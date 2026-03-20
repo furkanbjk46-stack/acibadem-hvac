@@ -997,7 +997,7 @@ class HVACAnalyzer:
             mode = "AUTO"
         
         # DEBUG: SAT, Room, Set değerlerini logla
-        logger.info(f"EXTRACT {name}: SAT={temps.sat}, Room={temps.room}, Set={temps.setpoint}, normalized keys={list(normalized.keys())[:10]}")
+        logger.debug(f"EXTRACT {name}: SAT={temps.sat}, Room={temps.room}, Set={temps.setpoint}, normalized keys={list(normalized.keys())[:10]}")
         
         # Create profile
         return EquipmentProfile(
@@ -1732,6 +1732,9 @@ class HVACAnalyzer:
                 result.rule = "NORMAL"
         
         # --- 2. FUNCTIONAL CHECK (SAT vs Setpoint) ---
+        # NOT: Bu inline SAT kontrolü, genel analyze_sat_status() fonksiyonunun
+        # AHU-özel versiyonudur ve öncelikli olarak çalışır. İki mantığı
+        # birleştirirken dikkat edin; inline AHU kontrolleri daha hassastır.
         # VANA EŞİK KONTROLÜ: Vana <%40 ise SAT kontrolü yapılmaz
         VALVE_THRESHOLD = 40.0
         heating_valve = profile.valves.heating if profile.valves.heating is not None else 0
