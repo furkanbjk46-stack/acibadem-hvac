@@ -2698,83 +2698,70 @@
             showAlert(`${type} örnek veri yüklendi. "Manuel Veriyi Analiz Et" butonuna tıklayın.`, 'info');
         }
 
-        // Export CSV
+        // Export XLSX (Analiz Sonuçları)
         function exportCSV() {
             if (currentResults.length === 0) {
                 showAlert('İndirilecek veri bulunamadı.', 'warning');
                 return;
             }
 
-            // Generate CSV from current results
-            // Kullanıcı talebi: SAT, Return Temp, Approach Supply, Approach Return ve Vana pozisyonları ekle; Valve Delta çıkar
             const headers = [
                 'Location', 'Type', 'Asset', 'Action', 'ΔT (°C)', 'Target ΔT (°C)', 'ΔT Dev (°C)',
                 'SAT Status', 'Recommended SAT (°C)', 'Score', 'Severity',
-                'Cool Valve (%)', 'Heat Valve (%)',           // Vana pozisyonları
-                'SAT (°C)', 'Return Temp (°C)',               // Santral üfleme ve emiş
-                'Approach Supply (°C)', 'Approach Return (°C)', // Approach değerleri
+                'Cool Valve (%)', 'Heat Valve (%)',
+                'SAT (°C)', 'Return Temp (°C)',
+                'Approach Supply (°C)', 'Approach Return (°C)',
                 'Rule'
             ];
 
-            let csvContent = headers.join(',') + '\n';
+            const getVal = (row, keys) => {
+                for (const key of keys) {
+                    if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key];
+                }
+                return '';
+            };
 
-            currentResults.forEach(row => {
-                // Veri nesnesindeki olası anahtar isimlerini kontrol et (farklı kaynaklardan gelebilir)
-                const getVal = (keys) => {
-                    for (const key of keys) {
-                        if (row[key] !== undefined && row[key] !== null) return row[key];
-                    }
-                    return '';
-                };
+            // Satırları XLSX için obje dizisine dönüştür
+            const xlsxRows = currentResults.map(row => ({
+                'Location':               getVal(row, ['Location', 'Mahal']),
+                'Type':                   getVal(row, ['Type', 'Tip']),
+                'Asset':                  getVal(row, ['Asset', 'Ekipman', 'Name']),
+                'Action':                 getVal(row, ['Action', 'Aksiyon']),
+                'ΔT (°C)':               getVal(row, ['ΔT (°C)']),
+                'Target ΔT (°C)':        getVal(row, ['Target ΔT (°C)']),
+                'ΔT Dev (°C)':           getVal(row, ['ΔT Dev (°C)']),
+                'SAT Status':            getVal(row, ['SAT Status']),
+                'Recommended SAT (°C)': getVal(row, ['Recommended SAT (°C)']),
+                'Score':                 getVal(row, ['Score', 'score']),
+                'Severity':              getVal(row, ['Severity', 'severity']),
+                'Cool Valve (%)':        getVal(row, ['Cool Valve (%)', 'Cool Checking', 'Cooling Valve']),
+                'Heat Valve (%)':        getVal(row, ['Heat Valve (%)', 'Heat Checking', 'Heating Valve']),
+                'SAT (°C)':              getVal(row, ['SAT (°C)', 'SAT', 'sat']),
+                'Return Temp (°C)':      getVal(row, ['Return (°C)', 'Return Temp', 'return_temp', 'RAT']),
+                'Approach Supply (°C)':  getVal(row, ['Approach_Supply (°C)', 'Approach Supply (°C)']),
+                'Approach Return (°C)':  getVal(row, ['Approach_Return (°C)', 'Approach Return (°C)']),
+                'Rule':                  getVal(row, ['Rule', 'rule'])
+            }));
 
-                const csvRow = [
-                    getVal(['Location', 'Mahal']),
-                    getVal(['Type', 'Tip']),
-                    getVal(['Asset', 'Ekipman', 'Name']),
-                    getVal(['Action', 'Aksiyon']),
-                    getVal(['ΔT (°C)']),
-                    getVal(['Target ΔT (°C)']),
-                    getVal(['ΔT Dev (°C)']),
-                    getVal(['SAT Status']),
-                    getVal(['Recommended SAT (°C)']),
-                    getVal(['Score', 'score']),
-                    getVal(['Severity', 'severity']),
-                    getVal(['Cool Valve (%)', 'Cool Checking', 'Cooling Valve', 'cooling_valve']),
-                    getVal(['Heat Valve (%)', 'Heat Checking', 'Heating Valve', 'heating_valve']),
-                    getVal(['SAT (°C)', 'SAT', 'sat']),
-                    getVal(['Return (°C)', 'Return Temp', 'return_temp', 'RAT']),
-                    getVal(['Approach_Supply (°C)', 'Approach Supply (°C)', 'approach_supply']),
-                    getVal(['Approach_Return (°C)', 'Approach Return (°C)', 'approach_return']),
-                    getVal(['Rule', 'rule'])
-                ].map(field => {
-                    // Escape fields containing commas or quotes
-                    const fieldStr = String(field);
-                    if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n')) {
-                        return '"' + fieldStr.replace(/"/g, '""') + '"';
-                    }
-                    return fieldStr;
-                });
-                csvContent += csvRow.join(',') + '\n';
-            });
+            // SheetJS ile XLSX oluştur
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(xlsxRows, { header: headers });
 
-            // Add UTF-8 BOM for Excel compatibility
-            const BOM = '\uFEFF';
-            const csvWithBOM = BOM + csvContent;
+            // Sütun genişlikleri
+            ws['!cols'] = [
+                { wch: 15 }, { wch: 10 }, { wch: 20 }, { wch: 30 },
+                { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
+                { wch: 18 }, { wch: 8 },  { wch: 10 }, { wch: 12 },
+                { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
+                { wch: 16 }, { wch: 20 }
+            ];
 
-            // Create and trigger download
-            const blob = new Blob([csvWithBOM], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
+            XLSX.utils.book_append_sheet(wb, ws, 'HVAC Analiz');
+
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `hvac_analiz_${timestamp}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            XLSX.writeFile(wb, `hvac_analiz_${timestamp}.xlsx`);
 
-            showAlert('Analiz sonuçları CSV olarak indirildi.', 'success');
+            showAlert('Analiz sonuçları Excel (XLSX) olarak indirildi.', 'success');
         }
 
         // Refresh results
