@@ -274,45 +274,23 @@ st.markdown("""
 # ---- Portal navigasyon (HVAC / Enerji ana menü) ----
 PORTAL_URL = os.environ.get("PORTAL_URL", "http://localhost:8005/")
 
-# ─── Lokasyon Yönetimi ───
 from location_manager import get_manager as get_location_manager
 _loc_mgr = get_location_manager()
-_loc_mgr.ensure_locations_ready()  # Migration + profil oluşturma
+_loc_mgr.ensure_locations_ready()
 _loc_config = _loc_mgr.get_location_config()
-
-# Sidebar lokasyon seçici
-_all_locations = _loc_mgr.list_locations()
-_active_loc = _loc_mgr.get_active_location_id()
-_loc_names = {loc['id']: loc['short_name'] for loc in _all_locations}
-_loc_options = list(_loc_names.keys())
-_loc_labels = [f"📍 {_loc_names[lid]}" for lid in _loc_options]
-
-with st.sidebar:
-    _selected_idx = _loc_options.index(_active_loc) if _active_loc in _loc_options else 0
-    _selected_loc = st.selectbox(
-        "🏥 Lokasyon", _loc_options, index=_selected_idx,
-        format_func=lambda x: f"📍 {_loc_names.get(x, x)}",
-        key="location_selector"
-    )
-    if _selected_loc != _active_loc:
-        _loc_mgr.set_active_location(_selected_loc)
-        st.cache_data.clear()  # Lokasyon değiştiğinde veri cache'i temizle
-        st.rerun()
 
 st.markdown(
     f"""
     <div style='display:flex; justify-content:space-between; align-items:center; gap:12px; margin: 0 0 10px 0;'>
-      <div style='font-weight:800; font-size:14px; letter-spacing:0.4px; color:#ffffff; text-transform:uppercase;'>{_loc_config.get('name', 'ACIBADEM SAĞLIK GRUBU')}</div>
+      <div style='font-weight:800; font-size:14px; letter-spacing:0.4px; color:#ffffff; text-transform:uppercase;'>{_loc_config.get('name', 'ACIBADEM MASLAK HASTANESİ')}</div>
       <a href='{PORTAL_URL}' target='_top' style='text-decoration:none; font-weight:800; color:#ffffff;'>⬅ Ana Sayfa</a>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# Lokasyon bazlı veri dosyası
 DATA_FILE = _loc_mgr.get_data_path("energy_data.csv")
 
-# Lokasyona göre sıcaklık sütunları
 _energy_schema = _loc_config.get("energy_schema", {})
 _has_dual_lines = bool(_energy_schema.get("heating_lines", []))
 
