@@ -1,0 +1,2 @@
+﻿Asset,Type,Name,Status,Severity,Su ΔT (°C),Hava ΔT (°C),Target ΔT (°C),ΔT Dev (°C),Band,SAT Status,Recommended SAT (°C),Score,Action,Reason,Valve Δ%,Rule,DT Source,Approach_Supply (°C),Approach_Return (°C),Plant Supply (°C),Plant Return (°C),OAT (°C)
+AHU:AHU-1,AHU,AHU-1,MISSING_DATA,WARNING,,5.00,4.60,,N/A,WARNING,16.5,5.0,UYARI: SAT Düşük,Üfleme (14.5°C) < 15.0°C. Aşırı soğutma/donma riski.,,SAT_LOW,,,,,,16.0

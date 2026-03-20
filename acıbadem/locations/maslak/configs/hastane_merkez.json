@@ -1,0 +1,36 @@
+{
+  "location_id": "hastane_merkez",
+  "location_name": "Acıbadem Hastanesi - Merkez",
+  "rules": {
+    "fcu": {
+      "set_min": 21.0,
+      "set_max": 26.0,
+      "sat_cooling": 18.0,
+      "sat_heating": 28.0,
+      "transfer_cooling": 15.0,
+      "transfer_heating": 50.0
+    },
+    "ahu": {
+      "sat_cooling": 18.0,
+      "sat_heating": 28.0,
+      "transfer_cooling": 13.0,
+      "transfer_heating": 60.0
+    },
+    "chiller": {
+      "day_set": 13.0,
+      "night_set": 17.0,
+      "rem_set": 7.5
+    },
+    "schedule": {
+      "work_end": 18,
+      "fcu_shutdown": 19,
+      "ahu_shutdown": 20,
+      "system_start": 7
+    }
+  },
+  "tolerances": {
+    "temperature": 2.0,
+    "valve": 5.0
+  },
+  "notes": "3 yıllık saha tecrübesi - Merkez hastane standart ayarlar"
+}
