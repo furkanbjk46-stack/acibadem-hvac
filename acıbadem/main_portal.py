@@ -1099,7 +1099,7 @@ class HVACAnalyzer:
         elif eq_type == EquipmentType.CHILLER:
             return self.config["TARGET_DT_CHILLER"]
         elif eq_type == EquipmentType.FCU:
-            return self.config["TARGET_DT_FCU"]
+            return self.config.get("TARGET_DT_FCU") or self.config.get("TARGET_DT_DEFAULT", 5.0)
         elif eq_type == EquipmentType.COLLECTOR:
             return self.config["TARGET_DT_COLLECTOR"]
         elif eq_type == EquipmentType.HEAT_EXCHANGER:
