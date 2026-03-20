@@ -36,6 +36,9 @@ def start_streamlit() -> subprocess.Popen:
         sys.executable, "-m", "streamlit", "run", STREAMLIT_FILE,
         "--server.port", STREAMLIT_PORT,
         "--server.headless", "true",
+        # GÜVENLİK NOTU: Sistem internete açılacağında bu iki satırı kaldırın
+        # ve Streamlit'i nginx reverse proxy arkasında çalıştırın.
+        # Şu an sadece hastane içi ağ için kapalı tutulmuştur.
         "--server.enableCORS", "false",
         "--server.enableXsrfProtection", "false",
     ]

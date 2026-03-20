@@ -9,7 +9,7 @@ Bu workflow "vizyonumuz güncelle" veya benzeri bir istek geldiğinde çalışt�
 ## Adımlar
 
 1. **Vizyon dosyasını aç:**
-   - Dosya yolu: `C:\Users\furka\.gemini\antigravity\brain\f0a17b7e-f8f2-4d9c-af71-957a740dbb8a\gelecek_vizyonu.md`
+   - Dosya yolu: `${PROJECT_ROOT}\.gemini\antigravity\brain\f0a17b7e-f8f2-4d9c-af71-957a740dbb8a\gelecek_vizyonu.md`
 
 2. **Son oturumda yapılanları kontrol et:**
    - Tamamlanan özellikler

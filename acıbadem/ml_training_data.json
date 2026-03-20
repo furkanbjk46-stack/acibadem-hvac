@@ -2017,7 +2017,102 @@
         "status": "negative"
       }
     },
-    "feedback": null,
+    "feedback": {
+      "status": "not_applied",
+      "notes": null,
+      "updated_at": "2026-03-20T17:12:45.419839"
+    },
+    "outcome": null
+  },
+  {
+    "id": "REC_20260320_171139_21",
+    "timestamp": "2026-03-20T17:11:39.800267",
+    "recommendation": {
+      "rule_id": "EFFICIENCY_INDEX_DROP",
+      "name": "Enerji Verimlilik İndeksi Düşmüş",
+      "severity": "WARNING",
+      "category": "ENERGY",
+      "savings_potential": "5-10%"
+    },
+    "context": {
+      "energy": {
+        "total_grid_consumption": 945200.0,
+        "total_cooling_consumption": 88317.0,
+        "avg_chiller_set_temp": 7.5,
+        "avg_outdoor_temp": 9.741935483870968
+      },
+      "hvac": {}
+    },
+    "yoy_changes": {
+      "total_grid_consumption": {
+        "current": 945200.0,
+        "previous": 405484.0,
+        "change_pct": 133.10414221029683,
+        "trend": "↑",
+        "status": "negative"
+      },
+      "total_cooling_consumption": {
+        "current": 88317.0,
+        "previous": 47217.0,
+        "change_pct": 87.04492026177012,
+        "trend": "↑",
+        "status": "negative"
+      },
+      "total_hospital_consumption": {
+        "current": 1792966.0,
+        "previous": 1798534.0,
+        "change_pct": -0.30958547350230803,
+        "trend": "↓",
+        "status": "positive"
+      },
+      "total_gas": {
+        "current": 285422.0,
+        "previous": 361717.0,
+        "change_pct": -21.092456257239775,
+        "trend": "↓",
+        "status": "positive"
+      },
+      "total_water_consumption": {
+        "current": 10633.0,
+        "previous": 10085.0,
+        "change_pct": 5.433812592959841,
+        "trend": "↑",
+        "status": "negative"
+      },
+      "total_chiller_consumption": {
+        "current": 88317.0,
+        "previous": 47217.0,
+        "change_pct": 87.04492026177012,
+        "trend": "↑",
+        "status": "negative"
+      },
+      "avg_chiller_set_temp": {
+        "current": 7.5,
+        "previous": 7.5,
+        "change_pct": 0.0,
+        "trend": "→",
+        "status": "neutral"
+      },
+      "avg_outdoor_temp": {
+        "current": 9.741935483870968,
+        "previous": 5.5,
+        "change_pct": 77.12609970674488,
+        "trend": "↑",
+        "status": "neutral"
+      },
+      "efficiency_index": {
+        "current": 62565.86013789222,
+        "previous": 52432.92801053275,
+        "change_pct": 19.32551263458711,
+        "trend": "↑",
+        "status": "negative"
+      }
+    },
+    "feedback": {
+      "status": "not_applied",
+      "notes": null,
+      "updated_at": "2026-03-20T17:12:45.414739"
+    },
     "outcome": null
   }
 ]

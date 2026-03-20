@@ -22,25 +22,25 @@ class LocationConfig:
     def _load_all_configs(self):
         """Tüm konfigürasyon dosyalarını yükle"""
         if not self.config_dir.exists():
-            print(f"⚠️ Konfigürasyon dizini bulunamadı: {self.config_dir}")
+            print(f"[UYARI] Konfigurasyon dizini bulunamadi: {self.config_dir}")
             return
-        
+
         for config_file in self.config_dir.glob("*.json"):
             location_id = config_file.stem
             try:
                 with open(config_file, 'r', encoding='utf-8') as f:
                     self.configs[location_id] = json.load(f)
-                print(f"✅ Konfigürasyon yüklendi: {location_id}")
+                print(f"[OK] Konfigurasyon yuklendi: {location_id}")
             except Exception as e:
-                print(f"❌ Konfigürasyon yüklenemedi ({location_id}): {e}")
-        
+                print(f"[HATA] Konfigurasyon yuklenemedi ({location_id}): {e}")
+
         if not self.configs:
-            print("⚠️ Hiç konfigürasyon dosyası bulunamadı!")
+            print("[UYARI] Hic konfigurasyon dosyasi bulunamadi!")
     
     def set_location(self, location_id: str):
         """Aktif lokasyonu değiştir"""
         if location_id not in self.configs:
-            print(f"⚠️ Lokasyon '{location_id}' bulunamadı, varsayılan kullanılıyor")
+            print(f"[UYARI] Lokasyon '{location_id}' bulunamadi, varsayilan kullaniliyor")
             if self.configs:
                 location_id = list(self.configs.keys())[0]
             else:
@@ -48,7 +48,7 @@ class LocationConfig:
         
         self.current_location = location_id
         config = self.configs[location_id]
-        print(f"📍 Aktif lokasyon: {config.get('location_name', location_id)}")
+        print(f"[LOKASYON] Aktif lokasyon: {config.get('location_name', location_id)}")
     
     def get(self, key_path: str, default: Any = None) -> Any:
         """

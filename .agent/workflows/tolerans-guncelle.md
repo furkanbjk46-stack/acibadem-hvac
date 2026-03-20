@@ -9,7 +9,7 @@ Bu workflow "tolerans güncelle", "eşik değiştir", "kural ekle/çıkar" veya 
 ## Referans Dosyaları
 
 1. **Tolerans Değerleri Belgesi:**
-   - `C:\Users\furka\.gemini\antigravity\brain\f0a17b7e-f8f2-4d9c-af71-957a740dbb8a\tolerans_degerleri.md`
+   - `${PROJECT_ROOT}\.gemini\antigravity\brain\f0a17b7e-f8f2-4d9c-af71-957a740dbb8a\tolerans_degerleri.md`
    
 2. **Config JSON Dosyası:**
    - `c:\Users\furka\Downloads\acibadem_hvac_patch_air_water_split\acıbadem\configs\hvac_settings.json`

@@ -3,10 +3,14 @@
 
 from __future__ import annotations
 import os
+import warnings
 import pandas as pd
 from datetime import date, datetime
 from typing import Dict, List, Optional
 import json
+
+warnings.filterwarnings('ignore', category=FutureWarning, module='pandas.*')
+warnings.filterwarnings('ignore', category=FutureWarning, message='.*DataFrame concatenation.*')
 
 
 # HVAC analiz geçmişi dosyası
@@ -55,12 +59,12 @@ class HVACHistoryManager:
         """Dosya yoksa oluştur"""
         if not os.path.exists(self.history_file):
             df = pd.DataFrame(columns=self.HISTORY_COLUMNS)
-            df.to_csv(self.history_file, index=False)
+            df.to_csv(self.history_file, index=False, encoding='utf-8')
     
     def load_history(self) -> pd.DataFrame:
         """Tüm geçmişi yükle"""
         try:
-            df = pd.read_csv(self.history_file)
+            df = pd.read_csv(self.history_file, encoding='utf-8')
             if "Tarih" in df.columns:
                 # Düzeltme: ISO standart format kullan (locale bağımsız)
                 df["Tarih"] = pd.to_datetime(df["Tarih"], format="%Y-%m-%d", errors="coerce").dt.date
@@ -92,13 +96,15 @@ class HVACHistoryManager:
             
             # Yeni satır ekle
             new_row = pd.DataFrame([summary])
+            if not df.empty:
+                new_row = new_row.reindex(columns=df.columns)
             df = pd.concat([df, new_row], ignore_index=True)
             
             # Tarihe göre sırala
             df = df.sort_values("Tarih")
             
             # Kaydet
-            df.to_csv(self.history_file, index=False)
+            df.to_csv(self.history_file, index=False, encoding='utf-8')
             
             return True
             

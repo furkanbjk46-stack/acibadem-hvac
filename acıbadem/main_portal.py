@@ -1,4 +1,9 @@
-print(">>> main.py LOADED", __file__)
+
+import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,8 +19,6 @@ from enum import Enum
 from rules.temperature_cascade import check_field_experience_rules
 from rules.location_config import get_location_config
 
-# Çoklu lokasyon yönetimi
-from location_manager import get_manager as get_location_manager
 
 # ================ KONFİGÜRASYON ================
 class EngineVersion(Enum):
@@ -114,40 +117,24 @@ MAINTENANCE_FILE = os.path.join(os.path.dirname(__file__), "configs", "maintenan
 DEFAULT_CONFIG = CONFIG.copy()  # Varsayılan ayarları sakla
 
 def _get_settings_file(location_id: str = None) -> str:
-    """Aktif lokasyonun ayar dosyası yolunu döndür."""
-    lm = get_location_manager()
-    path = lm.get_data_path("configs/hvac_settings.json", location_id)
-    # Lokasyon dosyası varsa onu kullan, yoksa eski yolu kullan (migration öncesi uyumluluk)
-    if os.path.exists(path):
-        return path
-    return SETTINGS_FILE
+    """Ayar dosyası yolunu döndür."""
+    return os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json")
 
 def _get_maintenance_file(location_id: str = None) -> str:
-    """Aktif lokasyonun bakım kartı dosyası yolunu döndür."""
-    lm = get_location_manager()
-    path = lm.get_data_path("configs/maintenance_cards.json", location_id)
-    if os.path.exists(path):
-        return path
-    return MAINTENANCE_FILE
+    """Bakım kartı dosyası yolunu döndür."""
+    return os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
 
 def _get_daily_reports_dir(location_id: str = None) -> str:
-    """Aktif lokasyonun günlük rapor klasörü."""
-    lm = get_location_manager()
-    path = lm.get_data_path("daily_reports", location_id)
+    """Günlük rapor klasörü yolunu döndür."""
+    path = os.path.join(os.path.dirname(__file__), "daily_reports")
     os.makedirs(path, exist_ok=True)
-    # Lokasyon klasörü varsa onu kullan
-    if os.path.isdir(os.path.dirname(path)):
-        return path
-    return os.path.join(os.path.dirname(__file__), "daily_reports")
+    return path
 
 def _get_monthly_reports_dir(location_id: str = None) -> str:
-    """Aktif lokasyonun aylık rapor klasörü."""
-    lm = get_location_manager()
-    path = lm.get_data_path("monthly_reports_summary", location_id)
+    """Aylık rapor klasörü yolunu döndür."""
+    path = os.path.join(os.path.dirname(__file__), "monthly_reports_summary")
     os.makedirs(path, exist_ok=True)
-    if os.path.isdir(os.path.dirname(path)):
-        return path
-    return os.path.join(os.path.dirname(__file__), "monthly_reports_summary")
+    return path
 
 # ================ BAKIM KARTI YÖNETİMİ ================
 MAINTENANCE_COMPONENTS = [
@@ -701,6 +688,28 @@ INSTRUCTION_GUIDE = {
             "Coil kirli",
             "Yük çok yüksek"
         ]
+    },
+    "SEASONAL_CHILLER_TRANSITION": {
+        "severity": "WARNING",
+        "score": 8.0,
+        "title": "Mevsimsel Chiller Geçiş Uyarısı",
+        "description": "Dış hava 10°C altında iken Chiller yüksek kapasitede ve düşük verimle zorlanarak çalışıyor. Free-Cooling fırsatı değerlendirilemiyor.",
+        "steps": [
+            "AHU'larda %100 taze hava moduna geçerek Free-Cooling yapın",
+            "Taze hava damperlerini tam açın — soğuk dış hava doğal soğutma sağlar",
+            "Chiller yükü düşmüyorsa ana kollektör setpoint'ini düşürün",
+            "Eğer tek Chiller hala %90 üzerinde zorlanıyorsa 2. Chiller'i devreye alın",
+            "Free-Cooling sonrası Chiller yükünü tekrar izleyin",
+            "Chiller COP değerini takip edin — düşük COP enerji israfına işaret eder"
+        ],
+        "causes": [
+            "Free-Cooling damperlerinin kapalı veya kısmi açık olması",
+            "AHU'ların taze hava modunda çalışmaması",
+            "Ana kollektör setpoint'inin çok yüksek ayarlanmış olması",
+            "Tek Chiller ile karşılanamayan aşırı soğutma talebi",
+            "Mevsimsel geçiş programının devreye girmemesi"
+        ],
+        "setpoint_chain": "Dış Hava (<10°C) → AHU %100 Taze Hava (Free-Cooling) → Kollektör Setpoint Düşür → 2. Chiller Devreye Al"
     }
 }
 
@@ -1214,8 +1223,8 @@ class HVACAnalyzer:
         sat_cool_min = self.config.get("SAT_COOLING_MIN", 15.0)
         sat_cool_max = self.config.get("SAT_COOLING_MAX", 18.0)
         sat_heat_min = self.config.get("SAT_HEATING_MIN", 28.0)
-        sat_heat_max = self.config.get("SAT_HEATING_MAX", 35.0)
-        
+        sat_heat_max = self.config.get("SAT_HEATING_MAX", 31.0)
+
         # Cooling mode recommendations
         if not is_heating:
             # SAT too high - recommend target of 16°C (middle of 15-18)
@@ -1228,14 +1237,14 @@ class HVACAnalyzer:
                 return current_sat - 2.0 if current_sat > sat_cool_max else None
             elif approach_supply and approach_supply > 7.0:
                 return max(current_sat - 2.0, sat_cool_min)
-        
+
         # Heating mode recommendations
         else:
-            # SAT too low - recommend target of 32°C (middle of 28-35)
+            # SAT too low - recommend target (middle of sat_heat_min - sat_heat_max)
             if rule == "NOT_HEATING" or sat_status == "NOT_HEATING":
-                return (sat_heat_min + sat_heat_max) / 2  # 31.5°C
+                return (sat_heat_min + sat_heat_max) / 2
             elif rule == "SAT_HIGH" or "SAT Yüksek" in str(sat_status):
-                # SAT too high - recommend 32°C
+                # SAT too high - recommend middle of heating range
                 return (sat_heat_min + sat_heat_max) / 2
             elif rule == "HEAT_EFF_LOW":
                 return current_sat + 3.0 if current_sat < sat_heat_min else None
@@ -1608,6 +1617,41 @@ class HVACAnalyzer:
             # FCU, Chiller, and others use the standard logic
             return self.analyze_fcu_performance(profile, effective_mode, plant_supply, plant_return, oat, tol_crit, tol_norm)
 
+    def _analyze_base(self, profile: EquipmentProfile, result: AnalysisResult, oat) -> Optional[AnalysisResult]:
+        """Ortak delta_t hesaplaması ve STANDBY kontrolü. STANDBY ise doldurulmuş result döner, değilse None."""
+        # Delta T hesaplamaları (tüm path'ler için ortak)
+        delta_t, dt_source = self.calculate_delta_t(profile)
+        result.delta_t = delta_t
+        result.dt_source = dt_source
+        result.air_delta_t = self.calculate_air_delta_t(profile)
+        target_dt = self.get_target_delta_t(profile, oat)
+        result.target_delta_t = target_dt
+        if delta_t is not None:
+            result.departure = delta_t - target_dt
+
+        # Chiller, Kazan ve Kolektörler vana ile kontrol edilmez (veya farklı mantık), bu yüzden STANDBY'a düşmemeli
+        SKIP_STANDBY_TYPES = ["CHILLER", "KAZAN", "KOLLEKTOR", "COLLECTOR", "POMPA", "PUMP"]
+        eq_type_upper = profile.type.upper() if profile.type else ""
+
+        cooling_valve = profile.valves.cooling if profile.valves.cooling is not None else 0
+        heating_valve = profile.valves.heating if profile.valves.heating is not None else 0
+        mode_upper = profile.mode.upper() if profile.mode else ""
+
+        # Eğer özel tip değilse VE Auto+Vana0 ise Standby
+        if (not any(t in eq_type_upper for t in SKIP_STANDBY_TYPES)) and \
+           mode_upper == "AUTO" and cooling_valve == 0 and heating_valve == 0:
+            # Ekipman bekleme modunda - veri eksik değil!
+            result.status = "STANDBY"
+            result.action = "Bekleme Modu"
+            result.reason = "Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor."
+            result.rule = "STANDBY"
+            result.severity = "OPTIMAL"
+            result.sat_status = "STANDBY"
+            result.score = 0.0
+            return result
+
+        return None
+
     def analyze_ahu_performance(self, profile: EquipmentProfile, effective_mode: str,
                               plant_supply, plant_return, oat, tol_crit, tol_norm,
                               maintenance_card: dict = None) -> AnalysisResult:
@@ -1637,44 +1681,19 @@ class HVACAnalyzer:
         
         result.maintenance_notes = maintenance_notes
         
-        # --- 0. STANDBY CHECK: Mode AUTO + Her iki vana 0 ---
-        cooling_valve = profile.valves.cooling if profile.valves.cooling is not None else 0
-        heating_valve = profile.valves.heating if profile.valves.heating is not None else 0
-        mode_upper = profile.mode.upper() if profile.mode else ""
-        
-        if mode_upper == "AUTO" and cooling_valve == 0 and heating_valve == 0:
-            # Ekipman bekleme modunda - veri eksik değil!
-            result.status = "STANDBY"
-            result.action = "Bekleme Modu"
-            result.reason = "Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor."
-            result.rule = "STANDBY"
-            result.severity = "OPTIMAL"
-            result.sat_status = "STANDBY"
-            result.score = 0.0
-            
-            # Yine de temel hesaplamaları yap
-            delta_t, dt_source = self.calculate_delta_t(profile)
-            result.delta_t = delta_t
-            result.dt_source = dt_source
-            result.target_delta_t = self.get_target_delta_t(profile, oat)
-            
-            return result
-        
+        # --- 0. STANDBY CHECK ---
+        standby = self._analyze_base(profile, result, oat)
+        if standby is not None:
+            return standby
+
         # AHU Logic: Focus on SAT (Supply Air Temp) vs Setpoint vs Return
         sat = profile.temperatures.sat or profile.temperatures.supply
         ret = profile.temperatures.return_ or profile.temperatures.room
         set_temp = profile.temperatures.setpoint
-        
-        # Calculate Delta T (Water side if available, otherwise Air side)
-        delta_t, dt_source = self.calculate_delta_t(profile)
-        result.delta_t = delta_t
-        result.dt_source = dt_source
-        result.air_delta_t = self.calculate_air_delta_t(profile)
-        
-        # Get target Delta T
-        target_dt = self.get_target_delta_t(profile, oat)
-        result.target_delta_t = target_dt
-        
+
+        delta_t = result.delta_t
+        target_dt = result.target_delta_t
+
         # Calculate approach
         app_sup, app_ret = self.calculate_approach(profile, plant_supply, plant_return)
         result.approach_supply = app_sup
@@ -1684,10 +1703,6 @@ class HVACAnalyzer:
         is_heating = "HEAT" in effective_mode
         
         # Default Logic (similar to base but customized)
-        # P1-2: AHU departure hesaplaması (score formülünde kullanılır)
-        if delta_t is not None:
-            result.departure = delta_t - target_dt
-        
         if delta_t is None:
             result.status = "MISSING_DATA"
             result.band = "N/A"
@@ -1796,47 +1811,14 @@ class HVACAnalyzer:
         """Standard logic for FCU and others (Room vs Set focus)."""
         result = AnalysisResult()
         
-        # --- 0. STANDBY CHECK: Mode AUTO + Her iki vana 0 ---
-        # Chiller, Kazan ve Kolektörler vana ile kontrol edilmez (veya farklı mantık), bu yüzden STANDBY'a düşmemeli
-        SKIP_STANDBY_TYPES = ["CHILLER", "KAZAN", "KOLLEKTOR", "COLLECTOR", "POMPA", "PUMP"]
-        eq_type_upper = profile.type.upper() if profile.type else ""
-        
-        cooling_valve = profile.valves.cooling if profile.valves.cooling is not None else 0
-        heating_valve = profile.valves.heating if profile.valves.heating is not None else 0
-        mode_upper = profile.mode.upper() if profile.mode else ""
-        
-        # Eğer özel tip değilse VE Auto+Vana0 ise Standby
-        if (not any(t in eq_type_upper for t in SKIP_STANDBY_TYPES)) and \
-           mode_upper == "AUTO" and cooling_valve == 0 and heating_valve == 0:
-            # Ekipman bekleme modunda - veri eksik değil!
-            result.status = "STANDBY"
-            result.action = "Bekleme Modu"
-            result.reason = "Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor."
-            result.rule = "STANDBY"
-            result.severity = "OPTIMAL"
-            result.sat_status = "STANDBY"
-            result.score = 0.0
-            
-            # Yine de temel hesaplamaları yap
-            delta_t, dt_source = self.calculate_delta_t(profile)
-            result.delta_t = delta_t
-            result.dt_source = dt_source
-            result.target_delta_t = self.get_target_delta_t(profile, oat)
-            
-            return result
-        
-        # Standard Delta T Calculation
-        delta_t, dt_source = self.calculate_delta_t(profile)
-        result.delta_t = delta_t
-        result.dt_source = dt_source
-        result.air_delta_t = self.calculate_air_delta_t(profile)
-        
-        target_dt = self.get_target_delta_t(profile, oat)
-        result.target_delta_t = target_dt
-        
-        if delta_t is not None:
-            result.departure = delta_t - target_dt
-            
+        # --- 0. STANDBY CHECK ---
+        standby = self._analyze_base(profile, result, oat)
+        if standby is not None:
+            return standby
+
+        delta_t = result.delta_t
+        target_dt = result.target_delta_t
+
         # Determine Status
         if delta_t is None:
             result.status = "MISSING_DATA"
@@ -1931,17 +1913,19 @@ class HVACAnalyzer:
 # ================ FASTAPI UYGULAMASI ================
 app = FastAPI(title=CONFIG["APP_TITLE"])
 
-# Logging setup
+# Logging setup — UTF-8 stream handler (Windows charmap uyumluluğu)
+_log_handler = logging.StreamHandler(stream=open(sys.stderr.fileno(), 'w', encoding='utf-8', closefd=False))
+_log_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    handlers=[_log_handler]
 )
 logger = logging.getLogger(__name__)
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:8005", "http://localhost:8501"],
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
@@ -2593,48 +2577,6 @@ def _iframe_wrapper_html(title: str, iframe_src: str) -> str:
 </body>
 </html>"""
 
-# ================ LOKASYON API'LERİ ================
-
-@app.get("/api/locations")
-async def list_locations():
-    """Mevcut lokasyonları listele."""
-    lm = get_location_manager()
-    return {
-        "success": True,
-        "locations": lm.list_locations(),
-        "active": lm.get_active_location_id(),
-    }
-
-@app.get("/api/location/active")
-async def get_active_location():
-    """Aktif lokasyonu getir."""
-    lm = get_location_manager()
-    loc_id = lm.get_active_location_id()
-    config = lm.get_location_config(loc_id)
-    return {
-        "success": True,
-        "location_id": loc_id,
-        "config": config,
-    }
-
-@app.post("/api/location/active")
-async def set_active_location(request: Request):
-    """Aktif lokasyonu değiştir."""
-    body = await request.json()
-    location_id = body.get("location_id", "")
-    lm = get_location_manager()
-    ok = lm.set_active_location(location_id)
-    if ok:
-        return {"success": True, "active": location_id}
-    raise HTTPException(status_code=400, detail=f"Bilinmeyen lokasyon: {location_id}")
-
-@app.get("/api/location/config")
-async def get_location_config_api(location_id: str = None):
-    """Lokasyon profil bilgilerini getir."""
-    lm = get_location_manager()
-    config = lm.get_location_config(location_id)
-    return {"success": True, "config": config}
-
 # ================ AYARLAR API'LERİ ================
 
 @app.get("/api/settings")
@@ -2927,13 +2869,6 @@ def _check_existing_reports_on_startup():
 
 _check_existing_reports_on_startup()
 
-# ─── Lokasyon sistemi başlat ───
-try:
-    _loc_mgr = get_location_manager()
-    _loc_mgr.ensure_locations_ready()
-    logging.info(f"Lokasyon sistemi hazır. Aktif: {_loc_mgr.get_active_location_id()}. Lokasyonlar: {_loc_mgr.list_location_ids()}")
-except Exception as e:
-    logging.error(f"Lokasyon sistemi başlatma hatası: {e}")
 
 # Zamanlayıcıyı başlat
 _schedule_daily_report()
@@ -3283,7 +3218,9 @@ async def recommend(
     oat: str = Form("20"),
     engine: str = Form("v2"),
     tol_ahu_critical: str = Form("1.0"),
-    tol_ahu_normal: str = Form("3.0")
+    tol_ahu_normal: str = Form("3.0"),
+    chiller_load_percent: str = Form(None),
+    chiller_cop: str = Form(None)
 ):
     """CSV veya Excel dosyasını analiz eder."""
     try:
@@ -3383,11 +3320,13 @@ async def recommend(
             oat=oat,
             engine=engine,
             tol_crit=tol_ahu_critical,
-            tol_norm=tol_ahu_normal
+            tol_norm=tol_ahu_normal,
+            chiller_load_percent=chiller_load_percent,
+            chiller_cop=chiller_cop
         )
-        
+
         return JSONResponse(result)
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -3430,29 +3369,60 @@ async def recommend_json(payload: Dict[str, Any]):
             oat=payload.get("oat", "20"),
             engine=payload.get("engine", "v2"),
             tol_crit=payload.get("tol_ahu_critical", "1.0"),
-            tol_norm=payload.get("tol_ahu_normal", "3.0")
+            tol_norm=payload.get("tol_ahu_normal", "3.0"),
+            chiller_load_percent=payload.get("chiller_load_percent"),
+            chiller_cop=payload.get("chiller_cop")
         )
-        
+
         return JSONResponse(result)
-        
+
     except Exception as e:
         logger.error(f"Recommend JSON error: {e}")
         raise HTTPException(status_code=500, detail=f"Analiz hatası: {str(e)}")
 
-async def analyze_data(rows: List[Dict[str, Any]], 
-                      oat: str, 
+def calculate_chiller_cop(load_percent: float) -> float:
+    """2000 KW Chiller Performans Eğrisine göre COP hesapla (doğrusal interpolasyon)."""
+    import bisect
+    _curve = [
+        (10.0, 2.52), (20.0, 4.59), (25.0, 5.37), (30.0, 6.04),
+        (40.0, 7.25), (50.0, 7.98), (60.0, 7.52), (70.0, 6.98),
+        (75.0, 6.68), (80.0, 6.38), (90.0, 5.72), (100.0, 5.05),
+    ]
+    loads = [x[0] for x in _curve]
+    cops  = [x[1] for x in _curve]
+    p = max(0.0, min(100.0, float(load_percent)))
+    if p <= loads[0]:
+        return cops[0]
+    if p >= loads[-1]:
+        return cops[-1]
+    i = bisect.bisect_right(loads, p)
+    x0, y0 = loads[i - 1], cops[i - 1]
+    x1, y1 = loads[i],     cops[i]
+    return round(y0 + (y1 - y0) * (p - x0) / (x1 - x0), 4)
+
+
+async def analyze_data(rows: List[Dict[str, Any]],
+                      oat: str,
                       engine: str,
                       tol_crit: str,
-                      tol_norm: str) -> Dict[str, Any]:
+                      tol_norm: str,
+                      chiller_load_percent: str = None,
+                      chiller_cop: str = None) -> Dict[str, Any]:
     """Ana analiz fonksiyonu."""
     # Initialize analyzer
     analyzer = HVACAnalyzer()
     utils = HVACUtils()
-    
+
     # Convert parameters
     oat_float = utils.to_float(oat)
     tol_crit_float = utils.to_float(tol_crit) or CONFIG["TOLERANCE_CRITICAL"]
     tol_norm_float = utils.to_float(tol_norm) or CONFIG["TOLERANCE_NORMAL"]
+    chiller_load_float = utils.to_float(chiller_load_percent)
+    # COP otomatik hesaplanır; chiller_cop parametresi geriye dönük uyumluluk için tutulur
+    if chiller_load_float is not None:
+        chiller_cop_float = calculate_chiller_cop(chiller_load_float)
+    else:
+        chiller_cop_float = utils.to_float(chiller_cop)
     
     # Extract profiles
     profiles = []
@@ -3471,79 +3441,79 @@ async def analyze_data(rows: List[Dict[str, Any]],
     cooling_collector = None
     heating_collector = None
     
-    logger.info("=== KOLEKTÖR ARAMA BAŞLADI ===")
+    logger.debug("=== KOLEKTÖR ARAMA BAŞLADI ===")
     for profile in profiles:
         eq_type = analyzer.classify_equipment_type(profile.type)
-        logger.info(f"Profile: {profile.name}, Type: {profile.type}, Classified: {eq_type}, Mode: {profile.mode}")
-        
+        logger.debug(f"Profile: {profile.name}, Type: {profile.type}, Classified: {eq_type}, Mode: {profile.mode}")
+
         if eq_type == EquipmentType.COLLECTOR:
             mode_upper = profile.mode.upper() if profile.mode else ""
             name_lower = profile.name.lower() if profile.name else ""
-            
-            logger.info(f"  → KOLEKTÖR BULUNDU: {profile.name}, Mode: {mode_upper}")
-            logger.info(f"     Inlet: {profile.temperatures.inlet}, Outlet: {profile.temperatures.outlet}")
-            
+
+            logger.debug(f"  → KOLEKTÖR BULUNDU: {profile.name}, Mode: {mode_upper}")
+            logger.debug(f"     Inlet: {profile.temperatures.inlet}, Outlet: {profile.temperatures.outlet}")
+
             # Mode'a göre veya isme göre algıla
             is_cooling = "COOL" in mode_upper or any(k in name_lower for k in ["soğutma", "sogutma", "cooling", "chilled"])
             is_heating = "HEAT" in mode_upper or any(k in name_lower for k in ["ısıtma", "isitma", "heating", "hot"])
-            
+
             if is_cooling:
                 cooling_collector = profile
-                logger.info(f"  ✅ SOĞUTMA KOLEKTÖRÜ ATANDI: {profile.name}")
+                logger.debug(f"  ✅ SOĞUTMA KOLEKTÖRÜ ATANDI: {profile.name}")
             elif is_heating:
                 heating_collector = profile
-                logger.info(f"  ✅ ISITMA KOLEKTÖRÜ ATANDI: {profile.name}")
-    
-    logger.info(f"Soğutma Kolektörü: {cooling_collector.name if cooling_collector else 'YOK'}")
-    logger.info(f"Isıtma Kolektörü: {heating_collector.name if heating_collector else 'YOK'}")
-    
+                logger.debug(f"  ✅ ISITMA KOLEKTÖRÜ ATANDI: {profile.name}")
+
+    logger.debug(f"Soğutma Kolektörü: {cooling_collector.name if cooling_collector else 'YOK'}")
+    logger.debug(f"Isıtma Kolektörü: {heating_collector.name if heating_collector else 'YOK'}")
+
     # Kolektör sıcaklıklarını AUTO mode ekipmanlara ata
-    logger.info("=== KOLEKTÖR ATAMA BAŞLADI ===")
+    logger.debug("=== KOLEKTÖR ATAMA BAŞLADI ===")
     for profile in profiles:
         # Sadece AHU ve FCU için
         eq_type = analyzer.classify_equipment_type(profile.type)
         if eq_type not in [EquipmentType.AHU, EquipmentType.FCU]:
             continue
-        
-        logger.info(f"Ekipman: {profile.name} ({eq_type})")
-        logger.info(f"  Inlet ÖNCE: {profile.temperatures.inlet}, Outlet ÖNCE: {profile.temperatures.outlet}")
-        
+
+        logger.debug(f"Ekipman: {profile.name} ({eq_type})")
+        logger.debug(f"  Inlet ÖNCE: {profile.temperatures.inlet}, Outlet ÖNCE: {profile.temperatures.outlet}")
+
         # Inlet/Outlet yoksa ve mode AUTO ise veya vana pozisyonuna göre
         if profile.temperatures.inlet is None or profile.temperatures.outlet is None:
             cooling_valve = profile.valves.cooling if profile.valves.cooling is not None else 0
             heating_valve = profile.valves.heating if profile.valves.heating is not None else 0
-            
-            logger.info(f"  Cool Valve: {cooling_valve}%, Heat Valve: {heating_valve}%")
-            
+
+            logger.debug(f"  Cool Valve: {cooling_valve}%, Heat Valve: {heating_valve}%")
+
             # Hangi vana açık?
             if cooling_valve > 0 and cooling_collector:
                 # Soğutma vanası açık - soğutma kolektörünü kullan
-                logger.info(f"  → SOĞUTMA VANASI AÇIK, kolektör atanıyor...")
+                logger.debug(f"  → SOĞUTMA VANASI AÇIK, kolektör atanıyor...")
                 profile.temperatures.inlet = cooling_collector.temperatures.inlet
                 profile.temperatures.outlet = cooling_collector.temperatures.outlet
-                logger.info(f"  ✅ ATANDI: Inlet={profile.temperatures.inlet}, Outlet={profile.temperatures.outlet}")
+                logger.debug(f"  ✅ ATANDI: Inlet={profile.temperatures.inlet}, Outlet={profile.temperatures.outlet}")
             elif heating_valve > 0 and heating_collector:
                 # Isıtma vanası açık - ısıtma kolektörünü kullan
-                logger.info(f"  → ISITMA VANASI AÇIK, kolektör atanıyor...")
+                logger.debug(f"  → ISITMA VANASI AÇIK, kolektör atanıyor...")
                 profile.temperatures.inlet = heating_collector.temperatures.inlet
                 profile.temperatures.outlet = heating_collector.temperatures.outlet
-                logger.info(f"  ✅ ATANDI: Inlet={profile.temperatures.inlet}, Outlet={profile.temperatures.outlet}")
+                logger.debug(f"  ✅ ATANDI: Inlet={profile.temperatures.inlet}, Outlet={profile.temperatures.outlet}")
             elif cooling_valve == 0 and heating_valve == 0:
                 # Her iki vana kapalı - mode'a göre veya varsayılan
-                logger.info(f"  → HER İKİ VANA KAPALI, mode'a göre atanıyor...")
+                logger.debug(f"  → HER İKİ VANA KAPALI, mode'a göre atanıyor...")
                 mode_upper = profile.mode.upper() if profile.mode else ""
                 if "COOL" in mode_upper and cooling_collector:
                     profile.temperatures.inlet = cooling_collector.temperatures.inlet
                     profile.temperatures.outlet = cooling_collector.temperatures.outlet
-                    logger.info(f"  ✅ SOĞUTMA MOD: Inlet={profile.temperatures.inlet}, Outlet={profile.temperatures.outlet}")
+                    logger.debug(f"  ✅ SOĞUTMA MOD: Inlet={profile.temperatures.inlet}, Outlet={profile.temperatures.outlet}")
                 elif "HEAT" in mode_upper and heating_collector:
                     profile.temperatures.inlet = heating_collector.temperatures.inlet
                     profile.temperatures.outlet = heating_collector.temperatures.outlet
-                    logger.info(f"  ✅ ISITMA MOD: Inlet={profile.temperatures.inlet}, Outlet={profile.temperatures.outlet}")
+                    logger.debug(f"  ✅ ISITMA MOD: Inlet={profile.temperatures.inlet}, Outlet={profile.temperatures.outlet}")
         else:
-            logger.info(f"  ℹ️ Inlet/Outlet zaten var, atlanıyor")
-    
-    logger.info("=== KOLEKTÖR ATAMA BİTTİ ===")
+            logger.debug(f"  ℹ️ Inlet/Outlet zaten var, atlanıyor")
+
+    logger.debug("=== KOLEKTÖR ATAMA BİTTİ ===")
     
     # Analyze each equipment
     results = []
@@ -3619,9 +3589,48 @@ async def analyze_data(rows: List[Dict[str, Any]],
                 "Score": 0
             })
     
+    # ========== KURAL 8: SEASONAL_CHILLER_TRANSITION ==========
+    # Dış hava <10°C iken Chiller yüksek kapasitede zorlanıyorsa uyar
+    if (oat_float is not None and oat_float < 10 and
+            chiller_load_float is not None and chiller_load_float > 80):
+        cop_str = f"{chiller_cop_float:.2f}" if chiller_cop_float is not None else "bilinmiyor"
+        chiller_warning_row = {
+            "Location": "SİSTEM",
+            "Asset": "SISTEM:Chiller-Yuk-Analizi",
+            "Type": "CHILLER",
+            "Name": "Chiller Yük/COP Analizi",
+            "Mode": "COOLING",
+            "Priority": "Critical",
+            "OAT (°C)": oat_float,
+            "Chiller Yük (%)": chiller_load_float,
+            "Chiller COP": chiller_cop_float,
+            "Status": "SEASONAL_CHILLER_TRANSITION",
+            "Severity": "WARNING",
+            "Score": 8.0,
+            "Rule": "SEASONAL_CHILLER_TRANSITION",
+            "Action": "Free-Cooling Potansiyelini Artırın",
+            "Reason": (
+                f"Dış hava ({oat_float}°C) serbest soğutma için çok uygun ancak "
+                f"Chiller {chiller_load_float}% kapasite ve {cop_str} COP ile zorlanarak çalışıyor! "
+                f"Free-Cooling potansiyelini artırın. Eğer sistem hala bu yüksek yükte çalışmaya "
+                f"devam ederse, 2. Chiller'i devreye almak için ana kollektör setini düşürmeniz gerekebilir."
+            ),
+            "Field Experience Issues": [],
+            "Field Experience Count": 0,
+            "Maintenance Notes": "",
+        }
+        # Kural bilgilerini INSTRUCTION_GUIDE'dan ekle
+        rule_info = INSTRUCTION_GUIDE.get("SEASONAL_CHILLER_TRANSITION", {})
+        chiller_warning_row["Band"] = rule_info.get("title", "Mevsimsel Chiller Geçiş Uyarısı")
+        results.append(chiller_warning_row)
+        logger.info(
+            f"KURAL 8 TETİKLENDİ: OAT={oat_float}°C, "
+            f"Chiller Yük={chiller_load_float}%, COP={cop_str}"
+        )
+
     # Sort by score (descending)
     results.sort(key=lambda x: float(x.get("Score", 0)), reverse=True)
-    
+
     # Calculate KPIs
     critical_count = sum(1 for r in results if r.get("Severity") == "CRITICAL")
     warning_count = sum(1 for r in results if r.get("Severity") == "WARNING")
@@ -3647,8 +3656,20 @@ async def analyze_data(rows: List[Dict[str, Any]],
         writer.writeheader()
         for row in results:
             writer.writerow({col: row.get(col, "") for col in output_columns})
-    
-    
+
+    # 7 günden eski output dosyalarını temizle
+    try:
+        cutoff = datetime.datetime.now() - datetime.timedelta(days=7)
+        for old_file in os.listdir(OUTPUT_DIR):
+            old_path = os.path.join(OUTPUT_DIR, old_file)
+            if os.path.isfile(old_path):
+                file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(old_path))
+                if file_mtime < cutoff:
+                    os.remove(old_path)
+                    logger.debug(f"Eski output dosyası silindi: {old_file}")
+    except Exception as e:
+        logger.warning(f"Output temizleme hatası: {e}")
+
     # Calculate average score
     avg_score = sum(float(r.get("Score", 0)) for r in results) / len(results) if results else 0.0
     
@@ -3679,12 +3700,12 @@ async def analyze_data(rows: List[Dict[str, Any]],
             results=results,
             csv_filename=filename
         )
-        print(f"✅ HVAC analiz sonuçları otomatik kaydedildi: {analysis_date}")
+        logger.info(f"HVAC analiz sonuçları otomatik kaydedildi: {analysis_date}")
         
     except ImportError:
-        print("⚠️ monthly_report modülü bulunamadı, HVAC history kaydedilmedi")
+        logger.warning("monthly_report modülü bulunamadı, HVAC history kaydedilmedi")
     except Exception as e:
-        print(f"⚠️ HVAC history kaydetme hatası: {e}")
+        logger.warning(f"HVAC history kaydetme hatası: {e}")
     
     return {
         "success": True,

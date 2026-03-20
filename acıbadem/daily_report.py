@@ -8,6 +8,7 @@ import os
 import json
 import io
 import tempfile
+import traceback
 from datetime import date, datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
@@ -39,6 +40,28 @@ except Exception:
     SETTINGS_FILE = os.path.join(BASE_DIR, "configs", "hvac_settings.json")
     REPORTS_DIR = os.path.join(BASE_DIR, "daily_reports")
 GAS_TO_KWH = 10.64  # 1 m³ doğalgaz ≈ 10.64 kWh
+
+
+def _calculate_chiller_cop(load_percent: float) -> float:
+    """2000 KW Chiller Performans Eğrisi — doğrusal interpolasyon."""
+    import bisect
+    _curve = [
+        (10.0, 2.52), (20.0, 4.59), (25.0, 5.37), (30.0, 6.04),
+        (40.0, 7.25), (50.0, 7.98), (60.0, 7.52), (70.0, 6.98),
+        (75.0, 6.68), (80.0, 6.38), (90.0, 5.72), (100.0, 5.05),
+    ]
+    loads = [x[0] for x in _curve]
+    cops  = [x[1] for x in _curve]
+    p = max(0.0, min(100.0, float(load_percent)))
+    if p <= loads[0]:
+        return cops[0]
+    if p >= loads[-1]:
+        return cops[-1]
+    i = bisect.bisect_right(loads, p)
+    x0, y0 = loads[i - 1], cops[i - 1]
+    x1, y1 = loads[i],     cops[i]
+    return round(y0 + (y1 - y0) * (p - x0) / (x1 - x0), 2)
+
 
 # ─── PDF Metin Temizleme (sadece emoji/sembol → ASCII, Türkçe korunur) ───
 def _sanitize(text: str) -> str:
@@ -182,6 +205,7 @@ def create_energy_pie_chart(total_kwh: float, chiller_kwh: float, gas_kwh: float
         width=500, height=350,
         title=dict(text="Enerji Dagilim", font=dict(size=16, color='white'))
     )
+    fig.update_layout(paper_bgcolor='white', plot_bgcolor='white', font=dict(color='#1a2332'))
     return pio.to_image(fig, format="png", scale=2)
 
 
@@ -367,7 +391,7 @@ class DailyReportPDF(FPDF):
         # fpdf2 rounded_rect yerine basit rect kullanıyoruz
         self.rect(x, y, w, h, style)
     
-    def add_image_from_bytes(self, img_bytes: bytes, x: float, y: float, w: float):
+    def add_image_from_bytes(self, img_bytes: bytes, x: float, y: float, w: float, h: float = 0):
         """Plotly grafik resmini PDF'e ekle."""
         if img_bytes is None:
             return
@@ -375,7 +399,9 @@ class DailyReportPDF(FPDF):
         try:
             tmp.write(img_bytes)
             tmp.close()
-            self.image(tmp.name, x=x, y=y, w=w)
+            self.image(tmp.name, x=x, y=y, w=w, h=h)
+            if h > 0:
+                self.set_y(y + h)
         finally:
             try:
                 os.unlink(tmp.name)
@@ -460,6 +486,8 @@ class DailyReportGenerator:
         if rows.empty:
             return {}
         row = rows.iloc[0]
+        chiller_load_raw = row.get("Chiller_Load_Percent")
+        chiller_load = float(chiller_load_raw) if chiller_load_raw not in (None, "", float("nan")) else None
         return {
             "total": float(row.get("Toplam_Hastane_Tuketim_kWh", 0) or 0),
             "chiller": float(row.get("Chiller_Tuketim_kWh", 0) or 0),
@@ -469,6 +497,7 @@ class DailyReportGenerator:
             "vrf": float(row.get("VRF_Split_Tuketim_kWh", 0) or 0),
             "oat": float(row.get("Dis_Hava_Sicakligi_C", 0) or 0),
             "chiller_set": float(row.get("Chiller_Set_C", 0) or 0),
+            "chiller_load": chiller_load,
         }
     
     def _get_hvac_day(self, df: pd.DataFrame, d: date) -> Dict:
@@ -638,20 +667,21 @@ class DailyReportGenerator:
         try:
             pie_img = create_energy_pie_chart(total, chiller, gas_kwh)
             if pie_img:
-                pdf.add_image_from_bytes(pie_img, 10, y_start, 90)
-        except Exception:
-            pass
+                pdf.add_image_from_bytes(pie_img, 10, y_start, 90, h=60)
+        except Exception as e:
+            import logging
+            logging.error(f"PIE CHART ERROR: {e}")
+            traceback.print_exc()
         
         # Haftalık trend
         try:
             trend_img = create_weekly_trend_chart(df, target_date)
             if trend_img:
-                pdf.add_image_from_bytes(trend_img, 105, y_start, 95)
+                pdf.add_image_from_bytes(trend_img, 105, y_start, 95, h=60)
         except Exception:
             pass
-        
         pdf.set_y(y_start + 65)
-    
+
     def _add_equipment_table(self, pdf: DailyReportPDF, hvac: Dict):
         """Ekipman durum özet tablosu."""
         # HVAC analiz sonuçları yoksa basit tablo
@@ -745,11 +775,17 @@ class DailyReportGenerator:
         else:
             lines.append(f"[!] DIKKAT: Sistem sagligi kritik seviyede (%{health}). {critical} kritik sorun acil mudahale bekliyor.")
         
+        # Chiller COP değerlendirmesi
+        chiller_load = report.get("chiller_load")
+        if chiller_load is not None and chiller_load > 0:
+            cop = _calculate_chiller_cop(chiller_load)
+            lines.append(f"[-] Hesaplanan Ortalama Chiller COP: {cop:.2f} (Kapasite: %{chiller_load:.1f})")
+
         # m² değerlendirmesi
         if area > 0 and total > 0:
             kwh_m2 = total / area
             lines.append(f"[-] Metrekare basina toplam tuketim: {kwh_m2:.3f} kWh/m2 ({area:,.0f} m2 alan uzerinden).")
-        
+
         # Sonuç
         if health >= 80 and (comp_total <= 0 or ((total - comp_total) / comp_total * 100) < 5):
             lines.append("")

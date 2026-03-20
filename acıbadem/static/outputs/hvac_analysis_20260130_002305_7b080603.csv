@@ -1,5 +1,0 @@
-﻿Asset,Type,Name,Status,Severity,Su ΔT (°C),Hava ΔT (°C),Target ΔT (°C),ΔT Dev (°C),Band,SAT Status,Recommended SAT (°C),Score,Action,Reason,Valve Δ%,Rule,DT Source,Approach_Supply (°C),Approach_Return (°C),Plant Supply (°C),Plant Return (°C),OAT (°C)
-CHILLER:CH-1,CHILLER,CH-1,IN_BAND,OPTIMAL,5.00,,3.00,+2.00,±5.0,NO DATA,,6.0,Normal,Hedef band içinde,,IN_BAND,Inlet/Outlet (Water),,,6.0,12.0,16.0
-AHU:AHU-1,AHU,AHU-1,MISSING_DATA,WARNING,,5.50,4.60,,N/A,WARNING,16.5,5.0,UYARI: SAT Düşük,Üfleme (14.5°C) < 15.0°C. Aşırı soğutma/donma riski.,,SAT_LOW,,+1.00,+0.50,6.0,12.0,16.0
-FCU:FCU-101,FCU,FCU-101,MISSING_DATA,CRITICAL,,4.50,4.00,,N/A,NO DATA,,0.0,Veri Eksik,ΔT hesaplanamadı - sensör verisi eksik,,MISSING_DATA,,+2.50,+1.00,6.0,12.0,16.0
-COLLECTOR:ANA KOLLEKTOR,COLLECTOR,ANA KOLLEKTOR,MISSING_DATA,CRITICAL,,6.00,3.00,,N/A,NO DATA,,0.0,Veri Eksik,ΔT hesaplanamadı - sensör verisi eksik,,MISSING_DATA,,+0.00,+0.00,6.0,12.0,16.0

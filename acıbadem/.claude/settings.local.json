@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import xlsxwriter; print\\(''xlsxwriter OK:'', xlsxwriter.__version__\\)\")",
+      "Bash(pip install:*)",
+      "Bash(start:*)",
+      "Bash(where claude:*)",
+      "Bash(npm list:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

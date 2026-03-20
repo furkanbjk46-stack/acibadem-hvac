@@ -41,6 +41,28 @@ except Exception:
     REPORTS_DIR = os.path.join(BASE_DIR, "monthly_reports_summary")
 GAS_TO_KWH = 10.64
 
+
+def _calculate_chiller_cop(load_percent: float) -> float:
+    """2000 KW Chiller Performans Eğrisi — doğrusal interpolasyon."""
+    import bisect
+    _curve = [
+        (10.0, 2.52), (20.0, 4.59), (25.0, 5.37), (30.0, 6.04),
+        (40.0, 7.25), (50.0, 7.98), (60.0, 7.52), (70.0, 6.98),
+        (75.0, 6.68), (80.0, 6.38), (90.0, 5.72), (100.0, 5.05),
+    ]
+    loads = [x[0] for x in _curve]
+    cops  = [x[1] for x in _curve]
+    p = max(0.0, min(100.0, float(load_percent)))
+    if p <= loads[0]:
+        return cops[0]
+    if p >= loads[-1]:
+        return cops[-1]
+    i = bisect.bisect_right(loads, p)
+    x0, y0 = loads[i - 1], cops[i - 1]
+    x1, y1 = loads[i],     cops[i]
+    return round(y0 + (y1 - y0) * (p - x0) / (x1 - x0), 2)
+
+
 AYLAR = {
     1: "Ocak", 2: "Subat", 3: "Mart", 4: "Nisan",
     5: "Mayis", 6: "Haziran", 7: "Temmuz", 8: "Agustos",
@@ -315,14 +337,16 @@ class MonthlyReportPDF(FPDF):
             self.set_xy(x + 6, y + 18)
             self.cell(w - 10, 4, _sanitize(sub), 0, 0)
     
-    def add_image_from_bytes(self, img_bytes, x, y, w):
+    def add_image_from_bytes(self, img_bytes, x, y, w, h=0):
         if img_bytes is None:
             return
         tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         try:
             tmp.write(img_bytes)
             tmp.close()
-            self.image(tmp.name, x=x, y=y, w=w)
+            self.image(tmp.name, x=x, y=y, w=w, h=h)
+            if h > 0:
+                self.set_y(y + h)
         finally:
             try:
                 os.unlink(tmp.name)
@@ -419,9 +443,17 @@ class MonthlyReportGenerator:
         grid = float(mdf.get("Sebeke_Tuketim_kWh", pd.Series([0])).fillna(0).sum())
         vrf = float(mdf.get("VRF_Split_Tuketim_kWh", pd.Series([0])).fillna(0).sum())
         days = len(mdf)
-        
+
         totals_series = mdf["Toplam_Hastane_Tuketim_kWh"].fillna(0)
-        
+
+        # Chiller yük yüzdesi (sadece girilmiş günlerin ortalaması)
+        if "Chiller_Load_Percent" in mdf.columns:
+            _load_vals = mdf["Chiller_Load_Percent"].dropna()
+            _load_vals = _load_vals[_load_vals > 0]
+            avg_chiller_load = float(_load_vals.mean()) if len(_load_vals) > 0 else None
+        else:
+            avg_chiller_load = None
+
         return {
             "total": total, "chiller": chiller, "gas": gas, "grid": grid, "vrf": vrf,
             "days": days,
@@ -429,6 +461,7 @@ class MonthlyReportGenerator:
             "avg_chiller": chiller / days if days > 0 else 0,
             "max_total": float(totals_series.max()),
             "min_total": float(totals_series.min()),
+            "avg_chiller_load": avg_chiller_load,
         }
     
     def _get_hvac_month(self, df: pd.DataFrame, year: int, month: int) -> Dict:
@@ -581,6 +614,8 @@ class MonthlyReportGenerator:
         pdf.set_y(y + 28)
     
     def _add_charts(self, pdf: MonthlyReportPDF, df, current, previous, year, month):
+        if pdf.get_y() > 140:
+            pdf.add_page()
         pdf.section_title("GRAFIKLER", (245, 158, 11))
         
         y_start = pdf.get_y()
@@ -590,7 +625,7 @@ class MonthlyReportGenerator:
             gas_kwh = current["gas"] * GAS_TO_KWH
             pie_img = create_monthly_pie_chart(current["total"], current["chiller"], gas_kwh)
             if pie_img:
-                pdf.add_image_from_bytes(pie_img, 10, y_start, 90)
+                pdf.add_image_from_bytes(pie_img, 10, y_start, 90, h=65)
         except Exception:
             pass
         
@@ -598,7 +633,7 @@ class MonthlyReportGenerator:
         try:
             comp_img = create_comparison_bar_chart(current, previous)
             if comp_img:
-                pdf.add_image_from_bytes(comp_img, 105, y_start, 95)
+                pdf.add_image_from_bytes(comp_img, 105, y_start, 95, h=65)
         except Exception:
             pass
         
@@ -611,13 +646,14 @@ class MonthlyReportGenerator:
         try:
             trend_img = create_daily_trend_chart(df, year, month)
             if trend_img:
-                pdf.add_image_from_bytes(trend_img, 15, pdf.get_y(), 180)
-                pdf.set_y(pdf.get_y() + 62)
+                pdf.add_image_from_bytes(trend_img, 15, pdf.get_y(), 180, h=75)
         except Exception:
             pass
     
     def _add_daily_table(self, pdf: MonthlyReportPDF, df: pd.DataFrame, year: int, month: int):
         """Günlük detay tablosu."""
+        if pdf.get_y() > 220:
+            pdf.add_page()
         pdf.section_title("GUNLUK DETAY TABLOSU", (59, 130, 246))
         
         if df.empty:
@@ -653,7 +689,7 @@ class MonthlyReportGenerator:
         # Satırlar
         pdf.set_font(pdf.font, '', 7)
         for i, (_, row) in enumerate(mdf.iterrows()):
-            if pdf.get_y() > 260:
+            if pdf.get_y() > 245:
                 pdf.add_page()
                 pdf.set_font(pdf.font, 'B', 8)
                 pdf.set_fill_color(30, 41, 59)
@@ -718,11 +754,17 @@ class MonthlyReportGenerator:
         else:
             lines.append(f"[+] Ay boyunca kritik sorun kaydedilmemistir.")
         
+        # Chiller COP değerlendirmesi
+        avg_load = current.get("avg_chiller_load")
+        if avg_load is not None and avg_load > 0:
+            cop = _calculate_chiller_cop(avg_load)
+            lines.append(f"[-] Hesaplanan Ortalama Chiller COP: {cop:.2f} (Ort. Kapasite: %{avg_load:.1f})")
+
         # m² değerlendirmesi
         if area > 0 and current["total"] > 0:
             kwh_m2 = current["total"] / area
             lines.append(f"[-] Aylik metrekare basina tuketim: {kwh_m2:.3f} kWh/m2.")
-        
+
         # Maliyet değerlendirmesi
         prices = load_unit_prices()
         if prices["electricity"] > 0 or prices["gas"] > 0:

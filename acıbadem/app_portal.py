@@ -322,6 +322,7 @@ SCHEMA = [
     "MCC_Tuketim_kWh",
     "VRF_Split_Tuketim_kWh",
     "Dis_Hava_Sicakligi_C",
+    "Chiller_Load_Percent",
     "Toplam_Hastane_Tuketim_kWh",
     "Toplam_Sogutma_Tuketim_kWh",
     "Diger_Yuk_kWh",
@@ -342,6 +343,7 @@ NUMERIC_COLS = [
     "MCC_Tuketim_kWh",
     "VRF_Split_Tuketim_kWh",
     "Dis_Hava_Sicakligi_C",
+    "Chiller_Load_Percent",
     "Toplam_Hastane_Tuketim_kWh",
     "Toplam_Sogutma_Tuketim_kWh",
     "Diger_Yuk_kWh",
@@ -1830,6 +1832,7 @@ with tab1:
         with c1:
             tarih = st.date_input("Tarih", value=date.today(), key="entry_tarih")
             dis_hava = st.number_input("Dış Hava Sıcaklığı (°C)", value=0.0, step=0.5, key="entry_dis_hava")
+            chiller_load_pct = st.number_input("Chiller Çalışma Kapasitesi Yüzdesi (%)", value=0.0, step=1.0, min_value=0.0, max_value=100.0, key="entry_chiller_load_pct", help="Chiller kapasite yüzdesini girin; COP otomatik hesaplanır.")
             kar_eritme = st.checkbox("Kar Eritme Aktif (On/Off)", value=False, key="entry_kar")
 
         with c2:
@@ -1923,6 +1926,7 @@ with tab1:
                 "MCC_Tuketim_kWh": mcc_kwh,
                 "VRF_Split_Tuketim_kWh": vrf_kwh,
                 "Dis_Hava_Sicakligi_C": dis_hava,
+                "Chiller_Load_Percent": chiller_load_pct if chiller_load_pct > 0 else None,
             })
             
             # ANOMALİ KONTROLÜ
@@ -2070,13 +2074,29 @@ with tab1:
         render_styled_table(df_now, table_key="mevcut_veri")
         exp = df_now.copy()
         exp["Tarih"] = exp["Tarih"].astype(str)
-        st.download_button(
-            "⬇️ CSV indir",
-            data=exp.to_csv(index=False).encode("utf-8"),
-            file_name="energy_data_export.csv",
-            mime="text/plain",
-            key="btn_csv_export",
-        )
+        _dl_col1, _dl_col2 = st.columns(2)
+        with _dl_col1:
+            st.download_button(
+                "⬇️ CSV İndir",
+                data=exp.to_csv(index=False).encode("utf-8"),
+                file_name="energy_data_export.csv",
+                mime="text/plain",
+                key="btn_csv_export",
+            )
+        with _dl_col2:
+            try:
+                _xlsx_buf = io.BytesIO()
+                with pd.ExcelWriter(_xlsx_buf, engine="xlsxwriter") as _writer:
+                    exp.to_excel(_writer, index=False, sheet_name="Enerji Verisi")
+                st.download_button(
+                    "⬇️ Excel İndir (.xlsx)",
+                    data=_xlsx_buf.getvalue(),
+                    file_name="energy_data_export.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="btn_xlsx_export",
+                )
+            except Exception as _xe:
+                st.warning(f"Excel butonu oluşturulamadı: {_xe}")
 
 # ---------------- TAB 2 ----------------
 with tab2:
@@ -2506,13 +2526,29 @@ with tab4:
 
         exp = show.copy()
         exp["Tarih"] = exp["Tarih"].astype(str)
-        st.download_button(
-            "⬇️ Filtreli veriyi CSV indir",
-            data=exp.to_csv(index=False).encode("utf-8"),
-            file_name="energy_data_filtered.csv",
-            mime="text/plain",
-            key="view_export_filtered_btn",
-        )
+        _fc1, _fc2 = st.columns(2)
+        with _fc1:
+            st.download_button(
+                "⬇️ Filtreli CSV İndir",
+                data=exp.to_csv(index=False).encode("utf-8"),
+                file_name="energy_data_filtered.csv",
+                mime="text/plain",
+                key="view_export_filtered_btn",
+            )
+        with _fc2:
+            try:
+                _fxlsx_buf = io.BytesIO()
+                with pd.ExcelWriter(_fxlsx_buf, engine="xlsxwriter") as _fwriter:
+                    exp.to_excel(_fwriter, index=False, sheet_name="Filtreli Veri")
+                st.download_button(
+                    "⬇️ Filtreli Excel İndir (.xlsx)",
+                    data=_fxlsx_buf.getvalue(),
+                    file_name="energy_data_filtered.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="view_export_filtered_xlsx_btn",
+                )
+            except Exception as _fxe:
+                st.warning(f"Excel butonu oluşturulamadı: {_fxe}")
 
 st.caption("Veriler 'energy_data.csv' dosyasında tutulur. Excel içe aktarım Tarih bazlı UPSERT (güncelle/ekle) yapar.")
 
@@ -2557,6 +2593,33 @@ with tab5:
                 # Tasarruf önerileri
                 engine = SavingsRecommendationEngine()
                 recommendations = engine.generate_recommendations(unified_data, yoy_analysis)
+
+                # ── Chiller KURAL 8 uyarısını enerji verisi üzerinden ekle ──
+                try:
+                    _edf = load_data()
+                    if not _edf.empty and "Chiller_Load_Percent" in _edf.columns and "Dis_Hava_Sicakligi_C" in _edf.columns:
+                        _edf["Tarih"] = pd.to_datetime(_edf["Tarih"], errors="coerce").dt.date
+                        _edf_period = _edf[
+                            (_edf["Tarih"] >= date(report_year, report_month, 1)) &
+                            (_edf["Tarih"] < date(report_year + (report_month // 12), (report_month % 12) + 1, 1))
+                        ]
+                        _chiller_trigger = _edf_period[
+                            (_edf_period["Dis_Hava_Sicakligi_C"].fillna(99) < 10) &
+                            (_edf_period["Chiller_Load_Percent"].fillna(0) > 80)
+                        ]
+                        if not _chiller_trigger.empty:
+                            _n = len(_chiller_trigger)
+                            recommendations.append({
+                                "name": "Mevsimsel Chiller Geçiş Uyarısı (KURAL 8)",
+                                "severity": "WARNING",
+                                "savings_potential": "Orta",
+                                "message": (
+                                    f"Bu dönemde {_n} gün; dış hava <10°C iken Chiller >%80 kapasitede çalışmıştır. "
+                                    "Free-Cooling potansiyelini artırın ve 2. Chiller devreye alınmasını değerlendirin."
+                                ),
+                            })
+                except Exception:
+                    pass
                 rec_summary = engine.get_recommendation_summary(recommendations)
                 
                 st.success(f"Analiz tamamlandı! {unified_data.get('days_with_data', 0)} gün veri işlendi.")

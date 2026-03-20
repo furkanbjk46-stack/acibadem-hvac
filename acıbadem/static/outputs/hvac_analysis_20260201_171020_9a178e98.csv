@@ -1,9 +1,0 @@
-﻿Asset,Type,Name,Status,Severity,Su ΔT (°C),Hava ΔT (°C),Target ΔT (°C),ΔT Dev (°C),Band,SAT Status,Recommended SAT (°C),Score,Action,Reason,Valve Δ%,Rule,DT Source,Approach_Supply (°C),Approach_Return (°C),Plant Supply (°C),Plant Return (°C),OAT (°C)
-AHU:AHU-2,AHU,AHU-2,IN_BAND,WARNING,10.00,10.00,10.00,,±1.0,WARNING,29.5,5.0,UYARI: SAT Yüksek,Üfleme (32.0°C) > 31.0°C. Aşırı ısıtma.,,SAT_HIGH,Inlet/Outlet (Water),+28.00,+28.00,7.0,14.0,20.0
-kollektor:sogutma kollektor,kollektor,sogutma kollektor,STANDBY,OPTIMAL,7.00,,3.00,,,STANDBY,,0.0,Bekleme Modu,"Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor.",,STANDBY,Inlet/Outlet (Water),,,7.0,14.0,20.0
-kollektor:ısıtma kollektor,kollektor,ısıtma kollektor,STANDBY,OPTIMAL,10.00,,3.00,,,STANDBY,,0.0,Bekleme Modu,"Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor.",,STANDBY,Inlet/Outlet (Water),,,7.0,14.0,20.0
-AHU:AHU-1,AHU,AHU-1,IN_BAND,OPTIMAL,7.00,8.00,5.00,,±3.0,OPTIMAL,,0.0,Normal,,,NORMAL,Inlet/Outlet (Water),+9.00,+10.00,7.0,14.0,20.0
-AHU:AHU-3,AHU,AHU-3,STANDBY,OPTIMAL,,,5.00,,,STANDBY,,0.0,Bekleme Modu,"Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor.",,STANDBY,,,,7.0,14.0,20.0
-AHU:AHU-10,AHU,AHU-10,IN_BAND,OPTIMAL,7.00,10.00,5.00,,±3.0,OPTIMAL,,0.0,Normal,,,NORMAL,Inlet/Outlet (Water),+8.00,+11.00,7.0,14.0,20.0
-CHILLER:CHILLER-1,CHILLER,CHILLER-1,STANDBY,OPTIMAL,7.00,,3.00,,,STANDBY,,0.0,Bekleme Modu,"Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor.",,STANDBY,Inlet/Outlet (Water),,,7.0,14.0,20.0
-KAZAN:KAZAN-1,KAZAN,KAZAN-1,STANDBY,OPTIMAL,5.00,,5.00,,,STANDBY,,0.0,Bekleme Modu,"Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor.",,STANDBY,Inlet/Outlet (Water),,,7.0,14.0,20.0
