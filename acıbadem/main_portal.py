@@ -1694,6 +1694,10 @@ class HVACAnalyzer:
         delta_t = result.delta_t
         target_dt = result.target_delta_t
 
+        # P2 Fix: AHU departure — delta_t yoksa SAT vs setpoint mutlak farkını kullan
+        if result.departure is None and sat is not None and set_temp is not None:
+            result.departure = abs(sat - set_temp)
+
         # Calculate approach
         app_sup, app_ret = self.calculate_approach(profile, plant_supply, plant_return)
         result.approach_supply = app_sup
@@ -1791,12 +1795,11 @@ class HVACAnalyzer:
             result.severity = "CRITICAL" if "KRİTİK" in special["action"] else "WARNING"
             result.score = max(result.score, 8.0)
         
-        # Calculate final score (if not set by critical issues)
-        if result.score == 0.0:
-            result.score = self.calculate_score(
-                profile, delta_t, target_dt, result.departure, 
-                result.sat_status, result.rule
-            )
+        # Calculate final score — mevcut skorla max al; özel kural veya SAT skoru korunur (P1-1)
+        result.score = max(result.score, self.calculate_score(
+            profile, delta_t, target_dt, result.departure,
+            result.sat_status, result.rule
+        ))
         
         # Calculate recommended SAT (effective_mode geçiriliyor)
         result.recommended_sat = self.calculate_recommended_sat(
@@ -1892,12 +1895,11 @@ class HVACAnalyzer:
             profile, result.sat_status, result.approach_supply, result.rule
         )
         
-        # Calculate score — comfort check score'u varsa koru (P1-1)
-        if result.score == 0.0:
-            result.score = self.calculate_score(
-                profile, delta_t, target_dt, result.departure, 
-                result.sat_status, result.rule
-            )
+        # Calculate score — comfort check score'u koruyarak max al (P1-1)
+        result.score = max(result.score, self.calculate_score(
+            profile, delta_t, target_dt, result.departure,
+            result.sat_status, result.rule
+        ))
         
         # Map severity for UI (considering rule type)
         result.severity = self.map_severity(result.status, result.score)

@@ -4,8 +4,11 @@
 from __future__ import annotations
 import os
 import json
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class TrainingDataCollector:
@@ -18,7 +21,8 @@ class TrainingDataCollector:
     try:
         from location_manager import get_manager as _get_loc_mgr
         DATA_FILE = _get_loc_mgr().get_data_path("ml_training_data.json")
-    except Exception:
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"location_manager yüklenemedi, varsayılan yol kullanılıyor: {e}")
         DATA_FILE = "ml_training_data.json"
     
     def __init__(self, data_file: str = None):
@@ -32,8 +36,7 @@ class TrainingDataCollector:
                 with open(self.data_file, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
-                import logging
-                logging.warning(f"Training data yükleme hatası ({self.data_file}): {e}")
+                logger.error(f"Training data yükleme hatası ({self.data_file}): {e}")
                 return []
         return []
     
@@ -43,7 +46,7 @@ class TrainingDataCollector:
             with open(self.data_file, "w", encoding="utf-8") as f:
                 json.dump(self.data, f, ensure_ascii=False, indent=2, default=str)
         except Exception as e:
-            print(f"Training data kaydetme hatasi: {e}")
+            logger.error(f"Training data kaydetme hatası ({self.data_file}): {e}")
     
     def save_recommendation_context(self, 
                                      recommendation: Dict,
