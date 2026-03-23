@@ -337,7 +337,7 @@
     <h1>HVAC Enerji Yönetim Sistemi</h1>
     <div class="subtitle">Gelecek Vizyon Belgesi</div>
     <div class="meta">
-      <span>📅 Son Güncelleme: 20 Şubat 2026</span>
+      <span>📅 Son Güncelleme: 23 Mart 2026</span>
       <span>🚀 Proje Başlangıcı: 5 Ağustos 2025</span>
       <span>⏱️ Toplam Süre: ~7 ay (kavramdan üretime)</span>
     </div>
@@ -371,13 +371,13 @@ graph LR
         <tr class="phase-row-done"><td>2</td><td><span class="badge badge-done">✅</span></td><td>Ocak 2026</td><td>Günlük anomali uyarısı</td></tr>
         <tr class="phase-row-done"><td>3 — 3.12</td><td><span class="badge badge-done">✅</span></td><td>Oca-Şub 2026</td><td>Tasarruf önerileri, PDF rapor, Dashboard, Grok UI</td></tr>
         <tr class="phase-row-done"><td>4 — 4.6</td><td><span class="badge badge-done">✅</span></td><td>Şubat 2026</td><td>Bakım kartları, m² metrik, maliyet, zamanlayıcı, AI göstergesi</td></tr>
-        <tr class="phase-row-active"><td><strong>5</strong></td><td><span class="badge badge-active">🟡</span></td><td>Şub 2026 →</td><td><strong>Yeni öneri kuralları + ileri AI altyapısı</strong></td></tr>
+        <tr class="phase-row-done"><td><strong>5</strong></td><td><span class="badge badge-done">✅</span></td><td>Şub-Mart 2026</td><td><strong>ML Tüketim Tahmini, Kural 8-9, Kod Refactoring, Otonom Swarm AI</strong></td></tr>
         <tr class="phase-row-future"><td>6</td><td><span class="badge badge-future">⬜</span></td><td>Gelecek</td><td>BMS entegrasyonu + otonom karar</td></tr>
       </tbody>
     </table>
 
     <div class="alert alert-highlight">
-      Proje 5 Ağustos 2025'te başladı. Şu an Faz 4.6 tamamlandı, Faz 5'e geçiş aşamasındayız.
+      Proje 5 Ağustos 2025'te başladı. Şu an Faz 5 (Makine Öğrenmesi) %100 tamamlandı. Faz 6 (Otonom) beklemede.
     </div>
   </div>
 
@@ -387,7 +387,7 @@ graph LR
 
     <div style="text-align:center; margin-bottom: 20px;">
       <div style="display:inline-block; background: linear-gradient(135deg, var(--blue), var(--purple)); color:white; padding: 14px 32px; border-radius: 12px; font-size: 22px; font-weight: 800;">
-        %65 — İleri Seviye 🚀
+        %78 — İleri Seviye 🚀
       </div>
     </div>
 
@@ -395,7 +395,7 @@ graph LR
       <div class="progress-item">
         <div class="label"><span>📊 Veri Olgunluğu</span><span class="score" style="color:var(--green);">25/25</span></div>
         <div class="progress-bar"><div class="fill" style="width:100%; background:var(--green);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">973 gün veri (2023→), maksimum</div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">1000 gün veri (2023→), maksimum</div>
       </div>
       <div class="progress-item">
         <div class="label"><span>💬 Geri Bildirim</span><span class="score" style="color:var(--orange);">10/25</span></div>
@@ -405,17 +405,17 @@ graph LR
       <div class="progress-item">
         <div class="label"><span>⚙️ Özellik Olgunluğu</span><span class="score" style="color:var(--green);">30/30</span></div>
         <div class="progress-bar"><div class="fill" style="width:100%; background:var(--green);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">7 temel özellik aktif, maksimum</div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">9 temel özellik aktif, maksimum</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🚀 İleri AI</span><span class="score" style="color:var(--red);">0/20</span></div>
-        <div class="progress-bar"><div class="fill" style="width:0%; background:var(--red);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Faz 5 özellikleri ile artacak</div>
+        <div class="label"><span>🚀 İleri AI</span><span class="score" style="color:var(--orange);">13/20</span></div>
+        <div class="progress-bar"><div class="fill" style="width:65%; background:var(--orange);"></div></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">ML Tahmin, Dinamik COP, Swarm AI eklendi</div>
       </div>
     </div>
 
     <div style="margin-top:4px; text-align:center; font-size:13px; color:var(--text-light);">
-      🎯 <strong>Sonraki Hedef:</strong> %80 Otonom seviye (kalan %15)
+      🎯 <strong>Sonraki Hedef:</strong> %80+ Otonom seviye (BMS entegrasyonu ile)
     </div>
 
     <h3>Seviye Haritası</h3>
@@ -516,22 +516,23 @@ graph TD
 
   <!-- 4. FAZ 5 -->
   <div class="section page-break">
-    <h2>🟡 Faz 5: Makine Öğrenmesi (Planlandı)</h2>
+    <h2>✅ Faz 5: Makine Öğrenmesi (Tamamlandı)</h2>
     <p style="margin-bottom:12px; color:var(--text-light);"><em>Bu faz, sistemin sabit kurallardan veriye dayalı karara geçtiği aşamadır.</em></p>
 
     <div class="mermaid">
 graph TD
-    subgraph "Faz 5 — Makine Öğrenmesi 🟡"
+    subgraph "Faz 5 — Makine Öğrenmesi ✅"
         direction TB
-        C1["5.1 Yeni Öneri Kuralları&lt;br/&gt;Kural 8-12"]:::planned
+        C1["5.1 Yeni Öneri Kuralları&lt;br/&gt;Kural 8-12"]:::done
         C2["5.2 Feedback Filtreleme&lt;br/&gt;Kabul/Red öğrenme"]:::research
         C3["5.3 İstatistiksel Anomali&lt;br/&gt;z-score + mevsimsel"]:::research
         C4["5.4 Hava Durumu API&lt;br/&gt;Proaktif uyarı"]:::research
-        C5["5.5 Tüketim Tahmini&lt;br/&gt;Fatura öngörüsü"]:::research
+        C5["5.5 Tüketim Tahmini&lt;br/&gt;ML Motor + Senaryo"]:::done
     end
 
     C1 --> C2 --> C3 --> C4 --> C5
 
+    classDef done fill:#10b981,stroke:#065f46,color:#fff
     classDef planned fill:#f59e0b,stroke:#92400e,color:#fff
     classDef research fill:#8b5cf6,stroke:#5b21b6,color:#fff
     </div>
@@ -573,7 +574,7 @@ graph TD
       <tbody>
         <tr><td>İstatistiksel Anomali</td><td>z-score + mevsimsel desen</td><td>900+ veri ✅</td></tr>
         <tr><td>Hava Durumu API</td><td>Proaktif uyarı</td><td>API key</td></tr>
-        <tr><td>Tüketim Tahmini</td><td>Fatura öngörüsü</td><td>365+ veri ✅</td></tr>
+        <tr><td>Tüketim Tahmini</td><td>ML Motor (GradientBoosting) + Senaryo</td><td>✅ Tamamlandı</td></tr>
         <tr><td>Geri Bildirim Filtresi</td><td>Reddedileni gizle, öne çıkar</td><td>50+ feedback</td></tr>
       </tbody>
     </table>
@@ -630,11 +631,11 @@ graph LR
     <table>
       <thead><tr><th>Katman</th><th>Şu An</th><th>Faz 5 Sonrası</th></tr></thead>
       <tbody>
-        <tr><td>Veri</td><td>✅ 973 gün → analiz</td><td>✅ + mevsimsel desen</td></tr>
+        <tr><td>Veri</td><td>✅ 1000 gün → analiz</td><td>✅ + mevsimsel desen</td></tr>
         <tr><td>Kurallar</td><td>⚙️ 7 sabit kural</td><td>⚙️ 15 kural (8 yeni)</td></tr>
         <tr><td>Öğrenme</td><td>📝 Feedback kaydediliyor</td><td>🧠 Filtreleme + eşik ayarlama</td></tr>
         <tr><td>Öneri</td><td>💡 Hep aynı öneriler</td><td>💡 Kişiselleştirilmiş + dinamik</td></tr>
-        <tr><td>Tahmin</td><td>❌ Yok</td><td>📈 Fatura tahmini + proaktif uyarı</td></tr>
+        <tr><td>Tahmin</td><td>✅ ML Motor (GradientBoosting)</td><td>📈 Hava API + proaktif uyarı</td></tr>
       </tbody>
     </table>
   </div>
@@ -923,9 +924,9 @@ gantt
   <div class="footer">
     <strong>Sonuç:</strong> Proje <strong>5 Ağustos 2025'te</strong> bir fikirle başladı.
     <strong>~5 ay ChatGPT ile kavram doğrulama ve prototipleme</strong> (Faz 0),
-    ardından <strong>7 hafta Antigravity ile tam geliştirme</strong> (Faz 1-4).
-    Toplam <strong>7 ayda 50+ özellik</strong> aktif, <strong>%65 AI olgunluk</strong>,
-    <strong>15 öneri kuralı planlandı</strong>. Sırada Faz 5: Makine Öğrenmesi! 🚀
+    ardından <strong>Antigravity ile tam geliştirme</strong> (Faz 1-5).
+    Toplam <strong>7,5 ayda 60+ özellik</strong> aktif, <strong>%78 AI olgunluk</strong>.
+    ML tüketim tahmini ve Otonom Swarm stabilizasyonu tamamlandı. Sırada BMS Faz 6! 🚀
   </div>
 
 </div>

@@ -501,14 +501,68 @@
                 </div>
                 <div class="info-card">
                     <div class="icon">📊</div>
-                    <div class="value">973 gün</div>
+                    <div class="value">1000 gün</div>
                     <div class="label">Tarihsel Veri (2023→)</div>
                 </div>
                 <div class="info-card">
                     <div class="icon">⚙️</div>
-                    <div class="value">120+ ünite</div>
+                    <div class="value">60+ ünite</div>
                     <div class="label">Takip Edilen Ekipman</div>
                 </div>
+            </div>
+        </div>
+
+        <!-- ========== 8. HEDEFLER ========== -->
+        <div class="section">
+            <h2>🎯 Sistemin Hedefleri</h2>
+
+            <div class="feature-grid">
+                <div class="feature-card" style="border-left: 4px solid var(--green);">
+                    <h4>🌿 Enerji Tasarrufu</h4>
+                    <ul>
+                        <li>Chiller set dinamik optimizasyonu ile %8-12 tasarruf</li>
+                        <li>Free cooling fırsatlarını yakalama</li>
+                        <li>Fcu ve klima senkronizasyonu ile verimlilik artışı</li>
+                        <li>ΔT optimizasyonu ile pompa enerji tüketimi azaltma</li>
+                        <li>kWh/m² endeksi ile bina verimlilik takibi</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="border-left: 4px solid var(--blue);">
+                    <h4>🏥 Konfor Güvencesi</h4>
+                    <ul>
+                        <li>Ameliyathane ve steril alanlar için 15°C set değeri</li>
+                        <li>COMFORT_OVERRIDE ile konfor öncelikli karar</li>
+                        <li>SAT Status sürekli izleme (soğutma/ısıtma etkinliği)</li>
+                        <li>Oda setpoint band kontrolü (21-26°C)</li>
+                        <li>Dış hava bazlı dinamik setpoint önerisi</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="border-left: 4px solid var(--orange);">
+                    <h4>🔧 Proaktif Bakım</h4>
+                    <ul>
+                        <li>Arızayı oluşmadan önce tespit (düşük ΔT sendromu)</li>
+                        <li>Dijital bakım kartları ile durum takibi</li>
+                        <li>Chiller ΔT takibi ile arıza erken uyarı</li>
+                        <li>Vana aktüatörü sıkışma tespiti</li>
+                        <li>Sensör kalibrasyon sapma analizi</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="border-left: 4px solid var(--purple);">
+                    <h4>📊 Veri Odaklı Karar</h4>
+                    <ul>
+                        <li>Geçmişe dönük tarihsel veri ile trend analizi</li>
+                        <li>YoY karşılaştırma ile yapısal sorun tespiti</li>
+                        <li>Günlük anomali uyarıları (%15+ sapma)</li>
+                        <li>₺ bazlı maliyet görünürlüğü</li>
+                        <li>Feedback sistemi ile AI öğrenme altyapısı</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert alert-green" style="text-align:center; font-size:15px; margin-top:20px;">
+                <strong>🎯 Nihai Hedef:</strong> Hastane konforunu koruyarak enerji maliyetlerini
+                <strong>%15-25</strong> düşürmek
+                ve HVAC ekipman ömrünü uzatmak.
             </div>
         </div>
 
@@ -656,14 +710,14 @@
                     </tr>
                     <tr>
                         <td>🔥 Isıtma</td>
-                        <td>28°C – 35°C</td>
+                        <td>28°C – 31°C</td>
                         <td>29.5°C</td>
                         <td>SAT &lt; 28°C → <span class="badge badge-critical">NOT_HEATING</span></td>
                     </tr>
                 </tbody>
             </table>
 
-            <h3>Sıcaklık Setpoint Zinciri</h3>
+            <h3>Sıcaklık Setpoint Zinciri (örnek)</h3>
             <p>Her kontrol noktası bir sonrakini besler — enerji tasarrufu zincirin tamamında optimize edilir:</p>
             <h4>Soğutma Zinciri</h4>
             <div class="chain">
@@ -1111,59 +1165,6 @@
             </table>
         </div>
 
-        <!-- ========== 8. HEDEFLER ========== -->
-        <div class="section">
-            <h2>🎯 Sistemin Hedefleri</h2>
-
-            <div class="feature-grid">
-                <div class="feature-card" style="border-left: 4px solid var(--green);">
-                    <h4>🌿 Enerji Tasarrufu</h4>
-                    <ul>
-                        <li>Chiller set dinamik optimizasyonu ile %8-12 tasarruf</li>
-                        <li>Free cooling fırsatlarını yakalama</li>
-                        <li>VRF bypass tespiti ile ikili çalışma önleme</li>
-                        <li>ΔT optimizasyonu ile pompa enerji tüketimi azaltma</li>
-                        <li>kWh/m² endeksi ile bina verimlilik takibi</li>
-                    </ul>
-                </div>
-                <div class="feature-card" style="border-left: 4px solid var(--blue);">
-                    <h4>🏥 Konfor Güvencesi</h4>
-                    <ul>
-                        <li>Ameliyathane ve steril alanlar ±1°C özel tolerans</li>
-                        <li>COMFORT_OVERRIDE ile konfor öncelikli karar</li>
-                        <li>SAT Status sürekli izleme (soğutma/ısıtma etkinliği)</li>
-                        <li>Oda setpoint band kontrolü (21-26°C)</li>
-                        <li>Dış hava bazlı dinamik setpoint önerisi</li>
-                    </ul>
-                </div>
-                <div class="feature-card" style="border-left: 4px solid var(--orange);">
-                    <h4>🔧 Proaktif Bakım</h4>
-                    <ul>
-                        <li>Arızayı oluşmadan önce tespit (düşük ΔT sendromu)</li>
-                        <li>Dijital bakım kartları ile durum takibi</li>
-                        <li>Chiller bypass / kompresör arıza erken uyarı</li>
-                        <li>Vana aktüatörü sıkışma tespiti</li>
-                        <li>Sensör kalibrasyon sapma analizi</li>
-                    </ul>
-                </div>
-                <div class="feature-card" style="border-left: 4px solid var(--purple);">
-                    <h4>📊 Veri Odaklı Karar</h4>
-                    <ul>
-                        <li>973 günlük tarihsel veri ile trend analizi</li>
-                        <li>YoY karşılaştırma ile yapısal sorun tespiti</li>
-                        <li>Günlük anomali uyarıları (%15+ sapma)</li>
-                        <li>₺ bazlı maliyet görünürlüğü</li>
-                        <li>Feedback sistemi ile AI öğrenme altyapısı</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="alert alert-green" style="text-align:center; font-size:15px; margin-top:20px;">
-                <strong>🎯 Nihai Hedef:</strong> Hastane konforunu koruyarak enerji maliyetlerini
-                <strong>%15-25</strong> düşürmek
-                ve HVAC ekipman ömrünü uzatmak.
-            </div>
-        </div>
 
         <!-- ========== 9. TEKNOLOJİ ========== -->
         <div class="section page-break">
@@ -1337,7 +1338,7 @@
         <!-- FOOTER -->
         <div class="footer">
             <strong>HVAC Enerji Yönetim Sistemi</strong> — Acıbadem Hastanesi<br>
-            106.000 m² | 120+ ekipman | 973 gün veri | 15+ kural | 7 tasarruf kuralı<br>
+            106.000 m² | 60+ ekipman | 1000 gün veri | 15+ kural | 7 tasarruf kuralı<br>
             <em>Yapay zeka destekli hastane enerji optimizasyonu — Konfor + Tasarruf + Proaktif Bakım</em> 🏥⚡🧠
         </div>
 

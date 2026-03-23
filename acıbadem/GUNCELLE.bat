@@ -74,19 +74,7 @@ for %%D in (daily_reports monthly_reports_summary) do (
     )
 )
 
-:: ─── Lokasyon verileri (çoklu lokasyon desteği) ───
-if exist "locations" (
-    xcopy /E /I /Y /Q "locations" "!YEDEK!\locations" >nul
-    echo       ✓ locations\
-    set /a SAYAC+=1
-)
 
-:: ─── configs\active_location.json ───
-if exist "configs\active_location.json" (
-    copy /Y "configs\active_location.json" "!YEDEK!\configs\active_location.json" >nul
-    echo       ✓ configs\active_location.json
-    set /a SAYAC+=1
-)
 
 :: ─── static\outputs (analiz çıktıları) ───
 if exist "static\outputs" (
@@ -145,15 +133,7 @@ if exist "!YEDEK!\static\outputs" (
     echo       ✓ static\outputs\ (geri yüklendi)
 )
 
-:: ─── Lokasyon verileri geri yükle ───
-if exist "!YEDEK!\locations" (
-    xcopy /E /I /Y /Q "!YEDEK!\locations" "locations" >nul
-    echo       ✓ locations\ (geri yüklendi)
-)
-if exist "!YEDEK!\configs\active_location.json" (
-    copy /Y "!YEDEK!\configs\active_location.json" "configs\active_location.json" >nul
-    echo       ✓ configs\active_location.json (geri yüklendi)
-)
+
 
 :: === ADIM 5: DOĞRULAMA RAPORU ===
 echo [5/5] Doğrulama yapılıyor...
@@ -183,7 +163,7 @@ for %%F in (monthly_report\pdf_generator.py monthly_report\savings_engine.py mon
 )
 
 :: Kritik klasör kontrolü
-for %%D in (rules configs static .streamlit monthly_report fonts locations) do (
+for %%D in (rules configs static .streamlit monthly_report fonts) do (
     if exist "%%D" (
         echo       ✅ %%D\ — mevcut
     ) else (
