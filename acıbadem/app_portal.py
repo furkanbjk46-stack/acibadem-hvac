@@ -22,6 +22,13 @@ import plotly.io as pio
 
 from fpdf import FPDF
 
+# Bulut senkronizasyonu (Supabase) — arka planda otomatik başlat
+try:
+    from cloud_sync import start_background_sync
+    start_background_sync()
+except Exception:
+    pass  # supabase_config.json yoksa veya ayarlanmamışsa sessizce atla
+
 st.set_page_config(page_title="Enerji Yönetimi & Raporlama", layout="wide")
 
 # Custom Dark Theme CSS
