@@ -37,11 +37,9 @@ echo.
 echo [OK] Tum kutuphaneler yuklendi!
 echo.
 
-set DESKTOP=%USERPROFILE%\Desktop
-set SHORTCUT_NAME=Merkez Portal.lnk
 set BAT_PATH=%~dp0PORTAL_BASLAT.bat
 
-powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%DESKTOP%\%SHORTCUT_NAME%'); $SC.TargetPath = '%BAT_PATH%'; $SC.WorkingDirectory = '%~dp0'; $SC.IconLocation = 'shell32.dll,43'; $SC.Description = 'Acibadem Genel Merkez Portal'; $SC.Save()"
+powershell -Command "$DesktopPath = [Environment]::GetFolderPath('Desktop'); $WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut($DesktopPath + '\Merkez Portal.lnk'); $SC.TargetPath = '%BAT_PATH%'; $SC.WorkingDirectory = '%~dp0'; $SC.IconLocation = 'shell32.dll,43'; $SC.Description = 'Acibadem Genel Merkez Portal'; $SC.Save()"
 
 echo.
 echo ====================================================

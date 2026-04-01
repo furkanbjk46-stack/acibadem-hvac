@@ -191,8 +191,21 @@ with tabs[0]:
         
         # Son sync bilgisi
         lok_info = next((l for l in lokasyonlar if l.get("lokasyon_id") == lok_id), {})
-        son_sync = lok_info.get("son_sync", "Bilinmiyor")
-        durum = lok_info.get("durum", "offline")
+        son_sync_str = str(lok_info.get("son_sync", "")).strip()
+        
+        # Zaman bazlı gerçek online/offline kontrolü (2 saatten eskiyse offline say)
+        durum = "offline"
+        if son_sync_str and son_sync_str != "Bilinmiyor":
+            try:
+                # ISO parsing işlemi
+                son_sync_dt = pd.to_datetime(son_sync_str).tz_localize(None)
+                fark_saat = (datetime.now() - son_sync_dt).total_seconds() / 3600
+                if fark_saat < 2.0:
+                    durum = "online"
+            except Exception:
+                pass
+                
+        son_sync = son_sync_str if son_sync_str else "Bilinmiyor"
         
         with cols[i]:
             status_class = "status-online" if durum == "online" else "status-offline"
