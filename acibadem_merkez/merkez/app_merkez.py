@@ -102,6 +102,11 @@ def get_client():
     except Exception:
         return None, config
 
+def get_supabase_client_direct(url, key):
+    """Cache'siz, anlık Supabase client (ping testi için)"""
+    from supabase import create_client
+    return create_client(url, key)
+
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_all_energy(url, key):
     """Tüm lokasyonların enerji verisini çek (5dk cache)"""
@@ -188,36 +193,68 @@ with tabs[0]:
     for i, lok_id in enumerate(aktif_lokasyonlar):
         lok_name = LOK_NAMES.get(lok_id, lok_id.title())
         lok_df = df_all[df_all["lokasyon_id"] == lok_id].copy()
-        
-        # Son sync bilgisi
+
+        # Lokasyon bilgisi
         lok_info = next((l for l in lokasyonlar if l.get("lokasyon_id") == lok_id), {})
-        son_sync_str = str(lok_info.get("son_sync", "")).strip()
-        
-        # Zaman bazlı gerçek online/offline kontrolü (2 saatten eskiyse offline say)
+
+        # Önce son_sinyal (heartbeat), yoksa son_sync'e bak
+        sinyal_str = str(lok_info.get("son_sinyal", "") or lok_info.get("son_sync", "")).strip()
+
+        # Online/offline: son heartbeat 5 dakikadan eskiyse offline
         durum = "offline"
-        if son_sync_str and son_sync_str != "Bilinmiyor":
+        fark_dk = None
+        if sinyal_str and sinyal_str not in ("", "None", "Bilinmiyor"):
             try:
-                # ISO parsing işlemi
-                son_sync_dt = pd.to_datetime(son_sync_str).tz_localize(None)
-                fark_saat = (datetime.now() - son_sync_dt).total_seconds() / 3600
-                if fark_saat < 2.0:
+                sinyal_dt = pd.to_datetime(sinyal_str).tz_localize(None)
+                fark_dk = (datetime.now() - sinyal_dt).total_seconds() / 60
+                if fark_dk < 5:
                     durum = "online"
             except Exception:
                 pass
-                
-        son_sync = son_sync_str if son_sync_str else "Bilinmiyor"
-        
+
         with cols[i]:
-            status_class = "status-online" if durum == "online" else "status-offline"
             status_icon = "🟢" if durum == "online" else "🔴"
-            
+            durum_text = "Çevrimiçi" if durum == "online" else "Çevrimdışı"
+
+            if fark_dk is not None:
+                if fark_dk < 1:
+                    sinyal_aciklama = "az önce"
+                elif fark_dk < 60:
+                    sinyal_aciklama = f"{int(fark_dk)} dk önce"
+                else:
+                    sinyal_aciklama = f"{int(fark_dk/60)} saat önce"
+            else:
+                sinyal_aciklama = "bilinmiyor"
+
             st.markdown(f"""
             <div class='lokasyon-card'>
-                <h3>{lok_name} {status_icon}</h3>
+                <h3>{lok_name} {status_icon} <span style='font-size:14px;font-weight:400;opacity:0.8;'>{durum_text}</span></h3>
                 <p>Toplam Kayıt: <strong>{len(lok_df)}</strong></p>
-                <p>Son Senkronizasyon: <strong>{son_sync[:16] if len(str(son_sync)) > 16 else son_sync}</strong></p>
+                <p>Son Sinyal: <strong>{sinyal_aciklama}</strong></p>
             </div>
             """, unsafe_allow_html=True)
+
+            # Ping testi butonu
+            if st.button(f"📡 Ping Testi", key=f"ping_{lok_id}"):
+                with st.spinner("Sinyal kontrol ediliyor..."):
+                    try:
+                        fresh = get_supabase_client_direct(sb_url, sb_key)
+                        r = fresh.table("lokasyonlar").select("son_sinyal,son_sync").eq("lokasyon_id", lok_id).execute()
+                        if r.data:
+                            ts = r.data[0].get("son_sinyal") or r.data[0].get("son_sync")
+                            if ts:
+                                dt = pd.to_datetime(ts).tz_localize(None)
+                                fark = (datetime.now() - dt).total_seconds() / 60
+                                if fark < 5:
+                                    st.success(f"✅ {lok_name} bağlı! Son sinyal {int(fark)} dk önce.")
+                                else:
+                                    st.warning(f"⚠️ Son sinyal {int(fark)} dk önce — bağlantı kesilmiş olabilir.")
+                            else:
+                                st.error("❌ Sinyal bulunamadı.")
+                        else:
+                            st.error("❌ Lokasyon Supabase'de kayıtlı değil.")
+                    except Exception as ex:
+                        st.error(f"Ping hatası: {ex}")
             
             # Son günün verileri
             if not lok_df.empty and "Tarih" in lok_df.columns:
@@ -450,17 +487,79 @@ with tabs[4]:
         for lok in lokasyonlar:
             lok_id = lok.get("lokasyon_id", "?")
             lok_name = LOK_NAMES.get(lok_id, lok_id)
-            son_sync = lok.get("son_sync", "Bilinmiyor")
-            durum = lok.get("durum", "offline")
-            
-            icon = "🟢" if durum == "online" else "🔴"
-            st.markdown(f"""
-            **{icon} {lok_name}**  
-            Son Senkronizasyon: `{son_sync}`  
-            Durum: `{durum}`
-            """)
+
+            # Heartbeat bazlı gerçek durum (5 dk eşiği)
+            sinyal_str = str(lok.get("son_sinyal", "") or lok.get("son_sync", "")).strip()
+            gercek_durum = "offline"
+            fark_dk = None
+            if sinyal_str and sinyal_str not in ("", "None", "Bilinmiyor"):
+                try:
+                    sinyal_dt = pd.to_datetime(sinyal_str).tz_localize(None)
+                    fark_dk = (datetime.now() - sinyal_dt).total_seconds() / 60
+                    if fark_dk < 5:
+                        gercek_durum = "online"
+                except Exception:
+                    pass
+
+            icon = "🟢" if gercek_durum == "online" else "🔴"
+            durum_text = "Çevrimiçi" if gercek_durum == "online" else "Çevrimdışı"
+
+            if fark_dk is not None:
+                if fark_dk < 1:
+                    sinyal_aciklama = "az önce"
+                elif fark_dk < 60:
+                    sinyal_aciklama = f"{int(fark_dk)} dk önce"
+                else:
+                    sinyal_aciklama = f"{int(fark_dk/60)} saat önce"
+            else:
+                sinyal_aciklama = "sinyal yok"
+
+            st.markdown(f"**{icon} {lok_name}** — {durum_text}  \nSon sinyal: `{sinyal_aciklama}`")
     else:
         st.warning("Henüz lokasyon bilgisi yok.")
+
+# ============ GÜNCELLEME BİLDİRİMLERİ ============
+st.markdown("---")
+st.markdown("### 📦 Güncelleme Durumu")
+
+@st.cache_data(ttl=30, show_spinner=False)
+def fetch_guncellemeler(url, key):
+    try:
+        from supabase import create_client
+        client = create_client(url, key)
+        r = client.table("guncellemeler").select("*").order("created_at", desc=True).limit(10).execute()
+        return r.data if r.data else []
+    except Exception:
+        return []
+
+guncellemeler = fetch_guncellemeler(sb_url, sb_key)
+
+if guncellemeler:
+    for g in guncellemeler:
+        versiyon = g.get("versiyon", "?")
+        hedef = g.get("hedef", "?")
+        durum = g.get("durum", "?")
+        tamamlayan = g.get("tamamlayan_lokasyon", "")
+        created = str(g.get("created_at", ""))[:16].replace("T", " ")
+        dosya_sayisi = len(g.get("dosyalar", {}))
+
+        if durum == "bekliyor":
+            icon = "⏳"
+            renk = "orange"
+        elif durum == "tamamlandi":
+            icon = "✅"
+            renk = "green"
+        else:
+            icon = "❌"
+            renk = "red"
+
+        tamamlayan_str = f" → `{tamamlayan}` tarafından uygulandı" if tamamlayan else ""
+        st.markdown(
+            f"{icon} **v{versiyon}** — Hedef: `{hedef}` | {dosya_sayisi} dosya | "
+            f"Durum: :{renk}[**{durum}**]{tamamlayan_str} | `{created}`"
+        )
+else:
+    st.caption("Henüz güncelleme yayınlanmamış.")
 
 # ============ FOOTER ============
 st.markdown("---")

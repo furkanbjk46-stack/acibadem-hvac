@@ -184,21 +184,91 @@ def sync_hvac_summary(client, lokasyon_id: str):
         return 0
 
 
+def check_and_apply_update(client, lokasyon_id: str):
+    """Supabase'de bekleyen güncelleme varsa uygula"""
+    try:
+        r = client.table("guncellemeler") \
+            .select("*") \
+            .eq("durum", "bekliyor") \
+            .in_("hedef", [lokasyon_id, "all"]) \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+
+        if not r.data:
+            return
+
+        kayit = r.data[0]
+        kayit_id = kayit["id"]
+        versiyon = kayit.get("versiyon", "?")
+        dosyalar = kayit.get("dosyalar", {})
+
+        logger.info(f"🔄 Güncelleme bulundu: v{versiyon} ({len(dosyalar)} dosya) — uygulanıyor...")
+
+        base_dir = os.path.dirname(__file__)
+        uygulanan = 0
+        hatalar = []
+
+        for dosya_yolu, icerik in dosyalar.items():
+            try:
+                tam_yol = os.path.join(base_dir, dosya_yolu)
+                os.makedirs(os.path.dirname(tam_yol), exist_ok=True)
+                with open(tam_yol, "w", encoding="utf-8") as f:
+                    f.write(icerik)
+                uygulanan += 1
+                logger.info(f"  ✅ {dosya_yolu}")
+            except Exception as e:
+                hatalar.append(dosya_yolu)
+                logger.error(f"  ❌ {dosya_yolu}: {e}")
+
+        # Durumu güncelle
+        yeni_durum = "tamamlandi" if not hatalar else "hata"
+        client.table("guncellemeler").update({
+            "durum": yeni_durum,
+            "tamamlayan_lokasyon": lokasyon_id,
+            "tamamlanma_zamani": datetime.now().isoformat(),
+        }).eq("id", kayit_id).execute()
+
+        logger.info(f"✅ Güncelleme tamamlandı: v{versiyon} — {uygulanan} dosya uygulandı")
+
+        # Watchdog'a yeniden başlatma sinyali gönder
+        flag_path = os.path.join(os.path.dirname(__file__), "_restart.flag")
+        with open(flag_path, "w") as f:
+            f.write(f"v{versiyon} - {datetime.now().isoformat()}")
+        logger.info("🔄 Yeniden başlatma sinyali gönderildi (_restart.flag)")
+
+    except Exception as e:
+        logger.error(f"Güncelleme kontrol hatası: {e}")
+
+
+def send_heartbeat(client, lokasyon_id: str):
+    """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
+    try:
+        client.table("lokasyonlar").upsert(
+            {"lokasyon_id": lokasyon_id, "son_sinyal": datetime.now().isoformat(), "durum": "online"},
+            on_conflict="lokasyon_id"
+        ).execute()
+        logger.debug(f"💓 Heartbeat gönderildi: {lokasyon_id}")
+    except Exception as e:
+        logger.warning(f"Heartbeat hatası: {e}")
+
+
 def sync_location_info(client, lokasyon_id: str):
     """Lokasyon durum bilgisini güncelle"""
     try:
         from location_manager import get_manager
         mgr = get_manager()
         loc_config = mgr.get_location_config()
-        
+
         info = {
             "lokasyon_id": lokasyon_id,
             "isim": loc_config.get("name", lokasyon_id),
             "son_sync": datetime.now().isoformat(),
+            "son_sinyal": datetime.now().isoformat(),
             "versiyon": "2.0",
             "durum": "online"
         }
-        
+
         # Upsert (varsa güncelle, yoksa ekle)
         client.table("lokasyonlar").upsert(info, on_conflict="lokasyon_id").execute()
         logger.info(f"✅ Lokasyon bilgisi güncellendi: {lokasyon_id}")
@@ -228,7 +298,7 @@ def run_sync():
 
 
 def start_background_sync():
-    """Arka planda periyodik senkronizasyon başlat"""
+    """Arka planda periyodik senkronizasyon ve heartbeat başlat"""
     config = load_config()
     if not config:
         return
@@ -240,6 +310,9 @@ def start_background_sync():
         logger.info("Otomatik senkronizasyon kapalı (supabase_config.json)")
         return
 
+    lokasyon_id = config.get("lokasyon_id", "bilinmeyen")
+    client = get_supabase_client(config)
+
     def _sync_loop():
         while True:
             try:
@@ -248,9 +321,24 @@ def start_background_sync():
                 logger.error(f"Senkronizasyon döngüsü hatası: {e}")
             time.sleep(interval)
 
-    t = threading.Thread(target=_sync_loop, daemon=True, name="cloud-sync")
-    t.start()
-    logger.info(f"🔄 Arka plan senkronizasyonu başlatıldı (her {interval // 60} dakika)")
+    def _heartbeat_loop():
+        """Her 2 dakikada bir son_sinyal güncelle ve güncelleme kontrol et"""
+        while True:
+            try:
+                if client:
+                    send_heartbeat(client, lokasyon_id)
+                    check_and_apply_update(client, lokasyon_id)
+            except Exception as e:
+                logger.warning(f"Heartbeat döngüsü hatası: {e}")
+            time.sleep(120)  # 2 dakika
+
+    t_sync = threading.Thread(target=_sync_loop, daemon=True, name="cloud-sync")
+    t_sync.start()
+
+    t_hb = threading.Thread(target=_heartbeat_loop, daemon=True, name="heartbeat")
+    t_hb.start()
+
+    logger.info(f"🔄 Arka plan senkronizasyonu başlatıldı (her {interval // 60} dakika, heartbeat: 2 dk)")
 
 
 # ============ Manuel çalıştırma ============

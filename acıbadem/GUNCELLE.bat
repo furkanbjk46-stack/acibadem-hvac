@@ -143,7 +143,7 @@ set "HATA=0"
 
 :: Kritik KOD dosyası kontrolü
 echo       ─────── Kod Dosyaları ───────
-for %%F in (main_portal.py app_portal.py run_portal.py ai_progress.py daily_report.py monthly_summary_report.py location_manager.py) do (
+for %%F in (main_portal.py app_portal.py run_portal.py ai_progress.py daily_report.py monthly_summary_report.py location_manager.py cloud_sync.py) do (
     if exist "%%F" (
         echo       ✅ %%F — mevcut
     ) else (
@@ -153,7 +153,17 @@ for %%F in (main_portal.py app_portal.py run_portal.py ai_progress.py daily_repo
 )
 
 :: monthly_report kod dosyaları kontrolü
-for %%F in (monthly_report\pdf_generator.py monthly_report\savings_engine.py monthly_report\data_merger.py monthly_report\hvac_history.py monthly_report\yoy_analyzer.py monthly_report\forecast_engine.py) do (
+for %%F in (monthly_report\pdf_generator.py monthly_report\savings_engine.py monthly_report\data_merger.py monthly_report\hvac_history.py monthly_report\yoy_analyzer.py monthly_report\forecast_engine.py monthly_report\daily_comparison.py monthly_report\training_data.py) do (
+    if exist "%%F" (
+        echo       ✅ %%F — mevcut
+    ) else (
+        echo       ❌ %%F — EKSİK!
+        set "HATA=1"
+    )
+)
+
+:: rules klasörü kod dosyaları kontrolü
+for %%F in (rules\location_config.py rules\temperature_cascade.py) do (
     if exist "%%F" (
         echo       ✅ %%F — mevcut
     ) else (
