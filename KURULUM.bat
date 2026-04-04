@@ -34,8 +34,8 @@ echo.
 REM pip guncelle
 python -m pip install --upgrade pip --quiet
 
-REM Kutuphaneleri yukle (Eklenen: scikit-learn, numpy, kaleido, xlsxwriter)
-pip install streamlit pandas plotly openpyxl xlrd fastapi uvicorn fpdf2 python-multipart kaleido scikit-learn numpy xlsxwriter --quiet
+REM Kutuphaneleri yukle (Eklenen: scikit-learn, numpy, kaleido, xlsxwriter, supabase)
+pip install streamlit pandas plotly openpyxl xlrd fastapi uvicorn fpdf2 python-multipart kaleido scikit-learn numpy xlsxwriter supabase --quiet
 
 if errorlevel 1 (
     echo [HATA] Kutuphane yukleme basarisiz!
