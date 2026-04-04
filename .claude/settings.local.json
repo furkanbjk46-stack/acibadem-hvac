@@ -14,7 +14,10 @@
       "Bash(tasklist)",
       "Bash(taskkill:*)",
       "Bash(cmd /c \"taskkill /F /IM python.exe\")",
-      "Bash(cmd /c \"taskkill /F /PID 12168 /PID 23004\" 2>&1)"
+      "Bash(cmd /c \"taskkill /F /PID 12168 /PID 23004\" 2>&1)",
+      "Bash(find . -newer .git/index -not -path ./.git/* -type f)",
+      "Bash(find . -not -path ./.git/* -type f -printf '%T+ %p\\\\n')",
+      "Bash(xargs grep:*)"
     ]
   }
 }
