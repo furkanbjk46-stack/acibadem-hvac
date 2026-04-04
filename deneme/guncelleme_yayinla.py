@@ -20,6 +20,7 @@ GUNCELLENECEK_DOSYALAR = [
     "daily_report.py",
     "monthly_summary_report.py",
     "location_manager.py",
+    "portal_watchdog.py",
     "monthly_report/pdf_generator.py",
     "monthly_report/savings_engine.py",
     "monthly_report/data_merger.py",
