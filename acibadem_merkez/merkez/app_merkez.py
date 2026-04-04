@@ -189,23 +189,24 @@ with tabs[0]:
         lok_name = LOK_NAMES.get(lok_id, lok_id.title())
         lok_df = df_all[df_all["lokasyon_id"] == lok_id].copy()
         
-        # Son sync bilgisi
+        # Son ping (heartbeat) bilgisi — her 5 dk bir gelen sinyal
         lok_info = next((l for l in lokasyonlar if l.get("lokasyon_id") == lok_id), {})
-        son_sync_str = str(lok_info.get("son_sync", "")).strip()
         
-        # Zaman bazlı gerçek online/offline kontrolü (2 saatten eskiyse offline say)
+        # Önce ping_zamani'na bak (yeni Heartbeat sistemi), yoksa son_sync'e düş
+        ping_str = str(lok_info.get("ping_zamani", "") or lok_info.get("son_sync", "")).strip()
+        
+        # Zaman bazlı gerçek online/offline kontrolü (10 dakikadan eskiyse offline say)
         durum = "offline"
-        if son_sync_str and son_sync_str != "Bilinmiyor":
+        if ping_str and ping_str != "Bilinmiyor":
             try:
-                # ISO parsing işlemi
-                son_sync_dt = pd.to_datetime(son_sync_str).tz_localize(None)
-                fark_saat = (datetime.now() - son_sync_dt).total_seconds() / 3600
-                if fark_saat < 2.0:
+                ping_dt = pd.to_datetime(ping_str).tz_localize(None)
+                fark_dakika = (datetime.now() - ping_dt).total_seconds() / 60
+                if fark_dakika < 10.0:
                     durum = "online"
             except Exception:
                 pass
                 
-        son_sync = son_sync_str if son_sync_str else "Bilinmiyor"
+        son_sinyal = ping_str if ping_str else "Bilinmiyor"
         
         with cols[i]:
             status_class = "status-online" if durum == "online" else "status-offline"
@@ -215,7 +216,7 @@ with tabs[0]:
             <div class='lokasyon-card'>
                 <h3>{lok_name} {status_icon}</h3>
                 <p>Toplam Kayıt: <strong>{len(lok_df)}</strong></p>
-                <p>Son Senkronizasyon: <strong>{son_sync[:16] if len(str(son_sync)) > 16 else son_sync}</strong></p>
+                <p>Son Sinyal (Ping): <strong>{son_sinyal[:16] if len(str(son_sinyal)) > 16 else son_sinyal}</strong></p>
             </div>
             """, unsafe_allow_html=True)
             

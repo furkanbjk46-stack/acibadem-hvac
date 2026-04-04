@@ -184,8 +184,77 @@ def sync_hvac_summary(client, lokasyon_id: str):
         return 0
 
 
+def send_heartbeat_and_check_ota(client, lokasyon_id: str):
+    """Her 5 dakikada bir 'Ben yasiyorum' sinyali gonder ve Yazilim Guncellemesi (OTA) var mi kontrol et."""
+    try:
+        from location_manager import get_manager
+        import urllib.request
+        import zipfile
+        
+        mgr = get_manager()
+        loc_config = mgr.get_location_config()
+        current_version = loc_config.get("local_version", "1.0")
+        
+        info = {
+            "lokasyon_id": lokasyon_id,
+            "isim": loc_config.get("name", lokasyon_id),
+            "ping_zamani": datetime.now().isoformat(),
+            "versiyon": current_version,
+            "durum": "online"
+        }
+        
+        # 1. Ping Sinyalini Gönder (Heartbeat) - Supabase'e isliyoruz
+        client.table("lokasyonlar").upsert(info, on_conflict="lokasyon_id").execute()
+        logger.debug(f"💓 Ping gonderildi: {lokasyon_id} (Versiyon: {current_version})")
+        
+        # 2. OTA Yazılım Güncelleme Kontrolü
+        # Merkezdeki ota_updates tablosunu sorguluyoruz.
+        try:
+            ota_res = client.table("ota_updates").select("*").eq("is_active", True).order("created_at", desc=True).limit(1).execute()
+            if ota_res.data:
+                latest_update = ota_res.data[0]
+                target_version = latest_update.get("version", "1.0")
+                download_url = latest_update.get("download_url", "")
+                
+                # Versiyon kiyaslamasi (Basit string/sayi mantigi)
+                target_v_num = float(target_version.replace("v", "")) if str(target_version).replace("v", "").replace(".", "").isdigit() else 1.0
+                curr_v_num = float(current_version.replace("v", "")) if str(current_version).replace("v", "").replace(".", "").isdigit() else 1.0
+                
+                if target_v_num > curr_v_num and download_url:
+                    logger.warning(f"🚀 YENI YAZILIM BULUNDU: v{target_version}! (Mevcut: v{current_version})")
+                    logger.warning("OTA İndirme başlatılıyor...")
+                    
+                    # Update islemi (Zip indir, cikar, config guncelle)
+                    zip_path = os.path.join(os.path.dirname(__file__), "update.zip")
+                    urllib.request.urlretrieve(download_url, zip_path)
+                    
+                    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                        # Ana klasore ac (mevcut dosyalari ezerek)
+                        zip_ref.extractall(os.path.dirname(__file__))
+                    
+                    # zip'i sil
+                    os.remove(zip_path)
+                    
+                    # Guncellenmis versiyonu kaydet
+                    loc_config["local_version"] = target_version
+                    mgr.save_config()
+                    
+                    logger.warning("✅ YAZILIM GÜNCELLENDİ! (Sistem bir sonraki analizde yeni ayarlari kullanacaktir)")
+                    
+                    # Taze gelen ayarlarla senkronizasyonu aninda tetikle
+                    run_sync()
+                    
+        except Exception as ota_e:
+            # Tablo henüz yoksa hata vermesin sessizce geçsin.
+            pass
+
+    except Exception as e:
+        # Ping basarisiz olsa bile sistemi durdurma
+        pass
+
+
 def sync_location_info(client, lokasyon_id: str):
-    """Lokasyon durum bilgisini güncelle"""
+    """Sadece buyuk data gonderiminde (Sync) son_sync zamanini gunceller."""
     try:
         from location_manager import get_manager
         mgr = get_manager()
@@ -228,29 +297,34 @@ def run_sync():
 
 
 def start_background_sync():
-    """Arka planda periyodik senkronizasyon başlat"""
+    """Arka planda sadece Heartbeat (Ping) ve OTA Update kontrolcüsünü çalıştır."""
     config = load_config()
     if not config:
         return
 
-    interval = config.get("sync_interval_minutes", 60) * 60  # dakika → saniye
-    auto_sync = config.get("auto_sync", True)
-
-    if not auto_sync:
-        logger.info("Otomatik senkronizasyon kapalı (supabase_config.json)")
+    client = get_supabase_client(config)
+    if not client:
         return
 
-    def _sync_loop():
-        while True:
-            try:
-                run_sync()
-            except Exception as e:
-                logger.error(f"Senkronizasyon döngüsü hatası: {e}")
-            time.sleep(interval)
+    lokasyon_id = config.get("lokasyon_id", "bilinmeyen")
+    interval = 300  # 5 dakika (Heartbeat hızı)
 
-    t = threading.Thread(target=_sync_loop, daemon=True, name="cloud-sync")
+    auto_sync = config.get("auto_sync", True)
+    if not auto_sync:
+        logger.info("Bulut erisimi kapali (supabase_config.json)")
+        return
+
+    def _heartbeat_loop():
+        # İlk açılışta ping
+        send_heartbeat_and_check_ota(client, lokasyon_id)
+        while True:
+            time.sleep(interval)
+            send_heartbeat_and_check_ota(client, lokasyon_id)
+
+    # Artık saat başı data yükleme yok, sadece Ping ve OTA var!
+    t = threading.Thread(target=_heartbeat_loop, daemon=True, name="cloud-heartbeat")
     t.start()
-    logger.info(f"🔄 Arka plan senkronizasyonu başlatıldı (her {interval // 60} dakika)")
+    logger.info(f"💓 Arka plan Ping/OTA Heartbeat başlatıldı (her 5 dakika)")
 
 
 # ============ Manuel çalıştırma ============
