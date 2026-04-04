@@ -296,6 +296,21 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# --- FAZ 7: MANUEL SYNC BUTONU ---
+_sync_col1, _sync_col2 = st.columns([4, 1])
+with _sync_col2:
+    if st.button("🔄 Merkeze Gönder", key="manuel_sync_btn", help="Verileri şimdi Genel Merkeze gönder"):
+        try:
+            from cloud_sync import run_sync
+            with st.spinner("📡 Senkronizasyon yapılıyor..."):
+                success = run_sync()
+            if success:
+                st.success("✅ Veriler Merkeze başarıyla gönderildi!")
+            else:
+                st.warning("⚠️ Senkronizasyon ayarlanmamış (supabase_config.json)")
+        except Exception as e:
+            st.error(f"❌ Senkronizasyon hatası: {e}")
+# ---
 DATA_FILE = _loc_mgr.get_data_path("energy_data.csv")
 
 _energy_schema = _loc_config.get("energy_schema", {})
@@ -520,6 +535,15 @@ def persist_df(df: pd.DataFrame) -> None:
     out["Tarih"] = out["Tarih"].astype(str)
     out.to_csv(DATA_FILE, index=False)
     load_data.clear()
+
+    # --- FAZ 7: KAYIT ANINDA BULUTA TETIKLE (INSTANT SYNC) ---
+    try:
+        from cloud_sync import run_sync
+        import threading
+        t = threading.Thread(target=run_sync, daemon=True, name="cloud-instant-sync")
+        t.start()
+    except Exception:
+        pass
 
 
 def upsert_by_date(df_new: pd.DataFrame) -> tuple[int, int]:
