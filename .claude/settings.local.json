@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST http://localhost:8005/api/recommend_json -H \"Content-Type: application/json\" -d '{\"\"\"\"rows\"\"\"\":[{\"\"\"\"Type\"\"\"\":\"\"\"\"FCU\"\"\"\",\"\"\"\"Name\"\"\"\":\"\"\"\"Test-FCU-1\"\"\"\",\"\"\"\"Location\"\"\"\":\"\"\"\"Kat1\"\"\"\",\"\"\"\"Mode\"\"\"\":\"\"\"\"COOL\"\"\"\",\"\"\"\"Supply \\(°C\\)\"\"\"\":15,\"\"\"\"Return \\(°C\\)\"\"\"\":12,\"\"\"\"Inlet \\(°C\\)\"\"\"\":7,\"\"\"\"Outlet \\(°C\\)\"\"\"\":12,\"\"\"\"Room \\(°C\\)\"\"\"\":24,\"\"\"\"Set \\(°C\\)\"\"\"\":22,\"\"\"\"Cool Valve \\(%\\)\"\"\"\":50}],\"\"\"\"oat\"\"\"\":\"\"\"\"7\"\"\"\",\"\"\"\"chiller_load_percent\"\"\"\":\"\"\"\"85\"\"\"\",\"\"\"\"chiller_cop\"\"\"\":\"\"\"\"2.1\"\"\"\"}')",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(list\\(d.keys\\(\\)\\)\\); recs=d.get\\(''''recs_table'''',[]\\); print\\(''''Total recs:'''', len\\(recs\\)\\); [print\\(r.get\\(''''Name''''\\), r.get\\(''''Rule''''\\)\\) for r in recs]\")",
+      "Bash(curl:*)",
+      "Bash(python -c \"from main_portal import INSTRUCTION_GUIDE; r=INSTRUCTION_GUIDE.get\\(''SEASONAL_CHILLER_TRANSITION'',{}\\); print\\(''Title:'', r.get\\(''title''\\)\\); print\\(''Severity:'', r.get\\(''severity''\\)\\); print\\(''Score:'', r.get\\(''score''\\)\\); print\\(''Steps count:'', len\\(r.get\\(''steps'',[]\\)\\)\\)\")",
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(taskkill /F /IM python.exe /T)",
+      "Bash(cmd /c \"taskkill /F /IM python.exe /T\")",
+      "Bash(cmd /c \"cd /d C:\\\\Users\\\\furka\\\\Downloads\\\\acibadem_hvac_patch_air_water_split\\\\acıbadem && set PYTHONIOENCODING=utf-8 && python -m py_compile main_portal.py && echo main_portal.py OK && python -m py_compile monthly_report\\\\hvac_history.py && echo hvac_history.py OK && python -m py_compile rules\\\\location_config.py && echo location_config.py OK\" 2>&1)",
+      "Bash(ls C:/Users/furka/Downloads/acibadem_hvac_patch_air_water_split/acıbadem/portal_run*.log)",
+      "Bash(tasklist)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c \"taskkill /F /IM python.exe\")",
+      "Bash(cmd /c \"taskkill /F /PID 12168 /PID 23004\" 2>&1)",
+      "Bash(find . -newer .git/index -not -path ./.git/* -type f)",
+      "Bash(find . -not -path ./.git/* -type f -printf '%T+ %p\\\\n')",
+      "Bash(xargs grep:*)",
+      "Bash(echo $USERPROFILE)",
+      "Read(//c/Users/furka/**)",
+      "Bash(cmd /c 'echo %USERPROFILE%')",
+      "Bash(cmd /c 'dir /b C:\\\\Users\\\\furka\\\\OneDrive')",
+      "Bash(DESKTOP=\"/c/Users/furka/OneDrive/Masaüstü\")",
+      "Bash(SRC=\"/c/Users/furka/Downloads/acibadem_hvac_patch_air_water_split/.claude/worktrees/priceless-merkle\")",
+      "Bash(DEST=\"$DESKTOP/acibadem_hvac_deneme\")",
+      "Bash(__NEW_LINE_094a766b1ee1c9e9__ cp:*)",
+      "Bash(echo \"Kopyalama tamamlandi: $DEST\")",
+      "Bash(grep -E \"\\\\.py$\")",
+      "Bash(netstat -ano)",
+      "Bash(timeout 8 python -c \":*)",
+      "Bash(timeout 10 python -c \":*)",
+      "Bash(timeout 12 python -c \":*)"
+    ]
+  }
+}

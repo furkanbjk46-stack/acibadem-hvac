@@ -1,0 +1,14 @@
+{
+  "daily": {
+    "filepath": "C:\\Users\\furka\\Downloads\\acibadem_hvac_patch_air_water_split\\acıbadem\\daily_reports\\gunluk_rapor_20260403.pdf",
+    "filename": "gunluk_rapor_20260403.pdf",
+    "timestamp": "04.04.2026 17:20",
+    "seen": false
+  },
+  "monthly": {
+    "filepath": "C:\\Users\\furka\\Downloads\\acibadem_hvac_patch_air_water_split\\acıbadem\\monthly_reports_summary\\aylik_rapor_2026_01_Ocak.pdf",
+    "filename": "aylik_rapor_2026_01_Ocak.pdf",
+    "timestamp": "21.02.2026 21:58",
+    "seen": true
+  }
+}
