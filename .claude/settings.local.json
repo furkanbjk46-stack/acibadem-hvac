@@ -17,7 +17,16 @@
       "Bash(cmd /c \"taskkill /F /PID 12168 /PID 23004\" 2>&1)",
       "Bash(find . -newer .git/index -not -path ./.git/* -type f)",
       "Bash(find . -not -path ./.git/* -type f -printf '%T+ %p\\\\n')",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(echo $USERPROFILE)",
+      "Read(//c/Users/furka/**)",
+      "Bash(cmd /c 'echo %USERPROFILE%')",
+      "Bash(cmd /c 'dir /b C:\\\\Users\\\\furka\\\\OneDrive')",
+      "Bash(DESKTOP=\"/c/Users/furka/OneDrive/Masaüstü\")",
+      "Bash(SRC=\"/c/Users/furka/Downloads/acibadem_hvac_patch_air_water_split/.claude/worktrees/priceless-merkle\")",
+      "Bash(DEST=\"$DESKTOP/acibadem_hvac_deneme\")",
+      "Bash(__NEW_LINE_094a766b1ee1c9e9__ cp:*)",
+      "Bash(echo \"Kopyalama tamamlandi: $DEST\")"
     ]
   }
 }

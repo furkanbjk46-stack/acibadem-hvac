@@ -26,7 +26,7 @@ echo.
 
 REM Proje klasorune git
 cd /d "%~dp0"
-cd acıbadem
+cd deneme
 
 echo Gerekli kutuphaneler yukleniyor...
 echo.

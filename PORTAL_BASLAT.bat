@@ -12,7 +12,7 @@ echo Sunucular baslatiliyor...
 echo.
 
 cd /d "%~dp0"
-cd acıbadem
+cd deneme
 
 echo Tarayici aciliyor (5 saniye bekleniyor)...
 timeout /t 5 /nobreak > nul
