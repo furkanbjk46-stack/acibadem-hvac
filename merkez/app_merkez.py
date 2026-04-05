@@ -120,10 +120,10 @@ def fetch_energy(url, key):
             for col in df.columns:
                 if col not in ["id","lokasyon_id","Tarih","Kar_Eritme_Aktif"]:
                     df[col] = pd.to_numeric(df[col], errors="coerce")
-            return df
+            return df, None
     except Exception as e:
-        st.error(f"Veri hatası: {e}")
-    return pd.DataFrame()
+        return pd.DataFrame(), str(e)
+    return pd.DataFrame(), None
 
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_lokasyonlar(url, key):
@@ -171,10 +171,14 @@ if not bagli:
     st.error("⚠️ Supabase bağlantısı yok. merkez_config.json dosyasını kontrol edin.")
     st.stop()
 
-df_all       = fetch_energy(url, key)
+df_all, _fetch_err = fetch_energy(url, key)
 lokasyonlar  = fetch_lokasyonlar(url, key)
 lok_dict     = {l["lokasyon_id"]: l for l in lokasyonlar}
 aktif_loklar = df_all["lokasyon_id"].unique().tolist() if not df_all.empty else []
+
+# Bağlantı hatası varsa üstte küçük uyarı göster (sayfayı durdurma)
+if _fetch_err:
+    st.warning(f"⚠️ Enerji verisi alınamadı — Supabase erişilemiyor. Proje duraklatılmış olabilir. Hata: `{_fetch_err[:80]}`")
 
 # ── Online durumu hesapla ──
 def online_bilgi(lok_id):
@@ -423,12 +427,18 @@ with sag:
                   </div>
                 </div>
                 """, unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="alrt-y">📡 Veri bekleniyor...</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="alrt-y">📡 Sunucu bağlantısı kurulamadı</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
     # ── 30 Günlük Trend Mini ──
     st.markdown('<div class="sec">📈 30G ENERJİ TRENDİ</div>', unsafe_allow_html=True)
-    if not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
+    if df_all.empty or "Toplam_Hastane_Tuketim_kWh" not in df_all.columns:
+        st.markdown('<div class="alrt-y">📡 Sunucu bağlantısı kurulamadı</div>', unsafe_allow_html=True)
+    elif not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
         trend = df_all[df_all["Tarih"] >= (now - timedelta(days=30))].copy()
         fig_mini = go.Figure()
         for lok_id in trend["lokasyon_id"].unique():
