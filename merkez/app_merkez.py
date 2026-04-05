@@ -78,6 +78,18 @@ st.markdown("""
     }
     .status-online { color: #10b981; font-weight: 800; }
     .status-offline { color: #ef4444; font-weight: 800; }
+
+    /* Dataframe / tablo koyu tema */
+    [data-testid="stDataFrame"] { background: rgba(255,255,255,0.05) !important; border-radius: 10px; }
+    [data-testid="stDataFrame"] iframe { background: transparent !important; }
+    .dvn-scroller { background: transparent !important; }
+    [data-testid="stDataFrame"] * { color: #ffffff !important; }
+    thead tr th { background: rgba(255,255,255,0.15) !important; color: #ffffff !important; font-weight: 700 !important; }
+    tbody tr td { background: rgba(255,255,255,0.04) !important; color: #ffffff !important; }
+    tbody tr:hover td { background: rgba(255,255,255,0.1) !important; }
+    [data-testid="stTable"] table { background: rgba(255,255,255,0.05) !important; border-radius: 10px; }
+    [data-testid="stTable"] th { background: rgba(255,255,255,0.15) !important; color: #ffffff !important; }
+    [data-testid="stTable"] td { background: transparent !important; color: #ffffff !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -458,22 +470,54 @@ with tabs[3]:
         
         if "Toplam_Hastane_Tuketim_kWh" in df_bench.columns:
             monthly = df_bench.groupby(["Ay", "Lokasyon"])["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
-            
-            # Pivot tablo
-            pivot = monthly.pivot(index="Ay", columns="Lokasyon", values="Toplam_Hastane_Tuketim_kWh").fillna(0)
-            
-            if len(pivot.columns) >= 2:
-                st.dataframe(pivot.style.format("{:,.0f}"), use_container_width=True)
-                
-                # Fark hesapla
-                lok_cols = list(pivot.columns)
-                pivot["Fark (kWh)"] = pivot[lok_cols[0]] - pivot[lok_cols[1]]
-                pivot["Verimli Olan"] = pivot["Fark (kWh)"].apply(
-                    lambda x: lok_cols[1] if x > 0 else lok_cols[0]
+
+            # Grafik
+            fig_bench = px.bar(
+                monthly, x="Ay", y="Toplam_Hastane_Tuketim_kWh", color="Lokasyon",
+                barmode="group",
+                labels={"Toplam_Hastane_Tuketim_kWh": "Toplam Tüketim (kWh)", "Ay": ""},
+                color_discrete_sequence=["#6366f1", "#f59e0b"],
+                template="plotly_dark",
+            )
+            fig_bench.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                legend=dict(font=dict(color="white")), font=dict(color="white"),
+                height=350,
+            )
+            st.plotly_chart(fig_bench, use_container_width=True)
+
+            # Pivot tablo — Plotly Table ile (koyu tema uyumlu)
+            pivot = monthly.pivot(index="Ay", columns="Lokasyon", values="Toplam_Hastane_Tuketim_kWh").fillna(0).reset_index()
+            lok_cols = [c for c in pivot.columns if c != "Ay"]
+
+            if len(lok_cols) >= 2:
+                pivot["Fark (kWh)"] = (pivot[lok_cols[0]] - pivot[lok_cols[1]]).round(0)
+                pivot["Verimli Olan"] = pivot["Fark (kWh)"].apply(lambda x: lok_cols[1] if x > 0 else lok_cols[0])
+
+                fig_tablo = go.Figure(data=[go.Table(
+                    header=dict(
+                        values=["<b>Ay</b>"] + [f"<b>{c}</b>" for c in lok_cols] + ["<b>Fark (kWh)</b>", "<b>Verimli Olan</b>"],
+                        fill_color="rgba(99,102,241,0.6)",
+                        font=dict(color="white", size=13),
+                        align="center", height=36,
+                    ),
+                    cells=dict(
+                        values=[
+                            pivot["Ay"],
+                            *[pivot[c].apply(lambda x: f"{x:,.0f}") for c in lok_cols],
+                            pivot["Fark (kWh)"].apply(lambda x: f"{abs(x):,.0f}"),
+                            pivot["Verimli Olan"],
+                        ],
+                        fill_color=[["rgba(255,255,255,0.05)", "rgba(255,255,255,0.08)"] * len(pivot)],
+                        font=dict(color="white", size=12),
+                        align="center", height=32,
+                    )
+                )])
+                fig_tablo.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=10, b=10, l=0, r=0), height=350
                 )
-                
                 st.markdown("#### 🏆 Aylık Verimlilik Sıralaması")
-                st.dataframe(pivot[["Fark (kWh)", "Verimli Olan"]], use_container_width=True)
+                st.plotly_chart(fig_tablo, use_container_width=True)
     else:
         st.info("Benchmark için en az 2 lokasyondan veri gerekiyor.")
 
