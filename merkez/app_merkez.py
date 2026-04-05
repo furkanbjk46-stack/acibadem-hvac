@@ -269,8 +269,6 @@ with sol:
         kwh      = dun_kwh(lok_id)
         renk     = lok_info["renk"]
         spark    = son7_kwh(lok_id)
-        hvac_pct = hvac_yuzdesi(lok_id)
-
         if fark_dk is None:
             card_cls   = "nk nk-gray"
             durum_renk = "#6b7280"
@@ -288,7 +286,6 @@ with sol:
             dot_shadow = f"box-shadow:0 0 8px {durum_renk};"
 
         kwh_str  = f"{kwh:,.0f}" if kwh else "—"
-        hvac_str = f"%{hvac_pct:.0f}" if hvac_pct is not None else "—"
         svg      = sparkline_svg(spark, renk) if spark else sparkline_svg([], renk)
 
         # kWh/m² hesapla
@@ -325,17 +322,12 @@ with sol:
             </div>
             <div>{svg}</div>
           </div>
-          <!-- Alt satır: verimlilik + hvac yük -->
+          <!-- Alt satır: verimlilik -->
           <div style="display:flex; gap:6px;">
             <div style="flex:1; background:rgba(0,212,255,0.05); border-radius:6px; padding:5px 8px;
                         border:1px solid rgba(0,212,255,0.08);">
-              <div style="font-size:8px; color:rgba(150,210,255,0.4);">kWh/m²</div>
-              <div style="font-family:'Orbitron',sans-serif; font-size:12px; color:#00d4ff; font-weight:700;">{verim_str}</div>
-            </div>
-            <div style="flex:1; background:rgba(0,212,255,0.05); border-radius:6px; padding:5px 8px;
-                        border:1px solid rgba(0,212,255,0.08);">
-              <div style="font-size:8px; color:rgba(150,210,255,0.4);">HVAC Yük</div>
-              <div style="font-family:'Orbitron',sans-serif; font-size:12px; color:{renk}; font-weight:700;">{hvac_str}</div>
+              <div style="font-size:8px; color:rgba(150,210,255,0.4); text-transform:uppercase; letter-spacing:1px;">Günlük kWh/m²</div>
+              <div style="font-family:'Orbitron',sans-serif; font-size:13px; color:#00d4ff; font-weight:700;">{verim_str}</div>
             </div>
           </div>
         </div>
