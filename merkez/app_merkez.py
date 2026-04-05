@@ -164,6 +164,12 @@ url  = config.get("supabase_url","")
 key  = config.get("supabase_key","")
 bagli = bool(url and "BURAYA" not in url)
 
+# Config'den m² değerlerini yükle (yoksa HASTANELER default'u kullan)
+m2_config = config.get("m2_degerler", {})
+for lok_id in HASTANELER:
+    if lok_id in m2_config:
+        HASTANELER[lok_id]["m2"] = int(m2_config[lok_id])
+
 now  = datetime.now()
 dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
@@ -602,7 +608,7 @@ st.markdown(f"""
 with st.expander("⚙️  Ayarlar", expanded=False):
     st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
 
-    ayar_tab1, ayar_tab2, ayar_tab3 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler"])
+    ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)"])
 
     # ── Bağlantı ──
     with ayar_tab1:
@@ -662,3 +668,27 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                   <span style="font-size:10px; color:rgba(150,210,255,0.45);">Son ping: {ping}</span>
                 </div>
                 """, unsafe_allow_html=True)
+
+    # ── Alan (m²) ──
+    with ayar_tab4:
+        st.markdown("**Lokasyon Alan Bilgileri (m²)**")
+        st.caption("Yıllık güncellemeler için buradan değiştirebilirsiniz. Kaydetmek için butona basın.")
+        yeni_m2 = {}
+        for lok_id, lok_info in HASTANELER.items():
+            mevcut_m2 = lok_info.get("m2", 10000)
+            yeni_m2[lok_id] = st.number_input(
+                f"🏥 {lok_info['isim']}",
+                min_value=100,
+                max_value=500000,
+                value=mevcut_m2,
+                step=100,
+                key=f"m2_{lok_id}",
+                help=f"Mevcut: {mevcut_m2:,} m²"
+            )
+        if st.button("💾 m² Değerlerini Kaydet", key="btn_m2"):
+            cfg_yeni = config.copy()
+            cfg_yeni["m2_degerler"] = {k: int(v) for k, v in yeni_m2.items()}
+            os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
+            st.success("✅ m² değerleri kaydedildi. Sayfayı yenileyin.")
