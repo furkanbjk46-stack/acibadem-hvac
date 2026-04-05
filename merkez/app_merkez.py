@@ -360,38 +360,73 @@ with merkez:
 with sag:
     # ── Canlı Uyarılar ──
     st.markdown('<div class="sec">🚨 CANLI UYARILAR</div>', unsafe_allow_html=True)
-    uyarilar = []
 
+    # Her lokasyon için uyarı listesi: {lok_id: [(severity, msg), ...]}
+    lok_uyari_map = {lok_id: [] for lok_id in HASTANELER}
+
+    # 1) Bakım kartı arızaları (Supabase lokasyonlar.bakim_ozet)
+    for lok_id, lok_info in HASTANELER.items():
+        ld = lok_dict.get(lok_id, {})
+        ozet = ld.get("bakim_ozet") or {}
+        if isinstance(ozet, str):
+            try: ozet = json.loads(ozet)
+            except: ozet = {}
+        ariza  = ozet.get("toplam_ariza", 0)
+        bakim  = ozet.get("toplam_bakim", 0)
+        isim   = lok_info["kisa"]
+        if ariza > 0:
+            arizali = ", ".join(ozet.get("arizali_cihazlar", [])[:2])
+            lok_uyari_map[lok_id].append(("r", f"🔴 {isim}: {ariza} ARIZALI bileşen — {arizali}"))
+        if bakim > 0:
+            lok_uyari_map[lok_id].append(("y", f"🟡 {isim}: {bakim} bileşen bakımda"))
+
+    # 2) Enerji verisi uyarıları
     if not df_all.empty:
         son_gun = df_all[df_all["Tarih"].dt.strftime("%Y-%m-%d") == dun]
         for lok_id in aktif_loklar:
-            isim = HASTANELER.get(lok_id,{}).get("kisa", lok_id)
-            lok_son = son_gun[son_gun["lokasyon_id"]==lok_id]
+            isim = HASTANELER.get(lok_id, {}).get("kisa", lok_id)
+            lok_son = son_gun[son_gun["lokasyon_id"] == lok_id]
             if lok_son.empty:
-                uyarilar.append(("r", f"⚠️ {isim}: Bugün veri yok"))
+                lok_uyari_map.setdefault(lok_id, []).append(("r", f"⚠️ {isim}: Bugün veri yok"))
                 continue
             if "Chiller_Set_Temp_C" in lok_son.columns:
                 cs = lok_son["Chiller_Set_Temp_C"].mean()
                 if pd.notna(cs) and cs > 9:
-                    uyarilar.append(("y", f"🌡️ {isim}: Set yüksek ({cs:.1f}°C)"))
+                    lok_uyari_map[lok_id].append(("y", f"🌡️ {isim}: Chiller set yüksek ({cs:.1f}°C)"))
                 elif pd.notna(cs) and cs < 6:
-                    uyarilar.append(("y", f"❄️ {isim}: Set düşük ({cs:.1f}°C)"))
+                    lok_uyari_map[lok_id].append(("y", f"❄️ {isim}: Chiller set düşük ({cs:.1f}°C)"))
             if "Chiller_Load_Percent" in lok_son.columns:
                 cl = lok_son["Chiller_Load_Percent"].mean()
                 if pd.notna(cl) and cl > 90:
-                    uyarilar.append(("r", f"🔥 {isim}: Chiller kritik (%{cl:.0f})"))
+                    lok_uyari_map[lok_id].append(("r", f"🔥 {isim}: Chiller kritik yük (%{cl:.0f})"))
 
+    # 3) Çevrimdışı uyarıları
     for lok_id, lok_info in HASTANELER.items():
         online, fark_dk = online_bilgi(lok_id)
         if fark_dk is not None and not online:
-            uyarilar.append(("r", f"🔴 {lok_info['kisa']}: Çevrimdışı ({int(fark_dk)}dk)"))
+            lok_uyari_map[lok_id].append(("r", f"🔴 {lok_info['kisa']}: Çevrimdışı ({int(fark_dk)}dk)"))
 
-    if not uyarilar:
+    # Lokasyonları arıza sayısına göre sırala (en fazla arıza önce)
+    def lok_ariza_skoru(lok_id):
+        ld = lok_dict.get(lok_id, {})
+        ozet = ld.get("bakim_ozet") or {}
+        if isinstance(ozet, str):
+            try: ozet = json.loads(ozet)
+            except: ozet = {}
+        return ozet.get("toplam_sorun", 0) * 10 + len(lok_uyari_map.get(lok_id, []))
+
+    sirali_loklar = sorted(HASTANELER.keys(), key=lok_ariza_skoru, reverse=True)
+
+    # Tüm uyarıları sıralı göster
+    tum_uyarilar = []
+    for lok_id in sirali_loklar:
+        tum_uyarilar.extend(lok_uyari_map.get(lok_id, []))
+
+    if not tum_uyarilar:
         st.markdown('<div class="alrt-g">✅ Tüm sistemler normal</div>', unsafe_allow_html=True)
     else:
-        for sev, msg in uyarilar[:8]:
-            cls = f"alrt-{sev}"
-            st.markdown(f'<div class="{cls}">{msg}</div>', unsafe_allow_html=True)
+        for sev, msg in tum_uyarilar[:10]:
+            st.markdown(f'<div class="alrt-{sev}">{msg}</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 

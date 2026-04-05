@@ -247,13 +247,52 @@ def check_and_apply_update(client, lokasyon_id: str):
         logger.error(f"Güncelleme kontrol hatası: {e}")
 
 
+def get_bakim_ozet() -> dict:
+    """configs/maintenance_cards.json dosyasından arıza özetini çıkar."""
+    try:
+        mc_file = os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
+        if not os.path.exists(mc_file):
+            return {}
+        with open(mc_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        cards = data.get("cards", {})
+        toplam_ariza = 0
+        toplam_bakim = 0
+        arizali_cihazlar = []
+        bakimda_cihazlar = []
+        for cihaz, bilesенler in cards.items():
+            cihaz_ariza = sum(1 for v in bilesенler.values() if v == "FAULTY")
+            cihaz_bakim = sum(1 for v in bilesенler.values() if v == "MAINTENANCE")
+            toplam_ariza += cihaz_ariza
+            toplam_bakim += cihaz_bakim
+            if cihaz_ariza > 0:
+                arizali_cihazlar.append(f"{cihaz} ({cihaz_ariza} arıza)")
+            if cihaz_bakim > 0:
+                bakimda_cihazlar.append(f"{cihaz} ({cihaz_bakim} bakım)")
+        return {
+            "toplam_ariza": toplam_ariza,
+            "toplam_bakim": toplam_bakim,
+            "toplam_sorun": toplam_ariza + toplam_bakim,
+            "cihaz_sayisi": len(cards),
+            "arizali_cihazlar": arizali_cihazlar,
+            "bakimda_cihazlar": bakimda_cihazlar,
+            "son_guncelleme": data.get("last_updated", ""),
+        }
+    except Exception as e:
+        logger.warning(f"Bakım kartı okuma hatası: {e}")
+        return {}
+
+
 def send_heartbeat(client, lokasyon_id: str):
     """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
     try:
-        client.table("lokasyonlar").upsert(
-            {"lokasyon_id": lokasyon_id, "ping_zamani": datetime.now().isoformat(), "durum": "online"},
-            on_conflict="lokasyon_id"
-        ).execute()
+        payload = {
+            "lokasyon_id": lokasyon_id,
+            "ping_zamani": datetime.now().isoformat(),
+            "durum": "online",
+            "bakim_ozet": get_bakim_ozet(),
+        }
+        client.table("lokasyonlar").upsert(payload, on_conflict="lokasyon_id").execute()
         logger.debug(f"💓 Heartbeat gönderildi: {lokasyon_id}")
     except Exception as e:
         logger.warning(f"Heartbeat hatası: {e}")
