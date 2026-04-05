@@ -1,100 +1,173 @@
 # app_merkez.py
-# Acıbadem Genel Merkez — Enerji & HVAC Merkezi Dashboard
-# Supabase üzerinden tüm lokasyonların verilerini gösterir
+# Acıbadem Genel Merkez — Enerji & HVAC Komuta Merkezi
+# Koyu Mavi / Neon Tasarım
 
 from __future__ import annotations
-import os
-import sys
-import json
+import os, sys, json
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 st.set_page_config(
-    page_title="Acıbadem Genel Merkez — Enerji Komuta Merkezi",
-    page_icon="🏢",
-    layout="wide"
+    page_title="Acıbadem GM — Enerji Komuta Merkezi",
+    page_icon="🏥",
+    layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
-# ============ CSS ============
+# ============ TEMA / CSS ============
 st.markdown("""
 <style>
-    .stApp {
-        background: linear-gradient(-45deg, #0a0e1a, #1a0a2e, #0a1628, #2a1a3e);
-        background-size: 400% 400%;
-        animation: gradient 20s ease infinite;
-    }
-    @keyframes gradient {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    h1, h2, h3, h4, h5, h6 { color: #ffffff !important; }
-    p, span, div, label { color: rgba(255,255,255,0.9) !important; }
-    
-    .stTabs [data-baseweb="tab-panel"] {
-        background: rgba(255,255,255,0.08);
-        backdrop-filter: blur(20px);
-        border-radius: 16px;
-        padding: 24px;
-        border: 1px solid rgba(255,255,255,0.15);
-    }
-    .stTabs [data-baseweb="tab-list"] {
-        background: rgba(255,255,255,0.08);
-        border-radius: 12px;
-        padding: 8px;
-        gap: 8px;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background: transparent;
-        color: rgba(255,255,255,0.7);
-        border-radius: 8px;
-        font-weight: 600;
-    }
-    .stTabs [aria-selected="true"] {
-        background: rgba(255,255,255,0.2) !important;
-        color: #ffffff !important;
-    }
-    [data-testid="stMetricValue"] { color: #ffffff !important; font-size: 28px !important; font-weight: 800 !important; }
-    [data-testid="stMetricLabel"] { color: rgba(255,255,255,0.7) !important; }
-    [data-testid="stMetricDelta"] { color: rgba(255,255,255,0.9) !important; }
-    
-    .stButton > button {
-        background: linear-gradient(135deg, #6b21a8, #9333ea);
-        color: white; border: none; border-radius: 10px; font-weight: 700;
-    }
-    .stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(147,51,234,0.4); }
-    .stButton > button p, .stButton > button span { color: #ffffff !important; }
-    
-    .lokasyon-card {
-        background: rgba(255,255,255,0.08);
-        backdrop-filter: blur(20px);
-        border-radius: 16px;
-        padding: 20px;
-        border: 1px solid rgba(255,255,255,0.15);
-        margin-bottom: 16px;
-    }
-    .status-online { color: #10b981; font-weight: 800; }
-    .status-offline { color: #ef4444; font-weight: 800; }
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
 
-    /* Dataframe / tablo koyu tema */
-    [data-testid="stDataFrame"] { background: rgba(255,255,255,0.05) !important; border-radius: 10px; }
-    [data-testid="stDataFrame"] iframe { background: transparent !important; }
-    .dvn-scroller { background: transparent !important; }
-    [data-testid="stDataFrame"] * { color: #ffffff !important; }
-    thead tr th { background: rgba(255,255,255,0.15) !important; color: #ffffff !important; font-weight: 700 !important; }
-    tbody tr td { background: rgba(255,255,255,0.04) !important; color: #ffffff !important; }
-    tbody tr:hover td { background: rgba(255,255,255,0.1) !important; }
-    [data-testid="stTable"] table { background: rgba(255,255,255,0.05) !important; border-radius: 10px; }
-    [data-testid="stTable"] th { background: rgba(255,255,255,0.15) !important; color: #ffffff !important; }
-    [data-testid="stTable"] td { background: transparent !important; color: #ffffff !important; }
+html, body, [data-testid="stAppViewContainer"] {
+    background: #020b18 !important;
+}
+[data-testid="stAppViewContainer"] {
+    background: radial-gradient(ellipse at 20% 50%, #0a1628 0%, #020b18 60%, #050d1f 100%) !important;
+}
+[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="stSidebar"] { background: #020b18 !important; }
+
+/* Genel metin */
+h1,h2,h3,h4,h5,h6 { color: #e0f2fe !important; font-family: 'Orbitron', sans-serif !important; }
+p, span, div, label { color: rgba(200,230,255,0.85) !important; font-family: 'Inter', sans-serif !important; }
+
+/* Metrik kartlar */
+[data-testid="stMetricValue"] { color: #00d4ff !important; font-size: 26px !important; font-weight: 800 !important; font-family: 'Orbitron', sans-serif !important; text-shadow: 0 0 20px rgba(0,212,255,0.6) !important; }
+[data-testid="stMetricLabel"] { color: rgba(150,210,255,0.8) !important; font-size: 11px !important; letter-spacing: 1px !important; text-transform: uppercase !important; }
+[data-testid="stMetricDelta"] { color: #10b981 !important; }
+[data-testid="metric-container"] {
+    background: linear-gradient(135deg, rgba(0,30,60,0.8), rgba(0,15,40,0.9)) !important;
+    border: 1px solid rgba(0,212,255,0.25) !important;
+    border-radius: 14px !important;
+    padding: 16px !important;
+    box-shadow: 0 0 20px rgba(0,212,255,0.08), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+}
+
+/* Tab stili */
+[data-baseweb="tab-list"] {
+    background: rgba(0,20,50,0.6) !important;
+    border-radius: 12px !important;
+    padding: 6px !important;
+    border: 1px solid rgba(0,212,255,0.15) !important;
+    gap: 4px !important;
+}
+[data-baseweb="tab"] {
+    background: transparent !important;
+    color: rgba(150,210,255,0.7) !important;
+    border-radius: 8px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+}
+[aria-selected="true"] {
+    background: linear-gradient(135deg, rgba(0,100,200,0.4), rgba(0,212,255,0.2)) !important;
+    color: #00d4ff !important;
+    box-shadow: 0 0 12px rgba(0,212,255,0.3) !important;
+}
+[data-baseweb="tab-panel"] {
+    background: rgba(0,15,40,0.4) !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(0,212,255,0.1) !important;
+    padding: 20px !important;
+}
+
+/* Buton */
+.stButton > button {
+    background: linear-gradient(135deg, #0066cc, #00d4ff) !important;
+    color: #000 !important; font-weight: 700 !important;
+    border: none !important; border-radius: 10px !important;
+    box-shadow: 0 0 15px rgba(0,212,255,0.4) !important;
+}
+.stButton > button:hover { transform: translateY(-2px) !important; box-shadow: 0 0 25px rgba(0,212,255,0.6) !important; }
+
+/* Select / input */
+[data-baseweb="select"] { background: rgba(0,20,50,0.8) !important; border: 1px solid rgba(0,212,255,0.3) !important; border-radius: 8px !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #020b18; }
+::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 4px; }
+
+.neon-card {
+    background: linear-gradient(135deg, rgba(0,30,70,0.85), rgba(0,15,45,0.95));
+    border: 1px solid rgba(0,212,255,0.25);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 0 25px rgba(0,212,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.neon-card-online {
+    border-color: rgba(16,185,129,0.5) !important;
+    box-shadow: 0 0 20px rgba(16,185,129,0.1) !important;
+}
+.neon-card-offline {
+    border-color: rgba(239,68,68,0.5) !important;
+    box-shadow: 0 0 20px rgba(239,68,68,0.1) !important;
+}
+.header-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: #00d4ff;
+    text-shadow: 0 0 30px rgba(0,212,255,0.7);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+.header-sub {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: rgba(150,210,255,0.6);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+.alert-red {
+    background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.08));
+    border: 1px solid rgba(239,68,68,0.4);
+    border-radius: 10px; padding: 10px 14px; margin: 4px 0;
+    color: #fca5a5 !important;
+    font-size: 13px;
+}
+.alert-yellow {
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.08));
+    border: 1px solid rgba(245,158,11,0.4);
+    border-radius: 10px; padding: 10px 14px; margin: 4px 0;
+    color: #fcd34d !important;
+    font-size: 13px;
+}
+.alert-green {
+    background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.08));
+    border: 1px solid rgba(16,185,129,0.4);
+    border-radius: 10px; padding: 10px 14px; margin: 4px 0;
+    color: #6ee7b7 !important;
+    font-size: 13px;
+}
+.section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    color: rgba(0,212,255,0.8);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(0,212,255,0.2);
+    padding-bottom: 6px;
+    margin-bottom: 14px;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ============ CONFIG & DATA ============
+# ============ CONFIG ============
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "merkez_config.json")
+
+HASTANELER = {
+    "maslak":      {"isim": "Acıbadem Maslak",      "lat": 41.1073, "lon": 29.0228, "m2": 15000, "renk": "#00d4ff"},
+    "altunizade":  {"isim": "Acıbadem Altunizade",  "lat": 41.0215, "lon": 29.0663, "m2": 10000, "renk": "#f59e0b"},
+    "kozyatagi":   {"isim": "Acıbadem Kozyatağı",   "lat": 40.9872, "lon": 29.1035, "m2": 12000, "renk": "#10b981"},
+    "taksim":      {"isim": "Acıbadem Taksim",       "lat": 41.0370, "lon": 28.9850, "m2": 8000,  "renk": "#a855f7"},
+}
 
 def load_config():
     if os.path.exists(CONFIG_FILE):
@@ -102,513 +175,582 @@ def load_config():
             return json.load(f)
     return {}
 
-def get_client():
-    config = load_config()
+@st.cache_data(ttl=120, show_spinner=False)
+def fetch_energy(url, key):
     try:
         from supabase import create_client
-        url = config.get("supabase_url", "")
-        key = config.get("supabase_key", "")
-        if "BURAYA" in url or not url:
-            return None, config
-        return create_client(url, key), config
-    except Exception:
-        return None, config
-
-def get_supabase_client_direct(url, key):
-    """Cache'siz, anlık Supabase client (ping testi için)"""
-    from supabase import create_client
-    return create_client(url, key)
-
-@st.cache_data(ttl=300, show_spinner=False)
-def fetch_all_energy(url, key):
-    """Tüm lokasyonların enerji verisini çek (5dk cache)"""
-    try:
-        from supabase import create_client
-        client = create_client(url, key)
-        result = client.table("energy_data").select("*").order("Tarih", desc=False).execute()
-        if result.data:
-            df = pd.DataFrame(result.data)
+        c = create_client(url, key)
+        r = c.table("energy_data").select("*").order("Tarih", desc=False).execute()
+        if r.data:
+            df = pd.DataFrame(r.data)
             if "Tarih" in df.columns:
                 df["Tarih"] = pd.to_datetime(df["Tarih"], errors="coerce")
+            num_cols = [col for col in df.columns if col not in ["id","lokasyon_id","Tarih","Kar_Eritme_Aktif"]]
+            for col in num_cols:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
             return df
     except Exception as e:
-        st.error(f"Veri çekme hatası: {e}")
+        st.error(f"Veri hatası: {e}")
     return pd.DataFrame()
 
-@st.cache_data(ttl=300, show_spinner=False)
+@st.cache_data(ttl=30, show_spinner=False)
 def fetch_lokasyonlar(url, key):
     try:
         from supabase import create_client
-        client = create_client(url, key)
-        result = client.table("lokasyonlar").select("*").execute()
-        return result.data if result.data else []
-    except Exception:
+        c = create_client(url, key)
+        r = c.table("lokasyonlar").select("*").execute()
+        return r.data or []
+    except:
         return []
+
+def plotly_cfg():
+    return dict(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#a0c8ff", family="Inter"), margin=dict(t=30,b=30,l=40,r=20))
+
+# ============ BAĞLANTI ============
+config = load_config()
+url = config.get("supabase_url","")
+key = config.get("supabase_key","")
+bagli = bool(url and "BURAYA" not in url)
 
 # ============ HEADER ============
 st.markdown("""
-<div style='text-align:center; margin-bottom:20px;'>
-    <h1 style='font-size:28px; letter-spacing:1px;'>🏢 ACIBADEM GENEL MERKEZ</h1>
-    <p style='font-size:16px; opacity:0.7;'>Enerji & HVAC Komuta Merkezi</p>
+<div style="text-align:center; padding: 20px 0 10px 0;">
+    <div style="font-family:'Orbitron',sans-serif; font-size:11px; color:rgba(0,212,255,0.5); letter-spacing:4px; text-transform:uppercase; margin-bottom:6px;">
+        ACIBADEM SAĞLIK GRUBU
+    </div>
+    <div style="font-family:'Orbitron',sans-serif; font-size:24px; font-weight:900; color:#00d4ff;
+                text-shadow: 0 0 40px rgba(0,212,255,0.8); letter-spacing:4px; text-transform:uppercase;">
+        ENERJİ & HVAC KOMUTA MERKEZİ
+    </div>
+    <div style="font-family:'Inter',sans-serif; font-size:11px; color:rgba(150,210,255,0.5); letter-spacing:2px; margin-top:4px;">
+        GENEL MERKEZ — CANLI İZLEME PANELİ
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ============ BAĞLANTI KONTROLÜ ============
-config = load_config()
-sb_url = config.get("supabase_url", "")
-sb_key = config.get("supabase_key", "")
-
-if "BURAYA" in sb_url or not sb_url:
-    st.warning("⚠️ Supabase bağlantısı henüz ayarlanmamış! `merkez/configs/merkez_config.json` dosyasını düzenleyin.")
-    st.info("""
-    **Kurulum Adımları:**
-    1. [supabase.com](https://supabase.com) adresinden ücretsiz hesap açın
-    2. Yeni proje oluşturun
-    3. Project Settings → API bölümünden URL ve anon key alın
-    4. `merkez_config.json` dosyasına yapıştırın
-    """)
+if not bagli:
+    st.error("⚠️ Supabase bağlantısı yok. merkez_config.json dosyasını kontrol edin.")
     st.stop()
 
-# ============ VERİ YÜKLEMELERİ ============
-with st.spinner("📡 Lokasyonlardan veri çekiliyor..."):
-    df_all = fetch_all_energy(sb_url, sb_key)
-    lokasyonlar = fetch_lokasyonlar(sb_url, sb_key)
+df_all = fetch_energy(url, key)
+lokasyonlar = fetch_lokasyonlar(url, key)
+lok_dict = {l["lokasyon_id"]: l for l in lokasyonlar}
 
-if df_all.empty:
-    st.info("📭 Henüz lokasyonlardan veri gelmemiş. Lokasyonlarda `cloud_sync.py` çalıştırıldığından emin olun.")
-    st.stop()
-
-# Lokasyon isimleri
-LOK_NAMES = {
-    "maslak": "Acıbadem Maslak",
-    "altunizade": "Acıbadem Altunizade"
-}
-
-aktif_lokasyonlar = df_all["lokasyon_id"].unique().tolist() if "lokasyon_id" in df_all.columns else []
+# Aktif lokasyon listesi (veri olanlar)
+aktif_loklar = df_all["lokasyon_id"].unique().tolist() if not df_all.empty else []
 
 # ============ TABS ============
 tabs = st.tabs([
-    "📊 Genel Bakış",
-    "⚡ Enerji Karşılaştırma",
-    "💰 Maliyet Özet",
-    "📈 Trend & Benchmark",
-    "🔧 HVAC Durumu"
+    "🏠 Genel Bakış",
+    "⚡ Enerji Analizi",
+    "🌡️ HVAC & Chiller",
+    "📊 Benchmark",
+    "🗺️ Türkiye Haritası",
+    "📦 Güncellemeler",
 ])
 
-# ============ TAB 1: GENEL BAKIŞ ============
+# ============================================================
+# TAB 1 — GENEL BAKIŞ
+# ============================================================
 with tabs[0]:
-    st.markdown("### 📊 Lokasyon Durumları")
-    
-    # Lokasyon kartları
-    cols = st.columns(max(len(aktif_lokasyonlar), 2))
-    
-    for i, lok_id in enumerate(aktif_lokasyonlar):
-        lok_name = LOK_NAMES.get(lok_id, lok_id.title())
-        lok_df = df_all[df_all["lokasyon_id"] == lok_id].copy()
 
-        # Lokasyon bilgisi
-        lok_info = next((l for l in lokasyonlar if l.get("lokasyon_id") == lok_id), {})
+    now = datetime.now()
 
-        # Önce ping_zamani (heartbeat), yoksa son_sync'e bak
-        sinyal_str = str(lok_info.get("ping_zamani", "") or lok_info.get("son_sync", "")).strip()
+    # Dünün verisi
+    dun = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    bugun = now.strftime("%Y-%m-%d")
 
-        # Online/offline: son heartbeat 5 dakikadan eskiyse offline
-        durum = "offline"
-        fark_dk = None
-        if sinyal_str and sinyal_str not in ("", "None", "Bilinmiyor"):
-            try:
-                sinyal_dt = pd.to_datetime(sinyal_str).tz_localize(None)
-                fark_dk = (datetime.now() - sinyal_dt).total_seconds() / 60
-                if fark_dk < 5:
-                    durum = "online"
-            except Exception:
-                pass
+    # ── DURUM SATIRI ──
+    st.markdown('<div class="section-title">🟢 LOKASYON DURUMU</div>', unsafe_allow_html=True)
 
-        with cols[i]:
-            status_icon = "🟢" if durum == "online" else "🔴"
-            durum_text = "Çevrimiçi" if durum == "online" else "Çevrimdışı"
+    lok_cols = st.columns(len(HASTANELER))
+    for i, (lok_id, lok_info) in enumerate(HASTANELER.items()):
+        with lok_cols[i]:
+            lok_data = lok_dict.get(lok_id, {})
+            ping_str = str(lok_data.get("ping_zamani") or "").strip()
+            online = False
+            ping_ago = "—"
+            if ping_str and ping_str not in ("None",""):
+                try:
+                    ping_dt = pd.to_datetime(ping_str).tz_localize(None)
+                    fark = (now - ping_dt).total_seconds() / 60
+                    online = fark < 10
+                    ping_ago = f"{int(fark)}dk önce" if fark < 60 else f"{int(fark/60)}sa önce"
+                except:
+                    pass
 
-            if fark_dk is not None:
-                if fark_dk < 1:
-                    sinyal_aciklama = "az önce"
-                elif fark_dk < 60:
-                    sinyal_aciklama = f"{int(fark_dk)} dk önce"
-                else:
-                    sinyal_aciklama = f"{int(fark_dk/60)} saat önce"
-            else:
-                sinyal_aciklama = "bilinmiyor"
+            # Dünkü tüketim
+            dun_kwh = "—"
+            if not df_all.empty and lok_id in aktif_loklar:
+                dun_df = df_all[(df_all["lokasyon_id"]==lok_id) & (df_all["Tarih"].dt.strftime("%Y-%m-%d")==dun)]
+                if not dun_df.empty and "Toplam_Hastane_Tuketim_kWh" in dun_df.columns:
+                    val = dun_df["Toplam_Hastane_Tuketim_kWh"].sum()
+                    dun_kwh = f"{val:,.0f}"
+
+            renk = lok_info["renk"]
+            durum_icon = "🟢" if online else "🔴"
+            durum_text = "ÇEVRİMİÇİ" if online else "ÇEVRİMDIŞI"
+            card_class = "neon-card neon-card-online" if online else "neon-card neon-card-offline"
 
             st.markdown(f"""
-            <div class='lokasyon-card'>
-                <h3>{lok_name} {status_icon} <span style='font-size:14px;font-weight:400;opacity:0.8;'>{durum_text}</span></h3>
-                <p>Toplam Kayıt: <strong>{len(lok_df)}</strong></p>
-                <p>Son Sinyal: <strong>{sinyal_aciklama}</strong></p>
+            <div class="{card_class}">
+                <div style="font-family:'Orbitron',sans-serif; font-size:11px; color:{renk}; letter-spacing:1px; margin-bottom:8px;">{lok_info['isim'].upper()}</div>
+                <div style="font-size:22px; font-weight:900; color:{renk}; text-shadow:0 0 15px {renk}88; font-family:'Orbitron',sans-serif;">{dun_kwh} <span style="font-size:11px; color:rgba(150,210,255,0.6);">kWh</span></div>
+                <div style="font-size:10px; color:rgba(150,210,255,0.5); margin-top:2px;">Dünkü Tüketim</div>
+                <div style="margin-top:10px; font-size:11px;">{durum_icon} <span style="color:{'#10b981' if online else '#ef4444'}; font-weight:700;">{durum_text}</span></div>
+                <div style="font-size:10px; color:rgba(150,210,255,0.4);">Son sinyal: {ping_ago}</div>
             </div>
             """, unsafe_allow_html=True)
 
-            # Ping testi butonu
-            if st.button(f"📡 Ping Testi", key=f"ping_{lok_id}"):
-                with st.spinner("Sinyal kontrol ediliyor..."):
-                    try:
-                        fresh = get_supabase_client_direct(sb_url, sb_key)
-                        r = fresh.table("lokasyonlar").select("ping_zamani,son_sync").eq("lokasyon_id", lok_id).execute()
-                        if r.data:
-                            ts = r.data[0].get("ping_zamani") or r.data[0].get("son_sync")
-                            if ts:
-                                dt = pd.to_datetime(ts).tz_localize(None)
-                                fark = (datetime.now() - dt).total_seconds() / 60
-                                if fark < 5:
-                                    st.success(f"✅ {lok_name} bağlı! Son sinyal {int(fark)} dk önce.")
-                                else:
-                                    st.warning(f"⚠️ Son sinyal {int(fark)} dk önce — bağlantı kesilmiş olabilir.")
-                            else:
-                                st.error("❌ Sinyal bulunamadı.")
-                        else:
-                            st.error("❌ Lokasyon Supabase'de kayıtlı değil.")
-                    except Exception as ex:
-                        st.error(f"Ping hatası: {ex}")
-            
-            # Son günün verileri
-            if not lok_df.empty and "Tarih" in lok_df.columns:
-                son_gun = lok_df.sort_values("Tarih").iloc[-1]
-                tarih_str = str(son_gun.get("Tarih", ""))[:10]
-                
-                st.caption(f"📅 Son Veri: {tarih_str}")
-                
-                m1, m2 = st.columns(2)
-                toplam = son_gun.get("Toplam_Hastane_Tuketim_kWh", 0) or 0
-                sogutma = son_gun.get("Toplam_Sogutma_Tuketim_kWh", 0) or 0
-                m1.metric("Toplam Tüketim", f"{toplam:,.0f} kWh")
-                m2.metric("Soğutma", f"{sogutma:,.0f} kWh")
-                
-                m3, m4 = st.columns(2)
-                chiller = son_gun.get("Chiller_Tuketim_kWh", 0) or 0
-                mcc = son_gun.get("MCC_Tuketim_kWh", 0) or 0
-                m3.metric("Chiller", f"{chiller:,.0f} kWh")
-                m4.metric("MCC", f"{mcc:,.0f} kWh")
-    
-    # Grup toplam
     st.markdown("---")
-    st.markdown("### 🏢 Grup Toplam (Tüm Lokasyonlar)")
-    
-    # Son 30 gün toplamları
-    if "Tarih" in df_all.columns:
-        son_30 = df_all[df_all["Tarih"] >= (datetime.now() - timedelta(days=30))]
-        
-        gc1, gc2, gc3, gc4 = st.columns(4)
-        
-        total_hosp = son_30.get("Toplam_Hastane_Tuketim_kWh", pd.Series([0])).sum()
-        total_cool = son_30.get("Toplam_Sogutma_Tuketim_kWh", pd.Series([0])).sum()
-        total_chiller = son_30.get("Chiller_Tuketim_kWh", pd.Series([0])).sum()
-        total_mcc = son_30.get("MCC_Tuketim_kWh", pd.Series([0])).sum()
-        
-        gc1.metric("📊 Son 30 Gün Toplam", f"{total_hosp:,.0f} kWh")
-        gc2.metric("❄️ Toplam Soğutma", f"{total_cool:,.0f} kWh")
-        gc3.metric("🧊 Toplam Chiller", f"{total_chiller:,.0f} kWh")
-        gc4.metric("⚡ Toplam MCC", f"{total_mcc:,.0f} kWh")
 
-# ============ TAB 2: ENERJİ KARŞILAŞTIRMA ============
+    # ── GLOBAL ÖZET METRİKLER ──
+    st.markdown('<div class="section-title">⚡ GLOBAL TÜKETİM ÖZETİ</div>', unsafe_allow_html=True)
+
+    if not df_all.empty:
+        son30 = df_all[df_all["Tarih"] >= (now - timedelta(days=30))]
+        m1, m2, m3, m4, m5 = st.columns(5)
+
+        toplam_kwh = son30["Toplam_Hastane_Tuketim_kWh"].sum() if "Toplam_Hastane_Tuketim_kWh" in son30 else 0
+        toplam_gaz = son30["Kazan_Dogalgaz_m3"].sum() + son30["Kojen_Dogalgaz_m3"].sum() if "Kazan_Dogalgaz_m3" in son30 else 0
+        toplam_su = son30["Su_Tuketimi_m3"].sum() if "Su_Tuketimi_m3" in son30 else 0
+        toplam_sogutma = son30["Toplam_Sogutma_Tuketim_kWh"].sum() if "Toplam_Sogutma_Tuketim_kWh" in son30 else 0
+        kojen_uretim = son30["Kojen_Uretim_kWh"].sum() if "Kojen_Uretim_kWh" in son30 else 0
+
+        with m1: st.metric("⚡ Toplam Enerji (30g)", f"{toplam_kwh/1000:,.0f} MWh")
+        with m2: st.metric("🔥 Doğalgaz (30g)", f"{toplam_gaz:,.0f} m³")
+        with m3: st.metric("❄️ Soğutma (30g)", f"{toplam_sogutma/1000:,.0f} MWh")
+        with m4: st.metric("💧 Su (30g)", f"{toplam_su:,.0f} m³")
+        with m5: st.metric("⚙️ Kojen Üretim (30g)", f"{kojen_uretim/1000:,.0f} MWh")
+
+    st.markdown("---")
+
+    # ── GÜNLÜK TREND GRAFİĞİ + UYARILAR ──
+    col_grafik, col_uyari = st.columns([3, 1])
+
+    with col_grafik:
+        st.markdown('<div class="section-title">📈 30 GÜNLÜK ENERJİ TRENDİ</div>', unsafe_allow_html=True)
+        if not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
+            trend_df = df_all[df_all["Tarih"] >= (now - timedelta(days=30))].copy()
+            trend_df["Lokasyon"] = trend_df["lokasyon_id"].map(
+                lambda x: HASTANELER.get(x, {}).get("isim", x))
+
+            fig_trend = go.Figure()
+            renkler = ["#00d4ff", "#f59e0b", "#10b981", "#a855f7"]
+            for idx, lok_id in enumerate(trend_df["lokasyon_id"].unique()):
+                lok_data_t = trend_df[trend_df["lokasyon_id"]==lok_id]
+                renk = HASTANELER.get(lok_id, {}).get("renk", renkler[idx % len(renkler)])
+                fig_trend.add_trace(go.Scatter(
+                    x=lok_data_t["Tarih"], y=lok_data_t["Toplam_Hastane_Tuketim_kWh"],
+                    name=HASTANELER.get(lok_id, {}).get("isim", lok_id),
+                    line=dict(color=renk, width=2),
+                    fill="tozeroy", fillcolor=f"{renk}15",
+                    mode="lines",
+                ))
+            fig_trend.update_layout(**plotly_cfg(), height=280,
+                xaxis=dict(gridcolor="rgba(0,212,255,0.08)", showgrid=True),
+                yaxis=dict(gridcolor="rgba(0,212,255,0.08)", showgrid=True, title="kWh"),
+                legend=dict(orientation="h", y=1.1, font=dict(color="#a0c8ff")),
+            )
+            st.plotly_chart(fig_trend, use_container_width=True)
+
+    with col_uyari:
+        st.markdown('<div class="section-title">🚨 CANLI UYARILAR</div>', unsafe_allow_html=True)
+        uyarilar = []
+
+        if not df_all.empty:
+            son_gun = df_all[df_all["Tarih"].dt.strftime("%Y-%m-%d") == dun]
+            for lok_id in aktif_loklar:
+                lok_son = son_gun[son_gun["lokasyon_id"]==lok_id]
+                isim = HASTANELER.get(lok_id, {}).get("isim", lok_id)
+                if lok_son.empty:
+                    uyarilar.append(("red", f"⚠️ {isim}: Bugün veri yok"))
+                    continue
+                if "Chiller_Set_Temp_C" in lok_son.columns:
+                    cs = lok_son["Chiller_Set_Temp_C"].mean()
+                    if pd.notna(cs) and cs > 9:
+                        uyarilar.append(("yellow", f"🌡️ {isim}: Chiller set yüksek ({cs:.1f}°C)"))
+                    elif pd.notna(cs) and cs < 6:
+                        uyarilar.append(("yellow", f"❄️ {isim}: Chiller set düşük ({cs:.1f}°C)"))
+                if "Chiller_Load_Percent" in lok_son.columns:
+                    cl = lok_son["Chiller_Load_Percent"].mean()
+                    if pd.notna(cl) and cl > 90:
+                        uyarilar.append(("red", f"🔥 {isim}: Chiller yük kritik (%{cl:.0f})"))
+
+            # Offline uyarı
+            for lok_id, lok_info in HASTANELER.items():
+                if lok_id in lok_dict:
+                    ping_str = str(lok_dict[lok_id].get("ping_zamani") or "").strip()
+                    if ping_str and ping_str not in ("None",""):
+                        try:
+                            ping_dt = pd.to_datetime(ping_str).tz_localize(None)
+                            fark = (now - ping_dt).total_seconds() / 60
+                            if fark > 10:
+                                uyarilar.append(("red", f"🔴 {lok_info['isim']}: Çevrimdışı ({int(fark)}dk)"))
+                        except:
+                            pass
+
+        if not uyarilar:
+            st.markdown('<div class="alert-green">✅ Tüm sistemler normal</div>', unsafe_allow_html=True)
+        else:
+            for seviye, mesaj in uyarilar[:8]:
+                css = f"alert-{seviye}"
+                st.markdown(f'<div class="{css}">{mesaj}</div>', unsafe_allow_html=True)
+
+# ============================================================
+# TAB 2 — ENERJİ ANALİZİ
+# ============================================================
 with tabs[1]:
-    st.markdown("### ⚡ Lokasyon Bazlı Enerji Karşılaştırması")
-    
-    if "Tarih" in df_all.columns and "lokasyon_id" in df_all.columns:
-        # Zaman aralığı seçimi
-        period = st.radio("Dönem", ["Son 30 Gün", "Son 90 Gün", "Son 1 Yıl", "Tümü"], horizontal=True)
-        
-        df_plot = df_all.copy()
-        if period == "Son 30 Gün":
-            df_plot = df_plot[df_plot["Tarih"] >= (datetime.now() - timedelta(days=30))]
-        elif period == "Son 90 Gün":
-            df_plot = df_plot[df_plot["Tarih"] >= (datetime.now() - timedelta(days=90))]
-        elif period == "Son 1 Yıl":
-            df_plot = df_plot[df_plot["Tarih"] >= (datetime.now() - timedelta(days=365))]
-        
-        # Lokasyon isimlerini güncelle
-        df_plot["Lokasyon"] = df_plot["lokasyon_id"].map(lambda x: LOK_NAMES.get(x, x))
-        
-        # Günlük toplam tüketim karşılaştırması
-        numeric_cols = ["Toplam_Hastane_Tuketim_kWh", "Chiller_Tuketim_kWh", "MCC_Tuketim_kWh",
-                       "Sebeke_Tuketim_kWh", "Kazan_Dogalgaz_m3"]
-        
-        for col in numeric_cols:
-            if col in df_plot.columns:
-                df_plot[col] = pd.to_numeric(df_plot[col], errors="coerce")
-        
-        # Toplam tüketim çizgi grafiği
-        if "Toplam_Hastane_Tuketim_kWh" in df_plot.columns:
-            fig = px.line(
-                df_plot, x="Tarih", y="Toplam_Hastane_Tuketim_kWh",
-                color="Lokasyon",
-                title="Günlük Toplam Hastane Tüketimi (kWh)",
-                color_discrete_map={
-                    "Acıbadem Maslak": "#3b82f6",
-                    "Acıbadem Altunizade": "#f59e0b"
-                }
-            )
-            fig.update_layout(
-                template="plotly_dark",
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font_color="white"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        
-        # Chiller tüketim karşılaştırması
-        if "Chiller_Tuketim_kWh" in df_plot.columns:
-            fig2 = px.line(
-                df_plot, x="Tarih", y="Chiller_Tuketim_kWh",
-                color="Lokasyon",
-                title="Günlük Chiller Tüketimi (kWh)",
-                color_discrete_map={
-                    "Acıbadem Maslak": "#3b82f6",
-                    "Acıbadem Altunizade": "#f59e0b"
-                }
-            )
-            fig2.update_layout(
-                template="plotly_dark",
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font_color="white"
-            )
-            st.plotly_chart(fig2, use_container_width=True)
-        
-        # Aylık karşılaştırma bar chart
-        st.markdown("#### 📊 Aylık Toplam Karşılaştırma")
-        df_monthly = df_plot.copy()
-        df_monthly["Ay"] = df_monthly["Tarih"].dt.to_period("M").astype(str)
-        
-        if "Toplam_Hastane_Tuketim_kWh" in df_monthly.columns:
-            monthly_agg = df_monthly.groupby(["Ay", "Lokasyon"])["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
-            
-            fig3 = px.bar(
-                monthly_agg, x="Ay", y="Toplam_Hastane_Tuketim_kWh",
-                color="Lokasyon", barmode="group",
-                title="Aylık Toplam Tüketim Karşılaştırması",
-                color_discrete_map={
-                    "Acıbadem Maslak": "#3b82f6",
-                    "Acıbadem Altunizade": "#f59e0b"
-                }
-            )
-            fig3.update_layout(
-                template="plotly_dark",
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font_color="white"
-            )
-            st.plotly_chart(fig3, use_container_width=True)
+    if df_all.empty:
+        st.info("Veri yok.")
+    else:
+        # Filtreler
+        fc1, fc2, fc3 = st.columns([2, 2, 1])
+        with fc1:
+            lok_secim = st.multiselect("Lokasyon",
+                options=aktif_loklar,
+                default=aktif_loklar,
+                format_func=lambda x: HASTANELER.get(x, {}).get("isim", x))
+        with fc2:
+            metrik = st.selectbox("Metrik", [
+                "Toplam_Hastane_Tuketim_kWh", "Sebeke_Tuketim_kWh",
+                "Kojen_Uretim_kWh", "Chiller_Tuketim_kWh",
+                "Kazan_Dogalgaz_m3", "Su_Tuketimi_m3",
+            ], format_func=lambda x: {
+                "Toplam_Hastane_Tuketim_kWh": "Toplam Tüketim (kWh)",
+                "Sebeke_Tuketim_kWh": "Şebeke Tüketimi (kWh)",
+                "Kojen_Uretim_kWh": "Kojenerasyon Üretimi (kWh)",
+                "Chiller_Tuketim_kWh": "Chiller Tüketimi (kWh)",
+                "Kazan_Dogalgaz_m3": "Doğalgaz (m³)",
+                "Su_Tuketimi_m3": "Su Tüketimi (m³)",
+            }.get(x, x))
+        with fc3:
+            periyot = st.selectbox("Periyot", ["Günlük","Haftalık","Aylık"])
 
-# ============ TAB 3: MALİYET ÖZET ============
+        df_fil = df_all[df_all["lokasyon_id"].isin(lok_secim)].copy()
+
+        if periyot == "Haftalık":
+            df_fil["Periyot"] = df_fil["Tarih"].dt.to_period("W").astype(str)
+        elif periyot == "Aylık":
+            df_fil["Periyot"] = df_fil["Tarih"].dt.to_period("M").astype(str)
+        else:
+            df_fil["Periyot"] = df_fil["Tarih"].dt.strftime("%Y-%m-%d")
+
+        df_fil["Lokasyon"] = df_fil["lokasyon_id"].map(lambda x: HASTANELER.get(x, {}).get("isim", x))
+
+        if metrik in df_fil.columns:
+            agg = df_fil.groupby(["Periyot","Lokasyon"])[metrik].sum().reset_index()
+
+            fig_enerji = px.bar(agg, x="Periyot", y=metrik, color="Lokasyon",
+                barmode="group",
+                color_discrete_map={HASTANELER[k]["isim"]: HASTANELER[k]["renk"] for k in HASTANELER},
+                template="plotly_dark",
+            )
+            fig_enerji.update_layout(**plotly_cfg(), height=350,
+                xaxis=dict(gridcolor="rgba(0,212,255,0.06)"),
+                yaxis=dict(gridcolor="rgba(0,212,255,0.06)"),
+                bargap=0.25, legend=dict(orientation="h", y=1.1),
+            )
+            st.plotly_chart(fig_enerji, use_container_width=True)
+
+            # Özet tablo — Plotly
+            ozet = agg.pivot(index="Periyot", columns="Lokasyon", values=metrik).fillna(0).reset_index()
+            lok_isimleri = [c for c in ozet.columns if c != "Periyot"]
+            fig_tablo = go.Figure(data=[go.Table(
+                header=dict(
+                    values=["<b>Periyot</b>"] + [f"<b>{c}</b>" for c in lok_isimleri],
+                    fill_color="rgba(0,100,200,0.5)", font=dict(color="white", size=12),
+                    align="center", height=34,
+                ),
+                cells=dict(
+                    values=[ozet["Periyot"]] + [ozet[c].apply(lambda x: f"{x:,.0f}") for c in lok_isimleri],
+                    fill_color=[["rgba(0,20,50,0.6)","rgba(0,30,70,0.4)"] * len(ozet)],
+                    font=dict(color="white", size=11), align="center", height=28,
+                )
+            )])
+            fig_tablo.update_layout(paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=5,b=5,l=0,r=0), height=300)
+            st.plotly_chart(fig_tablo, use_container_width=True)
+
+# ============================================================
+# TAB 3 — HVAC & CHİLLER
+# ============================================================
 with tabs[2]:
-    st.markdown("### 💰 Grup Maliyet Özeti")
-    
-    # Birim fiyatlar
-    st.markdown("#### ⚙️ Birim Fiyatlar")
-    pc1, pc2, pc3 = st.columns(3)
-    elektrik_fiyat = pc1.number_input("Elektrik (TL/kWh)", value=4.20, step=0.10, format="%.2f")
-    gaz_fiyat = pc2.number_input("Doğalgaz (TL/m³)", value=8.50, step=0.10, format="%.2f")
-    su_fiyat = pc3.number_input("Su (TL/m³)", value=35.0, step=1.0, format="%.1f")
-    
-    st.markdown("---")
-    
-    if "Tarih" in df_all.columns:
-        # Son ay verileri
-        son_ay = df_all[df_all["Tarih"] >= (datetime.now() - timedelta(days=30))]
-        
-        for lok_id in aktif_lokasyonlar:
-            lok_name = LOK_NAMES.get(lok_id, lok_id)
-            lok_df = son_ay[son_ay["lokasyon_id"] == lok_id]
-            
-            if lok_df.empty:
-                continue
-            
-            st.markdown(f"#### 🏥 {lok_name}")
-            
-            # Tüketim toplam hesapla
-            sebeke = pd.to_numeric(lok_df.get("Sebeke_Tuketim_kWh", 0), errors="coerce").sum()
-            kojen = pd.to_numeric(lok_df.get("Kojen_Uretim_kWh", 0), errors="coerce").sum()
-            kazan_gaz = pd.to_numeric(lok_df.get("Kazan_Dogalgaz_m3", 0), errors="coerce").sum()
-            kojen_gaz = pd.to_numeric(lok_df.get("Kojen_Dogalgaz_m3", 0), errors="coerce").sum()
-            su = pd.to_numeric(lok_df.get("Su_Tuketimi_m3", 0), errors="coerce").sum()
-            
-            elek_maliyet = sebeke * elektrik_fiyat
-            gaz_maliyet = (kazan_gaz + kojen_gaz) * gaz_fiyat
-            su_maliyet = su * su_fiyat
-            toplam_maliyet = elek_maliyet + gaz_maliyet + su_maliyet
-            
-            mc1, mc2, mc3, mc4 = st.columns(4)
-            mc1.metric("⚡ Elektrik", f"₺{elek_maliyet:,.0f}")
-            mc2.metric("🔥 Doğalgaz", f"₺{gaz_maliyet:,.0f}")
-            mc3.metric("💧 Su", f"₺{su_maliyet:,.0f}")
-            mc4.metric("💰 TOPLAM", f"₺{toplam_maliyet:,.0f}")
-            
-            st.markdown("---")
-        
-        # Grup toplam
-        st.markdown("#### 🏢 GRUP TOPLAM MALİYET (Son 30 Gün)")
-        g_sebeke = pd.to_numeric(son_ay.get("Sebeke_Tuketim_kWh", 0), errors="coerce").sum()
-        g_kazan = pd.to_numeric(son_ay.get("Kazan_Dogalgaz_m3", 0), errors="coerce").sum()
-        g_kojen = pd.to_numeric(son_ay.get("Kojen_Dogalgaz_m3", 0), errors="coerce").sum()
-        g_su = pd.to_numeric(son_ay.get("Su_Tuketimi_m3", 0), errors="coerce").sum()
-        
-        g_total = g_sebeke * elektrik_fiyat + (g_kazan + g_kojen) * gaz_fiyat + g_su * su_fiyat
-        
-        st.metric("🏢 GRUP TOPLAM MALİYET", f"₺{g_total:,.0f}")
+    if df_all.empty:
+        st.info("Veri yok.")
+    else:
+        son60 = df_all[df_all["Tarih"] >= (datetime.now() - timedelta(days=60))].copy()
+        son60["Lokasyon"] = son60["lokasyon_id"].map(lambda x: HASTANELER.get(x, {}).get("isim", x))
 
-# ============ TAB 4: TREND & BENCHMARK ============
+        g1, g2 = st.columns(2)
+
+        with g1:
+            st.markdown('<div class="section-title">🌡️ CHİLLER SET vs DIŞ HAVA</div>', unsafe_allow_html=True)
+            if "Chiller_Set_Temp_C" in son60.columns and "Dis_Hava_Sicakligi_C" in son60.columns:
+                fig_ch = go.Figure()
+                fig_ch.add_trace(go.Scatter(
+                    x=son60["Tarih"], y=son60["Dis_Hava_Sicakligi_C"],
+                    name="Dış Hava (°C)", line=dict(color="#f59e0b", width=1.5, dash="dot"),
+                    yaxis="y2"
+                ))
+                for lok_id in son60["lokasyon_id"].unique():
+                    ld = son60[son60["lokasyon_id"]==lok_id]
+                    renk = HASTANELER.get(lok_id, {}).get("renk", "#00d4ff")
+                    fig_ch.add_trace(go.Scatter(
+                        x=ld["Tarih"], y=ld["Chiller_Set_Temp_C"],
+                        name=f"Chiller Set - {HASTANELER.get(lok_id,{}).get('isim',lok_id)}",
+                        line=dict(color=renk, width=2), mode="lines"
+                    ))
+                fig_ch.update_layout(**plotly_cfg(), height=300,
+                    yaxis=dict(title="Chiller Set (°C)", gridcolor="rgba(0,212,255,0.08)"),
+                    yaxis2=dict(title="Dış Hava (°C)", overlaying="y", side="right", gridcolor="rgba(0,212,255,0.04)"),
+                    legend=dict(orientation="h", y=1.15, font=dict(size=10)),
+                )
+                st.plotly_chart(fig_ch, use_container_width=True)
+
+        with g2:
+            st.markdown('<div class="section-title">❄️ CHİLLER YÜK DAĞILIMI</div>', unsafe_allow_html=True)
+            if "Chiller_Load_Percent" in son60.columns:
+                fig_load = go.Figure()
+                for lok_id in son60["lokasyon_id"].unique():
+                    ld = son60[son60["lokasyon_id"]==lok_id]
+                    renk = HASTANELER.get(lok_id, {}).get("renk", "#00d4ff")
+                    fig_load.add_trace(go.Box(
+                        y=ld["Chiller_Load_Percent"].dropna(),
+                        name=HASTANELER.get(lok_id,{}).get("isim",lok_id),
+                        marker_color=renk, line_color=renk,
+                        fillcolor=f"{renk}22",
+                    ))
+                fig_load.update_layout(**plotly_cfg(), height=300,
+                    yaxis=dict(title="Yük (%)", gridcolor="rgba(0,212,255,0.08)"),
+                )
+                st.plotly_chart(fig_load, use_container_width=True)
+
+        # Chiller aylık ortalama tablo
+        st.markdown('<div class="section-title">📋 HVAC AYLIK ÖZET</div>', unsafe_allow_html=True)
+        son60["Ay"] = son60["Tarih"].dt.to_period("M").astype(str)
+        hvac_cols = ["Chiller_Set_Temp_C","Chiller_Load_Percent","Chiller_Adet","Kazan_Adet"]
+        mevcut_hvac = [c for c in hvac_cols if c in son60.columns]
+        if mevcut_hvac:
+            hvac_ozet = son60.groupby(["Ay","Lokasyon"])[mevcut_hvac].mean().round(1).reset_index()
+            fig_hvac_t = go.Figure(data=[go.Table(
+                header=dict(
+                    values=["<b>Ay</b>","<b>Lokasyon</b>"] + [f"<b>{c.replace('_',' ')}</b>" for c in mevcut_hvac],
+                    fill_color="rgba(0,100,200,0.5)", font=dict(color="white",size=12),
+                    align="center", height=34,
+                ),
+                cells=dict(
+                    values=[hvac_ozet["Ay"], hvac_ozet["Lokasyon"]] + [hvac_ozet[c].apply(lambda x: f"{x:.1f}") for c in mevcut_hvac],
+                    fill_color=[["rgba(0,20,50,0.6)","rgba(0,30,70,0.4)"] * len(hvac_ozet)],
+                    font=dict(color="white",size=11), align="center", height=28,
+                )
+            )])
+            fig_hvac_t.update_layout(paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=5,b=5,l=0,r=0), height=320)
+            st.plotly_chart(fig_hvac_t, use_container_width=True)
+
+# ============================================================
+# TAB 4 — BENCHMARK
+# ============================================================
 with tabs[3]:
-    st.markdown("### 📈 Verimlilik Karşılaştırması (Benchmark)")
-    
-    if len(aktif_lokasyonlar) >= 2 and "Tarih" in df_all.columns:
-        # Aylık kWh toplamları
+    if df_all.empty:
+        st.info("Veri yok.")
+    else:
+        st.markdown('<div class="section-title">🏆 LOKASYON KARŞILAŞTIRMA</div>', unsafe_allow_html=True)
+
         df_bench = df_all.copy()
         df_bench["Ay"] = df_bench["Tarih"].dt.to_period("M").astype(str)
-        df_bench["Lokasyon"] = df_bench["lokasyon_id"].map(lambda x: LOK_NAMES.get(x, x))
-        
-        for col in ["Toplam_Hastane_Tuketim_kWh", "Chiller_Tuketim_kWh"]:
-            if col in df_bench.columns:
-                df_bench[col] = pd.to_numeric(df_bench[col], errors="coerce")
-        
+        df_bench["Lokasyon"] = df_bench["lokasyon_id"].map(lambda x: HASTANELER.get(x, {}).get("isim", x))
+
         if "Toplam_Hastane_Tuketim_kWh" in df_bench.columns:
-            monthly = df_bench.groupby(["Ay", "Lokasyon"])["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
+            monthly = df_bench.groupby(["Ay","Lokasyon","lokasyon_id"])["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
+            monthly["m2"] = monthly["lokasyon_id"].map(lambda x: HASTANELER.get(x,{}).get("m2", 10000))
+            monthly["kWh/m²"] = (monthly["Toplam_Hastane_Tuketim_kWh"] / monthly["m2"]).round(1)
 
-            # Grafik
-            fig_bench = px.bar(
-                monthly, x="Ay", y="Toplam_Hastane_Tuketim_kWh", color="Lokasyon",
-                barmode="group",
-                labels={"Toplam_Hastane_Tuketim_kWh": "Toplam Tüketim (kWh)", "Ay": ""},
-                color_discrete_sequence=["#6366f1", "#f59e0b"],
-                template="plotly_dark",
-            )
-            fig_bench.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                legend=dict(font=dict(color="white")), font=dict(color="white"),
-                height=350,
-            )
-            st.plotly_chart(fig_bench, use_container_width=True)
+            b1, b2 = st.columns(2)
+            with b1:
+                fig_b1 = px.bar(monthly, x="Ay", y="Toplam_Hastane_Tuketim_kWh", color="Lokasyon",
+                    barmode="group", template="plotly_dark",
+                    color_discrete_map={HASTANELER[k]["isim"]: HASTANELER[k]["renk"] for k in HASTANELER},
+                    labels={"Toplam_Hastane_Tuketim_kWh": "Toplam kWh"},
+                    title="Aylık Toplam Tüketim",
+                )
+                fig_b1.update_layout(**plotly_cfg(), height=320, title_font=dict(color="#00d4ff", size=13))
+                st.plotly_chart(fig_b1, use_container_width=True)
 
-            # Pivot tablo — Plotly Table ile (koyu tema uyumlu)
-            pivot = monthly.pivot(index="Ay", columns="Lokasyon", values="Toplam_Hastane_Tuketim_kWh").fillna(0).reset_index()
-            lok_cols = [c for c in pivot.columns if c != "Ay"]
+            with b2:
+                fig_b2 = px.bar(monthly, x="Ay", y="kWh/m²", color="Lokasyon",
+                    barmode="group", template="plotly_dark",
+                    color_discrete_map={HASTANELER[k]["isim"]: HASTANELER[k]["renk"] for k in HASTANELER},
+                    title="Aylık Enerji Yoğunluğu (kWh/m²)",
+                )
+                fig_b2.update_layout(**plotly_cfg(), height=320, title_font=dict(color="#00d4ff", size=13))
+                st.plotly_chart(fig_b2, use_container_width=True)
 
-            if len(lok_cols) >= 2:
-                pivot["Fark (kWh)"] = (pivot[lok_cols[0]] - pivot[lok_cols[1]]).round(0)
-                pivot["Verimli Olan"] = pivot["Fark (kWh)"].apply(lambda x: lok_cols[1] if x > 0 else lok_cols[0])
-
-                fig_tablo = go.Figure(data=[go.Table(
+            # Verimlilik sıralaması — Plotly tablo
+            pivot = monthly.pivot(index="Ay", columns="Lokasyon", values="kWh/m²").fillna(0).reset_index()
+            lok_isimleri = [c for c in pivot.columns if c != "Ay"]
+            if len(lok_isimleri) >= 2:
+                pivot["En Verimli"] = pivot[lok_isimleri].idxmin(axis=1)
+                fig_rank = go.Figure(data=[go.Table(
                     header=dict(
-                        values=["<b>Ay</b>"] + [f"<b>{c}</b>" for c in lok_cols] + ["<b>Fark (kWh)</b>", "<b>Verimli Olan</b>"],
-                        fill_color="rgba(99,102,241,0.6)",
-                        font=dict(color="white", size=13),
+                        values=["<b>Ay</b>"] + [f"<b>{c}<br>kWh/m²</b>" for c in lok_isimleri] + ["<b>🏆 En Verimli</b>"],
+                        fill_color="rgba(0,100,200,0.5)", font=dict(color="white",size=12),
                         align="center", height=36,
                     ),
                     cells=dict(
-                        values=[
-                            pivot["Ay"],
-                            *[pivot[c].apply(lambda x: f"{x:,.0f}") for c in lok_cols],
-                            pivot["Fark (kWh)"].apply(lambda x: f"{abs(x):,.0f}"),
-                            pivot["Verimli Olan"],
-                        ],
-                        fill_color=[["rgba(255,255,255,0.05)", "rgba(255,255,255,0.08)"] * len(pivot)],
-                        font=dict(color="white", size=12),
-                        align="center", height=32,
+                        values=[pivot["Ay"]] + [pivot[c].apply(lambda x: f"{x:.1f}") for c in lok_isimleri] + [pivot["En Verimli"]],
+                        fill_color=[["rgba(0,20,50,0.6)","rgba(0,30,70,0.4)"] * len(pivot)],
+                        font=dict(color="white",size=12), align="center", height=30,
                     )
                 )])
-                fig_tablo.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=10, b=10, l=0, r=0), height=350
-                )
-                st.markdown("#### 🏆 Aylık Verimlilik Sıralaması")
-                st.plotly_chart(fig_tablo, use_container_width=True)
-    else:
-        st.info("Benchmark için en az 2 lokasyondan veri gerekiyor.")
+                fig_rank.update_layout(paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=5,b=5,l=0,r=0), height=350)
+                st.markdown('<div class="section-title">📋 AYLIK VERİMLİLİK SIRALAMASI</div>', unsafe_allow_html=True)
+                st.plotly_chart(fig_rank, use_container_width=True)
 
-# ============ TAB 5: HVAC DURUMU ============
+# ============================================================
+# TAB 5 — TÜRKİYE HARİTASI
+# ============================================================
 with tabs[4]:
-    st.markdown("### 🔧 Lokasyon HVAC Durumları")
-    st.info("HVAC analiz özeti, lokasyonlardan senkronize edildiğinde burada görünecektir.")
-    
-    # Senkron bilgileri göster
-    if lokasyonlar:
-        for lok in lokasyonlar:
-            lok_id = lok.get("lokasyon_id", "?")
-            lok_name = LOK_NAMES.get(lok_id, lok_id)
+    st.markdown('<div class="section-title">🗺️ HASTANE AĞI — TÜRKİYE</div>', unsafe_allow_html=True)
 
-            # Heartbeat bazlı gerçek durum (5 dk eşiği)
-            sinyal_str = str(lok.get("ping_zamani", "") or lok.get("son_sync", "")).strip()
-            gercek_durum = "offline"
-            fark_dk = None
-            if sinyal_str and sinyal_str not in ("", "None", "Bilinmiyor"):
-                try:
-                    sinyal_dt = pd.to_datetime(sinyal_str).tz_localize(None)
-                    fark_dk = (datetime.now() - sinyal_dt).total_seconds() / 60
-                    if fark_dk < 5:
-                        gercek_durum = "online"
-                except Exception:
-                    pass
+    now = datetime.now()
+    dun = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
-            icon = "🟢" if gercek_durum == "online" else "🔴"
-            durum_text = "Çevrimiçi" if gercek_durum == "online" else "Çevrimdışı"
+    harita_data = []
+    for lok_id, lok_info in HASTANELER.items():
+        lok_veri = lok_dict.get(lok_id, {})
+        ping_str = str(lok_veri.get("ping_zamani") or "").strip()
+        online = False
+        if ping_str and ping_str not in ("None",""):
+            try:
+                ping_dt = pd.to_datetime(ping_str).tz_localize(None)
+                online = (now - ping_dt).total_seconds() / 60 < 10
+            except:
+                pass
 
-            if fark_dk is not None:
-                if fark_dk < 1:
-                    sinyal_aciklama = "az önce"
-                elif fark_dk < 60:
-                    sinyal_aciklama = f"{int(fark_dk)} dk önce"
-                else:
-                    sinyal_aciklama = f"{int(fark_dk/60)} saat önce"
-            else:
-                sinyal_aciklama = "sinyal yok"
+        dun_kwh = 0
+        if not df_all.empty and lok_id in aktif_loklar:
+            dun_df = df_all[(df_all["lokasyon_id"]==lok_id) & (df_all["Tarih"].dt.strftime("%Y-%m-%d")==dun)]
+            if not dun_df.empty and "Toplam_Hastane_Tuketim_kWh" in dun_df.columns:
+                dun_kwh = dun_df["Toplam_Hastane_Tuketim_kWh"].sum()
 
-            st.markdown(f"**{icon} {lok_name}** — {durum_text}  \nSon sinyal: `{sinyal_aciklama}`")
+        harita_data.append({
+            "Hastane": lok_info["isim"],
+            "lat": lok_info["lat"],
+            "lon": lok_info["lon"],
+            "Durum": "Çevrimiçi" if online else "Çevrimdışı",
+            "Tüketim (kWh)": int(dun_kwh),
+            "m2": lok_info["m2"],
+            "renk": "#10b981" if online else "#ef4444",
+            "boyut": max(15, min(40, dun_kwh / 1000)) if dun_kwh > 0 else 15,
+        })
+
+    harita_df = pd.DataFrame(harita_data)
+
+    fig_harita = go.Figure()
+
+    # Türkiye sınır çizgisi (arka plan için basit scatter)
+    fig_harita.add_trace(go.Scattermapbox(
+        lat=harita_df["lat"], lon=harita_df["lon"],
+        mode="markers+text",
+        marker=dict(
+            size=harita_df["boyut"],
+            color=harita_df["renk"],
+            opacity=0.9,
+        ),
+        text=harita_df["Hastane"],
+        textposition="top center",
+        textfont=dict(color="white", size=12, family="Orbitron"),
+        customdata=harita_df[["Durum","Tüketim (kWh)","m2"]].values,
+        hovertemplate="<b>%{text}</b><br>Durum: %{customdata[0]}<br>Dünkü Tüketim: %{customdata[1]:,} kWh<br>Alan: %{customdata[2]:,} m²<extra></extra>",
+        name=""
+    ))
+
+    fig_harita.update_layout(
+        mapbox=dict(
+            style="carto-darkmatter",
+            center=dict(lat=41.02, lon=29.02),
+            zoom=10.5,
+        ),
+        paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(t=0,b=0,l=0,r=0),
+        height=500,
+        showlegend=False,
+    )
+    st.plotly_chart(fig_harita, use_container_width=True)
+
+    # Haritanın altında kart listesi
+    st.markdown('<div class="section-title" style="margin-top:16px;">📍 LOKASYON DETAYLARI</div>', unsafe_allow_html=True)
+    kart_cols = st.columns(len(harita_data))
+    for i, row in enumerate(harita_data):
+        with kart_cols[i]:
+            online = row["Durum"] == "Çevrimiçi"
+            renk = "#10b981" if online else "#ef4444"
+            st.markdown(f"""
+            <div class="neon-card {'neon-card-online' if online else 'neon-card-offline'}">
+                <div style="font-family:'Orbitron',sans-serif; font-size:10px; color:{HASTANELER.get(list(HASTANELER.keys())[i],{}).get('renk','#00d4ff')}; letter-spacing:1px;">{row['Hastane'].upper()}</div>
+                <div style="font-size:20px; font-weight:800; color:#00d4ff; font-family:'Orbitron',sans-serif; margin-top:6px;">{row['Tüketim (kWh)']:,} <span style="font-size:10px;">kWh</span></div>
+                <div style="font-size:10px; color:rgba(150,210,255,0.5);">Dünkü Tüketim</div>
+                <div style="margin-top:8px; font-size:11px; color:{renk};">{'🟢 Çevrimiçi' if online else '🔴 Çevrimdışı'}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+# ============================================================
+# TAB 6 — GÜNCELLEMELER
+# ============================================================
+with tabs[5]:
+    st.markdown('<div class="section-title">📦 GÜNCELLEME DURUMU</div>', unsafe_allow_html=True)
+
+    @st.cache_data(ttl=30, show_spinner=False)
+    def fetch_guncellemeler(url, key):
+        try:
+            from supabase import create_client
+            c = create_client(url, key)
+            r = c.table("guncellemeler").select("id,versiyon,hedef,durum,created_at").order("created_at", desc=True).limit(20).execute()
+            return r.data or []
+        except:
+            return []
+
+    gunc_data = fetch_guncellemeler(url, key)
+
+    if st.button("🔄 Yenile"):
+        st.cache_data.clear()
+        st.rerun()
+
+    if gunc_data:
+        durum_renk = {"tamamlandi":"#10b981","bekliyor":"#f59e0b","iptal":"#6b7280","hata":"#ef4444"}
+        durum_icon = {"tamamlandi":"✅","bekliyor":"⏳","iptal":"❌","hata":"🚨"}
+
+        fig_g = go.Figure(data=[go.Table(
+            header=dict(
+                values=["<b>Versiyon</b>","<b>Hedef</b>","<b>Durum</b>","<b>Tarih</b>"],
+                fill_color="rgba(0,100,200,0.5)", font=dict(color="white",size=12),
+                align="center", height=34,
+            ),
+            cells=dict(
+                values=[
+                    [r["versiyon"] for r in gunc_data],
+                    [r["hedef"] for r in gunc_data],
+                    [f"{durum_icon.get(r['durum'],'')} {r['durum']}" for r in gunc_data],
+                    [r["created_at"][:16].replace("T"," ") for r in gunc_data],
+                ],
+                fill_color=[["rgba(0,20,50,0.6)","rgba(0,30,70,0.4)"] * len(gunc_data)],
+                font=dict(color="white",size=12), align="center", height=30,
+            )
+        )])
+        fig_g.update_layout(paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=5,b=5,l=0,r=0), height=500)
+        st.plotly_chart(fig_g, use_container_width=True)
     else:
-        st.warning("Henüz lokasyon bilgisi yok.")
-
-# ============ GÜNCELLEME BİLDİRİMLERİ ============
-st.markdown("---")
-st.markdown("### 📦 Güncelleme Durumu")
-
-@st.cache_data(ttl=30, show_spinner=False)
-def fetch_guncellemeler(url, key):
-    try:
-        from supabase import create_client
-        client = create_client(url, key)
-        r = client.table("guncellemeler").select("*").order("created_at", desc=True).limit(10).execute()
-        return r.data if r.data else []
-    except Exception:
-        return []
-
-guncellemeler = fetch_guncellemeler(sb_url, sb_key)
-
-if guncellemeler:
-    for g in guncellemeler:
-        versiyon = g.get("versiyon", "?")
-        hedef = g.get("hedef", "?")
-        durum = g.get("durum", "?")
-        tamamlayan = g.get("tamamlayan_lokasyon", "")
-        created = str(g.get("created_at", ""))[:16].replace("T", " ")
-        dosya_sayisi = len(g.get("dosyalar", {}))
-
-        if durum == "bekliyor":
-            icon = "⏳"
-            renk = "orange"
-        elif durum == "tamamlandi":
-            icon = "✅"
-            renk = "green"
-        else:
-            icon = "❌"
-            renk = "red"
-
-        tamamlayan_str = f" → `{tamamlayan}` tarafından uygulandı" if tamamlayan else ""
-        st.markdown(
-            f"{icon} **v{versiyon}** — Hedef: `{hedef}` | {dosya_sayisi} dosya | "
-            f"Durum: :{renk}[**{durum}**]{tamamlayan_str} | `{created}`"
-        )
-else:
-    st.caption("Henüz güncelleme yayınlanmamış.")
+        st.info("Güncelleme kaydı yok.")
 
 # ============ FOOTER ============
-st.markdown("---")
-fc1, fc2 = st.columns(2)
-fc1.caption(f"Son güncelleme: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
-if fc2.button("🔄 Veriyi Yenile"):
-    st.cache_data.clear()
-    st.rerun()
+st.markdown(f"""
+<div style="text-align:center; padding:20px 0 10px; border-top:1px solid rgba(0,212,255,0.1); margin-top:20px;">
+    <div style="font-family:'Orbitron',sans-serif; font-size:10px; color:rgba(0,212,255,0.3); letter-spacing:2px;">
+        ACIBADEM SAĞLIK GRUBU — ENERJİ YÖNETİM SİSTEMİ
+    </div>
+    <div style="font-size:10px; color:rgba(150,210,255,0.3); margin-top:4px;">
+        Son güncelleme: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+    </div>
+</div>
+""", unsafe_allow_html=True)
