@@ -229,11 +229,19 @@ def check_and_apply_update(client, lokasyon_id: str):
 
         logger.info(f"✅ Güncelleme tamamlandı: v{versiyon} — {uygulanan} dosya uygulandı")
 
-        # Watchdog'a yeniden başlatma sinyali gönder
-        flag_path = os.path.join(os.path.dirname(__file__), "_restart.flag")
+        # Kritik dosya değiştiyse tam yeniden başlatma gerekir
+        KRITIK_DOSYALAR = {"cloud_sync.py", "portal_watchdog.py"}
+        tam_restart = bool(set(dosyalar.keys()) & KRITIK_DOSYALAR)
+
+        if tam_restart:
+            flag_path = os.path.join(os.path.dirname(__file__), "_full_restart.flag")
+            logger.info("🔄 Kritik dosya güncellendi — TAM yeniden başlatma sinyali gönderildi (_full_restart.flag)")
+        else:
+            flag_path = os.path.join(os.path.dirname(__file__), "_restart.flag")
+            logger.info("🔄 Yeniden başlatma sinyali gönderildi (_restart.flag)")
+
         with open(flag_path, "w") as f:
             f.write(f"v{versiyon} - {datetime.now().isoformat()}")
-        logger.info("🔄 Yeniden başlatma sinyali gönderildi (_restart.flag)")
 
     except Exception as e:
         logger.error(f"Güncelleme kontrol hatası: {e}")

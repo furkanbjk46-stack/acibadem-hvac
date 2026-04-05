@@ -7,6 +7,7 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
 import os
+import sys
 import time
 import subprocess
 import logging
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FLAG_FILE = os.path.join(BASE_DIR, "_restart.flag")
+FULL_RESTART_FLAG = os.path.join(BASE_DIR, "_full_restart.flag")
 
 
 def start_portals():
@@ -86,7 +88,21 @@ def main():
                 procs = start_portals()
                 break
 
-        # Güncelleme flag kontrolü
+        # TAM yeniden başlatma (cloud_sync.py / portal_watchdog.py değiştiyse)
+        if os.path.exists(FULL_RESTART_FLAG):
+            logger.info("🔄 TAM yeniden başlatma sinyali alındı — sistem sıfırlanıyor...")
+            stop_portals(procs)
+            try:
+                os.remove(FULL_RESTART_FLAG)
+            except Exception:
+                pass
+            time.sleep(2)
+            # Watchdog'u yeni kodla yeniden başlat, bu process'i sonlandır
+            subprocess.Popen([sys.executable, os.path.abspath(__file__)], cwd=BASE_DIR)
+            logger.info("✅ Yeni watchdog başlatıldı, mevcut process sonlanıyor.")
+            sys.exit(0)
+
+        # Normal yeniden başlatma (sadece portallar)
         if os.path.exists(FLAG_FILE):
             logger.info("🔄 Güncelleme sinyali alındı — portallar yeniden başlatılıyor...")
             stop_portals(procs)
