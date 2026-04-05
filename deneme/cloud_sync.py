@@ -243,7 +243,7 @@ def send_heartbeat(client, lokasyon_id: str):
     """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
     try:
         client.table("lokasyonlar").upsert(
-            {"lokasyon_id": lokasyon_id, "son_sinyal": datetime.now().isoformat(), "durum": "online"},
+            {"lokasyon_id": lokasyon_id, "ping_zamani": datetime.now().isoformat(), "durum": "online"},
             on_conflict="lokasyon_id"
         ).execute()
         logger.debug(f"💓 Heartbeat gönderildi: {lokasyon_id}")
@@ -262,7 +262,7 @@ def sync_location_info(client, lokasyon_id: str):
             "lokasyon_id": lokasyon_id,
             "isim": loc_config.get("name", lokasyon_id),
             "son_sync": datetime.now().isoformat(),
-            "son_sinyal": datetime.now().isoformat(),
+            "ping_zamani": datetime.now().isoformat(),
             "versiyon": "2.0",
             "durum": "online"
         }
@@ -320,7 +320,7 @@ def start_background_sync():
             time.sleep(interval)
 
     def _heartbeat_loop():
-        """Her 2 dakikada bir son_sinyal güncelle ve güncelleme kontrol et"""
+        """Her 2 dakikada bir ping_zamani güncelle ve güncelleme kontrol et"""
         while True:
             try:
                 if client:
