@@ -34,5 +34,29 @@ echo.
 echo Bu pencereyi kapatmayin! Kapatirsaniz sunucular durur.
 echo.
 
+REM Python kontrolu
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo [HATA] Python bulunamadi! Lutfen KURULUM.bat calistirin.
+    pause
+    exit /b 1
+)
+
+REM portal_watchdog.py var mi?
+if not exist "portal_watchdog.py" (
+    echo [HATA] portal_watchdog.py bulunamadi!
+    echo Bulunulan klasor:
+    cd
+    echo Klasor icerigi:
+    dir *.py
+    pause
+    exit /b 1
+)
+
 REM Watchdog portalları başlatır ve güncelleme sonrası yeniden başlatır
 python portal_watchdog.py
+if errorlevel 1 (
+    echo.
+    echo [HATA] Portal baslatma basarisiz oldu!
+    pause
+)

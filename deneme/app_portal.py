@@ -296,21 +296,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- FAZ 7: MANUEL SYNC BUTONU ---
-_sync_col1, _sync_col2 = st.columns([4, 1])
-with _sync_col2:
-    if st.button("🔄 Merkeze Gönder", key="manuel_sync_btn", help="Verileri şimdi Genel Merkeze gönder"):
-        try:
-            from cloud_sync import run_sync
-            with st.spinner("📡 Senkronizasyon yapılıyor..."):
-                success = run_sync()
-            if success:
-                st.success("✅ Veriler Merkeze başarıyla gönderildi!")
-            else:
-                st.warning("⚠️ Senkronizasyon ayarlanmamış (supabase_config.json)")
-        except Exception as e:
-            st.error(f"❌ Senkronizasyon hatası: {e}")
-# ---
+# --- FAZ 7: MANUEL SYNC (form içine taşındı) ---
 DATA_FILE = _loc_mgr.get_data_path("energy_data.csv")
 
 _energy_schema = _loc_config.get("energy_schema", {})
@@ -1918,7 +1904,11 @@ with tab1:
             f"Diğer Yük = **{preview_other:,.0f} kWh**"
         )
 
-        ok = st.form_submit_button("💾 Kaydet")
+        _btn_col1, _btn_col2 = st.columns([1, 1])
+        with _btn_col1:
+            ok = st.form_submit_button("💾 Kaydet", use_container_width=True)
+        with _btn_col2:
+            gonder_ok = st.form_submit_button("🔄 Merkeze Gönder", use_container_width=True)
 
     if ok:
         try:
@@ -1976,6 +1966,19 @@ with tab1:
                 st.success("✅ Kayıt işlendi: Tarih varsa güncellendi, yoksa eklendi.")
         except Exception as e:
             st.error(f"Kayıt hatası: {e}")
+
+    # ----- MERKEZE GÖNDER -----
+    if gonder_ok:
+        try:
+            from cloud_sync import run_sync
+            with st.spinner("📡 Senkronizasyon yapılıyor..."):
+                success = run_sync()
+            if success:
+                st.success("✅ Veriler Merkeze başarıyla gönderildi!")
+            else:
+                st.warning("⚠️ Senkronizasyon ayarlanmamış (supabase_config.json)")
+        except Exception as e:
+            st.error(f"❌ Senkronizasyon hatası: {e}")
 
     # ----- FORMDAN BAĞIMSIZ ONAY ALANI (State kontrolü) -----
     if st.session_state.get("confirm_needed"):
