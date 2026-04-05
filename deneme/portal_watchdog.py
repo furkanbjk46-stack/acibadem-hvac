@@ -43,6 +43,13 @@ def start_portals():
     logger.info(f"✅ HVAC Portal başlatıldı (PID: {p2.pid}, Port: 8005)")
     procs.append(p2)
 
+    p3 = subprocess.Popen(
+        ["python", "cloud_sync.py"],
+        cwd=BASE_DIR
+    )
+    logger.info(f"✅ Cloud Sync başlatıldı (PID: {p3.pid})")
+    procs.append(p3)
+
     return procs
 
 

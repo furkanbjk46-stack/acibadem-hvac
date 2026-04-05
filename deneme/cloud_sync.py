@@ -339,16 +339,21 @@ def start_background_sync():
     logger.info(f"🔄 Arka plan senkronizasyonu başlatıldı (her {interval // 60} dakika, heartbeat: 2 dk)")
 
 
-# ============ Manuel çalıştırma ============
+# ============ Manuel / Subprocess çalıştırma ============
 if __name__ == "__main__":
     print("=" * 50)
     print("  HVAC Enerji Sistemi — Bulut Senkronizasyonu")
     print("=" * 50)
-    
-    success = run_sync()
-    if success:
-        print("\n✅ Senkronizasyon başarılı!")
-    else:
-        print("\n❌ Senkronizasyon başarısız! Logları kontrol edin.")
-    
-    input("\nDevam etmek için Enter'a basın...")
+
+    # Önce bir kerelik tam sync yap
+    run_sync()
+
+    # Sonra arka plan döngüsünü başlat (heartbeat + güncelleme kontrolü)
+    start_background_sync()
+
+    # Ana thread canlı kalsın (daemon thread'ler ölmesin)
+    try:
+        while True:
+            time.sleep(60)
+    except KeyboardInterrupt:
+        print("\nCloud Sync durduruldu.")
