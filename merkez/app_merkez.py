@@ -299,48 +299,50 @@ with sol:
         m2 = lok_info.get("m2", 10000)
         verim_str = f"{kwh/m2:.2f}" if kwh else "—"
 
+        renk_r = int(renk[1:3], 16)
+        renk_g = int(renk[3:5], 16)
+        renk_b = int(renk[5:7], 16)
+        dr_r   = int(durum_renk[1:3], 16)
+        dr_g   = int(durum_renk[3:5], 16)
+        dr_b   = int(durum_renk[5:7], 16)
+
         st.markdown(f"""
         <div class="{card_cls}" style="padding:14px;">
           <div style="display:flex; align-items:center; gap:14px;">
 
-            <!-- SOL: Büyük ikon + nefes alan halka + durum dot -->
-            <div style="position:relative; width:68px; height:68px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
-              <!-- Nefes alan arka halka -->
-              <div style="position:absolute; inset:-6px; border-radius:50%;
-                          background:radial-gradient(circle, {renk}40 0%, {renk}10 50%, transparent 75%);
-                          animation: breathe-ring 3s ease-in-out infinite;"></div>
-              <!-- İkinci halka (daha geniş, yavaş) -->
-              <div style="position:absolute; inset:-14px; border-radius:50%;
-                          background:radial-gradient(circle, {renk}18 0%, transparent 65%);
-                          animation: breathe-ring 3s ease-in-out infinite; animation-delay:0.4s;"></div>
-              <!-- Bina ikonu -->
+            <div style="position:relative; width:68px; height:68px; flex-shrink:0;
+                        display:flex; align-items:center; justify-content:center;">
+              <div style="position:absolute; top:-6px; left:-6px; right:-6px; bottom:-6px;
+                          border-radius:50%;
+                          background:radial-gradient(circle, rgba({renk_r},{renk_g},{renk_b},0.25) 0%, rgba({renk_r},{renk_g},{renk_b},0.06) 50%, transparent 75%);
+                          animation:breathe-ring 3s ease-in-out infinite;"></div>
+              <div style="position:absolute; top:-14px; left:-14px; right:-14px; bottom:-14px;
+                          border-radius:50%;
+                          background:radial-gradient(circle, rgba({renk_r},{renk_g},{renk_b},0.10) 0%, transparent 65%);
+                          animation:breathe-ring 3s ease-in-out infinite; animation-delay:0.5s;"></div>
               <div style="font-size:42px; line-height:1; position:relative; z-index:1;
-                          filter:drop-shadow(0 0 10px {renk});">🏥</div>
-              <!-- Durum dot — ikonun sağ üstünde -->
+                          filter:drop-shadow(0 0 10px rgba({renk_r},{renk_g},{renk_b},0.8));">🏥</div>
               <div style="position:absolute; top:4px; right:4px; z-index:2;
                           width:13px; height:13px; border-radius:50%;
-                          background:{durum_renk};
+                          background:rgba({dr_r},{dr_g},{dr_b},1);
                           border:2px solid #020b18;
-                          color:{durum_renk};
-                          animation: breathe 2.4s ease-in-out infinite;"></div>
+                          box-shadow:0 0 6px rgba({dr_r},{dr_g},{dr_b},0.9), 0 0 14px rgba({dr_r},{dr_g},{dr_b},0.5);
+                          animation:breathe-ring 2.4s ease-in-out infinite;"></div>
             </div>
 
-            <!-- SAĞ: Bilgiler -->
             <div style="flex:1; min-width:0;">
-              <!-- İsim -->
               <div style="font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700;
-                          color:{renk}; letter-spacing:2px; text-shadow:0 0 8px {renk};
+                          color:{renk}; letter-spacing:2px; text-shadow:0 0 8px rgba({renk_r},{renk_g},{renk_b},0.7);
                           margin-bottom:2px;">{lok_info['kisa']}</div>
-              <!-- Durum yazısı -->
               <div style="font-size:9px; color:{durum_renk}; font-weight:600; margin-bottom:8px;
                           letter-spacing:0.5px;">{durum_lbl}</div>
-              <!-- kWh değeri -->
-              <div style="font-size:8px; color:rgba(150,210,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Günlük Tüketim</div>
+              <div style="font-size:8px; color:rgba(150,210,255,0.4); text-transform:uppercase;
+                          letter-spacing:1px; margin-bottom:2px;">Günlük Tüketim</div>
               <div style="font-family:'Orbitron',sans-serif; font-size:18px; font-weight:900;
-                          color:{renk}; text-shadow:0 0 12px {renk}; line-height:1; margin-bottom:8px;">
+                          color:{renk}; text-shadow:0 0 12px rgba({renk_r},{renk_g},{renk_b},0.7);
+                          line-height:1; margin-bottom:8px;">
                 {kwh_str}<span style="font-size:9px; color:rgba(150,210,255,0.5); margin-left:3px;">kWh</span>
               </div>
-              <!-- kWh/m² badge -->
               <div style="display:inline-flex; align-items:center; gap:6px;
                           background:rgba(0,212,255,0.06); border-radius:6px;
                           padding:4px 10px; border:1px solid rgba(0,212,255,0.12);">
