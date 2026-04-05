@@ -400,11 +400,7 @@ with sag:
                 if pd.notna(cl) and cl > 90:
                     lok_uyari_map[lok_id].append(("r", f"🔥 {isim}: Chiller kritik yük (%{cl:.0f})"))
 
-    # 3) Çevrimdışı uyarıları
-    for lok_id, lok_info in HASTANELER.items():
-        online, fark_dk = online_bilgi(lok_id)
-        if fark_dk is not None and not online:
-            lok_uyari_map[lok_id].append(("r", f"🔴 {lok_info['kisa']}: Çevrimdışı ({int(fark_dk)}dk)"))
+    # 3) Çevrimdışı uyarıları — sol kolonda kart olarak gösterildiği için burada yok
 
     # Lokasyonları arıza sayısına göre sırala (en fazla arıza önce)
     def lok_ariza_skoru(lok_id):
