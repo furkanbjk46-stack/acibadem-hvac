@@ -221,12 +221,10 @@ def check_and_apply_update(client, lokasyon_id: str):
                 hatalar.append(dosya_yolu)
                 logger.error(f"  ❌ {dosya_yolu}: {e}")
 
-        # Durumu güncelle
+        # Durumu güncelle (sadece mevcut kolon, ek kolon gerekmez)
         yeni_durum = "tamamlandi" if not hatalar else "hata"
         client.table("guncellemeler").update({
             "durum": yeni_durum,
-            "tamamlayan_lokasyon": lokasyon_id,
-            "tamamlanma_zamani": datetime.now().isoformat(),
         }).eq("id", kayit_id).execute()
 
         logger.info(f"✅ Güncelleme tamamlandı: v{versiyon} — {uygulanan} dosya uygulandı")
