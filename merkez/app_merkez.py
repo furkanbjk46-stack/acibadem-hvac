@@ -344,8 +344,8 @@ with merkez:
             font=dict(color="#a0c8ff", family="Inter"),
             margin=dict(t=10,b=20,l=40,r=40), height=200,
             xaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True),
-            yaxis=dict(title="Set °C", gridcolor="rgba(0,212,255,0.07)", titlefont=dict(size=10)),
-            yaxis2=dict(title="Dış Hava °C", overlaying="y", side="right", titlefont=dict(size=10)),
+            yaxis=dict(title=dict(text="Set °C", font=dict(size=10)), gridcolor="rgba(0,212,255,0.07)"),
+            yaxis2=dict(title=dict(text="Dış Hava °C", font=dict(size=10)), overlaying="y", side="right"),
             legend=dict(orientation="h", y=1.15, font=dict(size=10)),
         )
         st.plotly_chart(fig_ch, use_container_width=True, config={"displayModeBar": False})
