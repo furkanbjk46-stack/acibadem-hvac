@@ -197,8 +197,8 @@ with tabs[0]:
         # Lokasyon bilgisi
         lok_info = next((l for l in lokasyonlar if l.get("lokasyon_id") == lok_id), {})
 
-        # Önce son_sinyal (heartbeat), yoksa son_sync'e bak
-        sinyal_str = str(lok_info.get("son_sinyal", "") or lok_info.get("son_sync", "")).strip()
+        # Önce ping_zamani (heartbeat), yoksa son_sync'e bak
+        sinyal_str = str(lok_info.get("ping_zamani", "") or lok_info.get("son_sync", "")).strip()
 
         # Online/offline: son heartbeat 5 dakikadan eskiyse offline
         durum = "offline"
@@ -239,9 +239,9 @@ with tabs[0]:
                 with st.spinner("Sinyal kontrol ediliyor..."):
                     try:
                         fresh = get_supabase_client_direct(sb_url, sb_key)
-                        r = fresh.table("lokasyonlar").select("son_sinyal,son_sync").eq("lokasyon_id", lok_id).execute()
+                        r = fresh.table("lokasyonlar").select("ping_zamani,son_sync").eq("lokasyon_id", lok_id).execute()
                         if r.data:
-                            ts = r.data[0].get("son_sinyal") or r.data[0].get("son_sync")
+                            ts = r.data[0].get("ping_zamani") or r.data[0].get("son_sync")
                             if ts:
                                 dt = pd.to_datetime(ts).tz_localize(None)
                                 fark = (datetime.now() - dt).total_seconds() / 60
@@ -489,7 +489,7 @@ with tabs[4]:
             lok_name = LOK_NAMES.get(lok_id, lok_id)
 
             # Heartbeat bazlı gerçek durum (5 dk eşiği)
-            sinyal_str = str(lok.get("son_sinyal", "") or lok.get("son_sync", "")).strip()
+            sinyal_str = str(lok.get("ping_zamani", "") or lok.get("son_sync", "")).strip()
             gercek_durum = "offline"
             fark_dk = None
             if sinyal_str and sinyal_str not in ("", "None", "Bilinmiyor"):
