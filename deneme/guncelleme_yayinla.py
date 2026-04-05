@@ -35,6 +35,7 @@ GUNCELLENECEK_DOSYALAR = [
 ]
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "supabase_config.json")
+SECRET_FILE = os.path.join(os.path.dirname(__file__), "supabase_secret.json")
 
 def main():
     print("=" * 55)
@@ -45,8 +46,25 @@ def main():
     with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         cfg = json.load(f)
 
+    # Service role key oku (sadece GM bilgisayarında bulunur)
+    if not os.path.exists(SECRET_FILE):
+        print("\n❌ supabase_secret.json bulunamadı!")
+        print("   Bu dosya sadece GM bilgisayarında bulunur.")
+        print("   Supabase dashboard'dan service_role key'i alıp oluşturun.")
+        input("\nDevam etmek için Enter'a basın...")
+        return
+
+    with open(SECRET_FILE, "r", encoding="utf-8") as f:
+        secret = json.load(f)
+
+    service_key = secret.get("service_role_key", "")
+    if not service_key or "BURAYA" in service_key:
+        print("\n❌ supabase_secret.json içinde geçerli bir service_role_key yok!")
+        return
+
     from supabase import create_client
-    client = create_client(cfg["supabase_url"], cfg["supabase_key"])
+    # Service role key ile bağlan → RLS bypass → insert yetkisi var
+    client = create_client(cfg["supabase_url"], service_key)
 
     # Versiyon
     versiyon = input("\nVersiyon numarası girin (ör: 2.1): ").strip()
