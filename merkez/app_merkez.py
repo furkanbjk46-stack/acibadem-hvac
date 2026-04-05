@@ -82,6 +82,14 @@ p, span, div, label { color: rgba(200,230,255,0.85) !important; font-family: 'In
   50%  { opacity: 1;   transform: scale(1.05); }
   100% { opacity: 0.6; transform: scale(0.95); }
 }
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 4px currentColor, 0 0 8px currentColor;  transform: scale(1);    opacity: 0.85; }
+  50%       { box-shadow: 0 0 10px currentColor, 0 0 22px currentColor, 0 0 36px currentColor; transform: scale(1.25); opacity: 1; }
+}
+@keyframes breathe-ring {
+  0%, 100% { transform: scale(0.88); opacity: 0.25; }
+  50%       { transform: scale(1.12); opacity: 0.55; }
+}
 
 .btn-refresh button {
     background: linear-gradient(135deg,#003d80,#0066cc) !important;
@@ -292,37 +300,55 @@ with sol:
         verim_str = f"{kwh/m2:.2f}" if kwh else "—"
 
         st.markdown(f"""
-        <div class="{card_cls}" style="padding:12px;">
-          <!-- Üst satır: ikon + isim + durum dot -->
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-            <div style="position:relative; width:42px; height:42px; flex-shrink:0;">
-              <div style="position:absolute; inset:0; border-radius:50%;
-                          background:radial-gradient(circle, {renk}22 0%, transparent 70%);
-                          animation: pulse 2s infinite;"></div>
-              <div style="font-size:26px; line-height:42px; text-align:center;">🏥</div>
+        <div class="{card_cls}" style="padding:14px;">
+          <div style="display:flex; align-items:center; gap:14px;">
+
+            <!-- SOL: Büyük ikon + nefes alan halka + durum dot -->
+            <div style="position:relative; width:68px; height:68px; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+              <!-- Nefes alan arka halka -->
+              <div style="position:absolute; inset:-6px; border-radius:50%;
+                          background:radial-gradient(circle, {renk}40 0%, {renk}10 50%, transparent 75%);
+                          animation: breathe-ring 3s ease-in-out infinite;"></div>
+              <!-- İkinci halka (daha geniş, yavaş) -->
+              <div style="position:absolute; inset:-14px; border-radius:50%;
+                          background:radial-gradient(circle, {renk}18 0%, transparent 65%);
+                          animation: breathe-ring 3s ease-in-out infinite; animation-delay:0.4s;"></div>
+              <!-- Bina ikonu -->
+              <div style="font-size:42px; line-height:1; position:relative; z-index:1;
+                          filter:drop-shadow(0 0 10px {renk});">🏥</div>
+              <!-- Durum dot — ikonun sağ üstünde -->
+              <div style="position:absolute; top:4px; right:4px; z-index:2;
+                          width:13px; height:13px; border-radius:50%;
+                          background:{durum_renk};
+                          border:2px solid #020b18;
+                          color:{durum_renk};
+                          animation: breathe 2.4s ease-in-out infinite;"></div>
             </div>
+
+            <!-- SAĞ: Bilgiler -->
             <div style="flex:1; min-width:0;">
-              <div style="font-family:'Orbitron',sans-serif; font-size:10px; font-weight:700;
-                          color:{renk}; letter-spacing:1.5px; text-shadow:0 0 8px {renk};">{lok_info['kisa']}</div>
-              <div style="display:flex; align-items:center; gap:5px; margin-top:3px;">
-                <div style="width:7px; height:7px; border-radius:50%; background:{durum_renk}; {dot_shadow}"></div>
-                <span style="font-size:9px; color:{durum_renk}; font-weight:600;">{durum_lbl}</span>
+              <!-- İsim -->
+              <div style="font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700;
+                          color:{renk}; letter-spacing:2px; text-shadow:0 0 8px {renk};
+                          margin-bottom:2px;">{lok_info['kisa']}</div>
+              <!-- Durum yazısı -->
+              <div style="font-size:9px; color:{durum_renk}; font-weight:600; margin-bottom:8px;
+                          letter-spacing:0.5px;">{durum_lbl}</div>
+              <!-- kWh değeri -->
+              <div style="font-size:8px; color:rgba(150,210,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:2px;">Günlük Tüketim</div>
+              <div style="font-family:'Orbitron',sans-serif; font-size:18px; font-weight:900;
+                          color:{renk}; text-shadow:0 0 12px {renk}; line-height:1; margin-bottom:8px;">
+                {kwh_str}<span style="font-size:9px; color:rgba(150,210,255,0.5); margin-left:3px;">kWh</span>
+              </div>
+              <!-- kWh/m² badge -->
+              <div style="display:inline-flex; align-items:center; gap:6px;
+                          background:rgba(0,212,255,0.06); border-radius:6px;
+                          padding:4px 10px; border:1px solid rgba(0,212,255,0.12);">
+                <span style="font-size:8px; color:rgba(150,210,255,0.45); text-transform:uppercase; letter-spacing:1px;">kWh/m²</span>
+                <span style="font-family:'Orbitron',sans-serif; font-size:12px; color:#00d4ff; font-weight:700;">{verim_str}</span>
               </div>
             </div>
-          </div>
-          <!-- Metrikler -->
-          <div style="margin-bottom:8px;">
-            <div style="font-size:8px; color:rgba(150,210,255,0.45); text-transform:uppercase; letter-spacing:1px;">Enerji Tüketim</div>
-            <div style="font-family:'Orbitron',sans-serif; font-size:15px; font-weight:800;
-                        color:{renk}; text-shadow:0 0 10px {renk};">{kwh_str}
-              <span style="font-size:8px; color:rgba(150,210,255,0.5);">kWh</span>
-            </div>
-          </div>
-          <!-- Alt satır: verimlilik (fit-content) -->
-          <div style="display:inline-block; background:rgba(0,212,255,0.05); border-radius:6px;
-                      padding:4px 10px; border:1px solid rgba(0,212,255,0.1);">
-            <span style="font-size:8px; color:rgba(150,210,255,0.4); text-transform:uppercase; letter-spacing:1px;">kWh/m²&nbsp;</span>
-            <span style="font-family:'Orbitron',sans-serif; font-size:12px; color:#00d4ff; font-weight:700;">{verim_str}</span>
+
           </div>
         </div>
         """, unsafe_allow_html=True)
