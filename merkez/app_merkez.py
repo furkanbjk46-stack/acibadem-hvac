@@ -426,25 +426,6 @@ with sag:
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
-    # ── Güncellemeler ──
-    st.markdown('<div class="sec">📦 SON GÜNCELLEMELER</div>', unsafe_allow_html=True)
-    gunc = fetch_guncellemeler(url, key)
-    durum_renk = {"tamamlandi":"#10b981","bekliyor":"#f59e0b","iptal":"#6b7280","hata":"#ef4444"}
-    durum_icon = {"tamamlandi":"✅","bekliyor":"⏳","iptal":"❌","hata":"🚨"}
-    for r in gunc[:5]:
-        dr = durum_renk.get(r["durum"],"#aaa")
-        di = durum_icon.get(r["durum"],"?")
-        tarih = r["created_at"][:16].replace("T"," ")
-        st.markdown(f"""
-        <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
-                    border-radius:8px; border-left:3px solid {dr};">
-          <div style="font-size:11px; color:#e0f2fe; font-weight:600;">{di} {r['versiyon']} <span style="color:rgba(150,210,255,0.5); font-size:10px;">→ {r['hedef']}</span></div>
-          <div style="font-size:9px; color:{dr};">{r['durum'].upper()} &nbsp;·&nbsp; <span style="color:rgba(150,210,255,0.35);">{tarih}</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-
     # ── 30 Günlük Trend Mini ──
     st.markdown('<div class="sec">📈 30G ENERJİ TRENDİ</div>', unsafe_allow_html=True)
     if not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
@@ -479,3 +460,68 @@ st.markdown(f"""
   </span>
 </div>
 """, unsafe_allow_html=True)
+
+# ============ AYARLAR ============
+with st.expander("⚙️  Ayarlar", expanded=False):
+    st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
+
+    ayar_tab1, ayar_tab2, ayar_tab3 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler"])
+
+    # ── Bağlantı ──
+    with ayar_tab1:
+        st.markdown("**Supabase Bağlantısı**")
+        mevcut_url = config.get("supabase_url", "")
+        mevcut_key = config.get("supabase_key", "")
+        yeni_url = st.text_input("Supabase URL", value=mevcut_url, key="ayar_url")
+        yeni_key = st.text_input("Supabase Anon Key", value=mevcut_key, key="ayar_key", type="password")
+        if st.button("💾 Bağlantıyı Kaydet", key="btn_baglanti"):
+            import json as _json
+            os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+            cfg_yeni = config.copy()
+            cfg_yeni["supabase_url"] = yeni_url.strip()
+            cfg_yeni["supabase_key"] = yeni_key.strip()
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                _json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
+            st.success("✅ Bağlantı bilgileri kaydedildi. Sayfayı yenileyin.")
+
+    # ── Güncellemeler ──
+    with ayar_tab2:
+        st.markdown("**Son Güncellemeler**")
+        gunc = fetch_guncellemeler(url, key)
+        durum_renk_map = {"tamamlandi": "#10b981", "bekliyor": "#f59e0b", "iptal": "#6b7280", "hata": "#ef4444"}
+        durum_icon_map = {"tamamlandi": "✅", "bekliyor": "⏳", "iptal": "❌", "hata": "🚨"}
+        if not gunc:
+            st.info("Henüz güncelleme kaydı yok.")
+        for r in gunc:
+            dr = durum_renk_map.get(r["durum"], "#aaa")
+            di = durum_icon_map.get(r["durum"], "?")
+            tarih = r["created_at"][:16].replace("T", " ")
+            st.markdown(f"""
+            <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
+                        border-radius:8px; border-left:3px solid {dr};">
+              <div style="font-size:12px; color:#e0f2fe; font-weight:600;">{di} {r['versiyon']}
+                <span style="color:rgba(150,210,255,0.5); font-size:11px;">→ {r['hedef']}</span>
+              </div>
+              <div style="font-size:10px; color:{dr};">{r['durum'].upper()} &nbsp;·&nbsp;
+                <span style="color:rgba(150,210,255,0.35);">{tarih}</span>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ── Hastaneler ──
+    with ayar_tab3:
+        st.markdown("**Kayıtlı Lokasyonlar**")
+        if not lokasyonlar:
+            st.info("Lokasyon verisi bulunamadı.")
+        else:
+            for lok in lokasyonlar:
+                ping = str(lok.get("ping_zamani") or "—")[:16].replace("T", " ")
+                isim = lok.get("isim") or lok.get("lokasyon_id", "?")
+                st.markdown(f"""
+                <div style="padding:8px 12px; margin:4px 0; background:rgba(0,20,50,0.6);
+                            border-radius:8px; border:1px solid rgba(0,212,255,0.1);
+                            display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:12px; color:#e0f2fe; font-weight:600;">🏥 {isim}</span>
+                  <span style="font-size:10px; color:rgba(150,210,255,0.45);">Son ping: {ping}</span>
+                </div>
+                """, unsafe_allow_html=True)
