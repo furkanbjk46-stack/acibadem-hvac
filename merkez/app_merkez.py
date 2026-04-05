@@ -419,7 +419,7 @@ with merkez:
         ),
         paper_bgcolor="rgba(0,0,0,0)",
         margin=dict(t=0, b=0, l=0, r=0),
-        height=480,
+        height=580,
         showlegend=False,
     )
 
