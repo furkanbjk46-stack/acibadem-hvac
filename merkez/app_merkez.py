@@ -77,6 +77,12 @@ p, span, div, label { color: rgba(200,230,255,0.85) !important; font-family: 'In
 .alrt-g { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35);
            border-radius:8px; padding:7px 10px; margin:3px 0; font-size:11px; color:#6ee7b7 !important; }
 
+@keyframes pulse {
+  0%   { opacity: 0.6; transform: scale(0.95); }
+  50%  { opacity: 1;   transform: scale(1.05); }
+  100% { opacity: 0.6; transform: scale(0.95); }
+}
+
 .btn-refresh button {
     background: linear-gradient(135deg,#003d80,#0066cc) !important;
     color: #fff !important; border: 1px solid rgba(0,212,255,0.4) !important;
@@ -201,6 +207,52 @@ def dun_kwh(lok_id):
         return d["Toplam_Hastane_Tuketim_kWh"].sum()
     return 0
 
+def sparkline_svg(values, renk, w=75, h=28):
+    """Verilen değerlerden mini SVG sparkline üret."""
+    if not values or len(values) < 2:
+        return f'<svg width="{w}" height="{h}"></svg>'
+    mn, mx = min(values), max(values)
+    span = mx - mn if mx != mn else 1
+    pts = []
+    for i, v in enumerate(values):
+        x = i / (len(values) - 1) * w
+        y = h - ((v - mn) / span) * (h - 4) - 2
+        pts.append(f"{x:.1f},{y:.1f}")
+    path = " ".join(pts)
+    # Alan dolgusu için kapat
+    fill_path = f"M{pts[0]} " + " ".join(f"L{p}" for p in pts[1:]) + f" L{w},{ h} L0,{h} Z"
+    return f'''<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}">
+      <defs>
+        <linearGradient id="sg_{renk[1:]}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="{renk}" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="{renk}" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="{fill_path}" fill="url(#sg_{renk[1:]})" />
+      <polyline points="{path}" fill="none" stroke="{renk}" stroke-width="1.5"
+                stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>'''
+
+def son7_kwh(lok_id):
+    """Son 7 günün günlük kWh listesini döndür."""
+    if df_all.empty or "Toplam_Hastane_Tuketim_kWh" not in df_all.columns:
+        return []
+    son7_bas = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+    d = df_all[(df_all["lokasyon_id"] == lok_id) & (df_all["Tarih"].dt.strftime("%Y-%m-%d") >= son7_bas)]
+    if d.empty:
+        return []
+    return d.groupby(d["Tarih"].dt.strftime("%Y-%m-%d"))["Toplam_Hastane_Tuketim_kWh"].sum().tolist()
+
+def hvac_yuzdesi(lok_id):
+    """Dünkü ortalama Chiller Load %"""
+    if df_all.empty or "Chiller_Load_Percent" not in df_all.columns:
+        return None
+    d = df_all[(df_all["lokasyon_id"] == lok_id) & (df_all["Tarih"].dt.strftime("%Y-%m-%d") == dun)]
+    if d.empty:
+        return None
+    val = d["Chiller_Load_Percent"].mean()
+    return round(val, 1) if pd.notna(val) else None
+
 # ============================================================
 # ANA LAYOUT: sol | harita | sağ
 # ============================================================
@@ -214,34 +266,78 @@ with sol:
     st.markdown('<div class="sec">📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
     for lok_id, lok_info in HASTANELER.items():
         online, fark_dk = online_bilgi(lok_id)
-        kwh = dun_kwh(lok_id)
-        renk = lok_info["renk"]
+        kwh      = dun_kwh(lok_id)
+        renk     = lok_info["renk"]
+        spark    = son7_kwh(lok_id)
+        hvac_pct = hvac_yuzdesi(lok_id)
 
         if fark_dk is None:
-            sinyal = "sinyal yok"
-            card_cls = "nk nk-gray"
-            durum_icon = "⚫"
+            card_cls   = "nk nk-gray"
             durum_renk = "#6b7280"
+            durum_lbl  = "KURULMADI"
+            dot_shadow = ""
         elif online:
-            sinyal = f"{int(fark_dk)}dk önce" if fark_dk >= 1 else "az önce"
-            card_cls = "nk nk-green"
-            durum_icon = "🟢"
+            card_cls   = "nk nk-green"
             durum_renk = "#10b981"
+            durum_lbl  = "ÇEVRİMİÇİ"
+            dot_shadow = f"box-shadow:0 0 8px {durum_renk},0 0 16px {durum_renk};"
         else:
-            sinyal = f"{int(fark_dk)}dk önce"
-            card_cls = "nk nk-red"
-            durum_icon = "🔴"
+            card_cls   = "nk nk-red"
             durum_renk = "#ef4444"
+            durum_lbl  = "ÇEVRİMDIŞI"
+            dot_shadow = f"box-shadow:0 0 8px {durum_renk};"
 
-        kwh_str = f"{kwh:,.0f}" if kwh else "—"
+        kwh_str  = f"{kwh:,.0f}" if kwh else "—"
+        hvac_str = f"%{hvac_pct:.0f}" if hvac_pct is not None else "—"
+        svg      = sparkline_svg(spark, renk) if spark else sparkline_svg([], renk)
+
+        # kWh/m² hesapla
+        m2 = lok_info.get("m2", 10000)
+        verim_str = f"{kwh/m2:.2f}" if kwh else "—"
 
         st.markdown(f"""
-        <div class="{card_cls}">
-          <div style="font-family:'Orbitron',sans-serif; font-size:9px; color:{renk}; letter-spacing:1.5px; margin-bottom:6px;">{lok_info['kisa']}</div>
-          <div style="font-size:18px; font-weight:800; color:{renk}; font-family:'Orbitron',sans-serif; text-shadow:0 0 12px {renk};">{kwh_str}</div>
-          <div style="font-size:9px; color:rgba(150,210,255,0.5); margin-bottom:6px;">kWh / dün</div>
-          <div style="font-size:10px; color:{durum_renk}; font-weight:700;">{durum_icon} {"ÇEVRİMİÇİ" if online else ("KURULMADI" if fark_dk is None else "ÇEVRİMDIŞI")}</div>
-          <div style="font-size:9px; color:rgba(150,210,255,0.35);">Son ping: {sinyal}</div>
+        <div class="{card_cls}" style="padding:12px;">
+          <!-- Üst satır: ikon + isim + durum dot -->
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+            <div style="position:relative; width:42px; height:42px; flex-shrink:0;">
+              <div style="position:absolute; inset:0; border-radius:50%;
+                          background:radial-gradient(circle, {renk}22 0%, transparent 70%);
+                          animation: pulse 2s infinite;"></div>
+              <div style="font-size:26px; line-height:42px; text-align:center;">🏥</div>
+            </div>
+            <div style="flex:1; min-width:0;">
+              <div style="font-family:'Orbitron',sans-serif; font-size:10px; font-weight:700;
+                          color:{renk}; letter-spacing:1.5px; text-shadow:0 0 8px {renk};">{lok_info['kisa']}</div>
+              <div style="display:flex; align-items:center; gap:5px; margin-top:3px;">
+                <div style="width:7px; height:7px; border-radius:50%; background:{durum_renk}; {dot_shadow}"></div>
+                <span style="font-size:9px; color:{durum_renk}; font-weight:600;">{durum_lbl}</span>
+              </div>
+            </div>
+          </div>
+          <!-- Metrikler -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div>
+              <div style="font-size:8px; color:rgba(150,210,255,0.45); text-transform:uppercase; letter-spacing:1px;">Enerji Tüketim</div>
+              <div style="font-family:'Orbitron',sans-serif; font-size:15px; font-weight:800;
+                          color:{renk}; text-shadow:0 0 10px {renk};">{kwh_str}
+                <span style="font-size:8px; color:rgba(150,210,255,0.5);">kWh</span>
+              </div>
+            </div>
+            <div>{svg}</div>
+          </div>
+          <!-- Alt satır: verimlilik + hvac yük -->
+          <div style="display:flex; gap:6px;">
+            <div style="flex:1; background:rgba(0,212,255,0.05); border-radius:6px; padding:5px 8px;
+                        border:1px solid rgba(0,212,255,0.08);">
+              <div style="font-size:8px; color:rgba(150,210,255,0.4);">kWh/m²</div>
+              <div style="font-family:'Orbitron',sans-serif; font-size:12px; color:#00d4ff; font-weight:700;">{verim_str}</div>
+            </div>
+            <div style="flex:1; background:rgba(0,212,255,0.05); border-radius:6px; padding:5px 8px;
+                        border:1px solid rgba(0,212,255,0.08);">
+              <div style="font-size:8px; color:rgba(150,210,255,0.4);">HVAC Yük</div>
+              <div style="font-family:'Orbitron',sans-serif; font-size:12px; color:{renk}; font-weight:700;">{hvac_str}</div>
+            </div>
+          </div>
         </div>
         """, unsafe_allow_html=True)
 
