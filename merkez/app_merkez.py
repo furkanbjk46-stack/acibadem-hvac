@@ -299,61 +299,47 @@ with sol:
         m2 = lok_info.get("m2", 10000)
         verim_str = f"{kwh/m2:.2f}" if kwh else "—"
 
-        renk_r = int(renk[1:3], 16)
-        renk_g = int(renk[3:5], 16)
-        renk_b = int(renk[5:7], 16)
-        dr_r   = int(durum_renk[1:3], 16)
-        dr_g   = int(durum_renk[3:5], 16)
-        dr_b   = int(durum_renk[5:7], 16)
+        rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
+        dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
 
-        st.markdown(f"""
-        <div class="{card_cls}" style="padding:14px;">
-          <div style="display:flex; align-items:center; gap:14px;">
-
-            <div style="position:relative; width:68px; height:68px; flex-shrink:0;
-                        display:flex; align-items:center; justify-content:center;">
-              <div style="position:absolute; top:-6px; left:-6px; right:-6px; bottom:-6px;
-                          border-radius:50%;
-                          background:radial-gradient(circle, rgba({renk_r},{renk_g},{renk_b},0.25) 0%, rgba({renk_r},{renk_g},{renk_b},0.06) 50%, transparent 75%);
-                          animation:breathe-ring 3s ease-in-out infinite;"></div>
-              <div style="position:absolute; top:-14px; left:-14px; right:-14px; bottom:-14px;
-                          border-radius:50%;
-                          background:radial-gradient(circle, rgba({renk_r},{renk_g},{renk_b},0.10) 0%, transparent 65%);
-                          animation:breathe-ring 3s ease-in-out infinite; animation-delay:0.5s;"></div>
-              <div style="font-size:42px; line-height:1; position:relative; z-index:1;
-                          filter:drop-shadow(0 0 10px rgba({renk_r},{renk_g},{renk_b},0.8));">🏥</div>
-              <div style="position:absolute; top:4px; right:4px; z-index:2;
-                          width:13px; height:13px; border-radius:50%;
-                          background:rgba({dr_r},{dr_g},{dr_b},1);
-                          border:2px solid #020b18;
-                          box-shadow:0 0 6px rgba({dr_r},{dr_g},{dr_b},0.9), 0 0 14px rgba({dr_r},{dr_g},{dr_b},0.5);
-                          animation:breathe-ring 2.4s ease-in-out infinite;"></div>
-            </div>
-
-            <div style="flex:1; min-width:0;">
-              <div style="font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700;
-                          color:{renk}; letter-spacing:2px; text-shadow:0 0 8px rgba({renk_r},{renk_g},{renk_b},0.7);
-                          margin-bottom:2px;">{lok_info['kisa']}</div>
-              <div style="font-size:9px; color:{durum_renk}; font-weight:600; margin-bottom:8px;
-                          letter-spacing:0.5px;">{durum_lbl}</div>
-              <div style="font-size:8px; color:rgba(150,210,255,0.4); text-transform:uppercase;
-                          letter-spacing:1px; margin-bottom:2px;">Günlük Tüketim</div>
-              <div style="font-family:'Orbitron',sans-serif; font-size:18px; font-weight:900;
-                          color:{renk}; text-shadow:0 0 12px rgba({renk_r},{renk_g},{renk_b},0.7);
-                          line-height:1; margin-bottom:8px;">
-                {kwh_str}<span style="font-size:9px; color:rgba(150,210,255,0.5); margin-left:3px;">kWh</span>
-              </div>
-              <div style="display:inline-flex; align-items:center; gap:6px;
-                          background:rgba(0,212,255,0.06); border-radius:6px;
-                          padding:4px 10px; border:1px solid rgba(0,212,255,0.12);">
-                <span style="font-size:8px; color:rgba(150,210,255,0.45); text-transform:uppercase; letter-spacing:1px;">kWh/m²</span>
-                <span style="font-family:'Orbitron',sans-serif; font-size:12px; color:#00d4ff; font-weight:700;">{verim_str}</span>
-              </div>
-            </div>
-
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        kart_html = (
+            f'<div class="{card_cls}" style="padding:14px;">'
+            f'<div style="display:flex;align-items:center;gap:14px;">'
+            f'<div style="position:relative;width:68px;height:68px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
+            f'<div style="position:absolute;top:-6px;left:-6px;right:-6px;bottom:-6px;border-radius:50%;'
+            f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.25) 0%,rgba({rr},{rg},{rb},0.06) 50%,transparent 75%);'
+            f'animation:breathe-ring 3s ease-in-out infinite;"></div>'
+            f'<div style="position:absolute;top:-14px;left:-14px;right:-14px;bottom:-14px;border-radius:50%;'
+            f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.10) 0%,transparent 65%);'
+            f'animation:breathe-ring 3s ease-in-out infinite;animation-delay:0.5s;"></div>'
+            f'<div style="font-size:42px;line-height:1;position:relative;z-index:1;'
+            f'filter:drop-shadow(0 0 10px rgba({rr},{rg},{rb},0.8));">🏥</div>'
+            f'<div style="position:absolute;top:4px;right:4px;z-index:2;width:13px;height:13px;'
+            f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020b18;'
+            f'box-shadow:0 0 6px rgba({dr},{dg},{db},0.9),0 0 14px rgba({dr},{dg},{db},0.5);'
+            f'animation:breathe-ring 2.4s ease-in-out infinite;"></div>'
+            f'</div>'
+            f'<div style="flex:1;min-width:0;">'
+            f'<div style="font-family:Orbitron,sans-serif;font-size:11px;font-weight:700;'
+            f'color:{renk};letter-spacing:2px;text-shadow:0 0 8px rgba({rr},{rg},{rb},0.7);'
+            f'margin-bottom:2px;">{lok_info["kisa"]}</div>'
+            f'<div style="font-size:9px;color:{durum_renk};font-weight:600;margin-bottom:8px;">{durum_lbl}</div>'
+            f'<div style="font-size:8px;color:rgba(150,210,255,0.4);text-transform:uppercase;'
+            f'letter-spacing:1px;margin-bottom:2px;">Günlük Tüketim</div>'
+            f'<div style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:900;'
+            f'color:{renk};text-shadow:0 0 12px rgba({rr},{rg},{rb},0.7);line-height:1;margin-bottom:8px;">'
+            f'{kwh_str}<span style="font-size:9px;color:rgba(150,210,255,0.5);margin-left:3px;">kWh</span></div>'
+            f'<div style="display:inline-flex;align-items:center;gap:6px;'
+            f'background:rgba(0,212,255,0.06);border-radius:6px;padding:4px 10px;'
+            f'border:1px solid rgba(0,212,255,0.12);">'
+            f'<span style="font-size:8px;color:rgba(150,210,255,0.45);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
+            f'<span style="font-family:Orbitron,sans-serif;font-size:12px;color:#00d4ff;font-weight:700;">{verim_str}</span>'
+            f'</div>'
+            f'</div>'
+            f'</div>'
+            f'</div>'
+        )
+        st.markdown(kart_html, unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
