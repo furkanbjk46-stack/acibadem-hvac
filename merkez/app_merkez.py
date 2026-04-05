@@ -286,7 +286,6 @@ with sol:
             dot_shadow = f"box-shadow:0 0 8px {durum_renk};"
 
         kwh_str  = f"{kwh:,.0f}" if kwh else "—"
-        svg      = sparkline_svg(spark, renk) if spark else sparkline_svg([], renk)
 
         # kWh/m² hesapla
         m2 = lok_info.get("m2", 10000)
@@ -312,23 +311,18 @@ with sol:
             </div>
           </div>
           <!-- Metrikler -->
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <div>
-              <div style="font-size:8px; color:rgba(150,210,255,0.45); text-transform:uppercase; letter-spacing:1px;">Enerji Tüketim</div>
-              <div style="font-family:'Orbitron',sans-serif; font-size:15px; font-weight:800;
-                          color:{renk}; text-shadow:0 0 10px {renk};">{kwh_str}
-                <span style="font-size:8px; color:rgba(150,210,255,0.5);">kWh</span>
-              </div>
+          <div style="margin-bottom:8px;">
+            <div style="font-size:8px; color:rgba(150,210,255,0.45); text-transform:uppercase; letter-spacing:1px;">Enerji Tüketim</div>
+            <div style="font-family:'Orbitron',sans-serif; font-size:15px; font-weight:800;
+                        color:{renk}; text-shadow:0 0 10px {renk};">{kwh_str}
+              <span style="font-size:8px; color:rgba(150,210,255,0.5);">kWh</span>
             </div>
-            <div>{svg}</div>
           </div>
-          <!-- Alt satır: verimlilik -->
-          <div style="display:flex; gap:6px;">
-            <div style="flex:1; background:rgba(0,212,255,0.05); border-radius:6px; padding:5px 8px;
-                        border:1px solid rgba(0,212,255,0.08);">
-              <div style="font-size:8px; color:rgba(150,210,255,0.4); text-transform:uppercase; letter-spacing:1px;">Günlük kWh/m²</div>
-              <div style="font-family:'Orbitron',sans-serif; font-size:13px; color:#00d4ff; font-weight:700;">{verim_str}</div>
-            </div>
+          <!-- Alt satır: verimlilik (fit-content) -->
+          <div style="display:inline-block; background:rgba(0,212,255,0.05); border-radius:6px;
+                      padding:4px 10px; border:1px solid rgba(0,212,255,0.1);">
+            <span style="font-size:8px; color:rgba(150,210,255,0.4); text-transform:uppercase; letter-spacing:1px;">kWh/m²&nbsp;</span>
+            <span style="font-family:'Orbitron',sans-serif; font-size:12px; color:#00d4ff; font-weight:700;">{verim_str}</span>
           </div>
         </div>
         """, unsafe_allow_html=True)
