@@ -203,6 +203,12 @@ def fetch_lokasyonlar(url, key):
     except:
         return []
 
+def hex_to_rgba(hex_color, alpha=0.1):
+    """#rrggbb → rgba(r,g,b,alpha)"""
+    hex_color = hex_color.lstrip("#")
+    r, g, b = int(hex_color[0:2],16), int(hex_color[2:4],16), int(hex_color[4:6],16)
+    return f"rgba({r},{g},{b},{alpha})"
+
 def plotly_cfg():
     return dict(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#a0c8ff", family="Inter"), margin=dict(t=30,b=30,l=40,r=20))
@@ -296,7 +302,7 @@ with tabs[0]:
             st.markdown(f"""
             <div class="{card_class}">
                 <div style="font-family:'Orbitron',sans-serif; font-size:11px; color:{renk}; letter-spacing:1px; margin-bottom:8px;">{lok_info['isim'].upper()}</div>
-                <div style="font-size:22px; font-weight:900; color:{renk}; text-shadow:0 0 15px {renk}88; font-family:'Orbitron',sans-serif;">{dun_kwh} <span style="font-size:11px; color:rgba(150,210,255,0.6);">kWh</span></div>
+                <div style="font-size:22px; font-weight:900; color:{renk}; text-shadow:0 0 15px {renk}; font-family:'Orbitron',sans-serif;">{dun_kwh} <span style="font-size:11px; color:rgba(150,210,255,0.6);">kWh</span></div>
                 <div style="font-size:10px; color:rgba(150,210,255,0.5); margin-top:2px;">Dünkü Tüketim</div>
                 <div style="margin-top:10px; font-size:11px;">{durum_icon} <span style="color:{'#10b981' if online else '#ef4444'}; font-weight:700;">{durum_text}</span></div>
                 <div style="font-size:10px; color:rgba(150,210,255,0.4);">Son sinyal: {ping_ago}</div>
@@ -345,7 +351,7 @@ with tabs[0]:
                     x=lok_data_t["Tarih"], y=lok_data_t["Toplam_Hastane_Tuketim_kWh"],
                     name=HASTANELER.get(lok_id, {}).get("isim", lok_id),
                     line=dict(color=renk, width=2),
-                    fill="tozeroy", fillcolor=f"{renk}15",
+                    fill="tozeroy", fillcolor=hex_to_rgba(renk, 0.08),
                     mode="lines",
                 ))
             fig_trend.update_layout(**plotly_cfg(), height=280,
@@ -519,7 +525,7 @@ with tabs[2]:
                         y=ld["Chiller_Load_Percent"].dropna(),
                         name=HASTANELER.get(lok_id,{}).get("isim",lok_id),
                         marker_color=renk, line_color=renk,
-                        fillcolor=f"{renk}22",
+                        fillcolor=hex_to_rgba(renk, 0.13),
                     ))
                 fig_load.update_layout(**plotly_cfg(), height=300,
                     yaxis=dict(title="Yük (%)", gridcolor="rgba(0,212,255,0.08)"),
