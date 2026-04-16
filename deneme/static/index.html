@@ -1692,7 +1692,7 @@
                 "severity": "CRITICAL",
                 "score": 8.0,
                 "title": "Düşük Debi / Pompa Basıncı",
-                "description": "Su tarafı ΔT yüksek (≥25°C) ama üfleme sıcaklığı düşük (<28°C). Su yeterince akmıyor.",
+                "description": "Su tarafı ΔT yüksek (≥15°C) ama üfleme sıcaklığı düşük (<28°C). Su yeterince akmıyor.",
                 "steps": [
                     "Pompa çalışıyor mu? Akım değerini kontrol edin",
                     "Pompa basınç göstergelerini okuyun (giriş/çıkış)",
@@ -1895,18 +1895,22 @@
             },
             "SAT_LOW": {
                 "severity": "WARNING",
-                "score": 6.0,
-                "title": "SAT Düşük (Soğutmada)",
-                "description": "Üfleme sıcaklığı (SAT) hedef aralığının altında. Aşırı soğutma yapılıyor.",
+                "score": 5.0,
+                "title": "SAT Düşük (Donma Riski)",
+                "description": "Üfleme sıcaklığı (SAT) 15°C altına düştü. Aşırı soğutma yapılıyor, coil donma riski var.",
                 "steps": [
-                    "Soğutma setpoint'ini yükseltin",
-                    "Soğutma vanasını biraz kapatın",
-                    "Oda sıcaklığını kontrol edin - düşebilir",
-                    "Chiller set sıcaklığını kontrol edin"
+                    "⚠️ ACİL: Soğutma vanasını kısın veya kapatın — donma riski",
+                    "Chiller set sıcaklığını yükseltin (6-7°C altına düşmesin)",
+                    "SAT setpoint'ini 15°C üzerine (soğutma) / 27°C üzerine (ısıtma) çıkaracak şekilde artırın",
+                    "Coil donma koruma sensörünü kontrol edin — aktif mi?",
+                    "Coil'de buz oluşumu var mı gözle kontrol edin",
+                    "Oda sıcaklığını kontrol edin — aşırı soğumuş olabilir"
                 ],
                 "causes": [
-                    "Setpoint çok düşük ayarlanmış",
-                    "Vana tam açık kalmış",
+                    "Soğutma vanası çok açık kalmış",
+                    "Chiller set sıcaklığı çok düşük ayarlanmış",
+                    "Setpoint çok agresif",
+                    "Donma koruma devre dışı",
                     "Otomasyon hatası"
                 ]
             },
@@ -2006,6 +2010,66 @@
                     "Tatil/hafta sonu modu aktif"
                 ]
             },
+            "SAT_WARNING": {
+                "severity": "WARNING",
+                "score": 5.0,
+                "title": "SAT Uyarısı",
+                "description": "Üfleme sıcaklığı ideal aralığın dışında. Sistem çalışıyor ancak istenilen konfor tam sağlanamıyor.",
+                "steps": [
+                    "SAT setpoint'ini kontrol edin — doğru aralıkta mı?",
+                    "Vana açıklığını kontrol edin — istenilen pozisyonda mı?",
+                    "Su sıcaklığını kontrol edin — soğutmada 7-12°C, ısıtmada 45-60°C olmalı",
+                    "Hava debisini kontrol edin — fan devri yeterli mi?",
+                    "Sensör kalibrasyonunu doğrulayın"
+                ],
+                "causes": [
+                    "Setpoint yanlış ayarlanmış",
+                    "Vana kontrol sorunu",
+                    "Su sıcaklığı yetersiz",
+                    "Hava tarafı problemi"
+                ]
+            },
+            "INSUFFICIENT_CAPACITY": {
+                "severity": "WARNING",
+                "score": 7.0,
+                "title": "Yetersiz Kapasite",
+                "description": "Vana tam açık ama konfor sağlanamıyor. Sistem maksimum kapasitede çalışmasına rağmen oda konforu sağlanamıyor.",
+                "steps": [
+                    "Coil/eşanjör kapasitesini kontrol edin — yeterli mi?",
+                    "Su debisini artırın — balans vanası veya VFD ayarı",
+                    "Su sıcaklığını kontrol edin (soğutmada daha soğuk, ısıtmada daha sıcak gerekebilir)",
+                    "Coil temizliğini kontrol edin — kirli coil kapasiteyi düşürür",
+                    "Ek kapasite devreye alınabilir mi değerlendirin",
+                    "Setpoint'in gerçekçi olup olmadığını kontrol edin"
+                ],
+                "causes": [
+                    "Coil kapasitesi yetersiz",
+                    "Su debisi düşük",
+                    "Su sıcaklığı yetersiz",
+                    "Coil kirliliği",
+                    "Yük kapasiteden çok yüksek"
+                ]
+            },
+            "SEASONAL_CHILLER_TRANSITION": {
+                "severity": "CRITICAL",
+                "score": 8.0,
+                "title": "Mevsimsel Chiller Geçiş Uyarısı",
+                "description": "Dış hava 10°C altında iken Chiller yüksek kapasitede ve düşük verimle zorlanarak çalışıyor. Free-Cooling fırsatı değerlendirilemiyor.",
+                "steps": [
+                    "AHU'larda %100 taze hava moduna geçerek Free-Cooling yapın",
+                    "Taze hava damperlerini tam açın — soğuk dış hava doğal soğutma sağlar",
+                    "Chiller yükü düşmüyorsa ana kollektör setpoint'ini düşürün",
+                    "Eğer tek Chiller hala %90 üzerinde zorlanıyorsa 2. Chiller'i devreye alın",
+                    "Free-Cooling sonrası Chiller yükünü tekrar izleyin",
+                    "Chiller COP değerini takip edin — düşük COP enerji israfına işaret eder"
+                ],
+                "causes": [
+                    "Free-Cooling damperlerinin kapalı veya kısmi açık olması",
+                    "AHU'ların taze hava modunda çalışmaması",
+                    "Ana kollektör setpoint'inin çok yüksek ayarlanmış olması",
+                    "Tek Chiller ile karşılanamayan aşırı soğutma talebi"
+                ]
+            },
             "AMBIGUOUS": {
                 "severity": "WARNING",
                 "score": 5.0,
@@ -2028,72 +2092,6 @@
                 ]
             }
         };
-
-        // Show instructions modal
-        function showInstructions(ruleCode) {
-            const instruction = INSTRUCTION_DATA[ruleCode];
-            if (!instruction) {
-                showAlert('Bu kural için talimat bulunamadı: ' + ruleCode, 'warning');
-                return;
-            }
-
-            // Set title
-            document.getElementById('instructionTitle').textContent = instruction.title;
-
-            // Set severity badge
-            const severityBadge = document.getElementById('instructionSeverity');
-            severityBadge.textContent = instruction.severity;
-            severityBadge.className = 'instruction-severity-badge';
-            if (instruction.severity === 'CRITICAL') {
-                severityBadge.classList.add('severity-critical');
-            } else if (instruction.severity === 'WARNING') {
-                severityBadge.classList.add('severity-warning');
-            } else {
-                severityBadge.classList.add('severity-optimal');
-            }
-
-            // Set score badge
-            document.getElementById('instructionScore').textContent = `Skor: ${instruction.score.toFixed(1)}`;
-
-            // Set description
-            document.getElementById('instructionDescription').textContent = instruction.description;
-
-            // Set steps
-            const stepsList = document.getElementById('instructionSteps');
-            stepsList.innerHTML = '';
-            instruction.steps.forEach(step => {
-                const li = document.createElement('li');
-                li.textContent = step;
-                stepsList.appendChild(li);
-            });
-
-            // Set causes
-            const causesList = document.getElementById('instructionCauses');
-            const causesSection = document.getElementById('instructionCausesSection');
-            if (instruction.causes && instruction.causes.length > 0) {
-                causesList.innerHTML = '';
-                instruction.causes.forEach(cause => {
-                    const li = document.createElement('li');
-                    li.textContent = cause;
-                    causesList.appendChild(li);
-                });
-                causesSection.style.display = 'block';
-            } else {
-                causesSection.style.display = 'none';
-            }
-
-            // Set setpoint chain
-            const setpointSection = document.getElementById('instructionSetpointSection');
-            if (instruction.setpoint_chain) {
-                document.getElementById('instructionSetpoint').textContent = instruction.setpoint_chain;
-                setpointSection.style.display = 'block';
-            } else {
-                setpointSection.style.display = 'none';
-            }
-
-            // Show modal
-            document.getElementById('instructionModal').style.display = 'flex';
-        }
 
         // Close instructions modal
         function closeInstructionsModal() {

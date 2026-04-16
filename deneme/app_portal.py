@@ -16,6 +16,7 @@ from pathlib import Path
 from datetime import date
 
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 import plotly.io as pio
@@ -104,58 +105,127 @@ st.markdown("""
         color: #ffffff !important;
     }
     
-    /* Buttons */
+    /* Normal butonlar */
     .stButton > button {
-        background: linear-gradient(135deg, #012D75, #1a4a9e);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        font-weight: 700;
-        padding: 12px 24px;
+        background: linear-gradient(135deg, #012D75, #1a4a9e) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(100, 160, 255, 0.3) !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        padding: 10px 24px !important;
         transition: all 0.3s;
     }
-    
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 4px 16px rgba(26, 74, 158, 0.5) !important;
     }
-    
-    /* Input fields - Gri tonları, yumuşak beyaz yazı */
+
+    /* Form submit butonları (Kaydet / Merkeze Gönder) */
+    [data-testid="stFormSubmitButton"] button,
+    .stFormSubmitButton button {
+        background: linear-gradient(135deg, #012D75, #1a4a9e) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(100, 160, 255, 0.35) !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        padding: 10px 20px !important;
+        width: 100% !important;
+        transition: all 0.3s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    }
+    [data-testid="stFormSubmitButton"] button:hover,
+    .stFormSubmitButton button:hover {
+        background: linear-gradient(135deg, #1a4a9e, #2563eb) !important;
+        box-shadow: 0 4px 16px rgba(26, 74, 158, 0.6) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Input fields - soft köşeler, yumuşak glow */
     .stTextInput > div > div > input,
-    .stSelectbox > div > div > select,
     .stDateInput > div > div > input,
-    .stNumberInput > div > div > input {
-        background: rgba(60, 70, 90, 0.8) !important;
-        color: #f0f0f0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    .stNumberInput > div > div > input,
+    [data-testid="stNumberInput"] input,
+    [data-testid="stTextInput"] input,
+    [data-testid="stDateInput"] input,
+    [data-baseweb="input"] input,
+    input[type="number"],
+    input[type="text"] {
+        background: rgba(15, 30, 65, 0.85) !important;
+        color: #d8eeff !important;
+        border: 1px solid rgba(80, 130, 220, 0.25) !important;
         border-radius: 10px !important;
+        padding: 8px 12px !important;
+        transition: border 0.2s, box-shadow 0.2s;
     }
-    
-    /* Selectbox dropdown - Gri tonları */
+    [data-testid="stNumberInput"] input:focus,
+    [data-testid="stTextInput"] input:focus,
+    input:focus {
+        border: 1px solid rgba(100, 160, 255, 0.6) !important;
+        box-shadow: 0 0 0 3px rgba(26, 74, 158, 0.2) !important;
+        outline: none !important;
+    }
+
+    /* Number input container */
+    [data-testid="stNumberInput"] > div,
+    [data-baseweb="input"] {
+        background: rgba(15, 30, 65, 0.85) !important;
+        border: 1px solid rgba(80, 130, 220, 0.25) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+    }
+
+    /* Number input +/- butonları */
+    [data-testid="stNumberInput"] button {
+        background: rgba(10, 25, 55, 0.9) !important;
+        color: #7eb8f7 !important;
+        border: none !important;
+        border-radius: 6px !important;
+    }
+    [data-testid="stNumberInput"] button:hover {
+        background: rgba(26, 74, 158, 0.5) !important;
+        color: #ffffff !important;
+    }
+
+    /* Selectbox dropdown */
     div[data-baseweb="select"] > div {
-        background: rgba(60, 70, 90, 0.8) !important;
-        color: #f0f0f0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        background: rgba(15, 30, 65, 0.85) !important;
+        color: #d8eeff !important;
+        border: 1px solid rgba(80, 130, 220, 0.25) !important;
         border-radius: 10px !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
     }
-    
+
     /* Dropdown menu */
     ul[data-baseweb="menu"] {
-        background: rgba(40, 50, 70, 0.95) !important;
+        background: rgba(10, 25, 60, 0.98) !important;
+        border: 1px solid rgba(80, 130, 220, 0.2) !important;
+        border-radius: 10px !important;
     }
-    
     ul[data-baseweb="menu"] li {
-        color: #f0f0f0 !important;
+        color: #d8eeff !important;
     }
-    
-    /* Input labels */
-    .stTextInput label, .stSelectbox label, .stNumberInput label, .stDateInput label {
-        color: #d0d0d0 !important;
+    ul[data-baseweb="menu"] li:hover {
+        background: rgba(26, 74, 158, 0.4) !important;
     }
-    
+
+    /* Input labels — daha okunabilir */
+    .stTextInput label, .stSelectbox label, .stNumberInput label, .stDateInput label,
+    [data-testid="stNumberInput"] label,
+    [data-testid="stTextInput"] label,
+    [data-testid="stDateInput"] label,
+    [data-testid="stRadio"] > label,
+    [data-testid="stCheckbox"] > label {
+        color: #c8deff !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.3px !important;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+    }
+
     /* Placeholder */
     ::placeholder {
-        color: rgba(255, 255, 255, 0.5) !important;
+        color: rgba(140, 180, 255, 0.35) !important;
     }
     
     /* Dataframe - Enhanced for readability */
@@ -260,23 +330,722 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    /* File uploader */
+    /* File uploader alan */
     [data-testid="stFileUploader"] {
-        background: rgba(255, 255, 255, 0.05);
-        border: 2px dashed rgba(255, 255, 255, 0.3);
-        border-radius: 12px;
-        padding: 20px;
+        background: rgba(15, 30, 65, 0.7) !important;
+        border: 2px dashed rgba(80, 130, 220, 0.4) !important;
+        border-radius: 12px !important;
+        padding: 16px !important;
     }
-    
-    /* Expander */
-    .streamlit-expanderHeader {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        border-radius: 10px;
-        color: white !important;
+    [data-testid="stFileUploader"] label,
+    [data-testid="stFileUploader"] span,
+    [data-testid="stFileUploader"] p,
+    [data-testid="stFileUploaderDropzone"] span,
+    [data-testid="stFileUploaderDropzone"] p,
+    [data-testid="stFileUploaderDropzone"] small {
+        color: #a0c8ff !important;
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        background: rgba(15, 30, 65, 0.5) !important;
+        border-radius: 10px !important;
+    }
+
+    /* Browse files butonu */
+    [data-testid="stFileUploaderDropzone"] button,
+    [data-testid="stFileUploader"] button,
+    [data-testid="stFileUploaderDropzoneInput"] + div button {
+        background: linear-gradient(135deg, #012D75, #1a4a9e) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(100, 160, 255, 0.4) !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        padding: 7px 16px !important;
+        transition: all 0.3s;
+    }
+    [data-testid="stFileUploaderDropzone"] button:hover {
+        background: linear-gradient(135deg, #1a4a9e, #2563eb) !important;
+        box-shadow: 0 3px 12px rgba(26, 74, 158, 0.5) !important;
+    }
+
+    /* Download butonu */
+    [data-testid="stDownloadButton"] button,
+    .stDownloadButton button {
+        background: linear-gradient(135deg, #012D75, #1a4a9e) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(100, 160, 255, 0.35) !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        padding: 8px 18px !important;
+        transition: all 0.3s;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+    }
+    [data-testid="stDownloadButton"] button:hover,
+    .stDownloadButton button:hover {
+        background: linear-gradient(135deg, #1a4a9e, #2563eb) !important;
+        box-shadow: 0 4px 16px rgba(26, 74, 158, 0.6) !important;
+        transform: translateY(-1px);
+    }
+
+    /* Divider / çizgiler — daha belirgin */
+    hr {
+        border: none !important;
+        border-top: 2px solid rgba(100, 160, 255, 0.60) !important;
+        margin: 22px 0 !important;
+        opacity: 1 !important;
+        box-shadow: 0 0 8px rgba(100, 160, 255, 0.25) !important;
+    }
+    [data-testid="stDivider"] > div {
+        border-top: 2px solid rgba(100, 160, 255, 0.60) !important;
+        box-shadow: 0 0 8px rgba(100, 160, 255, 0.25) !important;
+    }
+
+    /* Dataframe / tablolar - koyu arka plan, görünür çizgilerle */
+    .stDataFrame {
+        background: rgba(10, 20, 50, 0.8) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(80, 130, 220, 0.25) !important;
+        overflow: hidden !important;
+    }
+    .stDataFrame table,
+    div[data-testid="stDataFrame"] table,
+    .dataframe {
+        font-size: 13px !important;
+        color: #d8eeff !important;
+        border-collapse: collapse !important;
+        width: 100% !important;
+    }
+    /* Tablo başlıkları */
+    .stDataFrame thead tr th,
+    div[data-testid="stDataFrame"] thead tr th,
+    .dataframe thead tr th {
+        background: rgba(1, 45, 117, 0.95) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 12px !important;
+        padding: 10px 10px !important;
+        border-bottom: 2px solid rgba(100, 160, 255, 0.4) !important;
+        border-right: 1px solid rgba(100, 160, 255, 0.15) !important;
+        text-align: left !important;
+        letter-spacing: 0.3px !important;
+    }
+    /* Tablo hücreleri - koyu arka plan görünür çizgilerle */
+    .stDataFrame tbody tr td,
+    div[data-testid="stDataFrame"] tbody tr td,
+    .dataframe tbody tr td {
+        color: #d8eeff !important;
+        background-color: rgba(10, 25, 60, 0.7) !important;
+        padding: 8px 10px !important;
+        border-bottom: 1px solid rgba(80, 130, 220, 0.18) !important;
+        border-right: 1px solid rgba(80, 130, 220, 0.12) !important;
+        font-size: 13px !important;
+    }
+    .stDataFrame tbody tr td *,
+    div[data-testid="stDataFrame"] tbody tr td * {
+        color: #d8eeff !important;
+    }
+    /* Satır hover */
+    .stDataFrame tbody tr:hover td,
+    div[data-testid="stDataFrame"] tbody tr:hover td {
+        background-color: rgba(26, 74, 158, 0.3) !important;
+    }
+    /* Çift satır rengi */
+    .stDataFrame tbody tr:nth-child(even) td,
+    div[data-testid="stDataFrame"] tbody tr:nth-child(even) td {
+        background-color: rgba(15, 35, 75, 0.7) !important;
+    }
+    /* Glide data grid (yeni Streamlit dataframe) */
+    [data-testid="stDataFrame"] td,
+    [data-testid="stDataFrame"] td span,
+    [data-testid="stDataFrame"] td div,
+    .dvn-cell, .dvn-cell span, .gdg-cell {
+        color: #d8eeff !important;
+        background-color: rgba(10, 25, 60, 0.7) !important;
+    }
+    /* Scrollbar */
+    .stDataFrame ::-webkit-scrollbar { height: 8px; width: 8px; }
+    .stDataFrame ::-webkit-scrollbar-track { background: rgba(10,20,50,0.5); border-radius: 4px; }
+    .stDataFrame ::-webkit-scrollbar-thumb { background: rgba(26,74,158,0.6); border-radius: 4px; }
+    .stDataFrame ::-webkit-scrollbar-thumb:hover { background: rgba(37,99,235,0.8); }
+
+    /* st.table() statik tablolar */
+    .stTable table {
+        border-collapse: collapse !important;
+        width: 100% !important;
+        background: rgba(10, 20, 50, 0.8) !important;
+        border-radius: 10px !important;
+        overflow: hidden !important;
+    }
+    .stTable th {
+        background: rgba(1, 45, 117, 0.95) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        padding: 10px 12px !important;
+        border-bottom: 2px solid rgba(100, 160, 255, 0.4) !important;
+        font-size: 12px !important;
+    }
+    .stTable td {
+        color: #d8eeff !important;
+        background: rgba(10, 25, 60, 0.7) !important;
+        padding: 8px 12px !important;
+        border-bottom: 1px solid rgba(80, 130, 220, 0.18) !important;
+        font-size: 13px !important;
+    }
+
+    /* Subheader ve section başlıkları */
+    [data-testid="stSubheader"],
+    .stSubheader {
+        color: #d8eeff !important;
+    }
+
+    /* Info / success / warning / error kutuları */
+    [data-testid="stAlert"] {
+        border-radius: 10px !important;
+        border: 1px solid rgba(80, 130, 220, 0.2) !important;
+    }
+
+    /* ════════ EXPANDER — standart koyu tema ════════ */
+    [data-testid="stExpander"] {
+        border: 1px solid rgba(80, 130, 220, 0.30) !important;
+        border-radius: 10px !important;
+        overflow: hidden !important;
+        background: rgba(10, 20, 50, 0.6) !important;
+    }
+    .streamlit-expanderHeader,
+    [data-testid="stExpander"] summary {
+        background: rgba(15, 30, 65, 0.85) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 10px !important;
+        color: #d8eeff !important;
+        font-weight: 600 !important;
+        padding: 10px 14px !important;
+    }
+    [data-testid="stExpander"] summary:hover {
+        background: rgba(26, 50, 100, 0.9) !important;
+    }
+    [data-testid="stExpander"] summary p,
+    [data-testid="stExpander"] summary span,
+    [data-testid="stExpander"] summary div {
+        color: #d8eeff !important;
+    }
+    /* Expander içeriği */
+    [data-testid="stExpander"] > div > div {
+        background: rgba(8, 18, 45, 0.55) !important;
+        border-top: 1px solid rgba(80, 130, 220, 0.18) !important;
+        padding: 12px 14px !important;
+    }
+
+    /* Checkbox */
+    [data-testid="stCheckbox"] label {
+        color: #a0c8ff !important;
+    }
+
+    /* Radio butonları */
+    [data-testid="stRadio"] label {
+        color: #c8deff !important;
+        font-weight: 600 !important;
+    }
+
+    /* ════════ TARİH INPUT — format placeholder fix ════════ */
+    /* Tarih alanının tüm içeriği koyu arka plan */
+    [data-testid="stDateInput"] > div,
+    [data-testid="stDateInput"] [data-baseweb="input"],
+    [data-testid="stDateInput"] [data-baseweb="base-input"] {
+        background: rgba(15, 30, 65, 0.85) !important;
+        border: 1px solid rgba(80, 130, 220, 0.28) !important;
+        border-radius: 10px !important;
+    }
+    /* Tarih alanı giriş metni ve format (YYYY/MM/DD) */
+    [data-testid="stDateInputField"],
+    [data-testid="stDateInputField"]:focus,
+    input[data-testid="stDateInputField"] {
+        background: transparent !important;
+        color: #d8eeff !important;
+        caret-color: #7eb8f7 !important;
+    }
+    /* Format placeholder rengi — daha belirgin */
+    [data-testid="stDateInputField"]::placeholder {
+        color: rgba(100, 160, 255, 0.55) !important;
+        font-style: italic !important;
+    }
+    /* Tarih alanı ikon/ok rengi */
+    [data-testid="stDateInput"] svg {
+        fill: rgba(100, 160, 255, 0.7) !important;
+    }
+
+    /* ════════ SELECTBOX — kapsamlı koyu tema ════════ */
+    /* Container */
+    [data-baseweb="select"],
+    div[data-baseweb="select"] {
+        background: rgba(15, 30, 65, 0.85) !important;
+        border-radius: 10px !important;
+    }
+    div[data-baseweb="select"] > div,
+    [data-baseweb="select"] > div {
+        background: rgba(15, 30, 65, 0.85) !important;
+        color: #d8eeff !important;
+        border: 1px solid rgba(80, 130, 220, 0.28) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+    }
+    div[data-baseweb="select"] > div:hover {
+        border-color: rgba(100, 160, 255, 0.55) !important;
+    }
+    /* Seçili değer metni */
+    [data-baseweb="select"] [data-testid="stSelectboxVirtualDropdown"],
+    [data-baseweb="select"] span,
+    [data-baseweb="select"] input,
+    [data-baseweb="select"] input[readonly] {
+        color: #d8eeff !important;
+        background: transparent !important;
+    }
+    /* Ok simgesi */
+    [data-baseweb="select"] svg {
+        fill: rgba(100, 160, 255, 0.8) !important;
+    }
+    /* Dropdown açılır liste */
+    [data-baseweb="popover"] ul[data-baseweb="menu"],
+    ul[data-baseweb="menu"] {
+        background: rgba(8, 18, 50, 0.98) !important;
+        border: 1px solid rgba(80, 130, 220, 0.25) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+    }
+    ul[data-baseweb="menu"] li,
+    ul[data-baseweb="menu"] [role="option"] {
+        color: #d8eeff !important;
+        background: transparent !important;
+    }
+    ul[data-baseweb="menu"] li:hover,
+    ul[data-baseweb="menu"] [aria-selected="true"],
+    ul[data-baseweb="menu"] [role="option"]:hover {
+        background: rgba(26, 74, 158, 0.45) !important;
+        color: #ffffff !important;
+    }
+
+    /* ════════ MULTİSELECT — chip/tag standart stili ════════ */
+    [data-baseweb="tag"] {
+        background: rgba(26, 60, 130, 0.65) !important;
+        border: 1px solid rgba(80, 140, 255, 0.4) !important;
+        border-radius: 6px !important;
+    }
+    [data-baseweb="tag"] span,
+    [data-baseweb="tag"] [data-testid="stMultiSelectItem"],
+    [data-baseweb="tag"] > span {
+        color: #c8e0ff !important;
+        font-weight: 600 !important;
+    }
+    /* Chip silme (X) butonu */
+    [data-baseweb="tag"] button,
+    [data-baseweb="tag"] [role="button"] {
+        color: rgba(150, 200, 255, 0.7) !important;
+        background: transparent !important;
+    }
+    [data-baseweb="tag"] button:hover {
+        color: #ffffff !important;
+        background: rgba(200, 80, 80, 0.3) !important;
+    }
+    /* Multiselect container */
+    [data-baseweb="multi-select"] {
+        background: rgba(15, 30, 65, 0.85) !important;
+        border: 1px solid rgba(80, 130, 220, 0.28) !important;
+        border-radius: 10px !important;
+    }
+    [data-baseweb="multi-select"] input {
+        color: #d8eeff !important;
+        background: transparent !important;
+    }
+    [data-baseweb="multi-select"] input::placeholder {
+        color: rgba(100, 160, 255, 0.45) !important;
+    }
+
+    /* ════════ TAKVIM (Date Picker) FİX — Soft Glassmorphism ════════ */
+
+    /* Ana kutu — eski soft hissi korunuyor */
+    [data-baseweb="calendar"] {
+        background: rgba(10, 22, 58, 0.88) !important;
+        backdrop-filter: blur(18px) !important;
+        -webkit-backdrop-filter: blur(18px) !important;
+        border: 1px solid rgba(100, 160, 255, 0.35) !important;
+        border-radius: 16px !important;
+        box-shadow:
+            0 8px 32px rgba(0, 10, 40, 0.55),
+            0 0 0 1px rgba(80, 130, 255, 0.12) !important;
+        overflow: hidden !important;
+    }
+
+    /* Tüm div/span/tablo hücreleri — header + boş köşe hücreler dahil */
+    [data-baseweb="calendar"] div,
+    [data-baseweb="calendar"] span,
+    [data-baseweb="calendar"] table,
+    [data-baseweb="calendar"] td,
+    [data-baseweb="calendar"] th,
+    [data-baseweb="calendar"] [role="grid"],
+    [data-baseweb="calendar"] [role="row"],
+    [data-baseweb="calendar"] [role="gridcell"],
+    [data-baseweb="calendar"] [role="columnheader"] {
+        background-color: transparent !important;
+        color: #d8eeff !important;
+    }
+
+    /* Butonlar — saydam, soft hover */
+    [data-baseweb="calendar"] button {
+        background-color: transparent !important;
+        color: #cce4ff !important;
+        border: none !important;
+        border-radius: 8px !important;
+        transition: background 0.15s ease !important;
+    }
+    [data-baseweb="calendar"] button:hover {
+        background-color: rgba(37, 99, 235, 0.3) !important;
+        color: #ffffff !important;
+    }
+
+    /* Seçili gün — mavi daire */
+    [data-baseweb="calendar"] [aria-selected="true"] button,
+    [data-baseweb="calendar"] button[aria-selected="true"] {
+        background-color: rgba(37, 99, 235, 0.85) !important;
+        color: #ffffff !important;
+        border-radius: 50% !important;
+        box-shadow: 0 0 8px rgba(37, 99, 235, 0.5) !important;
+    }
+
+    /* Bugün — ince mavi kenarlık */
+    [data-baseweb="calendar"] button[aria-current="date"] {
+        border: 1px solid rgba(100, 160, 255, 0.55) !important;
+        border-radius: 50% !important;
+    }
+
+    /* Devre dışı günler */
+    [data-baseweb="calendar"] button:disabled {
+        color: rgba(80, 120, 180, 0.28) !important;
+        background-color: transparent !important;
+    }
+
+    /* Haftanın günleri başlık (Mo Tu We...) */
+    [data-baseweb="calendar"] [role="columnheader"] {
+        color: rgba(120, 170, 255, 0.6) !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    /* Ay/Yıl selectbox butonları (header'daki April, 2026) */
+    [data-baseweb="calendar"] [data-baseweb="select"] > div,
+    [data-baseweb="calendar"] [data-baseweb="select"] div,
+    [data-baseweb="calendar"] [data-baseweb="select"] span,
+    [data-baseweb="calendar"] [data-baseweb="select"] input {
+        background-color: rgba(15, 30, 70, 0.7) !important;
+        color: #d8eeff !important;
+        border-color: rgba(80, 130, 220, 0.25) !important;
+    }
+    [data-baseweb="calendar"] [data-baseweb="select"] svg {
+        fill: rgba(100, 160, 255, 0.7) !important;
+    }
+
+    /* ════ Ay/Yıl açılır liste (tıklayınca çıkan seçenekler) ════
+       Bu liste ayrı bir popover olarak render edilir.
+       ul[data-baseweb="menu"] zaten globalde tanımlı ama
+       burada daha yüksek özgüllükle tekrar hedefliyoruz. */
+    ul[data-baseweb="menu"],
+    [data-baseweb="menu"] {
+        background: rgba(8, 18, 52, 0.97) !important;
+        border: 1px solid rgba(80, 130, 220, 0.3) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.55) !important;
+        backdrop-filter: blur(12px) !important;
+    }
+    ul[data-baseweb="menu"] li,
+    ul[data-baseweb="menu"] [role="option"],
+    [data-baseweb="menu"] li,
+    [data-baseweb="menu"] [role="option"],
+    [data-baseweb="menu-item"],
+    [role="listbox"] [role="option"] {
+        color: #cce4ff !important;
+        background-color: transparent !important;
+        font-size: 13px !important;
+    }
+    ul[data-baseweb="menu"] li:hover,
+    ul[data-baseweb="menu"] [role="option"]:hover,
+    [data-baseweb="menu"] li:hover,
+    [role="listbox"] [role="option"]:hover,
+    ul[data-baseweb="menu"] [aria-selected="true"],
+    [role="listbox"] [aria-selected="true"] {
+        background-color: rgba(37, 99, 235, 0.4) !important;
+        color: #ffffff !important;
+    }
+    /* Liste içindeki tüm span/div metinleri */
+    ul[data-baseweb="menu"] li span,
+    ul[data-baseweb="menu"] li div,
+    ul[data-baseweb="menu"] [role="option"] span,
+    [data-baseweb="menu-item"] span,
+    [data-baseweb="menu-item"] div {
+        color: #cce4ff !important;
+        background-color: transparent !important;
+    }
+
+    /* Takvim içi ay/yıl listesi — role=option LI elemanları */
+    [data-baseweb="calendar"] [role="option"],
+    [data-baseweb="calendar"] li[role="option"] {
+        color: #cce4ff !important;
+        background-color: transparent !important;
+        border-radius: 8px !important;
+        padding: 4px 10px !important;
+    }
+    [data-baseweb="calendar"] [role="option"]:hover {
+        background-color: rgba(37, 99, 235, 0.35) !important;
+        color: #ffffff !important;
+    }
+    [data-baseweb="calendar"] [role="option"][aria-selected="true"],
+    [data-baseweb="calendar"] li[role="option"][aria-selected="true"] {
+        background-color: rgba(37, 99, 235, 0.55) !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    /* ════════ SLIDER — standart ════════ */
+    [data-testid="stSlider"] [data-baseweb="slider"] [role="slider"] {
+        background: #1a4a9e !important;
+        border: 2px solid rgba(100, 160, 255, 0.7) !important;
+    }
+    [data-testid="stSlider"] [data-baseweb="slider"] div[class*="Track"] {
+        background: rgba(26, 74, 158, 0.4) !important;
+    }
+
+    /* ════════ GENEL METİN OKUNABİLİRLİK FİX ════════ */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
+    .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        padding-bottom: 6px !important;
+        border-bottom: 1px solid rgba(100, 160, 255, 0.35) !important;
+        margin-bottom: 12px !important;
+    }
+    .stMarkdown p, .stMarkdown li {
+        color: rgba(220, 235, 255, 0.92) !important;
+        line-height: 1.65 !important;
+        font-size: 14px !important;
+    }
+    [data-testid="stSubheader"] h3 {
+        color: #e0eeff !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+    }
+    .stCaption, [data-testid="stCaptionContainer"] p {
+        color: rgba(160, 200, 255, 0.70) !important;
+        font-size: 12px !important;
+    }
+    strong, b {
+        color: #ffffff !important;
+        font-weight: 700 !important;
     }
 </style>
+<script>
+// ── BasEUI Dropdown Koyu Tema — MutationObserver V2 ──
+// Gerçek DOM yapısı: [data-baseweb="popover"] > div > div > ul > div > li[role="option"]
+// Yani menu wrapper YOK — role="option" direkt hedeflenir.
+(function() {
+    var DARK_BG  = 'rgba(8,18,52,0.97)';
+    var TEXT_CLR = 'rgb(204,228,255)';
+    var HOVER_BG = 'rgba(37,99,235,0.40)';
+    var SEL_BG   = 'rgba(37,99,235,0.65)';
+    var BORDER   = '1px solid rgba(80,130,220,0.30)';
+    var RADIUS   = '10px';
+
+    // Tek bir [role="option"] öğesini stillendir
+    function styleOption(el) {
+        el.style.setProperty('color', TEXT_CLR, 'important');
+        el.style.setProperty('background-color', 'transparent', 'important');
+        if (el.getAttribute('aria-selected') === 'true') {
+            el.style.setProperty('background-color', SEL_BG, 'important');
+            el.style.setProperty('color', '#ffffff', 'important');
+        }
+        el.querySelectorAll('span, div, p').forEach(function(c) {
+            c.style.setProperty('color', TEXT_CLR, 'important');
+            c.style.setProperty('background-color', 'transparent', 'important');
+        });
+        if (!el._hvacHover) {
+            el._hvacHover = true;
+            el.addEventListener('mouseenter', function() {
+                if (el.getAttribute('aria-selected') !== 'true') {
+                    el.style.setProperty('background-color', HOVER_BG, 'important');
+                    el.style.setProperty('color', '#ffffff', 'important');
+                    el.querySelectorAll('span, div, p').forEach(function(c) {
+                        c.style.setProperty('color', '#ffffff', 'important');
+                    });
+                }
+            });
+            el.addEventListener('mouseleave', function() {
+                if (el.getAttribute('aria-selected') !== 'true') {
+                    el.style.setProperty('background-color', 'transparent', 'important');
+                    el.style.setProperty('color', TEXT_CLR, 'important');
+                    el.querySelectorAll('span, div, p').forEach(function(c) {
+                        c.style.setProperty('color', TEXT_CLR, 'important');
+                    });
+                }
+            });
+        }
+    }
+
+    function applyDark(root) {
+        // Popover arka planı (tüm dropdown kapsayıcılar)
+        root.querySelectorAll('[data-baseweb="popover"]').forEach(function(el) {
+            el.style.setProperty('background-color', DARK_BG, 'important');
+            el.style.setProperty('border', BORDER, 'important');
+            el.style.setProperty('border-radius', RADIUS, 'important');
+            el.style.setProperty('box-shadow', '0 8px 24px rgba(0,0,0,0.55)', 'important');
+        });
+
+        // Menu wrapper varsa (eski Streamlit versiyonları)
+        root.querySelectorAll('[data-baseweb="menu"]').forEach(function(el) {
+            el.style.setProperty('background-color', DARK_BG, 'important');
+        });
+
+        // Popover içindeki UL (liste arka planı)
+        root.querySelectorAll('[data-baseweb="popover"] ul').forEach(function(el) {
+            el.style.setProperty('background-color', DARK_BG, 'important');
+        });
+
+        // TÜM role="option" — parent bağımsız, her Streamlit versiyonunda çalışır
+        root.querySelectorAll('[role="option"]').forEach(styleOption);
+
+        // Root'un kendisi role="option" ise (MutationObserver'dan geliyorsa)
+        if (root.getAttribute && root.getAttribute('role') === 'option') {
+            styleOption(root);
+        }
+
+        // Selectbox seçili değer
+        root.querySelectorAll('[data-baseweb="select"] span, [data-baseweb="select"] input')
+            .forEach(function(el) {
+                el.style.setProperty('color', TEXT_CLR, 'important');
+            });
+    }
+
+    // Sayfa açılışında uygula
+    applyDark(document);
+
+    // DOM değişikliklerini izle
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+            m.addedNodes.forEach(function(node) {
+                if (node.nodeType !== 1) return;
+                var db = node.getAttribute ? node.getAttribute('data-baseweb') : null;
+                var role = node.getAttribute ? node.getAttribute('role') : null;
+
+                // Popover eklenirse içini stillendir
+                if (db === 'popover') {
+                    applyDark(node);
+                    return;
+                }
+                // Herhangi bir role="option" eklendiyse direkt stillendir
+                if (role === 'option') {
+                    styleOption(node);
+                    return;
+                }
+                // Genel ekleme — içinde option var mı bak
+                if (node.querySelector && node.querySelector('[role="option"]')) {
+                    applyDark(node);
+                }
+            });
+        });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+})();
+</script>
 """, unsafe_allow_html=True)
+
+# ── BasEUI Dropdown Koyu Tema — components.html ile gerçek JS enjeksiyonu ──
+# st.markdown içindeki <script> tarayıcı tarafından çalıştırılmaz (innerHTML güvenliği).
+# components.html bir iframe oluşturur → window.parent.document ile parent DOM'a erişir.
+components.html("""
+<script>
+(function() {
+    var DARK_BG  = 'rgba(8,18,52,0.97)';
+    var TEXT_CLR = 'rgb(204,228,255)';
+    var HOVER_BG = 'rgba(37,99,235,0.40)';
+    var SEL_BG   = 'rgba(37,99,235,0.65)';
+    var BORDER   = '1px solid rgba(80,130,220,0.30)';
+    var RADIUS   = '10px';
+
+    function styleOption(el) {
+        el.style.setProperty('color', TEXT_CLR, 'important');
+        el.style.setProperty('background-color', 'transparent', 'important');
+        if (el.getAttribute('aria-selected') === 'true') {
+            el.style.setProperty('background-color', SEL_BG, 'important');
+            el.style.setProperty('color', '#ffffff', 'important');
+        }
+        el.querySelectorAll('span, div, p').forEach(function(c) {
+            c.style.setProperty('color', TEXT_CLR, 'important');
+            c.style.setProperty('background-color', 'transparent', 'important');
+        });
+        if (!el._hvacHover) {
+            el._hvacHover = true;
+            el.addEventListener('mouseenter', function() {
+                if (el.getAttribute('aria-selected') !== 'true') {
+                    el.style.setProperty('background-color', HOVER_BG, 'important');
+                    el.style.setProperty('color', '#ffffff', 'important');
+                    el.querySelectorAll('span,div,p').forEach(function(c){ c.style.setProperty('color','#ffffff','important'); });
+                }
+            });
+            el.addEventListener('mouseleave', function() {
+                if (el.getAttribute('aria-selected') !== 'true') {
+                    el.style.setProperty('background-color', 'transparent', 'important');
+                    el.style.setProperty('color', TEXT_CLR, 'important');
+                    el.querySelectorAll('span,div,p').forEach(function(c){ c.style.setProperty('color',TEXT_CLR,'important'); });
+                }
+            });
+        }
+    }
+
+    function applyDark(root) {
+        root.querySelectorAll('[data-baseweb="popover"]').forEach(function(el) {
+            el.style.setProperty('background-color', DARK_BG, 'important');
+            el.style.setProperty('border', BORDER, 'important');
+            el.style.setProperty('border-radius', RADIUS, 'important');
+            el.style.setProperty('box-shadow', '0 8px 24px rgba(0,0,0,0.55)', 'important');
+        });
+        root.querySelectorAll('[data-baseweb="popover"] ul,[data-baseweb="menu"]').forEach(function(el) {
+            el.style.setProperty('background-color', DARK_BG, 'important');
+        });
+        root.querySelectorAll('[role="option"]').forEach(styleOption);
+        if (root.getAttribute && root.getAttribute('role') === 'option') styleOption(root);
+        root.querySelectorAll('[data-baseweb="select"] span,[data-baseweb="select"] input').forEach(function(el) {
+            el.style.setProperty('color', TEXT_CLR, 'important');
+        });
+    }
+
+    function setup(doc) {
+        applyDark(doc);
+        var obs = new MutationObserver(function(mutations) {
+            mutations.forEach(function(m) {
+                m.addedNodes.forEach(function(node) {
+                    if (node.nodeType !== 1) return;
+                    var db   = node.getAttribute ? node.getAttribute('data-baseweb') : null;
+                    var role = node.getAttribute ? node.getAttribute('role') : null;
+                    if (db === 'popover') { applyDark(node); return; }
+                    if (role === 'option') { styleOption(node); return; }
+                    if (node.querySelector && node.querySelector('[role="option"]')) applyDark(node);
+                });
+            });
+        });
+        obs.observe(doc.body, { childList: true, subtree: true });
+        doc._hvacObserver = obs;
+    }
+
+    try {
+        var pDoc = window.parent.document;
+        if (pDoc && pDoc.body) {
+            setup(pDoc);
+        } else {
+            window.parent.addEventListener('load', function() { setup(window.parent.document); });
+        }
+    } catch(e) {
+        console.warn('HVAC observer error:', e);
+    }
+})();
+</script>
+""", height=0)
 
 # ---- Portal navigasyon (HVAC / Enerji ana menü) ----
 PORTAL_URL = os.environ.get("PORTAL_URL", "http://localhost:8005/")

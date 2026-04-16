@@ -45,12 +45,12 @@ CONFIG = {
     
     # Hedef ΔT değerleri
     "TARGET_DT_AHU": 5.0,
-    "TARGET_DT_CHILLER": 3.0,
-    "TARGET_DT_FCU": 4.0,
+    "TARGET_DT_CHILLER": 5.0,
+    "TARGET_DT_FCU": 5.0,
     "TARGET_DT_COLLECTOR": 3.0,
     "TARGET_DT_HEAT_EXCHANGER": 8.0,
     "TARGET_DT_DEFAULT": 5.0,
-    "TARGET_DT_HEAT": 25.0,
+    "TARGET_DT_HEAT": 15.0,  # Gerçekçi ısıtma devresi ΔT eşiği (eski 25.0 LOW_FLOW_DETECTED'i erişilemez yapıyordu)
     
     # Toleranslar
     "TOLERANCE_CRITICAL": 1.0,
@@ -61,8 +61,8 @@ CONFIG = {
     "SAT_HEATING_THRESHOLD": 1.0,
     "SAT_COOLING_MIN": 15.0,  # Soğutma için minimum SAT
     "SAT_COOLING_MAX": 18.0,  # Soğutma için maksimum SAT
-    "SAT_HEATING_MIN": 28.0,  # Isıtma için minimum SAT
-    "SAT_HEATING_MAX": 31.0,  # Isıtma için maksimum SAT
+    "SAT_HEATING_MIN": 27.0,  # Isıtma için minimum SAT
+    "SAT_HEATING_MAX": 30.0,  # Isıtma için maksimum SAT
     "COMFORT_DEPARTURE": 3.0,
     
     # Skorlama parametreleri
@@ -86,10 +86,10 @@ CONFIG = {
     
     # Isıtma teşhis eşikleri
     "HEAT_EFF_LOW_THRESHOLD": 20.0,
-    "HEAT_SAT_LOW_THRESHOLD": 28.0,
+    "HEAT_SAT_LOW_THRESHOLD": 27.0,
     
-    # OAT bias
-    "OAT_BIAS_MAX": 0.5,
+    # OAT bias (soğuk havada hedef ΔT düşer, sıcak havada artar — AHU için)
+    "OAT_BIAS_MAX": 2.0,
     
     # Plant collector patterns
     "PLANT_COLLECTOR_PATTERNS": ["ana", "main", "header", "kollekt", "collector", "primary", "primer"],
@@ -654,19 +654,22 @@ INSTRUCTION_GUIDE = {
     "SAT_LOW": {
         "severity": "WARNING",
         "score": 5.0,
-        "title": "SAT Düşük",
-        "description": "Üfleme sıcaklığı hedefin altında. Aşırı soğutma veya donma riski.",
+        "title": "SAT Düşük (Donma Riski)",
+        "description": "Üfleme sıcaklığı (SAT) 15°C altına düştü. Aşırı soğutma yapılıyor, coil donma riski var.",
         "steps": [
-            "Soğutma vanasını kısın veya kapatın",
-            "SAT setpoint'ini artırın",
-            "Chiller sıcaklığını yükseltin",
-            "Coil donma korumasını kontrol edin"
+            "⚠️ ACİL: Soğutma vanasını kısın veya kapatın — donma riski",
+            "Chiller set sıcaklığını yükseltin (6-7°C altına düşmesin)",
+            "SAT setpoint'ini 15°C üzerine (soğutma) / 27°C üzerine (ısıtma) çıkaracak şekilde artırın",
+            "Coil donma koruma sensörünü kontrol edin — aktif mi?",
+            "Coil'de buz oluşumu var mı gözle kontrol edin",
+            "Oda sıcaklığını kontrol edin — aşırı soğumuş olabilir"
         ],
         "causes": [
-            "Vana çok açık",
-            "Setpoint çok düşük",
-            "Chiller sıcaklığı çok düşük",
-            "Donma riski"
+            "Soğutma vanası çok açık kalmış",
+            "Chiller set sıcaklığı çok düşük ayarlanmış",
+            "Setpoint çok agresif",
+            "Donma koruma devre dışı",
+            "Otomasyon hatası"
         ]
     },
     "INSUFFICIENT_CAPACITY": {
@@ -1064,10 +1067,12 @@ class HVACAnalyzer:
         return air_dt
 
     
-    def get_target_delta_t(self, profile: EquipmentProfile, oat: Optional[float] = None) -> float:
+    def get_target_delta_t(self, profile: EquipmentProfile, oat: Optional[float] = None, effective_mode: Optional[str] = None) -> float:
         """Get target ΔT based on equipment type and mode."""
         eq_type = self.classify_equipment_type(profile.type)
-        is_heating = self.utils.is_heating_mode(profile.mode)
+        # Use effective_mode if provided (resolves AUTO correctly), else fall back to raw profile.mode
+        mode_for_check = effective_mode if effective_mode else profile.mode
+        is_heating = self.utils.is_heating_mode(mode_for_check)
         
         # Heating mode target (type-specific)
         if is_heating and eq_type != EquipmentType.CHILLER:
@@ -1498,12 +1503,7 @@ class HVACAnalyzer:
         # Base score from ΔT departure
         if departure is not None:
             score += min(abs(departure) * 2.0, 6.0)
-        
-        # Priority weight
-        priority = profile.priority.lower()
-        if "kritik" in priority or "critical" in priority or priority == "1":
-            score *= 1.5
-        
+
         # Valve position impact
         max_valve = max(
             profile.valves.cooling or 0,
@@ -1511,33 +1511,42 @@ class HVACAnalyzer:
         )
         if max_valve > 80:
             score *= 1.2
-        
+
         # SAT issues (VALVE_LOW hariç - vana düşükken SAT sorunu normal)
-        if sat_status not in ["OPTIMAL", "NO DATA", "VALVE_LOW", "VALVE LOW"]:
+        if sat_status not in ["OPTIMAL", "NO DATA", "VALVE_LOW", "VALVE LOW", "STANDBY"]:
             score += 2.0
-        
-        # Special rules bonus
+
+        # Kural bazlı minimum skor — kural atanmışsa en az bu kadar olmalı
         rule_boosts = {
-            "SIMUL_HEAT_COOL": 10.0,
-            "CHILLER_BYPASS": 9.0,
-            "NOT_COOLING": 9.0,
-            "NOT_HEATING": 9.0,
-            "LOW_FLOW_DETECTED": 8.0,
-            "HEAT_EFF_LOW": 7.0,
-            "COOL_EFF_LOW": 7.0,
-            "CHILLER_LOW_DT": 6.0,
-            "LOW_DT_SYNDROME": 5.0,
-            "SAT_HIGH": 5.0,
-            "SAT_LOW": 5.0,
-            "BAND_HIGH": 4.0,
-            "BAND_LOW": 4.0,
-            "COMFORT_OVERRIDE": 4.0,
-            "HIGH_DT": 3.0,
-            "LOW_DT": 3.0,
+            "SIMUL_HEAT_COOL":          10.0,
+            "CHILLER_BYPASS":            9.0,
+            "NOT_COOLING":               9.0,
+            "NOT_HEATING":               9.0,
+            "LOW_FLOW_DETECTED":         8.0,
+            "INSUFFICIENT_CAPACITY":     7.0,  # Eksikti — eklendi
+            "HEAT_EFF_LOW":              7.0,
+            "COOL_EFF_LOW":              7.0,
+            "CHILLER_LOW_DT":            6.0,
+            "LOW_DT_SYNDROME":           5.0,
+            "SAT_HIGH":                  5.0,
+            "SAT_LOW":                   5.0,
+            "SAT_WARNING":               5.0,  # Eksikti — eklendi
+            "AMBIGUOUS":                 5.0,  # Eksikti — eklendi
+            "BAND_HIGH":                 4.0,
+            "BAND_LOW":                  4.0,
+            "COMFORT_OVERRIDE":          4.0,
+            "HIGH_DT":                   3.0,
+            "LOW_DT":                    3.0,
         }
         if special_rule in rule_boosts:
             score = max(score, rule_boosts[special_rule])
-        
+
+        # Öncelik çarpanı — kural boost'undan SONRA uygulanır
+        # Böylece kritik ekipman hem kural skorundan hem sapma skorundan faydalanır
+        priority = profile.priority.lower()
+        if "kritik" in priority or "critical" in priority or priority == "1":
+            score *= 1.5
+
         return min(score, 10.0)
     
     def map_severity(self, status: str, score: float) -> str:
@@ -1560,40 +1569,55 @@ class HVACAnalyzer:
         return "OPTIMAL"
     
     def determine_effective_mode(self, profile: EquipmentProfile) -> str:
-        """Determine effective operation mode, especially for AUTO."""
+        """Determine effective operation mode, especially for AUTO.
+
+        Öncelik sırası:
+        1. Açık mod (HEAT/COOL/OFF)
+        2. Vana pozisyonu (hangisi daha açık)
+        3. SAT vs Return sıcaklık farkı
+        4. OAT (dış hava — son çare)
+        5. UNKNOWN (SAT analizi atlanır, sadece ΔT band kontrolü yapılır)
+        """
         raw_mode = str(profile.mode).strip().upper()
-        
-        # If explicitly HEAT or COOL, return it
+
+        # 1. Açık mod tanımlanmışsa direkt döndür
         if "HEAT" in raw_mode or "ISIT" in raw_mode or "WINTER" in raw_mode:
             return "HEATING"
         if "COOL" in raw_mode or "SOGUT" in raw_mode or "SUMMER" in raw_mode:
             return "COOLING"
-            
-        # If AUTO, try to guess based on sensors or valve
+
+        # 2. AUTO veya boş mod → sensör/vana ile tespit et
         if raw_mode == "AUTO" or not raw_mode:
-            # 1. Valve position check
             heat_v = profile.valves.heating or 0
             cool_v = profile.valves.cooling or 0
-            
-            # AMBIGUOUS: İki vana birden yüksekse kontrol çakışması
+
+            # AMBIGUOUS: her iki vana da yüksek açık
             if heat_v >= 15 and cool_v >= 15:
                 return "AMBIGUOUS"
-            
+
             if heat_v > cool_v and heat_v >= 15:
                 return "HEATING (Auto)"
             if cool_v > heat_v and cool_v >= 15:
                 return "COOLING (Auto)"
-                
-            # 2. Temperature check (SAT vs Return)
+
+            # 3. SAT vs Return sıcaklık farkı
             sat = profile.temperatures.sat or profile.temperatures.supply
             ret = profile.temperatures.return_ or profile.temperatures.room
-            
             if sat is not None and ret is not None:
                 if sat > ret + 2.0:
                     return "HEATING (Auto-Detected)"
                 if sat < ret - 2.0:
                     return "COOLING (Auto-Detected)"
-                    
+
+            # 4. OAT son çare — soğuk hava ısıtma, sıcak hava soğutma
+            oat = profile.temperatures.oat
+            if oat is not None:
+                if oat <= 12.0:
+                    return "HEATING (OAT-Inferred)"
+                if oat >= 20.0:
+                    return "COOLING (OAT-Inferred)"
+
+        # 5. Tespit edilemedi — SAT analizi atlanacak, sadece ΔT band kontrolü
         return "UNKNOWN"
 
     def analyze_equipment(self, profile: EquipmentProfile, 
@@ -1617,14 +1641,14 @@ class HVACAnalyzer:
             # FCU, Chiller, and others use the standard logic
             return self.analyze_fcu_performance(profile, effective_mode, plant_supply, plant_return, oat, tol_crit, tol_norm)
 
-    def _analyze_base(self, profile: EquipmentProfile, result: AnalysisResult, oat) -> Optional[AnalysisResult]:
+    def _analyze_base(self, profile: EquipmentProfile, result: AnalysisResult, oat, effective_mode: Optional[str] = None) -> Optional[AnalysisResult]:
         """Ortak delta_t hesaplaması ve STANDBY kontrolü. STANDBY ise doldurulmuş result döner, değilse None."""
         # Delta T hesaplamaları (tüm path'ler için ortak)
         delta_t, dt_source = self.calculate_delta_t(profile)
         result.delta_t = delta_t
         result.dt_source = dt_source
         result.air_delta_t = self.calculate_air_delta_t(profile)
-        target_dt = self.get_target_delta_t(profile, oat)
+        target_dt = self.get_target_delta_t(profile, oat, effective_mode=effective_mode)
         result.target_delta_t = target_dt
         if delta_t is not None:
             result.departure = delta_t - target_dt
@@ -1637,10 +1661,22 @@ class HVACAnalyzer:
         heating_valve = profile.valves.heating if profile.valves.heating is not None else 0
         mode_upper = profile.mode.upper() if profile.mode else ""
 
-        # Eğer özel tip değilse VE Auto+Vana0 ise Standby
+        # OFF modu → direkt STANDBY (vanaya bakmadan)
+        OFF_MODES = {"OFF", "KAPALI", "DEVRE DISI", "DISABLED", "STOP", "STOPPED"}
+        if (not any(t in eq_type_upper for t in SKIP_STANDBY_TYPES)) and \
+           mode_upper in OFF_MODES:
+            result.status = "STANDBY"
+            result.action = "Kapalı"
+            result.reason = "Ekipman kapalı (OFF). Analiz yapılmıyor."
+            result.rule = "STANDBY"
+            result.severity = "OPTIMAL"
+            result.sat_status = "STANDBY"
+            result.score = 0.0
+            return result
+
+        # AUTO + vanalar kapalı → STANDBY (talep bekliyor)
         if (not any(t in eq_type_upper for t in SKIP_STANDBY_TYPES)) and \
            mode_upper == "AUTO" and cooling_valve == 0 and heating_valve == 0:
-            # Ekipman bekleme modunda - veri eksik değil!
             result.status = "STANDBY"
             result.action = "Bekleme Modu"
             result.reason = "Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor."
@@ -1680,9 +1716,9 @@ class HVACAnalyzer:
             maintenance_notes.append("Soğutma vanası 0-10V arızalı - Vana pozisyonu güvenilmez")
         
         result.maintenance_notes = maintenance_notes
-        
+
         # --- 0. STANDBY CHECK ---
-        standby = self._analyze_base(profile, result, oat)
+        standby = self._analyze_base(profile, result, oat, effective_mode=effective_mode)
         if standby is not None:
             return standby
 
@@ -1736,14 +1772,31 @@ class HVACAnalyzer:
         # AHU-özel versiyonudur ve öncelikli olarak çalışır. İki mantığı
         # birleştirirken dikkat edin; inline AHU kontrolleri daha hassastır.
         # VANA EŞİK KONTROLÜ: Vana <%40 ise SAT kontrolü yapılmaz
+
+        # UNKNOWN mod → mod tespit edilemedi, SAT analizi yanlış sonuç üretir — atla
+        _skip_sat_check = (effective_mode == "UNKNOWN")
+        if _skip_sat_check:
+            result.sat_status = "NO DATA"
+            if not result.action or result.action == "Normal":
+                result.action = "Mod Tespit Edilemedi"
+                result.reason = "Çalışma modu belirlenemedi. Vana ve sıcaklık verisi yetersiz."
+
         VALVE_THRESHOLD = 40.0
         heating_valve = profile.valves.heating if profile.valves.heating is not None else 0
         cooling_valve = profile.valves.cooling if profile.valves.cooling is not None else 0
-        
+
         # İlgili vana değerini al
-        relevant_valve = heating_valve if is_heating else cooling_valve
-        
+        # UNKNOWN modda is_heating=False (varsayılan) → cooling_valve kullanılır
+        # ama bu güvenli değil. _skip_sat_check=True ise relevant_valve=0 yaparak
+        # VALVE_LOW path'ini tetikle → SAT analizi güvenli şekilde atlanır.
+        relevant_valve = 0 if _skip_sat_check else (heating_valve if is_heating else cooling_valve)
+
         # Vana yeterince açık değilse SAT kontrolü ATLA
+        # NOT_COOLING / NOT_HEATING tanısı için iki aşamalı vana eşiği:
+        #   VALVE_THRESHOLD (40%) → SAT kontrolüne giriş kapısı
+        #   HIGH_VALVE_THRESHOLD (70%) → KRİTİK NOT_COOLING/NOT_HEATING tanısı için gereken minimum açıklık
+        #   40-69% arası: SAT sorunuysa UYARI (SAT_WARNING), KRİTİK değil
+        HIGH_VALVE_FOR_CRITICAL = 70.0
         if relevant_valve < VALVE_THRESHOLD:
             result.sat_status = "VALVE_LOW"
             # SAT kontrolü yapılmadan devam et
@@ -1752,14 +1805,24 @@ class HVACAnalyzer:
                 # Isıtma: SAT 28-35°C aralığında olmalı
                 sat_min = self.config.get("SAT_HEATING_MIN", 28.0)
                 sat_max = self.config.get("SAT_HEATING_MAX", 35.0)
-                
+
                 if sat < sat_min:
-                    result.sat_status = "NOT_HEATING"
-                    result.action = "KRİTİK: Isıtmıyor"
-                    result.reason = f"Üfleme ({sat:.1f}°C) < {sat_min}°C. Vana veya kazan kontrolü gerekli."
-                    result.severity = "CRITICAL"
-                    result.score = 9.0
-                    result.rule = "NOT_HEATING"
+                    if relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
+                        # Vana yüksek açık ama SAT düşük → gerçek sorun
+                        result.sat_status = "NOT_HEATING"
+                        result.action = "KRİTİK: Isıtmıyor"
+                        result.reason = f"Üfleme ({sat:.1f}°C) < {sat_min}°C, vana %{relevant_valve:.0f} açık. Vana veya kazan kontrolü gerekli."
+                        result.severity = "CRITICAL"
+                        result.score = 9.0
+                        result.rule = "NOT_HEATING"
+                    else:
+                        # Vana orta seviyede (%40-69) — SAT düşük ama henüz kritik değil
+                        result.sat_status = "WARNING"
+                        result.action = "UYARI: SAT Düşük (Isıtmada)"
+                        result.reason = f"Üfleme ({sat:.1f}°C) < {sat_min}°C, vana orta seviyede (%{relevant_valve:.0f}). Vana artmaya devam ederse kritik."
+                        result.severity = "WARNING"
+                        result.score = max(result.score, 5.0)
+                        result.rule = "SAT_WARNING"
                 elif sat > sat_max:
                     result.sat_status = "WARNING"
                     result.action = "UYARI: SAT Yüksek"
@@ -1772,14 +1835,24 @@ class HVACAnalyzer:
                 # Soğutma: SAT 15-18°C aralığında olmalı
                 sat_min = self.config.get("SAT_COOLING_MIN", 15.0)
                 sat_max = self.config.get("SAT_COOLING_MAX", 18.0)
-                
+
                 if sat > sat_max:
-                    result.sat_status = "NOT_COOLING"
-                    result.action = "KRİTİK: Soğutmuyor"
-                    result.reason = f"Üfleme ({sat:.1f}°C) > {sat_max}°C. Vana veya chiller kontrolü gerekli."
-                    result.severity = "CRITICAL"
-                    result.score = 9.0
-                    result.rule = "NOT_COOLING"
+                    if relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
+                        # Vana yüksek açık ama SAT yüksek → gerçek soğutma sorunu
+                        result.sat_status = "NOT_COOLING"
+                        result.action = "KRİTİK: Soğutmuyor"
+                        result.reason = f"Üfleme ({sat:.1f}°C) > {sat_max}°C, vana %{relevant_valve:.0f} açık. Vana veya chiller kontrolü gerekli."
+                        result.severity = "CRITICAL"
+                        result.score = 9.0
+                        result.rule = "NOT_COOLING"
+                    else:
+                        # Vana orta seviyede (%40-69) — SAT hedef dışında ama henüz kritik değil
+                        result.sat_status = "WARNING"
+                        result.action = "UYARI: SAT Yüksek (Soğutmada)"
+                        result.reason = f"Üfleme ({sat:.1f}°C) > {sat_max}°C, vana orta seviyede (%{relevant_valve:.0f}). Vana artmaya devam ederse kritik."
+                        result.severity = "WARNING"
+                        result.score = max(result.score, 5.0)
+                        result.rule = "SAT_WARNING"
                 elif sat < sat_min:
                     result.sat_status = "WARNING"
                     result.action = "UYARI: SAT Düşük"
@@ -1791,7 +1864,8 @@ class HVACAnalyzer:
 
         # --- 3. SPECIAL CONDITIONS ---
         special = self.check_special_conditions(profile, delta_t, effective_mode=effective_mode)
-        if special["rule"]:
+        # NOT_COOLING / NOT_HEATING kritik kural — özel durum tarafından ezilmez
+        if special["rule"] and result.rule not in ("NOT_COOLING", "NOT_HEATING"):
             result.action = special["action"]
             result.reason = special["reason"]
             result.rule = special["rule"]
@@ -1816,9 +1890,9 @@ class HVACAnalyzer:
                               plant_supply, plant_return, oat, tol_crit, tol_norm) -> AnalysisResult:
         """Standard logic for FCU and others (Room vs Set focus)."""
         result = AnalysisResult()
-        
+
         # --- 0. STANDBY CHECK ---
-        standby = self._analyze_base(profile, result, oat)
+        standby = self._analyze_base(profile, result, oat, effective_mode=effective_mode)
         if standby is not None:
             return standby
 
@@ -1847,7 +1921,24 @@ class HVACAnalyzer:
                 
         # Analyze SAT Status (Generic)
         result.sat_status = self.analyze_sat_status(profile)
-        
+
+        # SAT status → rule mapping (FCU path): SAT_WARNING daha önce hiç atanamayan durumlar için
+        _sat_to_rule = {
+            "NOT HEATING":           "NOT_HEATING",
+            "NOT COOLING":           "NOT_COOLING",
+            "INSUFFICIENT HEATING":  "SAT_WARNING",
+            "INSUFFICIENT COOLING":  "SAT_WARNING",
+            "CHECK REQUIRED":        "SAT_WARNING",
+        }
+        if result.sat_status in _sat_to_rule:
+            result.rule = _sat_to_rule[result.sat_status]
+            if result.rule in ("NOT_HEATING", "NOT_COOLING"):
+                result.severity = "CRITICAL"
+                result.score = max(result.score, 8.0)
+            else:
+                result.severity = "WARNING"
+                result.score = max(result.score, 5.0)
+
         # Calculate approach
         app_sup, app_ret = self.calculate_approach(profile, plant_supply, plant_return)
         result.approach_supply = app_sup
@@ -1866,10 +1957,12 @@ class HVACAnalyzer:
                 result.reason = f"Oda ({profile.temperatures.room}°C) Set'ten ({profile.temperatures.setpoint}°C) uzak ama vana açık."
                 result.severity = "WARNING"
                 result.score = 7.5
+                result.rule = "INSUFFICIENT_CAPACITY"
         
         # Check special conditions
+        # NOT_COOLING / NOT_HEATING kritik kural — özel durum tarafından ezilmez
         special_conditions = self.check_special_conditions(profile, delta_t, effective_mode=effective_mode)
-        if special_conditions["rule"]:
+        if special_conditions["rule"] and result.rule not in ("NOT_COOLING", "NOT_HEATING"):
             result.action = special_conditions["action"]
             result.reason = special_conditions["reason"]
             result.rule = special_conditions["rule"]
@@ -3519,15 +3612,44 @@ async def analyze_data(rows: List[Dict[str, Any]],
             logger.debug(f"  ℹ️ Inlet/Outlet zaten var, atlanıyor")
 
     logger.debug("=== KOLEKTÖR ATAMA BİTTİ ===")
-    
+
+    # Kolektörlerden mod-bazlı plant referansları türet
+    # Soğutma kolektörü → soğutma referansı
+    plant_supply_cooling = None
+    plant_return_cooling = None
+    if cooling_collector:
+        plant_supply_cooling = (cooling_collector.temperatures.inlet
+                                or cooling_collector.temperatures.supply)
+        plant_return_cooling = (cooling_collector.temperatures.outlet
+                                or cooling_collector.temperatures.return_)
+
+    # Isıtma kolektörü → ısıtma referansı
+    plant_supply_heating = None
+    plant_return_heating = None
+    if heating_collector:
+        plant_supply_heating = (heating_collector.temperatures.inlet
+                                or heating_collector.temperatures.supply)
+        plant_return_heating = (heating_collector.temperatures.outlet
+                                or heating_collector.temperatures.return_)
+
     # Analyze each equipment
     results = []
     for profile in profiles:
         try:
+            # Mod-bazlı doğru plant referansını seç (SORUN 6 fix)
+            eff_mode_for_ref = analyzer.determine_effective_mode(profile)
+            if eff_mode_for_ref == "HEATING":
+                ps = plant_supply_heating or plant_supply
+                pr = plant_return_heating or plant_return
+            else:
+                # COOLING, AMBIGUOUS, UNKNOWN → soğutma referansı (varsayılan)
+                ps = plant_supply_cooling or plant_supply
+                pr = plant_return_cooling or plant_return
+
             analysis = analyzer.analyze_equipment(
                 profile=profile,
-                plant_supply=plant_supply,
-                plant_return=plant_return,
+                plant_supply=ps,
+                plant_return=pr,
                 oat=oat_float,
                 tol_crit=tol_crit_float,
                 tol_norm=tol_norm_float
@@ -3610,7 +3732,7 @@ async def analyze_data(rows: List[Dict[str, Any]],
             "Chiller Yük (%)": chiller_load_float,
             "Chiller COP": chiller_cop_float,
             "Status": "SEASONAL_CHILLER_TRANSITION",
-            "Severity": "WARNING",
+            "Severity": analyzer.map_severity("SEASONAL_CHILLER_TRANSITION", 8.0),
             "Score": 8.0,
             "Rule": "SEASONAL_CHILLER_TRANSITION",
             "Action": "Free-Cooling Potansiyelini Artırın",

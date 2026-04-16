@@ -113,12 +113,17 @@ def check_field_experience_rules(equipment_data: Dict[str, Any]) -> list:
     """
     rules = TemperatureCascadeRules()
     issues = []
-    
+
     eq_type = equipment_data.get("Type", "")
     # P1-3: Effective_Mode varsa onu kullan (AUTO modda gerçek yönü bilir)
     mode = equipment_data.get("Effective_Mode") or equipment_data.get("Mode", "COOLING")
 
-    # P3 Fix: AUTO modda ısıtma vanası veya kış sıcaklığına göre effective_mode belirle
+    # AMBIGUOUS veya UNKNOWN modda saha kuralları çalıştırılmaz — mod belirsiz,
+    # yanlış ısıtma/soğutma kararı verilebilir.
+    if mode and mode.strip().upper() in ("AMBIGUOUS", "UNKNOWN"):
+        return []
+
+    # AUTO kaldıysa (Effective_Mode resolve edemediyse) vana/OAT'a bak
     if mode and mode.strip().upper() == "AUTO":
         heat_v = equipment_data.get("Heat Valve (%)", 0) or 0
         cool_v = equipment_data.get("Cool Valve (%)", 0) or 0
