@@ -1,0 +1,13 @@
+# Gizli anahtarlar - asla git'e girmesin
+supabase_secret.json
+**/supabase_secret.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Geçici dosyalar
+_restart.flag
+_full_restart.flag
+_yedek_*/
