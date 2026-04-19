@@ -69,6 +69,24 @@ def stop_portals(procs):
 
 
 def main():
+    # ── LİSANS KONTROLÜ ──────────────────────────────
+    try:
+        from lisans import lisans_kontrol
+        _lis = lisans_kontrol()
+        if not _lis["gecerli"]:
+            print("=" * 55)
+            print("  LISANSSIZ ERISIM — PROGRAM BASLATILMIYOR")
+            print("=" * 55)
+            print(f"  Makine ID : {_lis['makine_id']}")
+            print(f"  Hata      : {_lis['hata']}")
+            print("  Yetkili   : Acibadem Genel Merkez Enerji Yonetimi")
+            print("=" * 55)
+            sys.exit(1)
+        else:
+            logger.info(f"[LISANS] Gecerli — {_lis.get('makine_adi', _lis['makine_id'])}")
+    except ImportError:
+        pass  # lisans.py yoksa devam et
+
     logger.info("=" * 50)
     logger.info("  HVAC Watchdog başlatılıyor...")
     logger.info("=" * 50)

@@ -23,14 +23,40 @@ import plotly.io as pio
 
 from fpdf import FPDF
 
+st.set_page_config(page_title="Enerji Yönetimi & Raporlama", layout="wide")
+
+# ── LİSANS KONTROLÜ ──────────────────────────────────
+try:
+    from lisans import lisans_kontrol
+    _lis = lisans_kontrol()
+    if not _lis["gecerli"]:
+        st.markdown("""
+        <div style='display:flex;align-items:center;justify-content:center;height:80vh;'>
+        <div style='text-align:center;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);
+                    border-radius:16px;padding:48px 64px;'>
+            <div style='font-size:48px;margin-bottom:16px;'>🔒</div>
+            <div style='font-size:22px;font-weight:700;color:#ef4444;margin-bottom:12px;'>
+                Lisanssiz Erisim
+            </div>
+            <div style='font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:24px;'>
+                Bu cihaz icin gecerli bir lisans bulunamadi.
+            </div>
+            <div style='font-size:12px;color:rgba(255,255,255,0.4);'>
+                Yetkili: Acibadem Genel Merkez Enerji Yonetimi
+            </div>
+        </div></div>
+        """, unsafe_allow_html=True)
+        st.caption(f"Makine ID: `{_lis['makine_id']}`")
+        st.stop()
+except ImportError:
+    pass  # lisans.py yoksa eski davranis (geriye donuk uyumluluk)
+
 # Bulut senkronizasyonu (Supabase) — arka planda otomatik başlat
 try:
     from cloud_sync import start_background_sync
     start_background_sync()
 except Exception:
     pass  # supabase_config.json yoksa veya ayarlanmamışsa sessizce atla
-
-st.set_page_config(page_title="Enerji Yönetimi & Raporlama", layout="wide")
 
 # Custom Dark Theme CSS
 st.markdown("""

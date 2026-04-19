@@ -22,6 +22,24 @@ import signal
 
 import uvicorn
 
+# ── LİSANS KONTROLÜ ──────────────────────────────────
+try:
+    from lisans import lisans_kontrol
+    _lis = lisans_kontrol()
+    if not _lis["gecerli"]:
+        print("=" * 55)
+        print("  LISANSSIZ ERISIM — PROGRAM BASLATILMIYOR")
+        print("=" * 55)
+        print(f"  Makine ID : {_lis['makine_id']}")
+        print(f"  Hata      : {_lis['hata']}")
+        print("  Yetkili   : Acibadem Genel Merkez Enerji Yonetimi")
+        print("=" * 55)
+        sys.exit(1)
+    else:
+        print(f"[LISANS] Gecerli — {_lis.get('makine_adi', _lis['makine_id'])}")
+except ImportError:
+    pass  # lisans.py yoksa devam et
+
 
 FASTAPI_APP = os.environ.get("FASTAPI_APP", "main_portal:app")
 STREAMLIT_FILE = os.environ.get("STREAMLIT_FILE", "app_portal.py")
