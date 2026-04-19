@@ -1,8 +1,0 @@
-Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.
-Schema opsiyonel (None) ve alan doğru isimde. Değişiklik tamamlandı.
-
-UI Düzeltmesi Tamamlandı
-
-`chiller_load_pct` inputu `a3` (tüketim sütunu) konumundan kesildi ve `c1` (set değerleri sütunu) içine, Dış Hava Sıcaklığı ile Kar Eritme arasına yerleştirildi. `Chiller_Load_Percent` alanı SCHEMA'da opsiyonel (None) olarak korunuyor.
-
-/exit
