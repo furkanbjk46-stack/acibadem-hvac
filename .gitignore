@@ -1,13 +1,21 @@
-# Gizli anahtarlar - asla git'e girmesin
-supabase_secret.json
-**/supabase_secret.json
+# Cloudflare credentials (GİZLİ - commit etme!)
+.cloudflared/
 
-# Python
+# Python installers & binaries
+*.exe
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
+.cache/
 
-# Geçici dosyalar
-_restart.flag
-_full_restart.flag
-_yedek_*/
+# IDE
+.claude/
+.vscode/
+
+# Streamlit cache
+.streamlit/secrets.toml
+
+# 3D assets (büyük dosyalar)
+gm-3d/

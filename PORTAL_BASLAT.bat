@@ -1,62 +1,43 @@
 @echo off
 chcp 65001 >nul
-title HVAC & Enerji Portal Launcher
-color 0A
+title Acibadem Genel Merkez Portal
+color 0D
 
 echo.
 echo ====================================================
-echo    ACIBADEM HVAC ^& ENERJI PORTAL SISTEMI
+echo    ACIBADEM GENEL MERKEZ PORTAL
 echo ====================================================
 echo.
-echo Sunucular baslatiliyor...
-echo.
-
+echo Merkez Dashboard baslatiliyor...
 cd /d "%~dp0"
-cd deneme
+if exist "merkez\app_merkez.py" (
+    cd merkez
+)
 
-echo Tarayici aciliyor (5 saniye bekleniyor)...
+REM Merkez Portal (Streamlit) baslatiliyor
+echo [1/1] Merkez Portal baslatiliyor (Port 8601)...
+echo.
+echo Sunucu baslatildi! Tarayici aciliyor...
+echo 5 saniye bekleniyor...
+echo.
+
+REM 5 saniye bekle, sonra tarayiciyi ac
 timeout /t 5 /nobreak > nul
-start "" "http://127.0.0.1:8005"
+
+REM Varsayilan tarayicida ac
+start "" "http://localhost:8601"
+
+streamlit run app_merkez.py --server.port 8601 --server.headless true
 
 echo.
 echo ====================================================
-echo    PORTAL ADRESLERI
+echo    MERKEZ PORTAL ADRESI
 echo ====================================================
 echo.
-echo    HVAC Portal:   http://127.0.0.1:8005
-echo    Enerji Portal: http://localhost:8501
-echo.
-echo    Uzaktan guncelleme alindiktan sonra sistem
-echo    otomatik olarak yeniden baslatilacak.
+echo    Dashboard: http://localhost:8601
 echo.
 echo ====================================================
 echo.
-echo Bu pencereyi kapatmayin! Kapatirsaniz sunucular durur.
+echo Bu pencereyi kapatmayin! Kapatirsaniz portal durur.
 echo.
-
-REM Python kontrolu
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo [HATA] Python bulunamadi! Lutfen KURULUM.bat calistirin.
-    pause
-    exit /b 1
-)
-
-REM portal_watchdog.py var mi?
-if not exist "portal_watchdog.py" (
-    echo [HATA] portal_watchdog.py bulunamadi!
-    echo Bulunulan klasor:
-    cd
-    echo Klasor icerigi:
-    dir *.py
-    pause
-    exit /b 1
-)
-
-REM Watchdog portalları başlatır ve güncelleme sonrası yeniden başlatır
-python portal_watchdog.py
-if errorlevel 1 (
-    echo.
-    echo [HATA] Portal baslatma basarisiz oldu!
-    pause
-)
+pause

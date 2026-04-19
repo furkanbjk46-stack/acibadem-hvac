@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 import os, json
+import numpy as np
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -27,7 +28,14 @@ html, body, [data-testid="stAppViewContainer"] {
 [data-testid="stAppViewContainer"] {
     background: radial-gradient(ellipse at 50% 40%, #071830 0%, #020b18 70%) !important;
 }
-[data-testid="stHeader"]       { background: transparent !important; }
+[data-testid="stHeader"]                  { background: transparent !important; }
+[data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
+[data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
+section[data-testid="stSidebarCollapsedControl"] { display: none !important; }
+.stSidebarCollapsedControl               { display: none !important; }
+button[kind="header"]                    { display: none !important; }
+#MainMenu                                { display: none !important; }
+header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stSidebar"]      { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
 .block-container { padding: 0.5rem 1.5rem 1rem 1.5rem !important; max-width: 100% !important; }
@@ -66,6 +74,19 @@ p, span, div, label { color: rgba(200,230,255,0.85) !important; font-family: 'In
 .nk-red   { border-color: rgba(239,68,68,0.45) !important;  box-shadow: 0 0 15px rgba(239,68,68,0.08) !important;  }
 .nk-gray  { border-color: rgba(100,120,150,0.3) !important; opacity: 0.6; }
 
+.lok-scroll {
+    max-height: 492px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 3px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,212,255,0.25) rgba(0,15,40,0.4);
+}
+.lok-scroll::-webkit-scrollbar { width: 4px; }
+.lok-scroll::-webkit-scrollbar-track { background: rgba(0,15,40,0.4); border-radius: 2px; }
+.lok-scroll::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.28); border-radius: 2px; }
+.lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.55); }
+
 .sec { font-family:'Orbitron',sans-serif; font-size:10px; color:rgba(0,212,255,0.7);
        letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(0,212,255,0.15);
        padding-bottom:5px; margin-bottom:10px; }
@@ -90,6 +111,27 @@ p, span, div, label { color: rgba(200,230,255,0.85) !important; font-family: 'In
   0%, 100% { transform: scale(0.88); opacity: 0.25; }
   50%       { transform: scale(1.12); opacity: 0.55; }
 }
+@keyframes neon-breathe {
+  0%, 100% {
+    text-shadow:
+      0 0 10px rgba(0,212,255,0.4),
+      0 0 25px rgba(0,212,255,0.2),
+      0 0 50px rgba(0,212,255,0.08);
+    opacity: 0.82;
+  }
+  50% {
+    text-shadow:
+      0 0 20px rgba(0,212,255,1),
+      0 0 45px rgba(0,212,255,0.7),
+      0 0 90px rgba(0,212,255,0.35),
+      0 0 140px rgba(0,212,255,0.15);
+    opacity: 1;
+  }
+}
+@keyframes neon-breathe-sub {
+  0%, 100% { opacity: 0.35; letter-spacing: 4px; }
+  50%       { opacity: 0.65; letter-spacing: 5px; }
+}
 
 .btn-refresh button {
     background: linear-gradient(135deg,#003d80,#0066cc) !important;
@@ -97,15 +139,83 @@ p, span, div, label { color: rgba(200,230,255,0.85) !important; font-family: 'In
     border-radius: 8px !important; font-size: 11px !important;
     padding: 4px 12px !important; font-family:'Inter',sans-serif !important;
 }
+
+/* Alarm expander */
+[data-testid="stExpander"] {
+    background: rgba(0,15,40,0.7) !important;
+    border: 1px solid rgba(0,212,255,0.15) !important;
+    border-radius: 10px !important;
+    margin-bottom: 5px !important;
+}
+[data-testid="stExpander"]:has(.alrt-exp-r) {
+    border-color: rgba(239,68,68,0.45) !important;
+    background: rgba(239,68,68,0.05) !important;
+}
+[data-testid="stExpander"]:has(.alrt-exp-y) {
+    border-color: rgba(245,158,11,0.35) !important;
+    background: rgba(245,158,11,0.04) !important;
+}
+[data-testid="stExpanderToggleIcon"] { color: rgba(0,212,255,0.6) !important; }
+.alrt-detay-r {
+    background: rgba(239,68,68,0.10); border-left: 3px solid #ef4444;
+    border-radius: 6px; padding: 8px 12px; margin: 4px 0;
+    font-size: 12px; color: #fca5a5 !important;
+}
+.alrt-detay-y {
+    background: rgba(245,158,11,0.10); border-left: 3px solid #f59e0b;
+    border-radius: 6px; padding: 8px 12px; margin: 4px 0;
+    font-size: 12px; color: #fcd34d !important;
+}
+.alarm-detay-kart {
+    background: rgba(0,20,55,0.6);
+    border: 1px solid rgba(0,212,255,0.12);
+    border-radius: 8px; padding: 10px 14px; margin-top: 8px;
+}
+.btn-goto button {
+    background: rgba(0,212,255,0.08) !important;
+    color: #00d4ff !important;
+    border: 1px solid rgba(0,212,255,0.3) !important;
+    border-radius: 8px !important;
+    font-size: 11px !important;
+    padding: 4px 14px !important;
+    width: 100% !important;
+}
+.btn-goto button:hover { background: rgba(0,212,255,0.18) !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ============ SABİT VERİ ============
 HASTANELER = {
-    "maslak":     {"isim": "Acıbadem Maslak",     "kisa": "MASLAK",     "lat": 41.1073, "lon": 29.0228, "m2": 15000, "renk": "#00d4ff"},
-    "altunizade": {"isim": "Acıbadem Altunizade", "kisa": "ALTUNİZADE", "lat": 41.0215, "lon": 29.0663, "m2": 10000, "renk": "#f59e0b"},
-    "kozyatagi":  {"isim": "Acıbadem Kozyatağı",  "kisa": "KOZYATAĞİ", "lat": 40.9872, "lon": 29.1035, "m2": 12000, "renk": "#10b981"},
-    "taksim":     {"isim": "Acıbadem Taksim",      "kisa": "TAKSİM",     "lat": 41.0370, "lon": 28.9850, "m2": 8000,  "renk": "#a855f7"},
+    # ── İstanbul ──
+    "maslak":       {"isim": "Acıbadem Maslak",        "kisa": "MASLAK",        "lat": 41.1273, "lon": 29.0246, "m2": 15000, "renk": "#00d4ff"},
+    "altunizade":   {"isim": "Acıbadem Altunizade",    "kisa": "ALTUNİZADE",    "lat": 41.0189, "lon": 29.0458, "m2": 10000, "renk": "#f59e0b"},
+    "kozyatagi":    {"isim": "Acıbadem Kozyatağı",     "kisa": "KOZYATAĞİ",    "lat": 40.9766, "lon": 29.0928, "m2": 12000, "renk": "#10b981"},
+    "taksim":       {"isim": "Acıbadem Taksim",        "kisa": "TAKSİM",        "lat": 41.0417, "lon": 28.9827, "m2":  8000, "renk": "#a855f7"},
+    "atakent":      {"isim": "Acıbadem Atakent",       "kisa": "ATAKENT",       "lat": 41.0349, "lon": 28.7789, "m2": 20000, "renk": "#f97316"},
+    "atasehir":     {"isim": "Acıbadem Ataşehir",      "kisa": "ATAŞEHİR",      "lat": 40.9934, "lon": 29.1213, "m2": 14000, "renk": "#06b6d4"},
+    "bakirkoy":     {"isim": "Acıbadem Bakırköy",      "kisa": "BAKIRKÖY",      "lat": 40.9776, "lon": 28.8731, "m2": 12000, "renk": "#84cc16"},
+    "fulya":        {"isim": "Acıbadem Fulya",         "kisa": "FULYA",         "lat": 41.0557, "lon": 28.9994, "m2":  9000, "renk": "#e879f9"},
+    "international":{"isim": "Acıbadem International", "kisa": "INTERNAT.",     "lat": 40.9590, "lon": 28.8354, "m2": 18000, "renk": "#14b8a6"},
+    "kadikoy":      {"isim": "Acıbadem Kadıköy",       "kisa": "KADİKÖY",       "lat": 41.0072, "lon": 29.0429, "m2":  8000, "renk": "#ec4899"},
+    "kartal":       {"isim": "Acıbadem Kartal",        "kisa": "KARTAL",        "lat": 40.8860, "lon": 29.2041, "m2": 11000, "renk": "#ef4444"},
+    # ── Ankara ──
+    "ankara":         {"isim": "Acıbadem Ankara",          "kisa": "ANKARA",       "lat": 39.9179, "lon": 32.8626, "m2": 16000, "renk": "#fb7185"},
+    "bayindir":       {"isim": "Acıbadem Bayındır Söğütözü","kisa": "BAYINDIR",    "lat": 39.8980, "lon": 32.8240, "m2": 12000, "renk": "#f43f5e"},
+    # ── Bursa ──
+    "bursa":          {"isim": "Acıbadem Bursa",            "kisa": "BURSA",        "lat": 40.2090, "lon": 28.9790, "m2": 13000, "renk": "#fbbf24"},
+    # ── Kocaeli ──
+    "kocaeli":        {"isim": "Acıbadem Kocaeli",          "kisa": "KOCAELİ",      "lat": 40.7654, "lon": 29.9408, "m2": 10000, "renk": "#34d399"},
+    # ── Eskişehir ──
+    "eskisehir":      {"isim": "Acıbadem Eskişehir",        "kisa": "ESKİŞEHİR",    "lat": 39.7767, "lon": 30.5206, "m2":  9000, "renk": "#818cf8"},
+    # ── İzmir ──
+    "izmir":          {"isim": "Acıbadem İzmir Kent",       "kisa": "İZMİR",        "lat": 38.4192, "lon": 27.1287, "m2": 15000, "renk": "#38bdf8"},
+    # ── Kayseri ──
+    "kayseri":        {"isim": "Acıbadem Kayseri",          "kisa": "KAYSERİ",      "lat": 38.7225, "lon": 35.4875, "m2": 11000, "renk": "#a78bfa"},
+    # ── Adana ──
+    "adana":          {"isim": "Acıbadem Adana",            "kisa": "ADANA",        "lat": 37.0000, "lon": 35.3213, "m2": 12000, "renk": "#f472b6"},
+    "adana_ortopedia":{"isim": "Acıbadem Adana Ortopedia",  "kisa": "ADANA ORT.",   "lat": 37.0100, "lon": 35.3350, "m2":  5000, "renk": "#e879f9"},
+    # ── Muğla / Bodrum ──
+    "bodrum":         {"isim": "Acıbadem Bodrum",           "kisa": "BODRUM",       "lat": 37.0344, "lon": 27.4305, "m2":  7000, "renk": "#2dd4bf"},
 }
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "merkez_config.json")
@@ -121,23 +231,45 @@ def hex_rgba(h, a=0.1):
     r,g,b = int(h[0:2],16), int(h[2:4],16), int(h[4:6],16)
     return f"rgba({r},{g},{b},{a})"
 
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_dis_hava() -> float | None:
+    """Open-Meteo API'den İstanbul anlık sıcaklığını çek (ücretsiz, API key yok)."""
+    try:
+        import urllib.request, json as _json
+        url = "https://api.open-meteo.com/v1/forecast?latitude=41.0082&longitude=28.9784&current=temperature_2m&timezone=Europe%2FIstanbul"
+        with urllib.request.urlopen(url, timeout=5) as r:
+            data = _json.loads(r.read())
+        return float(data["current"]["temperature_2m"])
+    except Exception:
+        return None
+
 @st.cache_data(ttl=120, show_spinner=False)
 def fetch_energy(url, key):
     try:
         from supabase import create_client
         c = create_client(url, key)
-        r = c.table("energy_data").select("*").order("Tarih", desc=False).execute()
-        if r.data:
-            df = pd.DataFrame(r.data)
+        all_data = []
+        offset = 0
+        batch = 1000
+        while True:
+            r = c.table("energy_data").select("*").order("Tarih", desc=False).range(offset, offset + batch - 1).execute()
+            if not r.data:
+                break
+            all_data.extend(r.data)
+            if len(r.data) < batch:
+                break
+            offset += batch
+        if all_data:
+            df = pd.DataFrame(all_data)
             if "Tarih" in df.columns:
                 df["Tarih"] = pd.to_datetime(df["Tarih"], errors="coerce")
             for col in df.columns:
                 if col not in ["id","lokasyon_id","Tarih","Kar_Eritme_Aktif"]:
                     df[col] = pd.to_numeric(df[col], errors="coerce")
             return df, None
+        return pd.DataFrame(), None
     except Exception as e:
         return pd.DataFrame(), str(e)
-    return pd.DataFrame(), None
 
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_lokasyonlar(url, key):
@@ -176,16 +308,39 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 # ============ HEADER ============
 st.markdown("""
 <div style="text-align:center; padding:12px 0 8px;">
-  <div style="font-family:'Orbitron',sans-serif; font-size:9px; color:rgba(0,212,255,0.45); letter-spacing:5px; text-transform:uppercase;">ACIBADEM SAĞLIK GRUBU</div>
+  <div style="font-family:'Orbitron',sans-serif; font-size:9px; color:rgba(0,212,255,0.45);
+              letter-spacing:5px; text-transform:uppercase;
+              animation:neon-breathe-sub 3.5s ease-in-out infinite;">
+    ACIBADEM SAĞLIK GRUBU
+  </div>
   <div style="font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900; color:#00d4ff;
-              text-shadow:0 0 35px rgba(0,212,255,0.8); letter-spacing:4px; text-transform:uppercase; line-height:1.3;">
+              letter-spacing:4px; text-transform:uppercase; line-height:1.3;
+              animation:neon-breathe 3s ease-in-out infinite;">
     ENERJİ &amp; HVAC KOMUTA MERKEZİ
   </div>
-  <div style="font-family:'Inter',sans-serif; font-size:10px; color:rgba(150,210,255,0.4); letter-spacing:2px; margin-top:2px;">
+  <div style="font-family:'Inter',sans-serif; font-size:10px; color:rgba(150,210,255,0.4);
+              letter-spacing:2px; margin-top:2px;
+              animation:neon-breathe-sub 3.5s ease-in-out infinite; animation-delay:0.8s;">
     GENEL MERKEZ — CANLI İZLEME
   </div>
 </div>
 """, unsafe_allow_html=True)
+
+# ── Lokasyon detay yönlendirmesi (kart ikonu tıklanınca) ──
+if "detay" in st.query_params:
+    _lok = st.query_params["detay"]
+    if _lok in HASTANELER:
+        st.session_state["detay_lokasyon"] = _lok
+        st.query_params.clear()
+        st.switch_page("pages/lokasyon_detay.py")
+
+# ── Rapor yönlendirmesi ──
+if "rapor" in st.query_params:
+    _lok = st.query_params["rapor"]
+    if _lok in HASTANELER:
+        st.session_state["rapor_lokasyon"] = _lok
+        st.query_params.clear()
+        st.switch_page("pages/rapor_olustur.py")
 
 if not bagli:
     st.error("⚠️ Supabase bağlantısı yok. merkez_config.json dosyasını kontrol edin.")
@@ -216,7 +371,14 @@ def online_bilgi(lok_id):
 def dun_kwh(lok_id):
     if df_all.empty or lok_id not in aktif_loklar:
         return 0
-    d = df_all[(df_all["lokasyon_id"]==lok_id) & (df_all["Tarih"].dt.strftime("%Y-%m-%d")==dun)]
+    lok_df = df_all[df_all["lokasyon_id"] == lok_id]
+    if lok_df.empty:
+        return 0
+    # Önce dünü dene, yoksa en son mevcut günü kullan
+    d = lok_df[lok_df["Tarih"].dt.strftime("%Y-%m-%d") == dun]
+    if d.empty:
+        son = lok_df["Tarih"].dropna().max()
+        d = lok_df[lok_df["Tarih"].dt.strftime("%Y-%m-%d") == son.strftime("%Y-%m-%d")]
     if not d.empty and "Toplam_Hastane_Tuketim_kWh" in d.columns:
         return d["Toplam_Hastane_Tuketim_kWh"].sum()
     return 0
@@ -278,87 +440,101 @@ sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 with sol:
     # ── Lokasyon Durumu ──
     st.markdown('<div class="sec">📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
-    for lok_id, lok_info in HASTANELER.items():
+
+    # Tümünü tüketime göre sırala (veri olanlar önce, olmayanlar sona)
+    lok_sira = sorted(
+        HASTANELER.items(),
+        key=lambda x: (dun_kwh(x[0]) or 0),
+        reverse=True
+    )
+
+    # Tüm kartları tek HTML bloğu olarak oluştur → scrollable div içine sar
+    tum_kartlar = '<div class="lok-scroll">'
+
+    for i, (lok_id, lok_info) in enumerate(lok_sira):
         online, fark_dk = online_bilgi(lok_id)
         kwh      = dun_kwh(lok_id)
         renk     = lok_info["renk"]
-        spark    = son7_kwh(lok_id)
         if fark_dk is None:
             card_cls   = "nk nk-gray"
             durum_renk = "#6b7280"
             durum_lbl  = "KURULMADI"
-            dot_shadow = ""
         elif online:
             card_cls   = "nk nk-green"
             durum_renk = "#10b981"
             durum_lbl  = "ÇEVRİMİÇİ"
-            dot_shadow = f"box-shadow:0 0 8px {durum_renk},0 0 16px {durum_renk};"
         else:
             card_cls   = "nk nk-red"
             durum_renk = "#ef4444"
             durum_lbl  = "ÇEVRİMDIŞI"
-            dot_shadow = f"box-shadow:0 0 8px {durum_renk};"
 
-        kwh_str  = f"{kwh:,.0f}" if kwh else "—"
-
-        # kWh/m² hesapla
-        m2 = lok_info.get("m2", 10000)
-        verim_str = f"{kwh/m2:.2f}" if kwh else "—"
+        kwh_str   = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
+        m2_lok    = lok_info.get("m2", 10000)
+        verim_str = f"{kwh/m2_lok:.2f}".replace(".", ",") if kwh else "—"
+        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Orbitron,sans-serif;font-size:8px;color:rgba(150,210,255,0.35);font-weight:700;">#{i+1}</span>' if i < 4 else ""
 
         rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
         dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
 
-        kart_html = (
-            f'<div class="{card_cls}" style="padding:14px;">'
+        tum_kartlar += (
+            f'<div class="{card_cls}" style="padding:14px;position:relative;">'
+            + sira_badge +
+            f'<a href="?detay={lok_id}" title="Detaya Git" style="position:absolute;top:8px;right:10px;'
+            f'font-size:14px;color:rgba({rr},{rg},{rb},0.55);text-decoration:none;'
+            f'transition:color 0.2s;" onmouseover="this.style.color=\'rgba({rr},{rg},{rb},1)\'" '
+            f'onmouseout="this.style.color=\'rgba({rr},{rg},{rb},0.55)\'">⟶</a>'
             f'<div style="display:flex;align-items:center;gap:14px;">'
-            f'<div style="position:relative;width:68px;height:68px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
-            f'<div style="position:absolute;top:-6px;left:-6px;right:-6px;bottom:-6px;border-radius:50%;'
-            f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.25) 0%,rgba({rr},{rg},{rb},0.06) 50%,transparent 75%);'
+            f'<div style="position:relative;width:58px;height:58px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
+            f'<div style="position:absolute;top:-5px;left:-5px;right:-5px;bottom:-5px;border-radius:50%;'
+            f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.22) 0%,rgba({rr},{rg},{rb},0.05) 55%,transparent 75%);'
             f'animation:breathe-ring 3s ease-in-out infinite;"></div>'
-            f'<div style="position:absolute;top:-14px;left:-14px;right:-14px;bottom:-14px;border-radius:50%;'
-            f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.10) 0%,transparent 65%);'
-            f'animation:breathe-ring 3s ease-in-out infinite;animation-delay:0.5s;"></div>'
-            f'<div style="font-size:42px;line-height:1;position:relative;z-index:1;'
-            f'filter:drop-shadow(0 0 10px rgba({rr},{rg},{rb},0.8));">🏥</div>'
-            f'<div style="position:absolute;top:4px;right:4px;z-index:2;width:13px;height:13px;'
+            f'<div style="font-size:36px;line-height:1;position:relative;z-index:1;'
+            f'filter:drop-shadow(0 0 8px rgba({rr},{rg},{rb},0.8));">🏥</div>'
+            f'<div style="position:absolute;top:2px;right:2px;z-index:2;width:11px;height:11px;'
             f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020b18;'
-            f'box-shadow:0 0 6px rgba({dr},{dg},{db},0.9),0 0 14px rgba({dr},{dg},{db},0.5);'
-            f'animation:breathe-ring 2.4s ease-in-out infinite;"></div>'
+            f'box-shadow:0 0 5px rgba({dr},{dg},{db},0.9);"></div>'
             f'</div>'
             f'<div style="flex:1;min-width:0;">'
-            f'<div style="font-family:Orbitron,sans-serif;font-size:11px;font-weight:700;'
-            f'color:{renk};letter-spacing:2px;text-shadow:0 0 8px rgba({rr},{rg},{rb},0.7);'
-            f'margin-bottom:2px;">{lok_info["kisa"]}</div>'
-            f'<div style="font-size:9px;color:{durum_renk};font-weight:600;margin-bottom:8px;">{durum_lbl}</div>'
-            f'<div style="font-size:8px;color:rgba(150,210,255,0.4);text-transform:uppercase;'
-            f'letter-spacing:1px;margin-bottom:2px;">Günlük Tüketim</div>'
-            f'<div style="font-family:Orbitron,sans-serif;font-size:18px;font-weight:900;'
-            f'color:{renk};text-shadow:0 0 12px rgba({rr},{rg},{rb},0.7);line-height:1;margin-bottom:8px;">'
-            f'{kwh_str}<span style="font-size:9px;color:rgba(150,210,255,0.5);margin-left:3px;">kWh</span></div>'
-            f'<div style="display:inline-flex;align-items:center;gap:6px;'
-            f'background:rgba(0,212,255,0.06);border-radius:6px;padding:4px 10px;'
-            f'border:1px solid rgba(0,212,255,0.12);">'
-            f'<span style="font-size:8px;color:rgba(150,210,255,0.45);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
-            f'<span style="font-family:Orbitron,sans-serif;font-size:12px;color:#00d4ff;font-weight:700;">{verim_str}</span>'
+            f'<div style="font-family:Orbitron,sans-serif;font-size:10px;font-weight:700;'
+            f'color:{renk};letter-spacing:1.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);'
+            f'margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{lok_info["kisa"]}</div>'
+            f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:5px;">{durum_lbl}</div>'
+            f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:5px;">'
+            f'<span style="font-family:Orbitron,sans-serif;font-size:16px;font-weight:900;'
+            f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</span>'
+            f'<span style="font-size:8px;color:rgba(150,210,255,0.5);">kWh</span>'
             f'</div>'
+            f'<div style="display:inline-flex;align-items:center;gap:5px;'
+            f'background:rgba(0,212,255,0.05);border-radius:5px;padding:3px 8px;'
+            f'border:1px solid rgba(0,212,255,0.10);">'
+            f'<span style="font-size:7px;color:rgba(150,210,255,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
+            f'<span style="font-family:Orbitron,sans-serif;font-size:11px;color:#00d4ff;font-weight:700;">{verim_str}</span>'
             f'</div>'
-            f'</div>'
-            f'</div>'
+            f'</div></div></div>'
         )
-        st.markdown(kart_html, unsafe_allow_html=True)
 
+    tum_kartlar += '</div>'
+    st.markdown(tum_kartlar, unsafe_allow_html=True)
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
     # ── Global Özet ──
     st.markdown('<div class="sec">⚡ GLOBAL ÖZET (30G)</div>', unsafe_allow_html=True)
     if not df_all.empty:
         son30 = df_all[df_all["Tarih"] >= (now - timedelta(days=30))]
+        def tr(sayi, ondalik=0):
+            """Türkçe sayı formatı: binlik=nokta, ondalık=virgül."""
+            fmt = f"{sayi:,.{ondalik}f}"
+            if ondalik > 0:
+                parts = fmt.split(".")
+                return parts[0].replace(",", ".") + "," + parts[1]
+            return fmt.replace(",", ".")
+
         ozet = {
-            "⚡ Toplam Enerji": f"{son30['Toplam_Hastane_Tuketim_kWh'].sum()/1000:,.0f} MWh" if "Toplam_Hastane_Tuketim_kWh" in son30 else "—",
-            "🔥 Doğalgaz": f"{(son30.get('Kazan_Dogalgaz_m3', pd.Series([0])).sum() + son30.get('Kojen_Dogalgaz_m3', pd.Series([0])).sum()):,.0f} m³",
-            "❄️ Soğutma": f"{son30['Toplam_Sogutma_Tuketim_kWh'].sum()/1000:,.0f} MWh" if "Toplam_Sogutma_Tuketim_kWh" in son30 else "—",
-            "💧 Su": f"{son30['Su_Tuketimi_m3'].sum():,.0f} m³" if "Su_Tuketimi_m3" in son30 else "—",
-            "⚙️ Kojen Üretim": f"{son30['Kojen_Uretim_kWh'].sum()/1000:,.0f} MWh" if "Kojen_Uretim_kWh" in son30 else "—",
+            "⚡ Toplam Enerji": f"{tr(son30['Toplam_Hastane_Tuketim_kWh'].sum()/1000)} MWh" if "Toplam_Hastane_Tuketim_kWh" in son30 else "—",
+            "🔥 Doğalgaz": f"{tr(son30.get('Kazan_Dogalgaz_m3', pd.Series([0])).sum() + son30.get('Kojen_Dogalgaz_m3', pd.Series([0])).sum())} m³",
+            "❄️ Soğutma": f"{tr(son30['Toplam_Sogutma_Tuketim_kWh'].sum()/1000)} MWh" if "Toplam_Sogutma_Tuketim_kWh" in son30 else "—",
+            "💧 Su": f"{tr(son30['Su_Tuketimi_m3'].sum())} m³" if "Su_Tuketimi_m3" in son30 else "—",
+            "⚙️ Kojen Üretim": f"{tr(son30['Kojen_Uretim_kWh'].sum()/1000)} MWh" if "Kojen_Uretim_kWh" in son30 else "—",
         }
         for label, val in ozet.items():
             st.markdown(f"""
@@ -374,87 +550,277 @@ with sol:
 # MERKEZ KOLON — TÜRKİYE HARİTASI
 # ════════════════════════════════
 with merkez:
-    # Harita verisi
-    harita_data = []
+    # ── Leaflet harita verisi ─────────────────────────────
+    harita_js = []
     for lok_id, lok_info in HASTANELER.items():
         online, fark_dk = online_bilgi(lok_id)
         kwh = dun_kwh(lok_id)
-        harita_data.append({
-            "isim": lok_info["isim"],
-            "lat": lok_info["lat"],
-            "lon": lok_info["lon"],
-            "durum": "Çevrimiçi" if online else ("Kurulmadı" if fark_dk is None else "Çevrimdışı"),
-            "kwh": int(kwh),
-            "m2": lok_info["m2"],
-            "renk": "#10b981" if online else ("#6b7280" if fark_dk is None else "#ef4444"),
-            "boyut": max(14, min(38, kwh/900)) if kwh > 0 else 14,
+        durum  = "Çevrimiçi" if online else ("Kurulmadı" if fark_dk is None else "Çevrimdışı")
+        d_renk = "#10b981" if online else ("#6b7280" if fark_dk is None else "#ef4444")
+        boyut  = max(10, min(22, kwh / 1400)) if kwh > 0 else 9
+        harita_js.append({
+            "isim":  lok_info["isim"],
+            "kisa":  lok_info["kisa"],
+            "lat":   lok_info["lat"],
+            "lon":   lok_info["lon"],
+            "durum": durum,
+            "kwh":   f"{int(kwh):,}" if kwh else "—",
+            "m2":    f"{lok_info['m2']:,}",
+            "renk":  d_renk,
+            "boyut": boyut,
+            "online": bool(online),
         })
-    hdf = pd.DataFrame(harita_data)
 
-    fig_map = go.Figure()
-    fig_map.add_trace(go.Scattermapbox(
-        lat=hdf["lat"], lon=hdf["lon"],
-        mode="markers+text",
-        marker=dict(size=hdf["boyut"], color=hdf["renk"], opacity=0.92),
-        text=hdf["isim"],
-        textposition="top center",
-        textfont=dict(color="white", size=11, family="Orbitron"),
-        customdata=hdf[["durum","kwh","m2"]].values,
-        hovertemplate="<b>%{text}</b><br>Durum: %{customdata[0]}<br>Dün: %{customdata[1]:,} kWh<br>Alan: %{customdata[2]:,} m²<extra></extra>",
-        name="",
-    ))
-    # Glow efekti için büyük şeffaf daire
-    fig_map.add_trace(go.Scattermapbox(
-        lat=hdf["lat"], lon=hdf["lon"],
-        mode="markers",
-        marker=dict(size=hdf["boyut"]*2.5, color=hdf["renk"], opacity=0.15),
-        hoverinfo="skip", showlegend=False,
-    ))
+    hjs = json.dumps(harita_js, ensure_ascii=False)
 
-    fig_map.update_layout(
-        mapbox=dict(
-            style="carto-darkmatter",
-            center=dict(lat=41.05, lon=29.02),
-            zoom=10.8,
-        ),
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=0, b=0, l=0, r=0),
-        height=580,
-        showlegend=False,
-    )
+    harita_html = f"""<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ background:#020b18; }}
+#map {{ width:100%; height:608px; background:#020b18; }}
+.leaflet-container {{ background:#020b18 !important; font-family:Inter,sans-serif; }}
+.leaflet-popup-content-wrapper {{
+    background:rgba(2,11,30,0.96) !important;
+    border:1px solid rgba(0,212,255,0.35) !important;
+    border-radius:12px !important;
+    box-shadow:0 0 24px rgba(0,212,255,0.18), 0 4px 20px rgba(0,0,0,0.6) !important;
+    padding:0 !important;
+}}
+.leaflet-popup-content {{ margin:0 !important; color:white !important; }}
+.leaflet-popup-tip-container {{ display:none; }}
+.leaflet-popup-close-button {{ color:rgba(0,212,255,0.5) !important; font-size:16px !important; top:8px !important; right:10px !important; }}
+.leaflet-control-zoom a {{
+    background:rgba(0,15,40,0.9) !important;
+    color:#00d4ff !important;
+    border-color:rgba(0,212,255,0.25) !important;
+}}
+.leaflet-control-zoom a:hover {{ background:rgba(0,30,70,0.95) !important; }}
+.leaflet-control-attribution {{ display:none !important; }}
+@keyframes breathe-outer {{
+    0%,100% {{ opacity:0.10; transform:scale(0.92); }}
+    50%      {{ opacity:0.28; transform:scale(1.20); }}
+}}
+@keyframes breathe-inner {{
+    0%,100% {{ opacity:0.22; transform:scale(0.96); }}
+    50%     {{ opacity:0.50; transform:scale(1.10); }}
+}}
+</style>
+</head><body>
+<div id="map"></div>
+<script>
+var map = L.map('map', {{
+    center: [39.0, 35.0],
+    zoom: 5,
+    zoomControl: true,
+    attributionControl: false,
+    preferCanvas: true
+}});
 
-    st.markdown('<div class="sec">🗺️ HASTANE AĞI — İSTANBUL</div>', unsafe_allow_html=True)
-    st.plotly_chart(fig_map, use_container_width=True, config={"displayModeBar": False})
+// CartoDB Dark Matter — ücretsiz, API key yok
+L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
+    maxZoom: 19, subdomains: 'abcd'
+}}).addTo(map);
 
-    # ── Harita altı: Chiller Set vs Dış Hava ──
-    st.markdown('<div class="sec">🌡️ CHİLLER SET vs DIŞ HAVA (60G)</div>', unsafe_allow_html=True)
+var hospitals = {hjs};
+
+hospitals.forEach(function(h) {{
+    var s  = h.boyut;
+    var c  = h.renk;
+    var hs = s / 2;
+
+    // ── Dış glow halkası ──
+    L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="width:'+(s*3.8)+'px;height:'+(s*3.8)+'px;background:'+c+';border-radius:50%;animation:breathe-outer 3s ease-in-out infinite;"></div>',
+            iconSize:[s*3.8, s*3.8], iconAnchor:[s*1.9, s*1.9]
+        }}),
+        interactive:false, zIndexOffset:-200
+    }}).addTo(map);
+
+    // ── İç glow halkası ──
+    L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="width:'+(s*2)+'px;height:'+(s*2)+'px;background:'+c+';border-radius:50%;animation:breathe-inner 3s ease-in-out infinite;"></div>',
+            iconSize:[s*2, s*2], iconAnchor:[s, s]
+        }}),
+        interactive:false, zIndexOffset:-100
+    }}).addTo(map);
+
+    // ── Ana nokta ──
+    var dot = L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="width:'+s+'px;height:'+s+'px;background:'+c+';border-radius:50%;border:2px solid rgba(255,255,255,0.28);box-shadow:0 0 10px '+c+',0 0 3px rgba(0,0,0,0.8);"></div>',
+            iconSize:[s, s], iconAnchor:[hs, hs]
+        }}),
+        zIndexOffset:100
+    }}).addTo(map);
+
+    // ── Etiket ──
+    L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+'</div>',
+            iconSize:[100,16], iconAnchor:[-hs-2, hs-2]
+        }}),
+        interactive:false, zIndexOffset:300
+    }}).addTo(map);
+
+    // ── Popup ──
+    var kwh_bar = h.kwh !== '—'
+        ? '<div style="margin-top:8px;height:3px;background:rgba(0,212,255,0.15);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;"></div></div>'
+        : '';
+    dot.bindPopup(
+        '<div style="padding:14px 16px;min-width:170px;">' +
+        '<div style="font-family:Orbitron,monospace;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
+        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
+        '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
+        '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
+        '<div style="font-size:12px;color:#a0c8ff;margin-bottom:4px;">⚡ <b style="color:white;font-size:14px;">'+h.kwh+'</b> kWh</div>' +
+        '<div style="font-size:10px;color:rgba(150,200,255,0.55);">📐 '+h.m2+' m²</div>' +
+        kwh_bar + '</div>',
+        {{ maxWidth:220, className:'' }}
+    );
+}});
+</script>
+</body></html>"""
+
+    st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
+    import streamlit.components.v1 as components
+    components.html(harita_html, height=612, scrolling=False)
+
+    # ── Harita altı: Chiller Set vs Dış Hava (Gauge Kartları) ──
+    st.markdown('<div class="sec">🌡️ CHİLLER SET vs DIŞ HAVA</div>', unsafe_allow_html=True)
     if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
-        son60 = df_all[df_all["Tarih"] >= (now - timedelta(days=60))].copy()
-        fig_ch = go.Figure()
-        fig_ch.add_trace(go.Scatter(
-            x=son60["Tarih"], y=son60["Dis_Hava_Sicakligi_C"],
-            name="Dış Hava", line=dict(color="#f59e0b", width=1.5, dash="dot"),
-            yaxis="y2", mode="lines",
-        ))
-        for lok_id in son60["lokasyon_id"].unique():
-            ld = son60[son60["lokasyon_id"]==lok_id]
-            renk = HASTANELER.get(lok_id, {}).get("renk", "#00d4ff")
-            fig_ch.add_trace(go.Scatter(
-                x=ld["Tarih"], y=ld["Chiller_Set_Temp_C"],
-                name=HASTANELER.get(lok_id,{}).get("kisa", lok_id),
-                line=dict(color=renk, width=2), mode="lines",
-                fill="tozeroy", fillcolor=hex_rgba(renk, 0.07),
-            ))
-        fig_ch.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#a0c8ff", family="Inter"),
-            margin=dict(t=10,b=20,l=40,r=40), height=200,
-            xaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True),
-            yaxis=dict(title=dict(text="Set °C", font=dict(size=10)), gridcolor="rgba(0,212,255,0.07)"),
-            yaxis2=dict(title=dict(text="Dış Hava °C", font=dict(size=10)), overlaying="y", side="right"),
-            legend=dict(orientation="h", y=1.15, font=dict(size=10)),
-        )
-        st.plotly_chart(fig_ch, use_container_width=True, config={"displayModeBar": False})
+        # En son veri noktasını al (her lokasyon için)
+        son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
+
+        chiller_vals = {}
+        # Canlı dış hava → Open-Meteo, yoksa DB'den fallback
+        dis_hava_val = fetch_dis_hava()
+        _dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
+        for _, row in son_veri.iterrows():
+            lok_id = row["lokasyon_id"]
+            if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
+                chiller_vals[lok_id] = float(row["Chiller_Set_Temp_C"])
+            if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
+                dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
+                _dis_hava_kaynak = "📊 DB"
+
+        if chiller_vals:
+            min_lok = min(chiller_vals, key=chiller_vals.get)
+            max_lok = max(chiller_vals, key=chiller_vals.get)
+            min_val = chiller_vals[min_lok]
+            max_val = chiller_vals[max_lok]
+            min_renk = HASTANELER.get(min_lok, {}).get("renk", "#00d4ff")
+            max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
+            min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
+            max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
+
+            g_steps = [
+                {"range": [4,  7],  "color": "rgba(0,212,255,0.08)"},
+                {"range": [7,  10], "color": "rgba(245,158,11,0.07)"},
+                {"range": [10, 16], "color": "rgba(239,68,68,0.07)"},
+            ]
+
+            def gauge_fig(val, renk, isim, ikon, etiket):
+                rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
+                fig = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=val,
+                    number={"suffix": " °C", "font": {"size": 26, "color": renk, "family": "Orbitron, sans-serif"},
+                            "valueformat": ".1f"},
+                    title={"text": f"{ikon} {isim}<br><span style='font-size:9px;color:#6b8fa8;letter-spacing:1px;'>{etiket}</span>",
+                           "font": {"size": 11, "color": "#a0c8ff", "family": "Orbitron, sans-serif"}},
+                    gauge={
+                        "axis": {"range": [4, 16],
+                                 "tickcolor": "rgba(160,200,255,0.25)",
+                                 "tickfont": {"size": 8, "color": "rgba(160,200,255,0.4)"},
+                                 "dtick": 3},
+                        "bar": {"color": f"rgba({rr},{rg},{rb},0.9)", "thickness": 0.25},
+                        "bgcolor": "rgba(0,0,0,0)",
+                        "borderwidth": 1,
+                        "bordercolor": f"rgba({rr},{rg},{rb},0.2)",
+                        "steps": g_steps,
+                        "threshold": {
+                            "line": {"color": renk, "width": 2},
+                            "thickness": 0.8,
+                            "value": val,
+                        },
+                    }
+                ))
+                fig.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    margin=dict(t=55, b=10, l=15, r=15),
+                    height=185,
+                    font=dict(family="Inter, sans-serif", color="#a0c8ff"),
+                )
+                return fig
+
+            def gauge_fig_dh(val, kaynak=""):
+                renk = "#f59e0b"
+                rr,rg,rb = 245,158,11
+                fig = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=val,
+                    number={"suffix": " °C", "font": {"size": 26, "color": renk, "family": "Orbitron, sans-serif"},
+                            "valueformat": ".1f"},
+                    title={"text": f"🌡️ DIŞ HAVA<br><span style='font-size:9px;color:#6b8fa8;letter-spacing:1px;'>İSTANBUL — {kaynak}</span>",
+                           "font": {"size": 11, "color": "#a0c8ff", "family": "Orbitron, sans-serif"}},
+                    gauge={
+                        "axis": {"range": [-10, 45],
+                                 "tickcolor": "rgba(160,200,255,0.25)",
+                                 "tickfont": {"size": 8, "color": "rgba(160,200,255,0.4)"},
+                                 "dtick": 10},
+                        "bar": {"color": f"rgba({rr},{rg},{rb},0.9)", "thickness": 0.25},
+                        "bgcolor": "rgba(0,0,0,0)",
+                        "borderwidth": 1,
+                        "bordercolor": f"rgba({rr},{rg},{rb},0.2)",
+                        "steps": [
+                            {"range": [-10, 5],  "color": "rgba(0,212,255,0.08)"},
+                            {"range": [5,  25],  "color": "rgba(16,185,129,0.06)"},
+                            {"range": [25, 45],  "color": "rgba(239,68,68,0.07)"},
+                        ],
+                        "threshold": {
+                            "line": {"color": renk, "width": 2},
+                            "thickness": 0.8,
+                            "value": val,
+                        },
+                    }
+                ))
+                fig.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    margin=dict(t=55, b=10, l=15, r=15),
+                    height=185,
+                    font=dict(family="Inter, sans-serif", color="#a0c8ff"),
+                )
+                return fig
+
+            gc1, gc2, gc3 = st.columns(3)
+            with gc1:
+                st.plotly_chart(
+                    gauge_fig(min_val, min_renk, min_isim, "🏥", "EN DÜŞÜK SET"),
+                    use_container_width=True, config={"displayModeBar": False}
+                )
+            with gc2:
+                st.plotly_chart(
+                    gauge_fig(max_val, max_renk, max_isim, "🏥", "EN YÜKSEK SET"),
+                    use_container_width=True, config={"displayModeBar": False}
+                )
+            with gc3:
+                if dis_hava_val is not None:
+                    st.plotly_chart(
+                        gauge_fig_dh(dis_hava_val, _dis_hava_kaynak),
+                        use_container_width=True, config={"displayModeBar": False}
+                    )
+        else:
+            st.info("Chiller set verisi bulunamadı.")
 
 # ════════════════════════════════
 # SAĞ KOLON
@@ -515,16 +881,84 @@ with sag:
 
     sirali_loklar = sorted(HASTANELER.keys(), key=lok_ariza_skoru, reverse=True)
 
-    # Tüm uyarıları sıralı göster
-    tum_uyarilar = []
-    for lok_id in sirali_loklar:
-        tum_uyarilar.extend(lok_uyari_map.get(lok_id, []))
+    # ── Uyarıları lokasyon bazında grupla ve göster ──────
+    lok_ile_uyari = [(lid, lok_uyari_map.get(lid, []))
+                     for lid in sirali_loklar
+                     if lok_uyari_map.get(lid)]
 
-    if not tum_uyarilar:
-        st.markdown('<div class="alrt-g">✅ Tüm sistemler normal</div>', unsafe_allow_html=True)
+    if not lok_ile_uyari:
+        st.markdown('<div class="alrt-g">✅ Tüm sistemler normal</div>',
+                    unsafe_allow_html=True)
     else:
-        for sev, msg in tum_uyarilar[:10]:
-            st.markdown(f'<div class="alrt-{sev}">{msg}</div>', unsafe_allow_html=True)
+        for lid, uyarilar in lok_ile_uyari:
+            lok_inf   = HASTANELER.get(lid, {})
+            isim      = lok_inf.get("kisa", lid)
+            lok_renk  = lok_inf.get("renk", "#00d4ff")
+            has_crit  = any(s == "r" for s, _ in uyarilar)
+            exp_icon  = "🔴" if has_crit else "🟡"
+            exp_label = f"{exp_icon} {isim}  —  {len(uyarilar)} uyarı"
+
+            with st.expander(exp_label, expanded=False):
+
+                # Gizli sınıf tetikleyici (CSS :has için)
+                css_cls = "alrt-exp-r" if has_crit else "alrt-exp-y"
+                st.markdown(f'<span class="{css_cls}" style="display:none"></span>',
+                            unsafe_allow_html=True)
+
+                # Alarm satırları
+                for sev, msg in uyarilar:
+                    st.markdown(f'<div class="alrt-detay-{sev}">{msg}</div>',
+                                unsafe_allow_html=True)
+
+                # Bakım kartı detayları (arızalı cihaz listesi)
+                ld   = lok_dict.get(lid, {})
+                ozet = ld.get("bakim_ozet") or {}
+                if isinstance(ozet, str):
+                    try: ozet = json.loads(ozet)
+                    except: ozet = {}
+
+                arizali_list = ozet.get("arizali_cihazlar", [])
+                bakim_list   = ozet.get("bakim_cihazlari", [])
+
+                if arizali_list or bakim_list:
+                    st.markdown('<div class="alarm-detay-kart">', unsafe_allow_html=True)
+                    if arizali_list:
+                        st.markdown(
+                            "<span style='font-size:10px;color:rgba(239,68,68,0.8);"
+                            "letter-spacing:1px;text-transform:uppercase;"
+                            "font-weight:700;'>Arızalı Bileşenler</span>",
+                            unsafe_allow_html=True
+                        )
+                        for cihaz in arizali_list:
+                            st.markdown(
+                                f"<div style='font-size:11px;color:#fca5a5;"
+                                f"padding:2px 0 2px 8px;'>🔴 {cihaz}</div>",
+                                unsafe_allow_html=True
+                            )
+                    if bakim_list:
+                        st.markdown(
+                            "<span style='font-size:10px;color:rgba(245,158,11,0.8);"
+                            "letter-spacing:1px;text-transform:uppercase;"
+                            "font-weight:700;margin-top:6px;display:block;'>Bakımdaki Bileşenler</span>",
+                            unsafe_allow_html=True
+                        )
+                        for cihaz in bakim_list:
+                            st.markdown(
+                                f"<div style='font-size:11px;color:#fcd34d;"
+                                f"padding:2px 0 2px 8px;'>🟡 {cihaz}</div>",
+                                unsafe_allow_html=True
+                            )
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                # Lokasyona git butonu
+                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                st.markdown('<div class="btn-goto">', unsafe_allow_html=True)
+                if st.button(f"⟶ {lok_inf.get('isim', isim)} Detayına Git",
+                             key=f"alarm_goto_{lid}",
+                             use_container_width=True):
+                    st.session_state["detay_lokasyon"] = lid
+                    st.switch_page("pages/lokasyon_detay.py")
+                st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
