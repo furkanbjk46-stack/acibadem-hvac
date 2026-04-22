@@ -2,6 +2,6 @@
     "supabase_url": "https://qayjwkqnnjjsnnxovhei.supabase.co",
     "supabase_key": "sb_publishable_m22uNXePA5Av6ocWHJsa5Q_OQFY36Oq",
     "lokasyon_id": "deneme",
-    "sync_interval_minutes": 5,
+    "sync_interval_minutes": 60,
     "auto_sync": true
 }
