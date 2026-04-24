@@ -113,38 +113,41 @@ async def _async_oku_ve_analiz_et() -> int:
         logger.error(f"BAC0 baslatılamadi: {e}")
         return 0
 
-    # Tum agda Who-Is broadcast ile cihazları kesfet
-    logger.info("Tum cihazlar taranıyor (Who-Is broadcast)...")
-    try:
-        bacnet.discover()          # sync fonksiyon, await yok
-        await asyncio.sleep(10)   # I-Am yanitlarini bekle
-        discovered = bacnet.discoveredDevices if hasattr(bacnet, "discoveredDevices") else {}
-        logger.info(f"Kesfedilen cihaz instance'lari: {list(discovered.keys())}")
-    except Exception as e:
-        logger.warning(f"Discover hatasi: {e}")
-        discovered = {}
-
-    # Ihtiyac duyulan device'larin adreslerini al
-    device_addresses = {}
+    # Bilinen IP'lere unicast Who-Is gonder (broadcast kapali olabilir)
+    known_ips = [f"192.168.0.{i}" for i in [254, 2, 3, 1, 4, 5, 10, 100]]
     needed_ids = set()
     for p in ortak.values():
-        if isinstance(p, dict):
-            needed_ids.add(str(p.get("device", "")))
+        if isinstance(p, dict) and device_ips.get(str(p.get("device", ""))):
+            needed_ids.add(int(p["device"]))
     for ahu in ahu_listesi.values():
         for p in ahu.values():
-            if isinstance(p, dict):
-                needed_ids.add(str(p.get("device", "")))
-    needed_ids.discard("")
+            if isinstance(p, dict) and device_ips.get(str(p.get("device", ""))):
+                needed_ids.add(int(p["device"]))
 
-    for dev_id_str in needed_ids:
-        dev_id = int(dev_id_str)
-        if dev_id in discovered:
-            info = discovered[dev_id]
+    logger.info(f"Unicast Who-Is gonderiliyor (hedef cihazlar: {needed_ids})...")
+    for ip in known_ips:
+        for dev_id in needed_ids:
+            try:
+                bacnet.who_is(
+                    low_limit=dev_id, high_limit=dev_id,
+                    address=f"{ip}:{desigo_port}"
+                )
+            except Exception:
+                pass
+    await asyncio.sleep(8)
+
+    raw_disc = getattr(bacnet, "discoveredDevices", None) or {}
+    logger.info(f"Kesfedilen instance'lar: {list(raw_disc.keys())}")
+
+    device_addresses = {}
+    for dev_id in needed_ids:
+        if dev_id in raw_disc:
+            info = raw_disc[dev_id]
             addr = info.get("address", str(info)) if isinstance(info, dict) else str(info)
-            device_addresses[dev_id_str] = addr
-            logger.info(f"Cihaz {dev_id} → {addr}")
+            device_addresses[str(dev_id)] = addr
+            logger.info(f"Cihaz {dev_id} bulundu → {addr}")
         else:
-            logger.warning(f"Cihaz {dev_id} ag'da bulunamadi.")
+            logger.warning(f"Cihaz {dev_id} bulunamadi.")
 
     async def oku_nokta(nokta_def: dict):
         device_id = str(nokta_def["device"])
