@@ -113,48 +113,24 @@ async def _async_oku_ve_analiz_et() -> int:
         logger.error(f"BAC0 baslatılamadi: {e}")
         return 0
 
-    # Gereken device instance'larini topla (bos IP'liler haric)
-    needed = set()
-    for p in ortak.values():
-        if isinstance(p, dict) and device_ips.get(str(p.get("device", ""))):
-            needed.add(int(p["device"]))
-    for ahu in ahu_listesi.values():
-        for p in ahu.values():
-            if isinstance(p, dict) and device_ips.get(str(p.get("device", ""))):
-                needed.add(int(p["device"]))
-
-    # Who-Is ile gercek BACnet adreslerini kesfet
-    device_addresses = {}
-    for dev_id in needed:
-        try:
-            logger.info(f"Who-Is: device {dev_id} aranıyor...")
-            iams = await bacnet.whois(low_limit=dev_id, high_limit=dev_id)
-            await asyncio.sleep(2)
-            for iam in (iams or []):
-                try:
-                    iam_id   = int(iam[0]) if isinstance(iam, (list, tuple)) else int(iam)
-                    iam_addr = str(iam[1]) if isinstance(iam, (list, tuple)) else str(iam)
-                except Exception:
-                    continue
-                if iam_id == dev_id:
-                    device_addresses[str(dev_id)] = iam_addr
-                    logger.info(f"Cihaz {dev_id} bulundu → {iam_addr}")
-                    break
-            if str(dev_id) not in device_addresses:
-                logger.warning(f"Cihaz {dev_id} Who-Is ile bulunamadi.")
-        except Exception as e:
-            logger.warning(f"Who-Is hatasi (device {dev_id}): {e}")
+    # BAC0 metodlarini logla (hangi discovery metodu var?)
+    discovery_methods = [m for m in dir(bacnet) if any(k in m.lower() for k in ("whois","who_is","discover","iam","i_am"))]
+    logger.info(f"BAC0 discovery metodlari: {discovery_methods}")
 
     async def oku_nokta(nokta_def: dict):
-        device_id = str(nokta_def["device"])
-        addr = device_addresses.get(device_id)
-        if not addr:
-            return None
-        adres = f"{addr} {nokta_def['type']}:{nokta_def['instance']} presentValue"
+        obj = f"{nokta_def['type']}:{nokta_def['instance']}"
+        # Format 1: sadece device_id (BAC0 icsel Who-Is yapar)
+        adres = f"{nokta_def['device']} {obj} presentValue"
         try:
             return float(await bacnet.read(adres))
-        except Exception as e:
-            logger.warning(f"Okuma hatasi ({adres}): {e}")
+        except Exception as e1:
+            # Format 2: bilinen IP'ler sirayla denenir
+            for ip in ["192.168.0.254", "192.168.0.2", "192.168.0.3"]:
+                try:
+                    return float(await bacnet.read(f"{ip}:{desigo_port} {obj} presentValue"))
+                except Exception:
+                    continue
+            logger.warning(f"Okuma hatasi ({adres}): {e1}")
             return None
 
     plant_supply = await oku_nokta(ortak["plant_supply"]) if "plant_supply" in ortak else None
