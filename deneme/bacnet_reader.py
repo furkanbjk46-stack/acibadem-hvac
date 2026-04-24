@@ -96,30 +96,29 @@ async def _async_oku_ve_analiz_et() -> int:
         logger.error(f"BAC0 baslatılamadi: {e}")
         return 0
 
-    def oku_nokta(nokta_def: dict):
+    async def oku_nokta(nokta_def: dict):
         ip = device_ips.get(str(nokta_def["device"]))
         if not ip:
             return None
-        # Desigo'nun BACnet portunu (47808) hedefle
         adres = f"{ip}:{desigo_port} {nokta_def['type']} {nokta_def['instance']} presentValue"
         try:
-            return float(bacnet.read(adres))
+            return float(await bacnet.read(adres))
         except Exception as e:
             logger.warning(f"Okuma hatasi ({adres}): {e}")
             return None
 
-    plant_supply = oku_nokta(ortak["plant_supply"]) if "plant_supply" in ortak else None
-    plant_return = oku_nokta(ortak["plant_return"]) if "plant_return" in ortak else None
-    oat          = oku_nokta(ortak["oat"])          if "oat"          in ortak else None
+    plant_supply = await oku_nokta(ortak["plant_supply"]) if "plant_supply" in ortak else None
+    plant_return = await oku_nokta(ortak["plant_return"]) if "plant_return" in ortak else None
+    oat          = await oku_nokta(ortak["oat"])          if "oat"          in ortak else None
 
     logger.info(f"Ortak: PlantSupply={plant_supply} PlantReturn={plant_return} OAT={oat}")
 
     rows = []
     for ahu_adi, noktalar in ahu_listesi.items():
-        sat           = oku_nokta(noktalar["sat"])           if "sat"           in noktalar else None
-        room          = oku_nokta(noktalar["room"])          if "room"          in noktalar else None
-        cooling_valve = oku_nokta(noktalar["cooling_valve"]) if "cooling_valve" in noktalar else None
-        heating_valve = oku_nokta(noktalar["heating_valve"]) if "heating_valve" in noktalar else None
+        sat           = await oku_nokta(noktalar["sat"])           if "sat"           in noktalar else None
+        room          = await oku_nokta(noktalar["room"])          if "room"          in noktalar else None
+        cooling_valve = await oku_nokta(noktalar["cooling_valve"]) if "cooling_valve" in noktalar else None
+        heating_valve = await oku_nokta(noktalar["heating_valve"]) if "heating_valve" in noktalar else None
 
         if sat is None:
             logger.warning(f"{ahu_adi}: SAT okunamadi, atlandi")
