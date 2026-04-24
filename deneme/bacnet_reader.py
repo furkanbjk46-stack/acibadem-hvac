@@ -82,8 +82,12 @@ async def _async_oku_ve_analiz_et() -> int:
         logger.warning("bacnet_points.json icinde AHU tanimli degil.")
         return 0
 
+    local_ip = cfg.get("local_ip", "")
     try:
-        bacnet = BAC0.lite()
+        if local_ip:
+            bacnet = BAC0.lite(ip=local_ip)
+        else:
+            bacnet = BAC0.lite()
         await asyncio.sleep(3)
     except Exception as e:
         logger.error(f"BAC0 baslatılamadi: {e}")
