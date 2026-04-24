@@ -1,6 +1,8 @@
 {
     "_aciklama": "BACnet/IP nokta haritasi - Maslak Lokasyonu. device_ips: cihaz instance numarasi → IP adresi. Bos IP'ler okuma sirasinda atlanir.",
     "local_ip": "192.168.0.254/24",
+    "local_port": 47809,
+    "desigo_port": 47808,
     "device_ips": {
         "2099287": "192.168.0.254",
         "2099291": "192.168.0.254",

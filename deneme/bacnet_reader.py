@@ -82,12 +82,15 @@ async def _async_oku_ve_analiz_et() -> int:
         logger.warning("bacnet_points.json icinde AHU tanimli degil.")
         return 0
 
-    local_ip = cfg.get("local_ip", "")
+    local_ip    = cfg.get("local_ip", "")
+    local_port  = cfg.get("local_port", 47809)
+    desigo_port = cfg.get("desigo_port", 47808)
+
     try:
         if local_ip:
-            bacnet = BAC0.lite(ip=local_ip)
+            bacnet = BAC0.lite(ip=local_ip, port=local_port)
         else:
-            bacnet = BAC0.lite()
+            bacnet = BAC0.lite(port=local_port)
         await asyncio.sleep(3)
     except Exception as e:
         logger.error(f"BAC0 baslatılamadi: {e}")
@@ -97,10 +100,12 @@ async def _async_oku_ve_analiz_et() -> int:
         ip = device_ips.get(str(nokta_def["device"]))
         if not ip:
             return None
+        # Desigo'nun BACnet portunu (47808) hedefle
+        adres = f"{ip}:{desigo_port} {nokta_def['type']} {nokta_def['instance']} presentValue"
         try:
-            return float(bacnet.read(f"{ip} {nokta_def['type']} {nokta_def['instance']} presentValue"))
+            return float(bacnet.read(adres))
         except Exception as e:
-            logger.warning(f"Okuma hatasi ({ip} {nokta_def['type']} {nokta_def['instance']}): {e}")
+            logger.warning(f"Okuma hatasi ({adres}): {e}")
             return None
 
     plant_supply = oku_nokta(ortak["plant_supply"]) if "plant_supply" in ortak else None
