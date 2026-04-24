@@ -117,7 +117,7 @@ async def _async_oku_ve_analiz_et() -> int:
         ip = device_ips.get(str(nokta_def["device"]))
         if not ip:
             return None
-        adres = f"{ip}:{desigo_port} {nokta_def['type']}:{nokta_def['instance']} presentValue"
+        adres = f"{ip}:{desigo_port} {nokta_def['device']} {nokta_def['type']}:{nokta_def['instance']} presentValue"
         try:
             return float(await bacnet.read(adres))
         except Exception as e:
