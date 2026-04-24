@@ -4,8 +4,8 @@
     "desigo_port": 47808,
     "device_ips": {
         "2099287": "192.168.0.3",
-        "2099291": "192.168.0.254",
-        "2098211": "192.168.0.254"
+        "2099291": "192.168.0.3",
+        "2098211": ""
     },
     "ortak": {
         "plant_supply": {"device": "2099291", "type": "analogInput",  "instance": 22,  "_aciklama": "TRNSPOMP SOGUTMA SP105 TFI - Su Gidis 9.24°C"},
