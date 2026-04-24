@@ -12,3 +12,4 @@ numpy>=1.24.0
 kaleido>=0.2.1
 xlsxwriter>=3.1.0
 supabase>=2.0.0
+BAC0>=22.0.0
