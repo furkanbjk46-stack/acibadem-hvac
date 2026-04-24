@@ -86,8 +86,7 @@ async def _async_oku_ve_analiz_et() -> int:
 
     bos = [k for k, v in device_ips.items() if not v]
     if bos:
-        logger.warning(f"IP tanimli olmayan cihazlar: {bos}")
-        return 0
+        logger.warning(f"IP tanimli olmayan cihazlar (atlanacak): {bos}")
 
     if not ahu_listesi:
         logger.warning("bacnet_points.json icinde AHU tanimli degil.")
