@@ -116,8 +116,8 @@ async def _async_oku_ve_analiz_et() -> int:
     # Tum agda Who-Is broadcast ile cihazları kesfet
     logger.info("Tum cihazlar taranıyor (Who-Is broadcast)...")
     try:
-        await bacnet.discover()
-        await asyncio.sleep(5)
+        bacnet.discover()          # sync fonksiyon, await yok
+        await asyncio.sleep(10)   # I-Am yanitlarini bekle
         discovered = bacnet.discoveredDevices if hasattr(bacnet, "discoveredDevices") else {}
         logger.info(f"Kesfedilen cihaz instance'lari: {list(discovered.keys())}")
     except Exception as e:
