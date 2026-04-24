@@ -113,11 +113,44 @@ async def _async_oku_ve_analiz_et() -> int:
         logger.error(f"BAC0 baslatılamadi: {e}")
         return 0
 
+    # Gereken device instance'larini topla (bos IP'liler haric)
+    needed = set()
+    for p in ortak.values():
+        if isinstance(p, dict) and device_ips.get(str(p.get("device", ""))):
+            needed.add(int(p["device"]))
+    for ahu in ahu_listesi.values():
+        for p in ahu.values():
+            if isinstance(p, dict) and device_ips.get(str(p.get("device", ""))):
+                needed.add(int(p["device"]))
+
+    # Who-Is ile gercek BACnet adreslerini kesfet
+    device_addresses = {}
+    for dev_id in needed:
+        try:
+            logger.info(f"Who-Is: device {dev_id} aranıyor...")
+            iams = await bacnet.whois(low_limit=dev_id, high_limit=dev_id)
+            await asyncio.sleep(2)
+            for iam in (iams or []):
+                try:
+                    iam_id   = int(iam[0]) if isinstance(iam, (list, tuple)) else int(iam)
+                    iam_addr = str(iam[1]) if isinstance(iam, (list, tuple)) else str(iam)
+                except Exception:
+                    continue
+                if iam_id == dev_id:
+                    device_addresses[str(dev_id)] = iam_addr
+                    logger.info(f"Cihaz {dev_id} bulundu → {iam_addr}")
+                    break
+            if str(dev_id) not in device_addresses:
+                logger.warning(f"Cihaz {dev_id} Who-Is ile bulunamadi.")
+        except Exception as e:
+            logger.warning(f"Who-Is hatasi (device {dev_id}): {e}")
+
     async def oku_nokta(nokta_def: dict):
-        ip = device_ips.get(str(nokta_def["device"]))
-        if not ip:
+        device_id = str(nokta_def["device"])
+        addr = device_addresses.get(device_id)
+        if not addr:
             return None
-        adres = f"{ip}:{desigo_port} {nokta_def['device']} {nokta_def['type']}:{nokta_def['instance']} presentValue"
+        adres = f"{addr} {nokta_def['type']}:{nokta_def['instance']} presentValue"
         try:
             return float(await bacnet.read(adres))
         except Exception as e:
