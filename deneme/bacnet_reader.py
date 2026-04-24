@@ -6,6 +6,7 @@ import asyncio
 import csv
 import json
 import logging
+import socket
 import time
 from datetime import datetime
 from pathlib import Path
@@ -37,6 +38,16 @@ DEFAULT_CONFIG = {
         }
     }
 }
+
+
+def _detect_local_ip(target_ip: str) -> str:
+    """Desigo CC'ye giden ag arayuzunun IP adresini otomatik tespit eder."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect((target_ip, 1))
+            return s.getsockname()[0]
+    except Exception:
+        return ""
 
 
 def _ensure_config():
@@ -82,13 +93,20 @@ async def _async_oku_ve_analiz_et() -> int:
         logger.warning("bacnet_points.json icinde AHU tanimli degil.")
         return 0
 
-    local_ip    = cfg.get("local_ip", "")
     local_port  = cfg.get("local_port", 47809)
     desigo_port = cfg.get("desigo_port", 47808)
 
+    # PC'nin IP'sini otomatik tespit et (DHCP aglarinda gerekli)
+    any_desigo_ip = next(iter(device_ips.values()), "")
+    local_ip = _detect_local_ip(any_desigo_ip) if any_desigo_ip else ""
+    if local_ip:
+        logger.info(f"Yerel IP tespit edildi: {local_ip}")
+    else:
+        logger.warning("Yerel IP tespit edilemedi, BAC0 otomatik sececek.")
+
     try:
         if local_ip:
-            bacnet = BAC0.lite(ip=local_ip, port=local_port)
+            bacnet = BAC0.lite(ip=f"{local_ip}/24", port=local_port)
         else:
             bacnet = BAC0.lite(port=local_port)
         await asyncio.sleep(3)
