@@ -16,13 +16,12 @@ BASE_DIR = Path(__file__).parent
 POINTS_CONFIG = BASE_DIR / "configs" / "bacnet_points.json"
 HVAC_HISTORY  = BASE_DIR / "hvac_analysis_history.csv"
 
-# ── Varsayılan nokta yapılandırması ───────────────────────────────
 DEFAULT_CONFIG = {
-    "_aciklama": "device_ips: BACnet cihaz instance -> IP adresi eslemesi. Bos birakilan IP'ler atlanir.",
+    "_aciklama": "device_ips: BACnet cihaz instance -> IP adresi eslemesi.",
     "device_ips": {
-        "2099287": "",
-        "2099291": "",
-        "2098211": ""
+        "2099287": "192.168.0.254",
+        "2099291": "192.168.0.254",
+        "2098211": "192.168.0.254"
     },
     "ortak": {
         "plant_supply": {"device": "2099291", "type": "analogInput",  "instance": 22},
@@ -45,22 +44,12 @@ def _ensure_config():
         POINTS_CONFIG.parent.mkdir(parents=True, exist_ok=True)
         with open(POINTS_CONFIG, "w", encoding="utf-8") as f:
             json.dump(DEFAULT_CONFIG, f, indent=4, ensure_ascii=False)
-        logger.info(f"bacnet_points.json olusturuldu: {POINTS_CONFIG}")
-        logger.info("Lutfen configs/bacnet_points.json dosyasina device IP adreslerini girin.")
 
 
 def _load_config() -> dict:
     _ensure_config()
     with open(POINTS_CONFIG, "r", encoding="utf-8") as f:
         return json.load(f)
-
-
-def _read_point(bacnet, ip: str, obj_type: str, instance: int):
-    try:
-        return float(bacnet.read(f"{ip} {obj_type} {instance} presentValue"))
-    except Exception as e:
-        logger.warning(f"Okuma hatasi ({ip} {obj_type} {instance}): {e}")
-        return None
 
 
 def _kaydet(sonuclar: list):
@@ -75,13 +64,9 @@ def _kaydet(sonuclar: list):
     logger.info(f"✅ {len(sonuclar)} AHU kaydedildi → {HVAC_HISTORY.name}")
 
 
-def oku_ve_analiz_et() -> int:
-    """BACnet'ten veri oku, analiz yap, CSV'ye kaydet. Okunan AHU sayısını döndürür."""
-    try:
-        import BAC0
-    except ImportError:
-        logger.error("BAC0 yuklu degil! Komut: pip install BAC0")
-        return 0
+async def _async_oku_ve_analiz_et() -> int:
+    """Tüm BACnet okuma ve analiz işlemini async olarak çalıştırır."""
+    import BAC0
 
     cfg         = _load_config()
     device_ips  = cfg.get("device_ips", {})
@@ -90,8 +75,7 @@ def oku_ve_analiz_et() -> int:
 
     bos = [k for k, v in device_ips.items() if not v]
     if bos:
-        logger.warning(f"Asagidaki cihazlar icin IP tanimli degil: {bos}")
-        logger.warning("configs/bacnet_points.json → device_ips alanini doldurun.")
+        logger.warning(f"IP tanimli olmayan cihazlar: {bos}")
         return 0
 
     if not ahu_listesi:
@@ -100,29 +84,33 @@ def oku_ve_analiz_et() -> int:
 
     try:
         bacnet = BAC0.lite()
-        time.sleep(2)
+        await asyncio.sleep(3)
     except Exception as e:
         logger.error(f"BAC0 baslatılamadi: {e}")
         return 0
 
-    def oku(nokta_def: dict):
+    def oku_nokta(nokta_def: dict):
         ip = device_ips.get(str(nokta_def["device"]))
         if not ip:
             return None
-        return _read_point(bacnet, ip, nokta_def["type"], nokta_def["instance"])
+        try:
+            return float(bacnet.read(f"{ip} {nokta_def['type']} {nokta_def['instance']} presentValue"))
+        except Exception as e:
+            logger.warning(f"Okuma hatasi ({ip} {nokta_def['type']} {nokta_def['instance']}): {e}")
+            return None
 
-    plant_supply = oku(ortak["plant_supply"]) if "plant_supply" in ortak else None
-    plant_return = oku(ortak["plant_return"]) if "plant_return" in ortak else None
-    oat          = oku(ortak["oat"])          if "oat"          in ortak else None
+    plant_supply = oku_nokta(ortak["plant_supply"]) if "plant_supply" in ortak else None
+    plant_return = oku_nokta(ortak["plant_return"]) if "plant_return" in ortak else None
+    oat          = oku_nokta(ortak["oat"])          if "oat"          in ortak else None
 
     logger.info(f"Ortak: PlantSupply={plant_supply} PlantReturn={plant_return} OAT={oat}")
 
     rows = []
     for ahu_adi, noktalar in ahu_listesi.items():
-        sat           = oku(noktalar["sat"])           if "sat"           in noktalar else None
-        room          = oku(noktalar["room"])          if "room"          in noktalar else None
-        cooling_valve = oku(noktalar["cooling_valve"]) if "cooling_valve" in noktalar else None
-        heating_valve = oku(noktalar["heating_valve"]) if "heating_valve" in noktalar else None
+        sat           = oku_nokta(noktalar["sat"])           if "sat"           in noktalar else None
+        room          = oku_nokta(noktalar["room"])          if "room"          in noktalar else None
+        cooling_valve = oku_nokta(noktalar["cooling_valve"]) if "cooling_valve" in noktalar else None
+        heating_valve = oku_nokta(noktalar["heating_valve"]) if "heating_valve" in noktalar else None
 
         if sat is None:
             logger.warning(f"{ahu_adi}: SAT okunamadi, atlandi")
@@ -154,13 +142,13 @@ def oku_ve_analiz_et() -> int:
         from main_portal import analyze_data
         tarih = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-        result = asyncio.run(analyze_data(
+        result = await analyze_data(
             rows=rows,
             oat=str(oat) if oat is not None else "",
             engine="auto",
             tol_crit="3.0",
             tol_norm="1.5",
-        ))
+        )
 
         sonuclar = result.get("results", [])
         for row in sonuclar:
@@ -172,3 +160,24 @@ def oku_ve_analiz_et() -> int:
     except Exception as e:
         logger.error(f"Analiz motoru hatasi: {e}")
         return 0
+
+
+def oku_ve_analiz_et() -> int:
+    """Thread içinden çağrılır. Kendi event loop'unu oluşturur."""
+    try:
+        import BAC0  # noqa: kontrol
+    except ImportError:
+        logger.error("BAC0 yuklu degil! Komut: pip install BAC0")
+        return 0
+
+    # Yeni event loop oluştur — thread içinde çalışmak için gerekli
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(_async_oku_ve_analiz_et())
+    except Exception as e:
+        logger.error(f"BACnet okuma hatasi: {e}")
+        return 0
+    finally:
+        loop.close()
+        asyncio.set_event_loop(None)
