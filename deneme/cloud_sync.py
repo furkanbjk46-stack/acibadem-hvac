@@ -377,11 +377,28 @@ def start_background_sync():
                 logger.warning(f"Heartbeat döngüsü hatası: {e}")
             time.sleep(120)  # 2 dakika
 
+    def _bacnet_loop():
+        """Her 5 dakikada bir BACnet'ten veri cek ve analiz et"""
+        bacnet_interval = config.get("bacnet_interval_minutes", 5) * 60
+        logger.info(f"📡 BACnet okuyucu baslatildi (her {bacnet_interval // 60} dakika)")
+        while True:
+            try:
+                from bacnet_reader import oku_ve_analiz_et
+                count = oku_ve_analiz_et()
+                if count:
+                    logger.info(f"📡 BACnet: {count} AHU analiz edildi ve kaydedildi")
+            except Exception as e:
+                logger.error(f"BACnet dongusu hatasi: {e}")
+            time.sleep(bacnet_interval)
+
     t_sync = threading.Thread(target=_sync_loop, daemon=True, name="cloud-sync")
     t_sync.start()
 
     t_hb = threading.Thread(target=_heartbeat_loop, daemon=True, name="heartbeat")
     t_hb.start()
+
+    t_bacnet = threading.Thread(target=_bacnet_loop, daemon=True, name="bacnet-reader")
+    t_bacnet.start()
 
     logger.info(f"🔄 Arka plan senkronizasyonu başlatıldı (her {interval // 60} dakika, heartbeat: 2 dk)")
 

@@ -22,6 +22,8 @@ IZIN_VERILEN_DOSYALAR = {
     "monthly_summary_report.py",
     "location_manager.py",
     "portal_watchdog.py",
+    "bacnet_reader.py",
+    "configs/bacnet_points.json",
     "monthly_report/pdf_generator.py",
     "monthly_report/savings_engine.py",
     "monthly_report/data_merger.py",

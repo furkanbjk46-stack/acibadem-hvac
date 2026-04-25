@@ -1,0 +1,23 @@
+{
+    "_aciklama": "BACnet/IP nokta haritasi - Maslak Lokasyonu. device_ips: cihaz instance numarasi → IP adresi. Bos IP'ler okuma sirasinda atlanir.",
+    "local_port": 47809,
+    "desigo_port": 47808,
+    "device_ips": {
+        "2099287": "192.168.0.254",
+        "2099291": "192.168.0.254",
+        "2098211": ""
+    },
+    "ortak": {
+        "plant_supply": {"device": "2099291", "type": "analogInput",  "instance": 22,  "_aciklama": "TRNSPOMP SOGUTMA SP105 TFI - Su Gidis 9.24°C"},
+        "plant_return": {"device": "2099291", "type": "analogInput",  "instance": 23,  "_aciklama": "TRNSPOMP SOGUTMA SP105 TRt - Su Donus 9.28°C"},
+        "oat":          {"device": "2098211", "type": "analogInput",  "instance": 33,  "_aciklama": "TRAFO1 ISITMA OAT OAT - Dis Hava 17.44°C"}
+    },
+    "ahu_listesi": {
+        "AHU-01": {
+            "sat":           {"device": "2099287", "type": "analogInput",  "instance": 254, "_aciklama": "VAHU01 EF01 UFLS - Ufleme Sicakligi"},
+            "room":          {"device": "2099287", "type": "analogInput",  "instance": 251, "_aciklama": "VAHU01 EF01 DNSIC - Donus/Oda Sicakligi"},
+            "cooling_valve": {"device": "2099287", "type": "analogOutput", "instance": 150, "_aciklama": "VAHU01 EF01 SOGV - Sogutma Vanasi %"},
+            "heating_valve": {"device": "2099287", "type": "analogOutput", "instance": 148, "_aciklama": "VAHU01 EF01 ISTV - Isitma Vanasi %"}
+        }
+    }
+}
