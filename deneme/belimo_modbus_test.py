@@ -17,9 +17,18 @@ def test():
 
     print("[OK] Baglandi.\n")
 
+    # pymodbus eski (<3.0) 'unit', yeni (>=3.0) 'slave' kullanir
+    kwargs = {}
+    try:
+        import pymodbus
+        major = int(pymodbus.__version__.split(".")[0])
+        kwargs = {"slave": SLAVE} if major >= 3 else {"unit": SLAVE}
+    except Exception:
+        kwargs = {"unit": SLAVE}
+
     # Holding registers oku (0-30 arasi)
     print("=== Holding Registers (0-30) ===")
-    rr = client.read_holding_registers(0, count=30, slave=SLAVE)
+    rr = client.read_holding_registers(0, count=30, **kwargs)
     if not rr.isError():
         for i, val in enumerate(rr.registers):
             print(f"  HR[{i:2d}] = {val:6d}  ({val/10:.1f}%  /  {val/100:.2f})")
@@ -30,7 +39,7 @@ def test():
 
     # Input registers oku (0-20 arasi)
     print("=== Input Registers (0-20) ===")
-    ir = client.read_input_registers(0, count=20, slave=SLAVE)
+    ir = client.read_input_registers(0, count=20, **kwargs)
     if not ir.isError():
         for i, val in enumerate(ir.registers):
             print(f"  IR[{i:2d}] = {val:6d}  ({val/10:.1f}  /  {val/100:.2f})")
