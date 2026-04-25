@@ -41,4 +41,13 @@ def test():
     print("\nTest tamamlandi.")
 
 if __name__ == "__main__":
-    test()
+    try:
+        test()
+    except ModuleNotFoundError:
+        print("\n[HATA] pymodbus yuklu degil!")
+        print("Komut satirinda su komutu calistirin:")
+        print("  pip install pymodbus")
+    except Exception as e:
+        print(f"\n[HATA] {e}")
+    finally:
+        input("\nCikmak icin Enter'a basin...")
