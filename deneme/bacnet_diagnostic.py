@@ -83,18 +83,23 @@ async def run_diagnostic():
     for ip, dev_id in VIRTUAL_DEVICES:
         addr = f"{ip}:{DESIGO_PORT}"
         print(f"\n>>> Device {dev_id} @ {addr}")
-        try:
-            obj_list = bacnet.read(f"{addr} device {dev_id} objectList")
-            if obj_list:
-                print(f"    {len(obj_list)} nesne bulundu:")
-                for obj in obj_list[:30]:
-                    print(f"      {obj}")
-                if len(obj_list) > 30:
-                    print(f"      ... ve {len(obj_list)-30} nesne daha")
-            else:
-                print("    Object list bos veya None dondu.")
-        except Exception as e:
-            print(f"    [HATA] {e}")
+        for fmt_addr in [
+            f"{addr} device:{dev_id} objectList",
+            f"{ip} device:{dev_id} objectList",
+        ]:
+            try:
+                obj_list = await bacnet.read(fmt_addr)
+                if obj_list:
+                    print(f"    {len(obj_list)} nesne bulundu:")
+                    for obj in obj_list[:30]:
+                        print(f"      {obj}")
+                    if len(obj_list) > 30:
+                        print(f"      ... ve {len(obj_list)-30} nesne daha")
+                else:
+                    print("    Object list bos veya None dondu.")
+                break
+            except Exception as e:
+                print(f"    [HATA] ({fmt_addr}): {e}")
 
     # ── 2. Fiziksel AS Cihazlari — Object List ────────────
     sep()
@@ -102,22 +107,26 @@ async def run_diagnostic():
     sep()
     for ip, dev_id in FIZIKSEL_AS:
         print(f"\n>>> Device {dev_id} @ {ip}")
-        try:
-            obj_list = bacnet.read(f"{ip} device {dev_id} objectList")
-            if obj_list:
-                print(f"    {len(obj_list)} nesne bulundu:")
-                # AHU ile ilgili olabilecekleri filtrele
-                ilgili = [o for o in obj_list if any(
-                    t in str(o).lower() for t in ["analog", "binary", "multi"]
-                )]
-                for obj in ilgili[:40]:
-                    print(f"      {obj}")
-                if len(ilgili) > 40:
-                    print(f"      ... ve {len(ilgili)-40} nesne daha")
-            else:
-                print("    Object list bos veya None dondu.")
-        except Exception as e:
-            print(f"    [HATA] {e}")
+        for fmt_addr in [
+            f"{ip}:{DESIGO_PORT} device:{dev_id} objectList",
+            f"{ip} device:{dev_id} objectList",
+        ]:
+            try:
+                obj_list = await bacnet.read(fmt_addr)
+                if obj_list:
+                    print(f"    {len(obj_list)} nesne bulundu:")
+                    ilgili = [o for o in obj_list if any(
+                        t in str(o).lower() for t in ["analog", "binary", "multi"]
+                    )]
+                    for obj in ilgili[:40]:
+                        print(f"      {obj}")
+                    if len(ilgili) > 40:
+                        print(f"      ... ve {len(ilgili)-40} nesne daha")
+                else:
+                    print("    Object list bos veya None dondu.")
+                break
+            except Exception as e:
+                print(f"    [HATA] ({fmt_addr}): {e}")
 
     # ── 3. Bilinen Noktalari Dogrudan Oku ────────────────
     sep()
@@ -134,25 +143,25 @@ async def run_diagnostic():
             (ip for ip, d in VIRTUAL_DEVICES + FIZIKSEL_AS if d == dev_id),
             DESIGO_IP
         )
-        port = DESIGO_PORT if ip == DESIGO_IP else 47808
-        addr = f"{ip}:{port}" if port != 47808 or ip == DESIGO_IP else ip
-
-        # Format 1: IP:port type instance presentValue
-        adres1 = f"{addr} {obj_type} {instance} presentValue"
-        # Format 2: IP:port type:instance presentValue
-        adres2 = f"{addr} {obj_type}:{instance} presentValue"
+        addr_with_port = f"{ip}:{DESIGO_PORT}"
 
         print(f"\n>>> {aciklama}")
-        print(f"    Device {dev_id} | {obj_type} #{instance}")
+        print(f"    Device {dev_id} | {obj_type}:{instance}")
+
+        # BAC0 bacpypes3 format: "ip:port type:instance property"
+        denemelər = [
+            f"{addr_with_port} {obj_type}:{instance} presentValue",
+            f"{ip} {obj_type}:{instance} presentValue",
+        ]
 
         deger = None
-        for fmt, adres in [("Format1", adres1), ("Format2", adres2)]:
+        for adres in denemelər:
             try:
-                deger = float(bacnet.read(adres))
-                print(f"    [{fmt}] BASARILI: {deger}")
+                deger = float(await bacnet.read(adres))
+                print(f"    [OK] BASARILI ({adres}): {deger}")
                 break
             except Exception as e:
-                print(f"    [{fmt}] Hata: {e}")
+                print(f"    [--] Hata ({adres}): {e}")
 
         if deger is None:
             print(f"    !! Okunamadi")
@@ -163,7 +172,7 @@ async def run_diagnostic():
     sep()
     print("Broadcast Who-Is...")
     try:
-        bacnet.whois()
+        await bacnet.who_is()
         await asyncio.sleep(5)
     except Exception as e:
         print(f"Broadcast hata: {e}")
@@ -172,7 +181,7 @@ async def run_diagnostic():
     hedef_ips = [f"192.168.0.{i}" for i in list(range(1, 11)) + [100, 254]]
     for ip in hedef_ips:
         try:
-            bacnet.whois(address=f"{ip}:{DESIGO_PORT}")
+            await bacnet.who_is(address=f"{ip}:{DESIGO_PORT}")
         except Exception:
             pass
     await asyncio.sleep(5)
