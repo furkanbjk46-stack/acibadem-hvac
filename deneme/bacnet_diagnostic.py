@@ -76,6 +76,28 @@ async def run_diagnostic():
         print(f"[HATA] BAC0 baslatılamadi: {e}")
         return
 
+    # ── 0. Desigo CC Ana Cihazi (device:9998) ────────────
+    sep()
+    print("  0. DESIGO CC ANA CIHAZI — OBJECT LIST (device:9998)")
+    sep()
+    desigo_cc_ids = [9998, 9999, 1, 4194303]
+    for cc_id in desigo_cc_ids:
+        addr = f"{DESIGO_IP}:{DESIGO_PORT}"
+        fmt_addr = f"{addr} device:{cc_id} objectList"
+        print(f"\n>>> Deneniyor: {fmt_addr}")
+        try:
+            obj_list = await bacnet.read(fmt_addr)
+            if obj_list:
+                print(f"    *** BASARILI! {len(obj_list)} nesne:")
+                for obj in obj_list[:50]:
+                    print(f"      {obj}")
+                if len(obj_list) > 50:
+                    print(f"      ... ve {len(obj_list)-50} nesne daha")
+            else:
+                print("    None dondu.")
+        except Exception as e:
+            print(f"    [HATA]: {e}")
+
     # ── 1. Sanal Desigo Cihazlari — Object List ───────────
     sep()
     print("  1. SANAL DESIGO CIHAZLARI — OBJECT LIST")
@@ -103,7 +125,7 @@ async def run_diagnostic():
 
     # ── 2. Fiziksel AS Cihazlari — Object List ────────────
     sep()
-    print("\n  2. FIZIKSEL AS CIHAZLARI — OBJECT LIST")
+    print("\n  2. FIZIKSEL AS CIHAZLARI — OBJECT LIST (FILTRESIZ)")
     sep()
     for ip, dev_id in FIZIKSEL_AS:
         print(f"\n>>> Device {dev_id} @ {ip}")
@@ -114,14 +136,11 @@ async def run_diagnostic():
             try:
                 obj_list = await bacnet.read(fmt_addr)
                 if obj_list:
-                    print(f"    {len(obj_list)} nesne bulundu:")
-                    ilgili = [o for o in obj_list if any(
-                        t in str(o).lower() for t in ["analog", "binary", "multi"]
-                    )]
-                    for obj in ilgili[:40]:
+                    print(f"    {len(obj_list)} nesne bulundu (TUMU):")
+                    for obj in obj_list[:60]:
                         print(f"      {obj}")
-                    if len(ilgili) > 40:
-                        print(f"      ... ve {len(ilgili)-40} nesne daha")
+                    if len(obj_list) > 60:
+                        print(f"      ... ve {len(obj_list)-60} nesne daha")
                 else:
                     print("    Object list bos veya None dondu.")
                 break
@@ -165,6 +184,38 @@ async def run_diagnostic():
 
         if deger is None:
             print(f"    !! Okunamadi")
+
+    # ── 3b. Fiziksel AS'dan Ayni Noktalari Dene ──────────
+    sep()
+    print("\n  3b. FIZIKSEL AS'DAN AYNI INSTANCELARI DENE")
+    sep()
+    print("(Ayni instance numaralari 192.168.0.2 ve 192.168.0.3'te var mi?)")
+    as_ips = ["192.168.0.2", "192.168.0.3"]
+    test_noktalar = [
+        ("analogInput",  254),
+        ("analogInput",  251),
+        ("analogInput",   22),
+        ("analogInput",   23),
+        ("analogInput",   33),
+        ("analogOutput", 150),
+        ("analogOutput", 148),
+        ("analogInput",    1),
+        ("analogInput",    2),
+        ("analogInput",    3),
+        ("analogInput",    4),
+        ("analogInput",    5),
+    ]
+    for as_ip in as_ips:
+        print(f"\n  --- {as_ip} ---")
+        for obj_type, instance in test_noktalar:
+            adres = f"{as_ip}:{DESIGO_PORT} {obj_type}:{instance} presentValue"
+            try:
+                val = await bacnet.read(adres)
+                print(f"    [OK] {obj_type}:{instance} = {val}")
+            except Exception as e:
+                err = str(e)
+                if "unknown-object" not in err and "NoneType" not in err:
+                    print(f"    [??] {obj_type}:{instance} → {err}")
 
     # ── 4. Who-Is Tarama ─────────────────────────────────
     sep()
