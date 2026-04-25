@@ -31,22 +31,75 @@ def build_whois(unicast: bool = False) -> bytes:
 
 def parse_iam(data: bytes):
     """
-    I-Am APDU'sundan cihaz instance numarasini cikar.
-    Basarili olursa int, olmazsa None.
+    BVLC + NPDU routing header'larini dogru sekilde atlayarak
+    I-Am APDU'sundan cihaz instance numarasini ve kaynak MS/TP
+    network/adresini cikar. (device_id, snet, sadr) dondurur.
+    Basarisiz olursa (None, None, None).
     """
     try:
-        for i in range(4, len(data) - 1):
-            if data[i] == 0x10 and data[i + 1] == 0x00:
-                k = i + 2
-                if k + 5 <= len(data) and data[k] == 0xC4:
-                    obj_id = struct.unpack(">I", data[k + 1: k + 5])[0]
-                    obj_type     = (obj_id >> 22) & 0x3FF
-                    obj_instance = obj_id & 0x3FFFFF
-                    if obj_type == 8:          # device
-                        return obj_instance
+        if len(data) < 8 or data[0] != 0x81:
+            return None, None, None
+
+        bvlc_func = data[1]
+        i = 4
+
+        # Forwarded-NPDU: 6 ekstra byte (asil kaynak IP + port)
+        if bvlc_func == 0x04:
+            i += 6
+
+        if i + 2 > len(data):
+            return None, None, None
+
+        npdu_ctrl = data[i + 1]
+        i += 2
+
+        # Network layer mesaji — APDU icermez
+        if npdu_ctrl & 0x80:
+            return None, None, None
+
+        snet = sadr = None
+
+        # Hedef adresi varsa atla (bit 5)
+        if npdu_ctrl & 0x20:
+            if i + 3 > len(data):
+                return None, None, None
+            i += 2                    # DNET
+            dlen = data[i]; i += 1 + dlen  # DLEN + DADR
+
+        # Kaynak adresi varsa oku (bit 3) — MS/TP cihaz bilgisi burada
+        if npdu_ctrl & 0x08:
+            if i + 3 > len(data):
+                return None, None, None
+            snet = (data[i] << 8) | data[i + 1]; i += 2
+            slen = data[i]; i += 1
+            sadr = data[i: i + slen].hex(); i += slen
+
+        # Hedef varsa hop count'u atla (bit 5)
+        if npdu_ctrl & 0x20:
+            i += 1
+
+        if i + 2 > len(data):
+            return None, None, None
+
+        # APDU: PDU type=1 (Unconfirmed-Req), service=0 (I-Am)
+        if (data[i] >> 4) != 1 or data[i + 1] != 0:
+            return None, None, None
+        i += 2
+
+        # Object-identifier: application tag 0xC4, 4 byte deger
+        if i + 5 > len(data) or data[i] != 0xC4:
+            return None, None, None
+
+        obj_id   = struct.unpack(">I", data[i + 1: i + 5])[0]
+        obj_type = (obj_id >> 22) & 0x3FF
+        obj_inst = obj_id & 0x3FFFFF
+
+        if obj_type == 8:
+            return obj_inst, snet, sadr
+
     except Exception:
         pass
-    return None
+    return None, None, None
 
 
 def main():
@@ -96,13 +149,14 @@ def main():
     while time.time() - baslangic < BEKLEME_SN:
         try:
             data, addr = sock.recvfrom(1024)
-            dev_id = parse_iam(data)
-            yanit_listesi.append((addr, data, dev_id))
+            dev_id, snet, sadr = parse_iam(data)
+            yanit_listesi.append((addr, data, dev_id, snet, sadr))
 
             if dev_id is not None:
-                print(f"  I-Am   {addr[0]:15s}:{addr[1]}  →  device {dev_id}")
+                routing = f"  MS/TP net={snet} mac={sadr}" if snet else ""
+                print(f"  I-Am   {addr[0]:15s}  →  device {dev_id}{routing}")
             else:
-                print(f"  PDU    {addr[0]:15s}:{addr[1]}  hex: {data[:12].hex()}")
+                print(f"  PDU    {addr[0]:15s}  hex: {data[:16].hex()}")
         except socket.timeout:
             continue
         except Exception as e:
@@ -113,13 +167,19 @@ def main():
     print("\n" + "=" * 55)
     print(f"Toplam paket  : {len(yanit_listesi)}")
 
-    bulunanlar = {r[2]: r[0] for r in yanit_listesi if r[2] is not None}
+    # En son I-Am'i kullan (tekrar edenler icin)
+    bulunanlar: dict[int, tuple] = {}
+    for addr, _, dev_id, snet, sadr in yanit_listesi:
+        if dev_id is not None:
+            bulunanlar[dev_id] = (addr[0], snet, sadr)
+
     print(f"I-Am / cihaz  : {len(bulunanlar)}")
 
     if bulunanlar:
         print("\nCihazlar:")
-        for dev_id, addr in sorted(bulunanlar.items()):
-            print(f"  device {dev_id:10d}  kaynak: {addr[0]}:{addr[1]}")
+        for dev_id, (ip, snet, sadr) in sorted(bulunanlar.items()):
+            routing = f"  (MS/TP net={snet} mac={sadr})" if snet else ""
+            print(f"  device {dev_id:10d}  kaynak: {ip}{routing}")
     else:
         print("\nHicbir cihaz I-Am gondermedi.")
         print("Kontrol listesi:")
