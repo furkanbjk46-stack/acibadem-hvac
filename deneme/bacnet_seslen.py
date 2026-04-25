@@ -24,14 +24,8 @@ GATEWAY_CIHAZLAR = {
 BACNET_PORT = 47808
 LOCAL_PORT  = 47808
 
-
-def _local_ip(target: str) -> str:
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect((target, 1))
-            return s.getsockname()[0]
-    except Exception:
-        return ""
+# YABE'nin kullandigi IP — bunu degistirme
+LOCAL_IP = "172.17.91.210"
 
 
 async def seslen():
@@ -41,8 +35,7 @@ async def seslen():
         print("BAC0 yuklu degil! Komut: pip install BAC0")
         sys.exit(1)
 
-    lip = _local_ip("192.168.0.2")
-    print(f"\nYerel IP   : {lip}")
+    print(f"\nYerel IP   : {LOCAL_IP}")
     print(f"BAC0 port  : {LOCAL_PORT}")
     print(f"Hedef port : {BACNET_PORT}\n")
     print("=" * 55)
@@ -50,8 +43,7 @@ async def seslen():
     # BAC0 baslat
     print("BAC0 baslatiliyor...")
     try:
-        bacnet = BAC0.lite(ip=f"{lip}/24", port=LOCAL_PORT) if lip \
-                 else BAC0.lite(port=LOCAL_PORT)
+        bacnet = BAC0.lite(ip=f"{LOCAL_IP}/24", port=LOCAL_PORT)
         await asyncio.sleep(3)
         print("BAC0 hazir.\n")
     except Exception as e:

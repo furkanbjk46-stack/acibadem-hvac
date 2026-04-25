@@ -218,9 +218,8 @@ def _log_vana(ad: str, s: dict) -> None:
 async def _bacnet_baslat(cfg: dict):
     import BAC0
     baglanti = cfg["baglanti"]
-    desigo_ip = baglanti["desigo_ip"]
     local_port = baglanti.get("local_port", 47808)
-    lip = _local_ip(desigo_ip)
+    lip = baglanti.get("local_ip") or _local_ip(baglanti.get("desigo_ip", ""))
     bacnet = BAC0.lite(ip=f"{lip}/24", port=local_port) if lip else BAC0.lite(port=local_port)
     await asyncio.sleep(3)
     return bacnet

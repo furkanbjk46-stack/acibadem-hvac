@@ -2,6 +2,7 @@
   "_aciklama": "BACnet/IP nokta yapılandırması ve energy_data.csv eşleştirmesi.",
 
   "baglanti": {
+    "local_ip":    "172.17.91.210",
     "local_port":  47808,
     "desigo_ip":   "192.168.0.8",
     "desigo_port": 47808
