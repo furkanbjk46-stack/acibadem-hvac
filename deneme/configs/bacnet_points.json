@@ -1,23 +1,238 @@
 {
-    "_aciklama": "BACnet/IP nokta haritasi - Maslak Lokasyonu. device_ips: cihaz instance numarasi → IP adresi. Bos IP'ler okuma sirasinda atlanir.",
-    "local_port": 47809,
-    "desigo_port": 47808,
-    "device_ips": {
-        "2099287": "192.168.0.254",
-        "2099291": "192.168.0.254",
-        "2098211": ""
-    },
-    "ortak": {
-        "plant_supply": {"device": "2099291", "type": "analogInput",  "instance": 22,  "_aciklama": "TRNSPOMP SOGUTMA SP105 TFI - Su Gidis 9.24°C"},
-        "plant_return": {"device": "2099291", "type": "analogInput",  "instance": 23,  "_aciklama": "TRNSPOMP SOGUTMA SP105 TRt - Su Donus 9.28°C"},
-        "oat":          {"device": "2098211", "type": "analogInput",  "instance": 33,  "_aciklama": "TRAFO1 ISITMA OAT OAT - Dis Hava 17.44°C"}
-    },
-    "ahu_listesi": {
-        "AHU-01": {
-            "sat":           {"device": "2099287", "type": "analogInput",  "instance": 254, "_aciklama": "VAHU01 EF01 UFLS - Ufleme Sicakligi"},
-            "room":          {"device": "2099287", "type": "analogInput",  "instance": 251, "_aciklama": "VAHU01 EF01 DNSIC - Donus/Oda Sicakligi"},
-            "cooling_valve": {"device": "2099287", "type": "analogOutput", "instance": 150, "_aciklama": "VAHU01 EF01 SOGV - Sogutma Vanasi %"},
-            "heating_valve": {"device": "2099287", "type": "analogOutput", "instance": 148, "_aciklama": "VAHU01 EF01 ISTV - Isitma Vanasi %"}
-        }
+  "_aciklama": "BACnet/IP + Modbus nokta yapılandırması ve energy_data.csv eşleştirmesi. Tek config dosyası.",
+
+  "baglanti": {
+    "local_port":  47809,
+    "desigo_ip":   "192.168.0.254",
+    "desigo_port": 47808
+  },
+
+  "cihazlar": {
+    "2099287": { "ip": "192.168.0.254", "ad": "Maslak AHU Kontrolör" },
+    "2099291": { "ip": "192.168.0.254", "ad": "Maslak Pompa/Chiller Kontrolör" },
+    "2098211": { "ip": "",              "ad": "OAT Sensör Kontrolör — IP girilmedi" }
+  },
+
+  "ahu_noktalari": {
+    "_aciklama": "HVAC analizi için AHU/FCU nokta tanımları. bacnet_reader analiz motoruna beslenir.",
+    "AHU-01": {
+      "sat":           { "device": "2099287", "type": "analogInput",  "instance": 254, "_": "Üfleme Sıcaklığı" },
+      "room":          { "device": "2099287", "type": "analogInput",  "instance": 251, "_": "Dönüş/Oda Sıcaklığı" },
+      "cooling_valve": { "device": "2099287", "type": "analogOutput", "instance": 150, "_": "Soğutma Vanası %" },
+      "heating_valve": { "device": "2099287", "type": "analogOutput", "instance": 148, "_": "Isıtma Vanası %" }
     }
+  },
+
+  "ortak_noktalar": {
+    "_aciklama": "Tüm AHU'lar için ortak ölçümler.",
+    "plant_supply": { "device": "2099291", "type": "analogInput", "instance": 22, "_": "Chiller Gidiş Suyu °C" },
+    "plant_return": { "device": "2099291", "type": "analogInput", "instance": 23, "_": "Chiller Dönüş Suyu °C" },
+    "oat":          { "device": "2098211", "type": "analogInput", "instance": 33, "_": "Dış Hava Sıcaklığı °C" }
+  },
+
+  "enerji_noktalari": {
+    "_aciklama": "energy_data.csv sütunlarına doğrudan eşleşen noktalar. etkin=false olanlar IP/register girilince true yapılır.",
+
+    "Dis_Hava_Sicakligi_C": {
+      "kaynak":  "bacnet",
+      "device":  "2098211",
+      "type":    "analogInput",
+      "instance": 33,
+      "etkin":   false,
+      "_": "OAT — cihaz IP girilince etkin=true yap"
+    },
+
+    "Mas1_Sogutma_Temp": {
+      "kaynak":  "bacnet",
+      "device":  "2099291",
+      "type":    "analogInput",
+      "instance": 22,
+      "etkin":   true,
+      "_": "Chiller gidiş suyu sıcaklığı"
+    },
+
+    "Mas1_Isitma_Temp": {
+      "kaynak":        "modbus",
+      "ip":            "192.168.0.35",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      2,
+      "scale":         0.1,
+      "etkin":         true,
+      "_": "Belimo AHU-03 T Giriş (IR[2] × 0.1 °C)"
+    },
+
+    "Mas1_Kazan_Temp": {
+      "kaynak":        "modbus",
+      "ip":            "192.168.0.35",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      3,
+      "scale":         0.1,
+      "etkin":         true,
+      "_": "Belimo AHU-03 T Dönüş (IR[3] × 0.1 °C)"
+    },
+
+    "Sebeke_Tuketim_kWh": {
+      "kaynak":        "modbus",
+      "ip":            "0.0.0.0",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      0,
+      "register_count": 2,
+      "scale":         0.1,
+      "format":        "uint32_hi_lo",
+      "deger_tipi":    "sayac",
+      "etkin":         false,
+      "_": "Şebeke enerji sayacı — IP ve register adresini girin"
+    },
+
+    "Kojen_Uretim_kWh": {
+      "kaynak":        "modbus",
+      "ip":            "0.0.0.0",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      0,
+      "register_count": 2,
+      "scale":         0.1,
+      "format":        "uint32_hi_lo",
+      "deger_tipi":    "sayac",
+      "etkin":         false,
+      "_": "Kojenerasyon üretim sayacı — IP ve register adresini girin"
+    },
+
+    "Chiller_Tuketim_kWh": {
+      "kaynak":        "modbus",
+      "ip":            "0.0.0.0",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      0,
+      "register_count": 2,
+      "scale":         0.1,
+      "format":        "uint32_hi_lo",
+      "deger_tipi":    "sayac",
+      "etkin":         false,
+      "_": "Chiller enerji sayacı — IP ve register adresini girin"
+    },
+
+    "MCC_Tuketim_kWh": {
+      "kaynak":        "modbus",
+      "ip":            "0.0.0.0",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      0,
+      "register_count": 2,
+      "scale":         0.1,
+      "format":        "uint32_hi_lo",
+      "deger_tipi":    "sayac",
+      "etkin":         false,
+      "_": "MCC pano sayacı — IP ve register adresini girin"
+    },
+
+    "VRF_Split_Tuketim_kWh": {
+      "kaynak":        "modbus",
+      "ip":            "0.0.0.0",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      0,
+      "register_count": 2,
+      "scale":         0.1,
+      "format":        "uint32_hi_lo",
+      "deger_tipi":    "sayac",
+      "etkin":         false,
+      "_": "VRF/Split sistem sayacı — IP ve register adresini girin"
+    },
+
+    "Kazan_Dogalgaz_m3": {
+      "kaynak":        "modbus",
+      "ip":            "0.0.0.0",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      0,
+      "register_count": 2,
+      "scale":         1,
+      "format":        "uint32_hi_lo",
+      "deger_tipi":    "sayac",
+      "etkin":         false,
+      "_": "Kazan doğalgaz sayacı m³ — IP ve register adresini girin"
+    },
+
+    "Kojen_Dogalgaz_m3": {
+      "kaynak":        "modbus",
+      "ip":            "0.0.0.0",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      0,
+      "register_count": 2,
+      "scale":         1,
+      "format":        "uint32_hi_lo",
+      "deger_tipi":    "sayac",
+      "etkin":         false,
+      "_": "Kojenerasyon doğalgaz sayacı m³ — IP ve register adresini girin"
+    },
+
+    "Su_Tuketimi_m3": {
+      "kaynak":        "modbus",
+      "ip":            "0.0.0.0",
+      "port":          502,
+      "slave":         1,
+      "register_type": "input",
+      "register":      0,
+      "register_count": 2,
+      "scale":         0.001,
+      "format":        "uint32_hi_lo",
+      "deger_tipi":    "sayac",
+      "etkin":         false,
+      "_": "Su sayacı m³ — IP ve register adresini girin"
+    },
+
+    "Toplam_Hastane_Tuketim_kWh": {
+      "kaynak":  "hesap",
+      "formul":  "Sebeke_Tuketim_kWh + Kojen_Uretim_kWh",
+      "etkin":   false,
+      "_": "Hesaplanan: şebeke + kojenerasyon"
+    },
+
+    "Toplam_Sogutma_Tuketim_kWh": {
+      "kaynak":  "hesap",
+      "formul":  "Chiller_Tuketim_kWh",
+      "etkin":   false
+    },
+
+    "Diger_Yuk_kWh": {
+      "kaynak":  "hesap",
+      "formul":  "Toplam_Hastane_Tuketim_kWh - Chiller_Tuketim_kWh - MCC_Tuketim_kWh - VRF_Split_Tuketim_kWh",
+      "etkin":   false
+    }
+  },
+
+  "belimo_vanalar": {
+    "_aciklama": "Belimo Modbus TCP vanaları — ayrıca detaylı loglanır.",
+    "AHU-03-Isitma": {
+      "ip":    "192.168.0.35",
+      "port":  502,
+      "slave": 1,
+      "input_registers": {
+        "0": { "ad": "Vana_Pozisyon",  "scale": 0.1, "birim": "%" },
+        "1": { "ad": "Hacimsel_Debi",  "scale": 1,   "birim": "l/h" },
+        "2": { "ad": "T_Giris",        "scale": 0.1, "birim": "°C" },
+        "3": { "ad": "T_Donus",        "scale": 0.1, "birim": "°C" },
+        "4": { "ad": "DeltaT",         "scale": 0.1, "birim": "K" },
+        "5": { "ad": "Is_Gucu",        "scale": 0.1, "birim": "kW" }
+      },
+      "holding_registers": {
+        "0": { "ad": "Setpoint",      "scale": 0.1, "birim": "%" },
+        "1": { "ad": "Kontrol_Modu",  "scale": 1,   "birim": "" }
+      }
+    }
+  }
 }
