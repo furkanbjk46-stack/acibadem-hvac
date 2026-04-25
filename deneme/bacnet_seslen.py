@@ -22,7 +22,7 @@ GATEWAY_CIHAZLAR = {
 }
 
 BACNET_PORT = 47808
-LOCAL_PORT  = 47809
+LOCAL_PORT  = 47808
 
 
 def _local_ip(target: str) -> str:
