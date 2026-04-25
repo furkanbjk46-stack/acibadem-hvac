@@ -383,8 +383,9 @@ def start_background_sync():
         logger.info(f"📡 BACnet okuyucu baslatildi (her {bacnet_interval // 60} dakika)")
         while True:
             try:
-                from bacnet_reader import oku_ve_analiz_et
-                count = oku_ve_analiz_et()
+                from bacnet_reader import oku_ve_kaydet
+                sonuc = oku_ve_kaydet()
+                count = sonuc.get("ahu_adet", 0)
                 if count:
                     logger.info(f"📡 BACnet: {count} AHU analiz edildi ve kaydedildi")
             except Exception as e:
