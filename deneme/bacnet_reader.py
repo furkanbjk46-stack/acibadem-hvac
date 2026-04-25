@@ -286,6 +286,8 @@ async def _async_oku_ahu(cfg: dict) -> list[dict[str, Any]]:
         if isinstance(nd, dict) and cihazlar.get(str(nd.get("device", "")), {}).get("ip"):
             needed.add(int(nd["device"]))
     for ahu in ahu_listesi.values():
+        if not isinstance(ahu, dict):
+            continue
         for nd in ahu.values():
             if isinstance(nd, dict) and cihazlar.get(str(nd.get("device", "")), {}).get("ip"):
                 needed.add(int(nd["device"]))
@@ -310,6 +312,8 @@ async def _async_oku_ahu(cfg: dict) -> list[dict[str, Any]]:
 
     satirlar: list[dict[str, Any]] = []
     for ahu_adi, noktalar in ahu_listesi.items():
+        if not isinstance(noktalar, dict):
+            continue
         sat           = await oku(noktalar["sat"])           if "sat"           in noktalar else None
         room          = await oku(noktalar["room"])          if "room"          in noktalar else None
         cooling_valve = await oku(noktalar["cooling_valve"]) if "cooling_valve" in noktalar else None
@@ -348,7 +352,7 @@ async def _async_oku_enerji(cfg: dict) -> dict[str, Any]:
     # Aktif BACnet noktaları
     bacnet_noktalar = [
         (k, v) for k, v in noktalar.items()
-        if v.get("etkin", False) and v.get("kaynak") == "bacnet"
+        if isinstance(v, dict) and v.get("etkin", False) and v.get("kaynak") == "bacnet"
         and cihazlar.get(str(v.get("device", "")), {}).get("ip")
     ]
 
@@ -376,7 +380,7 @@ async def _async_oku_enerji(cfg: dict) -> dict[str, Any]:
     # Aktif Modbus noktaları (sync, executor'da çalıştır)
     modbus_noktalar = [
         (k, v) for k, v in noktalar.items()
-        if v.get("etkin", False) and v.get("kaynak") == "modbus"
+        if isinstance(v, dict) and v.get("etkin", False) and v.get("kaynak") == "modbus"
         and v.get("ip", "0.0.0.0") != "0.0.0.0"
     ]
 
