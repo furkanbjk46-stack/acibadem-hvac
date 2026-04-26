@@ -221,6 +221,19 @@ HASTANELER = {
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "merkez_config.json")
 
 def load_config():
+    # Streamlit Cloud: önce st.secrets'a bak
+    try:
+        if "supabase" in st.secrets:
+            cfg = {
+                "supabase_url": st.secrets["supabase"]["url"],
+                "supabase_key": st.secrets["supabase"]["key"],
+            }
+            if "m2_degerler" in st.secrets:
+                cfg["m2_degerler"] = dict(st.secrets["m2_degerler"])
+            return cfg
+    except Exception:
+        pass
+    # Yerel PC: dosyadan oku
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)

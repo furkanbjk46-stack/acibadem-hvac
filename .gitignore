@@ -1,38 +1,5 @@
-# Gizli / credentials
-.cloudflared/
-**/supabase_secret.json
-**/supabase_config.json
-
-# Python installer & binary
-*.exe
-
-# Python cache
+﻿secrets.toml
+configs/merkez_config.json
 __pycache__/
 *.pyc
-*.pyo
-.cache/
-
-# IDE / araç klasörleri
-.claude/
-.vscode/
-.agent/
-
-# Streamlit secrets
-.streamlit/secrets.toml
-
-# Log dosyaları
-*.log
-
-# Büyük model dosyaları
-*.pkl
-
-# 3D assets
-gm-3d/
-
-# Geçici / test çıktıları
-**/static/outputs/
-**/daily_reports/
-**/monthly_reports_summary/
-hvac_analysis_history.csv
-**/energy_data.csv
-**/ml_training_data.json
+.env
