@@ -753,7 +753,7 @@ with tab3:
     goster_cols = [c for c in [
         "Tarih","Chiller_Set_Temp_C","Chiller_Adet","Dis_Hava_Sicakligi_C",
         "Toplam_Hastane_Tuketim_kWh","Toplam_Sogutma_Tuketim_kWh",
-        "Sebeke_Tuketim_kWh","Kojen_Uretim_kWh",
+        "Sebeke_Tuketim_kWh","MCC_Tuketim_kWh","Kojen_Uretim_kWh",
         "Kazan_Dogalgaz_m3","Su_Tuketimi_m3",
     ] if c in filtre.columns]
 
