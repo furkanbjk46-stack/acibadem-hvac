@@ -44,6 +44,14 @@ header[data-testid="stHeader"] button    { display: none !important; }
 h1,h2,h3,h4,h5,h6 { color: #e0f2fe !important; font-family: 'Orbitron', sans-serif !important; }
 p, span, div, label { color: rgba(200,230,255,0.85) !important; font-family: 'Inter', sans-serif !important; }
 
+/* Streamlit Material ikon istisnası — _arrow_right gibi ikonların bozulmaması için */
+span[data-testid="stIconMaterial"],
+[data-testid="stExpanderToggleIcon"] span,
+button span[data-testid="stIconMaterial"] {
+    font-family: 'Material Symbols Rounded' !important;
+    color: inherit !important;
+}
+
 /* Metrik */
 [data-testid="stMetricValue"]  { color: #00d4ff !important; font-size: 22px !important; font-weight: 800 !important; font-family: 'Orbitron', sans-serif !important; text-shadow: 0 0 15px rgba(0,212,255,0.5) !important; }
 [data-testid="stMetricLabel"]  { color: rgba(150,210,255,0.7) !important; font-size: 10px !important; letter-spacing: 1px !important; text-transform: uppercase !important; }

@@ -37,6 +37,12 @@ button[kind="header"]                    { display: none !important; }
 #MainMenu                                { display: none !important; }
 header[data-testid="stHeader"] button    { display: none !important; }
 * { font-family: 'Inter', sans-serif; }
+/* Streamlit Material ikon istisnası */
+span[data-testid="stIconMaterial"],
+[data-testid="stExpanderToggleIcon"] span,
+button span[data-testid="stIconMaterial"] {
+    font-family: 'Material Symbols Rounded' !important;
+}
 .sec {
     font-family: 'Orbitron', sans-serif;
     font-size: 9px; font-weight: 700;
