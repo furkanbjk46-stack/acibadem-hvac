@@ -158,6 +158,9 @@ def fetch_lok_data(url, key, lok_id):
             for col in df.columns:
                 if col not in ["id","lokasyon_id","Tarih","Kar_Eritme_Aktif"]:
                     df[col] = pd.to_numeric(df[col], errors="coerce")
+            # Aynı tarihte birden fazla kayıt varsa en son kaydı tut
+            df = df.drop_duplicates(subset=["Tarih"], keep="last")
+            df = df.sort_values("Tarih").reset_index(drop=True)
             return df
     except:
         pass
