@@ -285,7 +285,7 @@ with tab1:
     kazan_gaz  = son_df["Kazan_Dogalgaz_m3"].sum() if "Kazan_Dogalgaz_m3" in son_df.columns else None
     su_tuk     = son_df["Su_Tuketimi_m3"].sum() if "Su_Tuketimi_m3" in son_df.columns else None
     sebeke_tuk = son_df["Sebeke_Tuketim_kWh"].sum() if "Sebeke_Tuketim_kWh" in son_df.columns else None
-    mcc_tuk    = son_df["MCC_Tuketim_kW"].sum() if "MCC_Tuketim_kW" in son_df.columns else None
+    mcc_tuk    = son_df["MCC_Tuketim_kWh"].sum() if "MCC_Tuketim_kWh" in son_df.columns else None
 
     # ── 3 SÜTUN LAYOUT ────────────────────────────────
     col_left, col_mid, col_right = st.columns([2, 4, 2])
@@ -459,8 +459,8 @@ with tab1:
 
         # ── MCC Tüketimi ──
         elif grafik_tip == "mcc":
-            if "MCC_Tuketim_kW" in son30.columns and not son30.empty:
-                mcc_df = son30.groupby(son30["Tarih"].dt.date)["MCC_Tuketim_kW"].sum().reset_index()
+            if "MCC_Tuketim_kWh" in son30.columns and not son30.empty:
+                mcc_df = son30.groupby(son30["Tarih"].dt.date)["MCC_Tuketim_kWh"].sum().reset_index()
                 mcc_df.columns = ["Tarih", "kWh"]
                 fig_mcc = go.Figure(go.Bar(
                     x=mcc_df["Tarih"], y=mcc_df["kWh"],
