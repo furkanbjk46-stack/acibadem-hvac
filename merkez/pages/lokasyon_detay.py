@@ -242,7 +242,7 @@ else:
     son_tarih_str = dun
 
 # ── Header ───────────────────────────────────────────
-col_geri, col_baslik, col_rapor = st.columns([1, 7, 2])
+col_geri, col_baslik = st.columns([1, 9])
 with col_geri:
     if st.button("⬅ Geri"):
         st.switch_page("app_merkez.py")
@@ -257,11 +257,6 @@ with col_baslik:
         </div>""",
         unsafe_allow_html=True
     )
-with col_rapor:
-    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-    if st.button("📄 Rapor Oluştur", use_container_width=True):
-        st.session_state["rapor_lokasyon"] = lok_id
-        st.switch_page("pages/rapor_olustur.py")
 
 st.markdown("---")
 
@@ -270,7 +265,7 @@ if df.empty:
     st.stop()
 
 # ── SEKMELER ─────────────────────────────────────────
-tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📈 Trend & Tahmin", "📋 Veri Tablosu"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Dashboard", "📈 Trend & Tahmin", "📋 Veri Tablosu", "📄 Rapor Oluştur"])
 
 # ════════ TAB 1: DASHBOARD ════════
 with tab1:
@@ -289,6 +284,8 @@ with tab1:
     kojen_urt  = son_df["Kojen_Uretim_kWh"].sum() if "Kojen_Uretim_kWh" in son_df.columns else None
     kazan_gaz  = son_df["Kazan_Dogalgaz_m3"].sum() if "Kazan_Dogalgaz_m3" in son_df.columns else None
     su_tuk     = son_df["Su_Tuketimi_m3"].sum() if "Su_Tuketimi_m3" in son_df.columns else None
+    sebeke_tuk = son_df["Sebeke_Tuketim_kWh"].sum() if "Sebeke_Tuketim_kWh" in son_df.columns else None
+    mcc_tuk    = son_df["MCC_Tuketim_kWh"].sum() if "MCC_Tuketim_kWh" in son_df.columns else None
 
     # ── 3 SÜTUN LAYOUT ────────────────────────────────
     col_left, col_mid, col_right = st.columns([2, 4, 2])
@@ -326,6 +323,8 @@ with tab1:
             "📐 kWh/m² Trendi":        "verimlilik",
             "💧 Su Tüketimi":           "su",
             "⚙️ Kojen Üretim":         "kojen",
+            "🔌 Şebeke Tüketimi":      "sebeke",
+            "🏭 MCC Tüketimi":         "mcc",
         }
         secim = st.selectbox(
             "Grafik Seçin", list(grafik_secenekler.keys()),
@@ -436,6 +435,50 @@ with tab1:
             else:
                 st.info("Su tüketimi verisi bulunamadı.")
 
+        # ── Şebeke Tüketimi ──
+        elif grafik_tip == "sebeke":
+            if "Sebeke_Tuketim_kWh" in son30.columns and not son30.empty:
+                sb_df = son30.groupby(son30["Tarih"].dt.date)["Sebeke_Tuketim_kWh"].sum().reset_index()
+                sb_df.columns = ["Tarih", "kWh"]
+                fig_sb = go.Figure(go.Bar(
+                    x=sb_df["Tarih"], y=sb_df["kWh"],
+                    marker=dict(color="rgba(168,85,247,0.75)"),
+                    hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
+                ))
+                fig_sb.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#a0c8ff", family="Inter"),
+                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
+                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                               title=dict(text="kWh", font=dict(size=10))),
+                )
+                st.plotly_chart(fig_sb, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.info("Şebeke tüketim verisi bulunamadı.")
+
+        # ── MCC Tüketimi ──
+        elif grafik_tip == "mcc":
+            if "MCC_Tuketim_kWh" in son30.columns and not son30.empty:
+                mcc_df = son30.groupby(son30["Tarih"].dt.date)["MCC_Tuketim_kWh"].sum().reset_index()
+                mcc_df.columns = ["Tarih", "kWh"]
+                fig_mcc = go.Figure(go.Bar(
+                    x=mcc_df["Tarih"], y=mcc_df["kWh"],
+                    marker=dict(color="rgba(249,115,22,0.75)"),
+                    hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
+                ))
+                fig_mcc.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#a0c8ff", family="Inter"),
+                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
+                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                               title=dict(text="kWh", font=dict(size=10))),
+                )
+                st.plotly_chart(fig_mcc, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.info("MCC tüketim verisi bulunamadı.")
+
         # ── Kojen Üretim ──
         elif grafik_tip == "kojen":
             kojen_cols = [c for c in ["Kojen_Uretim_kWh","Kojen_Dogalgaz_m3"] if c in son30.columns]
@@ -492,15 +535,19 @@ with tab1:
                 unsafe_allow_html=True
             )
 
-        kgaz_str = f"{kojen_gaz:,.1f}" if kojen_gaz is not None else "—"
-        kurt_str = f"{kojen_urt:,.0f}" if kojen_urt is not None else "—"
-        kzan_str = f"{kazan_gaz:,.1f}" if kazan_gaz is not None else "—"
-        su_str   = f"{su_tuk:,.1f}"   if su_tuk   is not None else "—"
+        kgaz_str   = f"{kojen_gaz:,.1f}"  if kojen_gaz  is not None else "—"
+        kurt_str   = f"{kojen_urt:,.0f}"  if kojen_urt  is not None else "—"
+        kzan_str   = f"{kazan_gaz:,.1f}"  if kazan_gaz  is not None else "—"
+        su_str     = f"{su_tuk:,.1f}"     if su_tuk     is not None else "—"
+        sebeke_str = f"{sebeke_tuk:,.0f}" if sebeke_tuk is not None else "—"
+        mcc_str    = f"{mcc_tuk:,.0f}"    if mcc_tuk   is not None else "—"
 
-        info_card("🔥", "Kojen Doğalgaz", kgaz_str, "m³",  "#f97316")
-        info_card("⚙️", "Kojen Üretim",  kurt_str, "kWh", "#10b981")
-        info_card("🏭", "Kazan Doğalgaz", kzan_str, "m³",  "#ef4444")
-        info_card("💧", "Su Tüketimi",    su_str,   "m³",  "#38bdf8")
+        info_card("🔥", "Kojen Doğalgaz", kgaz_str,   "m³",  "#f97316")
+        info_card("⚙️", "Kojen Üretim",  kurt_str,   "kWh", "#10b981")
+        info_card("🏭", "Kazan Doğalgaz", kzan_str,   "m³",  "#ef4444")
+        info_card("💧", "Su Tüketimi",    su_str,     "m³",  "#38bdf8")
+        info_card("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#a855f7")
+        info_card("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#f59e0b")
 
     # ══════════════════════════════════════════════════════
     # HVAC & BAKIM DURUMU
@@ -713,3 +760,26 @@ with tab3:
     st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:8px;'>{len(filtre)} kayıt</div>", unsafe_allow_html=True)
     st.dataframe(filtre[goster_cols].sort_values("Tarih", ascending=False),
                  use_container_width=True, hide_index=True, height=450)
+
+# ════════ TAB 4: RAPOR OLUŞTUR ════════
+with tab4:
+    st.markdown("<div style='height:40px'></div>", unsafe_allow_html=True)
+    st.markdown(
+        f"""<div style='text-align:center;padding:40px;
+            background:rgba(0,20,50,0.6);border:1px solid rgba(0,212,255,0.15);
+            border-radius:16px;max-width:500px;margin:0 auto;'>
+            <div style='font-size:48px;margin-bottom:16px;'>📄</div>
+            <div style='font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;
+                color:{renk};letter-spacing:2px;margin-bottom:8px;'>RAPOR OLUŞTUR</div>
+            <div style='font-size:12px;color:rgba(150,210,255,0.6);margin-bottom:24px;'>
+                {lok_info["isim"]} için aylık enerji raporu oluşturun
+            </div>
+        </div>""",
+        unsafe_allow_html=True
+    )
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+    col_c1, col_c2, col_c3 = st.columns([2, 2, 2])
+    with col_c2:
+        if st.button("📄 Rapor Oluştur", use_container_width=True, key="rapor_btn"):
+            st.session_state["rapor_lokasyon"] = lok_id
+            st.switch_page("pages/rapor_olustur.py")
