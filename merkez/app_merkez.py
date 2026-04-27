@@ -435,6 +435,19 @@ def dun_kwh(lok_id):
         return d["Toplam_Hastane_Tuketim_kWh"].sum()
     return 0
 
+def onceki_gun_kwh(lok_id):
+    """Dünden bir önceki günün kWh değeri (% değişim için)."""
+    if df_all.empty or lok_id not in aktif_loklar:
+        return 0
+    lok_df = df_all[df_all["lokasyon_id"] == lok_id]
+    if lok_df.empty:
+        return 0
+    onceki = (now - timedelta(days=2)).strftime("%Y-%m-%d")
+    d = lok_df[lok_df["Tarih"].dt.strftime("%Y-%m-%d") == onceki]
+    if not d.empty and "Toplam_Hastane_Tuketim_kWh" in d.columns:
+        return d["Toplam_Hastane_Tuketim_kWh"].sum()
+    return 0
+
 def sparkline_svg(values, renk, w=75, h=28):
     """Verilen değerlerden mini SVG sparkline üret."""
     if not values or len(values) < 2:
@@ -525,6 +538,23 @@ with sol:
         verim_str = f"{kwh/m2_lok:.2f}".replace(".", ",") if kwh else "—"
         sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Orbitron,sans-serif;font-size:8px;color:rgba(150,210,255,0.35);font-weight:700;">#{i+1}</span>' if i < 4 else ""
 
+        # % değişim hesapla (dün vs önceki gün)
+        onceki_kwh = onceki_gun_kwh(lok_id)
+        if kwh and onceki_kwh and onceki_kwh > 0:
+            degisim_pct = (kwh - onceki_kwh) / onceki_kwh * 100
+            if degisim_pct > 2:
+                degisim_html = f'<span style="font-size:9px;color:#ef4444;font-weight:700;">▲ {degisim_pct:.1f}%</span>'
+            elif degisim_pct < -2:
+                degisim_html = f'<span style="font-size:9px;color:#10b981;font-weight:700;">▼ {abs(degisim_pct):.1f}%</span>'
+            else:
+                degisim_html = f'<span style="font-size:9px;color:#6b7280;">≈ {degisim_pct:+.1f}%</span>'
+        else:
+            degisim_html = ""
+
+        # Sparkline (son 7 gün)
+        spark_vals = son7_kwh(lok_id)
+        spark_svg  = sparkline_svg(spark_vals, renk, w=80, h=22) if spark_vals else ""
+
         rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
         dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
 
@@ -551,16 +581,20 @@ with sol:
             f'color:{renk};letter-spacing:1.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);'
             f'margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{lok_info["kisa"]}</div>'
             f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:5px;">{durum_lbl}</div>'
-            f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:5px;">'
+            f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">'
             f'<span style="font-family:Orbitron,sans-serif;font-size:16px;font-weight:900;'
             f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</span>'
             f'<span style="font-size:8px;color:rgba(150,210,255,0.5);">kWh</span>'
+            f'<span style="margin-left:4px;">{degisim_html}</span>'
             f'</div>'
+            f'<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">'
             f'<div style="display:inline-flex;align-items:center;gap:5px;'
             f'background:rgba(0,212,255,0.05);border-radius:5px;padding:3px 8px;'
             f'border:1px solid rgba(0,212,255,0.10);">'
             f'<span style="font-size:7px;color:rgba(150,210,255,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
             f'<span style="font-family:Orbitron,sans-serif;font-size:11px;color:#00d4ff;font-weight:700;">{verim_str}</span>'
+            f'</div>'
+            f'<div style="opacity:0.8;">{spark_svg}</div>'
             f'</div>'
             f'</div></div></div>'
         )
@@ -1050,6 +1084,91 @@ with sag:
             st.markdown('<div class="alrt-y">📡 Veri bekleniyor...</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div class="alrt-y">📡 Sunucu bağlantısı kurulamadı</div>', unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+
+    # ── Sezon Göstergesi ──
+    st.markdown('<div class="sec">🌡️ SEZON DURUMU</div>', unsafe_allow_html=True)
+    if dis_hava_val is not None:
+        if dis_hava_val >= 22:
+            sezon_ikon, sezon_ad, sezon_renk = "☀️", "SOĞUTMA SEZONU", "#f59e0b"
+            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Chiller'lar aktif"
+        elif dis_hava_val <= 10:
+            sezon_ikon, sezon_ad, sezon_renk = "❄️", "ISITMA SEZONU", "#38bdf8"
+            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Kazan sistemleri aktif"
+        else:
+            sezon_ikon, sezon_ad, sezon_renk = "🌤️", "GEÇİŞ DÖNEMİ", "#10b981"
+            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Yük dengeli"
+        sr=int(sezon_renk[1:3],16); sg=int(sezon_renk[3:5],16); sb=int(sezon_renk[5:7],16)
+        st.markdown(
+            f"<div style='background:rgba({sr},{sg},{sb},0.08);border:1px solid rgba({sr},{sg},{sb},0.3);"
+            f"border-radius:10px;padding:10px 12px;text-align:center;'>"
+            f"<div style='font-size:24px;margin-bottom:4px;'>{sezon_ikon}</div>"
+            f"<div style='font-family:Orbitron,sans-serif;font-size:9px;font-weight:700;"
+            f"color:{sezon_renk};letter-spacing:2px;margin-bottom:4px;'>{sezon_ad}</div>"
+            f"<div style='font-size:10px;color:rgba(180,220,255,0.6);'>{sezon_acik}</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown('<div class="alrt-y">🌡️ Dış hava verisi alınamadı</div>', unsafe_allow_html=True)
+
+    # ── En Verimli / En Verimsiz + Günlük Özet ──
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="sec">📊 GÜNLÜK ÖZET</div>', unsafe_allow_html=True)
+    if not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
+        gun_rows = []
+        for lid in aktif_loklar:
+            kwh_g = dun_kwh(lid)
+            if kwh_g and kwh_g > 0:
+                m2_g = HASTANELER.get(lid, {}).get("m2", 10000)
+                gun_rows.append({
+                    "isim":   HASTANELER.get(lid, {}).get("kisa", lid),
+                    "kwh":    kwh_g,
+                    "kwh_m2": kwh_g / m2_g,
+                    "renk":   HASTANELER.get(lid, {}).get("renk", "#00d4ff"),
+                })
+        if gun_rows:
+            gun_rows.sort(key=lambda x: x["kwh_m2"])
+            en_verimli  = gun_rows[0]
+            en_verimsiz = gun_rows[-1]
+            toplam_aktif   = len(gun_rows)
+            toplam_kwh_gun = sum(r["kwh"] for r in gun_rows)
+            st.markdown(
+                f"<div style='background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);"
+                f"border-radius:8px;padding:8px 12px;margin-bottom:6px;'>"
+                f"<div style='font-size:8px;color:rgba(16,185,129,0.7);letter-spacing:1px;"
+                f"text-transform:uppercase;margin-bottom:2px;'>🥇 En Verimli</div>"
+                f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+                f"<span style='font-size:12px;color:{en_verimli['renk']};font-weight:700;'>{en_verimli['isim']}</span>"
+                f"<span style='font-family:Orbitron,sans-serif;font-size:11px;color:#10b981;'>{en_verimli['kwh_m2']:.2f} kWh/m²</span>"
+                f"</div></div>",
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);"
+                f"border-radius:8px;padding:8px 12px;margin-bottom:6px;'>"
+                f"<div style='font-size:8px;color:rgba(239,68,68,0.7);letter-spacing:1px;"
+                f"text-transform:uppercase;margin-bottom:2px;'>⚠️ En Yüksek Tüketim</div>"
+                f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+                f"<span style='font-size:12px;color:{en_verimsiz['renk']};font-weight:700;'>{en_verimsiz['isim']}</span>"
+                f"<span style='font-family:Orbitron,sans-serif;font-size:11px;color:#ef4444;'>{en_verimsiz['kwh_m2']:.2f} kWh/m²</span>"
+                f"</div></div>",
+                unsafe_allow_html=True
+            )
+            st.markdown(
+                f"<div style='background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.12);"
+                f"border-radius:8px;padding:8px 12px;'>"
+                f"<div style='display:flex;justify-content:space-between;'>"
+                f"<span style='font-size:10px;color:rgba(150,210,255,0.6);'>Aktif Lokasyon</span>"
+                f"<span style='font-family:Orbitron,sans-serif;font-size:11px;color:#00d4ff;'>{toplam_aktif}</span>"
+                f"</div>"
+                f"<div style='display:flex;justify-content:space-between;margin-top:4px;'>"
+                f"<span style='font-size:10px;color:rgba(150,210,255,0.6);'>Toplam (dün)</span>"
+                f"<span style='font-family:Orbitron,sans-serif;font-size:11px;color:#00d4ff;'>{toplam_kwh_gun/1000:.1f} MWh</span>"
+                f"</div></div>",
+                unsafe_allow_html=True
+            )
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
