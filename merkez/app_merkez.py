@@ -287,6 +287,9 @@ def fetch_energy(url, key):
             for col in df.columns:
                 if col not in ["id","lokasyon_id","Tarih","Kar_Eritme_Aktif"]:
                     df[col] = pd.to_numeric(df[col], errors="coerce")
+            # Mükerrer tarihleri temizle (aynı lokasyon + tarih kombinasyonu)
+            if "lokasyon_id" in df.columns:
+                df = df.drop_duplicates(subset=["lokasyon_id", "Tarih"], keep="last")
             return df, None
         return pd.DataFrame(), None
     except Exception as e:
