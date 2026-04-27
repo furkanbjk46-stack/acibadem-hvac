@@ -967,78 +967,42 @@ with sag:
                      if lok_uyari_map.get(lid)]
 
     if not lok_ile_uyari:
-        st.markdown('<div class="alrt-g">✅ Tüm sistemler normal</div>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            "<div style='background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);"
+            "border-radius:8px;padding:8px 12px;font-size:11px;color:#6ee7b7;'>✅ Tüm sistemler normal</div>",
+            unsafe_allow_html=True
+        )
     else:
+        uyari_html = "<div style='max-height:260px;overflow-y:auto;padding-right:2px;'>"
         for lid, uyarilar in lok_ile_uyari:
-            lok_inf   = HASTANELER.get(lid, {})
-            isim      = lok_inf.get("kisa", lid)
-            lok_renk  = lok_inf.get("renk", "#00d4ff")
-            has_crit  = any(s == "r" for s, _ in uyarilar)
-            exp_icon  = "🔴" if has_crit else "🟡"
-            exp_label = f"{exp_icon} {isim}  —  {len(uyarilar)} uyarı"
-
-            with st.expander(exp_label, expanded=False):
-
-                # Gizli sınıf tetikleyici (CSS :has için)
-                css_cls = "alrt-exp-r" if has_crit else "alrt-exp-y"
-                st.markdown(f'<span class="{css_cls}" style="display:none"></span>',
-                            unsafe_allow_html=True)
-
-                # Alarm satırları
-                for sev, msg in uyarilar:
-                    st.markdown(f'<div class="alrt-detay-{sev}">{msg}</div>',
-                                unsafe_allow_html=True)
-
-                # Bakım kartı detayları (arızalı cihaz listesi)
-                ld   = lok_dict.get(lid, {})
-                ozet = ld.get("bakim_ozet") or {}
-                if isinstance(ozet, str):
-                    try: ozet = json.loads(ozet)
-                    except: ozet = {}
-
-                arizali_list = ozet.get("arizali_cihazlar", [])
-                bakim_list   = ozet.get("bakim_cihazlari", [])
-
-                if arizali_list or bakim_list:
-                    st.markdown('<div class="alarm-detay-kart">', unsafe_allow_html=True)
-                    if arizali_list:
-                        st.markdown(
-                            "<span style='font-size:10px;color:rgba(239,68,68,0.8);"
-                            "letter-spacing:1px;text-transform:uppercase;"
-                            "font-weight:700;'>Arızalı Bileşenler</span>",
-                            unsafe_allow_html=True
-                        )
-                        for cihaz in arizali_list:
-                            st.markdown(
-                                f"<div style='font-size:11px;color:#fca5a5;"
-                                f"padding:2px 0 2px 8px;'>🔴 {cihaz}</div>",
-                                unsafe_allow_html=True
-                            )
-                    if bakim_list:
-                        st.markdown(
-                            "<span style='font-size:10px;color:rgba(245,158,11,0.8);"
-                            "letter-spacing:1px;text-transform:uppercase;"
-                            "font-weight:700;margin-top:6px;display:block;'>Bakımdaki Bileşenler</span>",
-                            unsafe_allow_html=True
-                        )
-                        for cihaz in bakim_list:
-                            st.markdown(
-                                f"<div style='font-size:11px;color:#fcd34d;"
-                                f"padding:2px 0 2px 8px;'>🟡 {cihaz}</div>",
-                                unsafe_allow_html=True
-                            )
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-                # Lokasyona git butonu
-                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-                st.markdown('<div class="btn-goto">', unsafe_allow_html=True)
-                if st.button(f"⟶ {lok_inf.get('isim', isim)} Detayına Git",
-                             key=f"alarm_goto_{lid}",
-                             use_container_width=True):
-                    st.session_state["detay_lokasyon"] = lid
-                    st.switch_page("pages/lokasyon_detay.py")
-                st.markdown('</div>', unsafe_allow_html=True)
+            lok_inf  = HASTANELER.get(lid, {})
+            isim     = lok_inf.get("kisa", lid)
+            has_crit = any(s == "r" for s, _ in uyarilar)
+            kart_bg  = "rgba(239,68,68,0.06)" if has_crit else "rgba(245,158,11,0.06)"
+            kart_br  = "rgba(239,68,68,0.30)" if has_crit else "rgba(245,158,11,0.25)"
+            dot_renk = "#ef4444" if has_crit else "#f59e0b"
+            satirlar = ""
+            for sev, msg in uyarilar:
+                s_renk = "#fca5a5" if sev == "r" else "#fcd34d"
+                s_bg   = "rgba(239,68,68,0.08)" if sev == "r" else "rgba(245,158,11,0.08)"
+                satirlar += (
+                    f"<div style='background:{s_bg};border-radius:5px;padding:4px 8px;"
+                    f"margin-top:4px;font-size:10px;color:{s_renk};'>{msg}</div>"
+                )
+            uyari_html += (
+                f"<details style='background:{kart_bg};border:1px solid {kart_br};"
+                f"border-radius:8px;padding:6px 10px;margin-bottom:5px;cursor:pointer;'>"
+                f"<summary style='list-style:none;display:flex;align-items:center;gap:6px;"
+                f"font-size:11px;font-weight:600;color:rgba(200,230,255,0.85);'>"
+                f"<span style='width:7px;height:7px;border-radius:50%;background:{dot_renk};"
+                f"box-shadow:0 0 5px {dot_renk};flex-shrink:0;display:inline-block;'></span>"
+                f"{isim} — {len(uyarilar)} uyarı"
+                f"</summary>"
+                f"<div style='margin-top:4px;'>{satirlar}</div>"
+                f"</details>"
+            )
+        uyari_html += "</div>"
+        st.markdown(uyari_html, unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
