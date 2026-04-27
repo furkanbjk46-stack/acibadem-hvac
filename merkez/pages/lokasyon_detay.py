@@ -800,11 +800,15 @@ with tab1:
             "<div style='font-size:11px;color:#6ee7b7;padding:4px 0;'>Ariza yok</div>"
         )
         st.markdown(
-            "<div style='" + KART + "border:1px solid rgba(239,68,68,0.25);'>"
+            "<details style='" + KART + "border:1px solid rgba(239,68,68,0.25);cursor:pointer;'>"
+            "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>ARIZALI CIHAZLAR</div>"
             "<div style='font-family:Orbitron,sans-serif;font-size:28px;font-weight:900;"
-            "color:" + ar_renk + ";margin-bottom:10px;'>" + str(toplam_ariza) + "</div>"
-            + rows + "</div>",
+            "color:" + ar_renk + ";margin-bottom:4px;'>" + str(toplam_ariza) + "</div>"
+            "<div style='font-size:9px;color:rgba(150,210,255,0.4);margin-bottom:4px;'>▼ detay için tıkla</div>"
+            "</summary>"
+            "<div style='margin-top:8px;'>" + rows + "</div>"
+            "</details>",
             unsafe_allow_html=True
         )
 
@@ -815,14 +819,18 @@ with tab1:
             cihaz_html(c, "rgba(245,158,11,0.10)", "#f59e0b", "#fcd34d")
             for c in bakim_list
         ) if bakim_list else (
-            "<div style='font-size:11px;color:#6ee7b7;padding:4px 0;'>Bakim yok</div>"
+            "<div style='font-size:11px;color:rgba(150,210,255,0.5);padding:4px 0;'>Cihaz listesi girilmemiş</div>"
         )
         st.markdown(
-            "<div style='" + KART + "border:1px solid rgba(245,158,11,0.25);'>"
+            "<details style='" + KART + "border:1px solid rgba(245,158,11,0.25);cursor:pointer;'>"
+            "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>BAKIMDAKI CIHAZLAR</div>"
             "<div style='font-family:Orbitron,sans-serif;font-size:28px;font-weight:900;"
-            "color:" + bk_renk + ";margin-bottom:10px;'>" + str(toplam_bakim) + "</div>"
-            + rows + "</div>",
+            "color:" + bk_renk + ";margin-bottom:4px;'>" + str(toplam_bakim) + "</div>"
+            "<div style='font-size:9px;color:rgba(150,210,255,0.4);margin-bottom:4px;'>▼ detay için tıkla</div>"
+            "</summary>"
+            "<div style='margin-top:8px;'>" + rows + "</div>"
+            "</details>",
             unsafe_allow_html=True
         )
 
