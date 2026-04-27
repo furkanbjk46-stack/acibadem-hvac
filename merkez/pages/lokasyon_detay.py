@@ -335,19 +335,6 @@ with tab1:
             kojen_oran = min(kojen_urt / kwh_dun * 100, 100)
             metric_card_v("⚙️", "Kojen Karşılama", f"{kojen_oran:.1f}", "%", "#10b981")
 
-        # Tahmini günlük maliyet
-        st.markdown("<div style='margin-top:6px'></div>", unsafe_allow_html=True)
-        elektrik_fiyat = st.number_input(
-            "⚡ Elektrik Fiyatı (₺/kWh)",
-            min_value=0.1, max_value=99.0, value=5.5, step=0.1,
-            key="elek_fiyat",
-            help="Günlük tahmini maliyet hesabı için"
-        )
-        if kwh_dun and kwh_dun > 0:
-            maliyet_gun = kwh_dun * elektrik_fiyat
-            metric_card_v("💰", "Tahmini Günlük Maliyet", f"{maliyet_gun:,.0f}", "₺", "#f59e0b")
-            maliyet_30 = kwh_30 * elektrik_fiyat
-            metric_card_v("💰", "30G Tahmini Maliyet", f"{maliyet_30/1000:,.1f}", "K₺", "#f97316")
 
     # ──────────── SÜTUN 2: Grafik seçici + dinamik grafik ────────────
     with col_mid:
@@ -878,45 +865,6 @@ with tab1:
             unsafe_allow_html=True
         )
 
-    # ── Hedef vs Gerçek ──────────────────────────────────
-    st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="sec">🎯 HEDEF VS GERÇEK</div>', unsafe_allow_html=True)
-
-    if "Toplam_Hastane_Tuketim_kWh" in df.columns:
-        bu_ay_bas2 = now.replace(day=1)
-        bu_ay_df2  = df[df["Tarih"] >= pd.Timestamp(bu_ay_bas2)]
-        bu_ay_top  = bu_ay_df2["Toplam_Hastane_Tuketim_kWh"].sum() if not bu_ay_df2.empty else 0
-
-        col_h1, col_h2 = st.columns([1, 2])
-        with col_h1:
-            hedef_kwh = st.number_input(
-                f"🎯 {now.strftime('%B')} Ayı Hedef (kWh)",
-                min_value=1000, max_value=10_000_000,
-                value=int(kwh_30 * 0.95) if kwh_30 > 0 else 100000,
-                step=1000, key="hedef_kwh",
-            )
-        with col_h2:
-            if hedef_kwh > 0:
-                pct = min(bu_ay_top / hedef_kwh * 100, 100)
-                asim = bu_ay_top > hedef_kwh
-                bar_renk = "#ef4444" if asim else "#10b981"
-                durum_yazi = f"⚠️ Hedef aşıldı! {bu_ay_top/hedef_kwh*100:.1f}%" if asim else f"✅ {pct:.1f}% kullanıldı"
-                st.markdown(
-                    f"<div style='background:rgba(0,15,40,0.6);border:1px solid rgba(0,212,255,0.12);"
-                    f"border-radius:10px;padding:14px 18px;margin-top:8px;'>"
-                    f"<div style='display:flex;justify-content:space-between;margin-bottom:8px;'>"
-                    f"<span style='font-size:12px;color:rgba(180,220,255,0.7);'>Bu ay: <b style='color:#00d4ff'>{bu_ay_top:,.0f} kWh</b></span>"
-                    f"<span style='font-size:12px;color:rgba(180,220,255,0.7);'>Hedef: <b style='color:{bar_renk}'>{hedef_kwh:,.0f} kWh</b></span>"
-                    f"</div>"
-                    f"<div style='background:rgba(0,212,255,0.08);border-radius:6px;height:14px;overflow:hidden;'>"
-                    f"<div style='width:{pct:.1f}%;height:100%;background:{bar_renk};"
-                    f"border-radius:6px;transition:width 0.5s;'></div></div>"
-                    f"<div style='margin-top:6px;font-size:11px;color:{bar_renk};font-weight:600;'>{durum_yazi}</div>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-    else:
-        st.info("Hedef karşılaştırması için tüketim verisi bulunamadı.")
 
 # ════════ TAB 2: TREND & TAHMİN ════════
 with tab2:
