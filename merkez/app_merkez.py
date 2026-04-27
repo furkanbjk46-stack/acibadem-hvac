@@ -551,9 +551,6 @@ with sol:
         else:
             degisim_html = ""
 
-        # Sparkline (son 7 gün)
-        spark_vals = son7_kwh(lok_id)
-        spark_svg  = sparkline_svg(spark_vals, renk, w=80, h=22) if spark_vals else ""
 
         rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
         dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
@@ -587,14 +584,11 @@ with sol:
             f'<span style="font-size:8px;color:rgba(150,210,255,0.5);">kWh</span>'
             f'<span style="margin-left:4px;">{degisim_html}</span>'
             f'</div>'
-            f'<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">'
             f'<div style="display:inline-flex;align-items:center;gap:5px;'
             f'background:rgba(0,212,255,0.05);border-radius:5px;padding:3px 8px;'
             f'border:1px solid rgba(0,212,255,0.10);">'
             f'<span style="font-size:7px;color:rgba(150,210,255,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
             f'<span style="font-family:Orbitron,sans-serif;font-size:11px;color:#00d4ff;font-weight:700;">{verim_str}</span>'
-            f'</div>'
-            f'<div style="opacity:0.8;">{spark_svg}</div>'
             f'</div>'
             f'</div></div></div>'
         )
@@ -1048,43 +1042,6 @@ with sag:
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
-    # ── Benchmark (kWh/m²) ──
-    st.markdown('<div class="sec">🏆 VERİMLİLİK (kWh/m²)</div>', unsafe_allow_html=True)
-    if not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
-        son30 = df_all[df_all["Tarih"] >= (now - timedelta(days=30))]
-        bench_rows = []
-        for lok_id in aktif_loklar:
-            ld = son30[son30["lokasyon_id"]==lok_id]
-            if ld.empty: continue
-            toplam = ld["Toplam_Hastane_Tuketim_kWh"].sum()
-            m2 = HASTANELER.get(lok_id,{}).get("m2",10000)
-            bench_rows.append({
-                "isim": HASTANELER.get(lok_id,{}).get("kisa", lok_id),
-                "kwh_m2": toplam / m2,
-                "renk": HASTANELER.get(lok_id,{}).get("renk","#00d4ff"),
-            })
-        if bench_rows:
-            bench_rows.sort(key=lambda x: x["kwh_m2"])
-            max_val = max(r["kwh_m2"] for r in bench_rows)
-            for i, row in enumerate(bench_rows):
-                pct = row["kwh_m2"] / max_val * 100
-                medal = "🥇" if i == 0 else ("🥈" if i == 1 else "🥉")
-                st.markdown(f"""
-                <div style="margin-bottom:8px;">
-                  <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
-                    <span style="font-size:11px; color:rgba(200,230,255,0.8);">{medal} {row['isim']}</span>
-                    <span style="font-size:11px; font-weight:700; color:{row['renk']}; font-family:'Orbitron',sans-serif;">{row['kwh_m2']:.1f}</span>
-                  </div>
-                  <div style="height:5px; background:rgba(0,212,255,0.1); border-radius:3px;">
-                    <div style="height:5px; width:{pct:.0f}%; background:{row['renk']}; border-radius:3px; box-shadow:0 0 8px {row['renk']};"></div>
-                  </div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="alrt-y">📡 Veri bekleniyor...</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="alrt-y">📡 Sunucu bağlantısı kurulamadı</div>', unsafe_allow_html=True)
-
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
     # ── Sezon Göstergesi ──
@@ -1172,33 +1129,6 @@ with sag:
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
-    # ── 30 Günlük Trend Mini ──
-    st.markdown('<div class="sec">📈 30G ENERJİ TRENDİ</div>', unsafe_allow_html=True)
-    if df_all.empty or "Toplam_Hastane_Tuketim_kWh" not in df_all.columns:
-        st.markdown('<div class="alrt-y">📡 Sunucu bağlantısı kurulamadı</div>', unsafe_allow_html=True)
-    elif not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
-        trend = df_all[df_all["Tarih"] >= (now - timedelta(days=30))].copy()
-        fig_mini = go.Figure()
-        for lok_id in trend["lokasyon_id"].unique():
-            ld = trend[trend["lokasyon_id"]==lok_id]
-            renk = HASTANELER.get(lok_id,{}).get("renk","#00d4ff")
-            fig_mini.add_trace(go.Scatter(
-                x=ld["Tarih"], y=ld["Toplam_Hastane_Tuketim_kWh"],
-                name=HASTANELER.get(lok_id,{}).get("kisa", lok_id),
-                line=dict(color=renk, width=1.5),
-                fill="tozeroy", fillcolor=hex_rgba(renk, 0.07),
-                mode="lines",
-            ))
-        fig_mini.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#a0c8ff", size=9, family="Inter"),
-            margin=dict(t=5,b=20,l=30,r=5), height=160,
-            xaxis=dict(gridcolor="rgba(0,212,255,0.06)", showticklabels=True, tickfont=dict(size=8)),
-            yaxis=dict(gridcolor="rgba(0,212,255,0.06)", tickfont=dict(size=8)),
-            legend=dict(orientation="h", y=1.2, font=dict(size=9)),
-            showlegend=True,
-        )
-        st.plotly_chart(fig_mini, use_container_width=True, config={"displayModeBar": False})
 
 # ============ FOOTER ============
 st.markdown(f"""
