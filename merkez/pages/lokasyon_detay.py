@@ -330,6 +330,25 @@ with tab1:
         metric_card_v("📅", "30G Toplam",    f"{kwh_30/1000:,.1f}", "MWh", "#10b981")
         metric_card_v("❄️", "Chiller Set",  f"{ch_set:.1f}" if ch_set else "—", "°C", "#a855f7")
 
+        # Kojen öz tüketim oranı
+        if kojen_urt and kwh_dun and kwh_dun > 0:
+            kojen_oran = min(kojen_urt / kwh_dun * 100, 100)
+            metric_card_v("⚙️", "Kojen Karşılama", f"{kojen_oran:.1f}", "%", "#10b981")
+
+        # Tahmini günlük maliyet
+        st.markdown("<div style='margin-top:6px'></div>", unsafe_allow_html=True)
+        elektrik_fiyat = st.number_input(
+            "⚡ Elektrik Fiyatı (₺/kWh)",
+            min_value=0.1, max_value=99.0, value=5.5, step=0.1,
+            key="elek_fiyat",
+            help="Günlük tahmini maliyet hesabı için"
+        )
+        if kwh_dun and kwh_dun > 0:
+            maliyet_gun = kwh_dun * elektrik_fiyat
+            metric_card_v("💰", "Tahmini Günlük Maliyet", f"{maliyet_gun:,.0f}", "₺", "#f59e0b")
+            maliyet_30 = kwh_30 * elektrik_fiyat
+            metric_card_v("💰", "30G Tahmini Maliyet", f"{maliyet_30/1000:,.1f}", "K₺", "#f97316")
+
     # ──────────── SÜTUN 2: Grafik seçici + dinamik grafik ────────────
     with col_mid:
         st.markdown('<div class="sec">📊 GRAFİK</div>', unsafe_allow_html=True)
@@ -343,6 +362,9 @@ with tab1:
             "🔌 Şebeke Tüketimi":      "sebeke",
             "🏭 MCC Tüketimi":         "mcc",
             "🔥 Kazan Doğalgaz":       "kazan",
+            "📆 Bu Ay vs Geçen Ay":    "ay_karsilastir",
+            "🔥 Doğalgaz Verimliliği": "dogalgaz_verim",
+            "📋 KPI Özet":             "kpi_ozet",
         }
         secim = st.selectbox(
             "Grafik Seçin", list(grafik_secenekler.keys()),
@@ -518,6 +540,139 @@ with tab1:
                 st.plotly_chart(fig_kaz, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Kazan doğalgaz verisi bulunamadı.")
+
+        # ── Bu Ay vs Geçen Ay ──
+        elif grafik_tip == "ay_karsilastir":
+            if "Toplam_Hastane_Tuketim_kWh" in df.columns and not df.empty:
+                bu_ay_bas  = now.replace(day=1)
+                gec_ay_bit = bu_ay_bas - timedelta(days=1)
+                gec_ay_bas = gec_ay_bit.replace(day=1)
+                bu_ay_df  = df[df["Tarih"] >= pd.Timestamp(bu_ay_bas)]
+                gec_ay_df = df[(df["Tarih"] >= pd.Timestamp(gec_ay_bas)) & (df["Tarih"] <= pd.Timestamp(gec_ay_bit))]
+                bu_gun  = bu_ay_df.groupby(bu_ay_df["Tarih"].dt.day)["Toplam_Hastane_Tuketim_kWh"].sum()
+                gec_gun = gec_ay_df.groupby(gec_ay_df["Tarih"].dt.day)["Toplam_Hastane_Tuketim_kWh"].sum()
+                fig_ay = go.Figure()
+                fig_ay.add_trace(go.Bar(
+                    x=gec_gun.index, y=gec_gun.values,
+                    name=f"{gec_ay_bas.strftime('%B %Y')}",
+                    marker=dict(color=f"rgba({rr},{rg},{rb},0.4)"),
+                    hovertemplate="Gün %{x}: %{y:,.0f} kWh<extra></extra>",
+                ))
+                fig_ay.add_trace(go.Bar(
+                    x=bu_gun.index, y=bu_gun.values,
+                    name=f"{bu_ay_bas.strftime('%B %Y')}",
+                    marker=dict(color=f"rgba({rr},{rg},{rb},0.9)"),
+                    hovertemplate="Gün %{x}: %{y:,.0f} kWh<extra></extra>",
+                ))
+                fig_ay.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#a0c8ff", family="Inter"),
+                    margin=dict(t=30,b=20,l=50,r=10), height=370,
+                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)", title="Gün"),
+                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)", title=dict(text="kWh", font=dict(size=10))),
+                    barmode="group",
+                    legend=dict(orientation="h", y=1.1, font=dict(size=10)),
+                )
+                # Toplam fark özeti
+                bu_top  = bu_gun.sum()
+                gec_top = gec_gun.sum()
+                if gec_top > 0:
+                    fark_pct = (bu_top - gec_top) / gec_top * 100
+                    fark_renk = "#ef4444" if fark_pct > 0 else "#10b981"
+                    fark_yon  = "▲" if fark_pct > 0 else "▼"
+                    st.markdown(
+                        f"<div style='text-align:center;font-size:11px;color:{fark_renk};margin-bottom:4px;'>"
+                        f"{fark_yon} Bu ay şimdiye kadar geçen aya göre <b>{abs(fark_pct):.1f}%</b> "
+                        f"{'fazla' if fark_pct>0 else 'az'} tüketim</div>",
+                        unsafe_allow_html=True
+                    )
+                st.plotly_chart(fig_ay, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.info("Ay karşılaştırma verisi bulunamadı.")
+
+        # ── Doğalgaz Verimliliği ──
+        elif grafik_tip == "dogalgaz_verim":
+            has_kojen = "Kojen_Uretim_kWh" in son30.columns and "Kojen_Dogalgaz_m3" in son30.columns
+            has_kazan = "Kazan_Dogalgaz_m3" in son30.columns and "Toplam_Hastane_Tuketim_kWh" in son30.columns
+            if (has_kojen or has_kazan) and not son30.empty:
+                fig_dv = go.Figure()
+                if has_kojen:
+                    kj_g = son30.groupby(son30["Tarih"].dt.date)[["Kojen_Uretim_kWh","Kojen_Dogalgaz_m3"]].sum().reset_index()
+                    kj_g["verim"] = kj_g.apply(
+                        lambda r: r["Kojen_Uretim_kWh"]/r["Kojen_Dogalgaz_m3"] if r["Kojen_Dogalgaz_m3"]>0 else None, axis=1
+                    )
+                    fig_dv.add_trace(go.Scatter(
+                        x=kj_g["Tarih"], y=kj_g["verim"],
+                        name="Kojen (kWh/m³)", line=dict(color="#10b981", width=2),
+                        hovertemplate="<b>%{x}</b><br>%{y:.2f} kWh/m³<extra></extra>",
+                    ))
+                if has_kazan:
+                    kz_g = son30.groupby(son30["Tarih"].dt.date)[["Toplam_Hastane_Tuketim_kWh","Kazan_Dogalgaz_m3"]].sum().reset_index()
+                    kz_g["verim"] = kz_g.apply(
+                        lambda r: r["Toplam_Hastane_Tuketim_kWh"]/r["Kazan_Dogalgaz_m3"] if r["Kazan_Dogalgaz_m3"]>0 else None, axis=1
+                    )
+                    fig_dv.add_trace(go.Scatter(
+                        x=kz_g["Tarih"], y=kz_g["verim"],
+                        name="Kazan (kWh/m³)", line=dict(color="#ef4444", width=2, dash="dot"),
+                        hovertemplate="<b>%{x}</b><br>%{y:.2f} kWh/m³<extra></extra>",
+                    ))
+                fig_dv.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#a0c8ff", family="Inter"),
+                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
+                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                               title=dict(text="kWh / m³ gaz", font=dict(size=10))),
+                    legend=dict(orientation="h", y=1.1, font=dict(size=10)),
+                )
+                st.plotly_chart(fig_dv, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.info("Doğalgaz verimlilik verisi bulunamadı.")
+
+        # ── KPI Özet Scorecard ──
+        elif grafik_tip == "kpi_ozet":
+            kpi_rows = []
+            if "Toplam_Hastane_Tuketim_kWh" in son30.columns:
+                kpi_rows.append(("⚡ Elektrik Tüketimi (30G)", f"{son30['Toplam_Hastane_Tuketim_kWh'].sum():,.0f} kWh", "#00d4ff"))
+            if "Kojen_Uretim_kWh" in son30.columns:
+                kpi_rows.append(("⚙️ Kojen Üretimi (30G)", f"{son30['Kojen_Uretim_kWh'].sum():,.0f} kWh", "#10b981"))
+            if "Kojen_Uretim_kWh" in son30.columns and "Toplam_Hastane_Tuketim_kWh" in son30.columns:
+                top = son30["Toplam_Hastane_Tuketim_kWh"].sum()
+                ko  = son30["Kojen_Uretim_kWh"].sum()
+                if top > 0:
+                    kpi_rows.append(("⚙️ Kojen Karşılama Oranı", f"%{ko/top*100:.1f}", "#10b981"))
+            if "Kojen_Dogalgaz_m3" in son30.columns:
+                kpi_rows.append(("🔥 Kojen Doğalgaz (30G)", f"{son30['Kojen_Dogalgaz_m3'].sum():,.1f} m³", "#f97316"))
+            if "Kazan_Dogalgaz_m3" in son30.columns:
+                kpi_rows.append(("🏭 Kazan Doğalgaz (30G)", f"{son30['Kazan_Dogalgaz_m3'].sum():,.1f} m³", "#ef4444"))
+            if "Su_Tuketimi_m3" in son30.columns:
+                kpi_rows.append(("💧 Su Tüketimi (30G)", f"{son30['Su_Tuketimi_m3'].sum():,.1f} m³", "#38bdf8"))
+            if "Sebeke_Tuketim_kWh" in son30.columns:
+                kpi_rows.append(("🔌 Şebeke Tüketimi (30G)", f"{son30['Sebeke_Tuketim_kWh'].sum():,.0f} kWh", "#a855f7"))
+            if "MCC_Tuketim_kWh" in son30.columns:
+                kpi_rows.append(("🏗️ MCC Tüketimi (30G)", f"{son30['MCC_Tuketim_kWh'].sum():,.0f} kWh", "#f59e0b"))
+            if m2 and son30["Toplam_Hastane_Tuketim_kWh"].sum() if "Toplam_Hastane_Tuketim_kWh" in son30.columns else 0:
+                kpi_rows.append(("📐 kWh/m² (30G)", f"{son30['Toplam_Hastane_Tuketim_kWh'].sum()/m2:.2f}", "#f59e0b"))
+
+            if kpi_rows:
+                rows_html = ""
+                for baslik, deger, renk_hex in kpi_rows:
+                    r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
+                    rows_html += (
+                        f"<div style='display:flex;justify-content:space-between;align-items:center;"
+                        f"padding:10px 14px;border-bottom:1px solid rgba(0,212,255,0.07);'>"
+                        f"<span style='font-size:12px;color:rgba(180,220,255,0.8);'>{baslik}</span>"
+                        f"<span style='font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;"
+                        f"color:{renk_hex};text-shadow:0 0 8px rgba({r2},{g2},{b2},0.5);'>{deger}</span>"
+                        f"</div>"
+                    )
+                st.markdown(
+                    f"<div style='background:rgba(0,15,40,0.7);border:1px solid rgba(0,212,255,0.12);"
+                    f"border-radius:12px;overflow:hidden;'>{rows_html}</div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.info("KPI verisi bulunamadı.")
 
         # ── Kojen Üretim ──
         elif grafik_tip == "kojen":
@@ -722,6 +877,46 @@ with tab1:
             + hv_rows + "</div>",
             unsafe_allow_html=True
         )
+
+    # ── Hedef vs Gerçek ──────────────────────────────────
+    st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="sec">🎯 HEDEF VS GERÇEK</div>', unsafe_allow_html=True)
+
+    if "Toplam_Hastane_Tuketim_kWh" in df.columns:
+        bu_ay_bas2 = now.replace(day=1)
+        bu_ay_df2  = df[df["Tarih"] >= pd.Timestamp(bu_ay_bas2)]
+        bu_ay_top  = bu_ay_df2["Toplam_Hastane_Tuketim_kWh"].sum() if not bu_ay_df2.empty else 0
+
+        col_h1, col_h2 = st.columns([1, 2])
+        with col_h1:
+            hedef_kwh = st.number_input(
+                f"🎯 {now.strftime('%B')} Ayı Hedef (kWh)",
+                min_value=1000, max_value=10_000_000,
+                value=int(kwh_30 * 0.95) if kwh_30 > 0 else 100000,
+                step=1000, key="hedef_kwh",
+            )
+        with col_h2:
+            if hedef_kwh > 0:
+                pct = min(bu_ay_top / hedef_kwh * 100, 100)
+                asim = bu_ay_top > hedef_kwh
+                bar_renk = "#ef4444" if asim else "#10b981"
+                durum_yazi = f"⚠️ Hedef aşıldı! {bu_ay_top/hedef_kwh*100:.1f}%" if asim else f"✅ {pct:.1f}% kullanıldı"
+                st.markdown(
+                    f"<div style='background:rgba(0,15,40,0.6);border:1px solid rgba(0,212,255,0.12);"
+                    f"border-radius:10px;padding:14px 18px;margin-top:8px;'>"
+                    f"<div style='display:flex;justify-content:space-between;margin-bottom:8px;'>"
+                    f"<span style='font-size:12px;color:rgba(180,220,255,0.7);'>Bu ay: <b style='color:#00d4ff'>{bu_ay_top:,.0f} kWh</b></span>"
+                    f"<span style='font-size:12px;color:rgba(180,220,255,0.7);'>Hedef: <b style='color:{bar_renk}'>{hedef_kwh:,.0f} kWh</b></span>"
+                    f"</div>"
+                    f"<div style='background:rgba(0,212,255,0.08);border-radius:6px;height:14px;overflow:hidden;'>"
+                    f"<div style='width:{pct:.1f}%;height:100%;background:{bar_renk};"
+                    f"border-radius:6px;transition:width 0.5s;'></div></div>"
+                    f"<div style='margin-top:6px;font-size:11px;color:{bar_renk};font-weight:600;'>{durum_yazi}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+    else:
+        st.info("Hedef karşılaştırması için tüketim verisi bulunamadı.")
 
 # ════════ TAB 2: TREND & TAHMİN ════════
 with tab2:
