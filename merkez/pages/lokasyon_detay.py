@@ -342,6 +342,7 @@ with tab1:
             "⚙️ Kojen Üretim":         "kojen",
             "🔌 Şebeke Tüketimi":      "sebeke",
             "🏭 MCC Tüketimi":         "mcc",
+            "🔥 Kazan Doğalgaz":       "kazan",
         }
         secim = st.selectbox(
             "Grafik Seçin", list(grafik_secenekler.keys()),
@@ -495,6 +496,28 @@ with tab1:
                 st.plotly_chart(fig_mcc, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("MCC tüketim verisi bulunamadı.")
+
+        # ── Kazan Doğalgaz ──
+        elif grafik_tip == "kazan":
+            if "Kazan_Dogalgaz_m3" in son30.columns and not son30.empty:
+                kaz_df = son30.groupby(son30["Tarih"].dt.date)["Kazan_Dogalgaz_m3"].sum().reset_index()
+                kaz_df.columns = ["Tarih", "m3"]
+                fig_kaz = go.Figure(go.Bar(
+                    x=kaz_df["Tarih"], y=kaz_df["m3"],
+                    marker=dict(color="rgba(239,68,68,0.75)"),
+                    hovertemplate="<b>%{x}</b><br>%{y:,.1f} m³<extra></extra>",
+                ))
+                fig_kaz.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#a0c8ff", family="Inter"),
+                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
+                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                               title=dict(text="m³", font=dict(size=10))),
+                )
+                st.plotly_chart(fig_kaz, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.info("Kazan doğalgaz verisi bulunamadı.")
 
         # ── Kojen Üretim ──
         elif grafik_tip == "kojen":
