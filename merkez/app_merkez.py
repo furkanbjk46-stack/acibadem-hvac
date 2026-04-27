@@ -305,6 +305,30 @@ def fetch_lokasyonlar(url, key):
     except:
         return []
 
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_m2_supabase(url, key):
+    """Supabase ayarlar tablosundan m² değerlerini çek."""
+    try:
+        from supabase import create_client
+        import json as _json
+        c = create_client(url, key)
+        r = c.table("ayarlar").select("value").eq("key", "m2_degerler").execute()
+        if r.data:
+            return _json.loads(r.data[0]["value"])
+    except Exception:
+        pass
+    return {}
+
+def save_m2_supabase(url, key, m2_dict):
+    """m² değerlerini Supabase ayarlar tablosuna kaydet."""
+    from supabase import create_client
+    import json as _json
+    c = create_client(url, key)
+    c.table("ayarlar").upsert({
+        "key": "m2_degerler",
+        "value": _json.dumps({k: int(v) for k, v in m2_dict.items()})
+    }).execute()
+
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_guncellemeler(url, key):
     try:
@@ -320,8 +344,12 @@ url  = config.get("supabase_url","")
 key  = config.get("supabase_key","")
 bagli = bool(url and "BURAYA" not in url)
 
-# Config'den m² değerlerini yükle (yoksa HASTANELER default'u kullan)
-m2_config = config.get("m2_degerler", {})
+# m² değerlerini Supabase'den yükle (yoksa config/default kullan)
+m2_config = {}
+if bagli:
+    m2_config = fetch_m2_supabase(url, key)
+if not m2_config:
+    m2_config = config.get("m2_degerler", {})
 for lok_id in HASTANELER:
     if lok_id in m2_config:
         HASTANELER[lok_id]["m2"] = int(m2_config[lok_id])
@@ -1144,9 +1172,15 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                 help=f"Mevcut: {mevcut_m2:,} m²"
             )
         if st.button("💾 m² Değerlerini Kaydet", key="btn_m2"):
-            cfg_yeni = config.copy()
-            cfg_yeni["m2_degerler"] = {k: int(v) for k, v in yeni_m2.items()}
-            os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
-            st.success("✅ m² değerleri kaydedildi. Sayfayı yenileyin.")
+            try:
+                save_m2_supabase(url, key, yeni_m2)
+                fetch_m2_supabase.clear()
+                st.success("✅ m² değerleri kaydedildi. Sayfayı yenileyin.")
+            except Exception as ex:
+                # Supabase başarısız olursa local dosyaya yaz
+                cfg_yeni = config.copy()
+                cfg_yeni["m2_degerler"] = {k: int(v) for k, v in yeni_m2.items()}
+                os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                    json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
+                st.warning(f"⚠️ Supabase'e yazılamadı, local kaydedildi: {ex}")
