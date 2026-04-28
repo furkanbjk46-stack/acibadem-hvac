@@ -1,6 +1,10 @@
 """
 BACnet Agent — Maslak PC'de çalışır (192.168.0.254).
-Device 2099296'dan AI:1 ve AI:2 okur -> CSV + Supabase.
+Device 2099296 (MASLAK2'AS65) -> IP: 192.168.0.237
+AI:1 ve AI:2 okur -> CSV + Supabase.
+
+NOT: Desigo CC açıkken PXC direkt yanıt vermiyor.
+     Bu script Desigo kapalıyken çalışır.
 
 Çalıştırma: python bacnet_agent.py
 """
@@ -12,13 +16,14 @@ import csv
 import os
 from datetime import datetime
 
-LOCAL_IP   = "192.168.0.254"
-LOCAL_PORT = 47808
-BROADCAST  = "192.168.0.255"
-TIMEOUT    = 5.0
-CSV_FILE   = "energy_data.csv"
+LOCAL_IP    = "192.168.0.254"
+LOCAL_PORT  = 47808
+BROADCAST   = "192.168.0.255"
+TIMEOUT     = 5.0
+CSV_FILE    = "energy_data.csv"
 
-TARGET_DEVICE = 2099296
+TARGET_DEVICE    = 2099296
+TARGET_DEVICE_IP = "192.168.0.237"   # I-Am ile keşfedildi — hardcode
 
 # Okunacak noktalar: (obj_type, obj_instance, property_id, label)
 POINTS = [
@@ -199,15 +204,11 @@ def supabase_gonder(row):
 def main(aralik=60):
     print("=" * 55)
     print(f"BACnet Agent — LOCAL_IP={LOCAL_IP}")
-    print(f"Hedef Device: {TARGET_DEVICE}  |  Aralık: {aralik}s")
+    print(f"Device: {TARGET_DEVICE} @ {TARGET_DEVICE_IP}  |  Aralık: {aralik}s")
     print("=" * 55)
 
     fieldnames = ["timestamp"] + [p[3] for p in POINTS]
-
-    # Cihazın IP'sini bir kez bul
-    print("\nCihaz keşfi yapılıyor...")
-    device_ip = cihaz_ip_bul(TARGET_DEVICE)
-    print(f"Kullanılacak IP: {device_ip}\n")
+    device_ip  = TARGET_DEVICE_IP
 
     while True:
         ts  = datetime.now().isoformat(timespec="seconds")
@@ -232,7 +233,7 @@ def main(aralik=60):
         if supabase_gonder(row):
             print("  -> Supabase OK")
 
-        # Cihaz kaybolursa yeniden keşfet
+        # Cihaz kaybolursa Who-Is ile yeniden keşfet
         if not tumu_ok:
             print("  Bazı noktalar okunamadı, cihaz yeniden aranıyor...")
             device_ip = cihaz_ip_bul(TARGET_DEVICE)
