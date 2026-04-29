@@ -686,7 +686,15 @@ def generate_pdf(df, period_df, lok_info, lok_id, period_type, period_str, m2):
     try:
         from fpdf import FPDF  # noqa — sadece import testi
     except ImportError:
-        return None, None, "fpdf2 yuklu degil. Terminal: pip install fpdf2"
+        import subprocess
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "fpdf2", "--quiet"],
+                timeout=60
+            )
+            from fpdf import FPDF  # noqa
+        except Exception as e:
+            return None, None, f"fpdf2 yuklenemedi: {e}. Terminal: pip install fpdf2"
 
     try:
         import plotly.io  # noqa
