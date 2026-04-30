@@ -97,19 +97,38 @@ button span[data-testid="stIconMaterial"] {
 </style>
 """, unsafe_allow_html=True)
 
-# ── Lokasyon bilgileri ────────────────────────────────
+# ── Lokasyon bilgileri (app_merkez.py ile senkron) ───────
 HASTANELER = {
-    "maslak":        {"isim": "Acıbadem Maslak",        "kisa": "MASLAK",      "m2": 15000, "renk": "#00d4ff"},
-    "altunizade":    {"isim": "Acıbadem Altunizade",    "kisa": "ALTUNİZADE",  "m2": 10000, "renk": "#f59e0b"},
-    "kozyatagi":     {"isim": "Acıbadem Kozyatağı",     "kisa": "KOZYATAĞİ",  "m2": 12000, "renk": "#10b981"},
-    "taksim":        {"isim": "Acıbadem Taksim",        "kisa": "TAKSİM",      "m2":  8000, "renk": "#a855f7"},
-    "atakent":       {"isim": "Acıbadem Atakent",       "kisa": "ATAKENT",     "m2": 20000, "renk": "#f97316"},
-    "atasehir":      {"isim": "Acıbadem Ataşehir",      "kisa": "ATAŞEHİR",    "m2": 14000, "renk": "#06b6d4"},
-    "bakirkoy":      {"isim": "Acıbadem Bakırköy",      "kisa": "BAKIRKÖY",    "m2": 12000, "renk": "#84cc16"},
-    "fulya":         {"isim": "Acıbadem Fulya",         "kisa": "FULYA",       "m2":  9000, "renk": "#e879f9"},
-    "international": {"isim": "Acıbadem International", "kisa": "INTERNAT.",   "m2": 18000, "renk": "#14b8a6"},
-    "kadikoy":       {"isim": "Acıbadem Kadıköy",       "kisa": "KADİKÖY",     "m2":  8000, "renk": "#ec4899"},
-    "kartal":        {"isim": "Acıbadem Kartal",        "kisa": "KARTAL",      "m2": 11000, "renk": "#ef4444"},
+    # ── İstanbul ──
+    "maslak":        {"isim": "Acıbadem Maslak",         "kisa": "MASLAK",       "m2": 15000, "renk": "#00d4ff"},
+    "altunizade":    {"isim": "Acıbadem Altunizade",     "kisa": "ALTUNİZADE",   "m2": 10000, "renk": "#f59e0b"},
+    "kozyatagi":     {"isim": "Acıbadem Kozyatağı",      "kisa": "KOZYATAĞİ",   "m2": 12000, "renk": "#10b981"},
+    "taksim":        {"isim": "Acıbadem Taksim",         "kisa": "TAKSİM",       "m2":  8000, "renk": "#a855f7"},
+    "atakent":       {"isim": "Acıbadem Atakent",        "kisa": "ATAKENT",      "m2": 20000, "renk": "#f97316"},
+    "atasehir":      {"isim": "Acıbadem Ataşehir",       "kisa": "ATAŞEHİR",     "m2": 14000, "renk": "#06b6d4"},
+    "bakirkoy":      {"isim": "Acıbadem Bakırköy",       "kisa": "BAKIRKÖY",     "m2": 12000, "renk": "#84cc16"},
+    "fulya":         {"isim": "Acıbadem Fulya",          "kisa": "FULYA",        "m2":  9000, "renk": "#e879f9"},
+    "international": {"isim": "Acıbadem International",  "kisa": "INTERNAT.",    "m2": 18000, "renk": "#14b8a6"},
+    "kadikoy":       {"isim": "Acıbadem Kadıköy",        "kisa": "KADİKÖY",      "m2":  8000, "renk": "#ec4899"},
+    "kartal":        {"isim": "Acıbadem Kartal",         "kisa": "KARTAL",       "m2": 11000, "renk": "#ef4444"},
+    # ── Ankara ──
+    "ankara":          {"isim": "Acıbadem Ankara",           "kisa": "ANKARA",      "m2": 16000, "renk": "#fb7185"},
+    "bayindir":        {"isim": "Acıbadem Bayındır",          "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
+    # ── Bursa ──
+    "bursa":           {"isim": "Acıbadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#fbbf24"},
+    # ── Kocaeli ──
+    "kocaeli":         {"isim": "Acıbadem Kocaeli",           "kisa": "KOCAELİ",     "m2": 10000, "renk": "#34d399"},
+    # ── Eskişehir ──
+    "eskisehir":       {"isim": "Acıbadem Eskişehir",         "kisa": "ESKİŞEHİR",   "m2":  9000, "renk": "#818cf8"},
+    # ── İzmir ──
+    "izmir":           {"isim": "Acıbadem İzmir Kent",        "kisa": "İZMİR",       "m2": 15000, "renk": "#38bdf8"},
+    # ── Kayseri ──
+    "kayseri":         {"isim": "Acıbadem Kayseri",           "kisa": "KAYSERİ",     "m2": 11000, "renk": "#a78bfa"},
+    # ── Adana ──
+    "adana":           {"isim": "Acıbadem Adana",             "kisa": "ADANA",       "m2": 12000, "renk": "#f472b6"},
+    "adana_ortopedia": {"isim": "Acıbadem Adana Ortopedia",   "kisa": "ADANA ORT.",  "m2":  5000, "renk": "#e879f9"},
+    # ── Bodrum ──
+    "bodrum":          {"isim": "Acıbadem Bodrum",            "kisa": "BODRUM",      "m2":  7000, "renk": "#2dd4bf"},
 }
 
 # ── Config & Lokasyon seç ────────────────────────────

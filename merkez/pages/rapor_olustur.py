@@ -1,5 +1,5 @@
 # pages/rapor_olustur.py
-# Lokasyon Rapor Oluşturma — Enerji Portalı Standart Formatı
+# Lokasyon Rapor Oluşturma — Enerji Portali Standart Formati
 
 from __future__ import annotations
 import os, sys, json, io, tempfile
@@ -70,19 +70,38 @@ html, body, [data-testid="stAppViewContainer"] { background: #020b18 !important;
 </style>
 """, unsafe_allow_html=True)
 
-# ── Lokasyon tanımları ────────────────────────────────────
+# ── Lokasyon tanımları (app_merkez.py ile senkron) ────────
 HASTANELER = {
-    "maslak":        {"isim": "Acibadem Maslak",        "kisa": "MASLAK",      "m2": 15000, "renk": "#00d4ff"},
-    "altunizade":    {"isim": "Acibadem Altunizade",    "kisa": "ALTUNIZADE",  "m2": 10000, "renk": "#f59e0b"},
-    "kozyatagi":     {"isim": "Acibadem Kozyatagi",     "kisa": "KOZYATAGI",   "m2": 12000, "renk": "#10b981"},
-    "taksim":        {"isim": "Acibadem Taksim",        "kisa": "TAKSIM",      "m2":  8000, "renk": "#a855f7"},
-    "atakent":       {"isim": "Acibadem Atakent",       "kisa": "ATAKENT",     "m2": 20000, "renk": "#f97316"},
-    "atasehir":      {"isim": "Acibadem Atasehir",      "kisa": "ATASEHIR",    "m2": 14000, "renk": "#06b6d4"},
-    "bakirkoy":      {"isim": "Acibadem Bakirkoy",      "kisa": "BAKIRKOY",    "m2": 12000, "renk": "#84cc16"},
-    "fulya":         {"isim": "Acibadem Fulya",         "kisa": "FULYA",       "m2":  9000, "renk": "#e879f9"},
-    "international": {"isim": "Acibadem International", "kisa": "INTERNAT.",   "m2": 18000, "renk": "#14b8a6"},
-    "kadikoy":       {"isim": "Acibadem Kadikoy",       "kisa": "KADIKOY",     "m2":  8000, "renk": "#ec4899"},
-    "kartal":        {"isim": "Acibadem Kartal",        "kisa": "KARTAL",      "m2": 11000, "renk": "#ef4444"},
+    # ── İstanbul ──
+    "maslak":        {"isim": "Acibadem Maslak",         "kisa": "MASLAK",      "m2": 15000, "renk": "#00d4ff"},
+    "altunizade":    {"isim": "Acibadem Altunizade",     "kisa": "ALTUNIZADE",  "m2": 10000, "renk": "#f59e0b"},
+    "kozyatagi":     {"isim": "Acibadem Kozyatagi",      "kisa": "KOZYATAGI",   "m2": 12000, "renk": "#10b981"},
+    "taksim":        {"isim": "Acibadem Taksim",         "kisa": "TAKSIM",      "m2":  8000, "renk": "#a855f7"},
+    "atakent":       {"isim": "Acibadem Atakent",        "kisa": "ATAKENT",     "m2": 20000, "renk": "#f97316"},
+    "atasehir":      {"isim": "Acibadem Atasehir",       "kisa": "ATASEHIR",    "m2": 14000, "renk": "#06b6d4"},
+    "bakirkoy":      {"isim": "Acibadem Bakirkoy",       "kisa": "BAKIRKOY",    "m2": 12000, "renk": "#84cc16"},
+    "fulya":         {"isim": "Acibadem Fulya",          "kisa": "FULYA",       "m2":  9000, "renk": "#e879f9"},
+    "international": {"isim": "Acibadem International",  "kisa": "INTERNAT.",   "m2": 18000, "renk": "#14b8a6"},
+    "kadikoy":       {"isim": "Acibadem Kadikoy",        "kisa": "KADIKOY",     "m2":  8000, "renk": "#ec4899"},
+    "kartal":        {"isim": "Acibadem Kartal",         "kisa": "KARTAL",      "m2": 11000, "renk": "#ef4444"},
+    # ── Ankara ──
+    "ankara":          {"isim": "Acibadem Ankara",           "kisa": "ANKARA",      "m2": 16000, "renk": "#fb7185"},
+    "bayindir":        {"isim": "Acibadem Bayindir",          "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
+    # ── Bursa ──
+    "bursa":           {"isim": "Acibadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#fbbf24"},
+    # ── Kocaeli ──
+    "kocaeli":         {"isim": "Acibadem Kocaeli",           "kisa": "KOCAELI",     "m2": 10000, "renk": "#34d399"},
+    # ── Eskişehir ──
+    "eskisehir":       {"isim": "Acibadem Eskisehir",         "kisa": "ESKISEHIR",   "m2":  9000, "renk": "#818cf8"},
+    # ── İzmir ──
+    "izmir":           {"isim": "Acibadem Izmir Kent",        "kisa": "IZMIR",       "m2": 15000, "renk": "#38bdf8"},
+    # ── Kayseri ──
+    "kayseri":         {"isim": "Acibadem Kayseri",           "kisa": "KAYSERI",     "m2": 11000, "renk": "#a78bfa"},
+    # ── Adana ──
+    "adana":           {"isim": "Acibadem Adana",             "kisa": "ADANA",       "m2": 12000, "renk": "#f472b6"},
+    "adana_ortopedia": {"isim": "Acibadem Adana Ortopedia",   "kisa": "ADANA ORT.",  "m2":  5000, "renk": "#e879f9"},
+    # ── Bodrum ──
+    "bodrum":          {"isim": "Acibadem Bodrum",            "kisa": "BODRUM",      "m2":  7000, "renk": "#2dd4bf"},
 }
 
 # ── Config ────────────────────────────────────────────────
@@ -111,8 +130,8 @@ key = config.get("supabase_key", "")
 
 lok_id = st.session_state.get("rapor_lokasyon", None)
 if not lok_id or lok_id not in HASTANELER:
-    st.error("Lokasyon secilmedi. Ana sayfaya donun.")
-    if st.button("Ana Sayfaya Don"):
+    st.error("⚠️ Lokasyon secilmedi veya tanimli degil. Ana sayfaya donun.")
+    if st.button("⬅ Ana Sayfaya Don"):
         st.switch_page("app_merkez.py")
     st.stop()
 
@@ -120,6 +139,25 @@ lok_info = HASTANELER[lok_id]
 renk     = lok_info["renk"]
 m2       = lok_info.get("m2", 10000)
 rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
+
+# ── m² Supabase'den al (varsa) ──────────────────────────
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_m2_supabase(url, key):
+    try:
+        from supabase import create_client
+        import json as _json
+        c = create_client(url, key)
+        r = c.table("ayarlar").select("value").eq("key", "m2_degerler").execute()
+        if r.data:
+            return _json.loads(r.data[0]["value"])
+    except Exception:
+        pass
+    return {}
+
+if url and "BURAYA" not in url:
+    m2_map = fetch_m2_supabase(url, key)
+    if lok_id in m2_map:
+        m2 = int(m2_map[lok_id])
 
 # ── Veri çek ─────────────────────────────────────────────
 @st.cache_data(ttl=120, show_spinner=False)
@@ -146,6 +184,8 @@ def fetch_lok_data(url, key, lok_id):
             for col in df.columns:
                 if col not in ["id", "lokasyon_id", "Tarih", "Kar_Eritme_Aktif"]:
                     df[col] = pd.to_numeric(df[col], errors="coerce")
+            df = df.drop_duplicates(subset=["Tarih"], keep="last")
+            df = df.sort_values("Tarih").reset_index(drop=True)
             return df
     except Exception:
         pass
@@ -156,7 +196,7 @@ df = fetch_lok_data(url, key, lok_id)
 # ── Header ───────────────────────────────────────────────
 col_geri, col_baslik = st.columns([1, 8])
 with col_geri:
-    if st.button("Geri"):
+    if st.button("⬅ Geri"):
         st.switch_page("pages/lokasyon_detay.py")
 with col_baslik:
     st.markdown(
@@ -173,7 +213,7 @@ with col_baslik:
 st.markdown("---")
 
 if df.empty:
-    st.warning("Bu lokasyon icin veri bulunamadi.")
+    st.warning("⚠️ Bu lokasyon icin Supabase'de veri bulunamadi.")
     st.stop()
 
 son_tarih = df["Tarih"].dropna().max()
@@ -221,29 +261,41 @@ st.markdown(
 # ══════════════════════════════════════════════════════════
 
 def _sanitize(text: str) -> str:
-    """Emoji/sembol/Unicode özel karakter → ASCII, metin temizleme."""
+    """Emoji/sembol/Unicode ozel karakter → ASCII, metin temizleme."""
     if text is None:
         return ""
+    text = str(text)
     for char, rep in {
         # Tire/cizgi varyantlari
-        "\u2014": " - ",   # em dash —
-        "\u2013": " - ",   # en dash –
-        "\u2012": "-",     # figure dash
-        "\u2015": "-",     # horizontal bar
+        "—": " - ",   # em dash —
+        "–": " - ",   # en dash –
+        "‒": "-",     # figure dash
+        "―": "-",     # horizontal bar
         # Tirnak
-        "\u2018": "'", "\u2019": "'",   # sol/sag tek tirnak
-        "\u201c": '"', "\u201d": '"',   # sol/sag cift tirnak
+        "‘": "'", "’": "'",   # sol/sag tek tirnak
+        "“": '"', "”": '"',   # sol/sag cift tirnak
         # Diger semboller
-        "•": "-", "·": ".", "→": "->", "←": "<-", "↑": "^", "↓": "v",
-        "…": "...",
+        "•": "-", "·": ".", "→": "->", "←": "<-",
+        "↑": "^", "↓": "v", "…": "...",
+        # Turk karakterleri → ASCII
+        "ş": "s", "Ş": "S",   # ş Ş
+        "ğ": "g", "Ğ": "G",   # ğ Ğ
+        "ı": "i",                   # ı
+        "ö": "o", "Ö": "O",   # ö Ö
+        "ü": "u", "Ü": "U",   # ü Ü
+        "ç": "c", "Ç": "C",   # ç Ç
+        "İ": "I",                   # İ
         # Emoji
-        "📊": "", "✅": "[OK]", "❌": "[X]", "⚠️": "[!]",
-        "📈": "", "📉": "", "🔹": "*", "❄️": "", "🔥": "",
-        "🟢": "[+]", "🟡": "[-]", "🔴": "[!]",
-        "📄": "", "📐": "", "⚡": "", "🏥": "",
+        "\U0001f4ca": "", "✅": "[OK]", "❌": "[X]",
+        "⚠": "[!]", "️": "",
+        "\U0001f4c8": "", "\U0001f4c9": "", "\U0001f539": "*",
+        "❄": "", "\U0001f525": "",
+        "\U0001f7e2": "[+]", "\U0001f7e1": "[-]", "\U0001f534": "[!]",
+        "\U0001f4c4": "", "\U0001f4d0": "", "⚡": "", "\U0001f3e5": "",
     }.items():
         text = text.replace(char, rep)
-    return text
+    # Geri kalan non-ASCII karakterleri kaldir
+    return text.encode("ascii", errors="ignore").decode("ascii")
 
 
 def _download_dejavu(fonts_dir):
@@ -251,9 +303,9 @@ def _download_dejavu(fonts_dir):
     import urllib.request
     BASE_URL = "https://github.com/dejavu-fonts/dejavu-fonts/raw/master/ttf/"
     files = {
-        "DejaVuSans.ttf":        BASE_URL + "DejaVuSans.ttf",
-        "DejaVuSans-Bold.ttf":   BASE_URL + "DejaVuSans-Bold.ttf",
-        "DejaVuSans-Oblique.ttf":BASE_URL + "DejaVuSans-Oblique.ttf",
+        "DejaVuSans.ttf":         BASE_URL + "DejaVuSans.ttf",
+        "DejaVuSans-Bold.ttf":    BASE_URL + "DejaVuSans-Bold.ttf",
+        "DejaVuSans-Oblique.ttf": BASE_URL + "DejaVuSans-Oblique.ttf",
     }
     os.makedirs(fonts_dir, exist_ok=True)
     for fname, furl in files.items():
@@ -266,150 +318,182 @@ def _download_dejavu(fonts_dir):
 
 
 def _setup_unicode_font(pdf):
-    """DejaVu Unicode font ekle — Turkce karakter destegi.
-    Font yoksa uygulama klasorune indirir."""
+    """DejaVu Unicode font ekle. Font yoksa indirir; yoksa Helvetica kullanir."""
     from pathlib import Path
-    BASE       = Path(__file__).parent.parent
-    fonts_dir  = BASE / "fonts"
+    BASE      = Path(__file__).parent.parent
+    fonts_dir = BASE / "fonts"
 
     def cands(name):
         return [
             fonts_dir / name,
             Path("C:/Windows/Fonts") / name,
             Path("/usr/share/fonts/truetype/dejavu") / name,
+            Path("/usr/share/fonts") / name,
         ]
 
-    reg  = next((p for p in cands("DejaVuSans.ttf") if p.exists()), None)
+    reg = next((p for p in cands("DejaVuSans.ttf") if p.exists()), None)
 
     # Font bulunamazsa indir, tekrar dene
     if reg is None:
-        _download_dejavu(str(fonts_dir))
-        reg  = next((p for p in cands("DejaVuSans.ttf") if p.exists()), None)
+        try:
+            _download_dejavu(str(fonts_dir))
+        except Exception:
+            pass
+        reg = next((p for p in cands("DejaVuSans.ttf") if p.exists()), None)
+
+    if reg is None:
+        return "Helvetica"
 
     bold = next((p for p in cands("DejaVuSans-Bold.ttf") if p.exists()), None)
     ital = next((p for p in cands("DejaVuSans-Oblique.ttf") if p.exists()), None)
 
-    if reg:
-        pdf.add_font("DejaVu", "",  str(reg),  uni=True)
-        if bold: pdf.add_font("DejaVu", "B", str(bold), uni=True)
-        pdf.add_font("DejaVu", "I", str(ital) if ital else str(reg), uni=True)
+    try:
+        # fpdf2 2.x — uni parametresi bazen deprecated, try/except ile
+        try:
+            pdf.add_font("DejaVu", "",  str(reg),  uni=True)
+            if bold: pdf.add_font("DejaVu", "B", str(bold), uni=True)
+            pdf.add_font("DejaVu", "I", str(ital) if ital else str(reg), uni=True)
+        except TypeError:
+            # Yeni fpdf2 — uni parametresi yok
+            pdf.add_font("DejaVu", "",  str(reg))
+            if bold: pdf.add_font("DejaVu", "B", str(bold))
+            pdf.add_font("DejaVu", "I", str(ital) if ital else str(reg))
         return "DejaVu"
-    return "Helvetica"
+    except Exception:
+        return "Helvetica"
+
+
+def _to_png(fig) -> Optional[bytes]:
+    """Plotly figuru PNG'e cevir. kaleido yoksa None doner."""
+    try:
+        import plotly.io as pio
+        return pio.to_image(fig, format="png", scale=2)
+    except Exception:
+        pass
+    # kaleido yoksa basit fallback: None don
+    return None
 
 
 def _plotly_bar(period_df, lok_renk) -> Optional[bytes]:
     """Gunluk tuketim bar grafigi."""
     try:
         import plotly.graph_objects as go
-        import plotly.io as pio
     except ImportError:
         return None
 
     if "Toplam_Hastane_Tuketim_kWh" not in period_df.columns or period_df.empty:
         return None
 
-    gun = (period_df.groupby(period_df["Tarih"].dt.date)["Toplam_Hastane_Tuketim_kWh"]
-           .sum().reset_index())
-    gun.columns = ["Tarih", "kWh"]
+    try:
+        gun = (period_df.groupby(period_df["Tarih"].dt.date)["Toplam_Hastane_Tuketim_kWh"]
+               .sum().reset_index())
+        gun.columns = ["Tarih", "kWh"]
 
-    colors = [lok_renk] * len(gun)
-    if colors:
-        colors[-1] = "#00d4ff"
+        colors = [lok_renk] * len(gun)
+        if colors:
+            colors[-1] = "#00d4ff"
 
-    fig = go.Figure(go.Bar(
-        x=[str(d) for d in gun["Tarih"]],
-        y=gun["kWh"],
-        marker_color=colors,
-        hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
-    ))
-    fig.update_layout(
-        paper_bgcolor="#1a2332", plot_bgcolor="#0f172a",
-        font=dict(color="white", size=11),
-        xaxis=dict(gridcolor="rgba(255,255,255,0.08)", tickangle=-35,
-                   tickfont=dict(size=9)),
-        yaxis=dict(gridcolor="rgba(255,255,255,0.08)", title="kWh",
-                   tickfont=dict(size=9)),
-        margin=dict(l=50, r=20, t=30, b=60),
-        width=560, height=280,
-        title=dict(text="Gunluk Tuketim (kWh)", font=dict(size=13, color="white")),
-    )
-    return pio.to_image(fig, format="png", scale=2)
+        fig = go.Figure(go.Bar(
+            x=[str(d) for d in gun["Tarih"]],
+            y=gun["kWh"],
+            marker_color=colors,
+            hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
+        ))
+        fig.update_layout(
+            paper_bgcolor="#1a2332", plot_bgcolor="#0f172a",
+            font=dict(color="white", size=11),
+            xaxis=dict(gridcolor="rgba(255,255,255,0.08)", tickangle=-35,
+                       tickfont=dict(size=9)),
+            yaxis=dict(gridcolor="rgba(255,255,255,0.08)", title="kWh",
+                       tickfont=dict(size=9)),
+            margin=dict(l=50, r=20, t=30, b=60),
+            width=560, height=280,
+            title=dict(text="Gunluk Tuketim (kWh)", font=dict(size=13, color="white")),
+        )
+        return _to_png(fig)
+    except Exception:
+        return None
 
 
 def _plotly_chiller(period_df) -> Optional[bytes]:
     """Chiller Set + Dis Hava trend grafigi."""
     try:
         import plotly.graph_objects as go
-        import plotly.io as pio
     except ImportError:
         return None
 
     if "Chiller_Set_Temp_C" not in period_df.columns:
         return None
-    ch = period_df.dropna(subset=["Chiller_Set_Temp_C"]).copy()
-    if ch.empty:
-        return None
 
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=ch["Tarih"], y=ch["Chiller_Set_Temp_C"],
-        name="Chiller Set", line=dict(color="#a855f7", width=2.5),
-        fill="tozeroy", fillcolor="rgba(168,85,247,0.07)",
-    ))
-    if "Dis_Hava_Sicakligi_C" in ch.columns and ch["Dis_Hava_Sicakligi_C"].notna().any():
+    try:
+        ch = period_df.dropna(subset=["Chiller_Set_Temp_C"]).copy()
+        if ch.empty:
+            return None
+
+        fig = go.Figure()
         fig.add_trace(go.Scatter(
-            x=ch["Tarih"], y=ch["Dis_Hava_Sicakligi_C"],
-            name="Dis Hava", line=dict(color="#f59e0b", width=1.8, dash="dot"),
-            yaxis="y2",
+            x=ch["Tarih"], y=ch["Chiller_Set_Temp_C"],
+            name="Chiller Set", line=dict(color="#a855f7", width=2.5),
+            fill="tozeroy", fillcolor="rgba(168,85,247,0.07)",
         ))
-    fig.update_layout(
-        paper_bgcolor="#1a2332", plot_bgcolor="#0f172a",
-        font=dict(color="white", size=11),
-        xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
-        yaxis=dict(title="Set degeri (C)", gridcolor="rgba(255,255,255,0.08)",
-                   tickfont=dict(size=9)),
-        yaxis2=dict(title="Dis Hava (C)", overlaying="y", side="right",
-                    tickfont=dict(size=9)),
-        legend=dict(orientation="h", y=1.12, font=dict(size=10)),
-        margin=dict(l=50, r=50, t=40, b=30),
-        width=560, height=260,
-        title=dict(text="Chiller Set Trendi", font=dict(size=13, color="white")),
-    )
-    return pio.to_image(fig, format="png", scale=2)
+        if "Dis_Hava_Sicakligi_C" in ch.columns and ch["Dis_Hava_Sicakligi_C"].notna().any():
+            fig.add_trace(go.Scatter(
+                x=ch["Tarih"], y=ch["Dis_Hava_Sicakligi_C"],
+                name="Dis Hava", line=dict(color="#f59e0b", width=1.8, dash="dot"),
+                yaxis="y2",
+            ))
+        fig.update_layout(
+            paper_bgcolor="#1a2332", plot_bgcolor="#0f172a",
+            font=dict(color="white", size=11),
+            xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
+            yaxis=dict(title="Set degeri (C)", gridcolor="rgba(255,255,255,0.08)",
+                       tickfont=dict(size=9)),
+            yaxis2=dict(title="Dis Hava (C)", overlaying="y", side="right",
+                        tickfont=dict(size=9)),
+            legend=dict(orientation="h", y=1.12, font=dict(size=10)),
+            margin=dict(l=50, r=50, t=40, b=30),
+            width=560, height=260,
+            title=dict(text="Chiller Set Trendi", font=dict(size=13, color="white")),
+        )
+        return _to_png(fig)
+    except Exception:
+        return None
 
 
 def _plotly_pie(sebeke, kojen) -> Optional[bytes]:
     """Enerji kaynagi pasta grafigi."""
     try:
         import plotly.graph_objects as go
-        import plotly.io as pio
     except ImportError:
         return None
 
     if sebeke <= 0 and kojen <= 0:
         return None
 
-    labels = ["Sebeke", "Kojen Uretim"]
-    values = [sebeke, kojen]
-    colors = ["#3b82f6", "#10b981"]
+    try:
+        labels = ["Sebeke", "Kojen Uretim"]
+        values = [max(sebeke, 0), max(kojen, 0)]
+        colors = ["#3b82f6", "#10b981"]
 
-    fig = go.Figure(go.Pie(
-        labels=labels, values=values, hole=0.45,
-        marker=dict(colors=colors, line=dict(color="#1a2332", width=2)),
-        textinfo="label+percent",
-        textfont=dict(size=12, color="white"),
-    ))
-    fig.update_layout(
-        paper_bgcolor="#1a2332",
-        font=dict(color="white", size=11),
-        showlegend=True,
-        legend=dict(orientation="h", y=-0.15, x=0.5, xanchor="center",
-                    font=dict(size=10, color="white")),
-        margin=dict(l=10, r=10, t=30, b=40),
-        width=300, height=280,
-        title=dict(text="Enerji Kaynagi", font=dict(size=13, color="white")),
-    )
-    return pio.to_image(fig, format="png", scale=2)
+        fig = go.Figure(go.Pie(
+            labels=labels, values=values, hole=0.45,
+            marker=dict(colors=colors, line=dict(color="#1a2332", width=2)),
+            textinfo="label+percent",
+            textfont=dict(size=12, color="white"),
+        ))
+        fig.update_layout(
+            paper_bgcolor="#1a2332",
+            font=dict(color="white", size=11),
+            showlegend=True,
+            legend=dict(orientation="h", y=-0.15, x=0.5, xanchor="center",
+                        font=dict(size=10, color="white")),
+            margin=dict(l=10, r=10, t=30, b=40),
+            width=300, height=280,
+            title=dict(text="Enerji Kaynagi", font=dict(size=13, color="white")),
+        )
+        return _to_png(fig)
+    except Exception:
+        return None
 
 
 # ── PDF Sınıfı ───────────────────────────────────────────
@@ -569,7 +653,8 @@ class HastaneRaporPDF:
 
         p.set_y(y0 + h + 5)
 
-    def add_chart(self, img_bytes: bytes, w: float = 190, h: float = 0):
+    def add_chart(self, img_bytes: bytes, w: float = 190, h: float = 70):
+        """Grafik PNG'i PDF'e ekle. img_bytes None ise atla."""
         if img_bytes is None:
             return
         p = self.pdf
@@ -577,11 +662,11 @@ class HastaneRaporPDF:
         try:
             tmp.write(img_bytes)
             tmp.close()
-            p.image(tmp.name, x=10, y=p.get_y(), w=w, h=h)
-            if h > 0:
-                p.set_y(p.get_y() + h + 4)
-            else:
-                p.ln(6)
+            y0 = p.get_y()
+            p.image(tmp.name, x=10, y=y0, w=w, h=h)
+            p.set_y(y0 + h + 4)
+        except Exception:
+            pass
         finally:
             try:
                 os.unlink(tmp.name)
@@ -609,6 +694,8 @@ class HastaneRaporPDF:
                 tmp.write(img)
                 tmp.close()
                 p.image(tmp.name, x=x, y=y0, w=iw, h=h)
+            except Exception:
+                pass
             finally:
                 try:
                     os.unlink(tmp.name)
@@ -652,21 +739,22 @@ class HastaneRaporPDF:
 
         self.kpi_row([
             ("TOPLAM TUKETIM",   f"{kwh_total/1000:,.2f}", "MWh",    CYAN),
-            ("kWh / m2",         f"{kwh_m2:.3f}",           "kWh/m2", AMBER),
-            ("CHILLER SET ORT.", f"{ch_set:.1f}" if ch_set else "--", "C",  PURPLE),
+            ("kWh / m2",          f"{kwh_m2:.3f}",           "kWh/m2", AMBER),
+            ("CHILLER SET ORT.", f"{ch_set:.1f}" if ch_set else "--", "C", PURPLE),
             ("TOPLAM DOGALGAZ",  f"{toplam_gaz:,.0f}",       "m3",    ORANGE),
         ])
 
         self.kpi_row([
-            ("SEBEKE TUKETIMI", f"{sebeke:,.0f}",  "kWh", CYAN),
-            ("KOJEN URETIMI",   f"{kojen:,.0f}",   "kWh", GREEN),
-            ("KAZAN DOGALGAZ",  f"{kazan_gaz:,.0f}", "m3", ORANGE),
-            ("SU TUKETIMI",     f"{su:,.1f}",       "m3",  BLUE2),
+            ("SEBEKE TUKETIMI",  f"{sebeke:,.0f}",    "kWh", CYAN),
+            ("KOJEN URETIMI",    f"{kojen:,.0f}",     "kWh", GREEN),
+            ("KAZAN DOGALGAZ",   f"{kazan_gaz:,.0f}", "m3",  ORANGE),
+            ("SU TUKETIMI",      f"{su:,.1f}",        "m3",  BLUE2),
         ])
 
         # ── 2. Tuketim Bar Grafigi ─────────────────────
-        self.section_title("GUNLUK TUKETIM (kWh)", CYAN)
-        self.add_chart(bar_img, w=190, h=68)
+        if bar_img:
+            self.section_title("GUNLUK TUKETIM (kWh)", CYAN)
+            self.add_chart(bar_img, w=190, h=68)
 
         # ── 3. Chiller + Pasta yan yana ───────────────
         if chiller_img or pie_img:
@@ -676,39 +764,70 @@ class HastaneRaporPDF:
         # ── Footer ────────────────────────────────────
         self._draw_footer()
 
-        buf = io.BytesIO()
-        p.output(buf)
-        return buf.getvalue()
+        # fpdf2 2.x — output() bytes doner
+        try:
+            raw = p.output()
+            if isinstance(raw, (bytes, bytearray)):
+                return bytes(raw)
+            # Eski API: output(dest) — BytesIO'ya yaz
+            buf = io.BytesIO()
+            p.output(buf)
+            return buf.getvalue()
+        except TypeError:
+            buf = io.BytesIO()
+            p.output(buf)
+            return buf.getvalue()
 
 
 # ── Rapor Oluştur ─────────────────────────────────────────
 def generate_pdf(df, period_df, lok_info, lok_id, period_type, period_str, m2):
+    # fpdf2 kurulu mu?
     try:
-        from fpdf import FPDF  # noqa — sadece import testi
+        from fpdf import FPDF  # noqa
     except ImportError:
-        return None, None, "fpdf2 yuklu degil. Terminal: pip install fpdf2"
+        return None, None, (
+            "fpdf2 kutuphanesi yuklu degil.\n"
+            "Terminalde: pip install fpdf2"
+        )
+
+    # plotly kurulu mu?
+    try:
+        import plotly.graph_objects  # noqa
+    except ImportError:
+        return None, None, (
+            "plotly kutuphanesi yuklu degil.\n"
+            "Terminalde: pip install plotly"
+        )
 
     try:
-        import plotly.io  # noqa
-    except ImportError:
-        return None, None, "plotly yuklu degil. Terminal: pip install plotly kaleido"
+        son_tarih = df["Tarih"].dropna().max()
+        lok_renk  = lok_info["renk"]
 
-    son_tarih = df["Tarih"].dropna().max()
+        with st.spinner("Grafikler olusturuluyor..."):
+            bar_img     = _plotly_bar(period_df, lok_renk)
+            chiller_img = _plotly_chiller(period_df)
+            sebeke_val  = period_df["Sebeke_Tuketim_kWh"].sum() if "Sebeke_Tuketim_kWh" in period_df.columns else 0
+            kojen_val   = period_df["Kojen_Uretim_kWh"].sum()   if "Kojen_Uretim_kWh"   in period_df.columns else 0
+            pie_img     = _plotly_pie(sebeke_val, kojen_val)
 
-    lok_renk = lok_info["renk"]
+        # kaleido yoksa grafik PNG'leri None — PDF grafiklerin yalnizca yazili bolumu olusur
+        grafik_uyari = ""
+        if bar_img is None and chiller_img is None:
+            grafik_uyari = (
+                "⚠️ Grafik goruntuleri olusturulamadi (kaleido kurulu degil olabilir).\n"
+                "Terminalde: pip install kaleido\n"
+                "PDF metin/KPI verileriyle olusturuldu."
+            )
 
-    with st.spinner("Grafikler olusturuluyor..."):
-        bar_img     = _plotly_bar(period_df, lok_renk)
-        chiller_img = _plotly_chiller(period_df)
-        sebeke_val  = period_df["Sebeke_Tuketim_kWh"].sum() if "Sebeke_Tuketim_kWh" in period_df.columns else 0
-        kojen_val   = period_df["Kojen_Uretim_kWh"].sum()   if "Kojen_Uretim_kWh"   in period_df.columns else 0
-        pie_img     = _plotly_pie(sebeke_val, kojen_val)
+        with st.spinner("PDF olusturuluyor..."):
+            rapor     = HastaneRaporPDF(lok_info, period_type, period_str)
+            pdf_bytes = rapor.build(period_df, m2, bar_img, chiller_img, pie_img)
 
-    rapor = HastaneRaporPDF(lok_info, period_type, period_str)
-    pdf_bytes = rapor.build(period_df, m2, bar_img, chiller_img, pie_img)
+        dosya = f"rapor_{lok_id}_{period_type.lower()}_{son_tarih.strftime('%Y%m%d')}.pdf"
+        return pdf_bytes, dosya, grafik_uyari if grafik_uyari else None
 
-    dosya = f"rapor_{lok_id}_{period_type.lower()}_{son_tarih.strftime('%Y%m%d')}.pdf"
-    return pdf_bytes, dosya, None
+    except Exception as ex:
+        return None, None, f"PDF olusturma hatasi: {ex}"
 
 
 # ── UI ───────────────────────────────────────────────────
@@ -716,23 +835,25 @@ st.markdown("")
 col_btn, _, col_dl = st.columns([2, 1, 2])
 
 with col_btn:
-    if st.button("Rapor Olustur", use_container_width=True):
+    if st.button("📄 Rapor Olustur", use_container_width=True):
         pdf_bytes, dosya_adi, hata = generate_pdf(
             df, period_df, lok_info, lok_id, period_type, period_str, m2
         )
-        if hata:
+        if hata and pdf_bytes is None:
             st.error(hata)
         elif pdf_bytes:
             st.session_state["_pdf_bytes"] = pdf_bytes
             st.session_state["_pdf_dosya"] = dosya_adi
-            st.success(f"Rapor hazir: **{dosya_adi}**")
+            if hata:
+                st.warning(hata)
+            st.success(f"✅ Rapor hazir: **{dosya_adi}**")
         else:
-            st.error("PDF olusturulamadi.")
+            st.error("PDF olusturulamadi. Detay icin terminal/log'u kontrol edin.")
 
 with col_dl:
     if st.session_state.get("_pdf_bytes"):
         st.download_button(
-            "PDF Indir",
+            "⬇️ PDF Indir",
             data=st.session_state["_pdf_bytes"],
             file_name=st.session_state.get("_pdf_dosya", "rapor.pdf"),
             mime="application/pdf",
