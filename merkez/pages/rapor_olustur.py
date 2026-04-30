@@ -363,21 +363,18 @@ def _setup_unicode_font(pdf):
         return "Helvetica"
 
 
-def _to_png(fig) -> Optional[bytes]:
-    """Plotly figuru PNG'e cevir. kaleido yoksa None doner."""
-    try:
-        import plotly.io as pio
-        return pio.to_image(fig, format="png", scale=2)
-    except Exception:
-        pass
-    # kaleido yoksa basit fallback: None don
-    return None
+def _hex_to_rgb(h: str):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i+2], 16) / 255.0 for i in (0, 2, 4))
 
 
-def _plotly_bar(period_df, lok_renk) -> Optional[bytes]:
-    """Gunluk tuketim bar grafigi."""
+def _mpl_bar(period_df, lok_renk) -> Optional[bytes]:
+    """Gunluk tuketim bar grafigi — matplotlib ile (kaleido gerektirmez)."""
     try:
-        import plotly.graph_objects as go
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import matplotlib.ticker as mticker
     except ImportError:
         return None
 
@@ -389,36 +386,50 @@ def _plotly_bar(period_df, lok_renk) -> Optional[bytes]:
                .sum().reset_index())
         gun.columns = ["Tarih", "kWh"]
 
-        colors = [lok_renk] * len(gun)
-        if colors:
-            colors[-1] = "#00d4ff"
+        BG    = "#0f172a"
+        GRID  = "#1e293b"
+        rc    = _hex_to_rgb(lok_renk)
 
-        fig = go.Figure(go.Bar(
-            x=[str(d) for d in gun["Tarih"]],
-            y=gun["kWh"],
-            marker_color=colors,
-            hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
-        ))
-        fig.update_layout(
-            paper_bgcolor="#1a2332", plot_bgcolor="#0f172a",
-            font=dict(color="white", size=11),
-            xaxis=dict(gridcolor="rgba(255,255,255,0.08)", tickangle=-35,
-                       tickfont=dict(size=9)),
-            yaxis=dict(gridcolor="rgba(255,255,255,0.08)", title="kWh",
-                       tickfont=dict(size=9)),
-            margin=dict(l=50, r=20, t=30, b=60),
-            width=560, height=280,
-            title=dict(text="Gunluk Tuketim (kWh)", font=dict(size=13, color="white")),
-        )
-        return _to_png(fig)
+        fig, ax = plt.subplots(figsize=(8, 3.6), facecolor=BG)
+        ax.set_facecolor(BG)
+
+        bars = ax.bar([str(d) for d in gun["Tarih"]], gun["kWh"],
+                      color=[rc] * len(gun), width=0.7, zorder=3)
+        # Son bar vurgulu
+        if bars:
+            bars[-1].set_color(_hex_to_rgb("#00d4ff"))
+
+        ax.set_title("Gunluk Tuketim (kWh)", color="white", fontsize=11, pad=8)
+        ax.set_ylabel("kWh", color="#94a3b8", fontsize=9)
+        ax.tick_params(colors="#94a3b8", labelsize=7)
+        ax.set_xticklabels([str(d) for d in gun["Tarih"]],
+                            rotation=35, ha="right", fontsize=7)
+        ax.yaxis.set_major_formatter(mticker.FuncFormatter(
+            lambda x, _: f"{x:,.0f}"))
+        ax.grid(axis="y", color=GRID, linewidth=0.7, zorder=0)
+        ax.spines[:].set_color(GRID)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        ax.spines["bottom"].set_visible(True)
+        ax.spines["bottom"].set_color(GRID)
+
+        plt.tight_layout(pad=0.5)
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
+                    facecolor=BG)
+        plt.close(fig)
+        buf.seek(0)
+        return buf.read()
     except Exception:
         return None
 
 
-def _plotly_chiller(period_df) -> Optional[bytes]:
-    """Chiller Set + Dis Hava trend grafigi."""
+def _mpl_chiller(period_df) -> Optional[bytes]:
+    """Chiller Set + Dis Hava trend grafigi — matplotlib ile."""
     try:
-        import plotly.graph_objects as go
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
     except ImportError:
         return None
 
@@ -430,40 +441,57 @@ def _plotly_chiller(period_df) -> Optional[bytes]:
         if ch.empty:
             return None
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=ch["Tarih"], y=ch["Chiller_Set_Temp_C"],
-            name="Chiller Set", line=dict(color="#a855f7", width=2.5),
-            fill="tozeroy", fillcolor="rgba(168,85,247,0.07)",
-        ))
-        if "Dis_Hava_Sicakligi_C" in ch.columns and ch["Dis_Hava_Sicakligi_C"].notna().any():
-            fig.add_trace(go.Scatter(
-                x=ch["Tarih"], y=ch["Dis_Hava_Sicakligi_C"],
-                name="Dis Hava", line=dict(color="#f59e0b", width=1.8, dash="dot"),
-                yaxis="y2",
-            ))
-        fig.update_layout(
-            paper_bgcolor="#1a2332", plot_bgcolor="#0f172a",
-            font=dict(color="white", size=11),
-            xaxis=dict(gridcolor="rgba(255,255,255,0.08)"),
-            yaxis=dict(title="Set degeri (C)", gridcolor="rgba(255,255,255,0.08)",
-                       tickfont=dict(size=9)),
-            yaxis2=dict(title="Dis Hava (C)", overlaying="y", side="right",
-                        tickfont=dict(size=9)),
-            legend=dict(orientation="h", y=1.12, font=dict(size=10)),
-            margin=dict(l=50, r=50, t=40, b=30),
-            width=560, height=260,
-            title=dict(text="Chiller Set Trendi", font=dict(size=13, color="white")),
-        )
-        return _to_png(fig)
+        BG   = "#0f172a"
+        GRID = "#1e293b"
+
+        fig, ax = plt.subplots(figsize=(8, 3.2), facecolor=BG)
+        ax.set_facecolor(BG)
+
+        ax.plot(ch["Tarih"], ch["Chiller_Set_Temp_C"],
+                color="#a855f7", linewidth=2, label="Chiller Set")
+        ax.fill_between(ch["Tarih"], ch["Chiller_Set_Temp_C"],
+                        alpha=0.08, color="#a855f7")
+
+        has_dh = ("Dis_Hava_Sicakligi_C" in ch.columns and
+                  ch["Dis_Hava_Sicakligi_C"].notna().any())
+        if has_dh:
+            ax2 = ax.twinx()
+            ax2.plot(ch["Tarih"], ch["Dis_Hava_Sicakligi_C"],
+                     color="#f59e0b", linewidth=1.6, linestyle="--",
+                     label="Dis Hava")
+            ax2.set_ylabel("Dis Hava (C)", color="#f59e0b", fontsize=8)
+            ax2.tick_params(colors="#94a3b8", labelsize=7)
+            ax2.spines[:].set_color(GRID)
+            ax2.legend(loc="upper right", fontsize=7,
+                       facecolor="#1e293b", edgecolor=GRID, labelcolor="white")
+
+        ax.set_title("Chiller Set Trendi", color="white", fontsize=11, pad=8)
+        ax.set_ylabel("Set (C)", color="#94a3b8", fontsize=9)
+        ax.tick_params(colors="#94a3b8", labelsize=7)
+        ax.xaxis.set_tick_params(rotation=25)
+        ax.grid(color=GRID, linewidth=0.6)
+        for sp in ax.spines.values():
+            sp.set_visible(False)
+        ax.legend(loc="upper left", fontsize=7,
+                  facecolor="#1e293b", edgecolor=GRID, labelcolor="white")
+
+        plt.tight_layout(pad=0.5)
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
+                    facecolor=BG)
+        plt.close(fig)
+        buf.seek(0)
+        return buf.read()
     except Exception:
         return None
 
 
-def _plotly_pie(sebeke, kojen) -> Optional[bytes]:
-    """Enerji kaynagi pasta grafigi."""
+def _mpl_pie(sebeke, kojen) -> Optional[bytes]:
+    """Enerji kaynagi pasta grafigi — matplotlib ile."""
     try:
-        import plotly.graph_objects as go
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
     except ImportError:
         return None
 
@@ -471,27 +499,33 @@ def _plotly_pie(sebeke, kojen) -> Optional[bytes]:
         return None
 
     try:
+        BG = "#0f172a"
         labels = ["Sebeke", "Kojen Uretim"]
         values = [max(sebeke, 0), max(kojen, 0)]
         colors = ["#3b82f6", "#10b981"]
 
-        fig = go.Figure(go.Pie(
-            labels=labels, values=values, hole=0.45,
-            marker=dict(colors=colors, line=dict(color="#1a2332", width=2)),
-            textinfo="label+percent",
-            textfont=dict(size=12, color="white"),
-        ))
-        fig.update_layout(
-            paper_bgcolor="#1a2332",
-            font=dict(color="white", size=11),
-            showlegend=True,
-            legend=dict(orientation="h", y=-0.15, x=0.5, xanchor="center",
-                        font=dict(size=10, color="white")),
-            margin=dict(l=10, r=10, t=30, b=40),
-            width=300, height=280,
-            title=dict(text="Enerji Kaynagi", font=dict(size=13, color="white")),
+        fig, ax = plt.subplots(figsize=(4, 3.6), facecolor=BG)
+        ax.set_facecolor(BG)
+
+        wedges, texts, autotexts = ax.pie(
+            values, labels=labels, colors=colors,
+            autopct="%1.1f%%", startangle=90,
+            wedgeprops=dict(width=0.55, edgecolor=BG, linewidth=2),
+            textprops=dict(color="white", fontsize=8),
         )
-        return _to_png(fig)
+        for at in autotexts:
+            at.set_fontsize(8)
+            at.set_color("white")
+
+        ax.set_title("Enerji Kaynagi", color="white", fontsize=11, pad=8)
+
+        plt.tight_layout(pad=0.5)
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=150, bbox_inches="tight",
+                    facecolor=BG)
+        plt.close(fig)
+        buf.seek(0)
+        return buf.read()
     except Exception:
         return None
 
@@ -804,18 +838,16 @@ def generate_pdf(df, period_df, lok_info, lok_id, period_type, period_str, m2):
         lok_renk  = lok_info["renk"]
 
         with st.spinner("Grafikler olusturuluyor..."):
-            bar_img     = _plotly_bar(period_df, lok_renk)
-            chiller_img = _plotly_chiller(period_df)
+            bar_img     = _mpl_bar(period_df, lok_renk)
+            chiller_img = _mpl_chiller(period_df)
             sebeke_val  = period_df["Sebeke_Tuketim_kWh"].sum() if "Sebeke_Tuketim_kWh" in period_df.columns else 0
             kojen_val   = period_df["Kojen_Uretim_kWh"].sum()   if "Kojen_Uretim_kWh"   in period_df.columns else 0
-            pie_img     = _plotly_pie(sebeke_val, kojen_val)
+            pie_img     = _mpl_pie(sebeke_val, kojen_val)
 
-        # kaleido yoksa grafik PNG'leri None — PDF grafiklerin yalnizca yazili bolumu olusur
         grafik_uyari = ""
         if bar_img is None and chiller_img is None:
             grafik_uyari = (
-                "⚠️ Grafik goruntuleri olusturulamadi (kaleido kurulu degil olabilir).\n"
-                "Terminalde: pip install kaleido\n"
+                "⚠️ Grafik goruntuleri olusturulamadi (matplotlib hatasi).\n"
                 "PDF metin/KPI verileriyle olusturuldu."
             )
 
