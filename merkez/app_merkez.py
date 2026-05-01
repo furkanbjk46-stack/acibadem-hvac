@@ -775,16 +775,13 @@ hospitals.forEach(function(h) {{
     import streamlit.components.v1 as components
     components.html(harita_html, height=612, scrolling=False)
 
-    # ── Harita altı: Chiller Set vs Dış Hava (Gauge Kartları) ──
-    st.markdown('<div class="sec">🌡️ CHİLLER SET vs DIŞ HAVA</div>', unsafe_allow_html=True)
+    # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
+    chiller_vals = {}
+    dis_hava_val = fetch_dis_hava()
+    _dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
+    min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
     if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
-        # En son veri noktasını al (her lokasyon için)
         son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
-
-        chiller_vals = {}
-        # Canlı dış hava → Open-Meteo, yoksa DB'den fallback
-        dis_hava_val = fetch_dis_hava()
-        _dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
         for _, row in son_veri.iterrows():
             lok_id = row["lokasyon_id"]
             if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
@@ -792,7 +789,6 @@ hospitals.forEach(function(h) {{
             if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
                 dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
                 _dis_hava_kaynak = "📊 DB"
-
         if chiller_vals:
             min_lok = min(chiller_vals, key=chiller_vals.get)
             max_lok = max(chiller_vals, key=chiller_vals.get)
@@ -803,104 +799,6 @@ hospitals.forEach(function(h) {{
             min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
             max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
 
-            g_steps = [
-                {"range": [4,  7],  "color": "rgba(0,212,255,0.08)"},
-                {"range": [7,  10], "color": "rgba(245,158,11,0.07)"},
-                {"range": [10, 16], "color": "rgba(239,68,68,0.07)"},
-            ]
-
-            def gauge_fig(val, renk, isim, ikon, etiket):
-                rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
-                fig = go.Figure(go.Indicator(
-                    mode="gauge+number",
-                    value=val,
-                    number={"suffix": " °C", "font": {"size": 26, "color": renk, "family": "Orbitron, sans-serif"},
-                            "valueformat": ".1f"},
-                    title={"text": f"{ikon} {isim}<br><span style='font-size:9px;color:#6b8fa8;letter-spacing:1px;'>{etiket}</span>",
-                           "font": {"size": 11, "color": "#a0c8ff", "family": "Orbitron, sans-serif"}},
-                    gauge={
-                        "axis": {"range": [4, 16],
-                                 "tickcolor": "rgba(160,200,255,0.25)",
-                                 "tickfont": {"size": 8, "color": "rgba(160,200,255,0.4)"},
-                                 "dtick": 3},
-                        "bar": {"color": f"rgba({rr},{rg},{rb},0.9)", "thickness": 0.25},
-                        "bgcolor": "rgba(0,0,0,0)",
-                        "borderwidth": 1,
-                        "bordercolor": f"rgba({rr},{rg},{rb},0.2)",
-                        "steps": g_steps,
-                        "threshold": {
-                            "line": {"color": renk, "width": 2},
-                            "thickness": 0.8,
-                            "value": val,
-                        },
-                    }
-                ))
-                fig.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    margin=dict(t=55, b=10, l=15, r=15),
-                    height=185,
-                    font=dict(family="Inter, sans-serif", color="#a0c8ff"),
-                )
-                return fig
-
-            def gauge_fig_dh(val, kaynak=""):
-                renk = "#f59e0b"
-                rr,rg,rb = 245,158,11
-                fig = go.Figure(go.Indicator(
-                    mode="gauge+number",
-                    value=val,
-                    number={"suffix": " °C", "font": {"size": 26, "color": renk, "family": "Orbitron, sans-serif"},
-                            "valueformat": ".1f"},
-                    title={"text": f"🌡️ DIŞ HAVA<br><span style='font-size:9px;color:#6b8fa8;letter-spacing:1px;'>İSTANBUL — {kaynak}</span>",
-                           "font": {"size": 11, "color": "#a0c8ff", "family": "Orbitron, sans-serif"}},
-                    gauge={
-                        "axis": {"range": [-10, 45],
-                                 "tickcolor": "rgba(160,200,255,0.25)",
-                                 "tickfont": {"size": 8, "color": "rgba(160,200,255,0.4)"},
-                                 "dtick": 10},
-                        "bar": {"color": f"rgba({rr},{rg},{rb},0.9)", "thickness": 0.25},
-                        "bgcolor": "rgba(0,0,0,0)",
-                        "borderwidth": 1,
-                        "bordercolor": f"rgba({rr},{rg},{rb},0.2)",
-                        "steps": [
-                            {"range": [-10, 5],  "color": "rgba(0,212,255,0.08)"},
-                            {"range": [5,  25],  "color": "rgba(16,185,129,0.06)"},
-                            {"range": [25, 45],  "color": "rgba(239,68,68,0.07)"},
-                        ],
-                        "threshold": {
-                            "line": {"color": renk, "width": 2},
-                            "thickness": 0.8,
-                            "value": val,
-                        },
-                    }
-                ))
-                fig.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    margin=dict(t=55, b=10, l=15, r=15),
-                    height=185,
-                    font=dict(family="Inter, sans-serif", color="#a0c8ff"),
-                )
-                return fig
-
-            gc1, gc2, gc3 = st.columns(3)
-            with gc1:
-                st.plotly_chart(
-                    gauge_fig(min_val, min_renk, min_isim, "🏥", "EN DÜŞÜK SET"),
-                    use_container_width=True, config={"displayModeBar": False}
-                )
-            with gc2:
-                st.plotly_chart(
-                    gauge_fig(max_val, max_renk, max_isim, "🏥", "EN YÜKSEK SET"),
-                    use_container_width=True, config={"displayModeBar": False}
-                )
-            with gc3:
-                if dis_hava_val is not None:
-                    st.plotly_chart(
-                        gauge_fig_dh(dis_hava_val, _dis_hava_kaynak),
-                        use_container_width=True, config={"displayModeBar": False}
-                    )
-        else:
-            st.info("Chiller set verisi bulunamadı.")
 
 # ════════════════════════════════
 # SAĞ KOLON
@@ -1034,62 +932,50 @@ with sag:
     else:
         st.markdown('<div class="alrt-y">🌡️ Dış hava verisi alınamadı</div>', unsafe_allow_html=True)
 
-    # ── En Verimli / En Verimsiz + Günlük Özet ──
+    # ── Chiller Set & Dış Hava Kartı ──
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="sec">📊 GÜNLÜK ÖZET</div>', unsafe_allow_html=True)
-    if not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
-        gun_rows = []
-        for lid in aktif_loklar:
-            kwh_g = dun_kwh(lid)
-            if kwh_g and kwh_g > 0:
-                m2_g = HASTANELER.get(lid, {}).get("m2", 10000)
-                gun_rows.append({
-                    "isim":   HASTANELER.get(lid, {}).get("kisa", lid),
-                    "kwh":    kwh_g,
-                    "kwh_m2": kwh_g / m2_g,
-                    "renk":   HASTANELER.get(lid, {}).get("renk", "#00d4ff"),
-                })
-        if gun_rows:
-            gun_rows.sort(key=lambda x: x["kwh_m2"])
-            en_verimli  = gun_rows[0]
-            en_verimsiz = gun_rows[-1]
-            toplam_aktif   = len(gun_rows)
-            toplam_kwh_gun = sum(r["kwh"] for r in gun_rows)
-            st.markdown(
-                f"<div style='background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);"
-                f"border-radius:8px;padding:8px 12px;margin-bottom:6px;'>"
-                f"<div style='font-size:8px;color:rgba(16,185,129,0.7);letter-spacing:1px;"
-                f"text-transform:uppercase;margin-bottom:2px;'>🥇 En Verimli</div>"
-                f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
-                f"<span style='font-size:12px;color:{en_verimli['renk']};font-weight:700;'>{en_verimli['isim']}</span>"
-                f"<span style='font-family:Orbitron,sans-serif;font-size:11px;color:#10b981;'>{en_verimli['kwh_m2']:.2f} kWh/m²</span>"
-                f"</div></div>",
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);"
-                f"border-radius:8px;padding:8px 12px;margin-bottom:6px;'>"
-                f"<div style='font-size:8px;color:rgba(239,68,68,0.7);letter-spacing:1px;"
-                f"text-transform:uppercase;margin-bottom:2px;'>⚠️ En Yüksek Tüketim</div>"
-                f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
-                f"<span style='font-size:12px;color:{en_verimsiz['renk']};font-weight:700;'>{en_verimsiz['isim']}</span>"
-                f"<span style='font-family:Orbitron,sans-serif;font-size:11px;color:#ef4444;'>{en_verimsiz['kwh_m2']:.2f} kWh/m²</span>"
-                f"</div></div>",
-                unsafe_allow_html=True
-            )
-            st.markdown(
-                f"<div style='background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.12);"
-                f"border-radius:8px;padding:8px 12px;'>"
-                f"<div style='display:flex;justify-content:space-between;'>"
-                f"<span style='font-size:10px;color:rgba(150,210,255,0.6);'>Aktif Lokasyon</span>"
-                f"<span style='font-family:Orbitron,sans-serif;font-size:11px;color:#00d4ff;'>{toplam_aktif}</span>"
-                f"</div>"
-                f"<div style='display:flex;justify-content:space-between;margin-top:4px;'>"
-                f"<span style='font-size:10px;color:rgba(150,210,255,0.6);'>Toplam (dün)</span>"
-                f"<span style='font-family:Orbitron,sans-serif;font-size:11px;color:#00d4ff;'>{toplam_kwh_gun/1000:.1f} MWh</span>"
-                f"</div></div>",
-                unsafe_allow_html=True
-            )
+    st.markdown('<div class="sec">🌡️ CHİLLER SET & DIŞ HAVA</div>', unsafe_allow_html=True)
+
+    kart_html = ""
+    # Dış hava satırı
+    if dis_hava_val is not None:
+        kart_html += (
+            "<div style='background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);"
+            "border-radius:8px;padding:8px 12px;margin-bottom:5px;'>"
+            "<div style='display:flex;justify-content:space-between;align-items:center;'>"
+            "<span style='font-size:11px;color:rgba(200,230,255,0.75);'>🌡️ Dış Hava İstanbul</span>"
+            f"<span style='font-family:Orbitron,sans-serif;font-size:13px;color:#f59e0b;font-weight:700;'>"
+            f"{dis_hava_val:.1f}°C "
+            f"<span style='font-size:8px;color:rgba(245,158,11,0.6);'>{_dis_hava_kaynak}</span></span>"
+            "</div></div>"
+        )
+    # En düşük chiller set
+    if min_val is not None:
+        kart_html += (
+            f"<div style='background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);"
+            f"border-radius:8px;padding:8px 12px;margin-bottom:5px;'>"
+            f"<div style='font-size:8px;color:rgba(0,212,255,0.55);letter-spacing:1px;"
+            f"text-transform:uppercase;margin-bottom:3px;'>❄️ En Düşük Set</div>"
+            f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+            f"<span style='font-size:12px;color:{min_renk};font-weight:700;'>{min_isim}</span>"
+            f"<span style='font-family:Orbitron,sans-serif;font-size:13px;color:#00d4ff;'>{min_val:.1f}°C</span>"
+            f"</div></div>"
+        )
+    # En yüksek chiller set
+    if max_val is not None and max_isim != min_isim:
+        kart_html += (
+            f"<div style='background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);"
+            f"border-radius:8px;padding:8px 12px;margin-bottom:5px;'>"
+            f"<div style='font-size:8px;color:rgba(239,68,68,0.55);letter-spacing:1px;"
+            f"text-transform:uppercase;margin-bottom:3px;'>🔥 En Yüksek Set</div>"
+            f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+            f"<span style='font-size:12px;color:{max_renk};font-weight:700;'>{max_isim}</span>"
+            f"<span style='font-family:Orbitron,sans-serif;font-size:13px;color:#ef4444;'>{max_val:.1f}°C</span>"
+            f"</div></div>"
+        )
+    if not kart_html:
+        kart_html = "<div class='alrt-y'>⚠️ Chiller set verisi bulunamadı</div>"
+    st.markdown(kart_html, unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
