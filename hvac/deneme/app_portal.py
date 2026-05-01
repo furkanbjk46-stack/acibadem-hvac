@@ -2624,6 +2624,10 @@ with tab1:
         with c2:
             st.markdown("**Chiller / Kazan**")
             ch_set = st.number_input("Chiller Set Temp (°C)", value=6.5, step=0.5, key="entry_ch_set")
+            st.caption(
+                "💡 **Chiller Set Önerisi:** "
+                "0–7°C → **8.0°C** | 7–23°C → **7.5°C** | 23–26°C → **7.0°C** | 26°C+ → **6.5°C**"
+            )
             ch_count = st.number_input("Chiller Adet (Çalışan)", value=0, step=1, min_value=0, key="entry_ch_count")
             abs_count = st.number_input("Absorption Chiller Adet", value=0, step=1, min_value=0, key="entry_abs_count")
             kazan_count = st.number_input("Kazan Adet", value=0, step=1, min_value=0, key="entry_kazan_count")
@@ -3423,6 +3427,51 @@ with tab5:
                             })
                 except Exception:
                     pass
+
+                # ── Chiller Set Sıcaklık Önerisi (Dış Hava Aralığına Göre) ──
+                try:
+                    def _chiller_set_onerisi(dis_hava_c):
+                        if dis_hava_c < 7:
+                            return 8.0
+                        elif dis_hava_c < 23:
+                            return 7.5
+                        elif dis_hava_c < 26:
+                            return 7.0
+                        else:
+                            return 6.5
+
+                    _edf2 = load_data()
+                    if not _edf2.empty and "Dis_Hava_Sicakligi_C" in _edf2.columns and "Chiller_Set_Temp_C" in _edf2.columns:
+                        _edf2["Tarih"] = pd.to_datetime(_edf2["Tarih"], errors="coerce").dt.date
+                        _edf2_period = _edf2[
+                            (_edf2["Tarih"] >= date(report_year, report_month, 1)) &
+                            (_edf2["Tarih"] < date(report_year + (report_month // 12), (report_month % 12) + 1, 1))
+                        ].dropna(subset=["Dis_Hava_Sicakligi_C", "Chiller_Set_Temp_C"])
+
+                        if not _edf2_period.empty:
+                            _avg_dis = _edf2_period["Dis_Hava_Sicakligi_C"].mean()
+                            _avg_set = _edf2_period["Chiller_Set_Temp_C"].mean()
+                            _onerilen = _chiller_set_onerisi(_avg_dis)
+                            _fark = _avg_set - _onerilen  # pozitif → set fazla düşük, negatif → set fazla yüksek
+
+                            if abs(_fark) >= 0.4:
+                                _yon = "düşük" if _fark < 0 else "yüksek"
+                                _severity = "CRITICAL" if abs(_fark) >= 1.0 else "WARNING"
+                                recommendations.append({
+                                    "name": "Chiller Set Sıcaklığı Optimizasyonu",
+                                    "severity": _severity,
+                                    "savings_potential": "Yüksek" if abs(_fark) >= 1.0 else "Orta",
+                                    "message": (
+                                        f"Bu dönemde ortalama dış hava sıcaklığı {_avg_dis:.1f}°C iken "
+                                        f"ortalama chiller set sıcaklığı {_avg_set:.1f}°C olarak uygulanmış. "
+                                        f"Dış hava aralığına göre önerilen set {_onerilen}°C'dir "
+                                        f"(uygulanan değer {abs(_fark):.1f}°C {_yon} girişli). "
+                                        "Chiller set sıcaklığını önerilen değere ayarlayarak enerji verimliliğini artırabilirsiniz."
+                                    ),
+                                })
+                except Exception:
+                    pass
+
                 rec_summary = engine.get_recommendation_summary(recommendations)
                 
                 st.success(f"Analiz tamamlandı! {unified_data.get('days_with_data', 0)} gün veri işlendi.")
