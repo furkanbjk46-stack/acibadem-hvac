@@ -2030,7 +2030,79 @@ def sanitize_ascii_for_pdf(s: str) -> str:
 
 
 def fig_to_png_bytes(fig) -> bytes:
-    return pio.to_image(fig, format="png", width=1400, height=700, scale=2)
+    """Plotly figürü PNG byte'a çevir. kaleido varsa kullan, yoksa matplotlib fallback."""
+    try:
+        return pio.to_image(fig, format="png", width=1400, height=700, scale=2)
+    except Exception:
+        pass
+
+    # ── Matplotlib fallback (kaleido/Linux sorunu için) ──────────────────
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        import io as _io
+
+        BG = "#0f1729"
+        COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#a855f7", "#f97316", "#ef4444"]
+
+        fig_mpl, ax = plt.subplots(figsize=(14, 7), facecolor=BG)
+        ax.set_facecolor(BG)
+        ax.tick_params(colors="#94a3b8")
+        for spine in ax.spines.values():
+            spine.set_edgecolor("#334155")
+
+        color_idx = 0
+        for trace in fig.data:
+            ttype = type(trace).__name__.lower()
+            color = COLORS[color_idx % len(COLORS)]
+            color_idx += 1
+
+            xs = list(trace.x) if getattr(trace, "x", None) is not None else []
+            ys = list(trace.y) if getattr(trace, "y", None) is not None else []
+            name = getattr(trace, "name", "") or ""
+
+            if ttype in ("scatter", "scattergl") and xs and ys:
+                # line rengi varsa kullan
+                try:
+                    lc = trace.line.color
+                    if lc:
+                        color = lc
+                except Exception:
+                    pass
+                ax.plot(xs, ys, label=name, color=color, linewidth=2)
+
+            elif ttype == "bar" and xs and ys:
+                try:
+                    mc = trace.marker.color
+                    if mc:
+                        color = mc if isinstance(mc, str) else COLORS[color_idx % len(COLORS)]
+                except Exception:
+                    pass
+                ax.bar(xs, ys, label=name, color=color, alpha=0.85)
+
+            elif ttype in ("pie",):
+                vals = list(trace.values) if getattr(trace, "values", None) is not None else ys
+                labs = list(trace.labels) if getattr(trace, "labels", None) is not None else xs
+                if vals:
+                    ax.clear()
+                    ax.set_facecolor(BG)
+                    ax.pie(vals, labels=labs, autopct="%1.0f%%",
+                           colors=COLORS[:len(vals)],
+                           textprops={"color": "#94a3b8", "fontsize": 10})
+
+        if ax.get_lines() or ax.patches:
+            legend = ax.legend(facecolor="#1e293b", labelcolor="#94a3b8",
+                               edgecolor="#334155", fontsize=9)
+
+        buf = _io.BytesIO()
+        plt.tight_layout(pad=0.5)
+        plt.savefig(buf, format="png", facecolor=BG, dpi=150)
+        plt.close(fig_mpl)
+        buf.seek(0)
+        return buf.read()
+    except Exception:
+        return None
 
 
 def generate_pdf_report(start: date, end_exclusive: date, df_period: pd.DataFrame, yoy_info: dict | None, figs: dict[str, object]) -> bytes:
