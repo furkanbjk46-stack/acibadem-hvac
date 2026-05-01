@@ -1011,15 +1011,15 @@ with sag:
     # ── Sezon Göstergesi ──
     st.markdown('<div class="sec">🌡️ SEZON DURUMU</div>', unsafe_allow_html=True)
     if dis_hava_val is not None:
-        if dis_hava_val >= 22:
+        if dis_hava_val >= 23:
             sezon_ikon, sezon_ad, sezon_renk = "☀️", "SOĞUTMA SEZONU", "#f59e0b"
-            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Chiller'lar aktif"
-        elif dis_hava_val <= 10:
+            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Chiller'lar aktif (set ≤7.0°C)"
+        elif dis_hava_val <= 7:
             sezon_ikon, sezon_ad, sezon_renk = "❄️", "ISITMA SEZONU", "#38bdf8"
-            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Kazan sistemleri aktif"
+            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Kazan sistemleri aktif (set 8.0°C)"
         else:
             sezon_ikon, sezon_ad, sezon_renk = "🌤️", "GEÇİŞ DÖNEMİ", "#10b981"
-            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Yük dengeli"
+            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Yük dengeli (set 7.5°C)"
         sr=int(sezon_renk[1:3],16); sg=int(sezon_renk[3:5],16); sb=int(sezon_renk[5:7],16)
         st.markdown(
             f"<div style='background:rgba({sr},{sg},{sb},0.08);border:1px solid rgba({sr},{sg},{sb},0.3);"
