@@ -2,6 +2,13 @@
 # Lokasyondan Supabase'e enerji verisi senkronizasyonu
 # Bu dosya her lokasyonun acıbadem/ klasörüne kopyalanır
 
+# ⚠️ GELİŞTİRME ORTAMI — Supabase sync devre dışı
+# Bu klasör test/geliştirme amaçlıdır. Gerçek sync sadece
+# "genel merkez geliştirme dosyası" klasöründen çalışır.
+import sys
+print("⚠️ Geliştirme ortamı — Supabase sync devre dışı bırakıldı.")
+sys.exit(0)
+
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
