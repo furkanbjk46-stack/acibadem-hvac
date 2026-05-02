@@ -79,21 +79,16 @@ st.markdown("""
         font-family: 'Inter', sans-serif !important;
     }
     
-    /* Text — sadece Streamlit içerik alanları hedefleniyor (input/tablo iç elementleri hariç) */
-    .stMarkdown p, .stMarkdown li, .stMarkdown span,
-    [data-testid="stText"] p,
-    .element-container > div > p,
-    .block-container p {
+    /* Genel metin rengi — tüm uygulama genelinde beyaz/açık */
+    p, span, div {
         color: rgba(255, 255, 255, 0.9) !important;
     }
 
-    /* Markdown tabloları (st.markdown ile render edilen tablolar — Tahmin, Özet vb.) */
+    /* Markdown tabloları (st.markdown tablolar — Tahmin, Özet vb.) */
     .stMarkdown table td,
     .stMarkdown table th,
     [data-testid="stMarkdown"] table td,
-    [data-testid="stMarkdown"] table th,
-    .stMarkdown table tr td,
-    .stMarkdown table tr th {
+    [data-testid="stMarkdown"] table th {
         color: rgba(255, 255, 255, 0.92) !important;
         background-color: transparent !important;
     }
