@@ -86,6 +86,22 @@ st.markdown("""
     .block-container p {
         color: rgba(255, 255, 255, 0.9) !important;
     }
+
+    /* Markdown tabloları (st.markdown ile render edilen tablolar — Tahmin, Özet vb.) */
+    .stMarkdown table td,
+    .stMarkdown table th,
+    [data-testid="stMarkdown"] table td,
+    [data-testid="stMarkdown"] table th,
+    .stMarkdown table tr td,
+    .stMarkdown table tr th {
+        color: rgba(255, 255, 255, 0.92) !important;
+        background-color: transparent !important;
+    }
+    .stMarkdown table th {
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        border-bottom: 1px solid rgba(100, 160, 255, 0.3) !important;
+    }
     
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
