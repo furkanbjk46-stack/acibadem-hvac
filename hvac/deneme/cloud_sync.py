@@ -4,10 +4,24 @@
 
 # ⚠️ GELİŞTİRME ORTAMI — Supabase sync devre dışı
 # Bu klasör test/geliştirme amaçlıdır. Gerçek sync sadece
-# "genel merkez geliştirme dosyası" klasöründen çalışır.
-import sys
-print("⚠️ Geliştirme ortamı — Supabase sync devre dışı bırakıldı.")
-sys.exit(0)
+# lokasyon PC'lerinde çalışır. Tüm fonksiyonlar stub olarak tanımlı.
+_DEV_MODE = True
+
+
+def run_sync(*args, **kwargs):
+    return False
+
+
+def start_background_sync(*args, **kwargs):
+    return
+
+
+def check_and_apply_update(*args, **kwargs):
+    return
+
+
+def send_heartbeat(*args, **kwargs):
+    return
 
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
