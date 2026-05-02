@@ -79,8 +79,11 @@ st.markdown("""
         font-family: 'Inter', sans-serif !important;
     }
     
-    /* Text */
-    p, span, div {
+    /* Text — sadece Streamlit içerik alanları hedefleniyor (input/tablo iç elementleri hariç) */
+    .stMarkdown p, .stMarkdown li, .stMarkdown span,
+    [data-testid="stText"] p,
+    .element-container > div > p,
+    .block-container p {
         color: rgba(255, 255, 255, 0.9) !important;
     }
     
@@ -148,7 +151,9 @@ st.markdown("""
     [data-testid="stNumberInput"] input,
     [data-testid="stTextInput"] input,
     [data-testid="stDateInput"] input,
+    [data-testid="stNumberInputField"],
     [data-baseweb="input"] input,
+    [data-baseweb="base-input"] input,
     input[type="number"],
     input[type="text"] {
         background: rgba(15, 30, 65, 0.85) !important;
@@ -160,19 +165,31 @@ st.markdown("""
     }
     [data-testid="stNumberInput"] input:focus,
     [data-testid="stTextInput"] input:focus,
+    [data-testid="stNumberInputField"]:focus,
     input:focus {
         border: 1px solid rgba(100, 160, 255, 0.6) !important;
         box-shadow: 0 0 0 3px rgba(26, 74, 158, 0.2) !important;
         outline: none !important;
     }
 
-    /* Number input container */
+    /* Number input container — eski ve yeni BaseUI sürümleri */
     [data-testid="stNumberInput"] > div,
-    [data-baseweb="input"] {
+    [data-baseweb="input"],
+    [data-baseweb="base-input"] {
         background: rgba(15, 30, 65, 0.85) !important;
         border: 1px solid rgba(80, 130, 220, 0.25) !important;
         border-radius: 10px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+    }
+
+    /* Number input içindeki tüm span/div metin elementleri — görünürlük garantisi */
+    [data-testid="stNumberInput"] span,
+    [data-testid="stNumberInput"] div,
+    [data-baseweb="input"] span,
+    [data-baseweb="input"] div,
+    [data-baseweb="base-input"] span,
+    [data-baseweb="base-input"] div {
+        color: #d8eeff !important;
     }
 
     /* Number input +/- butonları */
@@ -462,6 +479,18 @@ st.markdown("""
     .dvn-cell, .dvn-cell span, .gdg-cell {
         color: #d8eeff !important;
         background-color: rgba(10, 25, 60, 0.7) !important;
+    }
+    /* render_styled_table (unsafe_allow_html tablo) — satır değerleri her zaman görünür */
+    table.dataframe td,
+    table[id^="T_"] td,
+    table[id^="T_"] tbody td {
+        color: #d8eeff !important;
+        background-color: rgba(10, 25, 60, 0.75) !important;
+    }
+    table.dataframe th,
+    table[id^="T_"] th {
+        color: #ffffff !important;
+        background-color: rgba(1, 45, 117, 0.9) !important;
     }
     /* Scrollbar */
     .stDataFrame ::-webkit-scrollbar { height: 8px; width: 8px; }
@@ -1732,16 +1761,18 @@ def render_styled_table(df: pd.DataFrame, max_height: int = 400, max_rows: int =
     ''', unsafe_allow_html=True)
 
 
-def chart_consumption_vs_temp(df_period: pd.DataFrame):
+def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlük"):
     if df_period.empty:
         return None
     d = df_period.copy()
     d["Tarih"] = pd.to_datetime(d["Tarih"], format="%Y-%m-%d", errors="coerce")
-    
+
+    xfmt = {'Günlük': '%d %b', 'Aylık': '%b %Y', 'Yıllık': '%Y'}.get(view_mode, '%d %b')
+
     import plotly.graph_objects as go
-    
+
     fig = go.Figure()
-    
+
     # Ana çizgi - Toplam Tüketim (gradient fill ile)
     fig.add_trace(go.Scatter(
         x=d["Tarih"],
@@ -1752,9 +1783,9 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame):
         marker=dict(size=10, color='#3b82f6', line=dict(color='white', width=2)),
         fill='tozeroy',
         fillcolor='rgba(59, 130, 246, 0.15)',
-        hovertemplate='<b>%{x|%d %b}</b><br>Tüketim: %{y:,.0f} kWh<extra></extra>'
+        hovertemplate=f'<b>%{{x|{xfmt}}}</b><br>Tüketim: %{{y:,.0f}} kWh<extra></extra>'
     ))
-    
+
     # İkinci eksen - Dış Hava Sıcaklığı
     fig.add_trace(go.Scatter(
         x=d["Tarih"],
@@ -1764,9 +1795,9 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame):
         yaxis='y2',
         line=dict(color='#f59e0b', width=3, dash='dot', shape='spline'),
         marker=dict(size=8, color='#f59e0b', symbol='diamond', line=dict(color='white', width=2)),
-        hovertemplate='<b>%{x|%d %b}</b><br>Sıcaklık: %{y:.1f}°C<extra></extra>'
+        hovertemplate=f'<b>%{{x|{xfmt}}}</b><br>Sıcaklık: %{{y:.1f}}°C<extra></extra>'
     ))
-    
+
     # Modern layout - Premium koyu tema
     fig.update_layout(
         title=dict(
@@ -1795,7 +1826,7 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame):
         xaxis=dict(
             gridcolor='rgba(255, 255, 255, 0.05)',
             showgrid=True,
-            tickformat='%d %b'
+            tickformat=xfmt
         ),
         legend=dict(
             orientation="h",
@@ -1821,11 +1852,12 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame):
     return fig
 
 
-def chart_stacked_breakdown(df_period: pd.DataFrame):
+def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"):
     if df_period.empty:
         return None
     d = df_period.copy()
     d["Tarih"] = pd.to_datetime(d["Tarih"], format="%Y-%m-%d", errors="coerce")
+    xfmt = {'Günlük': '%d %b', 'Aylık': '%b %Y', 'Yıllık': '%Y'}.get(view_mode, '%d %b')
     plot_df = d[["Tarih", "Chiller_Tuketim_kWh", "MCC_Tuketim_kWh", "Diger_Yuk_kWh"]].fillna(0).copy()
     plot_df = plot_df.rename(columns={
         "Chiller_Tuketim_kWh": "❄️ Chiller",
@@ -1867,7 +1899,7 @@ def chart_stacked_breakdown(df_period: pd.DataFrame):
         xaxis=dict(
             gridcolor='rgba(255, 255, 255, 0.03)',
             showgrid=False,
-            tickformat='%d %b'
+            tickformat=xfmt
         ),
         legend=dict(
             orientation="h",
@@ -1898,9 +1930,9 @@ def chart_stacked_breakdown(df_period: pd.DataFrame):
         marker=dict(
             line=dict(color='rgba(255,255,255,0.1)', width=1)
         ),
-        hovertemplate='<b>%{x|%d %b}</b><br>%{y:,.0f} kWh<extra></extra>'
+        hovertemplate=f'<b>%{{x|{xfmt}}}</b><br>%{{y:,.0f}} kWh<extra></extra>'
     )
-    
+
     return fig
 
 
@@ -3287,8 +3319,8 @@ with tab2:
         st.markdown("### Grafikler")
 
         df_chart = aggregate_for_view(df_period, view_mode)
-        fig_line = chart_consumption_vs_temp(df_chart)
-        fig_stack = chart_stacked_breakdown(df_chart)
+        fig_line = chart_consumption_vs_temp(df_chart, view_mode)
+        fig_stack = chart_stacked_breakdown(df_chart, view_mode)
         fig_bar = chart_month_vs_last_year(yoy) if yoy else None
 
         left, right = st.columns([2, 1])
