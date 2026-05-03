@@ -52,6 +52,20 @@ def start_portals():
     logger.info(f"✅ Cloud Sync başlatıldı (PID: {p3.pid})")
     procs.append(p3)
 
+    p4 = subprocess.Popen(
+        ["python", "data_collector.py"],
+        cwd=BASE_DIR
+    )
+    logger.info(f"✅ Veri Toplayici başlatıldı (PID: {p4.pid}) — Modbus + BACnet")
+    procs.append(p4)
+
+    p5 = subprocess.Popen(
+        ["python", "data_bridge.py"],
+        cwd=BASE_DIR
+    )
+    logger.info(f"✅ Data Bridge başlatıldı (PID: {p5.pid}) — her gece 23:45 energy_data.csv'ye yazar")
+    procs.append(p5)
+
     return procs
 
 
