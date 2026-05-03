@@ -200,23 +200,83 @@ button span[data-testid="stIconMaterial"] {
 
 if _LM:
     st.markdown("""<style>
-html, body, [data-testid="stAppViewContainer"] { background: #f0f4f8 !important; }
-[data-testid="stAppViewContainer"] { background: #f0f4f8 !important; }
-h1,h2,h3,h4,h5,h6 { color: #0f172a !important; }
-p, span, div, label { color: rgba(15,23,42,0.85) !important; }
-[data-testid="stMetricValue"] { color: #0055bb !important; text-shadow: none !important; }
-[data-testid="stMetricLabel"] { color: rgba(0,60,150,0.7) !important; }
-[data-testid="metric-container"] { background: rgba(255,255,255,0.95) !important; border-color: rgba(0,85,187,0.25) !important; }
-::-webkit-scrollbar-track { background: #e2e8f0; }
-::-webkit-scrollbar-thumb { background: rgba(0,85,187,0.4); }
-.nk { background: rgba(255,255,255,0.92) !important; border-color: rgba(0,85,187,0.2) !important; }
-.sec { color: #0055bb !important; border-bottom-color: rgba(0,85,187,0.2) !important; }
-.alrt-r { color: #991b1b !important; }
-.alrt-y { color: #92400e !important; }
-.alrt-g { color: #065f46 !important; }
-[data-testid="stExpander"] { background: rgba(240,244,248,0.9) !important; border-color: rgba(0,85,187,0.15) !important; }
-[data-testid="stExpanderToggleIcon"] { color: rgba(0,85,187,0.6) !important; }
-.alarm-detay-kart { background: rgba(230,240,255,0.8) !important; border-color: rgba(0,85,187,0.15) !important; }
+/* ─── AYDINLIK MOD — yumuşak gri-mavi taban ─── */
+html, body, [data-testid="stAppViewContainer"] { background: #d5e4f4 !important; }
+[data-testid="stAppViewContainer"]             { background: #d5e4f4 !important; }
+
+/* Genel metin — !important inline style'ı da geçer */
+h1,h2,h3,h4,h5,h6                { color: #0a1e3d !important; }
+p, span, div, label               { color: #0f2a4a !important; }
+/* Markdown blokları içindeki inline renkli span'ler */
+[data-testid="stMarkdownContainer"] span,
+[data-testid="stMarkdownContainer"] div,
+[data-testid="stMarkdownContainer"] p { color: #0f2a4a !important; }
+
+/* Metric */
+[data-testid="stMetricValue"]  { color: #004fa3 !important; text-shadow: none !important; }
+[data-testid="stMetricLabel"]  { color: #1a4878 !important; }
+[data-testid="stMetricDelta"]  { color: #0a7a50 !important; }
+[data-testid="metric-container"] {
+    background: rgba(255,255,255,0.92) !important;
+    border-color: rgba(0,79,163,0.3) !important;
+    box-shadow: 0 2px 8px rgba(0,79,163,0.08) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar-track { background: #b4cce4; }
+::-webkit-scrollbar-thumb { background: rgba(0,79,163,0.45); }
+.lok-scroll { scrollbar-color: rgba(0,79,163,0.35) rgba(180,210,235,0.5); }
+.lok-scroll::-webkit-scrollbar-track { background: rgba(180,210,235,0.5); border-radius: 2px; }
+.lok-scroll::-webkit-scrollbar-thumb { background: rgba(0,79,163,0.35); border-radius: 2px; }
+
+/* Neon kartlar → beyaz kart */
+.nk {
+    background: rgba(255,255,255,0.90) !important;
+    border-color: rgba(0,79,163,0.25) !important;
+    box-shadow: 0 2px 8px rgba(0,79,163,0.07) !important;
+}
+.nk-green { border-color: rgba(5,120,80,0.45) !important; }
+.nk-red   { border-color: rgba(180,30,30,0.45) !important; }
+.nk-gray  { border-color: rgba(80,100,130,0.3) !important; opacity: 0.75 !important; }
+
+/* Bölüm başlıkları */
+.sec { color: #004fa3 !important; border-bottom-color: rgba(0,79,163,0.25) !important; }
+
+/* Alarm satırları */
+.alrt-r { color: #7f1d1d !important; background: rgba(200,30,30,0.10) !important;
+          border-color: rgba(180,30,30,0.4) !important; }
+.alrt-y { color: #78350f !important; background: rgba(200,100,0,0.10) !important;
+          border-color: rgba(200,100,0,0.4) !important; }
+.alrt-g { color: #064e3b !important; background: rgba(5,120,80,0.10) !important;
+          border-color: rgba(5,120,80,0.4) !important; }
+
+/* Alarm detay */
+.alrt-detay-r { color: #7f1d1d !important; background: rgba(200,30,30,0.08) !important; border-left-color: #b91c1c !important; }
+.alrt-detay-y { color: #78350f !important; background: rgba(200,100,0,0.08) !important; border-left-color: #c97706 !important; }
+
+/* Expander */
+[data-testid="stExpander"] {
+    background: rgba(220,235,255,0.88) !important;
+    border-color: rgba(0,79,163,0.22) !important;
+}
+[data-testid="stExpanderToggleIcon"] { color: rgba(0,79,163,0.7) !important; }
+
+.alarm-detay-kart {
+    background: rgba(210,228,255,0.90) !important;
+    border-color: rgba(0,79,163,0.2) !important;
+}
+
+/* Butonlar */
+.btn-goto button {
+    background: rgba(0,79,163,0.12) !important;
+    color: #004fa3 !important;
+    border-color: rgba(0,79,163,0.35) !important;
+}
+.btn-refresh button {
+    background: linear-gradient(135deg,#1a5a9e,#2070cc) !important;
+    color: #fff !important;
+    border-color: rgba(0,79,163,0.5) !important;
+}
 </style>""", unsafe_allow_html=True)
 
 # ============ SABİT VERİ ============
