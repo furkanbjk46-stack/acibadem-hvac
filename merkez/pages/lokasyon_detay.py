@@ -307,9 +307,16 @@ tab1, tab2, tab3, tab4 = st.tabs(["📊 Dashboard", "📈 Trend & Tahmin", "📋
 with tab1:
     # Son 30 gün — son_tarih_str baz alınır (gerçek son tarihe göre)
     son_tarih_dt = pd.to_datetime(son_tarih_str)
-    son30 = df[df["Tarih"] >= (son_tarih_dt - timedelta(days=30))].copy()
-    son7  = df[df["Tarih"] >= (son_tarih_dt - timedelta(days=7))].copy()
+    # timedelta(days=29): son_tarih dahil geriye 30 gün (örn: 01 Nis – 30 Nis = tam 30 gün)
+    son30_bas = son_tarih_dt - timedelta(days=29)
+    son30 = df[(df["Tarih"] >= son30_bas) & (df["Tarih"] <= son_tarih_dt)].copy()
+    son7  = df[(df["Tarih"] >= son_tarih_dt - timedelta(days=6)) & (df["Tarih"] <= son_tarih_dt)].copy()
     son_df = df[df["Tarih"].dt.strftime("%Y-%m-%d") == son_tarih_str]  # en son mevcut gün
+
+    # 30G tarih aralığı metni (kart altında gösterilecek)
+    son30_bas_str  = son30_bas.strftime("%d %b %Y") if not son30.empty else "—"
+    son30_bit_str  = son_tarih_dt.strftime("%d %b %Y")
+    son30_gun_sayi = len(son30["Tarih"].dt.date.unique()) if not son30.empty else 0
 
     # Özet değerler
     kwh_dun    = son_df["Toplam_Hastane_Tuketim_kWh"].sum() if "Toplam_Hastane_Tuketim_kWh" in son_df.columns else 0
@@ -330,8 +337,12 @@ with tab1:
     with col_left:
         st.markdown('<div class="sec">⚡ ÖZET</div>', unsafe_allow_html=True)
 
-        def metric_card_v(ikon, baslik, deger, birim, renk_hex):
+        def metric_card_v(ikon, baslik, deger, birim, renk_hex, alt_bilgi=""):
             r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
+            alt_html = (
+                f"<div style='font-size:8px;color:rgba(150,210,255,0.4);margin-top:5px;"
+                f"letter-spacing:0.5px;'>{alt_bilgi}</div>"
+            ) if alt_bilgi else ""
             st.markdown(
                 f"""<div class="metric-card" style="margin-bottom:10px;">
                 <div style='font-size:18px;margin-bottom:2px;'>{ikon}</div>
@@ -340,14 +351,18 @@ with tab1:
                 <div style='font-family:Orbitron,sans-serif;font-size:17px;font-weight:900;
                             color:{renk_hex};text-shadow:0 0 12px rgba({r2},{g2},{b2},0.7);'>
                     {deger}<span style='font-size:8px;color:rgba(150,210,255,0.5);margin-left:3px;'>{birim}</span>
-                </div></div>""",
+                </div>{alt_html}</div>""",
                 unsafe_allow_html=True
             )
 
         metric_card_v("⚡", f"Tüketim ({son_tarih_str})", f"{kwh_dun:,.0f}", "kWh", "#00d4ff")
-        metric_card_v("📐", "kWh/m²",        f"{verim_dun:.2f}", "kWh/m²", "#f59e0b")
-        metric_card_v("📅", "30G Toplam",    f"{kwh_30/1000:,.1f}", "MWh", "#10b981")
-        metric_card_v("❄️", "Chiller Set",  f"{ch_set:.1f}" if ch_set else "—", "°C", "#a855f7")
+        metric_card_v("📐", "kWh/m²",     f"{verim_dun:.2f}", "kWh/m²", "#f59e0b")
+        metric_card_v(
+            "📅", "30G Toplam",
+            f"{kwh_30/1000:,.1f}", "MWh", "#10b981",
+            alt_bilgi=f"{son30_bas_str} → {son30_bit_str}  ({son30_gun_sayi} gün)"
+        )
+        metric_card_v("❄️", "Chiller Set", f"{ch_set:.1f}" if ch_set else "—", "°C", "#a855f7")
 
         # Kojen öz tüketim oranı
         if kojen_urt and kwh_dun and kwh_dun > 0:
