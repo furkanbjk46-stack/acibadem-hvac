@@ -1,14 +1,23 @@
 # data_bridge.py
 # Modbus (analizor_guncel_veriler.csv) + BACnet (hedefli_enerji_verileri.csv)
 # verilerini otomatik olarak energy_data.csv formatina donusturur.
-# Gunde bir kez (SNAPSHOT_HOUR:SNAPSHOT_MINUTE) calisir.
+#
+# CALISMA MANTIĞI:
+#   Her sabah 08:30'da sayac okumasi yapilir.
+#   Gunluk tuketim = bugun 08:30 okumasi - dun 08:30 okumasi
+#   Hesaplanan tuketim DUN'un tarihi ile energy_data.csv'ye yazilir.
+#
+#   Ornek: 4 Mayis 08:30'da calisinca ->
+#     - 4 Mayis 08:30 okumasi kaydedilir (yarinki hesap icin)
+#     - 3 Mayis 08:30 - 4 Mayis 08:30 farki = 3 Mayis'in tuketimi
+#     - energy_data.csv'ye "2026-05-03" satirini yazar
 
 import csv
 import json
 import os
 import time
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [BRIDGE] %(message)s")
 logger = logging.getLogger(__name__)
@@ -29,9 +38,9 @@ ENERGY_CSV = os.path.join(BASE_DIR, "energy_data.csv")
 # Gunluk Modbus referans degerleri (dun gece okuma)
 REF_FILE = os.path.join(BASE_DIR, "modbus_daily_ref.json")
 
-# Gunluk snapshot saati
-SNAPSHOT_HOUR   = 23
-SNAPSHOT_MINUTE = 45
+# Gunluk snapshot saati — her sabah 08:30'da dun'un verisini yazar
+SNAPSHOT_HOUR   = 8
+SNAPSHOT_MINUTE = 30
 
 # ================================================================
 # ANALIZOR GRUPLARI
@@ -296,44 +305,49 @@ def build_daily_row(today_str, bacnet, daily_kwh):
 # ================================================================
 
 def run_daily_snapshot():
-    today_str = date.today().isoformat()
-    logger.info("=== Gunluk snapshot basliyor: %s ===", today_str)
+    today     = date.today()
+    yesterday = today - timedelta(days=1)
 
-    # 1. CSV'leri oku
+    today_str     = today.isoformat()      # referans olarak kaydedilecek
+    yesterday_str = yesterday.isoformat()  # energy_data.csv'ye yazilacak tarih
+
+    logger.info("=== Gunluk snapshot basliyor ===")
+    logger.info("Bugun 08:30 okumasi: %s | Yazilacak tarih: %s", today_str, yesterday_str)
+
+    # 1. CSV'leri oku (data_collector'in en son yazdigi degerler)
     modbus_now = read_modbus_csv()
     bacnet_now = read_bacnet_csv()
-    logger.info("Modbus: %d cihaz okundu | BACnet: %d nokta okundu",
-                len(modbus_now), len(bacnet_now))
+    logger.info("Modbus: %d cihaz | BACnet: %d nokta", len(modbus_now), len(bacnet_now))
 
-    # 2. Onceki referansi yukle ve gunluk farki hesapla
+    # 2. Dunku referansi yukle (dun 08:30'daki okumalar)
     ref = load_ref()
     daily_kwh = calc_daily_kwh(modbus_now, ref)
 
-    # 3. Bugunun okumalarini yarin icin referans olarak kaydet
+    # 3. Bugunun 08:30 okumalarini yarin icin referans olarak kaydet
     if modbus_now:
         save_ref(today_str, modbus_now)
 
-    # 4. Ilk calistirma — referans kaydedildi, bugunku veri yazilmaz
+    # 4. Ilk calistirma — referans kaydedildi, dun icin veri yazilamaz
     if daily_kwh is None:
-        logger.info("Ilk calistirma — yarin ilk otomatik veri energy_data.csv'ye islenir.")
+        logger.info("Ilk calistirma: bugunun referansi kaydedildi.")
+        logger.info("Yarin 08:30'da dun'un (%s) verisi otomatik yazilacak.", today_str)
         return
 
-    # 5. Bu tarih zaten varsa uzerine yazma
-    if date_exists_in_csv(today_str):
-        logger.warning("Tarih zaten mevcut: %s — atlaniyour.", today_str)
+    # 5. Dunku tarih zaten energy_data.csv'de var mi?
+    if date_exists_in_csv(yesterday_str):
+        logger.warning("Tarih zaten mevcut: %s — atlanıyor.", yesterday_str)
         return
 
-    # 6. Satiri olustur ve yaz
-    row = build_daily_row(today_str, bacnet_now, daily_kwh)
+    # 6. Satiri olustur (dun'un tarihi ile) ve yaz
+    row = build_daily_row(yesterday_str, bacnet_now, daily_kwh)
     write_to_energy_csv(row)
 
-    logger.info("Otomatik degerler: MCC=%.1f kWh | Chiller=%.1f kWh | Dis Hava=%.1f C",
+    logger.info("Otomatik: MCC=%.1f kWh | Chiller=%.1f kWh | Dis Hava=%.1f C",
                 row.get("MCC_Tuketim_kWh") or 0,
                 row.get("Chiller_Tuketim_kWh") or 0,
                 row.get("Dis_Hava_Sicakligi_C") or 0)
-    logger.info("Manuel girilenler (portal uzerinden tamamlayin): "
-                "Sebeke, Kojen, Dogalgaz, Su")
-    logger.info("=== Snapshot tamamlandi ===")
+    logger.info("Manuel tamamlanacak (portal): Sebeke, Kojen, Dogalgaz, Su")
+    logger.info("=== Snapshot tamamlandi: %s ===", yesterday_str)
 
 
 # ================================================================
