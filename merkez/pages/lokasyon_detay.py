@@ -305,18 +305,24 @@ tab1, tab2, tab3, tab4 = st.tabs(["📊 Dashboard", "📈 Trend & Tahmin", "📋
 
 # ════════ TAB 1: DASHBOARD ════════
 with tab1:
-    # Son 30 gün — son_tarih_str baz alınır (gerçek son tarihe göre)
     son_tarih_dt = pd.to_datetime(son_tarih_str)
-    # timedelta(days=29): son_tarih dahil geriye 30 gün (örn: 01 Nis – 30 Nis = tam 30 gün)
+
+    # Grafik için kayan pencere (son 30 gün)
     son30_bas = son_tarih_dt - timedelta(days=29)
     son30 = df[(df["Tarih"] >= son30_bas) & (df["Tarih"] <= son_tarih_dt)].copy()
     son7  = df[(df["Tarih"] >= son_tarih_dt - timedelta(days=6)) & (df["Tarih"] <= son_tarih_dt)].copy()
     son_df = df[df["Tarih"].dt.strftime("%Y-%m-%d") == son_tarih_str]  # en son mevcut gün
 
-    # 30G tarih aralığı metni (kart altında gösterilecek)
-    son30_bas_str  = son30_bas.strftime("%d %b %Y") if not son30.empty else "—"
-    son30_bit_str  = son_tarih_dt.strftime("%d %b %Y")
-    son30_gun_sayi = len(son30["Tarih"].dt.date.unique()) if not son30.empty else 0
+    # ── AY BAZLI TOPLAM (kart için) ───────────────────
+    # Son tarihin ayının 1'inden son veriye kadar — ay kaç günse o kadar alır
+    ay_bas_dt  = son_tarih_dt.replace(day=1)
+    bu_ay_df   = df[(df["Tarih"] >= ay_bas_dt) & (df["Tarih"] <= son_tarih_dt)].copy()
+    kwh_bu_ay  = bu_ay_df["Toplam_Hastane_Tuketim_kWh"].sum() \
+                 if "Toplam_Hastane_Tuketim_kWh" in bu_ay_df.columns else 0
+    ay_gun_sayi = len(bu_ay_df["Tarih"].dt.date.unique()) if not bu_ay_df.empty else 0
+    ay_bas_str  = ay_bas_dt.strftime("%d %b %Y")
+    ay_bit_str  = son_tarih_dt.strftime("%d %b %Y")
+    ay_adi      = son_tarih_dt.strftime("%B %Y")   # örn: "Nisan 2026"
 
     # Özet değerler
     kwh_dun    = son_df["Toplam_Hastane_Tuketim_kWh"].sum() if "Toplam_Hastane_Tuketim_kWh" in son_df.columns else 0
@@ -358,9 +364,9 @@ with tab1:
         metric_card_v("⚡", f"Tüketim ({son_tarih_str})", f"{kwh_dun:,.0f}", "kWh", "#00d4ff")
         metric_card_v("📐", "kWh/m²",     f"{verim_dun:.2f}", "kWh/m²", "#f59e0b")
         metric_card_v(
-            "📅", "30G Toplam",
-            f"{kwh_30/1000:,.1f}", "MWh", "#10b981",
-            alt_bilgi=f"{son30_bas_str} → {son30_bit_str}  ({son30_gun_sayi} gün)"
+            "📅", f"{ay_adi} Toplam",
+            f"{kwh_bu_ay/1000:,.1f}", "MWh", "#10b981",
+            alt_bilgi=f"{ay_bas_str} → {ay_bit_str}  ({ay_gun_sayi} gün)"
         )
         metric_card_v("❄️", "Chiller Set", f"{ch_set:.1f}" if ch_set else "—", "°C", "#a855f7")
 
