@@ -18,12 +18,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── LIGHT / DARK MODE (ana sayfayla senkron) ─────────
-if "light_mode" not in st.session_state:
-    st.session_state.light_mode = False
-_LM = st.session_state.light_mode
-
-# ── CSS (Koyu mod — temel) ───────────────────────────
+# ── CSS ──────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
@@ -101,64 +96,6 @@ button span[data-testid="stIconMaterial"] {
 }
 </style>
 """, unsafe_allow_html=True)
-
-# ── CSS (Aydınlık mod — üstüne yazar) ───────────────
-if _LM:
-    st.markdown("""<style>
-/* ─── AYDINLIK MOD ─── */
-html, body, [data-testid="stAppViewContainer"] { background: #d5e4f4 !important; }
-[data-testid="stAppViewContainer"]             { background: #d5e4f4 !important; }
-h1,h2,h3,h4,h5,h6  { color: #0a1e3d !important; }
-p, span, div, label { color: #0f2a4a !important; }
-[data-testid="stMarkdownContainer"] span,
-[data-testid="stMarkdownContainer"] div,
-[data-testid="stMarkdownContainer"] p { color: #0f2a4a !important; }
-/* Metrikler */
-[data-testid="stMetricValue"] { color: #004fa3 !important; text-shadow: none !important; }
-[data-testid="stMetricLabel"] { color: #1a4878 !important; }
-/* Kart */
-.metric-card {
-    background: rgba(255,255,255,0.90) !important;
-    border-color: rgba(0,79,163,0.25) !important;
-}
-/* Bölüm başlığı */
-.sec { color: #004fa3 !important; border-bottom-color: rgba(0,79,163,0.25) !important; }
-/* Sekmeler */
-[data-testid="stTabs"] [data-baseweb="tab-list"] {
-    background: rgba(200,220,245,0.8) !important;
-}
-[data-testid="stTabs"] [data-baseweb="tab"] { color: #0f2a4a !important; }
-[data-testid="stTabs"] [aria-selected="true"] {
-    background: rgba(0,79,163,0.18) !important;
-    color: #003d80 !important;
-}
-[data-testid="stTabs"] [data-baseweb="tab-panel"] {
-    background: rgba(220,235,255,0.6) !important;
-    border-color: rgba(0,79,163,0.12) !important;
-}
-/* Tablo */
-.stDataFrame thead tr th {
-    background: rgba(0,79,163,0.85) !important;
-    color: #fff !important;
-}
-.stDataFrame tbody tr td {
-    background: rgba(235,244,255,0.9) !important;
-    color: #0a1e3d !important;
-    border-bottom-color: rgba(0,79,163,0.12) !important;
-}
-/* Buton */
-.stButton > button {
-    background: rgba(0,79,163,0.12) !important;
-    color: #004fa3 !important;
-    border-color: rgba(0,79,163,0.35) !important;
-}
-.stButton > button:hover {
-    background: rgba(0,79,163,0.22) !important;
-}
-/* Scrollbar */
-::-webkit-scrollbar-track { background: #b4cce4; }
-::-webkit-scrollbar-thumb { background: rgba(0,79,163,0.4); }
-</style>""", unsafe_allow_html=True)
 
 # ── Lokasyon bilgileri (app_merkez.py ile senkron) ───────
 HASTANELER = {
@@ -341,15 +278,10 @@ else:
     son_tarih_str = dun
 
 # ── Header ───────────────────────────────────────────
-col_geri, col_baslik, col_tema = st.columns([1, 8, 1])
+col_geri, col_baslik = st.columns([1, 9])
 with col_geri:
     if st.button("⬅ Geri"):
         st.switch_page("app_merkez.py")
-with col_tema:
-    _toggle_label = "☀️" if not _LM else "🌙"
-    if st.button(_toggle_label, key="theme_toggle_detay", help="Aydınlık / Koyu mod"):
-        st.session_state.light_mode = not st.session_state.light_mode
-        st.rerun()
 with col_baslik:
     st.markdown(
         f"""<div style='padding:8px 0;'>
