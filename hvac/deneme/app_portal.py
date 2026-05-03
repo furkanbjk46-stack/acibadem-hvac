@@ -2727,60 +2727,86 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(TAB_NAMES)
 with tab1:
     st.subheader("Günlük Veri Girişi (Tarih bazlı güncelle/ekle)")
 
+    # ── Tarih seçici FORM DIŞINDA — değişince mevcut değerleri önyükler ──
+    tarih = st.date_input("Tarih", value=date.today(), key="entry_tarih")
+
+    # Seçili tarih için mevcut satırı yükle
+    _df_all = load_data()
+    _ex = None
+    if not _df_all.empty:
+        _match = _df_all[_df_all["Tarih"] == tarih]
+        if not _match.empty:
+            _ex = _match.iloc[-1]
+            st.info(
+                f"📋 **{tarih}** için kayıtlı veri bulundu — mevcut değerler önyüklendi. "
+                "Sadece değiştirmek istediğiniz alanları düzenleyip kaydedin."
+            )
+
+    def _fv(col, default):
+        """Mevcut satırdan değer al, yoksa default döndür."""
+        if _ex is None:
+            return default
+        v = _ex.get(col)
+        if v is None or (isinstance(v, float) and __import__('math').isnan(v)):
+            return default
+        try:
+            return type(default)(v)
+        except (ValueError, TypeError):
+            return default
+
     with st.form("daily_entry_form", clear_on_submit=False):
         c1, c2, c3 = st.columns(3)
 
         with c1:
-            tarih = st.date_input("Tarih", value=date.today(), key="entry_tarih")
-            dis_hava = st.number_input("Dış Hava Sıcaklığı (°C)", value=0.0, step=0.5, key="entry_dis_hava")
-            chiller_load_pct = st.number_input("Chiller Çalışma Kapasitesi Yüzdesi (%)", value=0.0, step=1.0, min_value=0.0, max_value=100.0, key="entry_chiller_load_pct", help="Chiller kapasite yüzdesini girin; COP otomatik hesaplanır.")
-            kar_eritme = st.checkbox("Kar Eritme Aktif (On/Off)", value=False, key="entry_kar")
+            dis_hava = st.number_input("Dış Hava Sıcaklığı (°C)", value=_fv("Dis_Hava_Sicakligi_C", 0.0), step=0.5, key="entry_dis_hava")
+            chiller_load_pct = st.number_input("Chiller Çalışma Kapasitesi Yüzdesi (%)", value=_fv("Chiller_Load_Percent", 0.0), step=1.0, min_value=0.0, max_value=100.0, key="entry_chiller_load_pct", help="Chiller kapasite yüzdesini girin; COP otomatik hesaplanır.")
+            kar_eritme = st.checkbox("Kar Eritme Aktif (On/Off)", value=bool(_fv("Kar_Eritme_Aktif", False)), key="entry_kar")
 
         with c2:
             st.markdown("**Chiller / Kazan**")
-            ch_set = st.number_input("Chiller Set Temp (°C)", value=6.5, step=0.5, key="entry_ch_set")
+            ch_set = st.number_input("Chiller Set Temp (°C)", value=_fv("Chiller_Set_Temp_C", 6.5), step=0.5, key="entry_ch_set")
             st.caption(
                 "💡 **Chiller Set Önerisi:** "
                 "0–7°C → **8.0°C** | 7–23°C → **7.5°C** | 23–26°C → **7.0°C** | 26°C+ → **6.5°C**"
             )
-            ch_count = st.number_input("Chiller Adet (Çalışan)", value=0, step=1, min_value=0, key="entry_ch_count")
-            abs_count = st.number_input("Absorption Chiller Adet", value=0, step=1, min_value=0, key="entry_abs_count")
-            kazan_count = st.number_input("Kazan Adet", value=0, step=1, min_value=0, key="entry_kazan_count")
+            ch_count = st.number_input("Chiller Adet (Çalışan)", value=_fv("Chiller_Adet", 0), step=1, min_value=0, key="entry_ch_count")
+            abs_count = st.number_input("Absorption Chiller Adet", value=_fv("Absorption_Chiller_Adet", 0), step=1, min_value=0, key="entry_abs_count")
+            kazan_count = st.number_input("Kazan Adet", value=_fv("Kazan_Adet", 0), step=1, min_value=0, key="entry_kazan_count")
 
         with c3:
             # Lokasyona göre sıcaklık alanları
             if _has_dual_lines:
                 # Maslak: çift hat
                 st.markdown("**Mas-1 / Mas-2 Sıcaklıkları**")
-                mas1_h = st.number_input("Mas-1 Isıtma Temp", value=0.0, step=0.5, key="entry_mas1_h")
-                mas1_k = st.number_input("Mas-1 Kazan Temp", value=0.0, step=0.5, key="entry_mas1_k")
-                mas1_c = st.number_input("Mas-1 Soğutma Temp", value=0.0, step=0.5, key="entry_mas1_c")
-                mas2_h = st.number_input("Mas-2 Isıtma Temp", value=0.0, step=0.5, key="entry_mas2_h")
-                mas2_k = st.number_input("Mas-2 Kazan Temp", value=0.0, step=0.5, key="entry_mas2_k")
-                mas2_c = st.number_input("Mas-2 Soğutma Temp", value=0.0, step=0.5, key="entry_mas2_c")
+                mas1_h = st.number_input("Mas-1 Isıtma Temp", value=_fv("Mas1_Isitma_Temp", 0.0), step=0.5, key="entry_mas1_h")
+                mas1_k = st.number_input("Mas-1 Kazan Temp", value=_fv("Mas1_Kazan_Temp", 0.0), step=0.5, key="entry_mas1_k")
+                mas1_c = st.number_input("Mas-1 Soğutma Temp", value=_fv("Mas1_Sogutma_Temp", 0.0), step=0.5, key="entry_mas1_c")
+                mas2_h = st.number_input("Mas-2 Isıtma Temp", value=_fv("Mas2_Isitma_Temp", 0.0), step=0.5, key="entry_mas2_h")
+                mas2_k = st.number_input("Mas-2 Kazan Temp", value=_fv("Mas2_Kazan_Temp", 0.0), step=0.5, key="entry_mas2_k")
+                mas2_c = st.number_input("Mas-2 Soğutma Temp", value=_fv("Mas2_Sogutma_Temp", 0.0), step=0.5, key="entry_mas2_c")
             else:
                 # Altunizade vb.: tek hat
                 _single_labels = _energy_schema.get("single_labels", {})
                 st.markdown("**Sıcaklık Değerleri**")
-                single_h = st.number_input(_single_labels.get("heating_temp", "Isıtma Temp"), value=0.0, step=0.5, key="entry_single_h")
-                single_k = st.number_input(_single_labels.get("boiler_temp", "Kazan Temp"), value=0.0, step=0.5, key="entry_single_k")
-                single_c = st.number_input(_single_labels.get("cooling_temp", "Soğutma Temp"), value=0.0, step=0.5, key="entry_single_c")
+                single_h = st.number_input(_single_labels.get("heating_temp", "Isıtma Temp"), value=_fv("Isitma_Temp_C", 0.0), step=0.5, key="entry_single_h")
+                single_k = st.number_input(_single_labels.get("boiler_temp", "Kazan Temp"), value=_fv("Kazan_Temp_C", 0.0), step=0.5, key="entry_single_k")
+                single_c = st.number_input(_single_labels.get("cooling_temp", "Soğutma Temp"), value=_fv("Sogutma_Temp_C", 0.0), step=0.5, key="entry_single_c")
 
         st.divider()
         st.subheader("Tüketim / Üretim")
 
         a1, a2, a3 = st.columns(3)
         with a1:
-            sebeke = st.number_input("Şebeke Tüketim (kWh)", value=0.0, step=50.0, min_value=0.0, key="entry_sebeke")
-            koj = st.number_input("Kojen Üretim (kWh)", value=0.0, step=50.0, min_value=0.0, key="entry_kojen")
-            su = st.number_input("Su Tüketimi (m³)", value=0.0, step=1.0, min_value=0.0, key="entry_su")
+            sebeke = st.number_input("Şebeke Tüketim (kWh)", value=_fv("Sebeke_Tuketim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_sebeke")
+            koj = st.number_input("Kojen Üretim (kWh)", value=_fv("Kojen_Uretim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_kojen")
+            su = st.number_input("Su Tüketimi (m³)", value=_fv("Su_Tuketimi_m3", 0.0), step=1.0, min_value=0.0, key="entry_su")
         with a2:
-            kazan_gaz = st.number_input("Kazan Doğalgaz (m³)", value=0.0, step=10.0, min_value=0.0, key="entry_kazan_gaz")
-            koj_gaz = st.number_input("Kojen Doğalgaz (m³)", value=0.0, step=10.0, min_value=0.0, key="entry_kojen_gaz")
+            kazan_gaz = st.number_input("Kazan Doğalgaz (m³)", value=_fv("Kazan_Dogalgaz_m3", 0.0), step=10.0, min_value=0.0, key="entry_kazan_gaz")
+            koj_gaz = st.number_input("Kojen Doğalgaz (m³)", value=_fv("Kojen_Dogalgaz_m3", 0.0), step=10.0, min_value=0.0, key="entry_kojen_gaz")
         with a3:
-            ch_kwh = st.number_input("Chiller Tüketim (kWh)", value=0.0, step=50.0, min_value=0.0, key="entry_ch_kwh")
-            mcc_kwh = st.number_input("MCC Tüketim (kWh)", value=0.0, step=50.0, min_value=0.0, key="entry_mcc_kwh")
-            vrf_kwh = st.number_input("VRF/Split Tüketim (kWh) (varsa)", value=0.0, step=25.0, min_value=0.0, key="entry_vrf_kwh")
+            ch_kwh = st.number_input("Chiller Tüketim (kWh)", value=_fv("Chiller_Tuketim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_ch_kwh")
+            mcc_kwh = st.number_input("MCC Tüketim (kWh)", value=_fv("MCC_Tuketim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_mcc_kwh")
+            vrf_kwh = st.number_input("VRF/Split Tüketim (kWh) (varsa)", value=_fv("VRF_Split_Tuketim_kWh", 0.0), step=25.0, min_value=0.0, key="entry_vrf_kwh")
 
         preview_total_h = sebeke + koj
         preview_total_cool = ch_kwh + vrf_kwh
