@@ -17,6 +17,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# ============ LIGHT / DARK MODE ============
+if "light_mode" not in st.session_state:
+    st.session_state.light_mode = False
+
+_LM = st.session_state.light_mode
+
 # ============ CSS ============
 st.markdown("""
 <style>
@@ -26,7 +32,7 @@ html, body, [data-testid="stAppViewContainer"] {
     background: #020b18 !important;
 }
 [data-testid="stAppViewContainer"] {
-    background: radial-gradient(ellipse at 50% 40%, #071830 0%, #020b18 70%) !important;
+    background: #020b18 !important;
 }
 [data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
@@ -191,6 +197,27 @@ button span[data-testid="stIconMaterial"] {
 .btn-goto button:hover { background: rgba(0,212,255,0.18) !important; }
 </style>
 """, unsafe_allow_html=True)
+
+if _LM:
+    st.markdown("""<style>
+html, body, [data-testid="stAppViewContainer"] { background: #f0f4f8 !important; }
+[data-testid="stAppViewContainer"] { background: #f0f4f8 !important; }
+h1,h2,h3,h4,h5,h6 { color: #0f172a !important; }
+p, span, div, label { color: rgba(15,23,42,0.85) !important; }
+[data-testid="stMetricValue"] { color: #0055bb !important; text-shadow: none !important; }
+[data-testid="stMetricLabel"] { color: rgba(0,60,150,0.7) !important; }
+[data-testid="metric-container"] { background: rgba(255,255,255,0.95) !important; border-color: rgba(0,85,187,0.25) !important; }
+::-webkit-scrollbar-track { background: #e2e8f0; }
+::-webkit-scrollbar-thumb { background: rgba(0,85,187,0.4); }
+.nk { background: rgba(255,255,255,0.92) !important; border-color: rgba(0,85,187,0.2) !important; }
+.sec { color: #0055bb !important; border-bottom-color: rgba(0,85,187,0.2) !important; }
+.alrt-r { color: #991b1b !important; }
+.alrt-y { color: #92400e !important; }
+.alrt-g { color: #065f46 !important; }
+[data-testid="stExpander"] { background: rgba(240,244,248,0.9) !important; border-color: rgba(0,85,187,0.15) !important; }
+[data-testid="stExpanderToggleIcon"] { color: rgba(0,85,187,0.6) !important; }
+.alarm-detay-kart { background: rgba(230,240,255,0.8) !important; border-color: rgba(0,85,187,0.15) !important; }
+</style>""", unsafe_allow_html=True)
 
 # ============ SABİT VERİ ============
 HASTANELER = {
@@ -358,6 +385,13 @@ now  = datetime.now()
 dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
+_hcol1, _hcol2 = st.columns([10, 1])
+with _hcol2:
+    _toggle_label = "☀️" if not _LM else "🌙"
+    if st.button(_toggle_label, key="theme_toggle", help="Aydınlık / Koyu mod"):
+        st.session_state.light_mode = not st.session_state.light_mode
+        st.rerun()
+
 st.markdown("""
 <div style="text-align:center; padding:12px 0 8px;">
   <div style="font-family:'Orbitron',sans-serif; font-size:9px; color:rgba(0,212,255,0.45);
@@ -401,6 +435,11 @@ if not bagli:
 df_all, _fetch_err = fetch_energy(url, key)
 lokasyonlar  = fetch_lokasyonlar(url, key)
 lok_dict     = {l["lokasyon_id"]: l for l in lokasyonlar}
+
+# Sadece bilinen lokasyonları al (deneme/test verileri filtrelenir)
+if not df_all.empty and "lokasyon_id" in df_all.columns:
+    df_all = df_all[df_all["lokasyon_id"].isin(HASTANELER.keys())]
+
 aktif_loklar = df_all["lokasyon_id"].unique().tolist() if not df_all.empty else []
 
 # Bağlantı hatası varsa üstte küçük uyarı göster (sayfayı durdurma)
