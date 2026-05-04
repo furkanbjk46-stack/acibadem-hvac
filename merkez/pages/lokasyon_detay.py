@@ -405,6 +405,9 @@ with tab1:
             if "Toplam_Hastane_Tuketim_kWh" not in veri_df.columns or veri_df.empty:
                 st.info("Tüketim verisi bulunamadı.")
                 return
+            # Başlığı grafik içine değil, üstüne caption olarak göster
+            if baslik:
+                st.caption(baslik)
             gun_df = veri_df.groupby(veri_df["Tarih"].dt.date)["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
             gun_df.columns = ["Tarih", "kWh"]
             fig = go.Figure()
@@ -420,21 +423,20 @@ with tab1:
             fig.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#a0c8ff", family="Inter"),
-                margin=dict(t=10, b=20, l=50, r=10), height=370,
+                margin=dict(t=4, b=20, l=50, r=10), height=355,
                 xaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True),
                 yaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True,
                            title=dict(text="kWh", font=dict(size=10))),
-                title=dict(text=baslik, font=dict(size=11, color="#a0c8ff")) if baslik else {},
             )
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
         # ── Bu Ay Günlük Tüketim (varsayılan) ──
         if grafik_tip == "tuketim_bu_ay":
-            _bar_chart(bu_ay_df, f"{ay_adi}  —  {ay_bas_str} → {ay_bit_str}")
+            _bar_chart(bu_ay_df, f"{ay_bas_str} → {ay_bit_str}")
 
         # ── Son 30 Gün Tüketim ──
         elif grafik_tip == "tuketim":
-            _bar_chart(son30, f"Son 30 Gün  —  {son30_bas.strftime('%d %b')} → {son_tarih_dt.strftime('%d %b %Y')}")
+            _bar_chart(son30, f"{son30_bas.strftime('%d %b')} → {son_tarih_dt.strftime('%d %b %Y')}  (30 gün)")
 
         # ── Chiller Set Trendi ──
         elif grafik_tip == "chiller":
