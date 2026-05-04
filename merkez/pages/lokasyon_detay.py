@@ -381,17 +381,18 @@ with tab1:
         st.markdown('<div class="sec">📊 GRAFİK</div>', unsafe_allow_html=True)
 
         grafik_secenekler = {
-            "📊 Günlük Tüketim (30G)": "tuketim",
-            "❄️ Chiller Set Trendi":   "chiller",
-            "📐 kWh/m² Trendi":        "verimlilik",
-            "💧 Su Tüketimi":           "su",
-            "⚙️ Kojen Üretim":         "kojen",
-            "🔌 Şebeke Tüketimi":      "sebeke",
-            "🏭 MCC Tüketimi":         "mcc",
-            "🔥 Kazan Doğalgaz":       "kazan",
-            "📆 Bu Ay vs Geçen Ay":    "ay_karsilastir",
-            "🔥 Doğalgaz Verimliliği": "dogalgaz_verim",
-            "📋 KPI Özet":             "kpi_ozet",
+            f"📅 {ay_adi} Tüketim":     "tuketim_bu_ay",   # ← varsayılan: bu ay
+            "📊 Son 30 Gün Tüketim":    "tuketim",
+            "❄️ Chiller Set Trendi":    "chiller",
+            "📐 kWh/m² Trendi":         "verimlilik",
+            "💧 Su Tüketimi":            "su",
+            "⚙️ Kojen Üretim":          "kojen",
+            "🔌 Şebeke Tüketimi":       "sebeke",
+            "🏭 MCC Tüketimi":          "mcc",
+            "🔥 Kazan Doğalgaz":        "kazan",
+            "📆 Bu Ay vs Geçen Ay":     "ay_karsilastir",
+            "🔥 Doğalgaz Verimliliği":  "dogalgaz_verim",
+            "📋 KPI Özet":              "kpi_ozet",
         }
         secim = st.selectbox(
             "Grafik Seçin", list(grafik_secenekler.keys()),
@@ -399,32 +400,41 @@ with tab1:
         )
         grafik_tip = grafik_secenekler[secim]
 
-        # ── Günlük Tüketim ──
-        if grafik_tip == "tuketim":
-            if "Toplam_Hastane_Tuketim_kWh" in son30.columns and not son30.empty:
-                gun_df = son30.groupby(son30["Tarih"].dt.date)["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
-                gun_df.columns = ["Tarih", "kWh"]
-                fig_bar = go.Figure()
-                fig_bar.add_trace(go.Bar(
-                    x=gun_df["Tarih"], y=gun_df["kWh"],
-                    marker=dict(
-                        color=gun_df["kWh"],
-                        colorscale=[[0,f"rgba({rr},{rg},{rb},0.4)"],[1,f"rgba({rr},{rg},{rb},0.95)"]],
-                        showscale=False,
-                    ),
-                    hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
-                ))
-                fig_bar.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
-                    margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True,
-                               title=dict(text="kWh", font=dict(size=10))),
-                )
-                st.plotly_chart(fig_bar, use_container_width=True, config={"displayModeBar": False})
-            else:
+        def _bar_chart(veri_df, baslik=""):
+            """Günlük tüketim bar grafiği — verilen df ile çizer."""
+            if "Toplam_Hastane_Tuketim_kWh" not in veri_df.columns or veri_df.empty:
                 st.info("Tüketim verisi bulunamadı.")
+                return
+            gun_df = veri_df.groupby(veri_df["Tarih"].dt.date)["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
+            gun_df.columns = ["Tarih", "kWh"]
+            fig = go.Figure()
+            fig.add_trace(go.Bar(
+                x=gun_df["Tarih"], y=gun_df["kWh"],
+                marker=dict(
+                    color=gun_df["kWh"],
+                    colorscale=[[0, f"rgba({rr},{rg},{rb},0.4)"], [1, f"rgba({rr},{rg},{rb},0.95)"]],
+                    showscale=False,
+                ),
+                hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
+            ))
+            fig.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#a0c8ff", family="Inter"),
+                margin=dict(t=10, b=20, l=50, r=10), height=370,
+                xaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True),
+                yaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True,
+                           title=dict(text="kWh", font=dict(size=10))),
+                title=dict(text=baslik, font=dict(size=11, color="#a0c8ff")) if baslik else {},
+            )
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+        # ── Bu Ay Günlük Tüketim (varsayılan) ──
+        if grafik_tip == "tuketim_bu_ay":
+            _bar_chart(bu_ay_df, f"{ay_adi}  —  {ay_bas_str} → {ay_bit_str}")
+
+        # ── Son 30 Gün Tüketim ──
+        elif grafik_tip == "tuketim":
+            _bar_chart(son30, f"Son 30 Gün  —  {son30_bas.strftime('%d %b')} → {son_tarih_dt.strftime('%d %b %Y')}")
 
         # ── Chiller Set Trendi ──
         elif grafik_tip == "chiller":
@@ -656,30 +666,32 @@ with tab1:
             else:
                 st.info("Doğalgaz verimlilik verisi bulunamadı.")
 
-        # ── KPI Özet Scorecard ──
+        # ── KPI Özet Scorecard (ay bazlı) ──
         elif grafik_tip == "kpi_ozet":
             kpi_rows = []
-            if "Toplam_Hastane_Tuketim_kWh" in son30.columns:
-                kpi_rows.append(("⚡ Elektrik Tüketimi (30G)", f"{son30['Toplam_Hastane_Tuketim_kWh'].sum():,.0f} kWh", "#00d4ff"))
-            if "Kojen_Uretim_kWh" in son30.columns:
-                kpi_rows.append(("⚙️ Kojen Üretimi (30G)", f"{son30['Kojen_Uretim_kWh'].sum():,.0f} kWh", "#10b981"))
-            if "Kojen_Uretim_kWh" in son30.columns and "Toplam_Hastane_Tuketim_kWh" in son30.columns:
-                top = son30["Toplam_Hastane_Tuketim_kWh"].sum()
-                ko  = son30["Kojen_Uretim_kWh"].sum()
+            _kd = bu_ay_df  # KPI için bu ayın verisi
+            _etiket = ay_adi
+            if "Toplam_Hastane_Tuketim_kWh" in _kd.columns:
+                kpi_rows.append((f"⚡ Elektrik Tüketimi ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum():,.0f} kWh", "#00d4ff"))
+            if "Kojen_Uretim_kWh" in _kd.columns:
+                kpi_rows.append((f"⚙️ Kojen Üretimi ({_etiket})", f"{_kd['Kojen_Uretim_kWh'].sum():,.0f} kWh", "#10b981"))
+            if "Kojen_Uretim_kWh" in _kd.columns and "Toplam_Hastane_Tuketim_kWh" in _kd.columns:
+                top = _kd["Toplam_Hastane_Tuketim_kWh"].sum()
+                ko  = _kd["Kojen_Uretim_kWh"].sum()
                 if top > 0:
                     kpi_rows.append(("⚙️ Kojen Karşılama Oranı", f"%{ko/top*100:.1f}", "#10b981"))
-            if "Kojen_Dogalgaz_m3" in son30.columns:
-                kpi_rows.append(("🔥 Kojen Doğalgaz (30G)", f"{son30['Kojen_Dogalgaz_m3'].sum():,.1f} m³", "#f97316"))
-            if "Kazan_Dogalgaz_m3" in son30.columns:
-                kpi_rows.append(("🏭 Kazan Doğalgaz (30G)", f"{son30['Kazan_Dogalgaz_m3'].sum():,.1f} m³", "#ef4444"))
-            if "Su_Tuketimi_m3" in son30.columns:
-                kpi_rows.append(("💧 Su Tüketimi (30G)", f"{son30['Su_Tuketimi_m3'].sum():,.1f} m³", "#38bdf8"))
-            if "Sebeke_Tuketim_kWh" in son30.columns:
-                kpi_rows.append(("🔌 Şebeke Tüketimi (30G)", f"{son30['Sebeke_Tuketim_kWh'].sum():,.0f} kWh", "#a855f7"))
-            if "MCC_Tuketim_kWh" in son30.columns:
-                kpi_rows.append(("🏗️ MCC Tüketimi (30G)", f"{son30['MCC_Tuketim_kWh'].sum():,.0f} kWh", "#f59e0b"))
-            if m2 and son30["Toplam_Hastane_Tuketim_kWh"].sum() if "Toplam_Hastane_Tuketim_kWh" in son30.columns else 0:
-                kpi_rows.append(("📐 kWh/m² (30G)", f"{son30['Toplam_Hastane_Tuketim_kWh'].sum()/m2:.2f}", "#f59e0b"))
+            if "Kojen_Dogalgaz_m3" in _kd.columns:
+                kpi_rows.append((f"🔥 Kojen Doğalgaz ({_etiket})", f"{_kd['Kojen_Dogalgaz_m3'].sum():,.1f} m³", "#f97316"))
+            if "Kazan_Dogalgaz_m3" in _kd.columns:
+                kpi_rows.append((f"🏭 Kazan Doğalgaz ({_etiket})", f"{_kd['Kazan_Dogalgaz_m3'].sum():,.1f} m³", "#ef4444"))
+            if "Su_Tuketimi_m3" in _kd.columns:
+                kpi_rows.append((f"💧 Su Tüketimi ({_etiket})", f"{_kd['Su_Tuketimi_m3'].sum():,.1f} m³", "#38bdf8"))
+            if "Sebeke_Tuketim_kWh" in _kd.columns:
+                kpi_rows.append((f"🔌 Şebeke Tüketimi ({_etiket})", f"{_kd['Sebeke_Tuketim_kWh'].sum():,.0f} kWh", "#a855f7"))
+            if "MCC_Tuketim_kWh" in _kd.columns:
+                kpi_rows.append((f"🏗️ MCC Tüketimi ({_etiket})", f"{_kd['MCC_Tuketim_kWh'].sum():,.0f} kWh", "#f59e0b"))
+            if m2 and "Toplam_Hastane_Tuketim_kWh" in _kd.columns and _kd["Toplam_Hastane_Tuketim_kWh"].sum() > 0:
+                kpi_rows.append((f"📐 kWh/m² ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum()/m2:.2f}", "#f59e0b"))
 
             if kpi_rows:
                 rows_html = ""
