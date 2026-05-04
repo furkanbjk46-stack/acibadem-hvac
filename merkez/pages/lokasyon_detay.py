@@ -365,7 +365,7 @@ with tab1:
         metric_card_v("📐", "kWh/m²",     f"{verim_dun:.2f}", "kWh/m²", "#f59e0b")
         metric_card_v(
             "📅", f"{ay_adi} Toplam",
-            f"{kwh_bu_ay/1000:,.1f}", "MWh", "#10b981",
+            f"{kwh_bu_ay:,.0f}", "kWh", "#10b981",
             alt_bilgi=f"{ay_bas_str} → {ay_bit_str}  ({ay_gun_sayi} gün)"
         )
         metric_card_v("❄️", "Chiller Set", f"{ch_set:.1f}" if ch_set else "—", "°C", "#a855f7")
