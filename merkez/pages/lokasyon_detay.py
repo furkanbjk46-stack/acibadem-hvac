@@ -831,20 +831,36 @@ with tab1:
 
     def cihaz_html(cihaz, bg, border, text_renk):
         if isinstance(cihaz, dict):
-            ad  = cihaz.get("ad", cihaz.get("name", str(cihaz)))
-            det = cihaz.get("detay", cihaz.get("ariza", cihaz.get("bakim_turu", "")))
+            ad         = cihaz.get("ad", cihaz.get("name", str(cihaz)))
+            bilesenler = cihaz.get("bilesenler", [])
+            not_metni  = cihaz.get("not", cihaz.get("detay", cihaz.get("bakim_turu", "")))
         else:
-            ad, det = str(cihaz), ""
-        det_part = (
-            "<div style='font-size:10px;color:rgba(255,255,255,0.45);"
-            "margin-top:2px;padding-left:14px;'>" + det + "</div>"
-        ) if det else ""
+            ad, bilesenler, not_metni = str(cihaz), [], ""
+
+        # Bileşen badge'leri
+        badge_html = ""
+        if bilesenler:
+            badges = "".join(
+                f"<span style='display:inline-block;background:rgba(245,158,11,0.15);"
+                f"border:1px solid rgba(245,158,11,0.35);border-radius:4px;"
+                f"padding:2px 7px;margin:3px 3px 0 0;font-size:9px;"
+                f"color:rgba(253,211,77,0.9);letter-spacing:0.3px;'>{b}</span>"
+                for b in bilesenler
+            )
+            badge_html = f"<div style='margin-top:5px;padding-left:14px;'>{badges}</div>"
+
+        # Not
+        not_html = (
+            f"<div style='font-size:10px;color:rgba(200,220,255,0.45);"
+            f"margin-top:5px;padding-left:14px;font-style:italic;'>💬 {not_metni}</div>"
+        ) if not_metni else ""
+
         return (
             "<div style='background:" + bg + ";border-left:3px solid " + border + ";"
             "border-radius:6px;padding:8px 12px;margin-bottom:6px;'>"
             "<span style='font-size:12px;color:" + text_renk + ";font-weight:600;'>"
             + chr(9679) + " " + ad + "</span>"
-            + det_part +
+            + badge_html + not_html +
             "</div>"
         )
 

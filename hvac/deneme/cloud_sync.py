@@ -270,6 +270,14 @@ def check_and_apply_update(client, lokasyon_id: str):
 
 def get_bakim_ozet() -> dict:
     """configs/maintenance_cards.json dosyasından arıza özetini çıkar."""
+    BILESEN_ETIKET = {
+        "heating_valve_body":   "Isıtma Vanası Gövde",
+        "heating_valve_signal": "Isıtma Vanası 0-10V",
+        "cooling_valve_body":   "Soğutma Vanası Gövde",
+        "cooling_valve_signal": "Soğutma Vanası 0-10V",
+        "supply_sensor":        "Üfleme Sensör",
+        "return_sensor":        "Emiş Sensör",
+    }
     try:
         mc_file = os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
         if not os.path.exists(mc_file):
@@ -281,15 +289,32 @@ def get_bakim_ozet() -> dict:
         toplam_bakim = 0
         arizali_cihazlar = []
         bakimda_cihazlar = []
-        for cihaz, bilesенler in cards.items():
-            cihaz_ariza = sum(1 for v in bilesенler.values() if v == "FAULTY")
-            cihaz_bakim = sum(1 for v in bilesенler.values() if v == "MAINTENANCE")
-            toplam_ariza += cihaz_ariza
-            toplam_bakim += cihaz_bakim
-            if cihaz_ariza > 0:
-                arizali_cihazlar.append(f"{cihaz} ({cihaz_ariza} arıza)")
-            if cihaz_bakim > 0:
-                bakimda_cihazlar.append(f"{cihaz} ({cihaz_bakim} bakım)")
+        for cihaz, bilesenler in cards.items():
+            ariza_listesi = [
+                BILESEN_ETIKET.get(k, k)
+                for k, v in bilesenler.items()
+                if v == "FAULTY" and k != "note"
+            ]
+            bakim_listesi = [
+                BILESEN_ETIKET.get(k, k)
+                for k, v in bilesenler.items()
+                if v == "MAINTENANCE" and k != "note"
+            ]
+            not_metni = bilesenler.get("note", "")
+            toplam_ariza += len(ariza_listesi)
+            toplam_bakim += len(bakim_listesi)
+            if ariza_listesi:
+                arizali_cihazlar.append({
+                    "ad":        cihaz,
+                    "bilesenler": ariza_listesi,
+                    "not":       not_metni,
+                })
+            if bakim_listesi:
+                bakimda_cihazlar.append({
+                    "ad":        cihaz,
+                    "bilesenler": bakim_listesi,
+                    "not":       not_metni,
+                })
         return {
             "toplam_ariza": toplam_ariza,
             "toplam_bakim": toplam_bakim,
