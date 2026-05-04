@@ -381,8 +381,7 @@ with tab1:
         st.markdown('<div class="sec">📊 GRAFİK</div>', unsafe_allow_html=True)
 
         grafik_secenekler = {
-            f"📅 {ay_adi} Tüketim":     "tuketim_bu_ay",   # ← varsayılan: bu ay
-            "📊 Son 30 Gün Tüketim":    "tuketim",
+            "📊 Tüketim":               "tuketim",
             "❄️ Chiller Set Trendi":    "chiller",
             "📐 kWh/m² Trendi":         "verimlilik",
             "💧 Su Tüketimi":            "su",
@@ -394,18 +393,41 @@ with tab1:
             "🔥 Doğalgaz Verimliliği":  "dogalgaz_verim",
             "📋 KPI Özet":              "kpi_ozet",
         }
-        secim = st.selectbox(
-            "Grafik Seçin", list(grafik_secenekler.keys()),
-            key="grafik_sec", label_visibility="collapsed"
-        )
+
+        # ── Grafik seçici + Tarih aralığı (yan yana) ──
+        _gc1, _gc2, _gc3 = st.columns([3, 1.5, 1.5])
+        with _gc1:
+            secim = st.selectbox(
+                "Grafik Seçin", list(grafik_secenekler.keys()),
+                key="grafik_sec", label_visibility="collapsed"
+            )
+        with _gc2:
+            tarih_bas = st.date_input(
+                "Başlangıç", value=ay_bas_dt.date(),
+                key="grafik_bas", label_visibility="collapsed"
+            )
+        with _gc3:
+            tarih_bit = st.date_input(
+                "Bitiş", value=son_tarih_dt.date(),
+                key="grafik_bit", label_visibility="collapsed"
+            )
         grafik_tip = grafik_secenekler[secim]
+
+        # Seçilen tarih aralığına göre filtrele
+        secili_df = df[
+            (df["Tarih"].dt.date >= tarih_bas) &
+            (df["Tarih"].dt.date <= tarih_bit)
+        ].copy()
+        tarih_aralik_str = (
+            f"{pd.Timestamp(tarih_bas).strftime('%d %b')} → "
+            f"{pd.Timestamp(tarih_bit).strftime('%d %b %Y')}"
+        )
 
         def _bar_chart(veri_df, baslik=""):
             """Günlük tüketim bar grafiği — verilen df ile çizer."""
             if "Toplam_Hastane_Tuketim_kWh" not in veri_df.columns or veri_df.empty:
                 st.info("Tüketim verisi bulunamadı.")
                 return
-            # Başlığı grafik içine değil, üstüne caption olarak göster
             if baslik:
                 st.caption(baslik)
             gun_df = veri_df.groupby(veri_df["Tarih"].dt.date)["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
@@ -430,26 +452,23 @@ with tab1:
             )
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
-        # ── Bu Ay Günlük Tüketim (varsayılan) ──
-        if grafik_tip == "tuketim_bu_ay":
-            _bar_chart(bu_ay_df, f"{ay_bas_str} → {ay_bit_str}")
-
-        # ── Son 30 Gün Tüketim ──
-        elif grafik_tip == "tuketim":
-            _bar_chart(son30, f"{son30_bas.strftime('%d %b')} → {son_tarih_dt.strftime('%d %b %Y')}  (30 gün)")
+        # ── Tüketim ──
+        if grafik_tip == "tuketim":
+            _bar_chart(secili_df, tarih_aralik_str)
 
         # ── Chiller Set Trendi ──
         elif grafik_tip == "chiller":
-            if "Chiller_Set_Temp_C" in son30.columns and not son30.empty:
+            if "Chiller_Set_Temp_C" in secili_df.columns and not secili_df.empty:
+                st.caption(tarih_aralik_str)
                 fig_ch = go.Figure()
-                if "Dis_Hava_Sicakligi_C" in son30.columns:
+                if "Dis_Hava_Sicakligi_C" in secili_df.columns:
                     fig_ch.add_trace(go.Scatter(
-                        x=son30["Tarih"], y=son30["Dis_Hava_Sicakligi_C"],
+                        x=secili_df["Tarih"], y=secili_df["Dis_Hava_Sicakligi_C"],
                         name="Dış Hava", line=dict(color="#f59e0b", width=1.5, dash="dot"),
                         yaxis="y2",
                     ))
                 fig_ch.add_trace(go.Scatter(
-                    x=son30["Tarih"], y=son30["Chiller_Set_Temp_C"],
+                    x=secili_df["Tarih"], y=secili_df["Chiller_Set_Temp_C"],
                     name="Chiller Set", line=dict(color=renk, width=2),
                     fill="tozeroy", fillcolor=f"rgba({rr},{rg},{rb},0.07)",
                 ))
@@ -470,8 +489,9 @@ with tab1:
 
         # ── kWh/m² Trendi ──
         elif grafik_tip == "verimlilik":
-            if "Toplam_Hastane_Tuketim_kWh" in son30.columns and not son30.empty:
-                gun_df2 = son30.groupby(son30["Tarih"].dt.date)["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
+            if "Toplam_Hastane_Tuketim_kWh" in secili_df.columns and not secili_df.empty:
+                st.caption(tarih_aralik_str)
+                gun_df2 = secili_df.groupby(secili_df["Tarih"].dt.date)["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
                 gun_df2.columns = ["Tarih", "kWh"]
                 gun_df2["kWhm2"] = gun_df2["kWh"] / m2
                 fig_v = go.Figure(go.Scatter(
@@ -494,8 +514,9 @@ with tab1:
 
         # ── Su Tüketimi ──
         elif grafik_tip == "su":
-            if "Su_Tuketimi_m3" in son30.columns and not son30.empty:
-                su_df = son30.groupby(son30["Tarih"].dt.date)["Su_Tuketimi_m3"].sum().reset_index()
+            if "Su_Tuketimi_m3" in secili_df.columns and not secili_df.empty:
+                st.caption(tarih_aralik_str)
+                su_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Su_Tuketimi_m3"].sum().reset_index()
                 su_df.columns = ["Tarih", "m3"]
                 fig_su = go.Figure(go.Bar(
                     x=su_df["Tarih"], y=su_df["m3"],
@@ -516,8 +537,9 @@ with tab1:
 
         # ── Şebeke Tüketimi ──
         elif grafik_tip == "sebeke":
-            if "Sebeke_Tuketim_kWh" in son30.columns and not son30.empty:
-                sb_df = son30.groupby(son30["Tarih"].dt.date)["Sebeke_Tuketim_kWh"].sum().reset_index()
+            if "Sebeke_Tuketim_kWh" in secili_df.columns and not secili_df.empty:
+                st.caption(tarih_aralik_str)
+                sb_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Sebeke_Tuketim_kWh"].sum().reset_index()
                 sb_df.columns = ["Tarih", "kWh"]
                 fig_sb = go.Figure(go.Bar(
                     x=sb_df["Tarih"], y=sb_df["kWh"],
@@ -538,8 +560,9 @@ with tab1:
 
         # ── MCC Tüketimi ──
         elif grafik_tip == "mcc":
-            if "MCC_Tuketim_kWh" in son30.columns and not son30.empty:
-                mcc_df = son30.groupby(son30["Tarih"].dt.date)["MCC_Tuketim_kWh"].sum().reset_index()
+            if "MCC_Tuketim_kWh" in secili_df.columns and not secili_df.empty:
+                st.caption(tarih_aralik_str)
+                mcc_df = secili_df.groupby(secili_df["Tarih"].dt.date)["MCC_Tuketim_kWh"].sum().reset_index()
                 mcc_df.columns = ["Tarih", "kWh"]
                 fig_mcc = go.Figure(go.Bar(
                     x=mcc_df["Tarih"], y=mcc_df["kWh"],
@@ -560,8 +583,9 @@ with tab1:
 
         # ── Kazan Doğalgaz ──
         elif grafik_tip == "kazan":
-            if "Kazan_Dogalgaz_m3" in son30.columns and not son30.empty:
-                kaz_df = son30.groupby(son30["Tarih"].dt.date)["Kazan_Dogalgaz_m3"].sum().reset_index()
+            if "Kazan_Dogalgaz_m3" in secili_df.columns and not secili_df.empty:
+                st.caption(tarih_aralik_str)
+                kaz_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Kazan_Dogalgaz_m3"].sum().reset_index()
                 kaz_df.columns = ["Tarih", "m3"]
                 fig_kaz = go.Figure(go.Bar(
                     x=kaz_df["Tarih"], y=kaz_df["m3"],
@@ -631,12 +655,13 @@ with tab1:
 
         # ── Doğalgaz Verimliliği ──
         elif grafik_tip == "dogalgaz_verim":
-            has_kojen = "Kojen_Uretim_kWh" in son30.columns and "Kojen_Dogalgaz_m3" in son30.columns
-            has_kazan = "Kazan_Dogalgaz_m3" in son30.columns and "Toplam_Hastane_Tuketim_kWh" in son30.columns
-            if (has_kojen or has_kazan) and not son30.empty:
+            has_kojen = "Kojen_Uretim_kWh" in secili_df.columns and "Kojen_Dogalgaz_m3" in secili_df.columns
+            has_kazan = "Kazan_Dogalgaz_m3" in secili_df.columns and "Toplam_Hastane_Tuketim_kWh" in secili_df.columns
+            if (has_kojen or has_kazan) and not secili_df.empty:
+                st.caption(tarih_aralik_str)
                 fig_dv = go.Figure()
                 if has_kojen:
-                    kj_g = son30.groupby(son30["Tarih"].dt.date)[["Kojen_Uretim_kWh","Kojen_Dogalgaz_m3"]].sum().reset_index()
+                    kj_g = secili_df.groupby(secili_df["Tarih"].dt.date)[["Kojen_Uretim_kWh","Kojen_Dogalgaz_m3"]].sum().reset_index()
                     kj_g["verim"] = kj_g.apply(
                         lambda r: r["Kojen_Uretim_kWh"]/r["Kojen_Dogalgaz_m3"] if r["Kojen_Dogalgaz_m3"]>0 else None, axis=1
                     )
@@ -646,7 +671,7 @@ with tab1:
                         hovertemplate="<b>%{x}</b><br>%{y:.2f} kWh/m³<extra></extra>",
                     ))
                 if has_kazan:
-                    kz_g = son30.groupby(son30["Tarih"].dt.date)[["Toplam_Hastane_Tuketim_kWh","Kazan_Dogalgaz_m3"]].sum().reset_index()
+                    kz_g = secili_df.groupby(secili_df["Tarih"].dt.date)[["Toplam_Hastane_Tuketim_kWh","Kazan_Dogalgaz_m3"]].sum().reset_index()
                     kz_g["verim"] = kz_g.apply(
                         lambda r: r["Toplam_Hastane_Tuketim_kWh"]/r["Kazan_Dogalgaz_m3"] if r["Kazan_Dogalgaz_m3"]>0 else None, axis=1
                     )
@@ -668,11 +693,11 @@ with tab1:
             else:
                 st.info("Doğalgaz verimlilik verisi bulunamadı.")
 
-        # ── KPI Özet Scorecard (ay bazlı) ──
+        # ── KPI Özet Scorecard (seçilen tarih aralığı) ──
         elif grafik_tip == "kpi_ozet":
             kpi_rows = []
-            _kd = bu_ay_df  # KPI için bu ayın verisi
-            _etiket = ay_adi
+            _kd = secili_df  # KPI için seçilen tarih aralığı
+            _etiket = tarih_aralik_str
             if "Toplam_Hastane_Tuketim_kWh" in _kd.columns:
                 kpi_rows.append((f"⚡ Elektrik Tüketimi ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum():,.0f} kWh", "#00d4ff"))
             if "Kojen_Uretim_kWh" in _kd.columns:
@@ -717,19 +742,20 @@ with tab1:
 
         # ── Kojen Üretim ──
         elif grafik_tip == "kojen":
-            kojen_cols = [c for c in ["Kojen_Uretim_kWh","Kojen_Dogalgaz_m3"] if c in son30.columns]
-            if kojen_cols and not son30.empty:
+            kojen_cols = [c for c in ["Kojen_Uretim_kWh","Kojen_Dogalgaz_m3"] if c in secili_df.columns]
+            if kojen_cols and not secili_df.empty:
+                st.caption(tarih_aralik_str)
                 fig_kj = go.Figure()
-                if "Kojen_Uretim_kWh" in son30.columns:
-                    kj_df = son30.groupby(son30["Tarih"].dt.date)["Kojen_Uretim_kWh"].sum().reset_index()
+                if "Kojen_Uretim_kWh" in secili_df.columns:
+                    kj_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Kojen_Uretim_kWh"].sum().reset_index()
                     kj_df.columns = ["Tarih", "kWh"]
                     fig_kj.add_trace(go.Bar(
                         x=kj_df["Tarih"], y=kj_df["kWh"],
                         name="Kojen Üretim", marker=dict(color="rgba(16,185,129,0.75)"),
                         hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
                     ))
-                if "Kojen_Dogalgaz_m3" in son30.columns:
-                    kg_df = son30.groupby(son30["Tarih"].dt.date)["Kojen_Dogalgaz_m3"].sum().reset_index()
+                if "Kojen_Dogalgaz_m3" in secili_df.columns:
+                    kg_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Kojen_Dogalgaz_m3"].sum().reset_index()
                     kg_df.columns = ["Tarih", "m3"]
                     fig_kj.add_trace(go.Scatter(
                         x=kg_df["Tarih"], y=kg_df["m3"],
