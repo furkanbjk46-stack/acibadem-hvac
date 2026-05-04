@@ -818,7 +818,7 @@ with tab1:
     st.markdown('<div class="sec">🔧 HVAC & BAKIM DURUMU</div>', unsafe_allow_html=True)
 
     arizali_list = bakim_ozet.get("arizali_cihazlar", [])
-    bakim_list   = bakim_ozet.get("bakim_cihazlari", [])
+    bakim_list   = bakim_ozet.get("bakimda_cihazlar", [])
     toplam_ariza = bakim_ozet.get("toplam_ariza", 0)
     toplam_bakim = bakim_ozet.get("toplam_bakim", 0)
     hvac_kritik  = hvac_ozet.get("kritik", [])
