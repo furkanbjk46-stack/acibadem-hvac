@@ -993,29 +993,60 @@ with sag:
     # ── Son 30 günlük metrikleri hesapla ──
     _ai_metriks = {}
     _toplam_kwh_genel = 0
+
+    def _col_sum(df, col):
+        return float(df[col].sum()) if col in df.columns else 0.0
+    def _col_mean(df, col):
+        return df[col].dropna().mean() if col in df.columns else float("nan")
+
     if not df_all.empty:
         _son30 = df_all[df_all["Tarih"] >= (pd.Timestamp.now() - pd.Timedelta(days=30))]
         for _lok_id, _info in HASTANELER.items():
             _lok_df = _son30[_son30["lokasyon_id"] == _lok_id]
             if _lok_df.empty:
                 continue
-            _m2_val   = _info.get("m2", 10000)
-            _gun_say  = max(1, _lok_df["Tarih"].dt.date.nunique())  # kaç günlük veri var
-            _kwh      = float(_lok_df["Toplam_Hastane_Tuketim_kWh"].sum()) if "Toplam_Hastane_Tuketim_kWh" in _lok_df.columns else 0.0
-            _chkwh    = float(_lok_df["Chiller_Tuketim_kWh"].sum())        if "Chiller_Tuketim_kWh"         in _lok_df.columns else 0.0
-            _cs_raw   = _lok_df["Chiller_Set_Temp_C"].dropna().mean()      if "Chiller_Set_Temp_C"          in _lok_df.columns else float("nan")
-            _cl_raw   = _lok_df["Chiller_Load_Percent"].dropna().mean()    if "Chiller_Load_Percent"        in _lok_df.columns else float("nan")
+            _m2_val  = _info.get("m2", 10000)
+            _gun_say = max(1, _lok_df["Tarih"].dt.date.nunique())
+
+            # ── Elektrik ──
+            _kwh      = _col_sum(_lok_df, "Toplam_Hastane_Tuketim_kWh")
+            _chkwh    = _col_sum(_lok_df, "Chiller_Tuketim_kWh")
+            _mcc_kwh  = _col_sum(_lok_df, "MCC_Tuketim_kWh")
+            _kojen    = _col_sum(_lok_df, "Kojen_Uretim_kWh")
+            _sebeke   = _col_sum(_lok_df, "Sebeke_Tuketim_kWh")
+
+            # ── Doğalgaz & Su ──
+            _gaz_m3   = _col_sum(_lok_df, "Dogalgaz_Tuketim_m3")
+            _su_m3    = _col_sum(_lok_df, "Su_Tuketim_m3")
+
+            # ── Chiller anlık ──
+            _cs_raw   = _col_mean(_lok_df, "Chiller_Set_Temp_C")
+            _cl_raw   = _col_mean(_lok_df, "Chiller_Load_Percent")
+
             if _kwh <= 0:
                 continue
-            # Günlük ortalama kWh/m² — portal kartıyla aynı birim
-            _kwh_gun_ort = _kwh / _gun_say   # günlük ort. tüketim
+
+            # ── Türetilmiş verimlilik metrikleri ──
+            _kwh_m2_gun  = round(_kwh / _gun_say / _m2_val, 2)       # kWh/m²/gün
+            _kojen_verim = round(_kojen / _gaz_m3, 2) if _gaz_m3 > 0 else None   # kWh/m³
+            _gaz_verim   = round(_kwh   / _gaz_m3, 2) if _gaz_m3 > 0 else None   # kWh/m³ toplam
+            _sebeke_bag  = round(_sebeke / (_sebeke + _kojen) * 100, 1) if (_sebeke + _kojen) > 0 else None  # %
+            _chiller_pay = round(_chkwh / _kwh * 100, 1) if _kwh > 0 else None   # % soğutma payı
+
             _ai_metriks[_lok_id] = {
-                "isim":       _info["kisa"],
-                "kwh_m2":     round(_kwh_gun_ort / _m2_val, 2),   # kWh/m²/gün
-                "chiller_oran": round(_chkwh / _kwh * 100, 1) if _kwh > 0 else 0.0,
+                "isim":        _info["kisa"],
+                "kwh_m2":      _kwh_m2_gun,
+                "toplam_kwh":  round(_kwh),
                 "chiller_set": round(_cs_raw, 1) if not np.isnan(_cs_raw) else None,
                 "chiller_yuk": round(_cl_raw, 1) if not np.isnan(_cl_raw) else None,
-                "toplam_kwh":  round(_kwh),
+                "chiller_pay": _chiller_pay,
+                "kojen_kwh":   round(_kojen) if _kojen > 0 else None,
+                "kojen_verim": _kojen_verim,
+                "sebeke_bag":  _sebeke_bag,
+                "gaz_m3":      round(_gaz_m3) if _gaz_m3 > 0 else None,
+                "gaz_verim":   _gaz_verim,
+                "su_m3":       round(_su_m3) if _su_m3 > 0 else None,
+                "gun_say":     _gun_say,
                 "anormal":     False,
                 "ort_kwh_m2":  0.0,
             }
@@ -1096,31 +1127,53 @@ with sag:
             if _gecerli:
                 _ai_metin = st.session_state.get(_AI_CACHE, "")
             else:
-                # ── Prompt ──
-                _lok_satirlar = []
+                # ── Prompt — tam enerji üçgeni ──
+                _lok_bloklari = []
                 for _lid, _mv in _sirali:
-                    _s = f"  • {_mv['isim']}: {_mv['kwh_m2']} kWh/m²"
+                    _blok = f"【{_mv['isim']}】{' ⚠️ANORMAL' if _mv['anormal'] else ''}\n"
+                    _blok += f"  Enerji yoğunluğu : {_mv['kwh_m2']} kWh/m²/gün  ({_mv['gun_say']} gün)\n"
+                    _blok += f"  Toplam tüketim   : {_mv['toplam_kwh']:,} kWh\n"
+                    # Chiller
                     if _mv["chiller_set"] is not None:
-                        _s += f", Chiller {_mv['chiller_set']}°C"
-                    if _mv["chiller_yuk"] is not None:
-                        _s += f" %{_mv['chiller_yuk']:.0f} yük"
-                    if _mv["anormal"]:
-                        _s += "  ⚠️ ANORMAL"
-                    _lok_satirlar.append(_s)
+                        _blok += f"  Chiller set      : {_mv['chiller_set']}°C"
+                        if _mv["chiller_yuk"] is not None:
+                            _blok += f"  |  Yük: %{_mv['chiller_yuk']:.0f}"
+                        if _mv["chiller_pay"] is not None:
+                            _blok += f"  |  Soğutma payı: %{_mv['chiller_pay']:.0f}"
+                        _blok += "\n"
+                    # Kojen & Şebeke
+                    if _mv["kojen_kwh"] is not None:
+                        _blok += f"  Kojen üretimi    : {_mv['kojen_kwh']:,} kWh"
+                        if _mv["kojen_verim"] is not None:
+                            _blok += f"  |  Verim: {_mv['kojen_verim']} kWh/m³  (norm ≥3.5)"
+                        _blok += "\n"
+                    if _mv["sebeke_bag"] is not None:
+                        _blok += f"  Şebeke bağımlılığı: %{_mv['sebeke_bag']}  (düşük=iyi, kojen yüksek)\n"
+                    # Doğalgaz
+                    if _mv["gaz_m3"] is not None:
+                        _blok += f"  Doğalgaz         : {_mv['gaz_m3']:,} m³"
+                        if _mv["gaz_verim"] is not None:
+                            _blok += f"  |  Genel verim: {_mv['gaz_verim']} kWh/m³"
+                        _blok += "\n"
+                    # Su
+                    if _mv["su_m3"] is not None:
+                        _blok += f"  Su tüketimi      : {_mv['su_m3']:,} m³\n"
+                    _lok_bloklari.append(_blok)
 
-                _ort_str = f"{_ai_metriks[_sirali[0][0]]['ort_kwh_m2']}" if _ai_metriks else "?"
+                _ort_str = f"{list(_ai_metriks.values())[0].get('ort_kwh_m2', '?')}"
                 _prompt = (
-                    "Aşağıdaki hastane enerji verilerini profesyonel bir enerji mühendisi gözüyle analiz et.\n"
-                    f"Dönem: Son 30 gün | Toplam tüketim: {_toplam_kwh_genel:,} kWh\n"
-                    f"Günlük enerji yoğunluğu ortalaması: {_ort_str} kWh/m²/gün\n\n"
-                    "Lokasyon bazlı günlük yoğunluk — kWh/m²/gün (düşükten yükseğe):\n"
-                    + "\n".join(_lok_satirlar)
-                    + "\n\nNot: Hastaneler için tipik referans aralığı 0.5–1.5 kWh/m²/gün.\n"
-                    "\nTürkçe olarak şunları belirt:\n"
-                    "1. Genel tablo (1-2 cümle)\n"
-                    "2. Dikkat gerektiren lokasyon(lar) ve olası neden\n"
-                    "3. Bir somut aksiyon önerisi\n"
-                    "Maksimum 130 kelime, teknik ve özlü."
+                    "Sen bir hastane enerji yönetimi uzmanısın. "
+                    "Aşağıdaki verileri analiz ederek neden-sonuç ilişkisi kur.\n\n"
+                    f"Dönem: Son 30 gün  |  Toplam elektrik: {_toplam_kwh_genel:,} kWh\n"
+                    f"Ortalama enerji yoğunluğu: {_ort_str} kWh/m²/gün\n"
+                    "Referans: Hastane normu 0.5–1.5 kWh/m²/gün | "
+                    "Kojen verimi normu ≥3.5 kWh/m³ | Şebeke bağımlılığı ideal <%30\n\n"
+                    + "\n".join(_lok_bloklari)
+                    + "\nTürkçe, mühendis dilinde yaz:\n"
+                    "1. Genel enerji dengesi (kojen/şebeke/gaz ilişkisi)\n"
+                    "2. En kritik sorun ve kök nedeni\n"
+                    "3. İlk 2 haftada yapılması gereken 1 somut aksiyon\n"
+                    "Maksimum 160 kelime."
                 )
 
                 with st.spinner("🤖 Analiz yapılıyor…"):
