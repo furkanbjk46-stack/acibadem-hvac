@@ -1110,100 +1110,136 @@ with sag:
                 "<code>anthropic.api_key</code> ekleyin.</div>",
                 unsafe_allow_html=True)
         else:
-            # ── Yenile butonu ──
+            _AI_CACHE = "enerji_zekasi_metin"
+            _AI_ZAMAN = "enerji_zekasi_zaman"
+            _AI_GUN   = "enerji_zekasi_gun"
+            _su_an    = datetime.now()
+            _bugun    = _su_an.date()
+            _son_z    = st.session_state.get(_AI_ZAMAN)
+            _son_gun  = st.session_state.get(_AI_GUN)
+
+            # ── Otomatik tetikleme: yeni gün veya cache boşsa ──
+            _oto_calis = (_son_gun != _bugun) or (st.session_state.get(_AI_CACHE, "") == "")
+
             _yenile_btn = st.button(
                 "🔄 Yeniden Analiz Et", key="btn_ai_yenile", use_container_width=True)
 
-            _AI_CACHE = "enerji_zekasi_metin"
-            _AI_ZAMAN = "enerji_zekasi_zaman"
-            _su_an = datetime.now()
-            _son_z = st.session_state.get(_AI_ZAMAN)
-            _gecerli = (
-                not _yenile_btn
-                and _son_z is not None
-                and (_su_an - _son_z).total_seconds() < 1800  # 30 dk
-            )
+            _calistir = _oto_calis or _yenile_btn
 
-            if _gecerli:
+            if not _calistir:
                 _ai_metin = st.session_state.get(_AI_CACHE, "")
             else:
-                # ── Prompt — tam enerji üçgeni ──
+                # ── Dünün verisi — odak nokta ──
+                _dun_dt  = pd.Timestamp(_bugun) - pd.Timedelta(days=1)
+                _dun_str = _dun_dt.strftime("%d.%m.%Y")
+
+                # ── Dün + 30 günlük trend için bloklar ──
                 _lok_bloklari = []
                 for _lid, _mv in _sirali:
+                    # Dünün lokasyon verisi
+                    _dun_df = df_all[
+                        (df_all["lokasyon_id"] == _lid) &
+                        (df_all["Tarih"].dt.date == _dun_dt.date())
+                    ]
+
                     _blok = f"【{_mv['isim']}】{' ⚠️ANORMAL' if _mv['anormal'] else ''}\n"
-                    _blok += f"  Enerji yoğunluğu : {_mv['kwh_m2']} kWh/m²/gün  ({_mv['gun_say']} gün)\n"
-                    _blok += f"  Toplam tüketim   : {_mv['toplam_kwh']:,} kWh\n"
-                    # Chiller
-                    if _mv["chiller_set"] is not None:
-                        _blok += f"  Chiller set      : {_mv['chiller_set']}°C"
-                        if _mv["chiller_yuk"] is not None:
-                            _blok += f"  |  Yük: %{_mv['chiller_yuk']:.0f}"
-                        if _mv["chiller_pay"] is not None:
-                            _blok += f"  |  Soğutma payı: %{_mv['chiller_pay']:.0f}"
-                        _blok += "\n"
-                    # Kojen & Şebeke
-                    if _mv["kojen_kwh"] is not None:
-                        _blok += f"  Kojen üretimi    : {_mv['kojen_kwh']:,} kWh"
-                        if _mv["kojen_verim"] is not None:
-                            _blok += f"  |  Verim: {_mv['kojen_verim']} kWh/m³  (norm ≥3.5)"
-                        _blok += "\n"
+
+                    # Dün spesifik
+                    if not _dun_df.empty:
+                        _dun_kwh = _col_sum(_dun_df, "Toplam_Hastane_Tuketim_kWh")
+                        _dun_gaz = _col_sum(_dun_df, "Dogalgaz_Tuketim_m3")
+                        _dun_koj = _col_sum(_dun_df, "Kojen_Uretim_kWh")
+                        _dun_seb = _col_sum(_dun_df, "Sebeke_Tuketim_kWh")
+                        _dun_su  = _col_sum(_dun_df, "Su_Tuketim_m3")
+                        _dun_cs  = _col_mean(_dun_df, "Chiller_Set_Temp_C")
+                        _dun_cl  = _col_mean(_dun_df, "Chiller_Load_Percent")
+
+                        _blok += f"  ▶ Dün ({_dun_str}) gerçek değerler:\n"
+                        if _dun_kwh > 0:
+                            _blok += f"    Elektrik tüketim : {_dun_kwh:,.0f} kWh"
+                            _m2v = _mv.get("toplam_kwh", 1) / max(_mv.get("gun_say", 1), 1)
+                            _blok += f"  ({round(_dun_kwh / _info.get('m2', 10000), 2)} kWh/m²/gün)\n"
+                        if _dun_koj > 0:
+                            _blok += f"    Kojen üretimi    : {_dun_koj:,.0f} kWh"
+                            if _dun_gaz > 0:
+                                _blok += f"  |  Verim: {round(_dun_koj/_dun_gaz,2)} kWh/m³  (norm ≥3.5)"
+                            _blok += "\n"
+                        if (_dun_seb + _dun_koj) > 0:
+                            _sb = round(_dun_seb / (_dun_seb + _dun_koj) * 100, 1)
+                            _blok += f"    Şebeke bağımlılığı: %{_sb}  (ideal <%30)\n"
+                        if _dun_gaz > 0:
+                            _blok += f"    Doğalgaz         : {_dun_gaz:,.0f} m³"
+                            if _dun_kwh > 0:
+                                _blok += f"  |  Genel verim: {round(_dun_kwh/_dun_gaz,2)} kWh/m³"
+                            _blok += "\n"
+                        if _dun_su > 0:
+                            _blok += f"    Su tüketimi      : {_dun_su:,.0f} m³\n"
+                        if not np.isnan(_dun_cs):
+                            _blok += f"    Chiller set      : {round(_dun_cs,1)}°C"
+                            if not np.isnan(_dun_cl):
+                                _blok += f"  |  Yük: %{round(_dun_cl,0):.0f}"
+                            _blok += "\n"
+                    else:
+                        _blok += f"  ▶ Dün ({_dun_str}): veri yok\n"
+
+                    # 30 günlük trend özeti
+                    _blok += f"  ▷ 30 günlük ortalama : {_mv['kwh_m2']} kWh/m²/gün"
+                    if _mv["kojen_verim"] is not None:
+                        _blok += f"  |  Kojen verim ort: {_mv['kojen_verim']} kWh/m³"
                     if _mv["sebeke_bag"] is not None:
-                        _blok += f"  Şebeke bağımlılığı: %{_mv['sebeke_bag']}  (düşük=iyi, kojen yüksek)\n"
-                    # Doğalgaz
-                    if _mv["gaz_m3"] is not None:
-                        _blok += f"  Doğalgaz         : {_mv['gaz_m3']:,} m³"
-                        if _mv["gaz_verim"] is not None:
-                            _blok += f"  |  Genel verim: {_mv['gaz_verim']} kWh/m³"
-                        _blok += "\n"
-                    # Su
-                    if _mv["su_m3"] is not None:
-                        _blok += f"  Su tüketimi      : {_mv['su_m3']:,} m³\n"
+                        _blok += f"  |  Şebeke ort: %{_mv['sebeke_bag']}"
+                    _blok += "\n"
                     _lok_bloklari.append(_blok)
 
-                _ort_str = f"{list(_ai_metriks.values())[0].get('ort_kwh_m2', '?')}"
+                _ort_str = f"{list(_ai_metriks.values())[0].get('ort_kwh_m2','?')}"
                 _prompt = (
-                    "Sen bir hastane enerji yönetimi uzmanısın. "
-                    "Aşağıdaki verileri analiz ederek neden-sonuç ilişkisi kur.\n\n"
-                    f"Dönem: Son 30 gün  |  Toplam elektrik: {_toplam_kwh_genel:,} kWh\n"
-                    f"Ortalama enerji yoğunluğu: {_ort_str} kWh/m²/gün\n"
-                    "Referans: Hastane normu 0.5–1.5 kWh/m²/gün | "
-                    "Kojen verimi normu ≥3.5 kWh/m³ | Şebeke bağımlılığı ideal <%30\n\n"
-                    + "\n".join(_lok_bloklari)
-                    + "\nTürkçe, mühendis dilinde yaz:\n"
-                    "1. Genel enerji dengesi (kojen/şebeke/gaz ilişkisi)\n"
-                    "2. En kritik sorun ve kök nedeni\n"
-                    "3. İlk 2 haftada yapılması gereken 1 somut aksiyon\n"
-                    "Maksimum 160 kelime."
+                    f"Sen Acıbadem Sağlık Grubu'nun hastane enerji yönetimi uzmanısın.\n"
+                    f"Her sabah dünün verilerini inceleyip günlük rapor hazırlıyorsun.\n\n"
+                    f"Analiz tarihi: {_dun_str}  |  30 günlük toplam elektrik: {_toplam_kwh_genel:,} kWh\n"
+                    f"Referans eşikler:\n"
+                    f"  • Enerji yoğunluğu: hastane normu 0.5–1.5 kWh/m²/gün\n"
+                    f"  • Kojen verimi: ≥3.5 kWh/m³ (altı = bakım/ayar gerekli)\n"
+                    f"  • Şebeke bağımlılığı: ideal <%30 (yüksekse kojen yetersiz)\n"
+                    f"  • Doğalgaz genel verimi: ≥5.0 kWh/m³\n\n"
+                    f"Lokasyon verileri:\n" + "\n".join(_lok_bloklari) +
+                    f"\nTürkçe, mühendis dilinde, madde madde yaz:\n"
+                    f"1. Dünün genel enerji dengesi — kojen/şebeke/gaz üçgeni\n"
+                    f"2. En kritik anomali ve kök nedeni (veri yoksa belirt)\n"
+                    f"3. Bugün yapılması gereken 1 somut aksiyon\n"
+                    f"Maksimum 180 kelime."
                 )
 
-                with st.spinner("🤖 Analiz yapılıyor…"):
+                with st.spinner("🤖 Dünün verileri analiz ediliyor…"):
                     try:
                         import anthropic as _anthro
                         _cli = _anthro.Anthropic(api_key=_api_key)
                         _resp = _cli.messages.create(
                             model="claude-haiku-4-5",
-                            max_tokens=400,
+                            max_tokens=500,
                             messages=[{"role": "user", "content": _prompt}]
                         )
                         _ai_metin = _resp.content[0].text.strip()
                         st.session_state[_AI_CACHE] = _ai_metin
                         st.session_state[_AI_ZAMAN] = _su_an
+                        st.session_state[_AI_GUN]   = _bugun
                     except Exception as _ae:
                         _ai_metin = f"⚠️ Hata: {str(_ae)[:120]}"
 
             # ── AI çıktısını göster ──
+            _etiket = "🤖 OTOMATİK SABAH ANALİZİ" if not _yenile_btn else "🤖 YENİLENDİ"
             if _ai_metin:
                 st.markdown(
                     f"<div style='background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.18);"
                     f"border-radius:10px;padding:12px 14px;font-size:11px;"
                     f"color:rgba(200,230,255,0.88);line-height:1.65;margin-top:4px;'>"
                     f"<div style='font-size:8px;color:rgba(0,212,255,0.45);letter-spacing:1.5px;"
-                    f"text-transform:uppercase;margin-bottom:7px;'>🤖 AI · Son 30 Gün</div>"
+                    f"text-transform:uppercase;margin-bottom:7px;'>{_etiket}</div>"
                     + _ai_metin.replace("\n", "<br>") +
                     f"</div>",
                     unsafe_allow_html=True)
-                if _son_z and _gecerli:
-                    st.caption(f"🕐 Analiz: {_son_z.strftime('%d.%m %H:%M')}")
+                _son_z = st.session_state.get(_AI_ZAMAN)
+                if _son_z:
+                    st.caption(f"🕐 {_son_z.strftime('%d.%m.%Y %H:%M')} · Dün için otomatik analiz")
 
     else:
         st.markdown(
