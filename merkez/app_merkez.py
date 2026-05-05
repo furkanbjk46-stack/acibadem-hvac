@@ -1129,93 +1129,198 @@ with sag:
             if not _calistir:
                 _ai_metin = st.session_state.get(_AI_CACHE, "")
             else:
-                # ── Dünün verisi — odak nokta ──
                 _dun_dt  = pd.Timestamp(_bugun) - pd.Timedelta(days=1)
                 _dun_str = _dun_dt.strftime("%d.%m.%Y")
+                _lok_n   = len(_ai_metriks)   # aktif lokasyon sayısı
 
-                # ── Dün + 30 günlük trend için bloklar ──
-                _lok_bloklari = []
-                for _lid, _mv in _sirali:
-                    # Dünün lokasyon verisi
-                    _dun_df = df_all[
-                        (df_all["lokasyon_id"] == _lid) &
+                # ════════════════════════════════════════════════════
+                # Lokasyon sayısına göre adaptif blok + prompt yapısı
+                #
+                #  KATMANlar:
+                #  TIER 1 — 1-3 lok  : Her lokasyon tam detay
+                #  TIER 2 — 4-7 lok  : Özet tablo + top-3 anormal detay
+                #  TIER 3 — 8+  lok  : Grup istatistik + sadece kritikler
+                # ════════════════════════════════════════════════════
+
+                def _dun_verisi(lid):
+                    """Bir lokasyon için dünün ham satırını döndür."""
+                    return df_all[
+                        (df_all["lokasyon_id"] == lid) &
                         (df_all["Tarih"].dt.date == _dun_dt.date())
                     ]
 
-                    _blok = f"【{_mv['isim']}】{' ⚠️ANORMAL' if _mv['anormal'] else ''}\n"
-
-                    # Dün spesifik
-                    if not _dun_df.empty:
-                        _dun_kwh = _col_sum(_dun_df, "Toplam_Hastane_Tuketim_kWh")
-                        _dun_gaz = _col_sum(_dun_df, "Dogalgaz_Tuketim_m3")
-                        _dun_koj = _col_sum(_dun_df, "Kojen_Uretim_kWh")
-                        _dun_seb = _col_sum(_dun_df, "Sebeke_Tuketim_kWh")
-                        _dun_su  = _col_sum(_dun_df, "Su_Tuketim_m3")
-                        _dun_cs  = _col_mean(_dun_df, "Chiller_Set_Temp_C")
-                        _dun_cl  = _col_mean(_dun_df, "Chiller_Load_Percent")
-
-                        _blok += f"  ▶ Dün ({_dun_str}) gerçek değerler:\n"
-                        if _dun_kwh > 0:
-                            _blok += f"    Elektrik tüketim : {_dun_kwh:,.0f} kWh"
-                            _m2v = _mv.get("toplam_kwh", 1) / max(_mv.get("gun_say", 1), 1)
-                            _blok += f"  ({round(_dun_kwh / _info.get('m2', 10000), 2)} kWh/m²/gün)\n"
-                        if _dun_koj > 0:
-                            _blok += f"    Kojen üretimi    : {_dun_koj:,.0f} kWh"
-                            if _dun_gaz > 0:
-                                _blok += f"  |  Verim: {round(_dun_koj/_dun_gaz,2)} kWh/m³  (norm ≥3.5)"
-                            _blok += "\n"
-                        if (_dun_seb + _dun_koj) > 0:
-                            _sb = round(_dun_seb / (_dun_seb + _dun_koj) * 100, 1)
-                            _blok += f"    Şebeke bağımlılığı: %{_sb}  (ideal <%30)\n"
-                        if _dun_gaz > 0:
-                            _blok += f"    Doğalgaz         : {_dun_gaz:,.0f} m³"
-                            if _dun_kwh > 0:
-                                _blok += f"  |  Genel verim: {round(_dun_kwh/_dun_gaz,2)} kWh/m³"
-                            _blok += "\n"
-                        if _dun_su > 0:
-                            _blok += f"    Su tüketimi      : {_dun_su:,.0f} m³\n"
-                        if not np.isnan(_dun_cs):
-                            _blok += f"    Chiller set      : {round(_dun_cs,1)}°C"
-                            if not np.isnan(_dun_cl):
-                                _blok += f"  |  Yük: %{round(_dun_cl,0):.0f}"
-                            _blok += "\n"
+                def _dun_blok_tam(lid, mv):
+                    """TIER 1 — tam detay bloğu."""
+                    _ddf = _dun_verisi(lid)
+                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
+                    b = f"【{mv['isim']}】{' ⚠️ANORMAL' if mv['anormal'] else ''}\n"
+                    if not _ddf.empty:
+                        dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
+                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
+                        dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
+                        dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
+                        dsu  = _col_sum(_ddf, "Su_Tuketim_m3")
+                        dcs  = _col_mean(_ddf, "Chiller_Set_Temp_C")
+                        dcl  = _col_mean(_ddf, "Chiller_Load_Percent")
+                        b += f"  ▶ Dün ({_dun_str}):\n"
+                        if dkwh > 0:
+                            b += f"    Elektrik : {dkwh:,.0f} kWh  ({round(dkwh/_m2v,2)} kWh/m²/gün)\n"
+                        if dkoj > 0:
+                            b += f"    Kojen    : {dkoj:,.0f} kWh"
+                            if dgaz > 0: b += f"  |  Verim: {round(dkoj/dgaz,2)} kWh/m³ (≥3.5)"
+                            b += "\n"
+                        if (dseb + dkoj) > 0:
+                            b += f"    Şebeke bağ.: %{round(dseb/(dseb+dkoj)*100,1)}  (<%30 ideal)\n"
+                        if dgaz > 0:
+                            b += f"    Doğalgaz : {dgaz:,.0f} m³"
+                            if dkwh > 0: b += f"  |  Genel verim: {round(dkwh/dgaz,2)} kWh/m³"
+                            b += "\n"
+                        if dsu  > 0: b += f"    Su       : {dsu:,.0f} m³\n"
+                        if not np.isnan(dcs):
+                            b += f"    Chiller  : {round(dcs,1)}°C"
+                            if not np.isnan(dcl): b += f"  |  Yük %{round(dcl,0):.0f}"
+                            b += "\n"
                     else:
-                        _blok += f"  ▶ Dün ({_dun_str}): veri yok\n"
+                        b += f"  ▶ Dün: veri yok\n"
+                    b += f"  ▷ 30g ort: {mv['kwh_m2']} kWh/m²/gün"
+                    if mv["kojen_verim"]: b += f"  |  Kojen: {mv['kojen_verim']} kWh/m³"
+                    if mv["sebeke_bag"]:  b += f"  |  Şebeke: %{mv['sebeke_bag']}"
+                    return b + "\n"
 
-                    # 30 günlük trend özeti
-                    _blok += f"  ▷ 30 günlük ortalama : {_mv['kwh_m2']} kWh/m²/gün"
-                    if _mv["kojen_verim"] is not None:
-                        _blok += f"  |  Kojen verim ort: {_mv['kojen_verim']} kWh/m³"
-                    if _mv["sebeke_bag"] is not None:
-                        _blok += f"  |  Şebeke ort: %{_mv['sebeke_bag']}"
-                    _blok += "\n"
-                    _lok_bloklari.append(_blok)
+                def _dun_blok_ozet(lid, mv):
+                    """TIER 2 — tek satır özet."""
+                    _ddf = _dun_verisi(lid)
+                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
+                    flag = " ⚠️" if mv["anormal"] else ""
+                    if not _ddf.empty:
+                        dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
+                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
+                        dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
+                        dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
+                        kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"
+                        sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
+                        yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
+                        return (f"  {mv['isim']}{flag}: {yo} kWh/m²/gün  |  "
+                                f"Kojen verim {kv}  |  Şebeke {sb}  |  30g ort {mv['kwh_m2']}\n")
+                    else:
+                        return f"  {mv['isim']}{flag}: veri yok  |  30g ort {mv['kwh_m2']} kWh/m²/gün\n"
+
+                def _dun_blok_mini(lid, mv):
+                    """TIER 3 — minimal, sadece anahtar değerler."""
+                    _ddf = _dun_verisi(lid)
+                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
+                    flag = "⚠️" if mv["anormal"] else "✓"
+                    if not _ddf.empty:
+                        dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
+                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
+                        dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
+                        dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
+                        kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"
+                        sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
+                        yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
+                        return f"  [{flag}] {mv['isim']}: {yo} kWh/m²  Koj:{kv}  Şeb:{sb}\n"
+                    else:
+                        return f"  [?] {mv['isim']}: veri yok\n"
+
+                # ── Referans satırı (tüm tier'larda ortak) ──
+                _ref = (
+                    "Referans: Yoğunluk 0.5–1.5 kWh/m²/gün | "
+                    "Kojen ≥3.5 kWh/m³ | Şebeke <%30 | Gaz verimi ≥5.0 kWh/m³\n\n"
+                )
+
+                # ════════════════ TIER 1: 1-3 lokasyon ════════════════
+                if _lok_n <= 3:
+                    _lok_bloklari = [_dun_blok_tam(lid, mv) for lid, mv in _sirali]
+                    _max_tok = 500
+                    _yonerge = (
+                        "Türkçe, mühendis dilinde:\n"
+                        "1. Dünün enerji dengesi — kojen/şebeke/gaz üçgeni\n"
+                        "2. En kritik anomali ve kök nedeni\n"
+                        "3. Bugün yapılacak 1 somut aksiyon\n"
+                        "Maksimum 180 kelime."
+                    )
+
+                # ════════════════ TIER 2: 4-7 lokasyon ════════════════
+                elif _lok_n <= 7:
+                    # Tüm lokasyonlar özet tablo
+                    _ozet_satirlar = [_dun_blok_ozet(lid, mv) for lid, mv in _sirali]
+                    # Anormal olanlar için tam detay (max 3)
+                    _anormal_lids  = [(lid, mv) for lid, mv in _sirali if mv["anormal"]][:3]
+                    _detay_satirlar= [_dun_blok_tam(lid, mv) for lid, mv in _anormal_lids]
+                    _lok_bloklari  = (
+                        ["ÖZET TABLO (tüm lokasyonlar):\n"] + _ozet_satirlar +
+                        (["\nANORMAL LOKASYONLAR — detay:\n"] + _detay_satirlar if _detay_satirlar else [])
+                    )
+                    _max_tok = 650
+                    _yonerge = (
+                        "Türkçe, mühendis dilinde:\n"
+                        "1. Grup geneli enerji dengesi (1-2 cümle)\n"
+                        "2. Anormal lokasyonların kök nedeni (her biri 1-2 cümle)\n"
+                        "3. Bugün öncelikli yapılacak 2 aksiyon (lokasyon adıyla)\n"
+                        "Maksimum 220 kelime."
+                    )
+
+                # ════════════════ TIER 3: 8+ lokasyon ════════════════
+                else:
+                    # Grup istatistikleri
+                    _tum_yo    = [mv["kwh_m2"] for _, mv in _sirali]
+                    _grp_ort   = round(float(np.mean(_tum_yo)), 2)
+                    _grp_std   = round(float(np.std(_tum_yo)), 2)
+                    _grp_min   = _sirali[0][1]["isim"]
+                    _grp_max   = _sirali[-1][1]["isim"]
+                    _anormal_n2= sum(1 for _, mv in _sirali if mv["anormal"])
+                    _kojen_vrs = [mv["kojen_verim"] for _, mv in _sirali if mv["kojen_verim"]]
+                    _seb_vrs   = [mv["sebeke_bag"]  for _, mv in _sirali if mv["sebeke_bag"]]
+                    _grp_blok  = (
+                        f"GRUP İSTATİSTİKLERİ ({_lok_n} lokasyon):\n"
+                        f"  Yoğunluk: ort {_grp_ort}  std {_grp_std}  "
+                        f"  en iyi {_grp_min}  en yüksek {_grp_max}\n"
+                        f"  Anormal lokasyon: {_anormal_n2}/{_lok_n}\n"
+                    )
+                    if _kojen_vrs:
+                        _grp_blok += f"  Kojen verim ort: {round(float(np.mean(_kojen_vrs)),2)} kWh/m³\n"
+                    if _seb_vrs:
+                        _grp_blok += f"  Şebeke bağ. ort: %{round(float(np.mean(_seb_vrs)),1)}\n"
+
+                    # Tüm lokasyonlar mini satır
+                    _mini_satirlar = [_dun_blok_mini(lid, mv) for lid, mv in _sirali]
+                    # Sadece top-3 kritik (en yüksek yoğunluk + anormal) tam detay
+                    _kritik = [(lid, mv) for lid, mv in _sirali if mv["anormal"]]
+                    _kritik += [(lid, mv) for lid, mv in reversed(_sirali)
+                                if not mv["anormal"] and (lid, mv) not in _kritik]
+                    _kritik = _kritik[:3]
+                    _detay_satirlar = [_dun_blok_tam(lid, mv) for lid, mv in _kritik]
+                    _lok_bloklari = (
+                        [_grp_blok, "\nTÜM LOKASYONLAR (mini):\n"] + _mini_satirlar +
+                        ["\nKRİTİK LOKASYONLAR — detay:\n"] + _detay_satirlar
+                    )
+                    _max_tok = 800
+                    _yonerge = (
+                        "Türkçe, mühendis dilinde, yönetici özeti formatında:\n"
+                        "1. Grup geneli durum: kaç lokasyon normal/anormal, genel trend\n"
+                        "2. En kritik 3 lokasyon: kısa kök neden (1 cümle/lokasyon)\n"
+                        "3. Sistem geneli 1 stratejik aksiyon + 2 acil lokasyon aksiyonu\n"
+                        "Maksimum 250 kelime."
+                    )
 
                 _ort_str = f"{list(_ai_metriks.values())[0].get('ort_kwh_m2','?')}"
                 _prompt = (
-                    f"Sen Acıbadem Sağlık Grubu'nun hastane enerji yönetimi uzmanısın.\n"
-                    f"Her sabah dünün verilerini inceleyip günlük rapor hazırlıyorsun.\n\n"
-                    f"Analiz tarihi: {_dun_str}  |  30 günlük toplam elektrik: {_toplam_kwh_genel:,} kWh\n"
-                    f"Referans eşikler:\n"
-                    f"  • Enerji yoğunluğu: hastane normu 0.5–1.5 kWh/m²/gün\n"
-                    f"  • Kojen verimi: ≥3.5 kWh/m³ (altı = bakım/ayar gerekli)\n"
-                    f"  • Şebeke bağımlılığı: ideal <%30 (yüksekse kojen yetersiz)\n"
-                    f"  • Doğalgaz genel verimi: ≥5.0 kWh/m³\n\n"
-                    f"Lokasyon verileri:\n" + "\n".join(_lok_bloklari) +
-                    f"\nTürkçe, mühendis dilinde, madde madde yaz:\n"
-                    f"1. Dünün genel enerji dengesi — kojen/şebeke/gaz üçgeni\n"
-                    f"2. En kritik anomali ve kök nedeni (veri yoksa belirt)\n"
-                    f"3. Bugün yapılması gereken 1 somut aksiyon\n"
-                    f"Maksimum 180 kelime."
+                    f"Sen Acıbadem Sağlık Grubu enerji yönetimi uzmanısın. "
+                    f"Her sabah dünün verilerini analiz edip günlük rapor hazırlıyorsun.\n"
+                    f"Analiz: {_dun_str}  |  Aktif lokasyon: {_lok_n}  |  "
+                    f"30g toplam elektrik: {_toplam_kwh_genel:,} kWh\n"
+                    + _ref
+                    + "".join(_lok_bloklari)
+                    + "\n" + _yonerge
                 )
 
-                with st.spinner("🤖 Dünün verileri analiz ediliyor…"):
+                with st.spinner(f"🤖 {_lok_n} lokasyon analiz ediliyor…"):
                     try:
                         import anthropic as _anthro
                         _cli = _anthro.Anthropic(api_key=_api_key)
                         _resp = _cli.messages.create(
                             model="claude-haiku-4-5",
-                            max_tokens=500,
+                            max_tokens=_max_tok,
                             messages=[{"role": "user", "content": _prompt}]
                         )
                         _ai_metin = _resp.content[0].text.strip()
