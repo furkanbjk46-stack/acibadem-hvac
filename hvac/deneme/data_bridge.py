@@ -58,6 +58,9 @@ ALL_ANALYZERS = {
     "CK-MCC-D01", "CK-MCC-E01", "CK-MCC-F01",
 }
 
+# MCC tüketimi = Chiller HARİÇ geri kalan tüm analizörler
+MCC_ONLY_ANALYZERS = ALL_ANALYZERS - CHILLER_ANALYZERS
+
 # ================================================================
 # BACNET POINT -> energy_data.csv SUTUN ESLESTIRMESI
 # Point Name (hedefli_enerji_verileri.csv) -> dahili anahtar
@@ -118,7 +121,8 @@ def read_modbus_csv():
             for row in csv.DictReader(f):
                 name = row.get("Cihaz_Adi", "").strip()
                 try:
-                    result[name] = float(row.get("Enerji_kWh", ""))
+                    raw = row.get("Enerji_kWh", "").replace(",", "")  # 1,088,634.2 → 1088634.2
+                    result[name] = int(float(raw))                     # decimal at → 1088634
                 except (ValueError, TypeError):
                     logger.warning("Modbus %s baglanti hatasi — atlaniyor", name)
     except Exception as e:
@@ -260,12 +264,15 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     ch_load = round(sum(ch_yuz_vals) / len(ch_yuz_vals), 1) if ch_yuz_vals else ""
 
     # Modbus gunluk kWh farklari
-    chiller_kwh = safe_sum(daily_kwh, CHILLER_ANALYZERS) if daily_kwh else ""
-    all_kwh     = safe_sum(daily_kwh, ALL_ANALYZERS)     if daily_kwh else ""
+    chiller_kwh = safe_sum(daily_kwh, CHILLER_ANALYZERS)    if daily_kwh else ""  # Soğutma
+    mcc_kwh     = safe_sum(daily_kwh, MCC_ONLY_ANALYZERS)   if daily_kwh else ""  # MCC (Chiller hariç)
+    total_kwh   = safe_sum(daily_kwh, ALL_ANALYZERS)         if daily_kwh else ""  # Toplam
 
     diger_kwh = ""
-    if isinstance(all_kwh, (int, float)) and isinstance(chiller_kwh, (int, float)):
-        diger_kwh = round(all_kwh - chiller_kwh, 1)
+    if (isinstance(total_kwh, (int, float))
+            and isinstance(mcc_kwh, (int, float))
+            and isinstance(chiller_kwh, (int, float))):
+        diger_kwh = round(total_kwh - mcc_kwh - chiller_kwh, 1)
 
     # --- Son satir (sadece ENERGY_SCHEMA sutunlari) ---
     row = {
@@ -288,14 +295,14 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "Kojen_Dogalgaz_m3":          "",
         "Su_Tuketimi_m3":             "",
         # --- Otomatik ---
-        "Chiller_Tuketim_kWh":        chiller_kwh,
-        "MCC_Tuketim_kWh":            all_kwh,
-        "VRF_Split_Tuketim_kWh":      0,       # Sahada henuz yok
+        "Chiller_Tuketim_kWh":        chiller_kwh,  # Sadece CH analizörleri
+        "MCC_Tuketim_kWh":            mcc_kwh,      # CH HARİÇ tüm analizörler
+        "VRF_Split_Tuketim_kWh":      0,            # Sahada henuz yok
         "Dis_Hava_Sicakligi_C":       data.get("Dis_Hava_Sicakligi_C", ""),
         "Chiller_Load_Percent":       ch_load,
-        "Toplam_Hastane_Tuketim_kWh": all_kwh,     # Tum analizorler = toplam olculen
-        "Toplam_Sogutma_Tuketim_kWh": chiller_kwh,
-        "Diger_Yuk_kWh":              diger_kwh,
+        "Toplam_Hastane_Tuketim_kWh": total_kwh,    # Tüm analizörler toplamı
+        "Toplam_Sogutma_Tuketim_kWh": chiller_kwh,  # CH analizörleri = soğutma
+        "Diger_Yuk_kWh":              diger_kwh,    # Toplam - MCC - Soğutma
     }
     return row
 

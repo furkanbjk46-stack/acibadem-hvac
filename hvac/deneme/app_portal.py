@@ -1306,9 +1306,20 @@ def coerce_types(df: pd.DataFrame) -> pd.DataFrame:
 def recalc(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
-    df["Toplam_Hastane_Tuketim_kWh"] = df["Sebeke_Tuketim_kWh"].fillna(0) + df["Kojen_Uretim_kWh"].fillna(0)
-    df["Toplam_Sogutma_Tuketim_kWh"] = df["Chiller_Tuketim_kWh"].fillna(0) + df["VRF_Split_Tuketim_kWh"].fillna(0)
-    other = df["Toplam_Hastane_Tuketim_kWh"].fillna(0) - (df["Chiller_Tuketim_kWh"].fillna(0) + df["MCC_Tuketim_kWh"].fillna(0))
+    # Soğutma = CH analizörleri + VRF
+    df["Toplam_Sogutma_Tuketim_kWh"] = (
+        df["Chiller_Tuketim_kWh"].fillna(0) + df["VRF_Split_Tuketim_kWh"].fillna(0)
+    )
+    # Toplam = MCC + Soğutma (analizörlerden — Şebeke/Kojen manuel girilene kadar)
+    df["Toplam_Hastane_Tuketim_kWh"] = (
+        df["MCC_Tuketim_kWh"].fillna(0) + df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
+    )
+    # Diğer = Toplam - MCC - Soğutma
+    other = (
+        df["Toplam_Hastane_Tuketim_kWh"].fillna(0)
+        - df["MCC_Tuketim_kWh"].fillna(0)
+        - df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
+    )
     df["Diger_Yuk_kWh"] = other.clip(lower=0)
     return df
 
@@ -2729,6 +2740,27 @@ with tab1:
 
     # ── Tarih seçici FORM DIŞINDA — değişince mevcut değerleri önyükler ──
     tarih = st.date_input("Tarih", value=date.today(), key="entry_tarih")
+
+    # Tüm form widget key'leri (session_state temizlemek için)
+    _FORM_KEYS = [
+        "entry_dis_hava", "entry_chiller_load_pct", "entry_kar",
+        "entry_ch_set", "entry_ch_count", "entry_abs_count", "entry_kazan_count",
+        "entry_mas1_h", "entry_mas1_k", "entry_mas1_c",
+        "entry_mas2_h", "entry_mas2_k", "entry_mas2_c",
+        "entry_single_h", "entry_single_k", "entry_single_c",
+        "entry_sebeke", "entry_kojen", "entry_su",
+        "entry_kazan_gaz", "entry_kojen_gaz",
+        "entry_ch_kwh", "entry_mcc_kwh", "entry_vrf_kwh",
+    ]
+
+    # Tarih değişince session_state'deki eski widget değerlerini sil.
+    # Streamlit, key session_state'de varsa value= parametresini yoksayar —
+    # temizleyince bir sonraki render'da value=_fv(...) yeniden uygulanır.
+    if st.session_state.get("_prev_entry_tarih") != str(tarih):
+        st.session_state["_prev_entry_tarih"] = str(tarih)
+        for _k in _FORM_KEYS:
+            st.session_state.pop(_k, None)
+        st.rerun()
 
     # Seçili tarih için mevcut satırı yükle
     _df_all = load_data()
