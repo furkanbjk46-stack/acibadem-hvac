@@ -999,16 +999,19 @@ with sag:
             _lok_df = _son30[_son30["lokasyon_id"] == _lok_id]
             if _lok_df.empty:
                 continue
-            _m2_val = _info.get("m2", 10000)
-            _kwh    = float(_lok_df["Toplam_Hastane_Tuketim_kWh"].sum()) if "Toplam_Hastane_Tuketim_kWh" in _lok_df.columns else 0.0
-            _chkwh  = float(_lok_df["Chiller_Tuketim_kWh"].sum())        if "Chiller_Tuketim_kWh"         in _lok_df.columns else 0.0
-            _cs_raw = _lok_df["Chiller_Set_Temp_C"].dropna().mean()      if "Chiller_Set_Temp_C"          in _lok_df.columns else float("nan")
-            _cl_raw = _lok_df["Chiller_Load_Percent"].dropna().mean()    if "Chiller_Load_Percent"        in _lok_df.columns else float("nan")
+            _m2_val   = _info.get("m2", 10000)
+            _gun_say  = max(1, _lok_df["Tarih"].dt.date.nunique())  # kaç günlük veri var
+            _kwh      = float(_lok_df["Toplam_Hastane_Tuketim_kWh"].sum()) if "Toplam_Hastane_Tuketim_kWh" in _lok_df.columns else 0.0
+            _chkwh    = float(_lok_df["Chiller_Tuketim_kWh"].sum())        if "Chiller_Tuketim_kWh"         in _lok_df.columns else 0.0
+            _cs_raw   = _lok_df["Chiller_Set_Temp_C"].dropna().mean()      if "Chiller_Set_Temp_C"          in _lok_df.columns else float("nan")
+            _cl_raw   = _lok_df["Chiller_Load_Percent"].dropna().mean()    if "Chiller_Load_Percent"        in _lok_df.columns else float("nan")
             if _kwh <= 0:
                 continue
+            # Günlük ortalama kWh/m² — portal kartıyla aynı birim
+            _kwh_gun_ort = _kwh / _gun_say   # günlük ort. tüketim
             _ai_metriks[_lok_id] = {
                 "isim":       _info["kisa"],
-                "kwh_m2":     round(_kwh / _m2_val, 1),
+                "kwh_m2":     round(_kwh_gun_ort / _m2_val, 2),   # kWh/m²/gün
                 "chiller_oran": round(_chkwh / _kwh * 100, 1) if _kwh > 0 else 0.0,
                 "chiller_set": round(_cs_raw, 1) if not np.isnan(_cs_raw) else None,
                 "chiller_yuk": round(_cl_raw, 1) if not np.isnan(_cl_raw) else None,
@@ -1041,7 +1044,7 @@ with sag:
                 f"border-radius:8px;padding:8px 10px;text-align:center;'>"
                 f"<div style='font-size:8px;color:rgba(110,231,183,0.6);letter-spacing:1px;'>🏆 EN VERİMLİ</div>"
                 f"<div style='font-size:11px;font-weight:700;color:#6ee7b7;margin-top:2px;'>{_en_iyi[1]['isim']}</div>"
-                f"<div style='font-size:10px;color:rgba(110,231,183,0.8);'>{_en_iyi[1]['kwh_m2']} kWh/m²</div>"
+                f"<div style='font-size:10px;color:rgba(110,231,183,0.8);'>{_en_iyi[1]['kwh_m2']} kWh/m²/gün</div>"
                 f"</div>", unsafe_allow_html=True)
         with _mc2:
             st.markdown(
@@ -1049,7 +1052,7 @@ with sag:
                 f"border-radius:8px;padding:8px 10px;text-align:center;'>"
                 f"<div style='font-size:8px;color:rgba(252,165,165,0.6);letter-spacing:1px;'>⚠️ EN YÜKSEK</div>"
                 f"<div style='font-size:11px;font-weight:700;color:#fca5a5;margin-top:2px;'>{_en_kotu[1]['isim']}</div>"
-                f"<div style='font-size:10px;color:rgba(252,165,165,0.8);'>{_en_kotu[1]['kwh_m2']} kWh/m²</div>"
+                f"<div style='font-size:10px;color:rgba(252,165,165,0.8);'>{_en_kotu[1]['kwh_m2']} kWh/m²/gün</div>"
                 f"</div>", unsafe_allow_html=True)
 
         st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
@@ -1109,10 +1112,11 @@ with sag:
                 _prompt = (
                     "Aşağıdaki hastane enerji verilerini profesyonel bir enerji mühendisi gözüyle analiz et.\n"
                     f"Dönem: Son 30 gün | Toplam tüketim: {_toplam_kwh_genel:,} kWh\n"
-                    f"Enerji yoğunluğu ortalaması: {_ort_str} kWh/m²\n\n"
-                    "Lokasyon bazlı yoğunluk (düşükten yükseğe):\n"
+                    f"Günlük enerji yoğunluğu ortalaması: {_ort_str} kWh/m²/gün\n\n"
+                    "Lokasyon bazlı günlük yoğunluk — kWh/m²/gün (düşükten yükseğe):\n"
                     + "\n".join(_lok_satirlar)
-                    + "\n\nTürkçe olarak şunları belirt:\n"
+                    + "\n\nNot: Hastaneler için tipik referans aralığı 0.5–1.5 kWh/m²/gün.\n"
+                    "\nTürkçe olarak şunları belirt:\n"
                     "1. Genel tablo (1-2 cümle)\n"
                     "2. Dikkat gerektiren lokasyon(lar) ve olası neden\n"
                     "3. Bir somut aksiyon önerisi\n"
