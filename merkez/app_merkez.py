@@ -985,6 +985,176 @@ with sag:
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
+    # ════════════════════════════════
+    # 🤖 ENERJİ ZEKASI — AI Modülü
+    # ════════════════════════════════
+    st.markdown('<div class="sec">🤖 ENERJİ ZEKASI</div>', unsafe_allow_html=True)
+
+    # ── Son 30 günlük metrikleri hesapla ──
+    _ai_metriks = {}
+    _toplam_kwh_genel = 0
+    if not df_all.empty:
+        _son30 = df_all[df_all["Tarih"] >= (pd.Timestamp.now() - pd.Timedelta(days=30))]
+        for _lok_id, _info in HASTANELER.items():
+            _lok_df = _son30[_son30["lokasyon_id"] == _lok_id]
+            if _lok_df.empty:
+                continue
+            _m2_val = _info.get("m2", 10000)
+            _kwh    = float(_lok_df["Toplam_Hastane_Tuketim_kWh"].sum()) if "Toplam_Hastane_Tuketim_kWh" in _lok_df.columns else 0.0
+            _chkwh  = float(_lok_df["Chiller_Tuketim_kWh"].sum())        if "Chiller_Tuketim_kWh"         in _lok_df.columns else 0.0
+            _cs_raw = _lok_df["Chiller_Set_Temp_C"].dropna().mean()      if "Chiller_Set_Temp_C"          in _lok_df.columns else float("nan")
+            _cl_raw = _lok_df["Chiller_Load_Percent"].dropna().mean()    if "Chiller_Load_Percent"        in _lok_df.columns else float("nan")
+            if _kwh <= 0:
+                continue
+            _ai_metriks[_lok_id] = {
+                "isim":       _info["kisa"],
+                "kwh_m2":     round(_kwh / _m2_val, 1),
+                "chiller_oran": round(_chkwh / _kwh * 100, 1) if _kwh > 0 else 0.0,
+                "chiller_set": round(_cs_raw, 1) if not np.isnan(_cs_raw) else None,
+                "chiller_yuk": round(_cl_raw, 1) if not np.isnan(_cl_raw) else None,
+                "toplam_kwh":  round(_kwh),
+                "anormal":     False,
+                "ort_kwh_m2":  0.0,
+            }
+        _toplam_kwh_genel = sum(v["toplam_kwh"] for v in _ai_metriks.values())
+
+    # ── Aykırı değer tespiti (1.5 std) ──
+    if len(_ai_metriks) >= 3:
+        _yogunluklar = [v["kwh_m2"] for v in _ai_metriks.values()]
+        _ort_y = float(np.mean(_yogunluklar))
+        _std_y = float(np.std(_yogunluklar))
+        for _m in _ai_metriks.values():
+            _m["anormal"]    = bool(abs(_m["kwh_m2"] - _ort_y) > 1.5 * _std_y)
+            _m["ort_kwh_m2"] = round(_ort_y, 1)
+
+    # ── Sıralama & özet metrikler ──
+    if _ai_metriks:
+        _sirali     = sorted(_ai_metriks.items(), key=lambda x: x[1]["kwh_m2"])
+        _en_iyi     = _sirali[0]
+        _en_kotu    = _sirali[-1]
+        _anormal_n  = sum(1 for v in _ai_metriks.values() if v["anormal"])
+
+        _mc1, _mc2 = st.columns(2)
+        with _mc1:
+            st.markdown(
+                f"<div style='background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);"
+                f"border-radius:8px;padding:8px 10px;text-align:center;'>"
+                f"<div style='font-size:8px;color:rgba(110,231,183,0.6);letter-spacing:1px;'>🏆 EN VERİMLİ</div>"
+                f"<div style='font-size:11px;font-weight:700;color:#6ee7b7;margin-top:2px;'>{_en_iyi[1]['isim']}</div>"
+                f"<div style='font-size:10px;color:rgba(110,231,183,0.8);'>{_en_iyi[1]['kwh_m2']} kWh/m²</div>"
+                f"</div>", unsafe_allow_html=True)
+        with _mc2:
+            st.markdown(
+                f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);"
+                f"border-radius:8px;padding:8px 10px;text-align:center;'>"
+                f"<div style='font-size:8px;color:rgba(252,165,165,0.6);letter-spacing:1px;'>⚠️ EN YÜKSEK</div>"
+                f"<div style='font-size:11px;font-weight:700;color:#fca5a5;margin-top:2px;'>{_en_kotu[1]['isim']}</div>"
+                f"<div style='font-size:10px;color:rgba(252,165,165,0.8);'>{_en_kotu[1]['kwh_m2']} kWh/m²</div>"
+                f"</div>", unsafe_allow_html=True)
+
+        st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
+
+        if _anormal_n > 0:
+            _anormal_isimler = ", ".join(
+                v["isim"] for v in _ai_metriks.values() if v["anormal"]
+            )
+            st.markdown(
+                f"<div class='alrt-y'>⚡ {_anormal_n} lokasyon normal dışı: {_anormal_isimler}</div>",
+                unsafe_allow_html=True)
+
+        # ── AI yetki kontrolü ──
+        _api_key = ""
+        try:
+            _api_key = st.secrets.get("anthropic", {}).get("api_key", "")
+        except Exception:
+            pass
+
+        if not _api_key:
+            st.markdown(
+                "<div class='alrt-y' style='margin-top:6px;font-size:10px;'>"
+                "🔑 AI aktif değil.<br>Streamlit Secrets'a "
+                "<code>anthropic.api_key</code> ekleyin.</div>",
+                unsafe_allow_html=True)
+        else:
+            # ── Yenile butonu ──
+            _yenile_btn = st.button(
+                "🔄 Yeniden Analiz Et", key="btn_ai_yenile", use_container_width=True)
+
+            _AI_CACHE = "enerji_zekasi_metin"
+            _AI_ZAMAN = "enerji_zekasi_zaman"
+            _su_an = datetime.now()
+            _son_z = st.session_state.get(_AI_ZAMAN)
+            _gecerli = (
+                not _yenile_btn
+                and _son_z is not None
+                and (_su_an - _son_z).total_seconds() < 1800  # 30 dk
+            )
+
+            if _gecerli:
+                _ai_metin = st.session_state.get(_AI_CACHE, "")
+            else:
+                # ── Prompt ──
+                _lok_satirlar = []
+                for _lid, _mv in _sirali:
+                    _s = f"  • {_mv['isim']}: {_mv['kwh_m2']} kWh/m²"
+                    if _mv["chiller_set"] is not None:
+                        _s += f", Chiller {_mv['chiller_set']}°C"
+                    if _mv["chiller_yuk"] is not None:
+                        _s += f" %{_mv['chiller_yuk']:.0f} yük"
+                    if _mv["anormal"]:
+                        _s += "  ⚠️ ANORMAL"
+                    _lok_satirlar.append(_s)
+
+                _ort_str = f"{_ai_metriks[_sirali[0][0]]['ort_kwh_m2']}" if _ai_metriks else "?"
+                _prompt = (
+                    "Aşağıdaki hastane enerji verilerini profesyonel bir enerji mühendisi gözüyle analiz et.\n"
+                    f"Dönem: Son 30 gün | Toplam tüketim: {_toplam_kwh_genel:,} kWh\n"
+                    f"Enerji yoğunluğu ortalaması: {_ort_str} kWh/m²\n\n"
+                    "Lokasyon bazlı yoğunluk (düşükten yükseğe):\n"
+                    + "\n".join(_lok_satirlar)
+                    + "\n\nTürkçe olarak şunları belirt:\n"
+                    "1. Genel tablo (1-2 cümle)\n"
+                    "2. Dikkat gerektiren lokasyon(lar) ve olası neden\n"
+                    "3. Bir somut aksiyon önerisi\n"
+                    "Maksimum 130 kelime, teknik ve özlü."
+                )
+
+                with st.spinner("🤖 Analiz yapılıyor…"):
+                    try:
+                        import anthropic as _anthro
+                        _cli = _anthro.Anthropic(api_key=_api_key)
+                        _resp = _cli.messages.create(
+                            model="claude-haiku-4-5",
+                            max_tokens=400,
+                            messages=[{"role": "user", "content": _prompt}]
+                        )
+                        _ai_metin = _resp.content[0].text.strip()
+                        st.session_state[_AI_CACHE] = _ai_metin
+                        st.session_state[_AI_ZAMAN] = _su_an
+                    except Exception as _ae:
+                        _ai_metin = f"⚠️ Hata: {str(_ae)[:120]}"
+
+            # ── AI çıktısını göster ──
+            if _ai_metin:
+                st.markdown(
+                    f"<div style='background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.18);"
+                    f"border-radius:10px;padding:12px 14px;font-size:11px;"
+                    f"color:rgba(200,230,255,0.88);line-height:1.65;margin-top:4px;'>"
+                    f"<div style='font-size:8px;color:rgba(0,212,255,0.45);letter-spacing:1.5px;"
+                    f"text-transform:uppercase;margin-bottom:7px;'>🤖 AI · Son 30 Gün</div>"
+                    + _ai_metin.replace("\n", "<br>") +
+                    f"</div>",
+                    unsafe_allow_html=True)
+                if _son_z and _gecerli:
+                    st.caption(f"🕐 Analiz: {_son_z.strftime('%d.%m %H:%M')}")
+
+    else:
+        st.markdown(
+            "<div class='alrt-y'>📊 Henüz yeterli veri yok.</div>",
+            unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+
 
 # ============ FOOTER ============
 st.markdown(f"""
