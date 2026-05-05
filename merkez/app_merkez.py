@@ -1312,6 +1312,12 @@ with sag:
                     + _ref
                     + "".join(_lok_bloklari)
                     + "\n" + _yonerge
+                    + "\n\nÖNEMLİ FORMAT KURALLARI:\n"
+                    "- Kesinlikle başlık, rapor adı veya hastane adı yazma\n"
+                    "- ## veya # gibi markdown başlık kullanma\n"
+                    "- ** kalın ** kullanma, düz metin yaz\n"
+                    "- Doğrudan madde madde analize başla (1. ... 2. ... 3. ...)\n"
+                    "- --- ayraç kullanma"
                 )
 
                 with st.spinner(f"🤖 {_lok_n} lokasyon analiz ediliyor…"):
@@ -1333,18 +1339,34 @@ with sag:
             # ── AI çıktısını göster ──
             _etiket = "🤖 OTOMATİK SABAH ANALİZİ" if not _yenile_btn else "🤖 YENİLENDİ"
             if _ai_metin:
+                # Markdown kalıntılarını temizle (##, **, ---)
+                import re as _re
+                _ai_temiz = _ai_metin
+                _ai_temiz = _re.sub(r"#{1,3}\s*", "", _ai_temiz)          # ## başlıklar
+                _ai_temiz = _re.sub(r"\*\*(.+?)\*\*", r"\1", _ai_temiz)  # **kalın**
+                _ai_temiz = _re.sub(r"\*(.+?)\*",   r"\1", _ai_temiz)    # *italik*
+                _ai_temiz = _re.sub(r"^---+$", "", _ai_temiz, flags=_re.MULTILINE)  # ---
+                _ai_temiz = _ai_temiz.strip()
+
+                _son_z = st.session_state.get(_AI_ZAMAN)
+                _zaman_str = _son_z.strftime("%d.%m %H:%M") if _son_z else ""
                 st.markdown(
                     f"<div style='background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.18);"
-                    f"border-radius:10px;padding:12px 14px;font-size:11px;"
-                    f"color:rgba(200,230,255,0.88);line-height:1.65;margin-top:4px;'>"
-                    f"<div style='font-size:8px;color:rgba(0,212,255,0.45);letter-spacing:1.5px;"
-                    f"text-transform:uppercase;margin-bottom:7px;'>{_etiket}</div>"
-                    + _ai_metin.replace("\n", "<br>") +
-                    f"</div>",
+                    f"border-radius:10px;margin-top:4px;overflow:hidden;'>"
+                    # ── Başlık satırı ──
+                    f"<div style='display:flex;justify-content:space-between;align-items:center;"
+                    f"padding:7px 12px;border-bottom:1px solid rgba(0,212,255,0.1);'>"
+                    f"<span style='font-size:8px;color:rgba(0,212,255,0.5);letter-spacing:1.5px;"
+                    f"text-transform:uppercase;'>{_etiket}</span>"
+                    f"<span style='font-size:8px;color:rgba(0,212,255,0.3);'>🕐 {_zaman_str}</span>"
+                    f"</div>"
+                    # ── Kaydırılabilir içerik — sabit 220px ──
+                    f"<div style='max-height:220px;overflow-y:auto;padding:10px 14px;"
+                    f"font-size:11px;color:rgba(200,230,255,0.88);line-height:1.7;"
+                    f"scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;'>"
+                    + _ai_temiz.replace("\n", "<br>") +
+                    f"</div></div>",
                     unsafe_allow_html=True)
-                _son_z = st.session_state.get(_AI_ZAMAN)
-                if _son_z:
-                    st.caption(f"🕐 {_son_z.strftime('%d.%m.%Y %H:%M')} · Dün için otomatik analiz")
 
     else:
         st.markdown(
