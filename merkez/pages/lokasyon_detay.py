@@ -1117,12 +1117,12 @@ with tab4:
         _rp_bas = st.date_input(
             "Başlangıç Tarihi", value=_rp_ay_bas,
             min_value=_rp_min, max_value=_rp_son,
-            key="rapor_tarih_bas"
+            key="_rp_bas_input"
         )
         _rp_bit = st.date_input(
             "Bitiş Tarihi", value=_rp_son,
             min_value=_rp_min, max_value=_rp_son,
-            key="rapor_tarih_bit"
+            key="_rp_bit_input"
         )
 
         _rp_gun = (_rp_bit - _rp_bas).days + 1
