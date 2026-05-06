@@ -23,10 +23,10 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
 html, body, [data-testid="stAppViewContainer"] {
-    background: #0d1f35 !important;
+    background: #162d47 !important;
 }
 [data-testid="stAppViewContainer"] {
-    background: radial-gradient(ellipse at 50% 40%, #0f2a45 0%, #0d1f35 70%) !important;
+    background: radial-gradient(ellipse at 50% 40%, #1a3555 0%, #162d47 70%) !important;
 }
 [data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
@@ -52,14 +52,14 @@ button span[data-testid="stIconMaterial"] {
     border-bottom: 1px solid rgba(0,212,255,0.12);
 }
 .metric-card {
-    background: rgba(8,32,70,0.8);
+    background: rgba(14,42,85,0.85);
     border: 1px solid rgba(0,212,255,0.28);
     border-radius: 12px;
     padding: 16px;
     text-align: center;
 }
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
-    background: rgba(8,32,70,0.6);
+    background: rgba(14,42,85,0.65);
     border-radius: 10px; padding: 4px; gap: 4px;
 }
 [data-testid="stTabs"] [data-baseweb="tab"] {
@@ -71,16 +71,16 @@ button span[data-testid="stIconMaterial"] {
     color: #00d4ff !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] {
-    background: rgba(5,20,48,0.5);
+    background: rgba(10,30,62,0.6);
     border-radius: 12px; padding: 20px;
     border: 1px solid rgba(0,212,255,0.15);
 }
 .stDataFrame thead tr th {
-    background: rgba(5,55,130,0.95) !important;
+    background: rgba(8,65,148,0.95) !important;
     color: #fff !important; font-weight:700 !important;
 }
 .stDataFrame tbody tr td {
-    background: rgba(12,32,72,0.8) !important;
+    background: rgba(18,44,88,0.85) !important;
     color: #d8eeff !important;
     border-bottom: 1px solid rgba(80,130,220,0.15) !important;
 }
@@ -733,7 +733,7 @@ with tab1:
                         f"</div>"
                     )
                 st.markdown(
-                    f"<div style='background:rgba(8,28,65,0.8);border:1px solid rgba(0,212,255,0.22);"
+                    f"<div style='background:rgba(14,38,80,0.85);border:1px solid rgba(0,212,255,0.22);"
                     f"border-radius:12px;overflow:hidden;'>{rows_html}</div>",
                     unsafe_allow_html=True
                 )
@@ -825,7 +825,7 @@ with tab1:
     hvac_uyari   = hvac_ozet.get("uyari",  [])
     hvac_normal  = hvac_ozet.get("normal", [])
 
-    KART  = "background:rgba(8,28,65,0.75);border-radius:12px;padding:14px;"
+    KART  = "background:rgba(14,38,80,0.80);border-radius:12px;padding:14px;"
     LBL   = ("font-size:8px;color:rgba(150,210,255,0.5);letter-spacing:1.5px;"
              "text-transform:uppercase;margin-bottom:8px;font-weight:700;")
 
@@ -1054,7 +1054,7 @@ with tab4:
     st.markdown("<div style='height:40px'></div>", unsafe_allow_html=True)
     st.markdown(
         f"""<div style='text-align:center;padding:40px;
-            background:rgba(8,32,70,0.75);border:1px solid rgba(0,212,255,0.25);
+            background:rgba(14,42,85,0.80);border:1px solid rgba(0,212,255,0.25);
             border-radius:16px;max-width:500px;margin:0 auto;'>
             <div style='font-size:48px;margin-bottom:16px;'>📄</div>
             <div style='font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;
