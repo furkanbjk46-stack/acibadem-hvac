@@ -1262,9 +1262,29 @@ def parse_numeric_series(s: pd.Series) -> pd.Series:
         has_comma = "," in v
         has_dot = "." in v
         if has_comma and has_dot:
+            # Türkçe format: 7.563,010 → 7563.010
             v = v.replace(".", "").replace(",", ".")
         elif has_comma and not has_dot:
+            # Virgül ondalık ayraç: 7,563 → 7.563
             v = v.replace(",", ".")
+        elif has_dot and not has_comma:
+            # Sadece nokta — binlik ayraç mı yoksa ondalık mı?
+            # Kural: son noktadan sonra tam 3 rakam varsa → binlik ayraç (Türkçe)
+            # Tek nokta:  7.563  → 7563 | 13.9 → 13.9 (ondalık, 1 basamak)
+            # Çift nokta: 3.422.900 → son grubu at → 3.422 → 3422
+            #             7.563.010 → son grubu at → 7.563 → 7563
+            parts = v.split(".")
+            if (
+                len(parts) >= 2
+                and all(len(p) == 3 and p.isdigit() for p in parts[1:])
+                and parts[0].lstrip("-").isdigit()
+            ):
+                if len(parts) > 2:
+                    # Çift nokta: son 3 rakamı at, kalanı birleştir (3.422.900 → 3422)
+                    v = "".join(parts[:-1])
+                else:
+                    # Tek nokta 3 basamak: binlik ayraç (7.563 → 7563)
+                    v = v.replace(".", "")
         return v
 
     x = x.map(_fix)
@@ -1310,10 +1330,13 @@ def recalc(df: pd.DataFrame) -> pd.DataFrame:
     df["Toplam_Sogutma_Tuketim_kWh"] = (
         df["Chiller_Tuketim_kWh"].fillna(0) + df["VRF_Split_Tuketim_kWh"].fillna(0)
     )
-    # Toplam = MCC + Soğutma (analizörlerden — Şebeke/Kojen manuel girilene kadar)
-    df["Toplam_Hastane_Tuketim_kWh"] = (
-        df["MCC_Tuketim_kWh"].fillna(0) + df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
-    )
+    # Toplam Hastane:
+    #   Şebeke girilmişse → Şebeke + Kojen (sayaç bazlı, daha doğru)
+    #   Şebeke yoksa      → MCC + Soğutma (analizör bazlı fallback)
+    sebeke = df["Sebeke_Tuketim_kWh"].fillna(0)
+    kojen  = df["Kojen_Uretim_kWh"].fillna(0)
+    mcc_sogutma = df["MCC_Tuketim_kWh"].fillna(0) + df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
+    df["Toplam_Hastane_Tuketim_kWh"] = sebeke.where(sebeke > 0, mcc_sogutma) + kojen.where(sebeke > 0, 0)
     # Diğer = Toplam - MCC - Soğutma
     other = (
         df["Toplam_Hastane_Tuketim_kWh"].fillna(0)
@@ -2741,28 +2764,58 @@ with tab1:
     # ── Tarih seçici FORM DIŞINDA — değişince mevcut değerleri önyükler ──
     tarih = st.date_input("Tarih", value=date.today(), key="entry_tarih")
 
-    # Tüm form widget key'leri (session_state temizlemek için)
-    _FORM_KEYS = [
-        "entry_dis_hava", "entry_chiller_load_pct", "entry_kar",
-        "entry_ch_set", "entry_ch_count", "entry_abs_count", "entry_kazan_count",
-        "entry_mas1_h", "entry_mas1_k", "entry_mas1_c",
-        "entry_mas2_h", "entry_mas2_k", "entry_mas2_c",
-        "entry_single_h", "entry_single_k", "entry_single_c",
-        "entry_sebeke", "entry_kojen", "entry_su",
-        "entry_kazan_gaz", "entry_kojen_gaz",
-        "entry_ch_kwh", "entry_mcc_kwh", "entry_vrf_kwh",
-    ]
-
-    # Tarih değişince session_state'deki eski widget değerlerini sil.
-    # Streamlit, key session_state'de varsa value= parametresini yoksayar —
-    # temizleyince bir sonraki render'da value=_fv(...) yeniden uygulanır.
+    # Tarih değişince: yeni tarihe ait verileri session_state'e açıkça yaz → rerun
+    # NOT: Streamlit form widget'ları session_state'deki değeri value= parametresine
+    #      tercih eder. Bu yüzden pop+rerun yetmez — açıkça doğru değeri set etmek gerek.
     if st.session_state.get("_prev_entry_tarih") != str(tarih):
         st.session_state["_prev_entry_tarih"] = str(tarih)
-        for _k in _FORM_KEYS:
-            st.session_state.pop(_k, None)
+
+        _df_pre = load_data()
+        _ex_pre = None
+        if not _df_pre.empty:
+            _m_pre = _df_pre[_df_pre["Tarih"] == tarih]
+            if not _m_pre.empty:
+                _ex_pre = _m_pre.iloc[-1]
+
+        def _set_ss(key, col, default):
+            if _ex_pre is not None:
+                v = _ex_pre.get(col)
+                try:
+                    if v is not None and not pd.isna(v):
+                        st.session_state[key] = type(default)(v)
+                        return
+                except Exception:
+                    pass
+            st.session_state[key] = default
+
+        _set_ss("entry_dis_hava",         "Dis_Hava_Sicakligi_C",    0.0)
+        _set_ss("entry_chiller_load_pct", "Chiller_Load_Percent",     0.0)
+        _set_ss("entry_kar",              "Kar_Eritme_Aktif",         False)
+        _set_ss("entry_ch_set",           "Chiller_Set_Temp_C",       6.5)
+        _set_ss("entry_ch_count",         "Chiller_Adet",             0)
+        _set_ss("entry_abs_count",        "Absorption_Chiller_Adet",  0)
+        _set_ss("entry_kazan_count",      "Kazan_Adet",               0)
+        _set_ss("entry_mas1_h",           "Mas1_Isitma_Temp",         0.0)
+        _set_ss("entry_mas1_k",           "Mas1_Kazan_Temp",          0.0)
+        _set_ss("entry_mas1_c",           "Mas1_Sogutma_Temp",        0.0)
+        _set_ss("entry_mas2_h",           "Mas2_Isitma_Temp",         0.0)
+        _set_ss("entry_mas2_k",           "Mas2_Kazan_Temp",          0.0)
+        _set_ss("entry_mas2_c",           "Mas2_Sogutma_Temp",        0.0)
+        _set_ss("entry_single_h",         "Isitma_Temp_C",            0.0)
+        _set_ss("entry_single_k",         "Kazan_Temp_C",             0.0)
+        _set_ss("entry_single_c",         "Sogutma_Temp_C",           0.0)
+        _set_ss("entry_sebeke",           "Sebeke_Tuketim_kWh",       0.0)
+        _set_ss("entry_kojen",            "Kojen_Uretim_kWh",         0.0)
+        _set_ss("entry_su",               "Su_Tuketimi_m3",           0.0)
+        _set_ss("entry_kazan_gaz",        "Kazan_Dogalgaz_m3",        0.0)
+        _set_ss("entry_kojen_gaz",        "Kojen_Dogalgaz_m3",        0.0)
+        _set_ss("entry_ch_kwh",           "Chiller_Tuketim_kWh",      0.0)
+        _set_ss("entry_mcc_kwh",          "MCC_Tuketim_kWh",          0.0)
+        _set_ss("entry_vrf_kwh",          "VRF_Split_Tuketim_kWh",    0.0)
+
         st.rerun()
 
-    # Seçili tarih için mevcut satırı yükle
+    # Seçili tarih için mevcut satırı yükle (info mesajı ve _fv fallback için)
     _df_all = load_data()
     _ex = None
     if not _df_all.empty:
@@ -2775,12 +2828,14 @@ with tab1:
             )
 
     def _fv(col, default):
-        """Mevcut satırdan değer al, yoksa default döndür."""
         if _ex is None:
             return default
         v = _ex.get(col)
-        if v is None or (isinstance(v, float) and __import__('math').isnan(v)):
-            return default
+        try:
+            if v is None or pd.isna(v):
+                return default
+        except Exception:
+            pass
         try:
             return type(default)(v)
         except (ValueError, TypeError):
