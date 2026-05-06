@@ -221,28 +221,65 @@ son_tarih = df["Tarih"].dropna().max()
 # ── Dönem seçimi ─────────────────────────────────────────
 st.markdown('<div class="sec">RAPOR DONEMI SECIN</div>', unsafe_allow_html=True)
 st.markdown("")
-period = st.radio(
-    "Donem",
-    ["Gunluk", "Haftalik", "Aylik"],
-    horizontal=True,
-    label_visibility="collapsed",
-    key="rapor_period"
-)
 
-if period == "Gunluk":
-    bas         = son_tarih
-    period_type = "GUNLUK"
-    period_str  = son_tarih.strftime("%d.%m.%Y")
-elif period == "Haftalik":
-    bas         = son_tarih - timedelta(days=6)
-    period_type = "HAFTALIK"
-    period_str  = f"{bas.strftime('%d.%m')} - {son_tarih.strftime('%d.%m.%Y')}"
+# Lokasyon detay'dan tarih aralığı geldiyse doğrudan kullan
+_ss_bas = st.session_state.get("rapor_tarih_bas", None)
+_ss_bit = st.session_state.get("rapor_tarih_bit", None)
+
+if _ss_bas and _ss_bit:
+    # ── Lokasyon detay'dan gelen özel tarih aralığı ──
+    bas         = pd.Timestamp(_ss_bas)
+    bitis       = pd.Timestamp(_ss_bit)
+    gun_fark    = (bitis - bas).days + 1
+    period_type = "ÖZEL ARALIK"
+    period_str  = f"{bas.strftime('%d.%m.%Y')} → {bitis.strftime('%d.%m.%Y')}"
+
+    st.markdown(
+        f"<div style='background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.25);"
+        f"border-radius:10px;padding:10px 16px;margin-bottom:10px;"
+        f"font-size:12px;color:rgba(150,210,255,0.85);'>"
+        f"📅 <b style='color:#00d4ff;'>Seçilen Aralık:</b> {period_str}  "
+        f"<span style='color:rgba(150,210,255,0.5);'>({gun_fark} gün)</span>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
+    # Farklı aralık seçmek isterse sıfırlama butonu
+    if st.button("🔄 Farklı Tarih Seç", key="rapor_tarih_sifirla"):
+        st.session_state.pop("rapor_tarih_bas", None)
+        st.session_state.pop("rapor_tarih_bit", None)
+        st.rerun()
+
+    period_df = df[(df["Tarih"] >= bas) & (df["Tarih"] <= bitis)].copy()
+    son_tarih = bitis  # rapor alt kısımlarında son_tarih kullanılıyorsa doğru olsun
+
 else:
-    bas         = son_tarih - timedelta(days=29)
-    period_type = "AYLIK"
-    period_str  = f"{bas.strftime('%d.%m')} - {son_tarih.strftime('%d.%m.%Y')}"
+    # ── Standart seçim: Günlük / Haftalık / Aylık ──
+    period = st.radio(
+        "Donem",
+        ["Gunluk", "Haftalik", "Aylik"],
+        horizontal=True,
+        label_visibility="collapsed",
+        key="rapor_period"
+    )
 
-period_df = df[(df["Tarih"] >= bas) & (df["Tarih"] <= son_tarih)].copy()
+    if period == "Gunluk":
+        bas         = son_tarih
+        bitis       = son_tarih
+        period_type = "GUNLUK"
+        period_str  = son_tarih.strftime("%d.%m.%Y")
+    elif period == "Haftalik":
+        bas         = son_tarih - timedelta(days=6)
+        bitis       = son_tarih
+        period_type = "HAFTALIK"
+        period_str  = f"{bas.strftime('%d.%m')} - {son_tarih.strftime('%d.%m.%Y')}"
+    else:
+        bas         = son_tarih - timedelta(days=29)
+        bitis       = son_tarih
+        period_type = "AYLIK"
+        period_str  = f"{bas.strftime('%d.%m')} - {son_tarih.strftime('%d.%m.%Y')}"
+
+    period_df = df[(df["Tarih"] >= bas) & (df["Tarih"] <= bitis)].copy()
 
 st.markdown(
     f"""<div style='background:rgba(0,20,50,0.5);border:1px solid rgba(0,212,255,0.12);
