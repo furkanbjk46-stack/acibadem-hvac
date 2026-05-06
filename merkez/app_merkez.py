@@ -1110,24 +1110,51 @@ with sag:
                 "<code>anthropic.api_key</code> ekleyin.</div>",
                 unsafe_allow_html=True)
         else:
-            _AI_CACHE = "enerji_zekasi_metin"
-            _AI_ZAMAN = "enerji_zekasi_zaman"
-            _AI_GUN   = "enerji_zekasi_gun"
-            _su_an    = datetime.now()
-            _bugun    = _su_an.date()
-            _son_z    = st.session_state.get(_AI_ZAMAN)
-            _son_gun  = st.session_state.get(_AI_GUN)
+            _su_an  = datetime.now()
+            _bugun  = _su_an.date()
 
-            # ── Otomatik tetikleme: yeni gün veya cache boşsa ──
-            _oto_calis = (_son_gun != _bugun) or (st.session_state.get(_AI_CACHE, "") == "")
+            # ── Supabase'den bugünün analizini oku ──
+            def _sb_analiz_oku(tarih):
+                """Supabase ai_analizler tablosundan ilgili günün analizini çek."""
+                try:
+                    from supabase import create_client as _cc
+                    _c = _cc(url, key)
+                    _r = _c.table("ai_analizler").select("metin,created_at") \
+                           .eq("tarih", str(tarih)).limit(1).execute()
+                    if _r.data:
+                        return _r.data[0]["metin"], _r.data[0]["created_at"]
+                except Exception:
+                    pass
+                return None, None
+
+            def _sb_analiz_yaz(tarih, metin, lok_n):
+                """Analiz metnini Supabase ai_analizler tablosuna kaydet (upsert)."""
+                try:
+                    from supabase import create_client as _cc
+                    _c = _cc(url, key)
+                    _c.table("ai_analizler").upsert({
+                        "tarih":      str(tarih),
+                        "metin":      metin,
+                        "lok_sayisi": lok_n,
+                    }, on_conflict="tarih").execute()
+                except Exception:
+                    pass
+
+            # Saat 09:00'dan önce dünün analizini göster, sonra bugününkü
+            _analiz_tarihi = _bugun if _su_an.hour >= 9 else (_bugun - pd.Timedelta(days=1).to_pytimedelta().__class__(days=1))
+            _analiz_tarihi = _bugun if _su_an.hour >= 9 else (_su_an - pd.Timedelta(days=1)).date()
+
+            _sb_metin, _sb_zaman = _sb_analiz_oku(_analiz_tarihi)
 
             _yenile_btn = st.button(
                 "🔄 Yeniden Analiz Et", key="btn_ai_yenile", use_container_width=True)
 
-            _calistir = _oto_calis or _yenile_btn
+            # Çalıştırma koşulu: DB'de bugün yoksa VEYA yenile butonuna basıldıysa
+            _calistir = (_sb_metin is None) or _yenile_btn
 
             if not _calistir:
-                _ai_metin = st.session_state.get(_AI_CACHE, "")
+                _ai_metin  = _sb_metin
+                _ai_zaman_str = pd.Timestamp(_sb_zaman).strftime("%d.%m %H:%M") if _sb_zaman else ""
             else:
                 _dun_dt  = pd.Timestamp(_bugun) - pd.Timedelta(days=1)
                 _dun_str = _dun_dt.strftime("%d.%m.%Y")
@@ -1330,11 +1357,12 @@ with sag:
                             messages=[{"role": "user", "content": _prompt}]
                         )
                         _ai_metin = _resp.content[0].text.strip()
-                        st.session_state[_AI_CACHE] = _ai_metin
-                        st.session_state[_AI_ZAMAN] = _su_an
-                        st.session_state[_AI_GUN]   = _bugun
+                        # Supabase'e kaydet — günde 1 kez garantisi
+                        _sb_analiz_yaz(_analiz_tarihi, _ai_metin, _lok_n)
+                        _ai_zaman_str = _su_an.strftime("%d.%m %H:%M")
                     except Exception as _ae:
                         _ai_metin = f"⚠️ Hata: {str(_ae)[:120]}"
+                        _ai_zaman_str = ""
 
             # ── AI çıktısını göster ──
             _etiket = "🤖 OTOMATİK SABAH ANALİZİ" if not _yenile_btn else "🤖 YENİLENDİ"
@@ -1342,14 +1370,12 @@ with sag:
                 # Markdown kalıntılarını temizle (##, **, ---)
                 import re as _re
                 _ai_temiz = _ai_metin
-                _ai_temiz = _re.sub(r"#{1,3}\s*", "", _ai_temiz)          # ## başlıklar
-                _ai_temiz = _re.sub(r"\*\*(.+?)\*\*", r"\1", _ai_temiz)  # **kalın**
-                _ai_temiz = _re.sub(r"\*(.+?)\*",   r"\1", _ai_temiz)    # *italik*
-                _ai_temiz = _re.sub(r"^---+$", "", _ai_temiz, flags=_re.MULTILINE)  # ---
+                _ai_temiz = _re.sub(r"#{1,3}\s*", "", _ai_temiz)
+                _ai_temiz = _re.sub(r"\*\*(.+?)\*\*", r"\1", _ai_temiz)
+                _ai_temiz = _re.sub(r"\*(.+?)\*",   r"\1", _ai_temiz)
+                _ai_temiz = _re.sub(r"^---+$", "", _ai_temiz, flags=_re.MULTILINE)
                 _ai_temiz = _ai_temiz.strip()
 
-                _son_z = st.session_state.get(_AI_ZAMAN)
-                _zaman_str = _son_z.strftime("%d.%m %H:%M") if _son_z else ""
                 st.markdown(
                     f"<div style='background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.18);"
                     f"border-radius:10px;margin-top:4px;overflow:hidden;'>"
@@ -1358,7 +1384,7 @@ with sag:
                     f"padding:7px 12px;border-bottom:1px solid rgba(0,212,255,0.1);'>"
                     f"<span style='font-size:8px;color:rgba(0,212,255,0.5);letter-spacing:1.5px;"
                     f"text-transform:uppercase;'>{_etiket}</span>"
-                    f"<span style='font-size:8px;color:rgba(0,212,255,0.3);'>🕐 {_zaman_str}</span>"
+                    f"<span style='font-size:8px;color:rgba(0,212,255,0.3);'>🕐 {_ai_zaman_str}</span>"
                     f"</div>"
                     # ── Kaydırılabilir içerik — sabit 220px ──
                     f"<div style='max-height:220px;overflow-y:auto;padding:10px 14px;"
