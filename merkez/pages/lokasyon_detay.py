@@ -335,6 +335,10 @@ with tab1:
     su_tuk     = son_df["Su_Tuketimi_m3"].sum() if "Su_Tuketimi_m3" in son_df.columns else None
     sebeke_tuk = son_df["Sebeke_Tuketim_kWh"].sum() if "Sebeke_Tuketim_kWh" in son_df.columns else None
     mcc_tuk    = son_df["MCC_Tuketim_kWh"].sum() if "MCC_Tuketim_kWh" in son_df.columns else None
+    # Soğutma: önce hazır sütunu dene, yoksa Chiller'ı kullan
+    _sog_col   = "Toplam_Sogutma_Tuketim_kWh" if "Toplam_Sogutma_Tuketim_kWh" in son_df.columns \
+                 else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in son_df.columns else None)
+    sog_tuk    = son_df[_sog_col].sum() if _sog_col else None
 
     # ── 3 SÜTUN LAYOUT ────────────────────────────────
     col_left, col_mid, col_right = st.columns([2, 4, 2])
@@ -370,6 +374,10 @@ with tab1:
         )
         metric_card_v("❄️", "Chiller Set", f"{ch_set:.1f}" if ch_set else "—", "°C", "#a855f7")
 
+        # Soğutma tüketimi
+        if sog_tuk is not None and sog_tuk > 0:
+            metric_card_v("🧊", "Soğutma Tüketimi", f"{sog_tuk:,.0f}", "kWh", "#38bdf8")
+
         # Kojen öz tüketim oranı
         if kojen_urt and kwh_dun and kwh_dun > 0:
             kojen_oran = min(kojen_urt / kwh_dun * 100, 100)
@@ -384,6 +392,7 @@ with tab1:
             "📊 Tüketim":               "tuketim",
             "❄️ Chiller Set Trendi":    "chiller",
             "📐 kWh/m² Trendi":         "verimlilik",
+            "❄️ Soğutma Tüketimi":      "sogutma",
             "💧 Su Tüketimi":            "su",
             "⚙️ Kojen Üretim":          "kojen",
             "🔌 Şebeke Tüketimi":       "sebeke",
@@ -580,6 +589,31 @@ with tab1:
                 st.plotly_chart(fig_mcc, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("MCC tüketim verisi bulunamadı.")
+
+        # ── Soğutma Tüketimi (Chiller + VRF) ──
+        elif grafik_tip == "sogutma":
+            col_s = "Toplam_Sogutma_Tuketim_kWh" if "Toplam_Sogutma_Tuketim_kWh" in secili_df.columns \
+                    else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in secili_df.columns else None)
+            if col_s and not secili_df.empty:
+                st.caption(tarih_aralik_str)
+                sog_df = secili_df.groupby(secili_df["Tarih"].dt.date)[col_s].sum().reset_index()
+                sog_df.columns = ["Tarih", "kWh"]
+                fig_sog = go.Figure(go.Bar(
+                    x=sog_df["Tarih"], y=sog_df["kWh"],
+                    marker=dict(color="rgba(56,189,248,0.75)"),
+                    hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
+                ))
+                fig_sog.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#a0c8ff", family="Inter"),
+                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
+                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                               title=dict(text="kWh", font=dict(size=10))),
+                )
+                st.plotly_chart(fig_sog, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.info("Soğutma tüketim verisi bulunamadı.")
 
         # ── Kazan Doğalgaz ──
         elif grafik_tip == "kazan":
@@ -1051,23 +1085,58 @@ with tab3:
 
 # ════════ TAB 4: RAPOR OLUŞTUR ════════
 with tab4:
-    st.markdown("<div style='height:40px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
     st.markdown(
-        f"""<div style='text-align:center;padding:40px;
+        f"""<div style='text-align:center;padding:30px 40px 20px;
             background:rgba(14,42,85,0.80);border:1px solid rgba(0,212,255,0.25);
-            border-radius:16px;max-width:500px;margin:0 auto;'>
-            <div style='font-size:48px;margin-bottom:16px;'>📄</div>
+            border-radius:16px;max-width:560px;margin:0 auto;'>
+            <div style='font-size:40px;margin-bottom:12px;'>📄</div>
             <div style='font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;
-                color:{renk};letter-spacing:2px;margin-bottom:8px;'>RAPOR OLUŞTUR</div>
-            <div style='font-size:12px;color:rgba(150,210,255,0.6);margin-bottom:24px;'>
-                {lok_info["isim"]} için aylık enerji raporu oluşturun
+                color:{renk};letter-spacing:2px;margin-bottom:6px;'>RAPOR OLUŞTUR</div>
+            <div style='font-size:12px;color:rgba(150,210,255,0.6);margin-bottom:0;'>
+                {lok_info["isim"]} için tarih aralıklı enerji raporu
             </div>
         </div>""",
         unsafe_allow_html=True
     )
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-    col_c1, col_c2, col_c3 = st.columns([2, 2, 2])
-    with col_c2:
-        if st.button("📄 Rapor Oluştur", use_container_width=True, key="rapor_btn"):
-            st.session_state["rapor_lokasyon"] = lok_id
-            st.switch_page("pages/rapor_olustur.py")
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+
+    # ── Tarih aralığı seçimi ──
+    _rp_c1, _rp_c2, _rp_c3 = st.columns([1, 2, 1])
+    with _rp_c2:
+        # Varsayılan: bulunulan ayın 1'i → son veri tarihi
+        _rp_ay_bas = son_tarih_dt.replace(day=1).date()
+        _rp_son    = son_tarih_dt.date()
+        _rp_min    = df["Tarih"].min().date() if not df.empty else _rp_ay_bas
+
+        st.markdown(
+            "<div style='font-size:10px;color:rgba(0,212,255,0.5);letter-spacing:1px;"
+            "text-transform:uppercase;margin-bottom:6px;'>📅 Tarih Aralığı</div>",
+            unsafe_allow_html=True
+        )
+        _rp_bas = st.date_input(
+            "Başlangıç Tarihi", value=_rp_ay_bas,
+            min_value=_rp_min, max_value=_rp_son,
+            key="rapor_tarih_bas"
+        )
+        _rp_bit = st.date_input(
+            "Bitiş Tarihi", value=_rp_son,
+            min_value=_rp_min, max_value=_rp_son,
+            key="rapor_tarih_bit"
+        )
+
+        _rp_gun = (_rp_bit - _rp_bas).days + 1
+        st.markdown(
+            f"<div style='font-size:10px;color:rgba(150,210,255,0.4);margin:4px 0 12px;'>"
+            f"📆 {_rp_bas.strftime('%d.%m.%Y')} → {_rp_bit.strftime('%d.%m.%Y')}  ({_rp_gun} gün)</div>",
+            unsafe_allow_html=True
+        )
+
+        if _rp_bas > _rp_bit:
+            st.warning("⚠️ Başlangıç tarihi bitiş tarihinden büyük olamaz.")
+        else:
+            if st.button("📄 Rapor Oluştur", use_container_width=True, key="rapor_btn"):
+                st.session_state["rapor_lokasyon"]   = lok_id
+                st.session_state["rapor_tarih_bas"]  = str(_rp_bas)
+                st.session_state["rapor_tarih_bit"]  = str(_rp_bit)
+                st.switch_page("pages/rapor_olustur.py")
