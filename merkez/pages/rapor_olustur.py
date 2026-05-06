@@ -21,8 +21,8 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
-html, body, [data-testid="stAppViewContainer"] { background: #020b18 !important; }
-[data-testid="stAppViewContainer"] { background: radial-gradient(ellipse at 50% 40%, #071830 0%, #020b18 70%) !important; }
+html, body, [data-testid="stAppViewContainer"] { background: #162d47 !important; }
+[data-testid="stAppViewContainer"] { background: radial-gradient(ellipse at 50% 40%, #1a3555 0%, #162d47 70%) !important; }
 [data-testid="stHeader"] { background: transparent !important; }
 [data-testid="collapsedControl"] { display: none !important; visibility: hidden !important; }
 [data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
@@ -37,8 +37,8 @@ html, body, [data-testid="stAppViewContainer"] { background: #020b18 !important;
     border-bottom: 1px solid rgba(0,212,255,0.12);
 }
 [data-testid="stRadio"] label {
-    background: rgba(0,20,50,0.6) !important;
-    border: 1px solid rgba(0,212,255,0.2) !important;
+    background: rgba(14,42,85,0.65) !important;
+    border: 1px solid rgba(0,212,255,0.30) !important;
     border-radius: 12px !important;
     padding: 14px 28px !important;
     color: #a0c8ff !important;
