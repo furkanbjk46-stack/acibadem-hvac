@@ -23,10 +23,10 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
 
 html, body, [data-testid="stAppViewContainer"] {
-    background: #0d1f35 !important;
+    background: #162d47 !important;
 }
 [data-testid="stAppViewContainer"] {
-    background: #0d1f35 !important;
+    background: #162d47 !important;
 }
 [data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
@@ -57,7 +57,7 @@ button span[data-testid="stIconMaterial"] {
 [data-testid="stMetricLabel"]  { color: rgba(150,210,255,0.7) !important; font-size: 10px !important; letter-spacing: 1px !important; text-transform: uppercase !important; }
 [data-testid="stMetricDelta"]  { color: #10b981 !important; }
 [data-testid="metric-container"] {
-    background: linear-gradient(135deg, rgba(12,50,90,0.85), rgba(6,32,65,0.95)) !important;
+    background: linear-gradient(135deg, rgba(18,62,110,0.85), rgba(10,42,80,0.95)) !important;
     border: 1px solid rgba(0,212,255,0.3) !important;
     border-radius: 12px !important;
     padding: 12px !important;
@@ -66,12 +66,12 @@ button span[data-testid="stIconMaterial"] {
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: #0d1f35; }
+::-webkit-scrollbar-track { background: #162d47; }
 ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 3px; }
 
 /* Neon kart */
 .nk {
-    background: linear-gradient(135deg, rgba(10,40,85,0.9), rgba(5,22,55,0.95));
+    background: linear-gradient(135deg, rgba(16,55,100,0.9), rgba(9,32,70,0.95));
     border: 1px solid rgba(0,212,255,0.3);
     border-radius: 14px;
     padding: 14px;
@@ -88,10 +88,10 @@ button span[data-testid="stIconMaterial"] {
     overflow-x: hidden;
     padding-right: 3px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0,212,255,0.35) rgba(8,28,60,0.5);
+    scrollbar-color: rgba(0,212,255,0.35) rgba(14,38,72,0.6);
 }
 .lok-scroll::-webkit-scrollbar { width: 4px; }
-.lok-scroll::-webkit-scrollbar-track { background: rgba(8,28,60,0.5); border-radius: 2px; }
+.lok-scroll::-webkit-scrollbar-track { background: rgba(14,38,72,0.6); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.28); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.55); }
 
@@ -150,7 +150,7 @@ button span[data-testid="stIconMaterial"] {
 
 /* Alarm expander */
 [data-testid="stExpander"] {
-    background: rgba(8,28,65,0.75) !important;
+    background: rgba(14,38,80,0.80) !important;
     border: 1px solid rgba(0,212,255,0.25) !important;
     border-radius: 10px !important;
     margin-bottom: 5px !important;
