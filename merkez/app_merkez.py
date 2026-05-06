@@ -23,10 +23,10 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
 
 html, body, [data-testid="stAppViewContainer"] {
-    background: #020b18 !important;
+    background: #0d1f35 !important;
 }
 [data-testid="stAppViewContainer"] {
-    background: #020b18 !important;
+    background: #0d1f35 !important;
 }
 [data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
@@ -57,26 +57,26 @@ button span[data-testid="stIconMaterial"] {
 [data-testid="stMetricLabel"]  { color: rgba(150,210,255,0.7) !important; font-size: 10px !important; letter-spacing: 1px !important; text-transform: uppercase !important; }
 [data-testid="stMetricDelta"]  { color: #10b981 !important; }
 [data-testid="metric-container"] {
-    background: linear-gradient(135deg, rgba(0,30,60,0.85), rgba(0,15,40,0.95)) !important;
-    border: 1px solid rgba(0,212,255,0.2) !important;
+    background: linear-gradient(135deg, rgba(12,50,90,0.85), rgba(6,32,65,0.95)) !important;
+    border: 1px solid rgba(0,212,255,0.3) !important;
     border-radius: 12px !important;
     padding: 12px !important;
-    box-shadow: 0 0 15px rgba(0,212,255,0.06) !important;
+    box-shadow: 0 0 15px rgba(0,212,255,0.10) !important;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: #020b18; }
+::-webkit-scrollbar-track { background: #0d1f35; }
 ::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 3px; }
 
 /* Neon kart */
 .nk {
-    background: linear-gradient(135deg, rgba(0,25,60,0.9), rgba(0,12,35,0.95));
-    border: 1px solid rgba(0,212,255,0.2);
+    background: linear-gradient(135deg, rgba(10,40,85,0.9), rgba(5,22,55,0.95));
+    border: 1px solid rgba(0,212,255,0.3);
     border-radius: 14px;
     padding: 14px;
     margin-bottom: 10px;
-    box-shadow: 0 0 18px rgba(0,212,255,0.06);
+    box-shadow: 0 0 18px rgba(0,212,255,0.10);
 }
 .nk-green { border-color: rgba(16,185,129,0.45) !important; box-shadow: 0 0 15px rgba(16,185,129,0.08) !important; }
 .nk-red   { border-color: rgba(239,68,68,0.45) !important;  box-shadow: 0 0 15px rgba(239,68,68,0.08) !important;  }
@@ -88,10 +88,10 @@ button span[data-testid="stIconMaterial"] {
     overflow-x: hidden;
     padding-right: 3px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0,212,255,0.25) rgba(0,15,40,0.4);
+    scrollbar-color: rgba(0,212,255,0.35) rgba(8,28,60,0.5);
 }
 .lok-scroll::-webkit-scrollbar { width: 4px; }
-.lok-scroll::-webkit-scrollbar-track { background: rgba(0,15,40,0.4); border-radius: 2px; }
+.lok-scroll::-webkit-scrollbar-track { background: rgba(8,28,60,0.5); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.28); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.55); }
 
@@ -150,8 +150,8 @@ button span[data-testid="stIconMaterial"] {
 
 /* Alarm expander */
 [data-testid="stExpander"] {
-    background: rgba(0,15,40,0.7) !important;
-    border: 1px solid rgba(0,212,255,0.15) !important;
+    background: rgba(8,28,65,0.75) !important;
+    border: 1px solid rgba(0,212,255,0.25) !important;
     border-radius: 10px !important;
     margin-bottom: 5px !important;
 }
@@ -175,8 +175,8 @@ button span[data-testid="stIconMaterial"] {
     font-size: 12px; color: #fcd34d !important;
 }
 .alarm-detay-kart {
-    background: rgba(0,20,55,0.6);
-    border: 1px solid rgba(0,212,255,0.12);
+    background: rgba(8,35,75,0.7);
+    border: 1px solid rgba(0,212,255,0.22);
     border-radius: 8px; padding: 10px 14px; margin-top: 8px;
 }
 .btn-goto button {
