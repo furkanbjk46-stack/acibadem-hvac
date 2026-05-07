@@ -399,7 +399,6 @@ with tab1:
             "🏭 MCC Tüketimi":          "mcc",
             "🔥 Kazan Doğalgaz":        "kazan",
             "📆 Bu Ay vs Geçen Ay":     "ay_karsilastir",
-            "🔥 Doğalgaz Verimliliği":  "dogalgaz_verim",
             "📋 KPI Özet":              "kpi_ozet",
         }
 
