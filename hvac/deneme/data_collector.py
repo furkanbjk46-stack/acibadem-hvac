@@ -85,7 +85,7 @@ def modbus_get_kwh(device):
             s.close()
             if len(resp) >= 13:
                 val = struct.unpack('>f', resp[9:13])[0]
-                return round(val, 1)
+                return round(val / 1000, 3)  # Wh → kWh
 
         elif device["brand"] == "siemens":
             packet = b'\x00\x01\x00\x00\x00\x06\x01\x03\x03\x21\x00\x04'
@@ -94,7 +94,7 @@ def modbus_get_kwh(device):
             s.close()
             if len(resp) >= 17:
                 val = struct.unpack('>d', resp[9:17])[0]
-                return round(val, 1)
+                return round(val / 1000, 3)  # Wh → kWh
     except Exception:
         pass
     return None  # Baglanti hatasi
