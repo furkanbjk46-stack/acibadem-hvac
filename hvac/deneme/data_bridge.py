@@ -1,840 +1,405 @@
-# daily_report.py
-# Günlük Özet PDF Raporu Oluşturucu
-# Her gün saat 17:00'da önceki günün verilerini derleyerek modern PDF rapor üretir.
+# data_bridge.py
+# Modbus (analizor_guncel_veriler.csv) + BACnet (hedefli_enerji_verileri.csv)
+# verilerini otomatik olarak energy_data.csv formatina donusturur.
+#
+# CALISMA MANTIĞI:
+#   Her sabah 08:30'da sayac okumasi yapilir.
+#   Gunluk tuketim = bugun 08:30 okumasi - dun 08:30 okumasi
+#   Hesaplanan tuketim DUN'un tarihi ile energy_data.csv'ye yazilir.
+#
+#   Ornek: 4 Mayis 08:30'da calisinca ->
+#     - 4 Mayis 08:30 okumasi kaydedilir (yarinki hesap icin)
+#     - 3 Mayis 08:30 - 4 Mayis 08:30 farki = 3 Mayis'in tuketimi
+#     - energy_data.csv'ye "2026-05-03" satirini yazar
 
-from __future__ import annotations
-
-import os
+import csv
 import json
-import io
-import tempfile
-import traceback
-from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+import os
+import time
+import logging
+from datetime import datetime, date, timedelta
 
-import pandas as pd
-import numpy as np
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [BRIDGE] %(message)s")
+logger = logging.getLogger(__name__)
 
-from fpdf import FPDF
-
-# Plotly grafik üretimi
-try:
-    import plotly.graph_objects as go
-    import plotly.io as pio
-    HAS_PLOTLY = True
-except ImportError:
-    HAS_PLOTLY = False
-
-# ─── Sabitler ───
+# ================================================================
+# YOL YAPILANDIRMASI
+# Gemini scriptinin calistigi klasore gore ayarlayin
+# ================================================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Lokasyon bazlı dosya yolları (fallback: eski hardcoded yollar)
-try:
-    from location_manager import get_manager as _get_loc_mgr
-    _lm = _get_loc_mgr()
-    DATA_FILE = _lm.get_data_path("energy_data.csv")
-    SETTINGS_FILE = _lm.get_data_path("configs/hvac_settings.json")
-    REPORTS_DIR = _lm.get_data_path("daily_reports")
-except Exception:
-    DATA_FILE = os.path.join(BASE_DIR, "energy_data.csv")
-    SETTINGS_FILE = os.path.join(BASE_DIR, "configs", "hvac_settings.json")
-    REPORTS_DIR = os.path.join(BASE_DIR, "daily_reports")
-GAS_TO_KWH = 10.64  # 1 m³ doğalgaz ≈ 10.64 kWh
+# Gemini scriptinin urettigi CSV'ler (bu scriptle ayni klasorde olmali)
+MODBUS_CSV = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
+BACNET_CSV = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+
+# Portalin energy_data.csv konumu (bu scriptla ayni klasorde ise degistirme)
+ENERGY_CSV = os.path.join(BASE_DIR, "energy_data.csv")
+
+# Gunluk Modbus referans degerleri (dun gece okuma)
+REF_FILE = os.path.join(BASE_DIR, "modbus_daily_ref.json")
+
+# Gunluk snapshot saati — her sabah 08:30'da dun'un verisini yazar
+SNAPSHOT_HOUR   = 8
+SNAPSHOT_MINUTE = 30
+
+# ================================================================
+# ANALIZOR GRUPLARI
+# ================================================================
+CHILLER_ANALYZERS = {
+    "CHILLER-1", "CHILLER-2", "CHILLER-3", "CHILLER-4", "CHILLER-5"
+}
+
+ALL_ANALYZERS = {
+    "MCC-1", "MCC-2", "MCC-4", "MCC-6", "MCC-7",
+    "CHILLER-1", "CHILLER-2", "CHILLER-3", "CHILLER-4", "CHILLER-5",
+    "KULE-1", "KULE-2", "KULE-3",
+    "2BK-MCC-D01", "2BK-MCC-D02",
+    "4BK-MCC-E01", "4BK-MCC-E02", "4BK-MCC-F01",
+    "CK-MCC-D01", "CK-MCC-E01", "CK-MCC-F01",
+}
+
+# MCC tüketimi = Chiller HARİÇ geri kalan tüm analizörler
+MCC_ONLY_ANALYZERS = ALL_ANALYZERS - CHILLER_ANALYZERS
+
+# ================================================================
+# BACNET POINT -> energy_data.csv SUTUN ESLESTIRMESI
+# Point Name (hedefli_enerji_verileri.csv) -> dahili anahtar
+# "_" ile baslayanllar gecici, son satirda kullanilmaz
+# ================================================================
+BACNET_MAP = {
+    "DIS HAVA":                "Dis_Hava_Sicakligi_C",
+    "CH SET":                  "Chiller_Set_Temp_C",
+    "MAS-1 ISITMA SICAKLIK":   "Mas1_Isitma_Temp",
+    "MAS-2 ISITMA SICAKLIK":   "Mas2_Isitma_Temp",
+    "MAS-1 SOGUTMA SICAKLIK":  "Mas1_Sogutma_Temp",
+    "MAS-2 SOGUTMA SICAKLIK":  "Mas2_Sogutma_Temp",
+    "MAS-1 KAZAN SICAKLIK":    "Mas1_Kazan_Temp",
+    "MAS-2 KAZAN SICAKLIK":    "Mas2_Kazan_Temp",
+    # Durum bilgileri (0.0=KAPALI, 1.0=ACIK)
+    "CH-1 DURUM BILGISI":      "_ch_dur_1",
+    "CH-2 DURUM BILGISI":      "_ch_dur_2",
+    "CH-3 DURUM BILGISI":      "_ch_dur_3",
+    "CH-4 DURUM BILGISI":      "_ch_dur_4",
+    "CH-5 DURUM BILGISI":      "_ch_dur_5",
+    "ABS DURUM BILGISI":       "_abs_dur",
+    "KAZAN-1 DURUM BILGISI":   "_kaz_dur_1",
+    "KAZAN-2 DURUM BILGISI":   "_kaz_dur_2",
+    "KAZAN-3 DURUM BILGISI":   "_kaz_dur_3",
+    # Chiller calisma yuzdesi
+    "CH-1 CALISMA YUZDELIK":   "_ch_yuz_1",
+    "CH-2 CALISMA YUZDELIK":   "_ch_yuz_2",
+    "CH-3 CALISMA YUZDELIK":   "_ch_yuz_3",
+    "CH-4 CALISMA YUZDELIK":   "_ch_yuz_4",
+    "CH-5 CALISMA YUZDELIK":   "_ch_yuz_5",
+}
+
+ENERGY_SCHEMA = [
+    "Tarih", "Chiller_Set_Temp_C", "Chiller_Adet", "Absorption_Chiller_Adet",
+    "Kazan_Adet",
+    "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
+    "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
+    "Kar_Eritme_Aktif",
+    "Sebeke_Tuketim_kWh", "Kojen_Uretim_kWh",
+    "Kazan_Dogalgaz_m3", "Kojen_Dogalgaz_m3", "Su_Tuketimi_m3",
+    "Chiller_Tuketim_kWh", "MCC_Tuketim_kWh", "VRF_Split_Tuketim_kWh",
+    "Dis_Hava_Sicakligi_C", "Chiller_Load_Percent",
+    "Toplam_Hastane_Tuketim_kWh", "Toplam_Sogutma_Tuketim_kWh", "Diger_Yuk_kWh",
+]
+
+# ================================================================
+# YARDIMCI FONKSIYONLAR
+# ================================================================
+
+def read_modbus_csv():
+    """analizor_guncel_veriler.csv -> {cihaz_adi: kwh_int}
+    CSV Python tarafindan yazilir → her zaman standart float format (nokta=ondalik).
+    """
+    result = {}
+    if not os.path.exists(MODBUS_CSV):
+        logger.warning("Modbus CSV bulunamadi: %s", MODBUS_CSV)
+        return result
+    try:
+        with open(MODBUS_CSV, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                name = row.get("Cihaz_Adi", "").strip()
+                try:
+                    raw = row.get("Enerji_kWh", "").strip()
+                    result[name] = int(float(raw))
+                except (ValueError, TypeError) as e:
+                    logger.warning("Modbus %s parse hatasi (%s) — atlaniyor", name, e)
+    except Exception as e:
+        logger.error("Modbus CSV okuma hatasi: %s", e)
+    return result
 
 
-def _calculate_chiller_cop(load_percent: float) -> float:
-    """2000 KW Chiller Performans Eğrisi — doğrusal interpolasyon."""
-    import bisect
-    _curve = [
-        (10.0, 2.52), (20.0, 4.59), (25.0, 5.37), (30.0, 6.04),
-        (40.0, 7.25), (50.0, 7.98), (60.0, 7.52), (70.0, 6.98),
-        (75.0, 6.68), (80.0, 6.38), (90.0, 5.72), (100.0, 5.05),
+def read_bacnet_csv():
+    """hedefli_enerji_verileri.csv -> {point_name: float_value}"""
+    result = {}
+    if not os.path.exists(BACNET_CSV):
+        logger.warning("BACnet CSV bulunamadi: %s", BACNET_CSV)
+        return result
+    try:
+        with open(BACNET_CSV, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                name = row.get("Point_Name", "").strip()
+                status = row.get("Status", "")
+                if status != "OK":
+                    continue
+                try:
+                    result[name] = float(row.get("Value", ""))
+                except (ValueError, TypeError):
+                    pass
+    except Exception as e:
+        logger.error("BACnet CSV okuma hatasi: %s", e)
+    return result
+
+
+def load_ref():
+    """Dunku Modbus referans degerlerini yukle"""
+    if not os.path.exists(REF_FILE):
+        return None
+    try:
+        with open(REF_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning("Referans dosyasi okunamadi: %s", e)
+        return None
+
+
+def save_ref(today_str, readings):
+    """Bugunku Modbus okumalarini referans olarak kaydet (yarin kullanilacak)"""
+    data = {"date": today_str, "readings": readings}
+    with open(REF_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    logger.info("Modbus referans kaydedildi: %s (%d cihaz)", today_str, len(readings))
+
+
+MAX_DAILY_KWH_PER_DEVICE = 50_000  # Bir cihazin gunluk max makul tuketimi
+
+
+def calc_daily_kwh(today_readings, ref):
+    """
+    Gunluk tuketim = bugunun okumasi - dunku okumasi.
+    Sayac sifirlama, stale ref veya mantıksız büyük değerlerde 0 kabul edilir.
+    """
+    if ref is None:
+        return None  # Ilk calistirma, referans yok
+
+    # Referans tarihi dun olmalı — eski ref varsa sıfırdan başla
+    ref_date_str = ref.get("date", "")
+    expected_yesterday = (date.today() - timedelta(days=1)).isoformat()
+    if ref_date_str != expected_yesterday:
+        logger.warning(
+            "Referans tarihi uyumsuz (beklenen=%s, mevcut=%s) — referans gecersiz, 0 kullanılacak",
+            expected_yesterday, ref_date_str
+        )
+        return None  # Referansı iptal et, bugünü yeni başlangıç say
+
+    yesterday = ref.get("readings", {})
+    daily = {}
+    for name, today_val in today_readings.items():
+        yest_val = yesterday.get(name)
+        if yest_val is None:
+            logger.warning("%s icin dunku referans yok — atlaniyor", name)
+            continue
+        diff = today_val - yest_val
+        if diff < 0:
+            logger.warning("%s sayac sifirlandi veya hata (diff=%.1f) — 0 kabul edildi", name, diff)
+            diff = 0.0
+        if diff > MAX_DAILY_KWH_PER_DEVICE:
+            logger.error(
+                "%s gunluk fark cok buyuk (%.1f kWh) — referans sifir ya da format hatasi. 0 kullanildi.",
+                name, diff
+            )
+            diff = 0.0
+        daily[name] = round(diff, 1)
+    return daily
+
+
+def safe_sum(values_dict, keys):
+    """Belirtilen anahtarlarin toplamini al (None veya eksik olanlari atla)"""
+    total = 0.0
+    any_valid = False
+    for k in keys:
+        v = values_dict.get(k)
+        if isinstance(v, (int, float)):
+            total += v
+            any_valid = True
+    return round(total, 1) if any_valid else None
+
+
+def date_exists_in_csv(target_date_str):
+    """energy_data.csv'de bu tarih zaten var mi?"""
+    if not os.path.exists(ENERGY_CSV):
+        return False
+    try:
+        with open(ENERGY_CSV, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                if row.get("Tarih", "").startswith(target_date_str):
+                    return True
+    except Exception:
+        pass
+    return False
+
+
+def write_to_energy_csv(row_dict):
+    """energy_data.csv'ye yeni satir ekle (dosya yoksa olustur)"""
+    file_exists = os.path.exists(ENERGY_CSV)
+    with open(ENERGY_CSV, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=ENERGY_SCHEMA, extrasaction="ignore")
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row_dict)
+    logger.info("energy_data.csv -> yazildi: %s", row_dict.get("Tarih"))
+
+
+# ================================================================
+# ANA ROW BUILDER
+# ================================================================
+
+def build_daily_row(today_str, bacnet, daily_kwh):
+    """BACnet + Modbus verilerinden gunluk energy_data satirini olustur"""
+
+    # Tum BACnet noktalarini dahili dict'e al (gecici "_" anahtarlar dahil)
+    data = {}
+    for point_name, col_key in BACNET_MAP.items():
+        val = bacnet.get(point_name)
+        if val is not None:
+            data[col_key] = round(val, 2)
+
+    # --- Hesaplamalar ---
+
+    # Kac chiller calisiyor
+    ch_adet = sum(1 for i in range(1, 6) if data.get(f"_ch_dur_{i}", 0) >= 1.0)
+
+    # Absorption chiller
+    abs_adet = int(data.get("_abs_dur", 0) or 0)
+
+    # Kac kazan calisiyor
+    kaz_adet = sum(1 for i in range(1, 4) if data.get(f"_kaz_dur_{i}", 0) >= 1.0)
+
+    # Chiller yukleme yuzdesi: sadece calisan chillerlerin ortalamasi
+    ch_yuz_vals = [
+        data[f"_ch_yuz_{i}"] for i in range(1, 6)
+        if f"_ch_yuz_{i}" in data and data.get(f"_ch_dur_{i}", 0) >= 1.0
     ]
-    loads = [x[0] for x in _curve]
-    cops  = [x[1] for x in _curve]
-    p = max(0.0, min(100.0, float(load_percent)))
-    if p <= loads[0]:
-        return cops[0]
-    if p >= loads[-1]:
-        return cops[-1]
-    i = bisect.bisect_right(loads, p)
-    x0, y0 = loads[i - 1], cops[i - 1]
-    x1, y1 = loads[i],     cops[i]
-    return round(y0 + (y1 - y0) * (p - x0) / (x1 - x0), 2)
+    ch_load = round(sum(ch_yuz_vals) / len(ch_yuz_vals), 1) if ch_yuz_vals else ""
 
+    # Modbus gunluk kWh farklari
+    chiller_kwh = safe_sum(daily_kwh, CHILLER_ANALYZERS)    if daily_kwh else ""  # Soğutma
+    mcc_kwh     = safe_sum(daily_kwh, MCC_ONLY_ANALYZERS)   if daily_kwh else ""  # MCC (Chiller hariç)
+    total_kwh   = safe_sum(daily_kwh, ALL_ANALYZERS)         if daily_kwh else ""  # Toplam
 
-# ─── PDF Metin Temizleme (sadece emoji/sembol → ASCII, Türkçe korunur) ───
-def _sanitize(text: str) -> str:
-    if text is None:
-        return ""
-    replacements = {
-        "•": "-", "→": "->", "←": "<-", "↑": "^", "↓": "v",
-        "📊": "", "✅": "[OK]", "❌": "[X]", "⚠️": "[!]",
-        "📈": "", "📉": "", "🔹": "*", "❄️": "", "🔥": "",
-        "🟢": "[+]", "🟡": "[-]", "🔴": "[!]",
-        "📄": "", "📐": "", "⚡": "", "🏥": "",
+    diger_kwh = ""
+    if (isinstance(total_kwh, (int, float))
+            and isinstance(mcc_kwh, (int, float))
+            and isinstance(chiller_kwh, (int, float))):
+        diger_kwh = round(total_kwh - mcc_kwh - chiller_kwh, 1)
+
+    # --- Son satir (sadece ENERGY_SCHEMA sutunlari) ---
+    row = {
+        "Tarih":                      today_str,
+        "Chiller_Set_Temp_C":         data.get("Chiller_Set_Temp_C", ""),
+        "Chiller_Adet":               ch_adet,
+        "Absorption_Chiller_Adet":    abs_adet,
+        "Kazan_Adet":                 kaz_adet,
+        "Mas1_Isitma_Temp":           data.get("Mas1_Isitma_Temp", ""),
+        "Mas1_Kazan_Temp":            data.get("Mas1_Kazan_Temp", ""),
+        "Mas1_Sogutma_Temp":          data.get("Mas1_Sogutma_Temp", ""),
+        "Mas2_Isitma_Temp":           data.get("Mas2_Isitma_Temp", ""),
+        "Mas2_Kazan_Temp":            data.get("Mas2_Kazan_Temp", ""),
+        "Mas2_Sogutma_Temp":          data.get("Mas2_Sogutma_Temp", ""),
+        "Kar_Eritme_Aktif":           0,
+        # --- Manuel girilecek (sayac altyapisi hazir degil) ---
+        "Sebeke_Tuketim_kWh":         "",
+        "Kojen_Uretim_kWh":           "",
+        "Kazan_Dogalgaz_m3":          "",
+        "Kojen_Dogalgaz_m3":          "",
+        "Su_Tuketimi_m3":             "",
+        # --- Otomatik ---
+        "Chiller_Tuketim_kWh":        chiller_kwh,  # Sadece CH analizörleri
+        "MCC_Tuketim_kWh":            mcc_kwh,      # CH HARİÇ tüm analizörler
+        "VRF_Split_Tuketim_kWh":      0,            # Sahada henuz yok
+        "Dis_Hava_Sicakligi_C":       data.get("Dis_Hava_Sicakligi_C", ""),
+        "Chiller_Load_Percent":       ch_load,
+        "Toplam_Hastane_Tuketim_kWh": total_kwh,    # Tüm analizörler toplamı
+        "Toplam_Sogutma_Tuketim_kWh": chiller_kwh,  # CH analizörleri = soğutma
+        "Diger_Yuk_kWh":              diger_kwh,    # Toplam - MCC - Soğutma
     }
-    for char, rep in replacements.items():
-        text = text.replace(char, rep)
-    return text
+    return row
 
 
-def _setup_unicode_font(pdf):
-    """PDF nesnesine DejaVu Unicode font ekler — Türkçe karakterler doğru basılır."""
-    from pathlib import Path
-    font_candidates = [
-        Path(BASE_DIR) / "fonts" / "DejaVuSans.ttf",
-        Path("C:/Windows/Fonts/DejaVuSans.ttf"),
-        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
-    ]
-    bold_candidates = [
-        Path(BASE_DIR) / "fonts" / "DejaVuSans-Bold.ttf",
-        Path("C:/Windows/Fonts/DejaVuSans-Bold.ttf"),
-        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
-    ]
-    italic_candidates = [
-        Path(BASE_DIR) / "fonts" / "DejaVuSans-Oblique.ttf",
-        Path("C:/Windows/Fonts/DejaVuSans-Oblique.ttf"),
-        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf"),
-    ]
-    reg = next((p for p in font_candidates if p.exists()), None)
-    bold = next((p for p in bold_candidates if p.exists()), None)
-    italic = next((p for p in italic_candidates if p.exists()), None)
-    if reg:
-        pdf.add_font("DejaVu", "", str(reg), uni=True)
-        if bold:
-            pdf.add_font("DejaVu", "B", str(bold), uni=True)
-        pdf.add_font("DejaVu", "I", str(italic) if italic else str(reg), uni=True)
-        return "DejaVu"
-    return "Helvetica"  # fallback
+# ================================================================
+# GUNLUK SNAPSHOT
+# ================================================================
+
+def run_daily_snapshot():
+    today     = date.today()
+    yesterday = today - timedelta(days=1)
+
+    today_str     = today.isoformat()      # referans olarak kaydedilecek
+    yesterday_str = yesterday.isoformat()  # energy_data.csv'ye yazilacak tarih
+
+    logger.info("=== Gunluk snapshot basliyor ===")
+    logger.info("Bugun 08:30 okumasi: %s | Yazilacak tarih: %s", today_str, yesterday_str)
+
+    # 1. CSV'leri oku (data_collector'in en son yazdigi degerler)
+    modbus_now = read_modbus_csv()
+    bacnet_now = read_bacnet_csv()
+    logger.info("Modbus: %d cihaz | BACnet: %d nokta", len(modbus_now), len(bacnet_now))
+
+    # 2. Dunku referansi yukle (dun 08:30'daki okumalar)
+    ref = load_ref()
+    daily_kwh = calc_daily_kwh(modbus_now, ref)
+
+    # 3. Bugunun 08:30 okumalarini yarin icin referans olarak kaydet
+    if modbus_now:
+        save_ref(today_str, modbus_now)
+
+    # 4. Ilk calistirma — referans kaydedildi, dun icin veri yazilamaz
+    if daily_kwh is None:
+        logger.info("Ilk calistirma: bugunun referansi kaydedildi.")
+        logger.info("Yarin 08:30'da dun'un (%s) verisi otomatik yazilacak.", today_str)
+        return
+
+    # 5. Dunku tarih zaten energy_data.csv'de var mi?
+    if date_exists_in_csv(yesterday_str):
+        logger.warning("Tarih zaten mevcut: %s — atlanıyor.", yesterday_str)
+        return
+
+    # 6. Satiri olustur (dun'un tarihi ile) ve yaz
+    row = build_daily_row(yesterday_str, bacnet_now, daily_kwh)
+    write_to_energy_csv(row)
+
+    logger.info("Otomatik: MCC=%.1f kWh | Chiller=%.1f kWh | Dis Hava=%.1f C",
+                row.get("MCC_Tuketim_kWh") or 0,
+                row.get("Chiller_Tuketim_kWh") or 0,
+                row.get("Dis_Hava_Sicakligi_C") or 0)
+    logger.info("Manuel tamamlanacak (portal): Sebeke, Kojen, Dogalgaz, Su")
+    logger.info("=== Snapshot tamamlandi: %s ===", yesterday_str)
 
 
-# ─── Veri Yükleme ───
-def load_energy_data() -> pd.DataFrame:
-    """energy_data.csv'den enerji verilerini yükle."""
-    if not os.path.exists(DATA_FILE):
-        return pd.DataFrame()
-    df = pd.read_csv(DATA_FILE)
-    if "Tarih" in df.columns:
-        df["Tarih"] = pd.to_datetime(df["Tarih"], format="%Y-%m-%d", errors="coerce").dt.date
-    return df
+# ================================================================
+# ANA DONGU
+# ================================================================
+
+def bridge_loop():
+    logger.info("Data Bridge baslatildi — her gun %02d:%02d'de calisacak",
+                SNAPSHOT_HOUR, SNAPSHOT_MINUTE)
+    last_run_date = None
+
+    while True:
+        now = datetime.now()
+        today = now.date()
+
+        if (now.hour == SNAPSHOT_HOUR
+                and now.minute == SNAPSHOT_MINUTE
+                and last_run_date != today):
+            run_daily_snapshot()
+            last_run_date = today
+
+        time.sleep(30)  # 30 saniyede bir saat kontrolu
 
 
-def load_hvac_history() -> pd.DataFrame:
-    """HVAC analiz geçmişini yükle."""
-    try:
-        from monthly_report.hvac_history import HVACHistoryManager
-        mgr = HVACHistoryManager()
-        df = mgr.load_history()
-        if not df.empty and "Tarih" in df.columns:
-            df["Tarih"] = pd.to_datetime(df["Tarih"], format="%Y-%m-%d", errors="coerce").dt.date
-        return df
-    except Exception:
-        return pd.DataFrame()
-
-
-def load_building_area() -> float:
-    """Hastane m² bilgisini settings'ten yükle."""
-    try:
-        if os.path.exists(SETTINGS_FILE):
-            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return float(data.get("BUILDING_AREA_M2", 0))
-    except Exception:
-        pass
-    return 0.0
-
-
-def load_unit_prices() -> Dict:
-    """Birim fiyatları settings'ten yükle."""
-    try:
-        if os.path.exists(SETTINGS_FILE):
-            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return {
-                    "electricity": float(data.get("UNIT_PRICE_ELECTRICITY", 0)),
-                    "gas": float(data.get("UNIT_PRICE_GAS", 0)),
-                    "water": float(data.get("UNIT_PRICE_WATER", 0)),
-                }
-    except Exception:
-        pass
-    return {"electricity": 0, "gas": 0, "water": 0}
-
-
-def load_last_analysis() -> List[Dict]:
-    """Son HVAC analiz sonuçlarını yükle."""
-    try:
-        results_file = os.path.join(BASE_DIR, "configs", "last_analysis.json")
-        if os.path.exists(results_file):
-            with open(results_file, "r", encoding="utf-8") as f:
-                return json.load(f)
-    except Exception:
-        pass
-    return []
-
-
-# ─── Plotly Grafik Üretimi ───
-def create_energy_pie_chart(total_kwh: float, chiller_kwh: float, gas_kwh: float) -> Optional[bytes]:
-    """Enerji dağılım pasta grafiği oluştur."""
-    if not HAS_PLOTLY:
-        return None
-    
-    other = max(0, total_kwh - chiller_kwh - gas_kwh)
-    labels = ["Sogutma (Chiller)", "Isitma (Dogalgaz)", "Diger"]
-    values = [chiller_kwh, gas_kwh, other]
-    colors = ["#3b82f6", "#ef4444", "#8b5cf6"]
-    
-    fig = go.Figure(data=[go.Pie(
-        labels=labels, values=values,
-        hole=0.45,
-        marker=dict(colors=colors, line=dict(color='#1a2332', width=2)),
-        textinfo='label+percent',
-        textfont=dict(size=13, color='white'),
-        insidetextorientation='radial'
-    )])
-    fig.update_layout(
-        paper_bgcolor='#1a2332',
-        plot_bgcolor='#1a2332',
-        font=dict(color='white', size=12),
-        showlegend=True,
-        legend=dict(
-            orientation="h", yanchor="bottom", y=-0.15,
-            xanchor="center", x=0.5, font=dict(color='white', size=11)
-        ),
-        margin=dict(l=20, r=20, t=30, b=40),
-        width=500, height=350,
-        title=dict(text="Enerji Dagilim", font=dict(size=16, color='white'))
-    )
-    fig.update_layout(paper_bgcolor='white', plot_bgcolor='white', font=dict(color='#1a2332'))
-    return pio.to_image(fig, format="png", scale=2)
-
-
-def create_weekly_trend_chart(df: pd.DataFrame, report_date: date) -> Optional[bytes]:
-    """Son 7 günlük tüketim trend grafiği."""
-    if not HAS_PLOTLY or df.empty:
-        return None
-    
-    end = report_date
-    start = end - timedelta(days=6)
-    mask = (df["Tarih"] >= start) & (df["Tarih"] <= end)
-    week_df = df[mask].sort_values("Tarih")
-    
-    if week_df.empty:
-        return None
-    
-    dates = [d.strftime("%d/%m") for d in week_df["Tarih"]]
-    totals = week_df["Toplam_Hastane_Tuketim_kWh"].fillna(0).tolist()
-    chillers = week_df["Chiller_Tuketim_kWh"].fillna(0).tolist()
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=dates, y=totals, name="Toplam",
-        line=dict(color="#3b82f6", width=3),
-        fill='tozeroy', fillcolor='rgba(59,130,246,0.15)',
-        mode='lines+markers', marker=dict(size=8)
-    ))
-    fig.add_trace(go.Scatter(
-        x=dates, y=chillers, name="Chiller",
-        line=dict(color="#10b981", width=2, dash='dot'),
-        mode='lines+markers', marker=dict(size=6)
-    ))
-    fig.update_layout(
-        paper_bgcolor='#1a2332',
-        plot_bgcolor='#0f172a',
-        font=dict(color='white', size=12),
-        xaxis=dict(gridcolor='rgba(255,255,255,0.1)', title="Tarih"),
-        yaxis=dict(gridcolor='rgba(255,255,255,0.1)', title="kWh"),
-        legend=dict(
-            orientation="h", yanchor="bottom", y=-0.25,
-            xanchor="center", x=0.5, font=dict(color='white', size=11)
-        ),
-        margin=dict(l=50, r=20, t=40, b=50),
-        width=550, height=300,
-        title=dict(text="Son 7 Gun Tuketim Trendi", font=dict(size=14, color='white'))
-    )
-    return pio.to_image(fig, format="png", scale=2)
-
-
-def create_health_gauge(score: int) -> Optional[bytes]:
-    """Sistem sağlık göstergesi gauge grafiği."""
-    if not HAS_PLOTLY:
-        return None
-    
-    color = "#10b981" if score >= 80 else "#f59e0b" if score >= 50 else "#ef4444"
-    
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=score,
-        number=dict(suffix="%", font=dict(size=36, color='white')),
-        gauge=dict(
-            axis=dict(range=[0, 100], tickwidth=2, tickcolor='white',
-                      tickfont=dict(color='white', size=10)),
-            bar=dict(color=color, thickness=0.6),
-            bgcolor='rgba(255,255,255,0.05)',
-            borderwidth=2, bordercolor='rgba(255,255,255,0.2)',
-            steps=[
-                dict(range=[0, 50], color="rgba(239,68,68,0.15)"),
-                dict(range=[50, 80], color="rgba(245,158,11,0.15)"),
-                dict(range=[80, 100], color="rgba(16,185,129,0.15)"),
-            ],
-        ),
-    ))
-    fig.update_layout(
-        paper_bgcolor='#1a2332',
-        font=dict(color='white'),
-        margin=dict(l=30, r=30, t=30, b=10),
-        width=280, height=200,
-    )
-    return pio.to_image(fig, format="png", scale=2)
-
-
-# ─── PDF Sınıfı ───
-class DailyReportPDF(FPDF):
-    
-    ACCENT = (59, 130, 246)     # Mavi
-    DARK_BG = (26, 35, 50)     # Koyu arka plan
-    HEADER_BG = (15, 23, 42)   # Başlık arka plan
-    SUCCESS = (16, 185, 129)   # Yeşil
-    WARNING_C = (245, 158, 11) # Turuncu
-    DANGER = (239, 68, 68)     # Kırmızı
-    WHITE = (255, 255, 255)
-    GRAY = (156, 163, 175)
-    
-    def __init__(self, report_date: date):
-        super().__init__()
-        self.report_date = report_date
-        self.set_auto_page_break(auto=True, margin=20)
-        self.font = _setup_unicode_font(self)  # DejaVu varsa Türkçe karakter desteği
-    
-    def header(self):
-        # Gradient header simulation
-        self.set_fill_color(*self.HEADER_BG)
-        self.rect(0, 0, 210, 40, 'F')
-        
-        # Accent line
-        self.set_fill_color(*self.ACCENT)
-        self.rect(0, 40, 210, 1.5, 'F')
-        
-        # Title
-        self.set_font(self.font, 'B', 18)
-        self.set_text_color(*self.WHITE)
-        self.set_y(8)
-        self.cell(0, 10, _sanitize("GUNLUK ENERJI & HVAC RAPORU"), 0, 1, 'C')
-        
-        # Date
-        self.set_font(self.font, '', 11)
-        self.set_text_color(*self.GRAY)
-        date_str = self.report_date.strftime("%d.%m.%Y")
-        self.cell(0, 6, _sanitize(f"Rapor Tarihi: {date_str} | Olusturma: {datetime.now().strftime('%H:%M')}"), 0, 1, 'C')
-        
-        # Hospital name
-        self.set_font(self.font, 'I', 9)
-        self.cell(0, 5, _sanitize("Acibadem Hastanesi - Enerji Yonetim Sistemi"), 0, 1, 'C')
-        self.ln(8)
-    
-    def footer(self):
-        self.set_y(-15)
-        self.set_font(self.font, 'I', 8)
-        self.set_text_color(*self.GRAY)
-        self.cell(0, 10, f'Sayfa {self.page_no()}/{{nb}}', 0, 0, 'C')
-    
-    def section_title(self, icon: str, title: str, color: Tuple[int, int, int] = None):
-        """Modern bölüm başlığı."""
-        if color is None:
-            color = self.ACCENT
-        self.ln(4)
-        self.set_fill_color(*color)
-        self.rect(10, self.get_y(), 3, 8, 'F')
-        self.set_font(self.font, 'B', 13)
-        self.set_text_color(40, 40, 40)
-        self.set_x(16)
-        self.cell(0, 8, _sanitize(f"{icon} {title}"), 0, 1)
-        self.ln(2)
-    
-    def info_box(self, x: float, y: float, w: float, h: float,
-                 label: str, value: str, sub: str = "", 
-                 color: Tuple[int, int, int] = None):
-        """Bilgi kutusu (KPI kartı)."""
-        if color is None:
-            color = self.ACCENT
-        
-        # Arka plan
-        self.set_fill_color(245, 247, 250)
-        self.rounded_rect(x, y, w, h, 3, 'F')
-        
-        # Sol renk çizgisi
-        self.set_fill_color(*color)
-        self.rect(x, y + 2, 2, h - 4, 'F')
-        
-        # Label
-        self.set_font(self.font, '', 8)
-        self.set_text_color(120, 120, 120)
-        self.set_xy(x + 6, y + 3)
-        self.cell(w - 10, 4, _sanitize(label), 0, 0)
-        
-        # Value
-        self.set_font(self.font, 'B', 14)
-        self.set_text_color(30, 30, 30)
-        self.set_xy(x + 6, y + 9)
-        self.cell(w - 10, 8, _sanitize(value), 0, 0)
-        
-        # Sub
-        if sub:
-            self.set_font(self.font, '', 7)
-            color_sub = self.SUCCESS if "+" not in sub else self.DANGER if "-" in sub else self.GRAY
-            self.set_text_color(*color_sub)
-            self.set_xy(x + 6, y + 18)
-            self.cell(w - 10, 4, _sanitize(sub), 0, 0)
-    
-    def rounded_rect(self, x, y, w, h, r, style=''):
-        """Yuvarlatılmış köşeli dikdörtgen (basitleştirilmiş)."""
-        # fpdf2 rounded_rect yerine basit rect kullanıyoruz
-        self.rect(x, y, w, h, style)
-    
-    def add_image_from_bytes(self, img_bytes: bytes, x: float, y: float, w: float, h: float = 0):
-        """Plotly grafik resmini PDF'e ekle."""
-        if img_bytes is None:
-            return
-        tmp = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-        try:
-            tmp.write(img_bytes)
-            tmp.close()
-            self.image(tmp.name, x=x, y=y, w=w, h=h)
-            if h > 0:
-                self.set_y(y + h)
-        finally:
-            try:
-                os.unlink(tmp.name)
-            except Exception:
-                pass
-
-
-# ─── Ana Rapor Üretici ───
-class DailyReportGenerator:
-    
-    def __init__(self):
-        os.makedirs(REPORTS_DIR, exist_ok=True)
-    
-    def generate(self, target_date: date = None) -> str:
-        """
-        Günlük rapor PDF'i oluştur.
-        
-        Args:
-            target_date: Rapor tarihi (varsayılan: dün)
-        
-        Returns:
-            str: Oluşturulan PDF dosya yolu
-        """
-        if target_date is None:
-            target_date = date.today() - timedelta(days=1)
-        
-        compare_date = target_date - timedelta(days=1)
-        
-        # Verileri yükle
-        df = load_energy_data()
-        hvac_df = load_hvac_history()
-        building_area = load_building_area()
-        
-        # Rapor günü verileri
-        report_row = self._get_day_data(df, target_date)
-        compare_row = self._get_day_data(df, compare_date)
-        hvac_day = self._get_hvac_day(hvac_df, target_date)
-        
-        # PDF oluştur
-        pdf = DailyReportPDF(target_date)
-        pdf.alias_nb_pages()
-        pdf.add_page()
-        
-        # 1. ENERJI ÖZET KUTULARI
-        self._add_energy_summary(pdf, report_row, compare_row)
-        
-        # 2. m² METRİKLERİ
-        if building_area > 0:
-            self._add_m2_metrics(pdf, report_row, building_area)
-        
-        # 2.5. MALİYET ÖZETİ
-        prices = load_unit_prices()
-        has_price = prices["electricity"] > 0 or prices["gas"] > 0
-        if has_price:
-            self._add_cost_summary(pdf, report_row, prices)
-        
-        # 3. HVAC PERFORMANS ÖZETİ 
-        self._add_hvac_summary(pdf, hvac_day)
-        
-        # 4. GRAFİKLER
-        self._add_charts(pdf, df, report_row, target_date)
-        
-        # 5. SANTRAL VERİMLİLİK TABLOSU
-        self._add_equipment_table(pdf, hvac_day)
-        
-        # 6. GENEL DEĞERLENDİRME
-        self._add_evaluation(pdf, report_row, compare_row, hvac_day, building_area)
-        
-        # Kaydet
-        filename = f"gunluk_rapor_{target_date.strftime('%Y%m%d')}.pdf"
-        filepath = os.path.join(REPORTS_DIR, filename)
-        pdf.output(filepath)
-        
-        return filepath
-    
-    def _get_day_data(self, df: pd.DataFrame, d: date) -> Dict:
-        """Belirli bir günün enerji verilerini dict olarak al."""
-        if df.empty:
-            return {}
-        mask = df["Tarih"] == d
-        rows = df[mask]
-        if rows.empty:
-            return {}
-        row = rows.iloc[0]
-        chiller_load_raw = row.get("Chiller_Load_Percent")
-        chiller_load = float(chiller_load_raw) if chiller_load_raw not in (None, "", float("nan")) else None
-        return {
-            "total": float(row.get("Toplam_Hastane_Tuketim_kWh", 0) or 0),
-            "chiller": float(row.get("Chiller_Tuketim_kWh", 0) or 0),
-            "grid": float(row.get("Sebeke_Tuketim_kWh", 0) or 0),
-            "gas_kazan": float(row.get("Kazan_Dogalgaz_m3", 0) or 0),
-            "gas_kojen": float(row.get("Kojen_Dogalgaz_m3", 0) or 0),
-            "vrf": float(row.get("VRF_Split_Tuketim_kWh", 0) or 0),
-            "oat": float(row.get("Dis_Hava_Sicakligi_C", 0) or 0),
-            "chiller_set": float(row.get("Chiller_Set_C", 0) or 0),
-            "chiller_load": chiller_load,
-        }
-    
-    def _get_hvac_day(self, df: pd.DataFrame, d: date) -> Dict:
-        """HVAC analiz geçmişinden günlük özet."""
-        if df.empty:
-            return {}
-        mask = df["Tarih"] == d
-        rows = df[mask]
-        if rows.empty:
-            return {}
-        row = rows.iloc[-1]  # Son analiz
-        return {
-            "critical": int(row.get("Kritik_Sorun_Adet", 0) or 0),
-            "warning": int(row.get("Uyari_Adet", 0) or 0),
-            "optimal": int(row.get("Optimal_Adet", 0) or 0),
-            "total_eq": int(row.get("Toplam_Ekipman", 0) or 0),
-            "avg_score": float(row.get("Ort_Skor", 0) or 0),
-        }
-    
-    def _pct_change(self, current: float, previous: float) -> str:
-        """Yüzde değişim string'i."""
-        if previous <= 0:
-            return ""
-        pct = ((current - previous) / previous) * 100
-        sign = "+" if pct > 0 else ""
-        return f"{sign}{pct:.1f}% onceki gune gore"
-    
-    def _add_energy_summary(self, pdf: DailyReportPDF, report: Dict, compare: Dict):
-        """Enerji özet kutuları."""
-        pdf.section_title("", "ENERJI OZETI", pdf.ACCENT)
-        
-        total = report.get("total", 0)
-        chiller = report.get("chiller", 0)
-        gas = report.get("gas_kazan", 0) + report.get("gas_kojen", 0)
-        grid = report.get("grid", 0)
-        
-        comp_total = compare.get("total", 0)
-        comp_chiller = compare.get("chiller", 0)
-        comp_gas = compare.get("gas_kazan", 0) + compare.get("gas_kojen", 0)
-        
-        y = pdf.get_y()
-        box_w = 44
-        gap = 3
-        
-        pdf.info_box(10, y, box_w, 26, "Toplam Tuketim",
-                     f"{total:,.0f} kWh".replace(",", "."),
-                     self._pct_change(total, comp_total), pdf.ACCENT)
-        
-        pdf.info_box(10 + box_w + gap, y, box_w, 26, "Chiller (Sogutma)",
-                     f"{chiller:,.0f} kWh".replace(",", "."),
-                     self._pct_change(chiller, comp_chiller), (16, 185, 129))
-        
-        pdf.info_box(10 + 2*(box_w + gap), y, box_w, 26, "Dogalgaz",
-                     f"{gas:,.0f} m3".replace(",", "."),
-                     self._pct_change(gas, comp_gas), (239, 68, 68))
-        
-        pdf.info_box(10 + 3*(box_w + gap), y, box_w, 26, "Sebeke",
-                     f"{grid:,.0f} kWh".replace(",", "."),
-                     "", (139, 92, 246))
-        
-        pdf.set_y(y + 30)
-    
-    def _add_m2_metrics(self, pdf: DailyReportPDF, report: Dict, area: float):
-        """m² başına tüketim kutuları."""
-        pdf.section_title("", "m2 BASINA TUKETIM", (139, 92, 246))
-        
-        total = report.get("total", 0)
-        chiller = report.get("chiller", 0)
-        gas = (report.get("gas_kazan", 0) + report.get("gas_kojen", 0)) * GAS_TO_KWH
-        
-        y = pdf.get_y()
-        box_w = 60
-        gap = 5
-        
-        pdf.info_box(10, y, box_w, 22, "Sogutma kWh/m2",
-                     f"{chiller / area:.3f}",
-                     f"Alan: {area:,.0f} m2".replace(",", "."), (59, 130, 246))
-        
-        pdf.info_box(10 + box_w + gap, y, box_w, 22, "Isitma kWh/m2",
-                     f"{gas / area:.3f}",
-                     "", (239, 68, 68))
-        
-        pdf.info_box(10 + 2*(box_w + gap), y, box_w, 22, "Toplam kWh/m2",
-                     f"{total / area:.3f}",
-                     "", (139, 92, 246))
-        
-        pdf.set_y(y + 26)
-    
-    def _add_cost_summary(self, pdf: DailyReportPDF, report: Dict, prices: Dict):
-        """Maliyet özet kutuları."""
-        pdf.section_title("", "MALIYET OZETI (TL)", (245, 158, 11))
-        
-        total_kwh = report.get("total", 0)
-        grid_kwh = report.get("grid", 0)
-        gas_m3 = report.get("gas_kazan", 0) + report.get("gas_kojen", 0)
-        
-        cost_elec = grid_kwh * prices["electricity"] if prices["electricity"] > 0 else 0
-        cost_gas = gas_m3 * prices["gas"] if prices["gas"] > 0 else 0
-        cost_total = cost_elec + cost_gas
-        
-        y = pdf.get_y()
-        bw = 60
-        gap = 5
-        
-        if prices["electricity"] > 0:
-            pdf.info_box(10, y, bw, 22, "Sebeke Elektrik Maliyeti",
-                         f"{cost_elec:,.0f} TL".replace(",", "."),
-                         f"{prices['electricity']:.2f} TL/kWh | {grid_kwh:,.0f} kWh".replace(",", "."), (59, 130, 246))
-        
-        if prices["gas"] > 0:
-            pdf.info_box(10 + bw + gap, y, bw, 22, "Dogalgaz Maliyeti",
-                         f"{cost_gas:,.0f} TL".replace(",", "."),
-                         f"{prices['gas']:.2f} TL/m3", (239, 68, 68))
-        
-        pdf.info_box(10 + 2*(bw + gap), y, bw, 22, "Toplam Maliyet",
-                     f"{cost_total:,.0f} TL".replace(",", "."),
-                     "", (245, 158, 11))
-        
-        pdf.set_y(y + 26)
-    
-    def _add_hvac_summary(self, pdf: DailyReportPDF, hvac: Dict):
-        """HVAC performans özeti."""
-        pdf.section_title("", "HVAC PERFORMANS OZETI", (16, 185, 129))
-        
-        critical = hvac.get("critical", 0)
-        warning = hvac.get("warning", 0)
-        optimal = hvac.get("optimal", 0)
-        total_eq = hvac.get("total_eq", 0)
-        
-        # Sağlık skoru
-        penalty = (critical * 15) + (warning * 5)
-        health = max(0, 100 - penalty)
-        
-        y = pdf.get_y()
-        box_w = 35
-        gap = 3
-        
-        pdf.info_box(10, y, box_w, 24, "Kritik",
-                     str(critical), "", pdf.DANGER)
-        pdf.info_box(10 + box_w + gap, y, box_w, 24, "Uyari",
-                     str(warning), "", pdf.WARNING_C)
-        pdf.info_box(10 + 2*(box_w + gap), y, box_w, 24, "Optimal",
-                     str(optimal), "", pdf.SUCCESS)
-        pdf.info_box(10 + 3*(box_w + gap), y, box_w, 24, "Toplam",
-                     str(total_eq), "", pdf.GRAY)
-        
-        # Sağlık skoru gauge
-        health_color = pdf.SUCCESS if health >= 80 else pdf.WARNING_C if health >= 50 else pdf.DANGER
-        pdf.info_box(10 + 4*(box_w + gap), y, box_w + 5, 24, "Saglik Skoru",
-                     f"%{health}",
-                     "Iyi" if health >= 80 else "Dikkat" if health >= 50 else "Kritik",
-                     health_color)
-        
-        pdf.set_y(y + 28)
-    
-    def _add_charts(self, pdf: DailyReportPDF, df: pd.DataFrame, report: Dict, target_date: date):
-        """Grafikler bölümü."""
-        pdf.section_title("", "GRAFIKLER", (245, 158, 11))
-        
-        total = report.get("total", 0)
-        chiller = report.get("chiller", 0)
-        gas_kwh = (report.get("gas_kazan", 0) + report.get("gas_kojen", 0)) * GAS_TO_KWH
-        
-        y_start = pdf.get_y()
-        
-        # Pasta grafiği
-        try:
-            pie_img = create_energy_pie_chart(total, chiller, gas_kwh)
-            if pie_img:
-                pdf.add_image_from_bytes(pie_img, 10, y_start, 90, h=60)
-        except Exception as e:
-            import logging
-            logging.error(f"PIE CHART ERROR: {e}")
-            traceback.print_exc()
-        
-        # Haftalık trend
-        try:
-            trend_img = create_weekly_trend_chart(df, target_date)
-            if trend_img:
-                pdf.add_image_from_bytes(trend_img, 105, y_start, 95, h=60)
-        except Exception:
-            pass
-        pdf.set_y(y_start + 65)
-
-    def _add_equipment_table(self, pdf: DailyReportPDF, hvac: Dict):
-        """Ekipman durum özet tablosu."""
-        # HVAC analiz sonuçları yoksa basit tablo
-        pdf.section_title("", "EKIPMAN DURUM OZETI", (59, 130, 246))
-        
-        # Tablo başlığı
-        pdf.set_font(pdf.font, 'B', 9)
-        pdf.set_fill_color(30, 41, 59)
-        pdf.set_text_color(255, 255, 255)
-        
-        col_widths = [55, 25, 25, 30, 25, 30]
-        headers = ["Gosterge", "Deger", "Birim", "Durum", "Skor", "Oneri"]
-        
-        for i, (header, w) in enumerate(zip(headers, col_widths)):
-            pdf.cell(w, 8, _sanitize(header), 1, 0, 'C', True)
-        pdf.ln()
-        
-        # Veri satırları
-        pdf.set_font(pdf.font, '', 8)
-        pdf.set_text_color(50, 50, 50)
-        
-        rows = [
-            ("Kritik Sorun Sayisi", str(hvac.get("critical", "-")), "adet",
-             "Kritik" if hvac.get("critical", 0) > 0 else "Iyi",
-             "-", "Acil mudahale" if hvac.get("critical", 0) > 0 else "-"),
-            ("Uyari Sayisi", str(hvac.get("warning", "-")), "adet",
-             "Dikkat" if hvac.get("warning", 0) > 0 else "Iyi",
-             "-", "Takip" if hvac.get("warning", 0) > 0 else "-"),
-            ("Optimal Cihaz", str(hvac.get("optimal", "-")), "adet",
-             "Iyi", "-", "-"),
-            ("Ortalama Skor", f"{hvac.get('avg_score', 0):.1f}", "/10",
-             "Iyi" if hvac.get('avg_score', 0) < 4 else "Dikkat",
-             f"{hvac.get('avg_score', 0):.1f}", "-"),
-        ]
-        
-        for i, (label, val, unit, status, score, reco) in enumerate(rows):
-            bg = (248, 250, 252) if i % 2 == 0 else (255, 255, 255)
-            pdf.set_fill_color(*bg)
-            
-            pdf.cell(col_widths[0], 7, _sanitize(label), 1, 0, 'L', True)
-            pdf.cell(col_widths[1], 7, _sanitize(val), 1, 0, 'C', True)
-            pdf.cell(col_widths[2], 7, _sanitize(unit), 1, 0, 'C', True)
-            
-            # Durum rengi
-            if status == "Kritik":
-                pdf.set_text_color(239, 68, 68)
-            elif status == "Dikkat":
-                pdf.set_text_color(245, 158, 11)
-            else:
-                pdf.set_text_color(16, 185, 129)
-            pdf.cell(col_widths[3], 7, _sanitize(status), 1, 0, 'C', True)
-            pdf.set_text_color(50, 50, 50)
-            
-            pdf.cell(col_widths[4], 7, _sanitize(score), 1, 0, 'C', True)
-            pdf.cell(col_widths[5], 7, _sanitize(reco), 1, 0, 'C', True)
-            pdf.ln()
-        
-        pdf.ln(4)
-    
-    def _add_evaluation(self, pdf: DailyReportPDF, report: Dict, compare: Dict, hvac: Dict, area: float):
-        """Otomatik genel değerlendirme metni."""
-        pdf.section_title("", "GENEL DEGERLENDIRME", (16, 185, 129))
-        
-        total = report.get("total", 0)
-        comp_total = compare.get("total", 0)
-        critical = hvac.get("critical", 0)
-        warning = hvac.get("warning", 0)
-        penalty = (critical * 15) + (warning * 5)
-        health = max(0, 100 - penalty)
-        
-        # Değerlendirme metni oluştur
-        lines = []
-        
-        # Enerji değerlendirmesi
-        if comp_total > 0:
-            pct = ((total - comp_total) / comp_total) * 100
-            if pct < -5:
-                lines.append(f"[+] Enerji tuketimi onceki gune gore %{abs(pct):.1f} azalmistir. Olumlu trend.")
-            elif pct > 5:
-                lines.append(f"[!] Enerji tuketimi onceki gune gore %{pct:.1f} artmistir. Incelenmesi oneriliyor.")
-            else:
-                lines.append(f"[-] Enerji tuketimi onceki gunle benzer seviyededir (%{pct:+.1f}).")
-        else:
-            lines.append("[-] Onceki gun verisi bulunamadigindan karsilastirma yapilamadi.")
-        
-        # HVAC değerlendirmesi
-        if health >= 80:
-            lines.append(f"[+] Sistem sagligi iyi durumda (%{health}). Kritik sorun bulunmamaktadir.")
-        elif health >= 50:
-            lines.append(f"[-] Sistem sagligi dikkat gerektiriyor (%{health}). {critical} kritik, {warning} uyari mevcut.")
-        else:
-            lines.append(f"[!] DIKKAT: Sistem sagligi kritik seviyede (%{health}). {critical} kritik sorun acil mudahale bekliyor.")
-        
-        # Chiller COP değerlendirmesi
-        chiller_load = report.get("chiller_load")
-        if chiller_load is not None and chiller_load > 0:
-            cop = _calculate_chiller_cop(chiller_load)
-            lines.append(f"[-] Hesaplanan Ortalama Chiller COP: {cop:.2f} (Kapasite: %{chiller_load:.1f})")
-
-        # m² değerlendirmesi
-        if area > 0 and total > 0:
-            kwh_m2 = total / area
-            lines.append(f"[-] Metrekare basina toplam tuketim: {kwh_m2:.3f} kWh/m2 ({area:,.0f} m2 alan uzerinden).")
-
-        # Sonuç
-        if health >= 80 and (comp_total <= 0 or ((total - comp_total) / comp_total * 100) < 5):
-            lines.append("")
-            lines.append("SONUC: Sistem genel olarak iyi performans gostermektedir. Rutin takip yeterlidir.")
-        elif health < 50:
-            lines.append("")
-            lines.append("SONUC: Acil mudahale gerektiren sorunlar mevcuttur. Detayli analiz icin HVAC portali incelenmelidir.")
-        else:
-            lines.append("")
-            lines.append("SONUC: Sistem kabul edilebilir seviyededir. Uyarilarin takibi onemlidir.")
-        
-        # PDF'e yaz
-        pdf.set_font(pdf.font, '', 10)
-        pdf.set_text_color(50, 50, 50)
-        
-        for line in lines:
-            if not line.strip():
-                pdf.ln(3)
-                continue
-            
-            pdf.set_x(10)
-            if line.startswith("[+]"):
-                pdf.set_text_color(16, 185, 129)
-            elif line.startswith("[!]"):
-                pdf.set_text_color(239, 68, 68)
-            elif line.startswith("SONUC"):
-                pdf.set_font(pdf.font, 'B', 10)
-                pdf.set_text_color(59, 130, 246)
-            else:
-                pdf.set_text_color(80, 80, 80)
-            
-            pdf.multi_cell(190, 6, _sanitize(line))
-            pdf.set_font(pdf.font, '', 10)
-        
-        pdf.ln(4)
-        
-        # Alt bilgi kutusu
-        pdf.set_fill_color(240, 245, 255)
-        pdf.rect(10, pdf.get_y(), 190, 12, 'F')
-        pdf.set_font(pdf.font, 'I', 8)
-        pdf.set_text_color(100, 100, 100)
-        pdf.set_x(15)
-        pdf.cell(180, 12, _sanitize(
-            f"Bu rapor HVAC Enerji Yonetim Sistemi tarafindan {datetime.now().strftime('%d.%m.%Y %H:%M')} tarihinde otomatik olusturulmustur."
-        ), 0, 1)
-
-
-# ─── Doğrudan çalıştırma ───
 if __name__ == "__main__":
-    gen = DailyReportGenerator()
-    path = gen.generate()
-    print(f"Rapor olusturuldu: {path}")
+    bridge_loop()
