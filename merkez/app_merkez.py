@@ -616,11 +616,11 @@ with sol:
             return fmt.replace(",", ".")
 
         ozet = {
-            "⚡ Toplam Enerji": f"{tr(son30['Toplam_Hastane_Tuketim_kWh'].sum()/1000)} MWh" if "Toplam_Hastane_Tuketim_kWh" in son30 else "—",
+            "⚡ Toplam Enerji": f"{tr(son30['Toplam_Hastane_Tuketim_kWh'].sum())} kWh" if "Toplam_Hastane_Tuketim_kWh" in son30 else "—",
             "🔥 Doğalgaz": f"{tr(son30.get('Kazan_Dogalgaz_m3', pd.Series([0])).sum() + son30.get('Kojen_Dogalgaz_m3', pd.Series([0])).sum())} m³",
-            "❄️ Soğutma": f"{tr(son30['Toplam_Sogutma_Tuketim_kWh'].sum()/1000)} MWh" if "Toplam_Sogutma_Tuketim_kWh" in son30 else "—",
+            "❄️ Soğutma": f"{tr(son30['Toplam_Sogutma_Tuketim_kWh'].sum())} kWh" if "Toplam_Sogutma_Tuketim_kWh" in son30 else "—",
             "💧 Su": f"{tr(son30['Su_Tuketimi_m3'].sum())} m³" if "Su_Tuketimi_m3" in son30 else "—",
-            "⚙️ Kojen Üretim": f"{tr(son30['Kojen_Uretim_kWh'].sum()/1000)} MWh" if "Kojen_Uretim_kWh" in son30 else "—",
+            "⚙️ Kojen Üretim": f"{tr(son30['Kojen_Uretim_kWh'].sum())} kWh" if "Kojen_Uretim_kWh" in son30 else "—",
         }
         for label, val in ozet.items():
             st.markdown(f"""
