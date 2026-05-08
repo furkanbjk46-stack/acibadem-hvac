@@ -386,6 +386,16 @@ def run_daily_snapshot():
 def bridge_loop():
     logger.info("Data Bridge baslatildi — her gun %02d:%02d'de calisacak",
                 SNAPSHOT_HOUR, SNAPSHOT_MINUTE)
+
+    # Baslarken ref dosyasi yoksa hemen olustur (8:30'u bekleme)
+    if not os.path.exists(REF_FILE):
+        logger.info("Ref dosyasi yok — baslangic referansi olusturuluyor...")
+        modbus_now = read_modbus_csv()
+        if modbus_now:
+            save_ref(date.today().isoformat(), modbus_now)
+        else:
+            logger.warning("Modbus CSV bos veya okunamadi — ref olusturulamadi.")
+
     last_run_date = None
 
     while True:
