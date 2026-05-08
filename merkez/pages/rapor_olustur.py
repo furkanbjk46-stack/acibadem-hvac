@@ -530,7 +530,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
             "Tuketim Kirilimi",
         )
 
-        plt.tight_layout(pad=0.8)
+        plt.subplots_adjust(wspace=0.05, left=0.02, right=0.98, top=0.92, bottom=0.05)
         buf = io.BytesIO()
         fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=BG)
         plt.close(fig)
