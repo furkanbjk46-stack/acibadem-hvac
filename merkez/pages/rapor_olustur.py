@@ -800,13 +800,16 @@ class HastaneRaporPDF:
             self.section_title("GUNLUK TUKETIM (kWh)", CYAN)
             self.add_chart(bar_img, w=190, h=68)
 
-        # ── 3. Enerji Kırılımı (Kaynak + Tüketim donuts) ─
-        if donut_img:
-            self.section_title("ENERJI KIRILIMLARI", PURPLE)
-            self.add_chart(donut_img, w=190, h=75)
-
-        # ── Footer ────────────────────────────────────
+        # ── Footer (1. sayfa) ──────────────────────────
         self._draw_footer()
+
+        # ── 3. Enerji Kırılımı — 2. sayfa ─────────────
+        if donut_img:
+            p.add_page()
+            self._draw_header()
+            self.section_title("ENERJI KIRILIMLARI", PURPLE)
+            self.add_chart(donut_img, w=190, h=120)
+            self._draw_footer()
 
         # fpdf2 2.x — output() bytes doner
         try:
