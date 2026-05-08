@@ -488,7 +488,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
         if toplam <= 0:
             return None
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 2.8), facecolor=BG)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 2.2), facecolor=BG)
 
         def _draw_donut(ax, labels, values, colors, center_text, title):
             ax.set_facecolor(BG)
@@ -803,7 +803,7 @@ class HastaneRaporPDF:
         # ── 3. Enerji Kırılımı ─────────────────────────
         if donut_img:
             self.section_title("ENERJI KIRILIMLARI", PURPLE)
-            self.add_chart(donut_img, w=190, h=85)
+            self.add_chart(donut_img, w=190, h=60)
 
         # ── Footer ────────────────────────────────────
         self._draw_footer()
