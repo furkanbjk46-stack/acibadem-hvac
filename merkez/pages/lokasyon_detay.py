@@ -400,6 +400,7 @@ with tab1:
             "🔥 Kazan Doğalgaz":        "kazan",
             "📆 Bu Ay vs Geçen Ay":     "ay_karsilastir",
             "📋 KPI Özet":              "kpi_ozet",
+            "🥧 Enerji Kırılımı":       "enerji_kirilim",
         }
 
         # ── Grafik seçici + Tarih aralığı (yan yana) ──
@@ -772,6 +773,82 @@ with tab1:
                 )
             else:
                 st.info("KPI verisi bulunamadı.")
+
+        # ── Enerji Kırılımı (Donut) ──
+        elif grafik_tip == "enerji_kirilim":
+            st.caption(tarih_aralik_str)
+            _ek = secili_df
+            _dil = []   # (etiket, değer, renk)
+
+            # Kojen üretimi
+            if "Kojen_Uretim_kWh" in _ek.columns:
+                _v = _ek["Kojen_Uretim_kWh"].sum()
+                if _v > 0:
+                    _dil.append(("Kojen Üretim", _v, "#10b981"))
+
+            # Şebeke tüketimi
+            if "Sebeke_Tuketim_kWh" in _ek.columns:
+                _v = _ek["Sebeke_Tuketim_kWh"].sum()
+                if _v > 0:
+                    _dil.append(("Şebeke", _v, "#a855f7"))
+
+            # Soğutma tüketimi
+            _sog_col_k = ("Toplam_Sogutma_Tuketim_kWh" if "Toplam_Sogutma_Tuketim_kWh" in _ek.columns
+                          else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in _ek.columns else None))
+            if _sog_col_k:
+                _v = _ek[_sog_col_k].sum()
+                if _v > 0:
+                    _dil.append(("Soğutma", _v, "#38bdf8"))
+
+            # MCC tüketimi
+            if "MCC_Tuketim_kWh" in _ek.columns:
+                _v = _ek["MCC_Tuketim_kWh"].sum()
+                if _v > 0:
+                    _dil.append(("MCC", _v, "#f59e0b"))
+
+            # Kazan doğalgaz — ısı eşdeğeri (m³ × 10 kWh/m³ varsayım)
+            if "Kazan_Dogalgaz_m3" in _ek.columns:
+                _v = _ek["Kazan_Dogalgaz_m3"].sum() * 10
+                if _v > 0:
+                    _dil.append(("Kazan (ısı eq.)", _v, "#ef4444"))
+
+            if _dil:
+                _labels = [d[0] for d in _dil]
+                _values = [d[1] for d in _dil]
+                _colors = [d[2] for d in _dil]
+                _total  = sum(_values)
+
+                fig_ek = go.Figure(go.Pie(
+                    labels=_labels,
+                    values=_values,
+                    hole=0.55,
+                    marker=dict(colors=_colors, line=dict(color="rgba(0,0,0,0.3)", width=1)),
+                    textinfo="label+percent",
+                    textfont=dict(size=11, color="#c8e6ff"),
+                    hovertemplate="<b>%{label}</b><br>%{value:,.0f} kWh<br>%{percent}<extra></extra>",
+                    direction="clockwise",
+                    sort=True,
+                ))
+                fig_ek.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#a0c8ff", family="Inter"),
+                    margin=dict(t=20, b=20, l=20, r=20),
+                    height=370,
+                    showlegend=True,
+                    legend=dict(
+                        orientation="v", x=1.02, y=0.5,
+                        font=dict(size=10, color="#a0c8ff"),
+                    ),
+                    annotations=[dict(
+                        text=f"<b>{_total:,.0f}</b><br><span style='font-size:10px'>kWh</span>",
+                        x=0.5, y=0.5, font_size=14, font_color="#00d4ff",
+                        showarrow=False,
+                    )],
+                )
+                st.plotly_chart(fig_ek, use_container_width=True, config={"displayModeBar": False})
+            else:
+                st.info("Enerji kırılımı için yeterli veri bulunamadı.")
 
         # ── Kojen Üretim ──
         elif grafik_tip == "kojen":
