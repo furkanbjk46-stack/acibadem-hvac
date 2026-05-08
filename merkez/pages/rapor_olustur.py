@@ -501,17 +501,17 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
             wedges, texts, autotexts = ax.pie(
                 fv, labels=fl, colors=fc,
                 autopct="%1.1f%%", startangle=90,
-                wedgeprops=dict(width=0.52, edgecolor=BG, linewidth=1.5),
-                textprops=dict(color="white", fontsize=7.5),
-                pctdistance=0.75,
+                wedgeprops=dict(width=0.45, edgecolor=BG, linewidth=1.0),
+                textprops=dict(color="white", fontsize=5.5),
+                pctdistance=0.78,
             )
             for at in autotexts:
-                at.set_fontsize(7)
+                at.set_fontsize(5)
                 at.set_color("white")
             ax.text(0, 0, center_text, ha="center", va="center",
-                    color="#00d4ff", fontsize=7.5, fontweight="bold",
+                    color="#00d4ff", fontsize=5.5, fontweight="bold",
                     multialignment="center")
-            ax.set_title(title, color="white", fontsize=9, pad=6)
+            ax.set_title(title, color="white", fontsize=7, pad=4)
 
         _draw_donut(
             ax1,
