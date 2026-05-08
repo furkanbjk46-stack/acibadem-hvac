@@ -835,8 +835,8 @@ with tab1:
                     paper_bgcolor="rgba(0,0,0,0)",
                     plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#a0c8ff", family="Inter"),
-                    margin=dict(t=20, b=20, l=20, r=20),
-                    height=370,
+                    margin=dict(t=80, b=20, l=20, r=20),
+                    height=420,
                     showlegend=True,
                     legend=dict(
                         orientation="v", x=1.02, y=0.5,
