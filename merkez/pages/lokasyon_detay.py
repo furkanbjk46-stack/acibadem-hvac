@@ -778,77 +778,72 @@ with tab1:
         elif grafik_tip == "enerji_kirilim":
             st.caption(tarih_aralik_str)
             _ek = secili_df
-            _dil = []   # (etiket, değer, renk)
 
-            # Kojen üretimi
-            if "Kojen_Uretim_kWh" in _ek.columns:
-                _v = _ek["Kojen_Uretim_kWh"].sum()
-                if _v > 0:
-                    _dil.append(("Kojen Üretim", _v, "#10b981"))
+            # Toplam elektrik tüketimi (merkez değer)
+            _toplam = _ek["Toplam_Hastane_Tuketim_kWh"].sum() if "Toplam_Hastane_Tuketim_kWh" in _ek.columns else 0
 
-            # Şebeke tüketimi
-            if "Sebeke_Tuketim_kWh" in _ek.columns:
-                _v = _ek["Sebeke_Tuketim_kWh"].sum()
-                if _v > 0:
-                    _dil.append(("Şebeke", _v, "#a855f7"))
+            # ── Kaynak kırılımı: Kojen + Şebeke + Diğer = Toplam ──
+            _kojen  = _ek["Kojen_Uretim_kWh"].sum()  if "Kojen_Uretim_kWh"   in _ek.columns else 0
+            _sebeke = _ek["Sebeke_Tuketim_kWh"].sum() if "Sebeke_Tuketim_kWh" in _ek.columns else 0
+            _diger_k = max(_toplam - _kojen - _sebeke, 0)  # Fark (negatif olmaması için)
 
-            # Soğutma tüketimi
+            # ── Tüketim kırılımı: Soğutma + MCC + Diğer = Toplam ──
             _sog_col_k = ("Toplam_Sogutma_Tuketim_kWh" if "Toplam_Sogutma_Tuketim_kWh" in _ek.columns
                           else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in _ek.columns else None))
-            if _sog_col_k:
-                _v = _ek[_sog_col_k].sum()
-                if _v > 0:
-                    _dil.append(("Soğutma", _v, "#38bdf8"))
+            _sogutma = _ek[_sog_col_k].sum() if _sog_col_k else 0
+            _mcc     = _ek["MCC_Tuketim_kWh"].sum() if "MCC_Tuketim_kWh" in _ek.columns else 0
+            _diger_t = max(_toplam - _sogutma - _mcc, 0)
 
-            # MCC tüketimi
-            if "MCC_Tuketim_kWh" in _ek.columns:
-                _v = _ek["MCC_Tuketim_kWh"].sum()
-                if _v > 0:
-                    _dil.append(("MCC", _v, "#f59e0b"))
+            if _toplam > 0:
+                # İki donut yan yana
+                _c1, _c2 = st.columns(2)
 
-            # Kazan doğalgaz — ısı eşdeğeri (m³ × 10 kWh/m³ varsayım)
-            if "Kazan_Dogalgaz_m3" in _ek.columns:
-                _v = _ek["Kazan_Dogalgaz_m3"].sum() * 10
-                if _v > 0:
-                    _dil.append(("Kazan (ısı eq.)", _v, "#ef4444"))
+                def _donut_fig(labels, values, colors, center_val, center_label):
+                    fig = go.Figure(go.Pie(
+                        labels=labels, values=values,
+                        hole=0.58,
+                        marker=dict(colors=colors, line=dict(color="rgba(0,0,0,0.25)", width=1)),
+                        textinfo="label+percent",
+                        textposition="outside",
+                        outsidetextfont=dict(size=10, color="#c8e6ff"),
+                        hovertemplate="<b>%{label}</b><br>%{value:,.0f} kWh<br>%{percent}<extra></extra>",
+                        direction="clockwise", sort=True,
+                    ))
+                    fig.update_layout(
+                        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                        font=dict(color="#a0c8ff", family="Inter"),
+                        margin=dict(t=70, b=10, l=10, r=10), height=360,
+                        showlegend=False,
+                        annotations=[dict(
+                            text=f"<b>{center_val:,.0f}</b><br><span style='font-size:9px'>{center_label}</span>",
+                            x=0.5, y=0.5, font_size=12, font_color="#00d4ff", showarrow=False,
+                        )],
+                    )
+                    return fig
 
-            if _dil:
-                _labels = [d[0] for d in _dil]
-                _values = [d[1] for d in _dil]
-                _colors = [d[2] for d in _dil]
-                _total  = sum(_values)
+                with _c1:
+                    st.markdown("<div style='text-align:center;font-size:11px;color:rgba(150,210,255,0.6);margin-bottom:4px;'>⚡ KAYNAK KIRILIMLARI</div>", unsafe_allow_html=True)
+                    _kaynak_labels = []
+                    _kaynak_values = []
+                    _kaynak_colors = []
+                    if _kojen  > 0: _kaynak_labels.append("Kojen");  _kaynak_values.append(_kojen);  _kaynak_colors.append("#10b981")
+                    if _sebeke > 0: _kaynak_labels.append("Şebeke"); _kaynak_values.append(_sebeke); _kaynak_colors.append("#a855f7")
+                    if _diger_k > 0: _kaynak_labels.append("Diğer"); _kaynak_values.append(_diger_k); _kaynak_colors.append("#64748b")
+                    if _kaynak_labels:
+                        st.plotly_chart(_donut_fig(_kaynak_labels, _kaynak_values, _kaynak_colors, _toplam, "kWh toplam"),
+                                        use_container_width=True, config={"displayModeBar": False})
 
-                fig_ek = go.Figure(go.Pie(
-                    labels=_labels,
-                    values=_values,
-                    hole=0.55,
-                    marker=dict(colors=_colors, line=dict(color="rgba(0,0,0,0.3)", width=1)),
-                    textinfo="label+percent",
-                    textposition="outside",
-                    textfont=dict(size=11, color="#c8e6ff"),
-                    outsidetextfont=dict(size=11, color="#c8e6ff"),
-                    hovertemplate="<b>%{label}</b><br>%{value:,.0f} kWh<br>%{percent}<extra></extra>",
-                    direction="clockwise",
-                    sort=True,
-                ))
-                fig_ek.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
-                    margin=dict(t=80, b=20, l=20, r=20),
-                    height=420,
-                    showlegend=True,
-                    legend=dict(
-                        orientation="v", x=1.02, y=0.5,
-                        font=dict(size=10, color="#a0c8ff"),
-                    ),
-                    annotations=[dict(
-                        text=f"<b>{_total:,.0f}</b><br><span style='font-size:10px'>kWh</span>",
-                        x=0.5, y=0.5, font_size=14, font_color="#00d4ff",
-                        showarrow=False,
-                    )],
-                )
-                st.plotly_chart(fig_ek, use_container_width=True, config={"displayModeBar": False})
+                with _c2:
+                    st.markdown("<div style='text-align:center;font-size:11px;color:rgba(150,210,255,0.6);margin-bottom:4px;'>🏭 TÜKETİM KIRILIMLARI</div>", unsafe_allow_html=True)
+                    _tuk_labels = []
+                    _tuk_values = []
+                    _tuk_colors = []
+                    if _sogutma > 0: _tuk_labels.append("Soğutma"); _tuk_values.append(_sogutma); _tuk_colors.append("#38bdf8")
+                    if _mcc     > 0: _tuk_labels.append("MCC");     _tuk_values.append(_mcc);     _tuk_colors.append("#f59e0b")
+                    if _diger_t > 0: _tuk_labels.append("Diğer");   _tuk_values.append(_diger_t); _tuk_colors.append("#64748b")
+                    if _tuk_labels:
+                        st.plotly_chart(_donut_fig(_tuk_labels, _tuk_values, _tuk_colors, _toplam, "kWh toplam"),
+                                        use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Enerji kırılımı için yeterli veri bulunamadı.")
 
