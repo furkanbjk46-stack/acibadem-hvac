@@ -782,10 +782,10 @@ class HastaneRaporPDF:
         self.section_title("OZET METRIKLER", CYAN)
 
         self.kpi_row([
-            ("TOPLAM TUKETIM",   f"{kwh_total/1000:,.2f}", "MWh",    CYAN),
+            ("TOPLAM TUKETIM",   f"{kwh_total:,.0f}",        "kWh",   CYAN),
             ("kWh / m2",          f"{kwh_m2:.3f}",           "kWh/m2", AMBER),
             ("CHILLER SET ORT.", f"{ch_set:.1f}" if ch_set else "--", "C", PURPLE),
-            ("TOPLAM DOGALGAZ",  f"{toplam_gaz:,.0f}",       "m3",    ORANGE),
+            ("KOJEN DOGALGAZ",   f"{kojen_gaz:,.0f}",        "m3",    ORANGE),
         ])
 
         self.kpi_row([
