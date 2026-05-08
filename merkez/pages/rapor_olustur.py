@@ -488,7 +488,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
         if toplam <= 0:
             return None
 
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 3.6), facecolor=BG)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 2.8), facecolor=BG)
 
         def _draw_donut(ax, labels, values, colors, center_text, title):
             ax.set_facecolor(BG)
@@ -800,16 +800,13 @@ class HastaneRaporPDF:
             self.section_title("GUNLUK TUKETIM (kWh)", CYAN)
             self.add_chart(bar_img, w=190, h=68)
 
-        # ── Footer (1. sayfa) ──────────────────────────
-        self._draw_footer()
-
-        # ── 3. Enerji Kırılımı — 2. sayfa ─────────────
+        # ── 3. Enerji Kırılımı ─────────────────────────
         if donut_img:
-            p.add_page()
-            self._draw_header()
             self.section_title("ENERJI KIRILIMLARI", PURPLE)
-            self.add_chart(donut_img, w=190, h=120)
-            self._draw_footer()
+            self.add_chart(donut_img, w=190, h=85)
+
+        # ── Footer ────────────────────────────────────
+        self._draw_footer()
 
         # fpdf2 2.x — output() bytes doner
         try:
