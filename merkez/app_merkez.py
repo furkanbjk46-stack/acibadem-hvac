@@ -877,7 +877,7 @@ with sag:
             unsafe_allow_html=True
         )
     else:
-        uyari_html = "<div style='max-height:260px;overflow-y:auto;padding-right:2px;'>"
+        uyari_html = "<div style='max-height:195px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;'>"
         for lid, uyarilar in lok_ile_uyari:
             lok_inf  = HASTANELER.get(lid, {})
             isim     = lok_inf.get("kisa", lid)
@@ -981,7 +981,12 @@ with sag:
         )
     if not kart_html:
         kart_html = "<div class='alrt-y'>⚠️ Chiller set verisi bulunamadı</div>"
-    st.markdown(kart_html, unsafe_allow_html=True)
+    st.markdown(
+        f"<div style='max-height:150px;overflow-y:auto;padding-right:4px;"
+        f"scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;'>"
+        f"{kart_html}</div>",
+        unsafe_allow_html=True
+    )
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
@@ -1068,23 +1073,27 @@ with sag:
         _en_kotu    = _sirali[-1]
         _anormal_n  = sum(1 for v in _ai_metriks.values() if v["anormal"])
 
-        _mc1, _mc2 = st.columns(2)
-        with _mc1:
-            st.markdown(
-                f"<div style='background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);"
-                f"border-radius:8px;padding:8px 10px;text-align:center;'>"
-                f"<div style='font-size:8px;color:rgba(110,231,183,0.6);letter-spacing:1px;'>🏆 EN VERİMLİ</div>"
-                f"<div style='font-size:11px;font-weight:700;color:#6ee7b7;margin-top:2px;'>{_en_iyi[1]['isim']}</div>"
-                f"<div style='font-size:10px;color:rgba(110,231,183,0.8);'>{_en_iyi[1]['kwh_m2']} kWh/m²/gün</div>"
-                f"</div>", unsafe_allow_html=True)
-        with _mc2:
-            st.markdown(
-                f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);"
-                f"border-radius:8px;padding:8px 10px;text-align:center;'>"
-                f"<div style='font-size:8px;color:rgba(252,165,165,0.6);letter-spacing:1px;'>⚠️ EN YÜKSEK</div>"
-                f"<div style='font-size:11px;font-weight:700;color:#fca5a5;margin-top:2px;'>{_en_kotu[1]['isim']}</div>"
-                f"<div style='font-size:10px;color:rgba(252,165,165,0.8);'>{_en_kotu[1]['kwh_m2']} kWh/m²/gün</div>"
-                f"</div>", unsafe_allow_html=True)
+        # Tüm lokasyonları scroll listesi olarak göster (3'ten fazlasında kaydır)
+        _ez_html = ""
+        for _lid, _mv in _sirali:
+            _ez_renk = "#ef4444" if _mv["anormal"] else "#6ee7b7"
+            _ez_bg   = "rgba(239,68,68,0.06)" if _mv["anormal"] else "rgba(16,185,129,0.05)"
+            _ez_br   = "rgba(239,68,68,0.25)" if _mv["anormal"] else "rgba(16,185,129,0.15)"
+            _ez_html += (
+                f"<div style='background:{_ez_bg};border:1px solid {_ez_br};"
+                f"border-radius:7px;padding:6px 10px;margin-bottom:4px;"
+                f"display:flex;justify-content:space-between;align-items:center;'>"
+                f"<span style='font-size:10px;font-weight:600;color:rgba(200,230,255,0.85);'>{_mv['isim']}</span>"
+                f"<span style='font-family:Orbitron,sans-serif;font-size:10px;color:{_ez_renk};'>"
+                f"{_mv['kwh_m2']} kWh/m²/gün</span>"
+                f"</div>"
+            )
+        st.markdown(
+            f"<div style='max-height:130px;overflow-y:auto;padding-right:4px;"
+            f"scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;'>"
+            f"{_ez_html}</div>",
+            unsafe_allow_html=True
+        )
 
         st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
 
