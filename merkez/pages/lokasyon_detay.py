@@ -812,7 +812,7 @@ with tab1:
                     fig.update_layout(
                         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                         font=dict(color="#a0c8ff", family="Inter"),
-                        margin=dict(t=70, b=10, l=10, r=10), height=360,
+                        margin=dict(t=55, b=25, l=10, r=10), height=360,
                         showlegend=False,
                         annotations=[dict(
                             text=f"<b>{center_val:,.0f}</b><br><span style='font-size:9px'>{center_label}</span>",
