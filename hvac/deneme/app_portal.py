@@ -1347,7 +1347,7 @@ def recalc(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=300)
 def load_data() -> pd.DataFrame:
     if not os.path.exists(DATA_FILE):
         return empty_df()
