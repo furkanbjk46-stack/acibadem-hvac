@@ -265,6 +265,28 @@ def fetch_dis_hava() -> float | None:
     except Exception:
         return None
 
+
+def _dis_hava_log_yaz(sb_url: str, sb_key: str, derece: float, kaynak: str = "api"):
+    """Dış hava değerini dis_hava_log tablosuna yaz. Saatte 1'den fazla yazmaz."""
+    try:
+        from supabase import create_client as _cc
+        _c = _cc(sb_url, sb_key)
+        # Son kayıt 55 dakikadan yeniyse tekrar yazma
+        _son = _c.table("dis_hava_log") \
+                  .select("timestamp") \
+                  .order("timestamp", desc=True) \
+                  .limit(1).execute()
+        if _son.data:
+            _son_zaman = pd.Timestamp(_son.data[0]["timestamp"])
+            if (pd.Timestamp.now(tz="UTC") - _son_zaman.tz_convert("UTC")).total_seconds() < 3300:
+                return  # 55 dakika geçmemiş, yazma
+        _c.table("dis_hava_log").insert({
+            "derece": round(derece, 2),
+            "kaynak": kaynak,
+        }).execute()
+    except Exception:
+        pass  # Log yazma hatası ana akışı etkilemesin
+
 @st.cache_data(ttl=120, show_spinner=False)
 def fetch_energy(url, key):
     try:
@@ -785,6 +807,8 @@ hospitals.forEach(function(h) {{
     chiller_vals = {}
     dis_hava_val = fetch_dis_hava()
     _dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
+    if dis_hava_val is not None:
+        _dis_hava_log_yaz(url, key, dis_hava_val, "api")
     min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
     if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
         son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
