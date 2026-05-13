@@ -2734,6 +2734,118 @@ if st.session_state.get("monthly_report_ready"):
                 key="monthly_report_download"
             )
 
+# ─── BİLDİRİM PANELİ ──────────────────────────────────────────────────────
+# GM portaldan gelen mesajları Supabase bildirimler tablosundan çek ve göster
+def _bildirim_panel():
+    import json as _bj
+    import urllib.request
+
+    # supabase_config.json'dan bağlantı bilgilerini al
+    _cfg_path = os.path.join(os.path.dirname(__file__), "supabase_config.json")
+    if not os.path.exists(_cfg_path):
+        return  # geliştirme ortamı — sessizce atla
+
+    try:
+        with open(_cfg_path, "r", encoding="utf-8") as _f:
+            _cfg = _bj.load(_f)
+    except Exception:
+        return
+
+    _url = _cfg.get("supabase_url", "")
+    _key = _cfg.get("supabase_key", "")
+    _lok = _cfg.get("lokasyon_id", "")
+
+    if not _url or not _key or not _lok or "BURAYA" in _url:
+        return
+
+    # 5 dakikada bir yenile (session_state cache)
+    from datetime import datetime as _dt2
+    _now_ts = _dt2.now().timestamp()
+    _last_check = st.session_state.get("_bildirim_last_check", 0)
+    _cached = st.session_state.get("_bildirimler_cache", None)
+
+    if _cached is None or (_now_ts - _last_check) > 300:
+        try:
+            _query = (
+                f"/rest/v1/bildirimler"
+                f"?or=(lokasyon.eq.{_lok},lokasyon.eq.all)"
+                f"&okundu=eq.false"
+                f"&order=created_at.asc"
+            )
+            _req = urllib.request.Request(
+                _url + _query,
+                headers={
+                    "apikey": _key,
+                    "Authorization": "Bearer " + _key,
+                    "Content-Type": "application/json",
+                }
+            )
+            with urllib.request.urlopen(_req, timeout=5) as _resp:
+                _cached = _bj.loads(_resp.read().decode())
+            st.session_state["_bildirimler_cache"] = _cached
+            st.session_state["_bildirim_last_check"] = _now_ts
+        except Exception:
+            _cached = st.session_state.get("_bildirimler_cache", [])
+
+    if not _cached:
+        return
+
+    # Renk haritası
+    _renk  = {"bilgi": "#3b82f6", "uyari": "#f59e0b", "acil": "#ef4444"}
+    _bg    = {"bilgi": "rgba(59,130,246,0.15)", "uyari": "rgba(245,158,11,0.15)", "acil": "rgba(239,68,68,0.18)"}
+    _icon  = {"bilgi": "ℹ️", "uyari": "⚠️", "acil": "🚨"}
+    _etiket = {"bilgi": "BİLGİ", "uyari": "UYARI", "acil": "ACİL"}
+
+    st.markdown("---")
+    for _b in _cached:
+        _bid   = _b.get("id", "")
+        _onc   = _b.get("oncelik", "bilgi")
+        _msj   = _b.get("mesaj", "")
+        _gon   = _b.get("gonderen", "GM Merkez")
+        _zaman = (_b.get("created_at", "")[:16].replace("T", " ")
+                  if _b.get("created_at") else "")
+
+        _col1, _col2 = st.columns([9, 1])
+        with _col1:
+            st.markdown(f"""
+<div style="
+    background:{_bg.get(_onc,'rgba(59,130,246,0.15)')};
+    border-left:4px solid {_renk.get(_onc,'#3b82f6')};
+    border-radius:8px;
+    padding:10px 16px;
+    margin-bottom:4px;
+">
+  <span style="color:{_renk.get(_onc,'#3b82f6')};font-weight:700;font-size:12px;">
+    {_icon.get(_onc,'ℹ️')} {_etiket.get(_onc,'BİLGİ')} &nbsp;·&nbsp; {_gon} &nbsp;·&nbsp; {_zaman}
+  </span><br>
+  <span style="color:rgba(255,255,255,0.95);font-size:14px;">{_msj}</span>
+</div>""", unsafe_allow_html=True)
+        with _col2:
+            if st.button("✓ Okundu", key=f"_okundu_{_bid}", use_container_width=True):
+                try:
+                    import json as _bj2
+                    _patch = _bj2.dumps({"okundu": True}).encode()
+                    _pr = urllib.request.Request(
+                        _url + f"/rest/v1/bildirimler?id=eq.{_bid}",
+                        data=_patch,
+                        headers={
+                            "apikey": _key,
+                            "Authorization": "Bearer " + _key,
+                            "Content-Type": "application/json",
+                            "Prefer": "return=minimal",
+                        },
+                        method="PATCH"
+                    )
+                    urllib.request.urlopen(_pr, timeout=5)
+                except Exception:
+                    pass
+                # Cache'i temizle → bir sonraki render'da bildirim listesini yenile
+                st.session_state.pop("_bildirimler_cache", None)
+                st.rerun()
+
+_bildirim_panel()
+# ───────────────────────────────────────────────────────────────────────────
+
 df = load_data()
 
 # Query parameter ile tab seçimi
