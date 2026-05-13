@@ -352,6 +352,200 @@ def save_m2_supabase(url, key, m2_dict):
         "value": _json.dumps({k: int(v) for k, v in m2_dict.items()})
     }).execute()
 
+# ═══════════════════════════════════════════════════════════════
+# OTOMATİK SET KONTROLÜ — 3 günlük tahmin + histerezis
+# ═══════════════════════════════════════════════════════════════
+
+# Chiller: 4 bölge, ±2°C histerezis
+_CH_SINIRLAR = [7.0, 23.0, 26.0]
+_CH_MODLAR   = ["koc_soguk", "serin", "ilimli", "sicak"]
+_CH_SET      = {"koc_soguk": 8.0, "serin": 7.5, "ilimli": 7.0, "sicak": 6.5}
+_CH_H        = 2.0
+
+# Kollektor / FCU / AHU: tek eşik 23°C, ±3°C histerezis
+_DIG_ESIK = 23.0
+_DIG_H    = 3.0
+_DIG_SET  = {
+    "sogutma": {
+        "GUNDUZ_KOLLEKTOR_SET":    13.0,
+        "GECE_KOLLEKTOR_SET":      15.0,
+        "A_BLOK_FCU_SET":          12.0,
+        "B_BLOK_FCU_SET":          12.0,
+        "ZON1_KLIMA_SANTRALI_SET":  8.0,
+        "ZON2_KLIMA_SANTRALI_SET":  8.0,
+    },
+    "isitma": {
+        "GUNDUZ_KOLLEKTOR_SET":    14.0,
+        "GECE_KOLLEKTOR_SET":      17.0,
+        "A_BLOK_FCU_SET":          14.0,
+        "B_BLOK_FCU_SET":          14.0,
+        "ZON1_KLIMA_SANTRALI_SET": 10.0,
+        "ZON2_KLIMA_SANTRALI_SET": 10.0,
+    },
+}
+_CH_NOKTALAR = ["CH1_REM_SET","CH2_REM_SET","CH3_REM_SET","CH4_REM_SET","CH5_REM_SET"]
+
+
+def _fetch_3gun_tahmin_ort() -> float | None:
+    """Open-Meteo'dan İstanbul için sonraki 3 günün ortalama sıcaklığını döner."""
+    try:
+        import urllib.request as _ur, json as _jj
+        _api = (
+            "https://api.open-meteo.com/v1/forecast"
+            "?latitude=41.0082&longitude=28.9784"
+            "&daily=temperature_2m_max,temperature_2m_min"
+            "&timezone=Europe%2FIstanbul&forecast_days=4"
+        )
+        with _ur.urlopen(_api, timeout=8) as _r:
+            _d = _jj.loads(_r.read())
+        _max = _d["daily"]["temperature_2m_max"][1:4]   # bugünü atla
+        _min = _d["daily"]["temperature_2m_min"][1:4]
+        _ort = [(_x + _n) / 2 for _x, _n in zip(_max, _min)]
+        return round(sum(_ort) / len(_ort), 1)
+    except Exception:
+        return None
+
+
+def _ch_modu_hesapla(ort: float, mevcut: str) -> str:
+    """4 bölgeli chiller modu — ±2°C histerezis."""
+    if mevcut not in _CH_MODLAR:
+        # Bilinmiyor: doğrudan hesapla
+        for i, sinir in enumerate(_CH_SINIRLAR):
+            if ort < sinir:
+                return _CH_MODLAR[i]
+        return _CH_MODLAR[-1]
+    idx = _CH_MODLAR.index(mevcut)
+    if idx < len(_CH_SINIRLAR) and ort > _CH_SINIRLAR[idx] + _CH_H:
+        return _CH_MODLAR[idx + 1]
+    if idx > 0 and ort < _CH_SINIRLAR[idx - 1] - _CH_H:
+        return _CH_MODLAR[idx - 1]
+    return mevcut
+
+
+def _dig_modu_hesapla(ort: float, mevcut: str) -> str:
+    """Kollektor/FCU/AHU ikili mod — ±3°C histerezis."""
+    if mevcut == "sogutma":
+        return "isitma" if ort < _DIG_ESIK - _DIG_H else "sogutma"
+    if mevcut == "isitma":
+        return "sogutma" if ort > _DIG_ESIK + _DIG_H else "isitma"
+    return "sogutma" if ort >= _DIG_ESIK else "isitma"
+
+
+def _oto_set_kontrol(sb_url: str, sb_key: str):
+    """
+    3 günlük tahmin ortalamasına göre mod değişimini kontrol et.
+    Mod değiştiyse tüm lokasyonlara komut gönder, ayarlar'a kaydet.
+    """
+    import urllib.request as _ur2, json as _jj2
+    from datetime import datetime as _dtt
+
+    try:
+        ort = _fetch_3gun_tahmin_ort()
+        if ort is None:
+            return
+
+        def _sb_ayar_oku(k):
+            _q = _ur2.Request(
+                sb_url + f"/rest/v1/ayarlar?key=eq.{k}&select=value",
+                headers={"apikey": sb_key, "Authorization": "Bearer " + sb_key}
+            )
+            with _ur2.urlopen(_q, timeout=6) as _r:
+                _d = _jj2.loads(_r.read())
+            return _d[0]["value"] if _d else ""
+
+        def _sb_ayar_yaz(k, v):
+            _p = _jj2.dumps({"key": k, "value": v}).encode()
+            _q = _ur2.Request(
+                sb_url + "/rest/v1/ayarlar",
+                data=_p,
+                headers={
+                    "apikey": sb_key, "Authorization": "Bearer " + sb_key,
+                    "Content-Type": "application/json",
+                    "Prefer": "resolution=merge-duplicates,return=minimal",
+                },
+                method="POST"
+            )
+            _ur2.urlopen(_q, timeout=6)
+
+        mevcut_ch  = _sb_ayar_oku("oto_mod_chiller")
+        mevcut_dig = _sb_ayar_oku("oto_mod_diger")
+
+        yeni_ch  = _ch_modu_hesapla(ort, mevcut_ch)
+        yeni_dig = _dig_modu_hesapla(ort, mevcut_dig)
+
+        ch_degisti  = yeni_ch  != mevcut_ch
+        dig_degisti = yeni_dig != mevcut_dig
+
+        if not ch_degisti and not dig_degisti:
+            # Sadece kontrol zamanını güncelle
+            _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
+                "zaman": _dtt.now().isoformat(), "tahmin_ort": ort,
+                "chiller_mod": yeni_ch, "diger_mod": yeni_dig, "komut_sayisi": 0
+            }))
+            return
+
+        # Aktif lokasyonları lokasyon_noktalar'dan çek
+        _lq = _ur2.Request(
+            sb_url + "/rest/v1/lokasyon_noktalar?select=lokasyon",
+            headers={"apikey": sb_key, "Authorization": "Bearer " + sb_key}
+        )
+        with _ur2.urlopen(_lq, timeout=6) as _r:
+            _loks = list({x["lokasyon"] for x in _jj2.loads(_r.read())})
+
+        komutlar = []
+        for lok in _loks:
+            if ch_degisti:
+                for nokta in _CH_NOKTALAR:
+                    komutlar.append({
+                        "lokasyon": lok, "nokta_adi": nokta,
+                        "hedef_deger": _CH_SET[yeni_ch], "durum": "bekliyor"
+                    })
+            if dig_degisti:
+                for nokta, deger in _DIG_SET[yeni_dig].items():
+                    komutlar.append({
+                        "lokasyon": lok, "nokta_adi": nokta,
+                        "hedef_deger": deger, "durum": "bekliyor"
+                    })
+
+        if komutlar:
+            _ins = _jj2.dumps(komutlar).encode()
+            _ir = _ur2.Request(
+                sb_url + "/rest/v1/komutlar",
+                data=_ins,
+                headers={
+                    "apikey": sb_key, "Authorization": "Bearer " + sb_key,
+                    "Content-Type": "application/json", "Prefer": "return=minimal"
+                },
+                method="POST"
+            )
+            _ur2.urlopen(_ir, timeout=10)
+
+        if ch_degisti:
+            _sb_ayar_yaz("oto_mod_chiller", yeni_ch)
+        if dig_degisti:
+            _sb_ayar_yaz("oto_mod_diger", yeni_dig)
+        _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
+            "zaman": _dtt.now().isoformat(), "tahmin_ort": ort,
+            "chiller_mod": yeni_ch, "diger_mod": yeni_dig,
+            "komut_sayisi": len(komutlar),
+            "lokasyonlar": _loks,
+        }))
+
+    except Exception as _oe:
+        import logging
+        logging.getLogger(__name__).warning(f"oto_set_kontrol hata: {_oe}")
+
+
+# ─── Arka plan thread: her 5 dakikada bir otomatik set kontrolü ───────────────
+import threading as _threading
+def _oto_set_loop(sb_url: str, sb_key: str):
+    import time as _time
+    while True:
+        _time.sleep(300)   # 5 dakika
+        _oto_set_kontrol(sb_url, sb_key)
+
+# ═══════════════════════════════════════════════════════════════
+
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_guncellemeler(url, key):
     try:
@@ -366,6 +560,18 @@ config = load_config()
 url  = config.get("supabase_url","")
 key  = config.get("supabase_key","")
 bagli = bool(url and "BURAYA" not in url)
+
+# Otomatik set arka plan thread'ini başlat (sayfa ömrü boyunca 1 kez)
+if bagli and not st.session_state.get("_oto_thread_started"):
+    _t = _threading.Thread(
+        target=_oto_set_loop, args=(url, key), daemon=True, name="oto-set"
+    )
+    _t.start()
+    st.session_state["_oto_thread_started"] = True
+    # İlk kontrolü hemen yap (thread 5 dk bekler)
+    _threading.Thread(
+        target=_oto_set_kontrol, args=(url, key), daemon=True
+    ).start()
 
 # m² değerlerini Supabase'den yükle (yoksa config/default kullan)
 m2_config = {}
@@ -961,6 +1167,44 @@ with sag:
         )
     else:
         st.markdown('<div class="alrt-y">🌡️ Dış hava verisi alınamadı</div>', unsafe_allow_html=True)
+
+    # ── Otomatik Set Durumu ──
+    try:
+        import json as _osjson, urllib.request as _osur
+        _osk_req = _osur.Request(
+            url + "/rest/v1/ayarlar?key=eq.oto_set_son_kontrol&select=value",
+            headers={"apikey": key, "Authorization": "Bearer " + key}
+        )
+        with _osur.urlopen(_osk_req, timeout=4) as _osr:
+            _osd = _osjson.loads(_osr.read())
+        if _osd:
+            _os = _osjson.loads(_osd[0]["value"])
+            _os_zaman = _os.get("zaman","")[:16].replace("T"," ")
+            _os_ort   = _os.get("tahmin_ort", "—")
+            _os_ch    = _os.get("chiller_mod", "—")
+            _os_dig   = _os.get("diger_mod", "—")
+            _os_cnt   = _os.get("komut_sayisi", 0)
+            _ch_label = {"koc_soguk":"❄️ 8.0°C","serin":"🌤️ 7.5°C",
+                         "ilimli":"☀️ 7.0°C","sicak":"🔥 6.5°C"}.get(_os_ch, _os_ch)
+            _dig_label = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
+            _cnt_html = (f"<span style='color:#f59e0b;font-weight:700;'>"
+                         f"⚡ {_os_cnt} komut gönderildi</span>") if _os_cnt > 0 else \
+                        "<span style='color:rgba(180,220,255,0.5);'>Mod değişmedi</span>"
+            st.markdown(
+                f"<div style='background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);"
+                f"border-radius:8px;padding:8px 12px;margin-top:6px;'>"
+                f"<div style='font-size:9px;color:rgba(16,185,129,0.7);font-weight:700;"
+                f"letter-spacing:1px;margin-bottom:4px;'>🤖 OTO SET — Son: {_os_zaman}</div>"
+                f"<div style='font-size:11px;color:rgba(200,230,255,0.85);'>"
+                f"3g ort: <b>{_os_ort}°C</b> &nbsp;|&nbsp; "
+                f"Chiller: <b>{_ch_label}</b> &nbsp;|&nbsp; "
+                f"Diğer: <b>{_dig_label}</b></div>"
+                f"<div style='font-size:10px;margin-top:3px;'>{_cnt_html}</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+    except Exception:
+        pass
 
     # ── Chiller Set & Dış Hava Kartı ──
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
