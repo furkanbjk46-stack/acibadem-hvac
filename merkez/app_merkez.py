@@ -531,6 +531,35 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             "lokasyonlar": _loks,
         }))
 
+        # Mod geçişlerini oto_mod_log tablosuna kaydet
+        _lok_str = ", ".join(_loks)
+        _log_kayitlar = []
+        if ch_degisti:
+            _log_kayitlar.append({
+                "tip": "chiller", "eski_mod": mevcut_ch, "yeni_mod": yeni_ch,
+                "tahmin_ort": ort,
+                "komut_sayisi": sum(1 for k in komutlar if k["nokta_adi"] in _CH_NOKTALAR),
+                "lokasyonlar": _lok_str,
+            })
+        if dig_degisti:
+            _log_kayitlar.append({
+                "tip": "diger", "eski_mod": mevcut_dig, "yeni_mod": yeni_dig,
+                "tahmin_ort": ort,
+                "komut_sayisi": sum(1 for k in komutlar if k["nokta_adi"] not in _CH_NOKTALAR),
+                "lokasyonlar": _lok_str,
+            })
+        if _log_kayitlar:
+            _lr = _ur2.Request(
+                sb_url + "/rest/v1/oto_mod_log",
+                data=_jj2.dumps(_log_kayitlar).encode(),
+                headers={
+                    "apikey": sb_key, "Authorization": "Bearer " + sb_key,
+                    "Content-Type": "application/json", "Prefer": "return=minimal"
+                },
+                method="POST"
+            )
+            _ur2.urlopen(_lr, timeout=6)
+
     except Exception as _oe:
         import logging
         logging.getLogger(__name__).warning(f"oto_set_kontrol hata: {_oe}")
@@ -1203,6 +1232,66 @@ with sag:
                 f"</div>",
                 unsafe_allow_html=True
             )
+    except Exception:
+        pass
+
+    # ── Mod Geçiş Analitik Kartı ──
+    try:
+        import urllib.request as _mlur, json as _mljson
+        _ml_req = _mlur.Request(
+            url + "/rest/v1/oto_mod_log?order=created_at.desc&limit=60"
+                  "&select=tip,eski_mod,yeni_mod,tahmin_ort,komut_sayisi,created_at",
+            headers={"apikey": key, "Authorization": "Bearer " + key}
+        )
+        with _mlur.urlopen(_ml_req, timeout=4) as _mlr:
+            _ml_data = _mljson.loads(_mlr.read())
+
+        if _ml_data:
+            _ml_ch  = [x for x in _ml_data if x["tip"] == "chiller"]
+            _ml_dig = [x for x in _ml_data if x["tip"] == "diger"]
+            _ml_top = len(_ml_data)
+
+            # Son geçiş özeti
+            _ml_son = _ml_data[0]
+            _ml_son_zaman = _ml_son["created_at"][:16].replace("T", " ")
+            _ml_son_text  = (
+                f"{'Chiller' if _ml_son['tip']=='chiller' else 'Kol/FCU/AHU'}: "
+                f"{_ml_son['eski_mod']} → {_ml_son['yeni_mod']} "
+                f"({_ml_son['tahmin_ort']}°C)"
+            )
+            with st.expander(f"📊 Mod Geçiş Geçmişi — Toplam {_ml_top} geçiş", expanded=False):
+                _mc1, _mc2 = st.columns(2)
+                with _mc1:
+                    st.metric("Chiller Geçişi", len(_ml_ch))
+                with _mc2:
+                    st.metric("Kol/FCU/AHU Geçişi", len(_ml_dig))
+
+                st.caption(f"Son geçiş: {_ml_son_zaman} — {_ml_son_text}")
+                st.markdown("---")
+
+                # Geçiş listesi
+                _eski_yeni_ikon = lambda e, y: "⬆️" if (
+                    ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(y)
+                    > ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(e)
+                ) else "⬇️"
+
+                for _mk in _ml_data[:20]:
+                    _mk_z  = _mk["created_at"][:16].replace("T", " ")
+                    _mk_ti = "🧊 Chiller" if _mk["tip"] == "chiller" else "🌀 Kol/FCU/AHU"
+                    try:
+                        _mk_ok = _eski_yeni_ikon(_mk["eski_mod"], _mk["yeni_mod"])
+                    except Exception:
+                        _mk_ok = "↔️"
+                    st.markdown(
+                        f"<div style='font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.06);'>"
+                        f"<span style='color:rgba(180,220,255,0.5);'>{_mk_z}</span> &nbsp; "
+                        f"{_mk_ti} &nbsp; {_mk_ok} &nbsp; "
+                        f"<b>{_mk['eski_mod']}</b> → <b>{_mk['yeni_mod']}</b> &nbsp; "
+                        f"<span style='color:rgba(245,158,11,0.8);'>{_mk['tahmin_ort']}°C</span> &nbsp; "
+                        f"<span style='color:rgba(100,200,100,0.7);'>{_mk['komut_sayisi']} komut</span>"
+                        f"</div>",
+                        unsafe_allow_html=True
+                    )
     except Exception:
         pass
 
