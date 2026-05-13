@@ -1448,7 +1448,7 @@ st.markdown(f"""
 with st.expander("⚙️  Ayarlar", expanded=False):
     st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
 
-    ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)"])
+    ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder"])
 
     # ── Bağlantı ──
     with ayar_tab1:
@@ -1531,10 +1531,43 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                 fetch_m2_supabase.clear()
                 st.success("✅ m² değerleri kaydedildi. Sayfayı yenileyin.")
             except Exception as ex:
-                # Supabase başarısız olursa local dosyaya yaz
                 cfg_yeni = config.copy()
                 cfg_yeni["m2_degerler"] = {k: int(v) for k, v in yeni_m2.items()}
                 os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
                 with open(CONFIG_FILE, "w", encoding="utf-8") as f:
                     json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
                 st.warning(f"⚠️ Supabase'e yazılamadı, local kaydedildi: {ex}")
+
+    # ── Mesaj Gönder ──
+    with ayar_tab5:
+        st.markdown("**Lokasyona Mesaj Gönder**")
+        st.caption("Seçilen lokasyonun ekranında bildirim olarak görünür. Personel okundu diyene kadar kalır.")
+
+        _lok_secenekler = {"Tüm Lokasyonlar": "all"}
+        for _lid, _linf in HASTANELER.items():
+            _lok_secenekler[_linf["isim"]] = _lid
+
+        _msg_hedef   = st.selectbox("Lokasyon", list(_lok_secenekler.keys()), key="msg_hedef")
+        _msg_oncelik = st.radio("Öncelik", ["bilgi", "uyari", "acil"],
+                                format_func=lambda x: {"bilgi": "🔵 Bilgi", "uyari": "🟡 Uyarı", "acil": "🔴 Acil"}[x],
+                                horizontal=True, key="msg_oncelik")
+        _msg_metin   = st.text_area("Mesaj", placeholder="Merhaba, bugün saat 14:00'de bakım yapılacaktır...",
+                                    height=100, key="msg_metin")
+
+        if st.button("📤 Gönder", key="btn_msg_gonder", use_container_width=True):
+            if not _msg_metin.strip():
+                st.warning("⚠️ Mesaj boş olamaz.")
+            else:
+                try:
+                    from supabase import create_client as _cc
+                    _c = _cc(url, key)
+                    _c.table("bildirimler").insert({
+                        "lokasyon":  _lok_secenekler[_msg_hedef],
+                        "mesaj":     _msg_metin.strip(),
+                        "gonderen":  "GM Merkez",
+                        "oncelik":   _msg_oncelik,
+                        "okundu":    False,
+                    }).execute()
+                    st.success(f"✅ Mesaj gönderildi → {_msg_hedef}")
+                except Exception as _me:
+                    st.error(f"❌ Gönderilemedi: {_me}")
