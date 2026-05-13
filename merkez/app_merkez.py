@@ -1448,7 +1448,7 @@ st.markdown(f"""
 with st.expander("⚙️  Ayarlar", expanded=False):
     st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
 
-    ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder"])
+    ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder", "🎛️ Uzaktan Kontrol"])
 
     # ── Bağlantı ──
     with ayar_tab1:
@@ -1571,3 +1571,100 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                     st.success(f"✅ Mesaj gönderildi → {_msg_hedef}")
                 except Exception as _me:
                     st.error(f"❌ Gönderilemedi: {_me}")
+
+    # ── Uzaktan Kontrol ──
+    with ayar_tab6:
+        st.markdown("**🎛️ Uzaktan BACnet Set Kontrolü**")
+        st.caption("Lokasyon BACnet noktasına değer gönder. Lokasyon PC 1 dakika içinde uygular.")
+
+        _uc_col1, _uc_col2 = st.columns(2)
+
+        with _uc_col1:
+            # Lokasyon seçimi (sadece aktif lokasyonlar)
+            _uc_lok_sec = {_linf["isim"]: _lid for _lid, _linf in HASTANELER.items()}
+            _uc_lok_isim = st.selectbox("Lokasyon", list(_uc_lok_sec.keys()), key="uc_lok")
+            _uc_lok_id   = _uc_lok_sec[_uc_lok_isim]
+
+        with _uc_col2:
+            # Bu lokasyonun nokta listesini Supabase'den çek
+            try:
+                from supabase import create_client as _ucc
+                _ucc_client = _ucc(url, key)
+                _uc_noktalar_raw = (
+                    _ucc_client.table("lokasyon_noktalar")
+                    .select("nokta_adi,aciklama")
+                    .eq("lokasyon", _uc_lok_id)
+                    .execute()
+                    .data
+                )
+                _uc_nokta_map = {
+                    (n.get("aciklama") or n["nokta_adi"]): n["nokta_adi"]
+                    for n in _uc_noktalar_raw
+                }
+            except Exception:
+                _uc_nokta_map = {}
+
+            if _uc_nokta_map:
+                _uc_nokta_label = st.selectbox("Nokta", list(_uc_nokta_map.keys()), key="uc_nokta")
+                _uc_nokta_adi   = _uc_nokta_map[_uc_nokta_label]
+            else:
+                st.warning(f"⚠️ {_uc_lok_isim} için tanımlı nokta yok.")
+                _uc_nokta_adi = None
+
+        _uc_deger = st.number_input(
+            "Hedef Değer (°C)",
+            min_value=0.0, max_value=99.0, value=7.0, step=0.5,
+            key="uc_deger"
+        )
+
+        # Son komutlar tablosu
+        try:
+            _uc_son_komutlar = (
+                _ucc_client.table("komutlar")
+                .select("nokta_adi,hedef_deger,durum,hata_mesaji,created_at,executed_at")
+                .eq("lokasyon", _uc_lok_id)
+                .order("created_at", desc=True)
+                .limit(8)
+                .execute()
+                .data
+            )
+        except Exception:
+            _uc_son_komutlar = []
+
+        _uc_g_col1, _uc_g_col2 = st.columns([1, 2])
+        with _uc_g_col1:
+            if st.button("📡 Komutu Gönder", key="btn_uc_gonder",
+                         use_container_width=True,
+                         disabled=(not _uc_nokta_adi)):
+                try:
+                    from supabase import create_client as _ucc2
+                    _ucc2(url, key).table("komutlar").insert({
+                        "lokasyon":    _uc_lok_id,
+                        "nokta_adi":   _uc_nokta_adi,
+                        "hedef_deger": float(_uc_deger),
+                        "durum":       "bekliyor",
+                    }).execute()
+                    st.success(f"✅ Komut gönderildi → {_uc_nokta_label} = {_uc_deger}°C")
+                    st.rerun()
+                except Exception as _uce:
+                    st.error(f"❌ Gönderilemedi: {_uce}")
+
+        with _uc_g_col2:
+            st.caption("Son 8 komut:")
+            if _uc_son_komutlar:
+                _durum_renk = {
+                    "bekliyor":    "🟡",
+                    "tamamlandi":  "✅",
+                    "hata":        "❌",
+                }
+                for _k in _uc_son_komutlar:
+                    _zaman = (_k.get("created_at", "")[:16].replace("T", " "))
+                    _icon  = _durum_renk.get(_k["durum"], "⏳")
+                    _hata  = f" — {_k['hata_mesaji']}" if _k.get("hata_mesaji") else ""
+                    st.markdown(
+                        f"{_icon} `{_k['nokta_adi']}` → **{_k['hedef_deger']}°C** "
+                        f"<span style='color:rgba(255,255,255,0.5);font-size:11px;'>{_zaman}{_hata}</span>",
+                        unsafe_allow_html=True
+                    )
+            else:
+                st.caption("Henüz komut gönderilmedi.")

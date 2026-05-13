@@ -412,16 +412,33 @@ def start_background_sync():
                 logger.error(f"Senkronizasyon döngüsü hatası: {e}")
             time.sleep(interval)
 
+    # BACnet yazıcıyı import et (yoksa sessizce atla)
+    try:
+        from bacnet_writer import komutlari_isle as _komutlari_isle
+        _bacnet_writer_ok = True
+    except Exception:
+        _bacnet_writer_ok = False
+
+    _sb_url = config.get("supabase_url", "")
+    _sb_key = config.get("supabase_key", "")
+
     def _heartbeat_loop():
-        """Her 2 dakikada bir ping_zamani güncelle ve güncelleme kontrol et"""
+        """Her 1 dakikada bir: heartbeat + güncelleme kontrolü + BACnet komut polling"""
+        _tick = 0
         while True:
             try:
                 if client:
-                    send_heartbeat(client, lokasyon_id)
-                    check_and_apply_update(client, lokasyon_id)
+                    # Her turda: BACnet komut polling (≈1 dk aralık)
+                    if _bacnet_writer_ok and _sb_url and _sb_key:
+                        _komutlari_isle(_sb_url, _sb_key, lokasyon_id)
+                    # Her 2 turda bir: heartbeat + güncelleme kontrolü
+                    if _tick % 2 == 0:
+                        send_heartbeat(client, lokasyon_id)
+                        check_and_apply_update(client, lokasyon_id)
+                    _tick += 1
             except Exception as e:
                 logger.warning(f"Heartbeat döngüsü hatası: {e}")
-            time.sleep(120)  # 2 dakika
+            time.sleep(60)  # 1 dakika
 
     t_sync = threading.Thread(target=_sync_loop, daemon=True, name="cloud-sync")
     t_sync.start()
