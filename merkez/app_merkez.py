@@ -1868,7 +1868,7 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                 .select("nokta_adi,hedef_deger,durum,hata_mesaji,created_at,executed_at")
                 .eq("lokasyon", _uc_lok_id)
                 .order("created_at", desc=True)
-                .limit(8)
+                .limit(30)
                 .execute()
                 .data
             )
@@ -1894,7 +1894,7 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                     st.error(f"❌ Gönderilemedi: {_uce}")
 
         with _uc_g_col2:
-            st.caption("Son 8 komut:")
+            st.caption("Son komutlar:")
             if _uc_son_komutlar:
                 _durum_renk = {
                     "bekliyor":    "🟡",
