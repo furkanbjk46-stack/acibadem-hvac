@@ -3862,6 +3862,155 @@ async def analyze_data(rows: List[Dict[str, Any]],
         }
     }
 
+# ================================================================
+# OTOMATİK ANALİZ — Son sonucu getir + Onay & Excel export
+# ================================================================
+
+AUTO_RESULT_FILE = os.path.join(os.path.dirname(__file__), "hvac_ahu_analiz_sonuclari.json")
+
+@app.get("/api/last_auto_analysis")
+async def last_auto_analysis():
+    """
+    Son otomatik AHU analiz sonucunu döndür.
+    Frontend: 'Son Otomatik Analizi Göster' butonu çağırır.
+    """
+    if not os.path.exists(AUTO_RESULT_FILE):
+        raise HTTPException(status_code=404, detail="Henüz otomatik analiz yapılmamış.")
+    try:
+        with open(AUTO_RESULT_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        sonuc = data.get("sonuc", {})
+        # recs_table içindeki rows listesine 'Location' bazlı erişim
+        return JSONResponse({
+            **sonuc,
+            "auto_timestamp": data.get("timestamp", ""),
+            "ahu_sayisi":     data.get("ahu_sayisi", 0),
+            "oat":            data.get("oat", 20.0),
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Dosya okuma hatası: {e}")
+
+
+@app.post("/api/onay_ver")
+async def onay_ver():
+    """
+    Analizi onayla: Excel dosyası oluştur ve indir.
+    Renk kodlu: CRITICAL=kırmızı, WARNING=sarı, OPTIMAL=yeşil.
+    Onay kaydı hvac_onay_log.json'a yazılır.
+    """
+    if not os.path.exists(AUTO_RESULT_FILE):
+        raise HTTPException(status_code=404, detail="Analiz sonucu bulunamadı.")
+    try:
+        with open(AUTO_RESULT_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        rows = data["sonuc"]["recs_table"]["rows"]
+        ts   = datetime.datetime.fromisoformat(
+                   data.get("timestamp", datetime.datetime.now().isoformat())
+               ).strftime("%Y%m%d_%H%M")
+
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+        except ImportError:
+            raise HTTPException(status_code=500, detail="openpyxl yüklü değil: pip install openpyxl")
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "HVAC Analiz"
+
+        headers = [
+            "Mahal", "Tip", "Ekipman", "Aksiyon",
+            "ΔT (°C)", "Hedef (°C)", "Sapma",
+            "SAT Durum", "Önerilen SAT (°C)", "Skor", "Durum",
+            "Kural", "Üfleme °C", "Emiş °C", "Set °C",
+            "Soğutma V%", "Isıtma V%",
+        ]
+
+        # Başlık satırı
+        hdr_fill = PatternFill("solid", fgColor="012D75")
+        hdr_font = Font(bold=True, color="FFFFFF", size=10)
+        for ci, h in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=ci, value=h)
+            cell.fill = hdr_fill
+            cell.font = hdr_font
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        ws.row_dimensions[1].height = 32
+
+        # Veri satırları — renk kodlaması
+        sev_renk = {"CRITICAL": "FFCCCC", "WARNING": "FFF3CC", "OPTIMAL": "CCFFEE"}
+        for ri, r in enumerate(rows, 2):
+            sev  = str(r.get("Severity", ""))
+            fill = PatternFill("solid", fgColor=sev_renk.get(sev, "FFFFFF"))
+            vals = [
+                r.get("Location", ""),
+                r.get("Type", ""),
+                r.get("Name", r.get("Asset", "")),
+                r.get("Action", ""),
+                r.get("ΔT (°C)", r.get("Su ΔT (°C)", "")),
+                r.get("Target ΔT (°C)", ""),
+                r.get("Departure", ""),
+                r.get("SAT Status", ""),
+                r.get("Recommended SAT (°C)", ""),
+                r.get("Score", ""),
+                sev,
+                r.get("Rule", ""),
+                r.get("SAT (°C)", r.get("Supply (°C)", "")),
+                r.get("Return (°C)", ""),
+                r.get("Set (°C)", ""),
+                r.get("Cool Valve (%)", ""),
+                r.get("Heat Valve (%)", ""),
+            ]
+            for ci, val in enumerate(vals, 1):
+                cell = ws.cell(row=ri, column=ci, value=val)
+                cell.fill = fill
+
+        # Sütun genişlikleri
+        for ci, w in enumerate([10,8,14,22,8,10,8,14,16,7,10,16,10,10,8,10,10], 1):
+            ws.column_dimensions[ws.cell(row=1, column=ci).column_letter].width = w
+        ws.freeze_panes = "A2"
+
+        # Kaydet
+        onay_klasor = os.path.join(os.path.dirname(__file__), "hvac_onaylanan")
+        os.makedirs(onay_klasor, exist_ok=True)
+        excel_dosya = f"hvac_analiz_{ts}_ONAYLANDI.xlsx"
+        excel_yolu  = os.path.join(onay_klasor, excel_dosya)
+        wb.save(excel_yolu)
+
+        # Onay logu
+        log_yolu = os.path.join(os.path.dirname(__file__), "hvac_onay_log.json")
+        log_data = []
+        if os.path.exists(log_yolu):
+            try:
+                with open(log_yolu) as f:
+                    log_data = json.load(f)
+            except Exception:
+                pass
+        log_data.append({
+            "onay_zamani":   datetime.datetime.now().isoformat(),
+            "analiz_zamani": data.get("timestamp", ""),
+            "excel_dosya":   excel_dosya,
+            "ahu_sayisi":    data.get("ahu_sayisi", 0),
+        })
+        with open(log_yolu, "w", encoding="utf-8") as f:
+            json.dump(log_data, f, ensure_ascii=False, indent=2)
+
+        logger.info("Onay verildi, Excel kaydedildi: %s", excel_dosya)
+
+        from fastapi.responses import FileResponse
+        return FileResponse(
+            excel_yolu,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            filename=excel_dosya,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("onay_ver hatası: %s", e)
+        raise HTTPException(status_code=500, detail=f"Excel oluşturma hatası: {e}")
+
+
 # Uygulamayı başlat
 if __name__ == "__main__":
     import uvicorn

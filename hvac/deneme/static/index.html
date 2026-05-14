@@ -1065,8 +1065,20 @@
                     </div>
                 </div>
 
+                <!-- Otomatik Analiz Butonu -->
+                <div class="control-section" id="autoAnalysisSection">
+                    <h3><i class="fas fa-robot"></i> Otomatik Analiz</h3>
+                    <div id="autoAnalysisBanner" style="display:none; background:rgba(16,185,129,0.15); border:1px solid #10b981; border-radius:8px; padding:10px; margin-bottom:10px; font-size:12px; color:#10b981;">
+                        <i class="fas fa-check-circle"></i> <span id="autoAnalysisInfo">Yükleniyor...</span>
+                    </div>
+                    <button class="btn btn-success" onclick="loadAutoAnalysis()" id="autoLoadBtn">
+                        <i class="fas fa-cloud-download-alt"></i>
+                        Son Otomatik Analizi Göster
+                    </button>
+                </div>
+
                 <div class="control-section">
-                    <h3><i class="fas fa-file-upload"></i> Veri Yükleme</h3>
+                    <h3><i class="fas fa-file-upload"></i> Manuel Veri Yükleme</h3>
                     <div class="file-upload">
                         <input type="file" id="csvUpload" accept=".csv,.xlsx,.xls" style="display: none;">
                         <label for="csvUpload" class="file-upload-label">
@@ -1128,6 +1140,11 @@
                         <button class="btn btn-secondary btn-sm" onclick="exportCSV()">
                             <i class="fas fa-file-csv"></i>
                             CSV İndir
+                        </button>
+                        <button id="onayBtn" class="btn btn-sm" onclick="onayVer()"
+                                style="display:none; background:#10b981; color:#fff; border:none;">
+                            <i class="fas fa-check-double"></i>
+                            ✅ Kontrol Edildi &amp; Excel İndir
                         </button>
                         <button class="btn btn-primary btn-sm" onclick="refreshResults()">
                             <i class="fas fa-sync-alt"></i>
@@ -2338,6 +2355,92 @@
 
             await analyzeData(payload);
         }
+
+        // ── Otomatik analiz: sayfa açılınca kontrol et ──
+        let isAutoAnalysis = false;
+
+        async function checkAutoAnalysis() {
+            try {
+                const resp = await fetch('/api/last_auto_analysis');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (!data.success) return;
+                const ts = data.auto_timestamp
+                    ? new Date(data.auto_timestamp).toLocaleString('tr-TR')
+                    : '';
+                const kpi = data.kpi || {};
+                document.getElementById('autoAnalysisInfo').textContent =
+                    `Son analiz: ${ts} — ${kpi.total || 0} santral | 🔴 ${kpi.crit || 0} Kritik | 🟡 ${kpi.warn || 0} Uyarı`;
+                document.getElementById('autoAnalysisBanner').style.display = 'block';
+            } catch(e) {}
+        }
+
+        async function loadAutoAnalysis() {
+            showLoading(true);
+            isAutoAnalysis = false;
+            document.getElementById('onayBtn').style.display = 'none';
+            try {
+                const resp = await fetch('/api/last_auto_analysis');
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    showAlert('Otomatik analiz bulunamadı: ' + (err.detail || resp.statusText), 'warning');
+                    return;
+                }
+                const data = await resp.json();
+                if (data.success && data.recs_table) {
+                    displayResults(data.recs_table);
+                    isAutoAnalysis = true;
+                    document.getElementById('onayBtn').style.display = 'inline-flex';
+                    const ts = data.auto_timestamp
+                        ? new Date(data.auto_timestamp).toLocaleString('tr-TR')
+                        : '';
+                    showAlert(`✅ Otomatik analiz yüklendi — ${ts}`, 'success');
+                } else {
+                    showAlert('Analiz verisi boş.', 'warning');
+                }
+            } catch(e) {
+                showAlert('Yüklenirken hata: ' + e.message, 'danger');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function onayVer() {
+            if (!isAutoAnalysis) {
+                showAlert('Önce "Son Otomatik Analizi Göster" butonuna basın.', 'warning');
+                return;
+            }
+            const btn = document.getElementById('onayBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> İşleniyor...';
+            try {
+                const resp = await fetch('/api/onay_ver', { method: 'POST' });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    showAlert('Hata: ' + (err.detail || resp.statusText), 'danger');
+                    return;
+                }
+                // Excel dosyasını indir
+                const blob = await resp.blob();
+                const cd   = resp.headers.get('content-disposition') || '';
+                const name = cd.includes('filename=')
+                    ? cd.split('filename=')[1].replace(/"/g, '')
+                    : 'hvac_analiz_ONAYLANDI.xlsx';
+                const url = URL.createObjectURL(blob);
+                const a   = document.createElement('a');
+                a.href = url; a.download = name; a.click();
+                URL.revokeObjectURL(url);
+                showAlert('✅ Onay verildi! Excel indiriliyor...', 'success');
+                btn.innerHTML = '<i class="fas fa-check"></i> Onaylandı';
+            } catch(e) {
+                showAlert('Onay hatası: ' + e.message, 'danger');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-double"></i> ✅ Kontrol Edildi & Excel İndir';
+            }
+        }
+
+        // Sayfa yüklenince otomatik kontrol et
+        window.addEventListener('load', () => { checkAutoAnalysis(); });
 
         // Upload CSV
         async function uploadCSV() {

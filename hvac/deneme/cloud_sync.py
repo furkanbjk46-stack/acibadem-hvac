@@ -419,11 +419,23 @@ def start_background_sync():
     except Exception:
         _bacnet_writer_ok = False
 
+    # HVAC AHU analiz modülünü import et (yoksa sessizce atla)
+    try:
+        from ahu_collector import hvac_analiz_calistir as _hvac_analiz
+        _ahu_ok = True
+    except Exception:
+        _ahu_ok = False
+
     _sb_url = config.get("supabase_url", "")
     _sb_key = config.get("supabase_key", "")
 
+    # HVAC günlük analiz saati (08:30)
+    _HVAC_SAAT   = 8
+    _HVAC_DAKIKA = 30
+    _hvac_son_gun = [None]  # mutable container — thread içinden güncellenir
+
     def _heartbeat_loop():
-        """Her 1 dakikada bir: heartbeat + güncelleme kontrolü + BACnet komut polling"""
+        """Her 1 dakikada bir: heartbeat + güncelleme kontrolü + BACnet komut polling + HVAC analiz"""
         _tick = 0
         while True:
             try:
@@ -435,6 +447,21 @@ def start_background_sync():
                     if _tick % 2 == 0:
                         send_heartbeat(client, lokasyon_id)
                         check_and_apply_update(client, lokasyon_id)
+                    # Günlük HVAC analizi: saat 08:30'da, günde 1 kez
+                    if _ahu_ok:
+                        _now = datetime.now()
+                        _bugun = _now.date()
+                        _saat_tamam = (
+                            _now.hour == _HVAC_SAAT and
+                            _HVAC_DAKIKA <= _now.minute < _HVAC_DAKIKA + 5
+                        )
+                        if _saat_tamam and _hvac_son_gun[0] != _bugun:
+                            _hvac_son_gun[0] = _bugun
+                            try:
+                                logger.info("⏰ 08:30 HVAC AHU analizi başlatılıyor...")
+                                _hvac_analiz()
+                            except Exception as _ae:
+                                logger.error("HVAC analiz hatası: %s", _ae)
                     _tick += 1
             except Exception as e:
                 logger.warning(f"Heartbeat döngüsü hatası: {e}")
