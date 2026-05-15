@@ -21,7 +21,7 @@ AHU_CONFIG_FILE   = os.path.join(BASE_DIR, "ahu_nokta_konfig.json")
 AHU_RESULTS_FILE  = os.path.join(BASE_DIR, "hvac_ahu_analiz_sonuclari.json")
 AHU_TRIGGER_FILE  = os.path.join(BASE_DIR, "hvac_analiz_trigger.txt")
 
-MAIN_PORTAL_URL   = "http://localhost:8000/api/recommend_json"
+MAIN_PORTAL_URL   = "http://localhost:8005/api/recommend_json"
 BACNET_PORT       = 47808
 BACNET_TIMEOUT    = 4.0
 PROP_PRESENT_VAL  = 85
