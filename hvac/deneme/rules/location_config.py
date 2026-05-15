@@ -4,17 +4,20 @@ Lokasyon bazlı konfigürasyon yönetimi
 """
 
 import json
+import os as _os
 from pathlib import Path
 from typing import Dict, Optional, Any
+
+_HERE = Path(_os.path.dirname(_os.path.abspath(__file__))).parent
 
 class LocationConfig:
     """
     Lokasyon bazlı konfigürasyon yöneticisi
     Her lokasyon için farklı set değerleri ve kurallar
     """
-    
-    def __init__(self, config_dir: str = "configs"):
-        self.config_dir = Path(config_dir)
+
+    def __init__(self, config_dir: str = None):
+        self.config_dir = Path(config_dir) if config_dir else _HERE / "configs"
         self.configs: Dict[str, Dict] = {}
         self.current_location = "hastane_merkez"
         self._load_all_configs()

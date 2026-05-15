@@ -17,13 +17,10 @@ import numpy as np
 
 from fpdf import FPDF
 
-# Plotly grafik üretimi
-try:
-    import plotly.graph_objects as go
-    import plotly.io as pio
-    HAS_PLOTLY = True
-except ImportError:
-    HAS_PLOTLY = False
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 # ─── Sabitler ───
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -173,119 +170,99 @@ def load_last_analysis() -> List[Dict]:
     return []
 
 
-# ─── Plotly Grafik Üretimi ───
+# ─── Matplotlib Grafik Üretimi ───
+def _fig_to_bytes(fig) -> Optional[bytes]:
+    """Matplotlib figure'ü PNG bytes'a çevir ve kapat."""
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    return buf.read()
+
+
 def create_energy_pie_chart(total_kwh: float, chiller_kwh: float, gas_kwh: float) -> Optional[bytes]:
-    """Enerji dağılım pasta grafiği oluştur."""
-    if not HAS_PLOTLY:
-        return None
-    
+    """Enerji dağılım donut grafiği — matplotlib."""
     other = max(0, total_kwh - chiller_kwh - gas_kwh)
-    labels = ["Sogutma (Chiller)", "Isitma (Dogalgaz)", "Diger"]
     values = [chiller_kwh, gas_kwh, other]
+    labels = ["Sogutma\n(Chiller)", "Isitma\n(Dogalgaz)", "Diger"]
     colors = ["#3b82f6", "#ef4444", "#8b5cf6"]
-    
-    fig = go.Figure(data=[go.Pie(
-        labels=labels, values=values,
-        hole=0.45,
-        marker=dict(colors=colors, line=dict(color='#1a2332', width=2)),
-        textinfo='label+percent',
-        textfont=dict(size=13, color='white'),
-        insidetextorientation='radial'
-    )])
-    fig.update_layout(
-        paper_bgcolor='#1a2332',
-        plot_bgcolor='#1a2332',
-        font=dict(color='white', size=12),
-        showlegend=True,
-        legend=dict(
-            orientation="h", yanchor="bottom", y=-0.15,
-            xanchor="center", x=0.5, font=dict(color='white', size=11)
-        ),
-        margin=dict(l=20, r=20, t=30, b=40),
-        width=500, height=350,
-        title=dict(text="Enerji Dagilim", font=dict(size=16, color='white'))
+
+    if sum(values) <= 0:
+        return None
+
+    fig, ax = plt.subplots(figsize=(5, 3.5), facecolor="white")
+    wedges, texts, autotexts = ax.pie(
+        values, labels=labels, colors=colors,
+        autopct="%1.1f%%", startangle=90,
+        wedgeprops=dict(width=0.55, edgecolor="white", linewidth=2),
+        textprops=dict(fontsize=9),
     )
-    fig.update_layout(paper_bgcolor='white', plot_bgcolor='white', font=dict(color='#1a2332'))
-    return pio.to_image(fig, format="png", scale=2)
+    for at in autotexts:
+        at.set_fontsize(8)
+    ax.set_title("Enerji Dagilimi", fontsize=11, fontweight="bold", pad=8)
+    return _fig_to_bytes(fig)
 
 
 def create_weekly_trend_chart(df: pd.DataFrame, report_date: date) -> Optional[bytes]:
-    """Son 7 günlük tüketim trend grafiği."""
-    if not HAS_PLOTLY or df.empty:
+    """Son 7 günlük tüketim trend grafiği — matplotlib."""
+    if df.empty:
         return None
-    
+
     end = report_date
     start = end - timedelta(days=6)
     mask = (df["Tarih"] >= start) & (df["Tarih"] <= end)
     week_df = df[mask].sort_values("Tarih")
-    
+
     if week_df.empty:
         return None
-    
+
     dates = [d.strftime("%d/%m") for d in week_df["Tarih"]]
     totals = week_df["Toplam_Hastane_Tuketim_kWh"].fillna(0).tolist()
     chillers = week_df["Chiller_Tuketim_kWh"].fillna(0).tolist()
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=dates, y=totals, name="Toplam",
-        line=dict(color="#3b82f6", width=3),
-        fill='tozeroy', fillcolor='rgba(59,130,246,0.15)',
-        mode='lines+markers', marker=dict(size=8)
-    ))
-    fig.add_trace(go.Scatter(
-        x=dates, y=chillers, name="Chiller",
-        line=dict(color="#10b981", width=2, dash='dot'),
-        mode='lines+markers', marker=dict(size=6)
-    ))
-    fig.update_layout(
-        paper_bgcolor='#1a2332',
-        plot_bgcolor='#0f172a',
-        font=dict(color='white', size=12),
-        xaxis=dict(gridcolor='rgba(255,255,255,0.1)', title="Tarih"),
-        yaxis=dict(gridcolor='rgba(255,255,255,0.1)', title="kWh"),
-        legend=dict(
-            orientation="h", yanchor="bottom", y=-0.25,
-            xanchor="center", x=0.5, font=dict(color='white', size=11)
-        ),
-        margin=dict(l=50, r=20, t=40, b=50),
-        width=550, height=300,
-        title=dict(text="Son 7 Gun Tuketim Trendi", font=dict(size=14, color='white'))
-    )
-    return pio.to_image(fig, format="png", scale=2)
+
+    fig, ax = plt.subplots(figsize=(5.5, 3), facecolor="white")
+    ax.plot(dates, totals, color="#3b82f6", linewidth=2.5, marker="o",
+            markersize=6, label="Toplam")
+    ax.fill_between(dates, totals, alpha=0.12, color="#3b82f6")
+    ax.plot(dates, chillers, color="#10b981", linewidth=1.8, marker="s",
+            markersize=5, linestyle="--", label="Chiller")
+    ax.set_title("Son 7 Gun Tuketim Trendi", fontsize=10, fontweight="bold")
+    ax.set_ylabel("kWh", fontsize=9)
+    ax.tick_params(axis="x", labelsize=8, rotation=30)
+    ax.tick_params(axis="y", labelsize=8)
+    ax.legend(fontsize=8, loc="upper right")
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    return _fig_to_bytes(fig)
 
 
 def create_health_gauge(score: int) -> Optional[bytes]:
-    """Sistem sağlık göstergesi gauge grafiği."""
-    if not HAS_PLOTLY:
-        return None
-    
+    """Sistem sağlık göstergesi — matplotlib yay tabanlı gauge."""
     color = "#10b981" if score >= 80 else "#f59e0b" if score >= 50 else "#ef4444"
-    
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=score,
-        number=dict(suffix="%", font=dict(size=36, color='white')),
-        gauge=dict(
-            axis=dict(range=[0, 100], tickwidth=2, tickcolor='white',
-                      tickfont=dict(color='white', size=10)),
-            bar=dict(color=color, thickness=0.6),
-            bgcolor='rgba(255,255,255,0.05)',
-            borderwidth=2, bordercolor='rgba(255,255,255,0.2)',
-            steps=[
-                dict(range=[0, 50], color="rgba(239,68,68,0.15)"),
-                dict(range=[50, 80], color="rgba(245,158,11,0.15)"),
-                dict(range=[80, 100], color="rgba(16,185,129,0.15)"),
-            ],
-        ),
-    ))
-    fig.update_layout(
-        paper_bgcolor='#1a2332',
-        font=dict(color='white'),
-        margin=dict(l=30, r=30, t=30, b=10),
-        width=280, height=200,
-    )
-    return pio.to_image(fig, format="png", scale=2)
+
+    fig, ax = plt.subplots(figsize=(2.8, 2), facecolor="white")
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    # Arka plan yayı (gri)
+    theta1, theta2 = 180, 0
+    bg = mpatches.Wedge((0.5, 0.3), 0.38, theta1, theta2,
+                        width=0.14, facecolor="#e5e7eb", transform=ax.transAxes)
+    ax.add_patch(bg)
+
+    # Değer yayı
+    angle_end = 180 - (score / 100 * 180)
+    val_arc = mpatches.Wedge((0.5, 0.3), 0.38, angle_end, 180,
+                             width=0.14, facecolor=color, transform=ax.transAxes)
+    ax.add_patch(val_arc)
+
+    ax.text(0.5, 0.35, f"%{score}", ha="center", va="center",
+            fontsize=18, fontweight="bold", color=color, transform=ax.transAxes)
+    label = "Iyi" if score >= 80 else "Dikkat" if score >= 50 else "Kritik"
+    ax.text(0.5, 0.12, label, ha="center", va="center",
+            fontsize=9, color="#6b7280", transform=ax.transAxes)
+    ax.set_title("Saglik Skoru", fontsize=9, fontweight="bold", pad=4)
+    return _fig_to_bytes(fig)
 
 
 # ─── PDF Sınıfı ───
@@ -496,7 +473,7 @@ class DailyReportGenerator:
             "gas_kojen": float(row.get("Kojen_Dogalgaz_m3", 0) or 0),
             "vrf": float(row.get("VRF_Split_Tuketim_kWh", 0) or 0),
             "oat": float(row.get("Dis_Hava_Sicakligi_C", 0) or 0),
-            "chiller_set": float(row.get("Chiller_Set_C", 0) or 0),
+            "chiller_set": float(row.get("Chiller_Set_Temp_C", 0) or 0),
             "chiller_load": chiller_load,
         }
     

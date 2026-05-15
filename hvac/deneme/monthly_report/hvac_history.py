@@ -13,8 +13,8 @@ warnings.filterwarnings('ignore', category=FutureWarning, module='pandas.*')
 warnings.filterwarnings('ignore', category=FutureWarning, message='.*DataFrame concatenation.*')
 
 
-# HVAC analiz geçmişi dosyası
-HVAC_HISTORY_FILE = "hvac_analysis_history.csv"
+# HVAC analiz geçmişi dosyası — __file__ bazlı mutlak yol (CWD bağımsız)
+HVAC_HISTORY_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hvac_analysis_history.csv")
 
 
 class HVACHistoryManager:
