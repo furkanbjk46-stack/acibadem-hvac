@@ -461,9 +461,34 @@ with tab1:
             )
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
+        # ── Geçen Yıl Aynı Dönem Karşılaştırma Badge'i (sadece 5 grafik için) ──
+        def _yoy_badge(col, s_df, full_df, t_bas, t_bit):
+            """Seçilen dönem ile geçen yıl aynı dönem arasındaki % farkı renkli badge olarak döndür."""
+            if col not in full_df.columns or s_df.empty:
+                return ""
+            bugun_val = s_df[col].sum()
+            gec_bas = pd.Timestamp(t_bas) - pd.DateOffset(years=1)
+            gec_bit = pd.Timestamp(t_bit) - pd.DateOffset(years=1)
+            gec_df = full_df[(full_df["Tarih"] >= gec_bas) & (full_df["Tarih"] <= gec_bit)]
+            if gec_df.empty or gec_df[col].sum() == 0:
+                return ""
+            gec_val = gec_df[col].sum()
+            fark = (bugun_val - gec_val) / gec_val * 100
+            rgb  = "239,68,68" if fark > 0 else "16,185,129"
+            renk_b = "#ef4444" if fark > 0 else "#10b981"
+            yon  = "▲" if fark > 0 else "▼"
+            etiket = f"+%{abs(fark):.1f}" if fark > 0 else f"-%{abs(fark):.1f}"
+            return (
+                f"<span style='background:rgba({rgb},0.15);border:1px solid {renk_b};"
+                f"border-radius:6px;padding:2px 10px;font-size:11px;font-weight:700;"
+                f"color:{renk_b};margin-left:8px;'>{yon} {etiket} geçen yıl</span>"
+            )
+
         # ── Tüketim ──
         if grafik_tip == "tuketim":
-            _bar_chart(secili_df, tarih_aralik_str)
+            _badge = _yoy_badge("Toplam_Hastane_Tuketim_kWh", secili_df, df, tarih_bas, tarih_bit)
+            st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+            _bar_chart(secili_df)
 
         # ── Chiller Set Trendi ──
         elif grafik_tip == "chiller":
@@ -524,7 +549,8 @@ with tab1:
         # ── Su Tüketimi ──
         elif grafik_tip == "su":
             if "Su_Tuketimi_m3" in secili_df.columns and not secili_df.empty:
-                st.caption(tarih_aralik_str)
+                _badge = _yoy_badge("Su_Tuketimi_m3", secili_df, df, tarih_bas, tarih_bit)
+                st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 su_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Su_Tuketimi_m3"].sum().reset_index()
                 su_df.columns = ["Tarih", "m3"]
                 fig_su = go.Figure(go.Bar(
@@ -570,7 +596,8 @@ with tab1:
         # ── MCC Tüketimi ──
         elif grafik_tip == "mcc":
             if "MCC_Tuketim_kWh" in secili_df.columns and not secili_df.empty:
-                st.caption(tarih_aralik_str)
+                _badge = _yoy_badge("MCC_Tuketim_kWh", secili_df, df, tarih_bas, tarih_bit)
+                st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 mcc_df = secili_df.groupby(secili_df["Tarih"].dt.date)["MCC_Tuketim_kWh"].sum().reset_index()
                 mcc_df.columns = ["Tarih", "kWh"]
                 fig_mcc = go.Figure(go.Bar(
@@ -595,7 +622,8 @@ with tab1:
             col_s = "Toplam_Sogutma_Tuketim_kWh" if "Toplam_Sogutma_Tuketim_kWh" in secili_df.columns \
                     else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in secili_df.columns else None)
             if col_s and not secili_df.empty:
-                st.caption(tarih_aralik_str)
+                _badge = _yoy_badge(col_s, secili_df, df, tarih_bas, tarih_bit)
+                st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 sog_df = secili_df.groupby(secili_df["Tarih"].dt.date)[col_s].sum().reset_index()
                 sog_df.columns = ["Tarih", "kWh"]
                 fig_sog = go.Figure(go.Bar(
@@ -618,7 +646,8 @@ with tab1:
         # ── Kazan Doğalgaz ──
         elif grafik_tip == "kazan":
             if "Kazan_Dogalgaz_m3" in secili_df.columns and not secili_df.empty:
-                st.caption(tarih_aralik_str)
+                _badge = _yoy_badge("Kazan_Dogalgaz_m3", secili_df, df, tarih_bas, tarih_bit)
+                st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 kaz_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Kazan_Dogalgaz_m3"].sum().reset_index()
                 kaz_df.columns = ["Tarih", "m3"]
                 fig_kaz = go.Figure(go.Bar(
