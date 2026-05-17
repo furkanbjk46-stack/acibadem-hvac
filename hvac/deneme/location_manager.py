@@ -24,8 +24,8 @@ LOCATION_CONFIG = {
     },
     "csv_columns": {
         "heating_temp_cols": [
-            "Mas1_Isitma_Temp_C", "Mas1_Kazan_Temp_C", "Mas1_Sogutma_Temp_C",
-            "Mas2_Isitma_Temp_C", "Mas2_Kazan_Temp_C", "Mas2_Sogutma_Temp_C"
+            "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
+            "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp"
         ]
     }
 }

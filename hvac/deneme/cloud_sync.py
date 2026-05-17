@@ -2,27 +2,6 @@
 # Lokasyondan Supabase'e enerji verisi senkronizasyonu
 # Bu dosya her lokasyonun acıbadem/ klasörüne kopyalanır
 
-# ⚠️ GELİŞTİRME ORTAMI — Supabase sync devre dışı
-# Bu klasör test/geliştirme amaçlıdır. Gerçek sync sadece
-# lokasyon PC'lerinde çalışır. Tüm fonksiyonlar stub olarak tanımlı.
-_DEV_MODE = True
-
-
-def run_sync(*args, **kwargs):
-    return False
-
-
-def start_background_sync(*args, **kwargs):
-    return
-
-
-def check_and_apply_update(*args, **kwargs):
-    return
-
-
-def send_heartbeat(*args, **kwargs):
-    return
-
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -31,7 +10,6 @@ if hasattr(sys.stderr, 'reconfigure'):
 
 import json
 import os
-import sys
 import time
 import threading
 import logging

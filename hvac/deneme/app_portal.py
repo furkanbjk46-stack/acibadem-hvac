@@ -19,7 +19,6 @@ import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
-import plotly.io as pio
 
 from fpdf import FPDF
 
@@ -2107,13 +2106,8 @@ def sanitize_ascii_for_pdf(s: str) -> str:
 
 
 def fig_to_png_bytes(fig) -> bytes:
-    """Plotly figürü PNG byte'a çevir. kaleido varsa kullan, yoksa matplotlib fallback."""
-    try:
-        return pio.to_image(fig, format="png", width=1400, height=700, scale=2)
-    except Exception:
-        pass
-
-    # ── Matplotlib fallback (kaleido/Linux sorunu için) ──────────────────
+    """Plotly figürü PNG byte'a çevir — matplotlib ile render eder."""
+    # ── Matplotlib render (kaleido kullanılmıyor) ────────────────────────
     try:
         import matplotlib
         matplotlib.use("Agg")

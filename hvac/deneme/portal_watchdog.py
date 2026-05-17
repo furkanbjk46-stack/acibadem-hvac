@@ -28,7 +28,7 @@ def start_portals():
     procs = []
 
     p1 = subprocess.Popen(
-        ["streamlit", "run", "app_portal.py",
+        [sys.executable, "-m", "streamlit", "run", "app_portal.py",
          "--server.port", "8501",
          "--server.headless", "true"],
         cwd=BASE_DIR
@@ -37,7 +37,7 @@ def start_portals():
     procs.append(p1)
 
     p2 = subprocess.Popen(
-        ["uvicorn", "main_portal:app",
+        [sys.executable, "-m", "uvicorn", "main_portal:app",
          "--host", "127.0.0.1",
          "--port", "8005"],
         cwd=BASE_DIR
@@ -46,21 +46,21 @@ def start_portals():
     procs.append(p2)
 
     p3 = subprocess.Popen(
-        ["python", "cloud_sync.py"],
+        [sys.executable, "cloud_sync.py"],
         cwd=BASE_DIR
     )
     logger.info(f"✅ Cloud Sync başlatıldı (PID: {p3.pid})")
     procs.append(p3)
 
     p4 = subprocess.Popen(
-        ["python", "data_collector.py"],
+        [sys.executable, "data_collector.py"],
         cwd=BASE_DIR
     )
     logger.info(f"✅ Veri Toplayici başlatıldı (PID: {p4.pid}) — Modbus + BACnet")
     procs.append(p4)
 
     p5 = subprocess.Popen(
-        ["python", "data_bridge.py"],
+        [sys.executable, "data_bridge.py"],
         cwd=BASE_DIR
     )
     logger.info(f"✅ Data Bridge başlatıldı (PID: {p5.pid}) — her gece 23:45 energy_data.csv'ye yazar")
