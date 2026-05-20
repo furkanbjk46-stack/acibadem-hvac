@@ -337,9 +337,9 @@
     <h1>HVAC Enerji Yönetim Sistemi</h1>
     <div class="subtitle">Gelecek Vizyon Belgesi</div>
     <div class="meta">
-      <span>📅 Son Güncelleme: 23 Mart 2026</span>
+      <span>📅 Son Güncelleme: 20 Mayıs 2026</span>
       <span>🚀 Proje Başlangıcı: 5 Ağustos 2025</span>
-      <span>⏱️ Toplam Süre: ~7 ay (kavramdan üretime)</span>
+      <span>⏱️ Toplam Süre: ~9.5 ay (kavramdan üretime)</span>
     </div>
   </div>
 
@@ -353,11 +353,12 @@ graph LR
     F1 --> F2["Faz 2&lt;br/&gt;Anomali Tespiti"]:::done
     F2 --> F3["Faz 3&lt;br/&gt;Tasarruf &amp; Rapor"]:::done
     F3 --> F4["Faz 4&lt;br/&gt;Operasyonel Zeka"]:::done
-    F4 --> F5["Faz 5&lt;br/&gt;Makine Öğrenmesi"]:::planned
-    F5 --> F6["Faz 6&lt;br/&gt;Otonom Kontrol"]:::future
+    F4 --> F5["Faz 5&lt;br/&gt;Makine Öğrenmesi"]:::done
+    F5 --> F55["Faz 5.5&lt;br/&gt;BACnet + Bulut"]:::done
+    F55 --> F6["Faz 6&lt;br/&gt;Otonom Kontrol"]:::active
 
     classDef done fill:#10b981,stroke:#065f46,color:#fff
-    classDef planned fill:#f59e0b,stroke:#92400e,color:#fff
+    classDef active fill:#f59e0b,stroke:#92400e,color:#fff
     classDef future fill:#6b7280,stroke:#374151,color:#fff
     </div>
 
@@ -371,13 +372,14 @@ graph LR
         <tr class="phase-row-done"><td>2</td><td><span class="badge badge-done">✅</span></td><td>Ocak 2026</td><td>Günlük anomali uyarısı</td></tr>
         <tr class="phase-row-done"><td>3 — 3.12</td><td><span class="badge badge-done">✅</span></td><td>Oca-Şub 2026</td><td>Tasarruf önerileri, PDF rapor, Dashboard, Grok UI</td></tr>
         <tr class="phase-row-done"><td>4 — 4.6</td><td><span class="badge badge-done">✅</span></td><td>Şubat 2026</td><td>Bakım kartları, m² metrik, maliyet, zamanlayıcı, AI göstergesi</td></tr>
-        <tr class="phase-row-done"><td><strong>5</strong></td><td><span class="badge badge-done">✅</span></td><td>Şub-Mart 2026</td><td><strong>ML Tüketim Tahmini, Kural 8-9, Kod Refactoring, Otonom Swarm AI</strong></td></tr>
-        <tr class="phase-row-future"><td>6</td><td><span class="badge badge-future">⬜</span></td><td>Gelecek</td><td>BMS entegrasyonu + otonom karar</td></tr>
+        <tr class="phase-row-done"><td><strong>5</strong></td><td><span class="badge badge-done">✅</span></td><td>Şub-Mart 2026</td><td><strong>ML Tüketim Tahmini, Kural 8-12, Otonom Swarm AI, Feedback Filtresi</strong></td></tr>
+        <tr class="phase-row-done"><td><strong>5.5</strong></td><td><span class="badge badge-done">✅</span></td><td>Nis-May 2026</td><td><strong>BACnet otomasyon (56 AHU), GM Merkez portal, Supabase bulut, Lisans sistemi, YoY badge, Personel bildirim + onay</strong></td></tr>
+        <tr class="phase-row-active"><td>6</td><td><span class="badge badge-active">🔄</span></td><td>Devam ediyor</td><td>BACnet write (setpoint), çok lokasyon BACnet (Altunizade), tam otonom karar</td></tr>
       </tbody>
     </table>
 
     <div class="alert alert-highlight">
-      Proje 5 Ağustos 2025'te başladı. Şu an Faz 5 (Makine Öğrenmesi) %100 tamamlandı. Faz 6 (Otonom) beklemede.
+      Proje 5 Ağustos 2025'te başladı. Faz 5 (ML) + Faz 5.5 (BACnet Otomasyon + Bulut Altyapı) tamamlandı. Faz 6 (Tam Otonom) devam ediyor.
     </div>
   </div>
 
@@ -386,8 +388,8 @@ graph LR
     <h2>🧠 Yapay Zeka Olgunluk Durumu</h2>
 
     <div style="text-align:center; margin-bottom: 20px;">
-      <div style="display:inline-block; background: linear-gradient(135deg, var(--blue), var(--purple)); color:white; padding: 14px 32px; border-radius: 12px; font-size: 22px; font-weight: 800;">
-        %78 — İleri Seviye 🚀
+      <div style="display:inline-block; background: linear-gradient(135deg, var(--green), var(--blue)); color:white; padding: 14px 32px; border-radius: 12px; font-size: 22px; font-weight: 800;">
+        %87 — Otonom Eşiği 🤖
       </div>
     </div>
 
@@ -398,9 +400,9 @@ graph LR
         <div style="font-size:11px; color:var(--text-light); margin-top:4px;">1000 gün veri (2023→), maksimum</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>💬 Geri Bildirim</span><span class="score" style="color:var(--orange);">10/25</span></div>
-        <div class="progress-bar"><div class="fill" style="width:40%; background:var(--orange);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Her öneri kabul/red'de +puan</div>
+        <div class="label"><span>💬 Geri Bildirim</span><span class="score" style="color:var(--orange);">14/25</span></div>
+        <div class="progress-bar"><div class="fill" style="width:56%; background:var(--orange);"></div></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Her öneri kabul/red'de +puan | Onay workflow aktif</div>
       </div>
       <div class="progress-item">
         <div class="label"><span>⚙️ Özellik Olgunluğu</span><span class="score" style="color:var(--green);">30/30</span></div>
@@ -408,14 +410,14 @@ graph LR
         <div style="font-size:11px; color:var(--text-light); margin-top:4px;">9 temel özellik aktif, maksimum</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🚀 İleri AI</span><span class="score" style="color:var(--orange);">13/20</span></div>
-        <div class="progress-bar"><div class="fill" style="width:65%; background:var(--orange);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">ML Tahmin, Dinamik COP, Swarm AI eklendi</div>
+        <div class="label"><span>🚀 İleri AI</span><span class="score" style="color:var(--green);">19/20</span></div>
+        <div class="progress-bar"><div class="fill" style="width:95%; background:var(--green);"></div></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">BACnet otomasyon, GM Merkez, bulut altyapı tamamlandı</div>
       </div>
     </div>
 
     <div style="margin-top:4px; text-align:center; font-size:13px; color:var(--text-light);">
-      🎯 <strong>Sonraki Hedef:</strong> %80+ Otonom seviye (BMS entegrasyonu ile)
+      🎯 <strong>Sonraki Hedef:</strong> %90+ Tam Otonom (BACnet write ile setpoint kilitleme + Altunizade BACnet)
     </div>
 
     <h3>Seviye Haritası</h3>
@@ -423,8 +425,8 @@ graph LR
       <div class="level-step" style="background:var(--gray);">🌱 Başlangıç<br>0-19%</div>
       <div class="level-step" style="background:var(--purple);">📈 Gelişen<br>20-39%</div>
       <div class="level-step" style="background:var(--orange);">🧠 Olgun<br>40-59%</div>
-      <div class="level-step current" style="background:var(--blue);">🚀 İleri<br>60-79%<br><small>⬆️ BURADAYIZ</small></div>
-      <div class="level-step" style="background:var(--green);">🤖 Otonom<br>80-100%</div>
+      <div class="level-step" style="background:var(--blue);">🚀 İleri<br>60-79%</div>
+      <div class="level-step current" style="background:var(--green);">🤖 Otonom<br>80-100%<br><small>⬆️ BURADAYIZ</small></div>
     </div>
   </div>
 
@@ -582,27 +584,35 @@ graph TD
 
   <!-- 5. FAZ 6 -->
   <div class="section">
-    <h2>⬜ Faz 6: Otonom Kontrol (Gelecek)</h2>
+    <h2>🔄 Faz 6: Otonom Kontrol (Devam Ediyor)</h2>
+    <div class="alert alert-info" style="margin-bottom:12px;">
+      <strong>ℹ️ Kısmi tamamlandı:</strong> BACnet okuma (56 AHU) aktif. BACnet write (setpoint gönderimi) ve Altunizade BACnet entegrasyonu sıradaki adımlar.
+    </div>
     <div class="mermaid">
 graph TD
-    subgraph "Faz 6 — Otonom Kontrol ⬜"
-        D1["BMS API Entegrasyonu"]:::future
-        D2["Gerçek Zamanlı Veri"]:::future
-        D3["FCU Set Kilitleme"]:::future
-        D4["Mevsimsel Basınç Otomatik Geçiş"]:::future
+    subgraph "Faz 6 — Otonom Kontrol"
+        D0["BACnet Okuma&lt;br/&gt;✅ 56 AHU, 08:30"]:::done
+        D1["BACnet Write&lt;br/&gt;🔄 Setpoint Gönderim"]:::active
+        D2["Altunizade BACnet&lt;br/&gt;⬜ ATZ Entegrasyon"]:::future
+        D3["FCU Kilitleme&lt;br/&gt;⬜ Otomatik Konfor"]:::future
+        D4["Tam Otonom&lt;br/&gt;⬜ Self-Optimize"]:::future
     end
 
-    D1 --> D2 --> D3 --> D4
+    D0 --> D1 --> D2 --> D3 --> D4
 
+    classDef done fill:#10b981,stroke:#065f46,color:#fff
+    classDef active fill:#f59e0b,stroke:#92400e,color:#fff
     classDef future fill:#6b7280,stroke:#374151,color:#fff
     </div>
     <table>
-      <thead><tr><th>Bileşen</th><th>Açıklama</th><th>Bağımlılık</th></tr></thead>
+      <thead><tr><th>Bileşen</th><th>Açıklama</th><th>Durum</th></tr></thead>
       <tbody>
-        <tr><td>BMS API</td><td>Gerçek zamanlı veri akışı</td><td>BMS erişimi</td></tr>
-        <tr><td>Otonom Kontrol</td><td>FCU set değerlerini kilitleme</td><td>BMS API</td></tr>
-        <tr><td>Transfer Hatları</td><td>Mevsimsel basınç otomatik geçiş</td><td>BMS API</td></tr>
-        <tr><td>Multi-tenant</td><td>Çoklu hastane desteği</td><td>Mimari</td></tr>
+        <tr><td>BACnet Okuma (Maslak)</td><td>56 AHU otomatik okuma, 08:30 trigger</td><td>✅ Aktif</td></tr>
+        <tr><td>BACnet Write</td><td>Analiz sonrası setpoint BMS'e gönderim</td><td>🔄 Geliştiriliyor</td></tr>
+        <tr><td>Altunizade BACnet</td><td>ATZ lokasyonu AHU noktaları eklenmeli</td><td>⬜ Bekliyor</td></tr>
+        <tr><td>Kolektör Inlet Noktası</td><td>KOLLEKTOR DONUS SICAKLIK BACnet nokta ekleme</td><td>⬜ Saha ziyareti</td></tr>
+        <tr><td>FCU Set Kilitleme</td><td>FCU setpoint otomatik optimize</td><td>⬜ Gelecek</td></tr>
+        <tr><td>Multi-lokasyon otonom</td><td>Hem Maslak hem ATZ özerk çalışma</td><td>⬜ Gelecek</td></tr>
       </tbody>
     </table>
   </div>
@@ -632,10 +642,11 @@ graph LR
       <thead><tr><th>Katman</th><th>Şu An</th><th>Faz 5 Sonrası</th></tr></thead>
       <tbody>
         <tr><td>Veri</td><td>✅ 1000 gün → analiz</td><td>✅ + mevsimsel desen</td></tr>
-        <tr><td>Kurallar</td><td>⚙️ 7 sabit kural</td><td>⚙️ 15 kural (8 yeni)</td></tr>
-        <tr><td>Öğrenme</td><td>📝 Feedback kaydediliyor</td><td>🧠 Filtreleme + eşik ayarlama</td></tr>
-        <tr><td>Öneri</td><td>💡 Hep aynı öneriler</td><td>💡 Kişiselleştirilmiş + dinamik</td></tr>
-        <tr><td>Tahmin</td><td>✅ ML Motor (GradientBoosting)</td><td>📈 Hava API + proaktif uyarı</td></tr>
+        <tr><td>Kurallar</td><td>⚙️ 12 kural aktif (8-12 eklendi)</td><td>⚙️ 15+ kural (feedback bazlı)</td></tr>
+        <tr><td>Öğrenme</td><td>🧠 Feedback filtreleme aktif</td><td>🤖 Eşik kişiselleştirme</td></tr>
+        <tr><td>Öneri</td><td>💡 Dinamik + bağlamsal öneriler</td><td>💡 Tam kişiselleştirilmiş</td></tr>
+        <tr><td>Tahmin</td><td>✅ ML Motor (GradientBoosting) aktif</td><td>📈 Hava API + proaktif uyarı</td></tr>
+        <tr><td>Otomasyon</td><td>✅ BACnet okuma 08:30 otomatik</td><td>🤖 BACnet write + FCU kilitleme</td></tr>
       </tbody>
     </table>
   </div>
@@ -708,10 +719,22 @@ gantt
         Bakım Kartları + AUTO Fix     :done, f4a, 2026-02-12, 2026-02-12
         Metrik + Raporlama + Maliyet  :done, f4b, 2026-02-17, 2026-02-20
 
-    section Faz 5 — ML (Planlandı)
-        Yeni Kurallar (8-12)          :active, f5a, 2026-02-21, 2026-04-01
-        Feedback Filtre               :f5b, 2026-04-01, 2026-05-01
-        İleri AI Altyapı              :f5c, 2026-05-01, 2026-06-01
+    section Faz 5 — ML (Tamamlandı)
+        Yeni Kurallar (8-12)          :done, f5a, 2026-02-21, 2026-03-15
+        Tüketim Tahmini ML            :done, f5b, 2026-03-01, 2026-03-20
+        Swarm AI + Feedback           :done, f5c, 2026-03-10, 2026-03-31
+
+    section Faz 5.5 — BACnet + Bulut (Tamamlandı)
+        ahu_collector + nokta konfig  :done, f55a, 2026-04-01, 2026-04-20
+        cloud_sync 08:30 trigger      :done, f55b, 2026-04-10, 2026-04-20
+        GM Merkez portal              :done, f55c, 2026-04-15, 2026-05-05
+        Lisans sistemi                :done, f55d, 2026-05-01, 2026-05-10
+        Supabase güncellemeler        :done, f55e, 2026-04-20, 2026-05-15
+        YoY badge + onay workflow     :done, f55f, 2026-05-05, 2026-05-20
+
+    section Faz 6 — Otonom (Devam)
+        BACnet Write setpoint         :active, f6a, 2026-05-20, 2026-07-01
+        Altunizade BACnet             :f6b, 2026-06-01, 2026-08-01
     </div>
   </div>
 
@@ -869,6 +892,55 @@ gantt
         <li>Vizyon Belgesi revizyon (mermaid diyagramları)</li>
       </ul>
     </div>
+
+    <h3 style="color:var(--green-dark); margin-top: 30px;">🤖 Faz 5 + 5.5: ML ve Bulut Altyapı (Mart – Mayıs 2026)</h3>
+
+    <div class="log-entry">
+      <h4>📌 Mart 2026 — ML Tamamlama ve Otonom Swarm</h4>
+      <ul>
+        <li>ML Tüketim Tahmini motoru (GradientBoosting) üretimde</li>
+        <li>Kural 8-12 tamamlandı: mevsimsel chiller geçişi, hafta sonu, kojen-kazan, verimlilik takibi</li>
+        <li>Otonom Swarm AI stabilizasyonu</li>
+        <li>Feedback filtresi altyapısı (kabul/red kaydı aktif)</li>
+        <li>Faz 5 %100 tamamlandı — AI olgunluk %78'e ulaştı</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 Nisan 2026 — BACnet Otomasyon (Maslak 56 AHU)</h4>
+      <ul>
+        <li>ahu_collector.py yazıldı — BACnet/IP UDP socket ile Desigo BMS okuma</li>
+        <li>ahu_nokta_konfig.json — 56 AHU için 280 BACnet nokta konfigürasyonu</li>
+        <li>cloud_sync.py güncellendi — her gün 08:30'da HVAC analizi otomatik tetikleniyor</li>
+        <li>Otomatik tip algılama: AHU, FCU, Kolektör, Chiller tiplerini BACnet verisinden tanıma</li>
+        <li>Supabase bildirimler tablosu — analiz bitince personele push mesajı</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 Nisan-Mayıs 2026 — GM Merkez Portalı</h4>
+      <ul>
+        <li>merkez/app_merkez.py — Streamlit Cloud'da çoklu lokasyon özet ekranı</li>
+        <li>merkez/pages/lokasyon_detay.py — Maslak + Altunizade detay sayfaları</li>
+        <li>YoY (geçen yıl aynı dönem) karşılaştırma badge'leri: 5 grafikte kırmızı/yeşil gösterge</li>
+        <li>Harita görünümü ile lokasyon seçimi</li>
+        <li>GitHub main branch → Streamlit Cloud otomatik deploy</li>
+        <li>requirements.txt repo kökünde (Streamlit Cloud uyumlu)</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 Mayıs 2026 — Bulut Altyapı ve Güvenlik</h4>
+      <ul>
+        <li>Supabase güncellemeler tablosu — uzak yama mekanizması (dosyaları JSON'da taşıma)</li>
+        <li>cloud_sync.py heartbeat — lokasyon PC'leri güncellemeleri otomatik çekiyor</li>
+        <li>Lisans sistemi (lisans.py) — Windows WMIC UUID → Supabase lisanslar doğrulama</li>
+        <li>run_portal.py lisans guard — lisanssız makinede program başlamıyor</li>
+        <li>data_collector.py düzeltmeleri: MCC-3 analizörü eklendi, xlsx typo düzeltildi</li>
+        <li>Üç-kanal güncelleme problemi tespit edildi ve çözüldü (artık yalnızca geliştirme makinesi)</li>
+        <li>Personel onay workflow: Kabul → Excel indirme → Saha müdahalesi</li>
+      </ul>
+    </div>
   </div>
 
   <!-- 9. TAMAMLANAN ÖZELLİKLER -->
@@ -908,13 +980,39 @@ gantt
         </ul>
       </div>
       <div class="feature-card">
-        <h4>4. Portal & UI (7 özellik)</h4>
+        <h4>4. Portal & UI (9 özellik)</h4>
         <ul>
           <li>FastAPI + Streamlit dual portal</li>
           <li>Grok-style animasyonlu UI</li>
           <li>Bakım Kartları modalı + arama</li>
           <li>AI İlerleme Göstergesi</li>
+          <li>Personel onay + Excel indirme</li>
           <li>Kolay kurulum (KURULUM.bat)</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h4>5. BACnet Otomasyon (6 özellik)</h4>
+        <ul>
+          <li>ahu_collector.py — UDP socket BACnet okuma</li>
+          <li>ahu_nokta_konfig.json — 280 nokta, 56 AHU</li>
+          <li>cloud_sync.py 08:30 HVAC tetikleyici</li>
+          <li>Otomatik tip algılama (AHU/FCU/Chiller)</li>
+          <li>Supabase bildirimler push mesajı</li>
+          <li>ReadProperty / WriteProperty altyapısı</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h4>6. Bulut Altyapı + GM Merkez (9 özellik)</h4>
+        <ul>
+          <li>Supabase güncellemeler — uzak yama mekanizması</li>
+          <li>Lisans sistemi (makine UUID doğrulama)</li>
+          <li>GM Merkez portal (Streamlit Cloud)</li>
+          <li>Çok lokasyon: Maslak + Altunizade</li>
+          <li>YoY karşılaştırma badge (5 grafik)</li>
+          <li>GitHub → Streamlit Cloud otomatik deploy</li>
+          <li>Supabase bildirimler tablosu</li>
+          <li>run_portal.py lisans guard</li>
+          <li>data_collector.py Modbus (22 analizör)</li>
         </ul>
       </div>
     </div>
@@ -923,10 +1021,11 @@ gantt
   <!-- FOOTER -->
   <div class="footer">
     <strong>Sonuç:</strong> Proje <strong>5 Ağustos 2025'te</strong> bir fikirle başladı.
-    <strong>~5 ay ChatGPT ile kavram doğrulama ve prototipleme</strong> (Faz 0),
-    ardından <strong>Antigravity ile tam geliştirme</strong> (Faz 1-5).
-    Toplam <strong>7,5 ayda 60+ özellik</strong> aktif, <strong>%78 AI olgunluk</strong>.
-    ML tüketim tahmini ve Otonom Swarm stabilizasyonu tamamlandı. Sırada BMS Faz 6! 🚀
+    ~5 ay Faz 0 kavram doğrulama (ChatGPT), ardından Faz 1-5 tam geliştirme (Antigravity),
+    ardından <strong>Faz 5.5: BACnet otomasyon + Supabase bulut + GM Merkez portalı</strong>.
+    Toplam <strong>~9,5 ayda 80+ özellik</strong> aktif, <strong>%87 AI olgunluk</strong>.
+    56 AHU BACnet okuma, uzak yama mekanizması, lisans sistemi, GM Merkez portalı tamamlandı.
+    Sırada: BACnet write (setpoint), Altunizade BACnet entegrasyonu! 🤖🚀
   </div>
 
 </div>

@@ -441,8 +441,9 @@
             <h1>HVAC Enerji Yönetim Sistemi</h1>
             <div class="subtitle">Nasıl Çalışır? — Sistem Tanıtım Raporu</div>
             <div class="tagline">
-                Acıbadem Hastanesi HVAC ve enerji sistemlerinin yapay zeka destekli analizi,
-                anomali tespiti ve tasarruf önerileri — Hastane konforunu koruyarak enerji maliyetlerini düşürme hedefi.
+                Acıbadem Hastanesi HVAC ve enerji sistemlerinin yapay zeka destekli otomatik analizi —
+                BACnet/Modbus entegrasyonu, Supabase bulut altyapısı, çok lokasyon (Maslak + Altunizade) yönetimi
+                ve GM Merkez portalı ile hastane konforunu koruyarak enerji maliyetlerini düşürme hedefi.
             </div>
         </div>
 
@@ -455,59 +456,67 @@
 
             <div class="mermaid">
                 graph TD
-                subgraph "📊 Veri Kaynakları"
-                CSV["CSV/XLSX<br />HVAC Ekipman Verisi"]
-                ENERGY["Enerji Veritabanı<br />Günlük Tüketim"]
-                BMS["BMS/SCADA<br />Gerçek Zamanlı"]
+                subgraph "🏭 Saha Katmanı"
+                BACNET["BACnet/IP<br/>Desigo BMS<br/>56 AHU/FCU"]
+                MODBUS["Modbus TCP<br/>22 Analizör<br/>Janitza + Siemens"]
                 end
 
-                subgraph "⚙️ Analiz Motoru"
-                ENGINE["Engine v2<br />ΔT Analiz"]
-                RULES["Kural Motoru<br />15+ Kural"]
-                SAVINGS["Tasarruf Motoru<br />7 Maliyet Kuralı"]
+                subgraph "🖥️ Lokasyon PC (Maslak / Altunizade)"
+                COLL["ahu_collector.py<br/>BACnet Okuma (08:30)"]
+                DC["data_collector.py<br/>Modbus (30 dk)"]
+                PORTAL["FastAPI Portal<br/>HVAC Analiz UI"]
+                DASH["Streamlit Dashboard<br/>Enerji Rapor"]
+                SYNC["cloud_sync.py<br/>Heartbeat + Güncelleme"]
                 end
 
-                subgraph "📱 Kullanıcı Arayüzü"
-                PORTAL["FastAPI Portal<br />HVAC Analiz UI"]
-                DASH["Streamlit Dashboard<br />Enerji Rapor"]
-                PDF["PDF Raporlar<br />Günlük + Aylık"]
+                subgraph "☁️ Supabase Bulut"
+                GUNC["guncellemeler<br/>Uzak Yama"]
+                LIS["lisanslar<br/>Makine ID Doğrulama"]
+                BIL["bildirimler<br/>Personel Push"]
                 end
 
-                CSV --> ENGINE
-                ENERGY --> SAVINGS
-                BMS -.->|"Faz 6"| ENGINE
-                ENGINE --> RULES
-                RULES --> PORTAL
-                SAVINGS --> DASH
-                PORTAL --> PDF
-                DASH --> PDF
+                subgraph "🌐 GM Merkez Portal"
+                MERKEZ["Streamlit Cloud<br/>Çok Lokasyon Görünümü"]
+                end
 
-                style CSV fill:#3b82f6,stroke:#1e40af,color:#fff
-                style ENERGY fill:#3b82f6,stroke:#1e40af,color:#fff
-                style BMS fill:#6b7280,stroke:#374151,color:#fff
-                style ENGINE fill:#f59e0b,stroke:#92400e,color:#fff
-                style RULES fill:#f59e0b,stroke:#92400e,color:#fff
-                style SAVINGS fill:#f59e0b,stroke:#92400e,color:#fff
+                BACNET -->|"BACnet UDP"| COLL
+                MODBUS -->|"TCP/502"| DC
+                COLL --> PORTAL
+                DC --> DASH
+                SYNC -->|"kontrol"| GUNC
+                SYNC -->|"lisans"| LIS
+                PORTAL -->|"bildirim"| BIL
+                GUNC -.->|"patch"| SYNC
+                MERKEZ -.->|"Supabase API"| GUNC
+
+                style BACNET fill:#3b82f6,stroke:#1e40af,color:#fff
+                style MODBUS fill:#3b82f6,stroke:#1e40af,color:#fff
+                style COLL fill:#f59e0b,stroke:#92400e,color:#fff
+                style DC fill:#f59e0b,stroke:#92400e,color:#fff
                 style PORTAL fill:#10b981,stroke:#065f46,color:#fff
                 style DASH fill:#10b981,stroke:#065f46,color:#fff
-                style PDF fill:#10b981,stroke:#065f46,color:#fff
+                style SYNC fill:#f59e0b,stroke:#92400e,color:#fff
+                style GUNC fill:#8b5cf6,stroke:#5b21b6,color:#fff
+                style LIS fill:#8b5cf6,stroke:#5b21b6,color:#fff
+                style BIL fill:#8b5cf6,stroke:#5b21b6,color:#fff
+                style MERKEZ fill:#14b8a6,stroke:#0d9488,color:#fff
             </div>
 
             <div class="info-grid">
                 <div class="info-card">
                     <div class="icon">🏥</div>
-                    <div class="value">106.000 m²</div>
-                    <div class="label">Toplam Bina Alanı</div>
+                    <div class="value">2 Lokasyon</div>
+                    <div class="label">Maslak + Altunizade</div>
                 </div>
                 <div class="info-card">
-                    <div class="icon">📊</div>
-                    <div class="value">1000 gün</div>
-                    <div class="label">Tarihsel Veri (2023→)</div>
+                    <div class="icon">🌡️</div>
+                    <div class="value">56 AHU</div>
+                    <div class="label">BACnet Otomatik Okuma</div>
                 </div>
                 <div class="info-card">
                     <div class="icon">⚙️</div>
-                    <div class="value">60+ ünite</div>
-                    <div class="label">Takip Edilen Ekipman</div>
+                    <div class="value">80+ özellik</div>
+                    <div class="label">Aktif Sistem Kapasitesi</div>
                 </div>
             </div>
         </div>
@@ -573,15 +582,14 @@
                 analizi yapar
                 ve sorunları tespit ederek <strong>aksiyon önerileri</strong> üretir.</p>
 
-            <h3>Analiz Akışı</h3>
+            <h3>Otomatik Analiz Akışı (Günlük 08:30)</h3>
             <div class="mermaid">
                 graph LR
-                A["📥 CSV Yükleme<br />AHU/FCU/Chiller/Kolektör"]:::input --> B["🔍 Otomatik Tip Algılama<br />Equipment
-                Type"]:::proc
-                B --> C["🌡️ ΔT Hesaplama<br />Su + Hava ΔT"]:::proc
-                C --> D["📏 Band Kontrolü<br />Hedef ΔT ± Tolerans"]:::proc
-                D --> E["⚠️ Teşhis<br />15+ Kural Eşleştirme"]:::proc
-                E --> F["💡 Aksiyon Önerisi<br />+ Operatör Talimatı"]:::output
+                A["🌐 BACnet/IP<br />Desigo BMS<br />56 AHU/FCU"]:::input --> B["📥 ahu_collector.py<br />Otomatik Okuma<br />(cloud_sync tetikler)"]:::proc
+                B --> C["🔍 Tip Algılama<br />+ ΔT Hesaplama<br />Su + Hava ΔT"]:::proc
+                C --> D["📏 15+ Kural<br />Band Kontrolü<br />Severity Skoru"]:::proc
+                D --> E["📲 Personel Bildirimi<br />Supabase bildirimler"]:::output
+                E --> F["✅ Onay + Excel<br />İndir / Saha Uygula"]:::output
 
                 classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
                 classDef proc fill:#f59e0b,stroke:#92400e,color:#fff
@@ -1172,7 +1180,7 @@
 
             <div class="two-col">
                 <div>
-                    <h4>Backend</h4>
+                    <h4>Backend & Protokoller</h4>
                     <table>
                         <tbody>
                             <tr>
@@ -1185,7 +1193,7 @@
                             </tr>
                             <tr>
                                 <td>📊 Streamlit</td>
-                                <td>Enerji dashboard</td>
+                                <td>Enerji dashboard + GM Merkez portal</td>
                             </tr>
                             <tr>
                                 <td>🐼 Pandas</td>
@@ -1200,95 +1208,132 @@
                                 <td>PDF rapor üretimi</td>
                             </tr>
                             <tr>
-                                <td>🖼️ Kaleido</td>
-                                <td>Plotly → PNG dönüşüm</td>
+                                <td>🖼️ Matplotlib (Agg)</td>
+                                <td>PDF içi grafik → PNG dönüşüm</td>
+                            </tr>
+                            <tr>
+                                <td>🌐 BACnet/IP (UDP)</td>
+                                <td>Desigo BMS entegrasyonu (56 AHU)</td>
+                            </tr>
+                            <tr>
+                                <td>🔌 Modbus TCP</td>
+                                <td>22 enerji analizörü okuma</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
                 <div>
-                    <h4>Frontend & Config</h4>
+                    <h4>Bulut & Altyapı</h4>
                     <table>
                         <tbody>
                             <tr>
-                                <td>🌐 HTML/CSS/JS</td>
-                                <td>HVAC portali UI</td>
+                                <td>☁️ Supabase</td>
+                                <td>Bulut DB — güncellemeler, lisanslar, bildirimler</td>
                             </tr>
                             <tr>
-                                <td>🎨 Glassmorphism</td>
-                                <td>Modern dark theme</td>
+                                <td>🐙 GitHub</td>
+                                <td>Kod deposu + CI/CD (main → Streamlit Cloud)</td>
+                            </tr>
+                            <tr>
+                                <td>🌐 Streamlit Cloud</td>
+                                <td>GM Merkez portalı otomatik deploy</td>
+                            </tr>
+                            <tr>
+                                <td>🌐 HTML/CSS/JS</td>
+                                <td>HVAC portali UI (dark glassmorphism)</td>
                             </tr>
                             <tr>
                                 <td>📁 JSON Config</td>
-                                <td>Ayarlar + bakım kartları</td>
+                                <td>ahu_nokta_konfig.json — 280 BACnet nokta</td>
                             </tr>
                             <tr>
-                                <td>📊 CSV/XLSX</td>
-                                <td>Veri giriş/çıkış</td>
+                                <td>⏰ cloud_sync.py</td>
+                                <td>Heartbeat + 08:30 HVAC tetikleyici + yama</td>
                             </tr>
                             <tr>
-                                <td>⏰ Daemon Timer</td>
-                                <td>Otomatik rapor zamanlayıcı</td>
-                            </tr>
-                            <tr>
-                                <td>🧠 ML JSON</td>
-                                <td>Eğitim verisi kaydı</td>
-                            </tr>
-                            <tr>
-                                <td>🤖 AI Progress</td>
-                                <td>Olgunluk göstergesi</td>
+                                <td>🔐 lisans.py</td>
+                                <td>Makine UUID → Supabase lisans doğrulama</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <h3>Saha Tecrübesi Kuralları</h3>
-            <p>3 yıllık HVAC saha tecrübesiyle oluşturulan kurallar, her ekipman için özelleştirilmiş eşik değerleri
-                sağlar:</p>
+        </div>
+
+        <!-- ========== 11. BULUT ALTYAPI ========== -->
+        <div class="section page-break">
+            <h2>☁️ Bulut Altyapı ve Çok Lokasyon Yönetimi</h2>
+            <p>Sistem, iki lokasyonu (Maslak + Altunizade) tek merkezden yönetmek için Supabase tabanlı bulut altyapısı kullanır.</p>
+
+            <div class="feature-grid">
+                <div class="feature-card" style="border-left: 4px solid var(--purple);">
+                    <h4>🔄 Uzak Güncelleme Mekanizması</h4>
+                    <ul>
+                        <li>Supabase <code>guncellemeler</code> tablosuna yama insert edilir</li>
+                        <li>cloud_sync.py lokasyonda heartbeat çalıştırır</li>
+                        <li>Yeni dosyaları otomatik indirir ve uygular</li>
+                        <li>USB ile manuel güncelleme (GUNCELLE.bat) de desteklenir</li>
+                        <li>Her lokasyon için bağımsız versiyon takibi</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="border-left: 4px solid var(--teal);">
+                    <h4>🌐 GM Merkez Portalı</h4>
+                    <ul>
+                        <li>Streamlit Cloud'da otomatik deploy (GitHub push → canlı)</li>
+                        <li>Maslak + Altunizade lokasyonlarını tek ekranda göster</li>
+                        <li>Yıl-üzeri-yıl (YoY) tüketim karşılaştırma badge'leri</li>
+                        <li>Harita görünümü ile lokasyon seçimi</li>
+                        <li>İnternetle her yerden erişim</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="border-left: 4px solid var(--red);">
+                    <h4>🔐 Lisans Sistemi</h4>
+                    <ul>
+                        <li>Windows WMIC UUID ile makine kimliği alınır</li>
+                        <li>Supabase <code>lisanslar</code> tablosunda doğrulama</li>
+                        <li>run_portal.py başlatmada otomatik kontrol</li>
+                        <li>Ağ hatasında geçiş yapılır (hastane içi öncelik)</li>
+                        <li>Yetkisiz makinede program başlamaz</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="border-left: 4px solid var(--orange);">
+                    <h4>📲 Personel Bildirim ve Onay</h4>
+                    <ul>
+                        <li>Günlük 08:30 HVAC analizi tamamlanınca bildirim gönderilir</li>
+                        <li>Supabase <code>bildirimler</code> tablosuna kayıt</li>
+                        <li>Portalde öneri listesi: Kabul / Reddet</li>
+                        <li>Onaylanan öneriler Excel olarak indirilebilir</li>
+                        <li>Saha ekibi indirilen listeye göre müdahale yapar</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Supabase Tablo Yapısı</h3>
             <table>
                 <thead>
-                    <tr>
-                        <th>Kontrol</th>
-                        <th>Kural</th>
-                        <th>Eşik</th>
-                    </tr>
+                    <tr><th>Tablo</th><th>Amaç</th><th>Örnek Kullanım</th></tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>FCU Setpoint</td>
-                        <td>Oda setpoint 21-26°C bandında olmalı</td>
-                        <td>Min 21°C / Max 26°C</td>
+                        <td>📦 <strong>guncellemeler</strong></td>
+                        <td>Uzak yama (dosya içerikleri JSON'da)</td>
+                        <td>app_portal.py v3.15 Maslak'a gönderildi</td>
                     </tr>
                     <tr>
-                        <td>AHU SAT (Soğutma)</td>
-                        <td>Üfleme sıcaklığı ≤ 18°C olmalı</td>
-                        <td>Hedef 18°C ± 2°C</td>
+                        <td>🔐 <strong>lisanslar</strong></td>
+                        <td>Makine ID + lokasyon bazlı erişim kontrolü</td>
+                        <td>Maslak PC UUID → aktif=true</td>
                     </tr>
                     <tr>
-                        <td>AHU SAT (Isıtma)</td>
-                        <td>Üfleme sıcaklığı ≥ 28°C olmalı</td>
-                        <td>Hedef 28°C ± 2°C</td>
+                        <td>📲 <strong>bildirimler</strong></td>
+                        <td>Personele push mesajları</td>
+                        <td>"08:30 HVAC analizi tamamlandı — 3 kritik uyarı"</td>
                     </tr>
                     <tr>
-                        <td>Transfer (FCU Soğutma)</td>
-                        <td>Su sıcaklığı ~15°C civarı</td>
-                        <td>Hedef 15°C ± 2°C</td>
-                    </tr>
-                    <tr>
-                        <td>Transfer (AHU Soğutma)</td>
-                        <td>Su sıcaklığı ~13°C civarı</td>
-                        <td>Hedef 13°C ± 2°C</td>
-                    </tr>
-                    <tr>
-                        <td>Transfer (FCU Isıtma)</td>
-                        <td>Su sıcaklığı ~50°C civarı</td>
-                        <td>Hedef 50°C ± 2°C</td>
-                    </tr>
-                    <tr>
-                        <td>Transfer (AHU Isıtma)</td>
-                        <td>Su sıcaklığı ~60°C civarı</td>
-                        <td>Hedef 60°C ± 2°C</td>
+                        <td>📍 <strong>lokasyonlar</strong></td>
+                        <td>Lokasyon metadata (harita koordinatları, isim)</td>
+                        <td>maslak, altunizade koordinatları</td>
                     </tr>
                 </tbody>
             </table>
@@ -1296,40 +1341,40 @@
 
         <!-- ========== 10. ÖĞRETİCİ — NASIL KULLANILIR ========== -->
         <div class="section">
-            <h2>📖 Nasıl Kullanılır?</h2>
+            <h2>📖 Sistem Nasıl Çalışır? (Günlük Rutin)</h2>
 
             <div class="mermaid">
                 graph LR
-                S1["1️⃣ Veri Topla<br />CSV/XLSX hazırla"]:::step --> S2["2️⃣ Yükle<br />HVAC Portal'a"]:::step
-                S2 --> S3["3️⃣ Analiz Et<br />Otomatik sonuç"]:::step
-                S3 --> S4["4️⃣ İncele<br />Öneri tablosu"]:::step
-                S4 --> S5["5️⃣ Uygula<br />Sahada müdahale"]:::step
-                S5 --> S6["6️⃣ Geri Bildir<br />Kabul/Reddet"]:::step
+                S1["☀️ 08:30<br />cloud_sync tetikler"]:::step --> S2["🌐 BACnet<br />56 AHU okunur"]:::step
+                S2 --> S3["🔍 Analiz<br />15+ kural uygulanır"]:::step
+                S3 --> S4["📲 Bildirim<br />Personele push"]:::step
+                S4 --> S5["✅ Onay<br />Kabul / Reddet"]:::step
+                S5 --> S6["📥 Excel<br />İndir + Sahaya git"]:::step
 
                 classDef step fill:#3b82f6,stroke:#1e40af,color:#fff
             </div>
 
             <div class="two-col">
                 <div>
-                    <h4>HVAC Portalı (FastAPI)</h4>
+                    <h4>HVAC Portalı (FastAPI — Lokasyon PC)</h4>
                     <ul style="font-size:13px; padding-left:18px; color:var(--text-light);">
-                        <li>CSV/XLSX dosyası yükle</li>
-                        <li>Otomatik ekipman tipi ve mod algılama</li>
-                        <li>ΔT analiz sonuçlarını tablo + renkle gör</li>
+                        <li>Günlük 08:30'da BACnet okuma otomatik başlar</li>
+                        <li>56 AHU/FCU'nun sıcaklık + vana verisi alınır</li>
+                        <li>ΔT analiz sonuçları tablo + renk kodlamasıyla gösterilir</li>
                         <li>Her uyarı için operatör talimatı (adım adım)</li>
-                        <li>Recommendations.csv + write_plan.csv indir</li>
-                        <li>Feedback ver: kabul / reddet</li>
+                        <li>Öneriler onaylanır → Excel indirilir → sahaya gidilir</li>
+                        <li>Geri bildirim: kabul / reddet (AI öğrenme kaydı)</li>
                     </ul>
                 </div>
                 <div>
-                    <h4>Enerji Dashboardı (Streamlit)</h4>
+                    <h4>Enerji Dashboardı (Streamlit — Lokasyon PC)</h4>
                     <ul style="font-size:13px; padding-left:18px; color:var(--text-light);">
-                        <li>Günlük enerji verisi gir veya Excel yükle</li>
-                        <li>KPI kartlarını kontrol et</li>
-                        <li>Trend grafiklerini incele</li>
+                        <li>Modbus analizörler 30 dakikada bir otomatik okunur</li>
+                        <li>KPI kartları: Tüketim, Chiller, Gaz, Su, MCC</li>
+                        <li>Trend grafikleri + YoY karşılaştırma</li>
                         <li>Tasarruf önerilerini gözden geçir</li>
                         <li>Bakım kartlarını güncelle</li>
-                        <li>PDF rapor indir veya otomatik üret</li>
+                        <li>PDF rapor indir veya 17:00'de otomatik üretilir</li>
                     </ul>
                 </div>
             </div>
@@ -1338,8 +1383,9 @@
         <!-- FOOTER -->
         <div class="footer">
             <strong>HVAC Enerji Yönetim Sistemi</strong> — Acıbadem Hastanesi<br>
-            106.000 m² | 60+ ekipman | 1000 gün veri | 15+ kural | 7 tasarruf kuralı<br>
-            <em>Yapay zeka destekli hastane enerji optimizasyonu — Konfor + Tasarruf + Proaktif Bakım</em> 🏥⚡🧠
+            2 Lokasyon (Maslak + Altunizade) | 56 AHU BACnet | 22 Modbus Analizör | 15+ kural | 80+ özellik<br>
+            BACnet/IP + Modbus TCP + Supabase Bulut + GM Merkez Portalı + Lisans Sistemi<br>
+            <em>Yapay zeka destekli otomatik hastane enerji optimizasyonu — Konfor + Tasarruf + Proaktif Bakım</em> 🏥⚡🧠
         </div>
 
     </div>

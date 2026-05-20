@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "supabase_config.json")
 DATA_FILE = os.path.join(os.path.dirname(__file__), "energy_data.csv")
 HVAC_FILE = os.path.join(os.path.dirname(__file__), "hvac_analysis_history.csv")
+HVAC_SON_CALISMA_FILE = os.path.join(os.path.dirname(__file__), "hvac_son_calisma.txt")
 
 
 def load_config():
@@ -410,7 +411,24 @@ def start_background_sync():
     # HVAC günlük analiz saati (08:30)
     _HVAC_SAAT   = 8
     _HVAC_DAKIKA = 30
-    _hvac_son_gun = [None]  # mutable container — thread içinden güncellenir
+
+    def _hvac_son_gun_oku():
+        """Disk'ten son HVAC çalışma tarihini oku — program restart'ına karşı kalıcı."""
+        try:
+            if os.path.exists(HVAC_SON_CALISMA_FILE):
+                with open(HVAC_SON_CALISMA_FILE, "r") as f:
+                    return datetime.strptime(f.read().strip(), "%Y-%m-%d").date()
+        except Exception:
+            pass
+        return None
+
+    def _hvac_son_gun_yaz(tarih):
+        """Son HVAC çalışma tarihini disk'e yaz."""
+        try:
+            with open(HVAC_SON_CALISMA_FILE, "w") as f:
+                f.write(tarih.strftime("%Y-%m-%d"))
+        except Exception:
+            pass
 
     def _heartbeat_loop():
         """Her 1 dakikada bir: heartbeat + güncelleme kontrolü + BACnet komut polling + HVAC analiz"""
@@ -426,6 +444,7 @@ def start_background_sync():
                         send_heartbeat(client, lokasyon_id)
                         check_and_apply_update(client, lokasyon_id)
                     # Günlük HVAC analizi: saat 08:30'da, günde 1 kez
+                    # _hvac_son_gun DOSYAYA yazılır — program restart'ta tekrar çalışmaz
                     if _ahu_ok:
                         _now = datetime.now()
                         _bugun = _now.date()
@@ -433,8 +452,8 @@ def start_background_sync():
                             _now.hour == _HVAC_SAAT and
                             _HVAC_DAKIKA <= _now.minute < _HVAC_DAKIKA + 5
                         )
-                        if _saat_tamam and _hvac_son_gun[0] != _bugun:
-                            _hvac_son_gun[0] = _bugun
+                        if _saat_tamam and _hvac_son_gun_oku() != _bugun:
+                            _hvac_son_gun_yaz(_bugun)  # önce yaz — tekrar tetiklenmesin
                             try:
                                 logger.info("⏰ 08:30 HVAC AHU analizi başlatılıyor...")
                                 _hvac_analiz()
