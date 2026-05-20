@@ -1086,7 +1086,10 @@ with sag:
         bakim  = ozet.get("toplam_bakim", 0)
         isim   = lok_info["kisa"]
         if ariza > 0:
-            arizali = ", ".join(ozet.get("arizali_cihazlar", [])[:2])
+            arizali = ", ".join(
+                c.get("ad", str(c)) if isinstance(c, dict) else str(c)
+                for c in ozet.get("arizali_cihazlar", [])[:2]
+            )
             lok_uyari_map[lok_id].append(("r", f"🔴 {isim}: {ariza} ARIZALI bileşen — {arizali}"))
         if bakim > 0:
             lok_uyari_map[lok_id].append(("y", f"🟡 {isim}: {bakim} bileşen bakımda"))
