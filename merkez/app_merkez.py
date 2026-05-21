@@ -254,31 +254,9 @@ def hex_rgba(h, a=0.1):
     return f"rgba({r},{g},{b},{a})"
 
 @st.cache_data(ttl=300, show_spinner=False)
-def fetch_dis_hava(sb_url: str = "", sb_key: str = "") -> float | None:
-    """
-    Dış hava sıcaklığını al. Öncelik sırası:
-    1) Supabase lokasyonlar tablosu (lokasyon PC her 2dk'da bir yazar — güvenilir)
-    2) Open-Meteo API doğrudan (fallback)
-    """
-    # 1) Supabase'den oku (lokasyon PC heartbeat'te yazıyor)
-    if sb_url and sb_key:
-        try:
-            import urllib.request as _ur, json as _jj
-            req = _ur.Request(
-                sb_url + "/rest/v1/lokasyonlar?select=dis_hava_c&order=ping_zamani.desc&limit=5",
-                headers={"apikey": sb_key, "Authorization": "Bearer " + sb_key}
-            )
-            with _ur.urlopen(req, timeout=5) as r:
-                rows = _jj.loads(r.read())
-            # Herhangi bir lokasyondan gelen geçerli değeri al
-            for row in rows:
-                val = row.get("dis_hava_c")
-                if val is not None:
-                    return float(val)
-        except Exception:
-            pass
-
-    # 2) Open-Meteo API
+def fetch_dis_hava() -> float | None:
+    """İstanbul anlık sıcaklık. Önce Open-Meteo, olmadı wttr.in."""
+    # 1) Open-Meteo API
     import urllib.request as _ur2, json as _json
     try:
         _om_url = "https://api.open-meteo.com/v1/forecast?latitude=41.0082&longitude=28.9784&current=temperature_2m&timezone=Europe%2FIstanbul"
@@ -1077,7 +1055,7 @@ hospitals.forEach(function(h) {{
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
-    dis_hava_val = fetch_dis_hava(url, key)
+    dis_hava_val = fetch_dis_hava()
     _dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
     if dis_hava_val is not None:
         _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
