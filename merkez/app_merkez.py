@@ -255,15 +255,19 @@ def hex_rgba(h, a=0.1):
 
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_dis_hava() -> float | None:
-    """Open-Meteo API'den İstanbul anlık sıcaklığını çek (ücretsiz, API key yok)."""
-    try:
-        import urllib.request, json as _json
-        url = "https://api.open-meteo.com/v1/forecast?latitude=41.0082&longitude=28.9784&current=temperature_2m&timezone=Europe%2FIstanbul"
-        with urllib.request.urlopen(url, timeout=5) as r:
-            data = _json.loads(r.read())
-        return float(data["current"]["temperature_2m"])
-    except Exception:
-        return None
+    """Open-Meteo API'den İstanbul anlık sıcaklığını çek (ücretsiz, API key yok).
+    2 deneme yapar — Streamlit Cloud ağ gecikmelerine karşı."""
+    import urllib.request, json as _json
+    url = "https://api.open-meteo.com/v1/forecast?latitude=41.0082&longitude=28.9784&current=temperature_2m&timezone=Europe%2FIstanbul"
+    for _deneme in range(2):
+        try:
+            with urllib.request.urlopen(url, timeout=10) as r:
+                data = _json.loads(r.read())
+            return float(data["current"]["temperature_2m"])
+        except Exception:
+            if _deneme == 0:
+                import time as _t; _t.sleep(1)  # 1sn bekle, tekrar dene
+    return None
 
 
 def _dis_hava_log_yaz(sb_url: str, sb_key: str, derece: float, kaynak: str = "api"):
