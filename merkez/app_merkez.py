@@ -278,17 +278,22 @@ def fetch_dis_hava(sb_url: str = "", sb_key: str = "") -> float | None:
         except Exception:
             pass
 
-    # 2) Fallback: Open-Meteo API doğrudan
-    import urllib.request, json as _json
-    url = "https://api.open-meteo.com/v1/forecast?latitude=41.0082&longitude=28.9784&current=temperature_2m&timezone=Europe%2FIstanbul"
-    for _deneme in range(2):
-        try:
-            with urllib.request.urlopen(url, timeout=10) as r:
-                data = _json.loads(r.read())
-            return float(data["current"]["temperature_2m"])
-        except Exception:
-            if _deneme == 0:
-                import time as _t; _t.sleep(1)
+    # 2) Open-Meteo API
+    import urllib.request as _ur2, json as _json
+    try:
+        _om_url = "https://api.open-meteo.com/v1/forecast?latitude=41.0082&longitude=28.9784&current=temperature_2m&timezone=Europe%2FIstanbul"
+        with _ur2.urlopen(_om_url, timeout=8) as r:
+            return float(_json.loads(r.read())["current"]["temperature_2m"])
+    except Exception:
+        pass
+
+    # 3) Fallback: wttr.in (Cloudflare CDN üzerinde, çok güvenilir)
+    try:
+        with _ur2.urlopen("https://wttr.in/Istanbul?format=j1", timeout=8) as r:
+            return float(_json.loads(r.read())["current_condition"][0]["temp_C"])
+    except Exception:
+        pass
+
     return None
 
 
