@@ -616,7 +616,12 @@ for lok_id in HASTANELER:
     if lok_id in m2_config:
         HASTANELER[lok_id]["m2"] = int(m2_config[lok_id])
 
-now  = datetime.now()
+try:
+    import pytz as _pytz
+    now = datetime.now(_pytz.timezone("Europe/Istanbul"))
+except ImportError:
+    from datetime import timezone, timedelta
+    now = datetime.now(timezone(timedelta(hours=3)))
 dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
