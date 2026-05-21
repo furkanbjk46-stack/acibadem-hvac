@@ -308,6 +308,19 @@ def get_bakim_ozet() -> dict:
         return {}
 
 
+def _fetch_dis_hava_c() -> float | None:
+    """Open-Meteo'dan Istanbul anlik sicakligini cek (lokasyon PC'den cagrılır)."""
+    try:
+        import urllib.request as _ur, json as _jj
+        url = ("https://api.open-meteo.com/v1/forecast"
+               "?latitude=41.0082&longitude=28.9784"
+               "&current=temperature_2m&timezone=Europe%2FIstanbul")
+        with _ur.urlopen(url, timeout=8) as r:
+            return float(_jj.loads(r.read())["current"]["temperature_2m"])
+    except Exception:
+        return None
+
+
 def send_heartbeat(client, lokasyon_id: str):
     """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
     try:
@@ -317,8 +330,13 @@ def send_heartbeat(client, lokasyon_id: str):
             "durum": "online",
             "bakim_ozet": get_bakim_ozet(),
         }
+        # Dış hava sıcaklığını lokasyon PC'den çekip heartbeat'e ekle
+        # (Streamlit Cloud doğrudan API'ye ulaşamıyor, buradan gönderilir)
+        _dh = _fetch_dis_hava_c()
+        if _dh is not None:
+            payload["dis_hava_c"] = _dh
         client.table("lokasyonlar").upsert(payload, on_conflict="lokasyon_id").execute()
-        logger.debug(f"💓 Heartbeat gönderildi: {lokasyon_id}")
+        logger.debug(f"💓 Heartbeat gönderildi: {lokasyon_id} (dış hava: {_dh}°C)")
     except Exception as e:
         logger.warning(f"Heartbeat hatası: {e}")
 
