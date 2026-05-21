@@ -616,12 +616,13 @@ for lok_id in HASTANELER:
     if lok_id in m2_config:
         HASTANELER[lok_id]["m2"] = int(m2_config[lok_id])
 
+now = datetime.now()  # timezone-naive — pandas karsilastirmalari icin
 try:
     import pytz as _pytz
-    now = datetime.now(_pytz.timezone("Europe/Istanbul"))
+    now_display = datetime.now(_pytz.timezone("Europe/Istanbul"))
 except ImportError:
-    from datetime import timezone, timedelta
-    now = datetime.now(timezone(timedelta(hours=3)))
+    from datetime import timezone as _tz
+    now_display = datetime.now(_tz(timedelta(hours=3)))
 dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
@@ -1784,7 +1785,7 @@ with sag:
 st.markdown(f"""
 <div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(0,212,255,0.08); margin-top:10px;">
   <span style="font-family:'Orbitron',sans-serif; font-size:9px; color:rgba(0,212,255,0.25); letter-spacing:2px;">
-    ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; {now.strftime('%d.%m.%Y %H:%M')}
+    ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; {now_display.strftime('%d.%m.%Y %H:%M')}
   </span>
 </div>
 """, unsafe_allow_html=True)
