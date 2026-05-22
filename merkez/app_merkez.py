@@ -432,7 +432,7 @@ def _ch_modu_hesapla(ort: float, mevcut: str) -> str:
 
 
 def _dig_modu_hesapla(ort: float, mevcut: str) -> str:
-    """Kollektor/FCU/AHU ikili mod — ±3°C histerezis."""
+    """Kollektor/FCU/AHU ikili mod — ±2°C histerezis."""
     if mevcut == "sogutma":
         return "isitma" if ort < _DIG_ESIK - _DIG_H else "sogutma"
     if mevcut == "isitma":
