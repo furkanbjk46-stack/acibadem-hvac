@@ -371,21 +371,21 @@ _CH_MODLAR   = ["koc_soguk", "serin", "ilimli", "sicak"]
 _CH_SET      = {"koc_soguk": 8.0, "serin": 7.5, "ilimli": 7.0, "sicak": 6.5}
 _CH_H        = 2.0
 
-# Kollektor / FCU / AHU: tek eşik 23°C, ±3°C histerezis
-_DIG_ESIK = 23.0
-_DIG_H    = 3.0
+# Kollektor / FCU / AHU: tek eşik 23°C, ±2°C histerezis
+_DIG_ESIK = 20.0
+_DIG_H    = 2.0
 _DIG_SET  = {
     "sogutma": {
-        "GUNDUZ_KOLLEKTOR_SET":    13.0,
-        "GECE_KOLLEKTOR_SET":      15.0,
+        "GUNDUZ_KOLLEKTOR_SET":    8.0,
+        "GECE_KOLLEKTOR_SET":      10.0,
         "A_BLOK_FCU_SET":          12.0,
         "B_BLOK_FCU_SET":          12.0,
         "ZON1_KLIMA_SANTRALI_SET":  8.0,
         "ZON2_KLIMA_SANTRALI_SET":  8.0,
     },
     "isitma": {
-        "GUNDUZ_KOLLEKTOR_SET":    14.0,
-        "GECE_KOLLEKTOR_SET":      17.0,
+        "GUNDUZ_KOLLEKTOR_SET":    10.0,
+        "GECE_KOLLEKTOR_SET":      12.0,
         "A_BLOK_FCU_SET":          14.0,
         "B_BLOK_FCU_SET":          14.0,
         "ZON1_KLIMA_SANTRALI_SET": 10.0,
