@@ -380,7 +380,7 @@ def start_background_sync():
     if not config:
         return
 
-    interval = config.get("sync_interval_minutes", 60) * 60  # dakika → saniye
+    interval = config.get("sync_interval_minutes", 240) * 60  # dakika → saniye (varsayılan 4 saat)
     auto_sync = config.get("auto_sync", True)
 
     if not auto_sync:
