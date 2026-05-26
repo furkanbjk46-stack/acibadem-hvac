@@ -366,6 +366,13 @@ def run_sync():
     lokasyon_id = config.get("lokasyon_id", "bilinmeyen")
     logger.info(f"🔄 Senkronizasyon başlıyor: {lokasyon_id}")
 
+    # Energy sync devre dışı flag kontrolü
+    _sync_flag = os.path.join(os.path.dirname(__file__), "_sync_disabled.flag")
+    if os.path.exists(_sync_flag):
+        logger.info("⏸️ Energy sync devre dışı (_sync_disabled.flag mevcut) — atlanıyor")
+        sync_location_info(client, lokasyon_id)
+        return True
+
     sync_energy_data(client, lokasyon_id)
     sync_hvac_summary(client, lokasyon_id)
     sync_location_info(client, lokasyon_id)
