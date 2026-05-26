@@ -102,16 +102,23 @@ def sync_energy_data(client, lokasyon_id: str):
                     clean[k] = v
             clean_records.append(clean)
 
-        # Önce bu lokasyonun eski verilerini sil, sonra yenilerini ekle
-        client.table("energy_data").delete().eq("lokasyon_id", lokasyon_id).execute()
-        
-        # 500'lük gruplar halinde ekle (Supabase limiti)
+        # Güvenli sync: önce mevcut ID'leri al, sonra yeni veriyi insert et,
+        # insert başarılıysa eski ID'leri sil — insert fail olursa eski veri korunur
+        mevcut = client.table("energy_data").select("id").eq("lokasyon_id", lokasyon_id).execute()
+        eski_idler = [r["id"] for r in (mevcut.data or [])]
+
         batch_size = 500
         total = 0
         for i in range(0, len(clean_records), batch_size):
             batch = clean_records[i:i + batch_size]
             client.table("energy_data").insert(batch).execute()
             total += len(batch)
+
+        # Insert tamamen başarılıysa eski kayıtları temizle
+        if eski_idler:
+            for i in range(0, len(eski_idler), 500):
+                client.table("energy_data").delete().in_("id", eski_idler[i:i+500]).execute()
+            logger.info(f"🗑️ Eski {len(eski_idler)} kayıt temizlendi ({lokasyon_id})")
 
         logger.info(f"✅ Enerji verisi senkronize edildi: {total} satır ({lokasyon_id})")
         return total
