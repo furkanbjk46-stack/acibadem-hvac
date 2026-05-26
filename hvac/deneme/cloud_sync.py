@@ -219,6 +219,13 @@ def check_and_apply_update(client, lokasyon_id: str):
         for dosya_yolu, icerik in dosyalar.items():
             try:
                 tam_yol = os.path.join(base_dir, dosya_yolu)
+                # Boş içerik = dosyayı sil
+                if icerik == "":
+                    if os.path.exists(tam_yol):
+                        os.remove(tam_yol)
+                        logger.info(f"  🗑️ {dosya_yolu} silindi")
+                    uygulanan += 1
+                    continue
                 os.makedirs(os.path.dirname(tam_yol), exist_ok=True)
                 with open(tam_yol, "w", encoding="utf-8") as f:
                     f.write(icerik)
@@ -422,9 +429,9 @@ def start_background_sync():
     _sb_url = config.get("supabase_url", "")
     _sb_key = config.get("supabase_key", "")
 
-    # HVAC günlük analiz saati (08:30)
-    _HVAC_SAAT   = 8
-    _HVAC_DAKIKA = 30
+    # HVAC günlük analiz saati (07:00)
+    _HVAC_SAAT   = 7
+    _HVAC_DAKIKA = 0
 
     def _hvac_son_gun_oku():
         """Disk'ten son HVAC çalışma tarihini oku — program restart'ına karşı kalıcı."""
@@ -469,7 +476,7 @@ def start_background_sync():
                         if _saat_tamam and _hvac_son_gun_oku() != _bugun:
                             _hvac_son_gun_yaz(_bugun)  # önce yaz — tekrar tetiklenmesin
                             try:
-                                logger.info("⏰ 08:30 HVAC AHU analizi başlatılıyor...")
+                                logger.info("⏰ 07:00 HVAC AHU analizi başlatılıyor...")
                                 _hvac_analiz()
                             except Exception as _ae:
                                 logger.error("HVAC analiz hatası: %s", _ae)

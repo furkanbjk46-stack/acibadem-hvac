@@ -38,9 +38,9 @@ ENERGY_CSV = os.path.join(BASE_DIR, "energy_data.csv")
 # Gunluk Modbus referans degerleri (dun gece okuma)
 REF_FILE = os.path.join(BASE_DIR, "modbus_daily_ref.json")
 
-# Gunluk snapshot saati — her sabah 08:30'da dun'un verisini yazar
-SNAPSHOT_HOUR   = 8
-SNAPSHOT_MINUTE = 30
+# Gunluk snapshot saati — her sabah 07:00'de dun'un verisini yazar
+SNAPSHOT_HOUR   = 7
+SNAPSHOT_MINUTE = 0
 
 # ================================================================
 # ANALIZOR GRUPLARI

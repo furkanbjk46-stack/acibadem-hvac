@@ -58,7 +58,9 @@ ANALYZERS = [
 
 MODBUS_PORT    = 502
 MODBUS_CSV     = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
-READ_INTERVAL  = 1800  # 30 dakika (saniye)
+READ_INTERVAL  = 1800  # 30 dakika (saniye) — artık kullanılmıyor, saat 07:00 tetikler
+READ_SAAT      = 7    # Günlük okuma saati
+READ_DAKIKA    = 0    # Günlük okuma dakikası
 
 # ================================================================
 # BACNET YAPILANDIRMASI
@@ -102,35 +104,43 @@ def modbus_get_kwh(device):
 
 
 def modbus_thread():
-    logger.info("Modbus thread baslatildi (%d analizor, %d dk aralik)",
-                len(ANALYZERS), READ_INTERVAL // 60)
+    logger.info("Modbus thread baslatildi (%d analizor, gunluk saat %02d:%02d)",
+                len(ANALYZERS), READ_SAAT, READ_DAKIKA)
+    _son_gun = None
     while True:
-        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        logger.info("Modbus okuma turu basliyor: %s", ts)
-        current_data = []
-        ok_count = 0
+        now = datetime.now()
+        bugun = now.date()
+        saat_tamam = (now.hour == READ_SAAT and READ_DAKIKA <= now.minute < READ_DAKIKA + 5)
 
-        for dev in ANALYZERS:
-            val = modbus_get_kwh(dev)
-            if val is not None:
-                ok_count += 1
-                status = f"{val} kWh"
-            else:
-                status = "[Baglanti Hatasi]"
-            current_data.append([ts, dev['name'], dev['ip'],
-                                  val if val is not None else "", status])
-            logger.debug("  %s: %s", dev['name'], status)
+        if saat_tamam and _son_gun != bugun:
+            _son_gun = bugun
+            ts = now.strftime('%Y-%m-%d %H:%M:%S')
+            logger.info("Modbus gunluk okuma basliyor: %s", ts)
+            current_data = []
+            ok_count = 0
 
-        # CSV'ye yaz (her turde uzerine yaz — en guncel veri)
-        with open(MODBUS_CSV, "w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(["Okuma_Zamani", "Cihaz_Adi", "IP", "Enerji_kWh", "Durum"])
-            for row in current_data:
-                writer.writerow(row)
+            for dev in ANALYZERS:
+                val = modbus_get_kwh(dev)
+                if val is not None:
+                    ok_count += 1
+                    status = f"{val} kWh"
+                else:
+                    status = "[Baglanti Hatasi]"
+                current_data.append([ts, dev['name'], dev['ip'],
+                                      val if val is not None else "", status])
+                logger.debug("  %s: %s", dev['name'], status)
 
-        logger.info("Modbus turu tamamlandi: %d/%d OK -> %s",
-                    ok_count, len(ANALYZERS), MODBUS_CSV)
-        time.sleep(READ_INTERVAL)
+            # CSV'ye yaz (her turde uzerine yaz — en guncel veri)
+            with open(MODBUS_CSV, "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(["Okuma_Zamani", "Cihaz_Adi", "IP", "Enerji_kWh", "Durum"])
+                for row in current_data:
+                    writer.writerow(row)
+
+            logger.info("Modbus gunluk okuma tamamlandi: %d/%d OK -> %s",
+                        ok_count, len(ANALYZERS), MODBUS_CSV)
+
+        time.sleep(60)  # Her dakika kontrol et
 
 
 # ================================================================
@@ -250,14 +260,24 @@ def bacnet_thread():
         logger.error("BACnet Excel okunamadi: %s", e)
         return
 
-    logger.info("BACnet thread baslatildi (%d nokta, %d dk aralik)",
-                len(df), READ_INTERVAL // 60)
+    logger.info("BACnet thread baslatildi (%d nokta, gunluk saat %02d:%02d)",
+                len(df), READ_SAAT, READ_DAKIKA)
 
     fieldnames = ["Timestamp", "Device_ID", "Point_Name", "Value", "Status"]
+    _son_gun = None
 
     while True:
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        logger.info("BACnet okuma turu basliyor: %s", ts)
+        now = datetime.now()
+        bugun = now.date()
+        saat_tamam = (now.hour == READ_SAAT and READ_DAKIKA <= now.minute < READ_DAKIKA + 5)
+
+        if not (saat_tamam and _son_gun != bugun):
+            time.sleep(60)
+            continue
+
+        _son_gun = bugun
+        ts = now.strftime("%Y-%m-%d %H:%M:%S")
+        logger.info("BACnet gunluk okuma basliyor: %s", ts)
         results = []
         ok_count = 0
 
@@ -293,9 +313,9 @@ def bacnet_thread():
             writer.writeheader()
             writer.writerows(results)
 
-        logger.info("BACnet turu tamamlandi: %d/%d OK -> %s",
+        logger.info("BACnet gunluk okuma tamamlandi: %d/%d OK -> %s",
                     ok_count, len(df), BACNET_CSV)
-        time.sleep(READ_INTERVAL)
+        time.sleep(60)
 
 
 # ================================================================
