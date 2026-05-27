@@ -407,10 +407,8 @@ def _fetch_3gun_tahmin_ort() -> float | None:
         )
         with _ur.urlopen(_api, timeout=8) as _r:
             _d = _jj.loads(_r.read())
-        _max = _d["daily"]["temperature_2m_max"][1:4]   # bugünü atla
-        _min = _d["daily"]["temperature_2m_min"][1:4]
-        _ort = [(_x + _n) / 2 for _x, _n in zip(_max, _min)]
-        return round(sum(_ort) / len(_ort), 1)
+        _max = _d["daily"]["temperature_2m_max"][1:4]   # bugünü atla — sadece gündüz max
+        return round(sum(_max) / len(_max), 1)
     except Exception:
         return None
 
