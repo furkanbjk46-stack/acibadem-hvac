@@ -394,7 +394,6 @@ def start_background_sync():
     if not config:
         return
 
-    interval = config.get("sync_interval_minutes", 240) * 60  # dakika → saniye (varsayılan 4 saat)
     auto_sync = config.get("auto_sync", True)
 
     if not auto_sync:
@@ -404,13 +403,44 @@ def start_background_sync():
     lokasyon_id = config.get("lokasyon_id", "bilinmeyen")
     client = get_supabase_client(config)
 
+    # Günlük sync saati: 08:00
+    _SYNC_SAAT   = 8
+    _SYNC_DAKIKA = 0
+    _SYNC_SON_FILE = os.path.join(os.path.dirname(__file__), "sync_son_calisma.txt")
+
+    def _sync_son_gun_oku():
+        try:
+            if os.path.exists(_SYNC_SON_FILE):
+                with open(_SYNC_SON_FILE, "r") as f:
+                    return datetime.strptime(f.read().strip(), "%Y-%m-%d").date()
+        except Exception:
+            pass
+        return None
+
+    def _sync_son_gun_yaz(tarih):
+        try:
+            with open(_SYNC_SON_FILE, "w") as f:
+                f.write(tarih.strftime("%Y-%m-%d"))
+        except Exception:
+            pass
+
     def _sync_loop():
+        """Her gün saat 08:00'de bir kez çalışır."""
         while True:
             try:
-                run_sync()
+                _now = datetime.now()
+                _bugun = _now.date()
+                _saat_tamam = (
+                    _now.hour == _SYNC_SAAT and
+                    _SYNC_DAKIKA <= _now.minute < _SYNC_DAKIKA + 5
+                )
+                if _saat_tamam and _sync_son_gun_oku() != _bugun:
+                    _sync_son_gun_yaz(_bugun)
+                    logger.info("⏰ 08:00 Günlük Supabase sync başlatılıyor...")
+                    run_sync()
             except Exception as e:
                 logger.error(f"Senkronizasyon döngüsü hatası: {e}")
-            time.sleep(interval)
+            time.sleep(60)
 
     # BACnet yazıcıyı import et (yoksa sessizce atla)
     try:
