@@ -1,6 +1,7 @@
 # app_merkez.py
 # Acıbadem Genel Merkez — Tek Sayfa Komuta Merkezi
 # Harita ortada, widget'lar etrafında — Koyu Mavi / Neon
+# v: 2026-05-27
 
 from __future__ import annotations
 import os, json
