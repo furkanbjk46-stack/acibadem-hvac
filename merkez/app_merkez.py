@@ -575,6 +575,11 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
 
 # ─── Arka plan thread: her 5 dakikada bir otomatik set kontrolü ───────────────
 import threading as _threading
+
+# Process-level flag — kaç tarayıcı sekmesi açılırsa açılsın tek thread çalışır
+_OTO_THREAD_STARTED = False
+_OTO_THREAD_LOCK    = _threading.Lock()
+
 def _oto_set_loop(sb_url: str, sb_key: str):
     import time as _time
     while True:
@@ -598,17 +603,19 @@ url  = config.get("supabase_url","")
 key  = config.get("supabase_key","")
 bagli = bool(url and "BURAYA" not in url)
 
-# Otomatik set arka plan thread'ini başlat (sayfa ömrü boyunca 1 kez)
-if bagli and not st.session_state.get("_oto_thread_started"):
-    _t = _threading.Thread(
-        target=_oto_set_loop, args=(url, key), daemon=True, name="oto-set"
-    )
-    _t.start()
-    st.session_state["_oto_thread_started"] = True
-    # İlk kontrolü hemen yap (thread 5 dk bekler)
-    _threading.Thread(
-        target=_oto_set_kontrol, args=(url, key), daemon=True
-    ).start()
+# Otomatik set arka plan thread'ini başlat (process genelinde 1 kez)
+if bagli:
+    global _OTO_THREAD_STARTED
+    with _OTO_THREAD_LOCK:
+        if not _OTO_THREAD_STARTED:
+            _OTO_THREAD_STARTED = True
+            _threading.Thread(
+                target=_oto_set_loop, args=(url, key), daemon=True, name="oto-set"
+            ).start()
+            # İlk kontrolü hemen yap (thread 5 dk bekler)
+            _threading.Thread(
+                target=_oto_set_kontrol, args=(url, key), daemon=True
+            ).start()
 
 # m² değerlerini Supabase'den yükle (yoksa config/default kullan)
 m2_config = {}
