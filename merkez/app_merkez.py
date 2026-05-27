@@ -605,7 +605,6 @@ bagli = bool(url and "BURAYA" not in url)
 
 # Otomatik set arka plan thread'ini başlat (process genelinde 1 kez)
 if bagli:
-    global _OTO_THREAD_STARTED
     with _OTO_THREAD_LOCK:
         if not _OTO_THREAD_STARTED:
             _OTO_THREAD_STARTED = True
