@@ -403,9 +403,9 @@ def start_background_sync():
     lokasyon_id = config.get("lokasyon_id", "bilinmeyen")
     client = get_supabase_client(config)
 
-    # Günlük sync saati: 08:00
-    _SYNC_SAAT   = 8
-    _SYNC_DAKIKA = 0
+    # Günlük sync saati: 09:45 (test)
+    _SYNC_SAAT   = 9
+    _SYNC_DAKIKA = 45
     _SYNC_SON_FILE = os.path.join(os.path.dirname(__file__), "sync_son_calisma.txt")
 
     def _sync_son_gun_oku():
