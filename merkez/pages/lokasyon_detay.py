@@ -780,6 +780,10 @@ with tab1:
                 kpi_rows.append((f"🔌 Şebeke Tüketimi ({_etiket})", f"{_kd['Sebeke_Tuketim_kWh'].sum():,.0f} kWh", "#a855f7"))
             if "MCC_Tuketim_kWh" in _kd.columns:
                 kpi_rows.append((f"🏗️ MCC Tüketimi ({_etiket})", f"{_kd['MCC_Tuketim_kWh'].sum():,.0f} kWh", "#f59e0b"))
+            _sog_col_kpi = ("Toplam_Sogutma_Tuketim_kWh" if "Toplam_Sogutma_Tuketim_kWh" in _kd.columns
+                            else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in _kd.columns else None))
+            if _sog_col_kpi:
+                kpi_rows.append((f"❄️ Soğutma Tüketimi ({_etiket})", f"{_kd[_sog_col_kpi].sum():,.0f} kWh", "#38bdf8"))
             if m2 and "Toplam_Hastane_Tuketim_kWh" in _kd.columns and _kd["Toplam_Hastane_Tuketim_kWh"].sum() > 0:
                 kpi_rows.append((f"📐 kWh/m² ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum()/m2:.2f}", "#f59e0b"))
 
