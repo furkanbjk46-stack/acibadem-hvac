@@ -917,7 +917,7 @@ with sol:
             p = (bu - gec) / gec * 100
             renk = "#10b981" if p <= 0 else "#ef4444"
             yon  = "▼" if p <= 0 else "▲"
-            return f'<span style="color:{renk};font-size:10px;font-weight:600;"> {yon}{abs(p):.1f}%</span>'
+            return f'<span style="color:{renk} !important;font-size:10px;font-weight:600;"> {yon}{abs(p):.1f}%</span>'
 
         _gec_ay_label = _ay_tr[_gec_ay_no - 1]
 
