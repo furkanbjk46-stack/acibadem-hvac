@@ -880,32 +880,85 @@ with sol:
     st.markdown(tum_kartlar, unsafe_allow_html=True)
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
-    # ── Global Özet ──
-    st.markdown('<div class="sec">⚡ GLOBAL ÖZET (30G)</div>', unsafe_allow_html=True)
+    # ── Global Özet (Aylık + Trend) ──
+    _ay_tr = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
+              "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
+    _bu_yil = now.year
+    _bu_ay  = now.month
+    st.markdown(f'<div class="sec">⚡ GLOBAL ÖZET — {_ay_tr[_bu_ay-1].upper()} {_bu_yil}</div>', unsafe_allow_html=True)
     if not df_all.empty:
-        son30 = df_all[df_all["Tarih"] >= (now - timedelta(days=30))]
+        # Dönem filtreleri
+        _bu_ay_bas   = pd.Timestamp(year=_bu_yil,   month=_bu_ay, day=1)
+        _gec_ay_yil  = _bu_yil - 1 if _bu_ay == 1 else _bu_yil
+        _gec_ay_no   = 12 if _bu_ay == 1 else _bu_ay - 1
+        _gec_ay_bas  = pd.Timestamp(year=_gec_ay_yil, month=_gec_ay_no, day=1)
+        _gec_ay_son  = _bu_ay_bas - pd.Timedelta(days=1)
+        _bu_yil_bas  = pd.Timestamp(year=_bu_yil,   month=1, day=1)
+        _gec_yil_bas = pd.Timestamp(year=_bu_yil-1, month=1, day=1)
+        _gec_yil_son = _bu_yil_bas - pd.Timedelta(days=1)
+
+        _df_bu_ay   = df_all[df_all["Tarih"] >= _bu_ay_bas]
+        _df_gec_ay  = df_all[(df_all["Tarih"] >= _gec_ay_bas) & (df_all["Tarih"] <= _gec_ay_son)]
+        _df_bu_yil  = df_all[df_all["Tarih"] >= _bu_yil_bas]
+        _df_gec_yil = df_all[(df_all["Tarih"] >= _gec_yil_bas) & (df_all["Tarih"] <= _gec_yil_son)]
+
         def tr(sayi, ondalik=0):
-            """Türkçe sayı formatı: binlik=nokta, ondalık=virgül."""
             fmt = f"{sayi:,.{ondalik}f}"
             if ondalik > 0:
                 parts = fmt.split(".")
                 return parts[0].replace(",", ".") + "," + parts[1]
             return fmt.replace(",", ".")
 
-        ozet = {
-            "⚡ Toplam Enerji": f"{tr(son30['Toplam_Hastane_Tuketim_kWh'].sum())} kWh" if "Toplam_Hastane_Tuketim_kWh" in son30 else "—",
-            "🔥 Doğalgaz": f"{tr(son30.get('Kazan_Dogalgaz_m3', pd.Series([0])).sum() + son30.get('Kojen_Dogalgaz_m3', pd.Series([0])).sum())} m³",
-            "❄️ Soğutma": f"{tr(son30['Toplam_Sogutma_Tuketim_kWh'].sum())} kWh" if "Toplam_Sogutma_Tuketim_kWh" in son30 else "—",
-            "💧 Su": f"{tr(son30['Su_Tuketimi_m3'].sum())} m³" if "Su_Tuketimi_m3" in son30 else "—",
-            "⚙️ Kojen Üretim": f"{tr(son30['Kojen_Uretim_kWh'].sum())} kWh" if "Kojen_Uretim_kWh" in son30 else "—",
-        }
-        for label, val in ozet.items():
+        def _cs(df, col):
+            return df[col].sum() if col in df.columns else 0
+
+        def _pct_html(bu, gec):
+            if not gec or gec == 0: return ""
+            p = (bu - gec) / gec * 100
+            renk = "#10b981" if p <= 0 else "#ef4444"
+            yon  = "▼" if p <= 0 else "▲"
+            return f'<span style="color:{renk};font-size:10px;font-weight:600;"> {yon}{abs(p):.1f}%</span>'
+
+        _gec_ay_label = _ay_tr[_gec_ay_no - 1]
+
+        _metrikler = [
+            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh"),
+            ("🔥 Doğalgaz",      None,                         "m³"),
+            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh"),
+            ("💧 Su",             "Su_Tuketimi_m3",             "m³"),
+            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh"),
+        ]
+
+        for _lbl, _col, _birim in _metrikler:
+            if _col is None:  # Doğalgaz: kazan + kojen toplamı
+                _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
+                _ga   = _cs(_df_gec_ay,  "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay,  "Kojen_Dogalgaz_m3")
+                _by   = _cs(_df_bu_yil,  "Kazan_Dogalgaz_m3") + _cs(_df_bu_yil,  "Kojen_Dogalgaz_m3")
+                _gy   = _cs(_df_gec_yil, "Kazan_Dogalgaz_m3") + _cs(_df_gec_yil, "Kojen_Dogalgaz_m3")
+            else:
+                _bu = _cs(_df_bu_ay,   _col)
+                _ga = _cs(_df_gec_ay,  _col)
+                _by = _cs(_df_bu_yil,  _col)
+                _gy = _cs(_df_gec_yil, _col)
+
+            _trend_parts = []
+            if _ga > 0: _trend_parts.append(f"{_gec_ay_label}: {tr(_ga)} {_birim}")
+            if _by > 0: _trend_parts.append(f"{_bu_yil} YTD: {tr(_by)} {_birim}")
+            if _gy > 0: _trend_parts.append(f"{_bu_yil-1}: {tr(_gy)} {_birim}")
+            _trend_html = (
+                f'<div style="font-size:9px;color:rgba(120,170,220,0.5);margin-top:2px;">'
+                + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
+            ) if _trend_parts else ""
+
             st.markdown(f"""
-            <div style="display:flex; justify-content:space-between; align-items:center;
-                        padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
+            <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
                         border-radius:8px; border:1px solid rgba(0,212,255,0.1);">
-              <span style="font-size:11px; color:rgba(150,210,255,0.7);">{label}</span>
-              <span style="font-size:12px; font-weight:700; color:#00d4ff; font-family:'Orbitron',sans-serif;">{val}</span>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}</span>
+                <span style="font-size:12px; font-weight:700; color:#00d4ff;
+                             font-family:'Orbitron',sans-serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>
+              </div>
+              {_trend_html}
             </div>
             """, unsafe_allow_html=True)
 
