@@ -396,20 +396,22 @@ _DIG_SET  = {
 _CH_NOKTALAR = ["CH1_REM_SET","CH2_REM_SET","CH3_REM_SET","CH4_REM_SET","CH5_REM_SET"]
 
 
-def _fetch_3gun_tahmin_ort() -> float | None:
-    """Open-Meteo'dan İstanbul için sonraki 3 günün ortalama sıcaklığını döner."""
+def _fetch_yarin_tahmin() -> dict | None:
+    """Open-Meteo'dan yarının gündüz max ve gece min sıcaklığını döner."""
     try:
         import urllib.request as _ur, json as _jj
         _api = (
             "https://api.open-meteo.com/v1/forecast"
             "?latitude=41.0082&longitude=28.9784"
             "&daily=temperature_2m_max,temperature_2m_min"
-            "&timezone=Europe%2FIstanbul&forecast_days=4"
+            "&timezone=Europe%2FIstanbul&forecast_days=3"
         )
         with _ur.urlopen(_api, timeout=8) as _r:
             _d = _jj.loads(_r.read())
-        _max = _d["daily"]["temperature_2m_max"][1:4]   # bugünü atla — sadece gündüz max
-        return round(sum(_max) / len(_max), 1)
+        return {
+            "max": round(_d["daily"]["temperature_2m_max"][1], 1),  # yarın max (gündüz)
+            "min": round(_d["daily"]["temperature_2m_min"][1], 1),  # yarın min (gece)
+        }
     except Exception:
         return None
 
@@ -441,16 +443,23 @@ def _dig_modu_hesapla(ort: float, mevcut: str) -> str:
 
 def _oto_set_kontrol(sb_url: str, sb_key: str):
     """
-    3 günlük tahmin ortalamasına göre mod değişimini kontrol et.
-    Mod değiştiyse tüm lokasyonlara komut gönder, ayarlar'a kaydet.
+    Yarınki gündüz/gece tahminlerine göre dönem bazlı set kontrolü.
+    06:00–19:00 → yarın max (gündüz seti) / 19:00–06:00 → yarın min (gece seti)
+    Dönem geçişinde (06:00 / 19:00) her zaman komut gönderilir.
     """
     import urllib.request as _ur2, json as _jj2
     from datetime import datetime as _dtt
 
     try:
-        ort = _fetch_3gun_tahmin_ort()
-        if ort is None:
+        tahmin = _fetch_yarin_tahmin()
+        if tahmin is None:
             return
+
+        # Dönem belirle: gündüz 06:00–19:00, gece 19:00–06:00
+        _saat = _dtt.now().hour
+        _gunduz = 6 <= _saat < 19
+        _donem  = "gunduz" if _gunduz else "gece"
+        _ref    = tahmin["max"] if _gunduz else tahmin["min"]
 
         def _sb_ayar_oku(k):
             _q = _ur2.Request(
@@ -475,19 +484,23 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             )
             _ur2.urlopen(_q, timeout=6)
 
-        mevcut_ch  = _sb_ayar_oku("oto_mod_chiller")
-        mevcut_dig = _sb_ayar_oku("oto_mod_diger")
+        mevcut_ch    = _sb_ayar_oku("oto_mod_chiller")
+        mevcut_dig   = _sb_ayar_oku("oto_mod_diger")
+        mevcut_donem = _sb_ayar_oku("oto_donem")  # son uygulanan dönem
 
-        yeni_ch  = _ch_modu_hesapla(ort, mevcut_ch)
-        yeni_dig = _dig_modu_hesapla(ort, mevcut_dig)
+        yeni_ch  = _ch_modu_hesapla(_ref, mevcut_ch)
+        yeni_dig = _dig_modu_hesapla(_ref, mevcut_dig)
 
-        ch_degisti  = yeni_ch  != mevcut_ch
-        dig_degisti = yeni_dig != mevcut_dig
+        ch_degisti    = yeni_ch  != mevcut_ch
+        dig_degisti   = yeni_dig != mevcut_dig
+        donem_degisti = _donem   != mevcut_donem  # 06:00 veya 19:00 geçişi
 
-        if not ch_degisti and not dig_degisti:
-            # Sadece kontrol zamanını güncelle
+        # Dönem değişmedi ve mod değişmedi → sadece kontrol zamanını güncelle
+        if not ch_degisti and not dig_degisti and not donem_degisti:
             _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
-                "zaman": _dtt.now().isoformat(), "tahmin_ort": ort,
+                "zaman": _dtt.now().isoformat(),
+                "donem": _donem, "ref_sicaklik": _ref,
+                "yarin_max": tahmin["max"], "yarin_min": tahmin["min"],
                 "chiller_mod": yeni_ch, "diger_mod": yeni_dig, "komut_sayisi": 0
             }))
             return
@@ -501,14 +514,18 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             _loks = list({x["lokasyon"] for x in _jj2.loads(_r.read())})
 
         komutlar = []
+        # Dönem geçişinde her iki grubu da gönder; sadece mod değişmişse ilgiliyi gönder
+        _ch_gonder  = ch_degisti  or donem_degisti
+        _dig_gonder = dig_degisti or donem_degisti
+
         for lok in _loks:
-            if ch_degisti:
+            if _ch_gonder:
                 for nokta in _CH_NOKTALAR:
                     komutlar.append({
                         "lokasyon": lok, "nokta_adi": nokta,
                         "hedef_deger": _CH_SET[yeni_ch], "durum": "bekliyor"
                     })
-            if dig_degisti:
+            if _dig_gonder:
                 for nokta, deger in _DIG_SET[yeni_dig].items():
                     komutlar.append({
                         "lokasyon": lok, "nokta_adi": nokta,
@@ -528,31 +545,33 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             )
             _ur2.urlopen(_ir, timeout=10)
 
-        if ch_degisti:
+        if _ch_gonder:
             _sb_ayar_yaz("oto_mod_chiller", yeni_ch)
-        if dig_degisti:
+        if _dig_gonder:
             _sb_ayar_yaz("oto_mod_diger", yeni_dig)
+        _sb_ayar_yaz("oto_donem", _donem)
         _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
-            "zaman": _dtt.now().isoformat(), "tahmin_ort": ort,
+            "zaman": _dtt.now().isoformat(),
+            "donem": _donem, "ref_sicaklik": _ref,
+            "yarin_max": tahmin["max"], "yarin_min": tahmin["min"],
             "chiller_mod": yeni_ch, "diger_mod": yeni_dig,
-            "komut_sayisi": len(komutlar),
-            "lokasyonlar": _loks,
+            "komut_sayisi": len(komutlar), "lokasyonlar": _loks,
         }))
 
-        # Mod geçişlerini oto_mod_log tablosuna kaydet
+        # Log
         _lok_str = ", ".join(_loks)
         _log_kayitlar = []
-        if ch_degisti:
+        if _ch_gonder:
             _log_kayitlar.append({
                 "tip": "chiller", "eski_mod": mevcut_ch, "yeni_mod": yeni_ch,
-                "tahmin_ort": ort,
+                "tahmin_ort": _ref,
                 "komut_sayisi": sum(1 for k in komutlar if k["nokta_adi"] in _CH_NOKTALAR),
                 "lokasyonlar": _lok_str,
             })
-        if dig_degisti:
+        if _dig_gonder:
             _log_kayitlar.append({
                 "tip": "diger", "eski_mod": mevcut_dig, "yeni_mod": yeni_dig,
-                "tahmin_ort": ort,
+                "tahmin_ort": _ref,
                 "komut_sayisi": sum(1 for k in komutlar if k["nokta_adi"] not in _CH_NOKTALAR),
                 "lokasyonlar": _lok_str,
             })
@@ -1284,11 +1303,16 @@ with sag:
             _osd = _osjson.loads(_osr.read())
         if _osd:
             _os = _osjson.loads(_osd[0]["value"])
-            _os_zaman = _os.get("zaman","")[:16].replace("T"," ")
-            _os_ort   = _os.get("tahmin_ort", "—")
-            _os_ch    = _os.get("chiller_mod", "—")
-            _os_dig   = _os.get("diger_mod", "—")
-            _os_cnt   = _os.get("komut_sayisi", 0)
+            _os_zaman   = _os.get("zaman","")[:16].replace("T"," ")
+            _os_donem   = _os.get("donem", "")
+            _os_ref     = _os.get("ref_sicaklik", _os.get("tahmin_ort", "—"))
+            _os_max     = _os.get("yarin_max", "—")
+            _os_min     = _os.get("yarin_min", "—")
+            _os_ort     = _os_ref  # geriye dönük uyumluluk
+            _os_ch      = _os.get("chiller_mod", "—")
+            _os_dig     = _os.get("diger_mod", "—")
+            _os_cnt     = _os.get("komut_sayisi", 0)
+            _donem_ikon = "🌞" if _os_donem == "gunduz" else ("🌙" if _os_donem == "gece" else "")
             _ch_label = {"koc_soguk":"❄️ 8.0°C","serin":"🌤️ 7.5°C",
                          "ilimli":"☀️ 7.0°C","sicak":"🔥 6.5°C"}.get(_os_ch, _os_ch)
             _dig_label = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
@@ -1301,7 +1325,7 @@ with sag:
                 f"<div style='font-size:9px;color:rgba(16,185,129,0.7);font-weight:700;"
                 f"letter-spacing:1px;margin-bottom:4px;'>🤖 OTO SET — Son: {_os_zaman}</div>"
                 f"<div style='font-size:11px;color:rgba(200,230,255,0.85);'>"
-                f"3g ort: <b>{_os_ort}°C</b> &nbsp;|&nbsp; "
+                f"{_donem_ikon} <b>{_os_ref}°C</b> (yarın max:{_os_max} / min:{_os_min}) &nbsp;|&nbsp; "
                 f"Chiller: <b>{_ch_label}</b> &nbsp;|&nbsp; "
                 f"Diğer: <b>{_dig_label}</b></div>"
                 f"<div style='font-size:10px;margin-top:3px;'>{_cnt_html}</div>"
