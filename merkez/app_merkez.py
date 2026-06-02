@@ -18,6 +18,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+from streamlit_autorefresh import st_autorefresh
+st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
+
 # ============ CSS ============
 st.markdown("""
 <style>
