@@ -451,16 +451,17 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
     Dönem geçişinde (06:00 / 19:00) her zaman komut gönderilir.
     """
     import urllib.request as _ur2, json as _jj2
-    from datetime import datetime as _dtt
-    from zoneinfo import ZoneInfo as _ZI
+    from datetime import datetime as _dtt, timezone as _tz, timedelta as _td
+
+    _IST = _tz(_td(hours=3))  # Türkiye UTC+3 (sabit, DST yok)
 
     try:
         tahmin = _fetch_yarin_tahmin()
         if tahmin is None:
             return
 
-        # Dönem belirle: gündüz 06:00–19:00, gece 19:00–06:00 (İstanbul yerel saati)
-        _saat = _dtt.now(_ZI("Europe/Istanbul")).hour
+        # Dönem belirle: gündüz 06:00–19:00, gece 19:00–06:00 (İstanbul UTC+3)
+        _saat = _dtt.now(_IST).hour
         _gunduz = 6 <= _saat < 19
         _donem  = "gunduz" if _gunduz else "gece"
         _ref    = tahmin["max"] if _gunduz else tahmin["min"]
@@ -502,7 +503,7 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
         # Dönem değişmedi ve mod değişmedi → sadece kontrol zamanını güncelle
         if not ch_degisti and not dig_degisti and not donem_degisti:
             _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
-                "zaman": _dtt.now(_ZI("Europe/Istanbul")).isoformat(),
+                "zaman": _dtt.now(_IST).isoformat(),
                 "donem": _donem, "ref_sicaklik": _ref,
                 "yarin_max": tahmin["max"], "yarin_min": tahmin["min"],
                 "chiller_mod": yeni_ch, "diger_mod": yeni_dig, "komut_sayisi": 0
@@ -555,7 +556,7 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             _sb_ayar_yaz("oto_mod_diger", yeni_dig)
         _sb_ayar_yaz("oto_donem", _donem)
         _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
-            "zaman": _dtt.now(_ZI("Europe/Istanbul")).isoformat(),
+            "zaman": _dtt.now(_IST).isoformat(),
             "donem": _donem, "ref_sicaklik": _ref,
             "yarin_max": tahmin["max"], "yarin_min": tahmin["min"],
             "chiller_mod": yeni_ch, "diger_mod": yeni_dig,
