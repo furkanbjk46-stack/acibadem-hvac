@@ -32,6 +32,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # MODBUS YAPILANDIRMASI
 # ================================================================
 ANALYZERS = [
+    {"ip": "172.17.91.121", "name": "TRDP-1",       "brand": "janitza"},
     {"ip": "172.17.91.100", "name": "MCC-1",        "brand": "janitza"},
     {"ip": "172.17.91.101", "name": "MCC-2",        "brand": "janitza"},
     {"ip": "172.17.91.102", "name": "MCC-3",        "brand": "janitza"},
@@ -54,6 +55,7 @@ ANALYZERS = [
     {"ip": "172.18.91.135", "name": "CK-MCC-D01",   "brand": "siemens"},
     {"ip": "172.18.91.136", "name": "CK-MCC-E01",   "brand": "siemens"},
     {"ip": "172.18.91.137", "name": "CK-MCC-F01",   "brand": "siemens"},
+    {"ip": "172.17.91.125", "name": "TRDP-3",       "brand": "siemens"},
 ]
 
 MODBUS_PORT    = 502
@@ -66,7 +68,7 @@ READ_DAKIKA    = 0    # Günlük okuma dakikası
 # BACNET YAPILANDIRMASI
 # ================================================================
 BACNET_PORT   = 47808
-BACNET_TIMEOUT = 4.0
+BACNET_TIMEOUT = 50.0
 EXCEL_FILE    = os.path.join(BASE_DIR, "hedefli_okuma_sablonu_2.xlsx")
 BACNET_CSV    = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
 PROP_PRESENT_VALUE = 85
@@ -78,7 +80,7 @@ PROP_PRESENT_VALUE = 85
 def modbus_get_kwh(device):
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(2.5)
+        s.settimeout(2.5) # Donmaları engellemek için timeout süresi
         s.connect((device["ip"], MODBUS_PORT))
 
         if device["brand"] == "janitza":
@@ -91,6 +93,7 @@ def modbus_get_kwh(device):
                 return round(val / 1000, 3)  # Wh → kWh
 
         elif device["brand"] == "siemens":
+            # Hem PAC3200 hem PAC4200 için çalışan evrensel paket
             packet = b'\x00\x01\x00\x00\x00\x06\x01\x03\x03\x21\x00\x04'
             s.send(packet)
             resp = s.recv(1024)
@@ -102,7 +105,6 @@ def modbus_get_kwh(device):
         pass
     return None  # Baglanti hatasi
 
-
 def modbus_thread():
     logger.info("Modbus thread baslatildi (%d analizor, gunluk saat %02d:%02d)",
                 len(ANALYZERS), READ_SAAT, READ_DAKIKA)
@@ -112,6 +114,7 @@ def modbus_thread():
         bugun = now.date()
         saat_tamam = (now.hour == READ_SAAT and READ_DAKIKA <= now.minute < READ_DAKIKA + 5)
 
+        # Orijinal günlük okuma kilidi aktif edildi
         if saat_tamam and _son_gun != bugun:
             _son_gun = bugun
             ts = now.strftime('%Y-%m-%d %H:%M:%S')
@@ -142,14 +145,12 @@ def modbus_thread():
 
         time.sleep(60)  # Her dakika kontrol et
 
-
 # ================================================================
 # BACNET FONKSİYONLARI
 # ================================================================
 
 def _pack_length(packet):
     return packet[:2] + struct.pack(">H", len(packet)) + packet[4:]
-
 
 def build_read_property(obj_type, obj_inst, prop_id=85,
                         invoke_id=1, dnet=None, dadr=None):
@@ -163,7 +164,6 @@ def build_read_property(obj_type, obj_inst, prop_id=85,
     apdu += bytes([0x0c]) + struct.pack(">I", obj_id)
     apdu += bytes([0x19, prop_id])
     return _pack_length(bvlc + npdu + apdu)
-
 
 def parse_real_value(data):
     try:
@@ -215,7 +215,6 @@ def parse_real_value(data):
         return f"[Hata: {e}]"
     return "[Format Bilinmiyor]"
 
-
 def bacnet_nokta_oku(gateway_ip, dnet, dadr_hex, obj_type, obj_inst, prop_id):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", 0))
@@ -240,9 +239,7 @@ def bacnet_nokta_oku(gateway_ip, dnet, dadr_hex, obj_type, obj_inst, prop_id):
     finally:
         sock.close()
 
-
 def bacnet_thread():
-    # Excel dosyasi yoksa thread baslamaz
     if not os.path.exists(EXCEL_FILE):
         logger.warning("BACnet Excel dosyasi bulunamadi: %s", EXCEL_FILE)
         logger.warning("BACnet thread baslatilmadi. Dosyayi bu klasore kopyalayin.")
@@ -317,7 +314,6 @@ def bacnet_thread():
                     ok_count, len(df), BACNET_CSV)
         time.sleep(60)
 
-
 # ================================================================
 # ANA BASLATI
 # ================================================================
@@ -330,7 +326,6 @@ def start():
     t2.start()
 
     return t1, t2
-
 
 if __name__ == "__main__":
     logger.info("=" * 55)
