@@ -244,13 +244,32 @@ def date_exists_in_csv(target_date_str):
 
 
 def write_to_energy_csv(row_dict):
-    """energy_data.csv'ye yeni satir ekle (dosya yoksa olustur)"""
-    file_exists = os.path.exists(ENERGY_CSV)
-    with open(ENERGY_CSV, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=ENERGY_SCHEMA, extrasaction="ignore")
-        if not file_exists:
+    """
+    energy_data.csv'ye yeni satir ekle.
+    Mevcut dosyada eksik sutun varsa (schema degisikligi) pandas ile guncelle.
+    """
+    import pandas as pd
+
+    if os.path.exists(ENERGY_CSV):
+        try:
+            df = pd.read_csv(ENERGY_CSV)
+            # Eksik sütunları ekle (schema genişledi)
+            for col in ENERGY_SCHEMA:
+                if col not in df.columns:
+                    df[col] = None
+                    logger.info("energy_data.csv sutun eklendi: %s", col)
+            # Yeni satırı ekle
+            new_row_df = pd.DataFrame([{k: row_dict.get(k, None) for k in ENERGY_SCHEMA}])
+            df = pd.concat([df[ENERGY_SCHEMA], new_row_df], ignore_index=True)
+            df.to_csv(ENERGY_CSV, index=False)
+        except Exception as e:
+            logger.error("energy_data.csv guncelleme hatasi: %s", e)
+    else:
+        with open(ENERGY_CSV, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=ENERGY_SCHEMA, extrasaction="ignore")
             writer.writeheader()
-        writer.writerow(row_dict)
+            writer.writerow(row_dict)
+
     logger.info("energy_data.csv -> yazildi: %s", row_dict.get("Tarih"))
 
 
