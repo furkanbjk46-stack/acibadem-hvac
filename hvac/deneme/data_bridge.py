@@ -50,7 +50,7 @@ CHILLER_ANALYZERS = {
 }
 
 ALL_ANALYZERS = {
-    "MCC-1", "MCC-2", "MCC-4", "MCC-6", "MCC-7",
+    "MCC-1", "MCC-2", "MCC-3", "MCC-4", "MCC-6", "MCC-7",
     "CHILLER-1", "CHILLER-2", "CHILLER-3", "CHILLER-4", "CHILLER-5",
     "KULE-1", "KULE-2", "KULE-3",
     "2BK-MCC-D01", "2BK-MCC-D02",
@@ -99,6 +99,7 @@ ENERGY_SCHEMA = [
     "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
     "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
     "Kar_Eritme_Aktif",
+    "TRDP1_kWh", "TRDP2_kWh", "TRDP3_kWh", "TRDP4_kWh",
     "Sebeke_Tuketim_kWh", "Kojen_Uretim_kWh",
     "Kazan_Dogalgaz_m3", "Kojen_Dogalgaz_m3", "Su_Tuketimi_m3",
     "Chiller_Tuketim_kWh", "MCC_Tuketim_kWh", "VRF_Split_Tuketim_kWh",
@@ -311,6 +312,10 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "Mas2_Sogutma_Temp":          data.get("Mas2_Sogutma_Temp", ""),
         "Kar_Eritme_Aktif":           0,
         # --- Manuel girilecek (sayac altyapisi hazir degil) ---
+        "TRDP1_kWh":                  "",  # Manuel girilecek
+        "TRDP2_kWh":                  "",  # Manuel girilecek
+        "TRDP3_kWh":                  "",  # Manuel girilecek
+        "TRDP4_kWh":                  "",  # Manuel girilecek
         "Sebeke_Tuketim_kWh":         "",
         "Kojen_Uretim_kWh":           "",
         "Kazan_Dogalgaz_m3":          "",
