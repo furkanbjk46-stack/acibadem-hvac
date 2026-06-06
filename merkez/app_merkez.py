@@ -456,6 +456,18 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
     _IST = _tz(_td(hours=3))  # Türkiye UTC+3 (sabit, DST yok)
 
     try:
+        # ── OTO SET aktif mi kontrol et ──
+        _aktif_req = _ur2.Request(
+            sb_url + "/rest/v1/ayarlar?key=eq.oto_set_aktif&select=value",
+            headers={"apikey": sb_key, "Authorization": "Bearer " + sb_key}
+        )
+        with _ur2.urlopen(_aktif_req, timeout=4) as _ar:
+            _aktif_data = _jj2.loads(_ar.read())
+        _oto_aktif = (_aktif_data[0]["value"] == "true") if _aktif_data else True
+        if not _oto_aktif:
+            logging.getLogger(__name__).info("oto_set_kontrol: devre disi, atlanıyor.")
+            return
+
         tahmin = _fetch_yarin_tahmin()
         if tahmin is None:
             return
@@ -1271,31 +1283,46 @@ with sag:
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
-    # ── Sezon Göstergesi ──
-    st.markdown('<div class="sec">🌡️ SEZON DURUMU</div>', unsafe_allow_html=True)
-    if dis_hava_val is not None:
-        if dis_hava_val >= 23:
-            sezon_ikon, sezon_ad, sezon_renk = "☀️", "SOĞUTMA SEZONU", "#f59e0b"
-            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Chiller'lar aktif (set ≤7.0°C)"
-        elif dis_hava_val <= 7:
-            sezon_ikon, sezon_ad, sezon_renk = "❄️", "ISITMA SEZONU", "#38bdf8"
-            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Kazan sistemleri aktif (set 8.0°C)"
-        else:
-            sezon_ikon, sezon_ad, sezon_renk = "🌤️", "GEÇİŞ DÖNEMİ", "#10b981"
-            sezon_acik = f"Dış hava {dis_hava_val:.1f}°C — Yük dengeli (set 7.5°C)"
-        sr=int(sezon_renk[1:3],16); sg=int(sezon_renk[3:5],16); sb=int(sezon_renk[5:7],16)
-        st.markdown(
-            f"<div style='background:rgba({sr},{sg},{sb},0.08);border:1px solid rgba({sr},{sg},{sb},0.3);"
-            f"border-radius:10px;padding:10px 12px;text-align:center;'>"
-            f"<div style='font-size:24px;margin-bottom:4px;'>{sezon_ikon}</div>"
-            f"<div style='font-family:Orbitron,sans-serif;font-size:9px;font-weight:700;"
-            f"color:{sezon_renk};letter-spacing:2px;margin-bottom:4px;'>{sezon_ad}</div>"
-            f"<div style='font-size:10px;color:rgba(180,220,255,0.6);'>{sezon_acik}</div>"
-            f"</div>",
-            unsafe_allow_html=True
+    # ── OTO SET ON/OFF Toggle ──
+    st.markdown('<div class="sec">🤖 OTO SET</div>', unsafe_allow_html=True)
+    try:
+        import json as _tgjson, urllib.request as _tgur
+        # Mevcut durumu oku
+        _tg_req = _tgur.Request(
+            url + "/rest/v1/ayarlar?key=eq.oto_set_aktif&select=value",
+            headers={"apikey": key, "Authorization": "Bearer " + key}
         )
-    else:
-        st.markdown('<div class="alrt-y">🌡️ Dış hava verisi alınamadı</div>', unsafe_allow_html=True)
+        with _tgur.urlopen(_tg_req, timeout=4) as _tgr:
+            _tg_data = _tgjson.loads(_tgr.read())
+        _oto_aktif_su = (_tg_data[0]["value"] == "true") if _tg_data else True
+
+        _tg_col1, _tg_col2 = st.columns([3, 1])
+        with _tg_col1:
+            _tg_lbl = "🟢 Aktif — Senaryo çalışıyor" if _oto_aktif_su else "🔴 Devre Dışı — Senaryo durduruldu"
+            st.markdown(
+                f"<div style='padding:6px 0;font-size:11px;color:rgba(200,230,255,0.85);'>{_tg_lbl}</div>",
+                unsafe_allow_html=True
+            )
+        with _tg_col2:
+            _tg_btn_lbl = "⏹ Durdur" if _oto_aktif_su else "▶ Başlat"
+            _tg_btn_renk = "#ef4444" if _oto_aktif_su else "#10b981"
+            if st.button(_tg_btn_lbl, key="oto_set_toggle", use_container_width=True):
+                _yeni_durum = "false" if _oto_aktif_su else "true"
+                _tg_payload = _tgjson.dumps({"key": "oto_set_aktif", "value": _yeni_durum}).encode()
+                _tg_upsert = _tgur.Request(
+                    url + "/rest/v1/ayarlar",
+                    data=_tg_payload,
+                    headers={
+                        "apikey": key, "Authorization": "Bearer " + key,
+                        "Content-Type": "application/json",
+                        "Prefer": "resolution=merge-duplicates"
+                    },
+                    method="POST"
+                )
+                _tgur.urlopen(_tg_upsert, timeout=4)
+                st.rerun()
+    except Exception:
+        pass
 
     # ── Otomatik Set Durumu ──
     try:
