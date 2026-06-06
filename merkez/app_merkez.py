@@ -1457,36 +1457,70 @@ with sag:
                 f"{_ml_son['eski_mod']} → {_ml_son['yeni_mod']} "
                 f"({_ml_son['tahmin_ort']}°C)"
             )
-            with st.expander(f"📊 Mod Geçiş Geçmişi — Toplam {_ml_top} geçiş", expanded=False):
-                _mc1, _mc2 = st.columns(2)
-                with _mc1:
-                    st.metric("Chiller Geçişi", len(_ml_ch))
-                with _mc2:
-                    st.metric("Kol/FCU/AHU Geçişi", len(_ml_dig))
+            # ── Mod Geçiş Kartı (kapalı özet) ──
+            _eski_yeni_ikon = lambda e, y: "⬆️" if (
+                ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(y)
+                > ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(e)
+            ) else "⬇️"
 
-                st.caption(f"Son geçiş: {_ml_son_zaman} — {_ml_son_text}")
-                st.markdown("---")
+            # Özet satır (her zaman görünür)
+            _son_tip  = "🧊 Chiller" if _ml_son["tip"] == "chiller" else "🌀 Kol/FCU/AHU"
+            try:
+                _son_ok = _eski_yeni_ikon(_ml_son["eski_mod"], _ml_son["yeni_mod"])
+            except Exception:
+                _son_ok = "↔️"
 
-                # Geçiş listesi
-                _eski_yeni_ikon = lambda e, y: "⬆️" if (
-                    ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(y)
-                    > ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(e)
-                ) else "⬇️"
+            st.markdown(
+                f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
+                f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:12px 14px;margin-top:6px;'>"
+                # Başlık
+                f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;'>"
+                f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
+                f"color:rgba(0,212,255,0.6);letter-spacing:2px;'>📊 MOD GEÇİŞ GEÇMİŞİ</div>"
+                f"<div style='font-size:8px;color:rgba(150,210,255,0.35);'>{_ml_son_zaman}</div>"
+                f"</div>"
+                # Sayaç rozetleri
+                f"<div style='display:flex;gap:6px;margin-bottom:8px;'>"
+                f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+                f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+                f"🧊 Chiller &nbsp;<b style='color:#00d4ff;'>{len(_ml_ch)}</b></div>"
+                f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+                f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+                f"🌀 Kol/FCU/AHU &nbsp;<b style='color:#00d4ff;'>{len(_ml_dig)}</b></div>"
+                f"<div style='background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);"
+                f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(245,158,11,0.85);'>"
+                f"Toplam &nbsp;<b>{_ml_top}</b></div>"
+                f"</div>"
+                # Son geçiş
+                f"<div style='font-size:9px;border-top:1px solid rgba(0,212,255,0.08);padding-top:6px;"
+                f"color:rgba(180,220,255,0.5);'>"
+                f"Son: {_son_tip} &nbsp;{_son_ok}&nbsp; "
+                f"<b style='color:rgba(200,230,255,0.75);'>{_ml_son['eski_mod']}</b> → "
+                f"<b style='color:#00d4ff;'>{_ml_son['yeni_mod']}</b> &nbsp;·&nbsp; "
+                f"<span style='color:#f59e0b;'>{_ml_son['tahmin_ort']}°C</span>"
+                f"</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
 
+            # Detay listesi (expander)
+            with st.expander("Tüm geçişleri göster", expanded=False):
                 for _mk in _ml_data[:20]:
                     _mk_z  = _mk["created_at"][:16].replace("T", " ")
-                    _mk_ti = "🧊 Chiller" if _mk["tip"] == "chiller" else "🌀 Kol/FCU/AHU"
+                    _mk_ti = "🧊" if _mk["tip"] == "chiller" else "🌀"
                     try:
                         _mk_ok = _eski_yeni_ikon(_mk["eski_mod"], _mk["yeni_mod"])
                     except Exception:
                         _mk_ok = "↔️"
                     st.markdown(
-                        f"<div style='font-size:11px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.06);'>"
-                        f"<span style='color:rgba(180,220,255,0.5);'>{_mk_z}</span> &nbsp; "
-                        f"{_mk_ti} &nbsp; {_mk_ok} &nbsp; "
-                        f"<b>{_mk['eski_mod']}</b> → <b>{_mk['yeni_mod']}</b> &nbsp; "
-                        f"<span style='color:rgba(245,158,11,0.8);'>{_mk['tahmin_ort']}°C</span> &nbsp; "
-                        f"<span style='color:rgba(100,200,100,0.7);'>{_mk['komut_sayisi']} komut</span>"
+                        f"<div style='font-size:10px;padding:4px 0;"
+                        f"border-bottom:1px solid rgba(0,212,255,0.06);'>"
+                        f"<span style='color:rgba(150,210,255,0.35);'>{_mk_z}</span>"
+                        f" &nbsp;{_mk_ti} {_mk_ok}&nbsp; "
+                        f"<b style='color:rgba(200,230,255,0.7);'>{_mk['eski_mod']}</b>"
+                        f" → <b style='color:#00d4ff;'>{_mk['yeni_mod']}</b>"
+                        f" &nbsp;<span style='color:#f59e0b;'>{_mk['tahmin_ort']}°C</span>"
+                        f" &nbsp;<span style='color:rgba(16,185,129,0.7);'>{_mk['komut_sayisi']} komut</span>"
                         f"</div>",
                         unsafe_allow_html=True
                     )
