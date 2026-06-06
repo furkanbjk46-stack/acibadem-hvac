@@ -1450,60 +1450,52 @@ with sag:
 
     # ── Chiller Set & Dış Hava Kartı ──
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="sec">🌡️ CHİLLER SET & DIŞ HAVA</div>', unsafe_allow_html=True)
-
-    kart_html = ""
-    # Dış hava satırı
+    # ── Chiller Set & Dış Hava — Birleşik Kart ──
+    _ch_ic = ""
     if dis_hava_val is not None:
-        kart_html += (
-            "<div style='background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);"
-            "border-radius:8px;padding:8px 12px;margin-bottom:5px;'>"
-            "<div style='display:flex;justify-content:space-between;align-items:center;'>"
-            "<span style='font-size:11px;color:rgba(200,230,255,0.75);'>🌡️ Dış Hava İstanbul</span>"
-            f"<span style='font-family:Orbitron,sans-serif;font-size:13px;color:#f59e0b;font-weight:700;'>"
-            f"{dis_hava_val:.1f}°C "
-            f"<span style='font-size:8px;color:rgba(245,158,11,0.6);'>{_dis_hava_kaynak}</span></span>"
-            "</div></div>"
+        _ch_ic += (
+            f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:8px;'>"
+            f"<span style='font-family:Orbitron,sans-serif;font-size:18px;font-weight:900;"
+            f"color:#f59e0b;text-shadow:0 0 12px rgba(245,158,11,0.5);'>"
+            f"🌡️ {dis_hava_val:.1f}°C</span>"
+            f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>Dış Hava İstanbul"
+            f" &nbsp;·&nbsp; {_dis_hava_kaynak}</span>"
+            f"</div>"
         )
-    # En düşük chiller set
+    _rozet_ic = ""
     if min_val is not None:
-        kart_html += (
-            f"<div style='background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);"
-            f"border-radius:8px;padding:8px 12px;margin-bottom:5px;'>"
-            f"<div style='font-size:8px;color:rgba(0,212,255,0.55);letter-spacing:1px;"
-            f"text-transform:uppercase;margin-bottom:3px;'>❄️ En Düşük Set</div>"
-            f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
-            f"<span style='font-size:12px;color:{min_renk};font-weight:700;'>{min_isim}</span>"
-            f"<span style='font-family:Orbitron,sans-serif;font-size:13px;color:#00d4ff;'>{min_val:.1f}°C</span>"
-            f"</div></div>"
+        _rozet_ic += (
+            f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+            f"❄️ Min &nbsp;<b style='color:#00d4ff;font-family:Orbitron,sans-serif;'>{min_val:.1f}°C</b>"
+            f"&nbsp;<span style='color:{min_renk};'>{min_isim}</span></div>"
         )
-    # En yüksek chiller set
     if max_val is not None and max_isim != min_isim:
-        kart_html += (
-            f"<div style='background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);"
-            f"border-radius:8px;padding:8px 12px;margin-bottom:5px;'>"
-            f"<div style='font-size:8px;color:rgba(239,68,68,0.55);letter-spacing:1px;"
-            f"text-transform:uppercase;margin-bottom:3px;'>🔥 En Yüksek Set</div>"
-            f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
-            f"<span style='font-size:12px;color:{max_renk};font-weight:700;'>{max_isim}</span>"
-            f"<span style='font-family:Orbitron,sans-serif;font-size:13px;color:#ef4444;'>{max_val:.1f}°C</span>"
-            f"</div></div>"
+        _rozet_ic += (
+            f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);"
+            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+            f"🔥 Max &nbsp;<b style='color:#ef4444;font-family:Orbitron,sans-serif;'>{max_val:.1f}°C</b>"
+            f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
         )
-    if not kart_html:
-        kart_html = "<div class='alrt-y'>⚠️ Chiller set verisi bulunamadı</div>"
-    st.markdown(
-        f"<div style='max-height:150px;overflow-y:auto;padding-right:4px;"
-        f"scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;'>"
-        f"{kart_html}</div>",
-        unsafe_allow_html=True
-    )
+    if dis_hava_val is not None or min_val is not None:
+        st.markdown(
+            f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
+            f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:14px 16px;'>"
+            f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
+            f"color:rgba(0,212,255,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
+            f"{_ch_ic}"
+            f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown("<div class='alrt-y'>⚠️ Chiller set verisi bulunamadı</div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
     # ════════════════════════════════
     # 🤖 ENERJİ ZEKASI — AI Modülü
     # ════════════════════════════════
-    st.markdown('<div class="sec">🤖 ENERJİ ZEKASI</div>', unsafe_allow_html=True)
 
     # ── Son 30 günlük metrikleri hesapla ──
     _ai_metriks = {}
@@ -1583,37 +1575,39 @@ with sag:
         _en_kotu    = _sirali[-1]
         _anormal_n  = sum(1 for v in _ai_metriks.values() if v["anormal"])
 
-        # Tüm lokasyonları scroll listesi olarak göster (3'ten fazlasında kaydır)
-        _ez_html = ""
+        # ── Enerji Zekası Kartı ──
+        _ez_satirlar = ""
         for _lid, _mv in _sirali:
-            _ez_renk = "#ef4444" if _mv["anormal"] else "#6ee7b7"
-            _ez_bg   = "rgba(239,68,68,0.06)" if _mv["anormal"] else "rgba(16,185,129,0.05)"
-            _ez_br   = "rgba(239,68,68,0.25)" if _mv["anormal"] else "rgba(16,185,129,0.15)"
-            _ez_html += (
-                f"<div style='background:{_ez_bg};border:1px solid {_ez_br};"
-                f"border-radius:7px;padding:6px 10px;margin-bottom:4px;"
-                f"display:flex;justify-content:space-between;align-items:center;'>"
-                f"<span style='font-size:10px;font-weight:600;color:rgba(200,230,255,0.85);'>{_mv['isim']}</span>"
+            _ez_renk = "#ef4444" if _mv["anormal"] else "#00d4ff"
+            _flag    = " ⚠️" if _mv["anormal"] else ""
+            _ez_satirlar += (
+                f"<div style='display:flex;justify-content:space-between;align-items:center;"
+                f"padding:5px 0;border-bottom:1px solid rgba(0,212,255,0.06);'>"
+                f"<span style='font-size:10px;font-weight:600;color:rgba(200,230,255,0.8);'>"
+                f"{_mv['isim']}{_flag}</span>"
                 f"<span style='font-family:Orbitron,sans-serif;font-size:10px;color:{_ez_renk};'>"
                 f"{_mv['kwh_m2']} kWh/m²/gün</span>"
                 f"</div>"
             )
+
+        _anormal_html = ""
+        if _anormal_n > 0:
+            _anormal_isimler = ", ".join(v["isim"] for v in _ai_metriks.values() if v["anormal"])
+            _anormal_html = (
+                f"<div style='font-size:9px;color:#f59e0b;margin-top:6px;'>"
+                f"⚡ {_anormal_n} lokasyon normal dışı: {_anormal_isimler}</div>"
+            )
+
         st.markdown(
-            f"<div style='max-height:130px;overflow-y:auto;padding-right:4px;"
-            f"scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;'>"
-            f"{_ez_html}</div>",
+            f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
+            f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:14px 16px;'>"
+            f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
+            f"color:rgba(0,212,255,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
+            f"{_ez_satirlar}"
+            f"{_anormal_html}"
+            f"</div>",
             unsafe_allow_html=True
         )
-
-        st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
-
-        if _anormal_n > 0:
-            _anormal_isimler = ", ".join(
-                v["isim"] for v in _ai_metriks.values() if v["anormal"]
-            )
-            st.markdown(
-                f"<div class='alrt-y'>⚡ {_anormal_n} lokasyon normal dışı: {_anormal_isimler}</div>",
-                unsafe_allow_html=True)
 
         # ── AI yetki kontrolü ──
         _api_key = ""
