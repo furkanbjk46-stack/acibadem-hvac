@@ -331,10 +331,10 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "Mas2_Sogutma_Temp":          data.get("Mas2_Sogutma_Temp", ""),
         "Kar_Eritme_Aktif":           0,
         # --- Manuel girilecek (sayac altyapisi hazir degil) ---
-        "TRDP1_kWh":                  "",  # Manuel girilecek
-        "TRDP2_kWh":                  "",  # Manuel girilecek
-        "TRDP3_kWh":                  "",  # Manuel girilecek
-        "TRDP4_kWh":                  "",  # Manuel girilecek
+        "TRDP1_kWh":                  daily_kwh.get("TRDP-1", "") if daily_kwh else "",  # Otomatik
+        "TRDP2_kWh":                  "",  # Manuel girilecek (bağlı değil)
+        "TRDP3_kWh":                  daily_kwh.get("TRDP-3", "") if daily_kwh else "",  # Otomatik
+        "TRDP4_kWh":                  "",  # Manuel girilecek (bağlı değil)
         "Sebeke_Tuketim_kWh":         "",
         "Kojen_Uretim_kWh":           "",
         "Kazan_Dogalgaz_m3":          "",
