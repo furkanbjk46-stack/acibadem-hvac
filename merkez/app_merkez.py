@@ -1283,228 +1283,151 @@ with sag:
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
-    # ── OTO SET ON/OFF Toggle (iOS switch stili) ──
-    # Önce CSS inject et
-    st.markdown("""
-    <style>
-    /* iOS toggle switch */
-    .ios-toggle-wrap {
-        display: flex; align-items: center; justify-content: space-between;
-        background: linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));
-        border: 1px solid rgba(0,212,255,0.2);
-        border-radius: 14px; padding: 12px 16px; margin-bottom: 6px;
-    }
-    .ios-toggle-left { display:flex; flex-direction:column; gap:3px; }
-    .ios-toggle-title {
-        font-family: 'Orbitron', sans-serif; font-size: 8px; font-weight: 700;
-        letter-spacing: 2px; color: rgba(150,210,255,0.6);
-    }
-    .ios-toggle-sub { font-size: 9px; color: rgba(180,220,255,0.45); }
-    .ios-toggle-status-on  { font-size:11px; font-weight:700; color:#10b981; }
-    .ios-toggle-status-off { font-size:11px; font-weight:700; color:#ef4444; }
-    /* Switch track */
-    .switch { position:relative; display:inline-block; width:46px; height:26px; flex-shrink:0; }
-    .switch input { opacity:0; width:0; height:0; }
-    .slider {
-        position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
-        border-radius:26px; transition:.35s;
-        background: rgba(100,120,160,0.35);
-        border: 1px solid rgba(100,140,200,0.2);
-    }
-    .slider.on  { background:#10b981; box-shadow:0 0 10px rgba(16,185,129,0.5); border-color:rgba(16,185,129,0.4); }
-    .slider.off { background:#374151; box-shadow:none; }
-    .slider:before {
-        content:""; position:absolute; height:20px; width:20px; left:3px; bottom:2px;
-        background:white; border-radius:50%; transition:.35s;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-    }
-    .slider.on:before  { transform: translateX(20px); }
-    .slider.off:before { transform: translateX(0px); }
-    /* Streamlit checkbox'ı gizle, sadece bizim div görünsün */
-    div[data-testid="stCheckbox"] { position:absolute; opacity:0; pointer-events:none; height:0; }
-    </style>
-    """, unsafe_allow_html=True)
+    # ── OTO SET — Birleşik Kart (toggle + durum + geçmiş) ──
+    st.markdown("""<style>
+    .switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;}
+    .switch input{opacity:0;width:0;height:0;}
+    .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;border-radius:26px;
+        transition:.35s;background:rgba(100,120,160,0.35);border:1px solid rgba(100,140,200,0.2);}
+    .slider.on{background:#10b981;box-shadow:0 0 10px rgba(16,185,129,0.5);border-color:rgba(16,185,129,0.4);}
+    .slider.off{background:#374151;box-shadow:none;}
+    .slider:before{content:"";position:absolute;height:20px;width:20px;left:3px;bottom:2px;
+        background:white;border-radius:50%;transition:.35s;box-shadow:0 2px 6px rgba(0,0,0,0.4);}
+    .slider.on:before{transform:translateX(20px);}
+    .slider.off:before{transform:translateX(0);}
+    div[data-testid="stCheckbox"]{position:absolute;opacity:0;pointer-events:none;height:0;}
+    </style>""", unsafe_allow_html=True)
 
+    import json as _oajson, urllib.request as _oaur
+
+    # Verileri çek
+    _oto_aktif_su = True
+    _os = {}
+    _ml_data = []
     try:
-        import json as _tgjson, urllib.request as _tgur
-        _tg_req = _tgur.Request(
+        with _oaur.urlopen(_oaur.Request(
             url + "/rest/v1/ayarlar?key=eq.oto_set_aktif&select=value",
-            headers={"apikey": key, "Authorization": "Bearer " + key}
-        )
-        with _tgur.urlopen(_tg_req, timeout=4) as _tgr:
-            _tg_data = _tgjson.loads(_tgr.read())
-        _oto_aktif_su = (_tg_data[0]["value"] == "true") if _tg_data else True
-
-        _sw_cls    = "on" if _oto_aktif_su else "off"
-        _st_txt    = "AKTİF" if _oto_aktif_su else "DEVRE DIŞI"
-        _st_cls    = "ios-toggle-status-on" if _oto_aktif_su else "ios-toggle-status-off"
-        _alt_txt   = "Senaryo çalışıyor" if _oto_aktif_su else "BACnet komut gönderilmiyor"
-
-        st.markdown(
-            f"<div class='ios-toggle-wrap'>"
-            f"  <div class='ios-toggle-left'>"
-            f"    <div class='ios-toggle-title'>🤖 OTO SET</div>"
-            f"    <div class='{_st_cls}'>{_st_txt}</div>"
-            f"    <div class='ios-toggle-sub'>{_alt_txt}</div>"
-            f"  </div>"
-            f"  <div class='switch'><span class='slider {_sw_cls}'></span></div>"
-            f"</div>",
-            unsafe_allow_html=True
-        )
-        # Gerçek tıklama: görünmez checkbox
-        _toggled = st.checkbox("oto_toggle_cb", value=_oto_aktif_su,
-                               key="oto_set_toggle", label_visibility="collapsed")
-        if _toggled != _oto_aktif_su:
-            _yeni_durum = "true" if _toggled else "false"
-            _tg_payload = _tgjson.dumps({"key": "oto_set_aktif", "value": _yeni_durum}).encode()
-            _tg_upsert = _tgur.Request(
-                url + "/rest/v1/ayarlar",
-                data=_tg_payload,
-                headers={
-                    "apikey": key, "Authorization": "Bearer " + key,
-                    "Content-Type": "application/json",
-                    "Prefer": "resolution=merge-duplicates"
-                },
-                method="POST"
-            )
-            _tgur.urlopen(_tg_upsert, timeout=4)
-            st.rerun()
-    except Exception:
-        pass
-
-    # ── Otomatik Set Durumu ──
+            headers={"apikey":key,"Authorization":"Bearer "+key}), timeout=4) as r:
+            d = _oajson.loads(r.read())
+            _oto_aktif_su = (d[0]["value"] == "true") if d else True
+    except Exception: pass
     try:
-        import json as _osjson, urllib.request as _osur
-        _osk_req = _osur.Request(
+        with _oaur.urlopen(_oaur.Request(
             url + "/rest/v1/ayarlar?key=eq.oto_set_son_kontrol&select=value",
-            headers={"apikey": key, "Authorization": "Bearer " + key}
-        )
-        with _osur.urlopen(_osk_req, timeout=4) as _osr:
-            _osd = _osjson.loads(_osr.read())
-        if _osd:
-            _os = _osjson.loads(_osd[0]["value"])
-            _os_zaman   = _os.get("zaman","")[:16].replace("T"," ")
-            _os_donem   = _os.get("donem", "")
-            _os_ref     = _os.get("ref_sicaklik", _os.get("tahmin_ort", "—"))
-            _os_max     = _os.get("yarin_max", "—")
-            _os_min     = _os.get("yarin_min", "—")
-            _os_ort     = _os_ref  # geriye dönük uyumluluk
-            _os_ch      = _os.get("chiller_mod", "—")
-            _os_dig     = _os.get("diger_mod", "—")
-            _os_cnt     = _os.get("komut_sayisi", 0)
-            _donem_ikon = "🌞" if _os_donem == "gunduz" else ("🌙" if _os_donem == "gece" else "")
-            _ch_label = {"koc_soguk":"❄️ 8.0°C","serin":"🌤️ 7.5°C",
-                         "ilimli":"☀️ 7.0°C","sicak":"🔥 6.5°C"}.get(_os_ch, _os_ch)
-            _dig_label = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
-            _cnt_html = (f"<span style='color:#f59e0b;font-weight:700;letter-spacing:0.5px;'>"
-                         f"⚡ {_os_cnt} komut gönderildi</span>") if _os_cnt > 0 else \
-                        "<span style='color:rgba(180,220,255,0.35);'>Mod değişmedi</span>"
-            st.markdown(
-                f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
-                f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:12px 14px;margin-top:6px;'>"
-                # Başlık satırı
-                f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;'>"
-                f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
-                f"color:rgba(0,212,255,0.6);letter-spacing:2px;'>🤖 OTO SET</div>"
-                f"<div style='font-size:8px;color:rgba(150,210,255,0.35);'>{_os_zaman}</div>"
-                f"</div>"
-                # Sıcaklık + dönem
-                f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:6px;'>"
-                f"<span style='font-family:Orbitron,sans-serif;font-size:16px;font-weight:900;"
-                f"color:#00d4ff;text-shadow:0 0 12px rgba(0,212,255,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
-                f"<span style='font-size:9px;color:rgba(150,210,255,0.45);'>"
-                f"yarın max:{_os_max} / min:{_os_min}</span>"
-                f"</div>"
-                # Chiller + Diğer rozetler
-                f"<div style='display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;'>"
-                f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
-                f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-                f"❄️ Chiller &nbsp;<b style='color:#00d4ff;'>{_ch_label}</b></div>"
-                f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
-                f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-                f"🌀 Diğer &nbsp;<b style='color:#00d4ff;'>{_dig_label}</b></div>"
-                f"</div>"
-                # Komut durumu
-                f"<div style='font-size:9px;border-top:1px solid rgba(0,212,255,0.08);padding-top:6px;'>"
-                f"{_cnt_html}</div>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-    except Exception:
-        pass
-
-    # ── Mod Geçiş Analitik Kartı ──
+            headers={"apikey":key,"Authorization":"Bearer "+key}), timeout=4) as r:
+            d = _oajson.loads(r.read())
+            _os = _oajson.loads(d[0]["value"]) if d else {}
+    except Exception: pass
     try:
-        import urllib.request as _mlur, json as _mljson
-        _ml_req = _mlur.Request(
+        with _oaur.urlopen(_oaur.Request(
             url + "/rest/v1/oto_mod_log?order=created_at.desc&limit=60"
-                  "&select=tip,eski_mod,yeni_mod,tahmin_ort,komut_sayisi,created_at",
-            headers={"apikey": key, "Authorization": "Bearer " + key}
+                 "&select=tip,eski_mod,yeni_mod,tahmin_ort,komut_sayisi,created_at",
+            headers={"apikey":key,"Authorization":"Bearer "+key}), timeout=4) as r:
+            _ml_data = _oajson.loads(r.read())
+    except Exception: pass
+
+    # Toggle değerleri
+    _sw_cls  = "on" if _oto_aktif_su else "off"
+    _st_renk = "#10b981" if _oto_aktif_su else "#ef4444"
+    _st_txt  = "AKTİF" if _oto_aktif_su else "DEVRE DIŞI"
+    _alt_txt = "Senaryo çalışıyor" if _oto_aktif_su else "BACnet komut gönderilmiyor"
+
+    # OTO SET durum değerleri
+    _os_zaman   = _os.get("zaman","")[:16].replace("T"," ")
+    _os_ref     = _os.get("ref_sicaklik", _os.get("tahmin_ort", "—"))
+    _os_max     = _os.get("yarin_max","—")
+    _os_min     = _os.get("yarin_min","—")
+    _os_ch      = _os.get("chiller_mod","—")
+    _os_dig     = _os.get("diger_mod","—")
+    _os_cnt     = _os.get("komut_sayisi", 0)
+    _os_donem   = _os.get("donem","")
+    _donem_ikon = "🌞" if _os_donem=="gunduz" else ("🌙" if _os_donem=="gece" else "")
+    _ch_label   = {"koc_soguk":"❄️ 8.0°C","serin":"🌤️ 7.5°C",
+                   "ilimli":"☀️ 7.0°C","sicak":"🔥 6.5°C"}.get(_os_ch, _os_ch)
+    _dig_label  = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
+    _cnt_html   = (f"<span style='color:#f59e0b;font-weight:700;'>⚡ {_os_cnt} komut gönderildi</span>"
+                   ) if _os_cnt > 0 else "<span style='color:rgba(180,220,255,0.3);'>Mod değişmedi</span>"
+
+    # Mod geçiş değerleri
+    _ml_ch  = [x for x in _ml_data if x["tip"]=="chiller"]
+    _ml_dig = [x for x in _ml_data if x["tip"]=="diger"]
+    _ml_top = len(_ml_data)
+    _eski_yeni_ikon = lambda e,y: "⬆️" if (
+        ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(y)
+        > ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(e)) else "⬇️"
+    _son_gecis_html = ""
+    if _ml_data:
+        _ml_son = _ml_data[0]
+        _son_tip = "🧊 Chiller" if _ml_son["tip"]=="chiller" else "🌀 Kol/FCU/AHU"
+        try: _son_ok = _eski_yeni_ikon(_ml_son["eski_mod"], _ml_son["yeni_mod"])
+        except: _son_ok = "↔️"
+        _son_gecis_html = (
+            f"<div style='font-size:9px;border-top:1px solid rgba(0,212,255,0.08);"
+            f"padding-top:6px;margin-top:6px;color:rgba(180,220,255,0.5);'>"
+            f"Son geçiş: {_son_tip} &nbsp;{_son_ok}&nbsp; "
+            f"<b style='color:rgba(200,230,255,0.75);'>{_ml_son['eski_mod']}</b> → "
+            f"<b style='color:#00d4ff;'>{_ml_son['yeni_mod']}</b> &nbsp;·&nbsp; "
+            f"<span style='color:#f59e0b;'>{_ml_son['tahmin_ort']}°C</span></div>"
         )
-        with _mlur.urlopen(_ml_req, timeout=4) as _mlr:
-            _ml_data = _mljson.loads(_mlr.read())
 
-        if _ml_data:
-            _ml_ch  = [x for x in _ml_data if x["tip"] == "chiller"]
-            _ml_dig = [x for x in _ml_data if x["tip"] == "diger"]
-            _ml_top = len(_ml_data)
+    st.markdown(
+        f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
+        f"border:1px solid rgba(0,212,255,0.18);border-radius:14px;padding:14px 16px;'>"
+        # ── Satır 1: Başlık + toggle ──
+        f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
+        f"<div>"
+        f"<div style='font-family:Orbitron,sans-serif;font-size:9px;font-weight:700;"
+        f"color:rgba(0,212,255,0.7);letter-spacing:2px;margin-bottom:2px;'>🤖 OTO SET</div>"
+        f"<div style='font-size:11px;font-weight:700;color:{_st_renk};'>{_st_txt}"
+        f"<span style='font-size:9px;font-weight:400;color:rgba(180,220,255,0.4);margin-left:6px;'>{_alt_txt}</span></div>"
+        f"</div>"
+        f"<div class='switch'><span class='slider {_sw_cls}'></span></div>"
+        f"</div>"
+        # ── Ayırıcı ──
+        f"<div style='border-top:1px solid rgba(0,212,255,0.08);margin-bottom:10px;'></div>"
+        # ── Satır 2: Sıcaklık + zaman ──
+        f"<div style='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;'>"
+        f"<div style='display:flex;align-items:baseline;gap:6px;'>"
+        f"<span style='font-family:Orbitron,sans-serif;font-size:18px;font-weight:900;"
+        f"color:#00d4ff;text-shadow:0 0 12px rgba(0,212,255,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
+        f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>yarın max:{_os_max} / min:{_os_min}</span>"
+        f"</div>"
+        f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>{_os_zaman}</span>"
+        f"</div>"
+        # ── Satır 3: Rozetler ──
+        f"<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;'>"
+        f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+        f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+        f"❄️ Chiller &nbsp;<b style='color:#00d4ff;'>{_ch_label}</b></div>"
+        f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+        f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+        f"🌀 Diğer &nbsp;<b style='color:#00d4ff;'>{_dig_label}</b></div>"
+        f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+        f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+        f"🧊 {len(_ml_ch)} &nbsp;·&nbsp; 🌀 {len(_ml_dig)} &nbsp;·&nbsp; "
+        f"<span style='color:#f59e0b;'>Σ {_ml_top}</span></div>"
+        f"</div>"
+        # ── Satır 4: Komut + son geçiş ──
+        f"<div style='font-size:9px;border-top:1px solid rgba(0,212,255,0.08);padding-top:6px;'>"
+        f"{_cnt_html}</div>"
+        f"{_son_gecis_html}"
+        f"</div>",
+        unsafe_allow_html=True
+    )
 
-            # Son geçiş özeti
-            _ml_son = _ml_data[0]
-            _ml_son_zaman = _ml_son["created_at"][:16].replace("T", " ")
-            _ml_son_text  = (
-                f"{'Chiller' if _ml_son['tip']=='chiller' else 'Kol/FCU/AHU'}: "
-                f"{_ml_son['eski_mod']} → {_ml_son['yeni_mod']} "
-                f"({_ml_son['tahmin_ort']}°C)"
-            )
-            # ── Mod Geçiş Kartı (kapalı özet) ──
-            _eski_yeni_ikon = lambda e, y: "⬆️" if (
-                ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(y)
-                > ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(e)
-            ) else "⬇️"
+    # Görünmez checkbox — toggle işlevi
+    _toggled = st.checkbox("oto_toggle_cb", value=_oto_aktif_su,
+                           key="oto_set_toggle", label_visibility="collapsed")
+    if _toggled != _oto_aktif_su:
+        _pay = _oajson.dumps({"key":"oto_set_aktif","value":"true" if _toggled else "false"}).encode()
+        _oaur.urlopen(_oaur.Request(url+"/rest/v1/ayarlar", data=_pay, method="POST",
+            headers={"apikey":key,"Authorization":"Bearer "+key,
+                     "Content-Type":"application/json","Prefer":"resolution=merge-duplicates"}), timeout=4)
+        st.rerun()
 
-            # Özet satır (her zaman görünür)
-            _son_tip  = "🧊 Chiller" if _ml_son["tip"] == "chiller" else "🌀 Kol/FCU/AHU"
-            try:
-                _son_ok = _eski_yeni_ikon(_ml_son["eski_mod"], _ml_son["yeni_mod"])
-            except Exception:
-                _son_ok = "↔️"
-
-            st.markdown(
-                f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
-                f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:12px 14px;margin-top:6px;'>"
-                # Başlık
-                f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;'>"
-                f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
-                f"color:rgba(0,212,255,0.6);letter-spacing:2px;'>📊 MOD GEÇİŞ GEÇMİŞİ</div>"
-                f"<div style='font-size:8px;color:rgba(150,210,255,0.35);'>{_ml_son_zaman}</div>"
-                f"</div>"
-                # Sayaç rozetleri
-                f"<div style='display:flex;gap:6px;margin-bottom:8px;'>"
-                f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
-                f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-                f"🧊 Chiller &nbsp;<b style='color:#00d4ff;'>{len(_ml_ch)}</b></div>"
-                f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
-                f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-                f"🌀 Kol/FCU/AHU &nbsp;<b style='color:#00d4ff;'>{len(_ml_dig)}</b></div>"
-                f"<div style='background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);"
-                f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(245,158,11,0.85);'>"
-                f"Toplam &nbsp;<b>{_ml_top}</b></div>"
-                f"</div>"
-                # Son geçiş
-                f"<div style='font-size:9px;border-top:1px solid rgba(0,212,255,0.08);padding-top:6px;"
-                f"color:rgba(180,220,255,0.5);'>"
-                f"Son: {_son_tip} &nbsp;{_son_ok}&nbsp; "
-                f"<b style='color:rgba(200,230,255,0.75);'>{_ml_son['eski_mod']}</b> → "
-                f"<b style='color:#00d4ff;'>{_ml_son['yeni_mod']}</b> &nbsp;·&nbsp; "
-                f"<span style='color:#f59e0b;'>{_ml_son['tahmin_ort']}°C</span>"
-                f"</div>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-
-            # Detay listesi (expander)
-            with st.expander("Tüm geçişleri göster", expanded=False):
+    # Detay listesi (expander)
+    if _ml_data:
+        with st.expander("📋 Tüm geçişleri göster", expanded=False):
                 for _mk in _ml_data[:20]:
                     _mk_z  = _mk["created_at"][:16].replace("T", " ")
                     _mk_ti = "🧊" if _mk["tip"] == "chiller" else "🌀"
