@@ -1198,10 +1198,12 @@ with tab3:
     filtre = df[(df["Tarih"].dt.date >= bas) & (df["Tarih"].dt.date <= bit)].copy()
     filtre["Tarih"] = filtre["Tarih"].dt.strftime("%Y-%m-%d")
 
+    _trdp_cols = ["TRDP1_kWh","TRDP2_kWh","TRDP3_kWh","TRDP4_kWh"] if lok_id == "maslak" else []
     goster_cols = [c for c in [
         "Tarih","Chiller_Set_Temp_C","Chiller_Adet","Dis_Hava_Sicakligi_C",
         "Toplam_Hastane_Tuketim_kWh","Toplam_Sogutma_Tuketim_kWh",
         "Sebeke_Tuketim_kWh","MCC_Tuketim_kWh","Kojen_Uretim_kWh",
+        *_trdp_cols,
         "Kazan_Dogalgaz_m3","Su_Tuketimi_m3",
     ] if c in filtre.columns]
 
