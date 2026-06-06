@@ -316,6 +316,37 @@ def build_daily_row(today_str, bacnet, daily_kwh):
             and isinstance(chiller_kwh, (int, float))):
         diger_kwh = round(total_kwh - mcc_kwh - chiller_kwh, 1)
 
+    # --- TRDP degerleri ---
+    trdp1 = daily_kwh.get("TRDP-1", "") if daily_kwh else ""
+    trdp3 = daily_kwh.get("TRDP-3", "") if daily_kwh else ""
+    # TRDP-2 ve TRDP-4 henuz bagli degil
+    trdp2 = ""
+    trdp4 = ""
+
+    # --- Sebeke fallback hesabi ---
+    # TRDP-2/4 bos ise: Sebeke = TRDP-1 + TRDP-3 + MCC + Chiller
+    # TRDP-2/4 dolu ise: Sebeke = TRDP-1 + TRDP-2 + TRDP-3 + TRDP-4
+    def _to_num(v):
+        try:
+            return float(v) if v != "" else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    _t1 = _to_num(trdp1)
+    _t2 = _to_num(trdp2)
+    _t3 = _to_num(trdp3)
+    _t4 = _to_num(trdp4)
+    _mcc = _to_num(mcc_kwh)
+    _ch  = _to_num(chiller_kwh)
+
+    if (_t1 > 0 or _t3 > 0):
+        if (_t2 > 0 and _t4 > 0):
+            sebeke_kwh = round(_t1 + _t2 + _t3 + _t4, 1)  # Tam TRDP
+        else:
+            sebeke_kwh = round(_t1 + _t3 + _mcc + _ch, 1)  # Fallback: MCC+Chiller
+    else:
+        sebeke_kwh = ""  # TRDP verisi yok, bos birak
+
     # --- Son satir (sadece ENERGY_SCHEMA sutunlari) ---
     row = {
         "Tarih":                      today_str,
@@ -330,12 +361,12 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "Mas2_Kazan_Temp":            data.get("Mas2_Kazan_Temp", ""),
         "Mas2_Sogutma_Temp":          data.get("Mas2_Sogutma_Temp", ""),
         "Kar_Eritme_Aktif":           0,
-        # --- Manuel girilecek (sayac altyapisi hazir degil) ---
-        "TRDP1_kWh":                  daily_kwh.get("TRDP-1", "") if daily_kwh else "",  # Otomatik
-        "TRDP2_kWh":                  "",  # Manuel girilecek (bağlı değil)
-        "TRDP3_kWh":                  daily_kwh.get("TRDP-3", "") if daily_kwh else "",  # Otomatik
-        "TRDP4_kWh":                  "",  # Manuel girilecek (bağlı değil)
-        "Sebeke_Tuketim_kWh":         "",
+        # --- TRDP ---
+        "TRDP1_kWh":                  trdp1,   # Otomatik (Modbus)
+        "TRDP2_kWh":                  trdp2,   # Manuel / henuz bagli degil
+        "TRDP3_kWh":                  trdp3,   # Otomatik (Modbus)
+        "TRDP4_kWh":                  trdp4,   # Manuel / henuz bagli degil
+        "Sebeke_Tuketim_kWh":         sebeke_kwh,  # Otomatik hesaplandi
         "Kojen_Uretim_kWh":           "",
         "Kazan_Dogalgaz_m3":          "",
         "Kojen_Dogalgaz_m3":          "",
@@ -346,7 +377,7 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "VRF_Split_Tuketim_kWh":      0,            # Sahada henuz yok
         "Dis_Hava_Sicakligi_C":       data.get("Dis_Hava_Sicakligi_C", ""),
         "Chiller_Load_Percent":       ch_load,
-        "Toplam_Hastane_Tuketim_kWh": total_kwh,    # Tüm analizörler toplamı
+        "Toplam_Hastane_Tuketim_kWh": sebeke_kwh if sebeke_kwh != "" else total_kwh,  # Sebeke+Kojen (Kojen=0 simdilik)
         "Toplam_Sogutma_Tuketim_kWh": chiller_kwh,  # CH analizörleri = soğutma
         "Diger_Yuk_kWh":              diger_kwh,    # Toplam - MCC - Soğutma
     }
