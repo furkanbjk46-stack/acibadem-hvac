@@ -1659,8 +1659,7 @@ with sag:
 
             _sb_metin, _sb_zaman = _sb_analiz_oku(_analiz_tarihi)
 
-            _yenile_btn = st.button(
-                "🔄 Yeniden Analiz Et", key="btn_ai_yenile", use_container_width=True)
+            _yenile_btn = False  # varsayılan
 
             # Çalıştırma koşulu: DB'de bugün yoksa VEYA yenile butonuna basıldıysa
             _calistir = (_sb_metin is None) or _yenile_btn
@@ -1878,9 +1877,7 @@ with sag:
                         _ai_zaman_str = ""
 
             # ── AI çıktısını göster ──
-            _etiket = "🤖 OTOMATİK SABAH ANALİZİ" if not _yenile_btn else "🤖 YENİLENDİ"
             if _ai_metin:
-                # Markdown kalıntılarını temizle (##, **, ---)
                 import re as _re
                 _ai_temiz = _ai_metin
                 _ai_temiz = _re.sub(r"#{1,3}\s*", "", _ai_temiz)
@@ -1889,23 +1886,52 @@ with sag:
                 _ai_temiz = _re.sub(r"^---+$", "", _ai_temiz, flags=_re.MULTILINE)
                 _ai_temiz = _ai_temiz.strip()
 
+                # Kart başlığı — sol başlık sağ buton
+                st.markdown("""<style>
+                div[data-testid="stButton"] > button[kind="secondary"] {
+                    background: rgba(0,212,255,0.06) !important;
+                    border: 1px solid rgba(0,212,255,0.2) !important;
+                    color: rgba(0,212,255,0.7) !important;
+                    font-size: 9px !important;
+                    padding: 2px 10px !important;
+                    border-radius: 6px !important;
+                    font-family: 'Inter', sans-serif !important;
+                    letter-spacing: 0.5px !important;
+                    height: 26px !important;
+                    line-height: 1 !important;
+                }
+                div[data-testid="stButton"] > button[kind="secondary"]:hover {
+                    background: rgba(0,212,255,0.12) !important;
+                    border-color: rgba(0,212,255,0.4) !important;
+                    color: #00d4ff !important;
+                }
+                </style>""", unsafe_allow_html=True)
+
+                # Kart dış çerçevesi — üst kısım
                 st.markdown(
-                    f"<div style='background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.18);"
-                    f"border-radius:10px;margin-top:4px;overflow:hidden;'>"
-                    # ── Başlık satırı ──
+                    f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
+                    f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;margin-top:6px;overflow:hidden;'>"
                     f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                    f"padding:7px 12px;border-bottom:1px solid rgba(0,212,255,0.1);'>"
-                    f"<span style='font-size:8px;color:rgba(0,212,255,0.5);letter-spacing:1.5px;"
-                    f"text-transform:uppercase;'>{_etiket}</span>"
-                    f"<span style='font-size:8px;color:rgba(0,212,255,0.3);'>🕐 {_ai_zaman_str}</span>"
+                    f"padding:10px 14px;border-bottom:1px solid rgba(0,212,255,0.08);'>"
+                    f"<span style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
+                    f"color:rgba(0,212,255,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
+                    f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>🕐 {_ai_zaman_str}</span>"
                     f"</div>"
-                    # ── Kaydırılabilir içerik — sabit 220px ──
-                    f"<div style='max-height:220px;overflow-y:auto;padding:10px 14px;"
-                    f"font-size:11px;color:rgba(200,230,255,0.88);line-height:1.7;"
+                    f"<div style='padding:12px 14px;font-size:11px;color:rgba(200,230,255,0.85);"
+                    f"line-height:1.7;max-height:220px;overflow-y:auto;"
                     f"scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;'>"
                     + _ai_temiz.replace("\n", "<br>") +
-                    f"</div></div>",
+                    f"</div>"
+                    f"<div style='padding:6px 14px 10px;border-top:1px solid rgba(0,212,255,0.08);'></div>"
+                    f"</div>",
                     unsafe_allow_html=True)
+
+                # Buton kartın altındaki boşluğa yerleşiyor — negatif margin ile karta yapışır
+                st.markdown("<div style='margin-top:-32px;padding:0 14px 10px;'>", unsafe_allow_html=True)
+                if st.button("🔄 Yeniden Analiz Et", key="btn_ai_yenile", use_container_width=True):
+                    _sb_metin = None
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
 
     else:
         st.markdown(
