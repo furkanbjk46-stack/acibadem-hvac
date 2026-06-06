@@ -951,6 +951,26 @@ with tab1:
         info_card("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#a855f7")
         info_card("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#f59e0b")
 
+        # ── TRDP Kırılımı (sadece Maslak) ──
+        if lok_id == "maslak":
+            trdp1_val = son_df["TRDP1_kWh"].sum() if "TRDP1_kWh" in son_df.columns else None
+            trdp2_val = son_df["TRDP2_kWh"].sum() if "TRDP2_kWh" in son_df.columns else None
+            trdp3_val = son_df["TRDP3_kWh"].sum() if "TRDP3_kWh" in son_df.columns else None
+            trdp4_val = son_df["TRDP4_kWh"].sum() if "TRDP4_kWh" in son_df.columns else None
+            st.markdown(
+                "<div style='font-size:8px;color:rgba(150,210,255,0.4);letter-spacing:1px;"
+                "text-transform:uppercase;margin:8px 0 4px 0;'>⚡ TRDP Trafo Kırılımı</div>",
+                unsafe_allow_html=True
+            )
+            t1_str = f"{trdp1_val:,.0f}" if trdp1_val else "—"
+            t2_str = f"{trdp2_val:,.0f}" if trdp2_val else "—"
+            t3_str = f"{trdp3_val:,.0f}" if trdp3_val else "—"
+            t4_str = f"{trdp4_val:,.0f}" if trdp4_val else "—"
+            info_card("🔹", "TRDP-1 (Bina Yükü)",    t1_str, "kWh", "#06b6d4")
+            info_card("🔸", "TRDP-2 (Mekanik)",       t2_str, "kWh", "#f59e0b")
+            info_card("🔹", "TRDP-3 (Bina Yükü)",    t3_str, "kWh", "#06b6d4")
+            info_card("🔸", "TRDP-4 (Mekanik)",       t4_str, "kWh", "#f59e0b")
+
     # ══════════════════════════════════════════════════════
     # HVAC & BAKIM DURUMU
     # ══════════════════════════════════════════════════════
