@@ -1129,6 +1129,10 @@ SCHEMA = [
     "Kazan_Adet",
 ] + _TEMP_COLS_SCHEMA + [
     "Kar_Eritme_Aktif",
+    "TRDP1_kWh",
+    "TRDP2_kWh",
+    "TRDP3_kWh",
+    "TRDP4_kWh",
     "Sebeke_Tuketim_kWh",
     "Kojen_Uretim_kWh",
     "Kazan_Dogalgaz_m3",
@@ -1150,6 +1154,10 @@ NUMERIC_COLS = [
     "Absorption_Chiller_Adet",
     "Kazan_Adet",
 ] + _TEMP_COLS_SCHEMA + [
+    "TRDP1_kWh",
+    "TRDP2_kWh",
+    "TRDP3_kWh",
+    "TRDP4_kWh",
     "Sebeke_Tuketim_kWh",
     "Kojen_Uretim_kWh",
     "Kazan_Dogalgaz_m3",
@@ -1329,9 +1337,21 @@ def recalc(df: pd.DataFrame) -> pd.DataFrame:
     df["Toplam_Sogutma_Tuketim_kWh"] = (
         df["Chiller_Tuketim_kWh"].fillna(0) + df["VRF_Split_Tuketim_kWh"].fillna(0)
     )
-    # Toplam Hastane:
-    #   Şebeke girilmişse → Şebeke + Kojen (sayaç bazlı, daha doğru)
-    #   Şebeke yoksa      → MCC + Soğutma (analizör bazlı fallback)
+    # Şebeke Hesabı:
+    # TRDP-2 ve TRDP-4 doluysa → TRDP-1+2+3+4 toplamı
+    # TRDP-2 ve TRDP-4 boşsa  → TRDP-1+3 + MCC + Chiller (mekanik fallback)
+    trdp1 = df["TRDP1_kWh"].fillna(0)
+    trdp2 = df["TRDP2_kWh"].fillna(0)
+    trdp3 = df["TRDP3_kWh"].fillna(0)
+    trdp4 = df["TRDP4_kWh"].fillna(0)
+    mekanik_gercek = (trdp2 > 0) & (trdp4 > 0)  # TRDP-2 ve TRDP-4 her ikisi de dolu
+    trdp_tam = trdp1 + trdp2 + trdp3 + trdp4
+    mekanik_fallback = df["MCC_Tuketim_kWh"].fillna(0) + df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
+    trdp_fallback = trdp1 + trdp3 + mekanik_fallback
+    trdp_toplam = trdp_tam.where(mekanik_gercek, trdp_fallback)
+    trdp_girildi = (trdp1 > 0) | (trdp3 > 0)  # En az TRDP-1 veya TRDP-3 girilmişse uygula
+    df["Sebeke_Tuketim_kWh"] = trdp_toplam.where(trdp_girildi, df["Sebeke_Tuketim_kWh"].fillna(0))
+    # Toplam Hastane = Şebeke (TRDP toplamı) + Kojen
     sebeke = df["Sebeke_Tuketim_kWh"].fillna(0)
     kojen  = df["Kojen_Uretim_kWh"].fillna(0)
     mcc_sogutma = df["MCC_Tuketim_kWh"].fillna(0) + df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
@@ -1746,7 +1766,7 @@ def render_styled_table(df: pd.DataFrame, max_height: int = 400, max_rows: int =
             st.session_state[page_key] = 1
         
         # Sayfalama kontrolleri
-        col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+        col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1])
         with col1:
             if st.button("◀ Önceki", key=f"prev_{table_key}"):
                 if st.session_state[page_key] > 1:
@@ -1757,6 +1777,15 @@ def render_styled_table(df: pd.DataFrame, max_height: int = 400, max_rows: int =
         with col3:
             st.markdown(f"**Toplam: {total_rows} satır**")
         with col4:
+            _git_sayfa = st.number_input(
+                "Sayfaya git", min_value=1, max_value=total_pages,
+                value=st.session_state[page_key],
+                step=1, key=f"goto_{table_key}", label_visibility="collapsed"
+            )
+            if _git_sayfa != st.session_state[page_key]:
+                st.session_state[page_key] = int(_git_sayfa)
+                st.rerun()
+        with col5:
             if st.button("Sonraki ▶", key=f"next_{table_key}"):
                 if st.session_state[page_key] < total_pages:
                     st.session_state[page_key] += 1
@@ -2910,6 +2939,10 @@ with tab1:
         _set_ss("entry_single_h",         "Isitma_Temp_C",            0.0)
         _set_ss("entry_single_k",         "Kazan_Temp_C",             0.0)
         _set_ss("entry_single_c",         "Sogutma_Temp_C",           0.0)
+        _set_ss("entry_trdp1",            "TRDP1_kWh",                0.0)
+        _set_ss("entry_trdp2",            "TRDP2_kWh",                0.0)
+        _set_ss("entry_trdp3",            "TRDP3_kWh",                0.0)
+        _set_ss("entry_trdp4",            "TRDP4_kWh",                0.0)
         _set_ss("entry_sebeke",           "Sebeke_Tuketim_kWh",       0.0)
         _set_ss("entry_kojen",            "Kojen_Uretim_kWh",         0.0)
         _set_ss("entry_su",               "Su_Tuketimi_m3",           0.0)
@@ -2928,10 +2961,32 @@ with tab1:
         _match = _df_all[_df_all["Tarih"] == tarih]
         if not _match.empty:
             _ex = _match.iloc[-1]
-            st.info(
-                f"📋 **{tarih}** için kayıtlı veri bulundu — mevcut değerler önyüklendi. "
-                "Sadece değiştirmek istediğiniz alanları düzenleyip kaydedin."
-            )
+            _info_col, _del_col = st.columns([5, 1])
+            with _info_col:
+                st.info(
+                    f"📋 **{tarih}** için kayıtlı veri bulundu — mevcut değerler önyüklendi. "
+                    "Sadece değiştirmek istediğiniz alanları düzenleyip kaydedin."
+                )
+            with _del_col:
+                if not st.session_state.get(f"_sil_onay_{tarih}"):
+                    if st.button("🗑️ Sil", key=f"_sil_btn_{tarih}", help=f"{tarih} tarihli veriyi sil", use_container_width=True):
+                        st.session_state[f"_sil_onay_{tarih}"] = True
+                        st.rerun()
+                else:
+                    st.warning(f"**{tarih}** silinecek. Emin misin?")
+                    _evet_col, _hayir_col = st.columns(2)
+                    with _evet_col:
+                        if st.button("✅ Evet", key=f"_sil_evet_{tarih}", use_container_width=True):
+                            _df_silme = load_data()
+                            _df_silme = _df_silme[_df_silme["Tarih"] != tarih]
+                            persist_df(_df_silme)
+                            st.session_state.pop(f"_sil_onay_{tarih}", None)
+                            st.success(f"✅ {tarih} tarihi silindi.")
+                            st.rerun()
+                    with _hayir_col:
+                        if st.button("❌ Hayır", key=f"_sil_hayir_{tarih}", use_container_width=True):
+                            st.session_state.pop(f"_sil_onay_{tarih}", None)
+                            st.rerun()
 
     def _fv(col, default):
         if _ex is None:
@@ -2990,7 +3045,11 @@ with tab1:
 
         a1, a2, a3 = st.columns(3)
         with a1:
-            sebeke = st.number_input("Şebeke Tüketim (kWh)", value=_fv("Sebeke_Tuketim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_sebeke")
+            st.markdown("**Trafo Tüketimleri (TRDP)**")
+            trdp1 = st.number_input("TRDP-1 (kWh)", value=_fv("TRDP1_kWh", 0.0), step=50.0, min_value=0.0, key="entry_trdp1")
+            trdp2 = st.number_input("TRDP-2 (kWh)", value=_fv("TRDP2_kWh", 0.0), step=50.0, min_value=0.0, key="entry_trdp2")
+            trdp3 = st.number_input("TRDP-3 (kWh)", value=_fv("TRDP3_kWh", 0.0), step=50.0, min_value=0.0, key="entry_trdp3")
+            trdp4 = st.number_input("TRDP-4 (kWh)", value=_fv("TRDP4_kWh", 0.0), step=50.0, min_value=0.0, key="entry_trdp4")
             koj = st.number_input("Kojen Üretim (kWh)", value=_fv("Kojen_Uretim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_kojen")
             su = st.number_input("Su Tüketimi (m³)", value=_fv("Su_Tuketimi_m3", 0.0), step=1.0, min_value=0.0, key="entry_su")
         with a2:
@@ -3001,14 +3060,25 @@ with tab1:
             mcc_kwh = st.number_input("MCC Tüketim (kWh)", value=_fv("MCC_Tuketim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_mcc_kwh")
             vrf_kwh = st.number_input("VRF/Split Tüketim (kWh) (varsa)", value=_fv("VRF_Split_Tuketim_kWh", 0.0), step=25.0, min_value=0.0, key="entry_vrf_kwh")
 
-        preview_total_h = sebeke + koj
+        preview_bina_yuk = trdp1 + trdp3
+        preview_mekanik = trdp2 + trdp4
         preview_total_cool = ch_kwh + vrf_kwh
-        preview_other = max(0.0, preview_total_h - (ch_kwh + mcc_kwh))
+        # Şebeke: TRDP-2/4 doluysa gerçek, yoksa fallback
+        if trdp2 > 0 and trdp4 > 0:
+            sebeke = trdp1 + trdp2 + trdp3 + trdp4
+            mekanik_not = ""
+        else:
+            sebeke = trdp1 + trdp3 + mcc_kwh + ch_kwh
+            mekanik_not = " (TRDP-2/4 yok → MCC+Chiller fallback)"
+        preview_total_h = sebeke + koj
+        preview_other = max(0.0, preview_mekanik - (ch_kwh + mcc_kwh))
         st.info(
             f"**Otomatik Hesap Önizleme:** "
-            f"Toplam Hastane = **{preview_total_h:,.0f} kWh**, "
-            f"Toplam Soğutma = **{preview_total_cool:,.0f} kWh**, "
-            f"Diğer Yük = **{preview_other:,.0f} kWh**"
+            f"Şebeke = **{sebeke:,.0f} kWh**{mekanik_not} | "
+            f"Toplam Hastane = **{preview_total_h:,.0f} kWh** | "
+            f"Bina Yükü (1+3) = **{preview_bina_yuk:,.0f} kWh** | "
+            f"Mekanik (2+4) = **{preview_mekanik:,.0f} kWh** | "
+            f"Toplam Soğutma = **{preview_total_cool:,.0f} kWh**"
         )
 
         _btn_col1, _btn_col2 = st.columns([1, 1])
@@ -3045,6 +3115,10 @@ with tab1:
                 })
             new_row.update({
                 "Kar_Eritme_Aktif": bool(kar_eritme),
+                "TRDP1_kWh": trdp1,
+                "TRDP2_kWh": trdp2,
+                "TRDP3_kWh": trdp3,
+                "TRDP4_kWh": trdp4,
                 "Sebeke_Tuketim_kWh": sebeke,
                 "Kojen_Uretim_kWh": koj,
                 "Kazan_Dogalgaz_m3": kazan_gaz,
