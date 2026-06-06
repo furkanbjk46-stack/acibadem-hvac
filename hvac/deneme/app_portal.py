@@ -1375,6 +1375,14 @@ def load_data() -> pd.DataFrame:
     df = coerce_types(df)
     df = recalc(df)
     df = df.dropna(subset=["Tarih"]).sort_values("Tarih")
+    # recalc sonrasi hesaplanan turetime sutunlari CSV'ye geri yaz
+    # (cloud_sync dogru degeri Supabase'e gonderebilsin)
+    try:
+        out = df.copy()
+        out["Tarih"] = out["Tarih"].astype(str)
+        out.to_csv(DATA_FILE, index=False)
+    except Exception:
+        pass
     return df
 
 
