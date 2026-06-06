@@ -1396,19 +1396,37 @@ with sag:
             _ch_label = {"koc_soguk":"❄️ 8.0°C","serin":"🌤️ 7.5°C",
                          "ilimli":"☀️ 7.0°C","sicak":"🔥 6.5°C"}.get(_os_ch, _os_ch)
             _dig_label = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
-            _cnt_html = (f"<span style='color:#f59e0b;font-weight:700;'>"
+            _cnt_html = (f"<span style='color:#f59e0b;font-weight:700;letter-spacing:0.5px;'>"
                          f"⚡ {_os_cnt} komut gönderildi</span>") if _os_cnt > 0 else \
-                        "<span style='color:rgba(180,220,255,0.5);'>Mod değişmedi</span>"
+                        "<span style='color:rgba(180,220,255,0.35);'>Mod değişmedi</span>"
             st.markdown(
-                f"<div style='background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);"
-                f"border-radius:8px;padding:8px 12px;margin-top:6px;'>"
-                f"<div style='font-size:9px;color:rgba(16,185,129,0.7);font-weight:700;"
-                f"letter-spacing:1px;margin-bottom:4px;'>🤖 OTO SET — Son: {_os_zaman}</div>"
-                f"<div style='font-size:11px;color:rgba(200,230,255,0.85);'>"
-                f"{_donem_ikon} <b>{_os_ref}°C</b> (yarın max:{_os_max} / min:{_os_min}) &nbsp;|&nbsp; "
-                f"Chiller: <b>{_ch_label}</b> &nbsp;|&nbsp; "
-                f"Diğer: <b>{_dig_label}</b></div>"
-                f"<div style='font-size:10px;margin-top:3px;'>{_cnt_html}</div>"
+                f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
+                f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:12px 14px;margin-top:6px;'>"
+                # Başlık satırı
+                f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;'>"
+                f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
+                f"color:rgba(0,212,255,0.6);letter-spacing:2px;'>🤖 OTO SET</div>"
+                f"<div style='font-size:8px;color:rgba(150,210,255,0.35);'>{_os_zaman}</div>"
+                f"</div>"
+                # Sıcaklık + dönem
+                f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:6px;'>"
+                f"<span style='font-family:Orbitron,sans-serif;font-size:16px;font-weight:900;"
+                f"color:#00d4ff;text-shadow:0 0 12px rgba(0,212,255,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
+                f"<span style='font-size:9px;color:rgba(150,210,255,0.45);'>"
+                f"yarın max:{_os_max} / min:{_os_min}</span>"
+                f"</div>"
+                # Chiller + Diğer rozetler
+                f"<div style='display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;'>"
+                f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+                f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+                f"❄️ Chiller &nbsp;<b style='color:#00d4ff;'>{_ch_label}</b></div>"
+                f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+                f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+                f"🌀 Diğer &nbsp;<b style='color:#00d4ff;'>{_dig_label}</b></div>"
+                f"</div>"
+                # Komut durumu
+                f"<div style='font-size:9px;border-top:1px solid rgba(0,212,255,0.08);padding-top:6px;'>"
+                f"{_cnt_html}</div>"
                 f"</div>",
                 unsafe_allow_html=True
             )
