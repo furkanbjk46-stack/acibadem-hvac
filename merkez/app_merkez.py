@@ -1283,7 +1283,48 @@ with sag:
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
-    # ── OTO SET ON/OFF Toggle ──
+    # ── OTO SET ON/OFF Toggle (iOS switch stili) ──
+    # Önce CSS inject et
+    st.markdown("""
+    <style>
+    /* iOS toggle switch */
+    .ios-toggle-wrap {
+        display: flex; align-items: center; justify-content: space-between;
+        background: linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));
+        border: 1px solid rgba(0,212,255,0.2);
+        border-radius: 14px; padding: 12px 16px; margin-bottom: 6px;
+    }
+    .ios-toggle-left { display:flex; flex-direction:column; gap:3px; }
+    .ios-toggle-title {
+        font-family: 'Orbitron', sans-serif; font-size: 8px; font-weight: 700;
+        letter-spacing: 2px; color: rgba(150,210,255,0.6);
+    }
+    .ios-toggle-sub { font-size: 9px; color: rgba(180,220,255,0.45); }
+    .ios-toggle-status-on  { font-size:11px; font-weight:700; color:#10b981; }
+    .ios-toggle-status-off { font-size:11px; font-weight:700; color:#ef4444; }
+    /* Switch track */
+    .switch { position:relative; display:inline-block; width:46px; height:26px; flex-shrink:0; }
+    .switch input { opacity:0; width:0; height:0; }
+    .slider {
+        position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0;
+        border-radius:26px; transition:.35s;
+        background: rgba(100,120,160,0.35);
+        border: 1px solid rgba(100,140,200,0.2);
+    }
+    .slider.on  { background:#10b981; box-shadow:0 0 10px rgba(16,185,129,0.5); border-color:rgba(16,185,129,0.4); }
+    .slider.off { background:#374151; box-shadow:none; }
+    .slider:before {
+        content:""; position:absolute; height:20px; width:20px; left:3px; bottom:2px;
+        background:white; border-radius:50%; transition:.35s;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    }
+    .slider.on:before  { transform: translateX(20px); }
+    .slider.off:before { transform: translateX(0px); }
+    /* Streamlit checkbox'ı gizle, sadece bizim div görünsün */
+    div[data-testid="stCheckbox"] { position:absolute; opacity:0; pointer-events:none; height:0; }
+    </style>
+    """, unsafe_allow_html=True)
+
     try:
         import json as _tgjson, urllib.request as _tgur
         _tg_req = _tgur.Request(
@@ -1294,30 +1335,27 @@ with sag:
             _tg_data = _tgjson.loads(_tgr.read())
         _oto_aktif_su = (_tg_data[0]["value"] == "true") if _tg_data else True
 
-        # Durum renk/metin
-        _tg_renk   = "#10b981" if _oto_aktif_su else "#ef4444"
-        _tg_bg     = "rgba(16,185,129,0.07)" if _oto_aktif_su else "rgba(239,68,68,0.07)"
-        _tg_border = "rgba(16,185,129,0.25)" if _oto_aktif_su else "rgba(239,68,68,0.25)"
-        _tg_dot    = "🟢" if _oto_aktif_su else "🔴"
-        _tg_durum  = "AKTİF" if _oto_aktif_su else "DEVRE DIŞI"
-        _tg_alt    = "Dış hava bazlı set senaryosu çalışıyor" if _oto_aktif_su else "Senaryo durduruldu — BACnet komut gönderilmiyor"
-        _tg_btn    = "⏹  DURDUR" if _oto_aktif_su else "▶  BAŞLAT"
-        _tr2=int(_tg_renk[1:3],16); _tg2=int(_tg_renk[3:5],16); _tb2=int(_tg_renk[5:7],16)
+        _sw_cls    = "on" if _oto_aktif_su else "off"
+        _st_txt    = "AKTİF" if _oto_aktif_su else "DEVRE DIŞI"
+        _st_cls    = "ios-toggle-status-on" if _oto_aktif_su else "ios-toggle-status-off"
+        _alt_txt   = "Senaryo çalışıyor" if _oto_aktif_su else "BACnet komut gönderilmiyor"
 
         st.markdown(
-            f"<div style='background:{_tg_bg};border:1px solid {_tg_border};"
-            f"border-radius:12px;padding:10px 14px;margin-bottom:4px;'>"
-            f"<div style='display:flex;align-items:center;justify-content:space-between;'>"
-            f"<div>"
-            f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
-            f"color:{_tg_renk};letter-spacing:2px;margin-bottom:3px;'>"
-            f"🤖 OTO SET &nbsp;·&nbsp; {_tg_dot} {_tg_durum}</div>"
-            f"<div style='font-size:9px;color:rgba(180,220,255,0.55);'>{_tg_alt}</div>"
-            f"</div></div></div>",
+            f"<div class='ios-toggle-wrap'>"
+            f"  <div class='ios-toggle-left'>"
+            f"    <div class='ios-toggle-title'>🤖 OTO SET</div>"
+            f"    <div class='{_st_cls}'>{_st_txt}</div>"
+            f"    <div class='ios-toggle-sub'>{_alt_txt}</div>"
+            f"  </div>"
+            f"  <div class='switch'><span class='slider {_sw_cls}'></span></div>"
+            f"</div>",
             unsafe_allow_html=True
         )
-        if st.button(_tg_btn, key="oto_set_toggle", use_container_width=True):
-            _yeni_durum = "false" if _oto_aktif_su else "true"
+        # Gerçek tıklama: görünmez checkbox
+        _toggled = st.checkbox("oto_toggle_cb", value=_oto_aktif_su,
+                               key="oto_set_toggle", label_visibility="collapsed")
+        if _toggled != _oto_aktif_su:
+            _yeni_durum = "true" if _toggled else "false"
             _tg_payload = _tgjson.dumps({"key": "oto_set_aktif", "value": _yeni_durum}).encode()
             _tg_upsert = _tgur.Request(
                 url + "/rest/v1/ayarlar",
