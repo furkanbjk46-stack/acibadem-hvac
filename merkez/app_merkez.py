@@ -1447,8 +1447,6 @@ with sag:
                         f"</div>",
                         unsafe_allow_html=True
                     )
-    except Exception:
-        pass
 
     # ── Chiller Set & Dış Hava Kartı ──
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
