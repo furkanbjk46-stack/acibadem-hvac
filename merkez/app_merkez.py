@@ -1401,7 +1401,7 @@ with sag:
         f"❄️ Chiller &nbsp;<b style='color:#00d4ff;'>{_ch_label}</b></div>"
         f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
         f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-        f"🌀 Diğer &nbsp;<b style='color:#00d4ff;'>{_dig_label}</b></div>"
+        f"🌀 KOL/FCU &nbsp;<b style='color:#00d4ff;'>{_dig_label}</b></div>"
         f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
         f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
         f"🧊 {len(_ml_ch)} &nbsp;·&nbsp; 🌀 {len(_ml_dig)} &nbsp;·&nbsp; "
