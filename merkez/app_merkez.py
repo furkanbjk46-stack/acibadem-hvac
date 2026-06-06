@@ -1144,8 +1144,7 @@ hospitals.forEach(function(h) {{
 </body></html>"""
 
     st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
-    import streamlit.components.v1 as components
-    components.html(harita_html, height=612, scrolling=False)
+    st.html(harita_html)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
