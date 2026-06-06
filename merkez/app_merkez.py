@@ -1284,10 +1284,8 @@ with sag:
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
     # ── OTO SET ON/OFF Toggle ──
-    st.markdown('<div class="sec">🤖 OTO SET</div>', unsafe_allow_html=True)
     try:
         import json as _tgjson, urllib.request as _tgur
-        # Mevcut durumu oku
         _tg_req = _tgur.Request(
             url + "/rest/v1/ayarlar?key=eq.oto_set_aktif&select=value",
             headers={"apikey": key, "Authorization": "Bearer " + key}
@@ -1296,31 +1294,43 @@ with sag:
             _tg_data = _tgjson.loads(_tgr.read())
         _oto_aktif_su = (_tg_data[0]["value"] == "true") if _tg_data else True
 
-        _tg_col1, _tg_col2 = st.columns([3, 1])
-        with _tg_col1:
-            _tg_lbl = "🟢 Aktif — Senaryo çalışıyor" if _oto_aktif_su else "🔴 Devre Dışı — Senaryo durduruldu"
-            st.markdown(
-                f"<div style='padding:6px 0;font-size:11px;color:rgba(200,230,255,0.85);'>{_tg_lbl}</div>",
-                unsafe_allow_html=True
+        # Durum renk/metin
+        _tg_renk   = "#10b981" if _oto_aktif_su else "#ef4444"
+        _tg_bg     = "rgba(16,185,129,0.07)" if _oto_aktif_su else "rgba(239,68,68,0.07)"
+        _tg_border = "rgba(16,185,129,0.25)" if _oto_aktif_su else "rgba(239,68,68,0.25)"
+        _tg_dot    = "🟢" if _oto_aktif_su else "🔴"
+        _tg_durum  = "AKTİF" if _oto_aktif_su else "DEVRE DIŞI"
+        _tg_alt    = "Dış hava bazlı set senaryosu çalışıyor" if _oto_aktif_su else "Senaryo durduruldu — BACnet komut gönderilmiyor"
+        _tg_btn    = "⏹  DURDUR" if _oto_aktif_su else "▶  BAŞLAT"
+        _tr2=int(_tg_renk[1:3],16); _tg2=int(_tg_renk[3:5],16); _tb2=int(_tg_renk[5:7],16)
+
+        st.markdown(
+            f"<div style='background:{_tg_bg};border:1px solid {_tg_border};"
+            f"border-radius:12px;padding:10px 14px;margin-bottom:4px;'>"
+            f"<div style='display:flex;align-items:center;justify-content:space-between;'>"
+            f"<div>"
+            f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
+            f"color:{_tg_renk};letter-spacing:2px;margin-bottom:3px;'>"
+            f"🤖 OTO SET &nbsp;·&nbsp; {_tg_dot} {_tg_durum}</div>"
+            f"<div style='font-size:9px;color:rgba(180,220,255,0.55);'>{_tg_alt}</div>"
+            f"</div></div></div>",
+            unsafe_allow_html=True
+        )
+        if st.button(_tg_btn, key="oto_set_toggle", use_container_width=True):
+            _yeni_durum = "false" if _oto_aktif_su else "true"
+            _tg_payload = _tgjson.dumps({"key": "oto_set_aktif", "value": _yeni_durum}).encode()
+            _tg_upsert = _tgur.Request(
+                url + "/rest/v1/ayarlar",
+                data=_tg_payload,
+                headers={
+                    "apikey": key, "Authorization": "Bearer " + key,
+                    "Content-Type": "application/json",
+                    "Prefer": "resolution=merge-duplicates"
+                },
+                method="POST"
             )
-        with _tg_col2:
-            _tg_btn_lbl = "⏹ Durdur" if _oto_aktif_su else "▶ Başlat"
-            _tg_btn_renk = "#ef4444" if _oto_aktif_su else "#10b981"
-            if st.button(_tg_btn_lbl, key="oto_set_toggle", use_container_width=True):
-                _yeni_durum = "false" if _oto_aktif_su else "true"
-                _tg_payload = _tgjson.dumps({"key": "oto_set_aktif", "value": _yeni_durum}).encode()
-                _tg_upsert = _tgur.Request(
-                    url + "/rest/v1/ayarlar",
-                    data=_tg_payload,
-                    headers={
-                        "apikey": key, "Authorization": "Bearer " + key,
-                        "Content-Type": "application/json",
-                        "Prefer": "resolution=merge-duplicates"
-                    },
-                    method="POST"
-                )
-                _tgur.urlopen(_tg_upsert, timeout=4)
-                st.rerun()
+            _tgur.urlopen(_tg_upsert, timeout=4)
+            st.rerun()
     except Exception:
         pass
 
