@@ -16,6 +16,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <!-- Türkçe karakter destekli DejaVu fontu (base64 gömülü, /static/fonts_dejavu_b64.js) -->
+    <script src="/static/fonts_dejavu_b64.js"></script>
     <style>
         :root {
             --acibadem-blue: #012D75;
@@ -3235,23 +3237,10 @@
             // (Python tarafındaki DejaVu mantığının client-side karşılığı.)
             // ÖNEMLİ: Her yeni jsPDF nesnesi için font yeniden eklenmeli (addFont nesneye özeldir,
             // global cache sadece base64 veriyi saklamalı, "yüklendi" bayrağını değil).
+            // Font verisi sayfa yüklenirken /static/fonts_dejavu_b64.js ile zaten geldi (base64 metin).
             if (!window._trFontB64) {
-                try {
-                    const toB64 = (buf) => {
-                        let bin = '';
-                        const bytes = new Uint8Array(buf);
-                        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-                        return btoa(bin);
-                    };
-                    const [reg, bold] = await Promise.all([
-                        fetch('/static/fonts/DejaVuSans.ttf').then(r => { if (!r.ok) throw new Error('font 404'); return r.arrayBuffer(); }),
-                        fetch('/static/fonts/DejaVuSans-Bold.ttf').then(r => { if (!r.ok) throw new Error('font-bold 404'); return r.arrayBuffer(); })
-                    ]);
-                    window._trFontB64 = { reg: toB64(reg), bold: toB64(bold) };
-                } catch (e) {
-                    console.warn('Türkçe font yüklenemedi, varsayılan font kullanılacak:', e);
-                    window._trFontB64 = null;
-                }
+                window._trFontB64 = window.__DEJAVU_B64__ || null;
+                if (!window._trFontB64) console.warn('Türkçe font verisi (window.__DEJAVU_B64__) bulunamadı, varsayılan font kullanılacak.');
             }
             if (!window._trFontB64) return false;
             try {
