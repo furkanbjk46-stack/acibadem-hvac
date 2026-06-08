@@ -12,6 +12,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <!-- SheetJS for XLSX generation -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- PDF export for maintenance cards -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --acibadem-blue: #012D75;
@@ -1519,10 +1523,20 @@
                 <div class="instruction-section">
                     <h3><i class="fas fa-clipboard-list"></i> Kayıtlı Bakım Kartları</h3>
                     <!-- Arama Kutusu -->
-                    <div style="margin-bottom: 12px;">
+                    <div style="margin-bottom: 12px; display:flex; gap:10px; flex-wrap:wrap;">
                         <input type="text" id="maintenanceSearch" placeholder="🔍 Santral ara (ör: AHU-6)..."
                             oninput="filterMaintenanceCards()"
-                            style="width: 100%; padding: 10px 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 14px; outline: none;">
+                            style="flex:1; min-width:200px; padding: 10px 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 14px; outline: none;">
+                        <select id="maintPdfFilter" style="padding:10px 14px; background: rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:white; font-size:13px;">
+                            <option value="ALL" style="background:#1a2332;">📋 Tümü</option>
+                            <option value="FAULTY" style="background:#1a2332;">❌ Sadece Arızalı</option>
+                            <option value="MAINTENANCE" style="background:#1a2332;">🔧 Sadece Bakımda</option>
+                            <option value="FAULTY_MAINT" style="background:#1a2332;">⚠️ Arızalı + Bakımda</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="exportMaintenanceReportPDF()"
+                            style="padding:10px 16px; font-size:13px; background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.4); white-space:nowrap;">
+                            <i class="fas fa-file-pdf"></i> PDF Raporu Al
+                        </button>
                     </div>
                     <div id="maintenanceCardsList"></div>
                     <div id="maintenanceEmpty" style="text-align: center; padding: 30px; color: rgba(255,255,255,0.5);">
@@ -3184,11 +3198,12 @@
                 const hasMaint = components.some(c => card[c] === 'MAINTENANCE');
                 const borderColor = hasFaulty ? '#ef4444' : hasMaint ? '#f59e0b' : '#10b981';
 
-                html += `<div style="background: rgba(255,255,255,0.05); border: 1px solid ${borderColor}; border-radius: 12px; padding: 16px; margin-bottom: 12px;">`;
+                html += `<div id="maintCard_${eqName}" style="background: rgba(20,30,48,1); border: 1px solid ${borderColor}; border-radius: 12px; padding: 16px; margin-bottom: 12px;">`;
                 html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">`;
                 html += `<h4 style="margin: 0; font-size: 16px;"><i class="fas fa-fan" style="color: ${borderColor};"></i> ${eqName}</h4>`;
+                html += `<div style="display:flex; gap:6px;">`;
                 html += `<button class="btn btn-secondary" onclick="removeMaintenanceCard('${eqName}')" style="padding: 4px 10px; font-size: 12px; background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5);">`;
-                html += `<i class="fas fa-trash"></i></button></div>`;
+                html += `<i class="fas fa-trash"></i></button></div></div>`;
 
                 html += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">`;
                 for (const comp of components) {
@@ -3213,6 +3228,213 @@
                 html += `</div>`;
             }
             container.innerHTML = html;
+        }
+
+        async function ensureTurkishPdfFont(pdf) {
+            // Türkçe karakterler (İ ı ş Ş ğ Ğ ü ö ç) için Unicode destekli font göm.
+            // (Python tarafındaki DejaVu mantığının client-side karşılığı.)
+            // ÖNEMLİ: Her yeni jsPDF nesnesi için font yeniden eklenmeli (addFont nesneye özeldir,
+            // global cache sadece base64 veriyi saklamalı, "yüklendi" bayrağını değil).
+            if (!window._trFontB64) {
+                try {
+                    const toB64 = (buf) => {
+                        let bin = '';
+                        const bytes = new Uint8Array(buf);
+                        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+                        return btoa(bin);
+                    };
+                    const [reg, bold] = await Promise.all([
+                        fetch('/static/fonts/DejaVuSans.ttf').then(r => { if (!r.ok) throw new Error('font 404'); return r.arrayBuffer(); }),
+                        fetch('/static/fonts/DejaVuSans-Bold.ttf').then(r => { if (!r.ok) throw new Error('font-bold 404'); return r.arrayBuffer(); })
+                    ]);
+                    window._trFontB64 = { reg: toB64(reg), bold: toB64(bold) };
+                } catch (e) {
+                    console.warn('Türkçe font yüklenemedi, varsayılan font kullanılacak:', e);
+                    window._trFontB64 = null;
+                }
+            }
+            if (!window._trFontB64) return false;
+            try {
+                pdf.addFileToVFS('DejaVuSans.ttf', window._trFontB64.reg);
+                pdf.addFont('DejaVuSans.ttf', 'DejaVu', 'normal');
+                pdf.addFileToVFS('DejaVuSans-Bold.ttf', window._trFontB64.bold);
+                pdf.addFont('DejaVuSans-Bold.ttf', 'DejaVu', 'bold');
+                return true;
+            } catch (e) {
+                console.warn('Font pdf nesnesine eklenemedi:', e);
+                return false;
+            }
+        }
+
+        async function exportMaintenanceReportPDF() {
+            try {
+                const cards = (maintenanceData && maintenanceData.cards) || {};
+                const filter = document.getElementById('maintPdfFilter').value;
+                const components = ['heating_valve_body', 'heating_valve_signal', 'cooling_valve_body', 'cooling_valve_signal', 'supply_sensor', 'return_sensor'];
+                const totalComp = components.length;
+
+                // Her santral için özet satır oluştur: arızalı/bakımdaki bileşen sayısı + durum
+                const matchesStatus = (val, f) => {
+                    if (f === 'FAULTY') return val === 'FAULTY';
+                    if (f === 'MAINTENANCE') return val === 'MAINTENANCE';
+                    if (f === 'FAULTY_MAINT') return val === 'FAULTY' || val === 'MAINTENANCE';
+                    return false;
+                };
+
+                const summary = [];
+                for (const [eqName, card] of Object.entries(cards)) {
+                    let faulty = 0, maint = 0;
+                    for (const comp of components) {
+                        const val = card[comp] || 'OK';
+                        if (val === 'FAULTY') faulty++;
+                        else if (val === 'MAINTENANCE') maint++;
+                    }
+                    const issueCount = faulty + maint;
+                    if (filter !== 'ALL') {
+                        const hasMatch = components.some(c => matchesStatus(card[c] || 'OK', filter));
+                        if (!hasMatch) continue;
+                    }
+                    let statusLabel, statusColor, badgeLabel, badgeColor;
+                    if (faulty > 0) {
+                        statusLabel = 'ARIZALI (Müdahale Gerekli)';
+                        statusColor = [211, 47, 47];
+                        badgeLabel = 'KRİTİK / ACİL';
+                        badgeColor = [211, 47, 47];
+                    } else if (maint > 0) {
+                        statusLabel = 'BAKIMDA';
+                        statusColor = [217, 119, 6];
+                        badgeLabel = 'ORTA';
+                        badgeColor = [217, 119, 6];
+                    } else {
+                        statusLabel = 'NORMAL';
+                        statusColor = [46, 125, 50];
+                        badgeLabel = 'DÜŞÜK';
+                        badgeColor = [158, 158, 158];
+                    }
+                    summary.push({
+                        eqName, totalComp, issueCount,
+                        statusLabel, statusColor, badgeLabel, badgeColor,
+                        critical: faulty > 0
+                    });
+                }
+
+                if (summary.length === 0) {
+                    showAlert('Seçilen filtreye uygun kayıt bulunamadı', 'warning');
+                    return;
+                }
+                summary.sort((a, b) => a.eqName.localeCompare(b.eqName));
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const NAVY = [0, 43, 94];
+
+                const trFontOk = await ensureTurkishPdfFont(pdf);
+                const FN = trFontOk ? 'DejaVu' : 'helvetica';
+
+                const filterLabels = {
+                    ALL: 'Tüm Santraller',
+                    FAULTY: 'Sadece Arızalı Santraller',
+                    MAINTENANCE: 'Sadece Bakımdaki Santraller',
+                    FAULTY_MAINT: 'Arızalı + Bakımdaki Santraller'
+                };
+
+                // ── Kurumsal başlık (logo kutusu + lacivert ayraç) ──
+                const margin = 40;
+                pdf.setFillColor(NAVY[0], NAVY[1], NAVY[2]);
+                pdf.roundedRect(margin, 30, 50, 50, 6, 6, 'F');
+                pdf.setDrawColor(255, 255, 255);
+                pdf.setLineWidth(1.6);
+                // basit rüzgar/HVAC ikonu (üç eğri çizgi)
+                pdf.line(margin + 10, margin + 8, margin + 32, margin + 8);
+                pdf.line(margin + 10, margin + 18, margin + 36, margin + 18);
+                pdf.line(margin + 10, margin + 28, margin + 28, margin + 28);
+
+                pdf.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
+                pdf.setFont(FN, 'bold');
+                pdf.setFontSize(15);
+                pdf.text('DİJİTAL BAKIM VE BİLEŞEN DURUM ÖZETİ', margin + 64, 52);
+                pdf.setFont(FN, 'normal');
+                pdf.setFontSize(10);
+                pdf.setTextColor(102, 102, 102);
+                pdf.text(
+                    'Tarih / Saat: ' + new Date().toLocaleString('tr-TR') +
+                    '   |   Filtre: ' + (filterLabels[filter] || filter) +
+                    '   |   Toplam Santral: ' + summary.length,
+                    margin + 64, 68
+                );
+                pdf.setDrawColor(NAVY[0], NAVY[1], NAVY[2]);
+                pdf.setLineWidth(2.2);
+                pdf.line(margin, 96, pageWidth - margin, 96);
+
+                // ── Tablo (kurumsal beyaz/lacivert tema) ──
+                const body = summary.map(s => [
+                    s.eqName,
+                    s.totalComp + ' / ' + s.totalComp,
+                    String(s.issueCount),
+                    (s.critical ? '✗ ' : '✓ ') + s.statusLabel,
+                    s.badgeLabel
+                ]);
+
+                pdf.autoTable({
+                    startY: 112,
+                    head: [['Santral Kodu', 'Kontrol Edilen Bileşen', 'Arıza/Bakım Sayısı', 'Sistem Durumu', 'Öncelik Seviyesi']],
+                    body: body,
+                    theme: 'grid',
+                    styles: { font: FN, fontSize: 9, cellPadding: 7, lineColor: [220, 220, 220], lineWidth: 0.7, halign: 'center', valign: 'middle', textColor: [51, 51, 51] },
+                    headStyles: { font: FN, fontStyle: 'bold', fillColor: NAVY, textColor: [255, 255, 255], fontSize: 10 },
+                    alternateRowStyles: { fillColor: [249, 249, 249] },
+                    columnStyles: {
+                        0: { halign: 'left', fontStyle: 'bold', textColor: [51, 51, 51] },
+                    },
+                    didParseCell: function (data) {
+                        if (data.section !== 'body') return;
+                        const s = summary[data.row.index];
+                        if (s.critical) data.cell.styles.fillColor = [255, 235, 238];
+                        if (data.column.index === 3) {
+                            data.cell.styles.textColor = s.statusColor;
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                        if (data.column.index === 2 && s.issueCount > 0) {
+                            data.cell.styles.textColor = s.statusColor;
+                            data.cell.styles.fontStyle = 'bold';
+                        }
+                    },
+                    didDrawCell: function (data) {
+                        // Öncelik sütununa rozet (badge) görünümü çiz
+                        if (data.section === 'body' && data.column.index === 4) {
+                            const s = summary[data.row.index];
+                            const txt = s.badgeLabel;
+                            pdf.setFont(FN, 'bold');
+                            pdf.setFontSize(8);
+                            const tw = pdf.getTextWidth(txt);
+                            const bw = tw + 16, bh = 16;
+                            const bx = data.cell.x + (data.cell.width - bw) / 2;
+                            const by = data.cell.y + (data.cell.height - bh) / 2;
+                            pdf.setFillColor(s.badgeColor[0], s.badgeColor[1], s.badgeColor[2]);
+                            pdf.roundedRect(bx, by, bw, bh, 8, 8, 'F');
+                            pdf.setTextColor(255, 255, 255);
+                            pdf.text(txt, bx + bw / 2, by + bh / 2 + 3, { align: 'center' });
+                        }
+                    }
+                });
+
+                const finalY = pdf.lastAutoTable.finalY || 112;
+                const faultyCount = summary.filter(s => s.critical).length;
+                pdf.setFont(FN, 'normal');
+                pdf.setFontSize(8);
+                pdf.setTextColor(140, 150, 165);
+                pdf.text(
+                    'Toplam santral: ' + summary.length + '   |   Kritik/Arızalı: ' + faultyCount,
+                    margin, finalY + 20
+                );
+
+                pdf.save('bakim_durum_ozeti_' + filter.toLowerCase() + '_' + new Date().toISOString().slice(0,10) + '.pdf');
+                showAlert('Bakım durum özeti PDF olarak indirildi (' + summary.length + ' santral)', 'success');
+            } catch (err) {
+                console.error(err);
+                showAlert('PDF oluşturulamadı: ' + err.message, 'error');
+            }
         }
 
         function onMaintenanceChange(eqName, comp, value) {
