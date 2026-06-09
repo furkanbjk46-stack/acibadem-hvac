@@ -182,6 +182,10 @@ def calc_daily_kwh(today_readings, ref):
     """
     Gunluk tuketim = bugunun okumasi - dunku okumasi.
     Sayac sifirlama, stale ref veya mantıksız büyük değerlerde 0 kabul edilir.
+    Donus degerleri:
+      None  → ilk calistirma (ref hic yok), energy_data yazilmaz
+      False → tarih uyumsuzlugu, Modbus alanlari bos ama satir yine yazilir
+      dict  → normal hesaplama
     """
     if ref is None:
         return None  # Ilk calistirma, referans yok
@@ -191,10 +195,10 @@ def calc_daily_kwh(today_readings, ref):
     expected_yesterday = (date.today() - timedelta(days=1)).isoformat()
     if ref_date_str != expected_yesterday:
         logger.warning(
-            "Referans tarihi uyumsuz (beklenen=%s, mevcut=%s) — referans gecersiz, 0 kullanılacak",
+            "Referans tarihi uyumsuz (beklenen=%s, mevcut=%s) — Modbus alanlari bos birakılacak, BACnet verisi yazilacak",
             expected_yesterday, ref_date_str
         )
-        return None  # Referansı iptal et, bugünü yeni başlangıç say
+        return False  # Tarih uyumsuz: satiri yaz ama Modbus alanlari bos
 
     yesterday = ref.get("readings", {})
     daily = {}
@@ -417,13 +421,16 @@ def run_daily_snapshot():
         logger.info("Yarin 08:30'da dun'un (%s) verisi otomatik yazilacak.", today_str)
         return
 
+    # daily_kwh=False → tarih uyumsuzlugu, Modbus alanlari bos ama BACnet yazilacak
+    modbus_data = daily_kwh if daily_kwh is not False else None
+
     # 5. Dunku tarih zaten energy_data.csv'de var mi?
     if date_exists_in_csv(yesterday_str):
         logger.warning("Tarih zaten mevcut: %s — atlanıyor.", yesterday_str)
         return
 
     # 6. Satiri olustur (dun'un tarihi ile) ve yaz
-    row = build_daily_row(yesterday_str, bacnet_now, daily_kwh)
+    row = build_daily_row(yesterday_str, bacnet_now, modbus_data)
     write_to_energy_csv(row)
 
     logger.info("Otomatik: MCC=%.1f kWh | Chiller=%.1f kWh | Dis Hava=%.1f C",
