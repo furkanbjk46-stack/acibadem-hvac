@@ -1416,14 +1416,12 @@ with sag:
         unsafe_allow_html=True
     )
 
-    # Gerçek toggle — st.toggle (tıklanabilir, autorefresh'e dayanıklı)
-    _toggled = st.toggle(
-        "Senaryo Aktif" if _oto_aktif_su else "Senaryo Devre Dışı",
-        value=_oto_aktif_su,
-        key="oto_set_toggle",
-    )
-    if _toggled != _oto_aktif_su:
-        _pay = _oajson.dumps({"key":"oto_set_aktif","value":"true" if _toggled else "false"}).encode()
+    # Senaryo açma/kapama butonu (st.toggle/checkbox CSS tarafından gizleniyordu)
+    _btn_lbl = "🟢 Senaryo AKTİF — Kapat" if _oto_aktif_su else "🔴 Senaryo KAPALI — Aç"
+    _btn_type = "secondary" if _oto_aktif_su else "primary"
+    if st.button(_btn_lbl, key="oto_set_toggle_btn", use_container_width=True, type=_btn_type):
+        _yeni_deger = "false" if _oto_aktif_su else "true"
+        _pay = _oajson.dumps({"key":"oto_set_aktif","value":_yeni_deger}).encode()
         _oaur.urlopen(_oaur.Request(url+"/rest/v1/ayarlar", data=_pay, method="POST",
             headers={"apikey":key,"Authorization":"Bearer "+key,
                      "Content-Type":"application/json","Prefer":"resolution=merge-duplicates"}), timeout=4)
