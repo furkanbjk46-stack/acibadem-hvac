@@ -1426,36 +1426,42 @@ with sag:
                      "Content-Type":"application/json","Prefer":"resolution=merge-duplicates"}), timeout=4)
         st.rerun()
 
-    # Detay listesi (native HTML details — st.expander tıklama sorunu yaşıyordu)
+    # Detay listesi — session_state toggle (autorefresh'e karşı dayanıklı)
     if _ml_data:
-        _gecis_satirlari = ""
-        for _mk in _ml_data[:20]:
-            _mk_z  = _mk["created_at"][:16].replace("T", " ")
-            _mk_ti = "🧊" if _mk["tip"] == "chiller" else "🌀"
-            try:
-                _mk_ok = _eski_yeni_ikon(_mk["eski_mod"], _mk["yeni_mod"])
-            except Exception:
-                _mk_ok = "↔️"
-            _gecis_satirlari += (
-                f"<div style='font-size:10px;padding:4px 0;"
-                f"border-bottom:1px solid rgba(0,212,255,0.06);'>"
-                f"<span style='color:rgba(150,210,255,0.35);'>{_mk_z}</span>"
-                f" &nbsp;{_mk_ti} {_mk_ok}&nbsp; "
-                f"<b style='color:rgba(200,230,255,0.7);'>{_mk['eski_mod']}</b>"
-                f" → <b style='color:#00d4ff;'>{_mk['yeni_mod']}</b>"
-                f" &nbsp;<span style='color:#f59e0b;'>{_mk['tahmin_ort']}°C</span>"
-                f" &nbsp;<span style='color:rgba(16,185,129,0.7);'>{_mk['komut_sayisi']} komut</span>"
-                f"</div>"
+        if "gecis_listesi_acik" not in st.session_state:
+            st.session_state["gecis_listesi_acik"] = False
+
+        _btn_label = "🔼 Geçişleri gizle" if st.session_state["gecis_listesi_acik"] else "📋 Tüm geçişleri göster"
+        if st.button(_btn_label, key="gecis_toggle_btn", use_container_width=True):
+            st.session_state["gecis_listesi_acik"] = not st.session_state["gecis_listesi_acik"]
+            st.rerun()
+
+        if st.session_state["gecis_listesi_acik"]:
+            _gecis_satirlari = ""
+            for _mk in _ml_data[:20]:
+                _mk_z  = _mk["created_at"][:16].replace("T", " ")
+                _mk_ti = "🧊" if _mk["tip"] == "chiller" else "🌀"
+                try:
+                    _mk_ok = _eski_yeni_ikon(_mk["eski_mod"], _mk["yeni_mod"])
+                except Exception:
+                    _mk_ok = "↔️"
+                _gecis_satirlari += (
+                    f"<div style='font-size:10px;padding:4px 0;"
+                    f"border-bottom:1px solid rgba(0,212,255,0.06);'>"
+                    f"<span style='color:rgba(150,210,255,0.35);'>{_mk_z}</span>"
+                    f" &nbsp;{_mk_ti} {_mk_ok}&nbsp; "
+                    f"<b style='color:rgba(200,230,255,0.7);'>{_mk['eski_mod']}</b>"
+                    f" → <b style='color:#00d4ff;'>{_mk['yeni_mod']}</b>"
+                    f" &nbsp;<span style='color:#f59e0b;'>{_mk['tahmin_ort']}°C</span>"
+                    f" &nbsp;<span style='color:rgba(16,185,129,0.7);'>{_mk['komut_sayisi']} komut</span>"
+                    f"</div>"
+                )
+            st.markdown(
+                f"<div style='background:rgba(14,38,80,0.80);border:1px solid rgba(0,212,255,0.25);"
+                f"border-radius:10px;padding:8px 12px;margin-bottom:5px;'>"
+                f"{_gecis_satirlari}</div>",
+                unsafe_allow_html=True
             )
-        st.markdown(
-            f"<details style='background:rgba(14,38,80,0.80);border:1px solid rgba(0,212,255,0.25);"
-            f"border-radius:10px;padding:8px 12px;margin-bottom:5px;cursor:pointer;'>"
-            f"<summary style='list-style:none;font-size:11px;color:rgba(0,212,255,0.8);"
-            f"font-weight:600;cursor:pointer;user-select:none;'>📋 Tüm geçişleri göster</summary>"
-            f"<div style='margin-top:8px;'>{_gecis_satirlari}</div>"
-            f"</details>",
-            unsafe_allow_html=True
-        )
 
     # ── Chiller Set & Dış Hava Kartı ──
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
