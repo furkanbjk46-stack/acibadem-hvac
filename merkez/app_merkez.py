@@ -1371,10 +1371,11 @@ with sag:
             f"<span style='color:#f59e0b;'>{_ml_son['tahmin_ort']}°C</span></div>"
         )
 
+    # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
     st.markdown(
         f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
         f"border:1px solid rgba(0,212,255,0.18);border-radius:14px;padding:14px 16px;'>"
-        # ── Satır 1: Başlık + toggle ──
+        # ── Satır 1: Başlık ──
         f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
         f"<div>"
         f"<div style='font-family:Orbitron,sans-serif;font-size:9px;font-weight:700;"
@@ -1382,7 +1383,6 @@ with sag:
         f"<div style='font-size:11px;font-weight:700;color:{_st_renk};'>{_st_txt}"
         f"<span style='font-size:9px;font-weight:400;color:rgba(180,220,255,0.4);margin-left:6px;'>{_alt_txt}</span></div>"
         f"</div>"
-        f"<div class='switch'><span class='slider {_sw_cls}'></span></div>"
         f"</div>"
         # ── Ayırıcı ──
         f"<div style='border-top:1px solid rgba(0,212,255,0.08);margin-bottom:10px;'></div>"
@@ -1416,9 +1416,12 @@ with sag:
         unsafe_allow_html=True
     )
 
-    # Görünmez checkbox — toggle işlevi
-    _toggled = st.checkbox("oto_toggle_cb", value=_oto_aktif_su,
-                           key="oto_set_toggle", label_visibility="collapsed")
+    # Gerçek toggle — st.toggle (tıklanabilir, autorefresh'e dayanıklı)
+    _toggled = st.toggle(
+        "Senaryo Aktif" if _oto_aktif_su else "Senaryo Devre Dışı",
+        value=_oto_aktif_su,
+        key="oto_set_toggle",
+    )
     if _toggled != _oto_aktif_su:
         _pay = _oajson.dumps({"key":"oto_set_aktif","value":"true" if _toggled else "false"}).encode()
         _oaur.urlopen(_oaur.Request(url+"/rest/v1/ayarlar", data=_pay, method="POST",
