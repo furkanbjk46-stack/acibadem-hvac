@@ -47,14 +47,14 @@ CONFIG = {
     "TARGET_DT_AHU": 5.0,
     "TARGET_DT_CHILLER": 5.0,
     "TARGET_DT_FCU": 5.0,
-    "TARGET_DT_COLLECTOR": 3.0,
+    "TARGET_DT_COLLECTOR": 10.0,
     "TARGET_DT_HEAT_EXCHANGER": 8.0,
     "TARGET_DT_DEFAULT": 5.0,
     "TARGET_DT_HEAT": 15.0,  # Gerçekçi ısıtma devresi ΔT eşiği (eski 25.0 LOW_FLOW_DETECTED'i erişilemez yapıyordu)
-    
+
     # Toleranslar
-    "TOLERANCE_CRITICAL": 1.0,
-    "TOLERANCE_NORMAL": 3.0,
+    "TOLERANCE_CRITICAL": 2.0,
+    "TOLERANCE_NORMAL": 4.0,
     
     # SAT analiz eşikleri
     "SAT_COOLING_THRESHOLD": 1.0,
@@ -370,8 +370,8 @@ INSTRUCTION_GUIDE = {
         ]
     },
     "HEAT_EFF_LOW": {
-        "severity": "CRITICAL",
-        "score": 7.0,
+        "severity": "WARNING",
+        "score": 6.0,
         "title": "Isıtma Etkisi Düşük",
         "description": "Isıtma vanası çok açık (≥90%) ama üfleme havası soğuk (<28°C).",
         "steps": [
@@ -394,8 +394,8 @@ INSTRUCTION_GUIDE = {
         "setpoint_chain": "Kazan (70-80°C) → Kolektör (50-60°C) → AHU SAT (30-35°C) → Oda (20-22°C)"
     },
     "COOL_EFF_LOW": {
-        "severity": "CRITICAL",
-        "score": 7.0,
+        "severity": "WARNING",
+        "score": 6.0,
         "title": "Soğutma Etkisi Düşük",
         "description": "Soğutma vanası çok açık (≥90%) ama üfleme havası sıcak (approach >7°C).",
         "steps": [
@@ -674,7 +674,7 @@ INSTRUCTION_GUIDE = {
     },
     "INSUFFICIENT_CAPACITY": {
         "severity": "WARNING",
-        "score": 7.0,
+        "score": 6.0,
         "title": "Yetersiz Kapasite",
         "description": "Vana tam açık ama konfor sağlanamıyor. Kapasite yetersiz.",
         "steps": [
@@ -1524,9 +1524,9 @@ class HVACAnalyzer:
             "NOT_COOLING":               9.0,
             "NOT_HEATING":               9.0,
             "LOW_FLOW_DETECTED":         8.0,
-            "INSUFFICIENT_CAPACITY":     7.0,  # Eksikti — eklendi
-            "HEAT_EFF_LOW":              7.0,
-            "COOL_EFF_LOW":              7.0,
+            "INSUFFICIENT_CAPACITY":     6.0,
+            "HEAT_EFF_LOW":              6.0,
+            "COOL_EFF_LOW":              6.0,
             "CHILLER_LOW_DT":            6.0,
             "LOW_DT_SYNDROME":           5.0,
             "SAT_HIGH":                  5.0,
@@ -1957,7 +1957,7 @@ class HVACAnalyzer:
                 result.action = "Yetersiz Kapasite / Verimsiz"
                 result.reason = f"Oda ({profile.temperatures.room}°C) Set'ten ({profile.temperatures.setpoint}°C) uzak ama vana açık."
                 result.severity = "WARNING"
-                result.score = 7.5
+                result.score = 6.0
                 result.rule = "INSUFFICIENT_CAPACITY"
         
         # Check special conditions
