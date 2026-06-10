@@ -40,7 +40,7 @@ REF_FILE = os.path.join(BASE_DIR, "modbus_daily_ref.json")
 
 # Gunluk snapshot saati — her sabah 07:00'de dun'un verisini yazar
 SNAPSHOT_HOUR   = 7
-SNAPSHOT_MINUTE = 0
+SNAPSHOT_MINUTE = 10
 
 # ================================================================
 # ANALIZOR GRUPLARI

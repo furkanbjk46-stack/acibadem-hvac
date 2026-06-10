@@ -70,6 +70,15 @@ def sync_energy_data(client, lokasyon_id: str):
             df["Tarih"] = pd.to_datetime(df["Tarih"], errors="coerce").dt.strftime("%Y-%m-%d")
             df = df.dropna(subset=["Tarih"])
 
+        # Tarih bazlı tekilleştir — aynı tarihin birden fazla satırı varsa son olanı tut
+        once = len(df)
+        if "Tarih" in df.columns:
+            df = df.drop_duplicates(subset=["Tarih"], keep="last")
+        else:
+            df = df.drop_duplicates()
+        if len(df) < once:
+            logger.info(f"🧹 Tarih bazlı tekilleştirme: {once} → {len(df)} satır ({once - len(df)} kopya temizlendi)")
+
         # NaN değerleri None yap (JSON uyumlu)
         import math
         df = df.where(df.notna(), None)
@@ -102,10 +111,21 @@ def sync_energy_data(client, lokasyon_id: str):
                     clean[k] = v
             clean_records.append(clean)
 
-        # Güvenli sync: önce mevcut ID'leri al, sonra yeni veriyi insert et,
-        # insert başarılıysa eski ID'leri sil — insert fail olursa eski veri korunur
-        mevcut = client.table("energy_data").select("id").eq("lokasyon_id", lokasyon_id).execute()
-        eski_idler = [r["id"] for r in (mevcut.data or [])]
+        # Güvenli sync: önce mevcut ID'leri sayfalayarak al (1000 limit yok),
+        # insert et, sonra eski ID'leri toplu sil
+        eski_idler = []
+        offset = 0
+        while True:
+            r = client.table("energy_data").select("id") \
+                .eq("lokasyon_id", lokasyon_id) \
+                .range(offset, offset + 999) \
+                .execute()
+            if not r.data:
+                break
+            eski_idler.extend([x["id"] for x in r.data])
+            if len(r.data) < 1000:
+                break
+            offset += 1000
 
         batch_size = 500
         total = 0
@@ -114,7 +134,7 @@ def sync_energy_data(client, lokasyon_id: str):
             client.table("energy_data").insert(batch).execute()
             total += len(batch)
 
-        # Insert tamamen başarılıysa eski kayıtları temizle
+        # Insert başarılıysa eski ID'leri toplu sil
         if eski_idler:
             for i in range(0, len(eski_idler), 500):
                 client.table("energy_data").delete().in_("id", eski_idler[i:i+500]).execute()
@@ -403,9 +423,9 @@ def start_background_sync():
     lokasyon_id = config.get("lokasyon_id", "bilinmeyen")
     client = get_supabase_client(config)
 
-    # Günlük sync saati: 09:45 (test)
-    _SYNC_SAAT   = 9
-    _SYNC_DAKIKA = 45
+    # Günlük sync saati: 08:00
+    _SYNC_SAAT   = 8
+    _SYNC_DAKIKA = 0
     _SYNC_SON_FILE = os.path.join(os.path.dirname(__file__), "sync_son_calisma.txt")
 
     def _sync_son_gun_oku():
@@ -460,7 +480,7 @@ def start_background_sync():
     _sb_key = config.get("supabase_key", "")
 
     # HVAC günlük analiz saati (07:00)
-    _HVAC_SAAT   = 7
+    _HVAC_SAAT   = 13
     _HVAC_DAKIKA = 0
 
     def _hvac_son_gun_oku():
@@ -494,7 +514,7 @@ def start_background_sync():
                     if _tick % 2 == 0:
                         send_heartbeat(client, lokasyon_id)
                         check_and_apply_update(client, lokasyon_id)
-                    # Günlük HVAC analizi: saat 08:30'da, günde 1 kez
+                    # Günlük HVAC analizi: saat 13:00'da, günde 1 kez
                     # _hvac_son_gun DOSYAYA yazılır — program restart'ta tekrar çalışmaz
                     if _ahu_ok:
                         _now = datetime.now()
@@ -506,7 +526,7 @@ def start_background_sync():
                         if _saat_tamam and _hvac_son_gun_oku() != _bugun:
                             _hvac_son_gun_yaz(_bugun)  # önce yaz — tekrar tetiklenmesin
                             try:
-                                logger.info("⏰ 07:00 HVAC AHU analizi başlatılıyor...")
+                                logger.info("⏰ 13:00 HVAC AHU analizi başlatılıyor...")
                                 _hvac_analiz()
                             except Exception as _ae:
                                 logger.error("HVAC analiz hatası: %s", _ae)
@@ -521,7 +541,7 @@ def start_background_sync():
     t_hb = threading.Thread(target=_heartbeat_loop, daemon=True, name="heartbeat")
     t_hb.start()
 
-    logger.info(f"🔄 Arka plan senkronizasyonu başlatıldı (her {interval // 60} dakika, heartbeat: 2 dk)")
+    logger.info(f"🔄 Arka plan senkronizasyonu başlatıldı (günlük {_SYNC_SAAT:02d}:{_SYNC_DAKIKA:02d}, heartbeat: 2 dk)")
 
 
 # ============ Manuel / Subprocess çalıştırma ============
@@ -530,10 +550,9 @@ if __name__ == "__main__":
     print("  HVAC Enerji Sistemi — Bulut Senkronizasyonu")
     print("=" * 50)
 
-    # Önce bir kerelik tam sync yap
-    run_sync()
-
-    # Sonra arka plan döngüsünü başlat (heartbeat + güncelleme kontrolü)
+    # NOT: Startup'ta run_sync() ÇAĞIRILMAZ.
+    # Sync zamanlaması _sync_loop tarafından (sync_son_calisma.txt ile) yönetilir.
+    # Bu sayede restart/güncelleme sonrasında çift sync olmaz.
     start_background_sync()
 
     # Ana thread canlı kalsın (daemon thread'ler ölmesin)

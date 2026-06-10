@@ -61,8 +61,10 @@ ANALYZERS = [
 MODBUS_PORT    = 502
 MODBUS_CSV     = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
 READ_INTERVAL  = 1800  # 30 dakika (saniye) — artık kullanılmıyor, saat 07:00 tetikler
-READ_SAAT      = 7    # Günlük okuma saati
-READ_DAKIKA    = 0    # Günlük okuma dakikası
+READ_SAAT      = 7    # Günlük Modbus okuma saati
+READ_DAKIKA    = 0    # Günlük Modbus okuma dakikası
+BACNET_SAAT    = 7    # Günlük BACnet okuma saati
+BACNET_DAKIKA  = 5    # Günlük BACnet okuma dakikası (Modbus'tan 5 dk sonra)
 
 # ================================================================
 # BACNET YAPILANDIRMASI
@@ -258,7 +260,7 @@ def bacnet_thread():
         return
 
     logger.info("BACnet thread baslatildi (%d nokta, gunluk saat %02d:%02d)",
-                len(df), READ_SAAT, READ_DAKIKA)
+                len(df), BACNET_SAAT, BACNET_DAKIKA)
 
     fieldnames = ["Timestamp", "Device_ID", "Point_Name", "Value", "Status"]
     _son_gun = None
@@ -266,7 +268,7 @@ def bacnet_thread():
     while True:
         now = datetime.now()
         bugun = now.date()
-        saat_tamam = (now.hour == READ_SAAT and READ_DAKIKA <= now.minute < READ_DAKIKA + 5)
+        saat_tamam = (now.hour == BACNET_SAAT and BACNET_DAKIKA <= now.minute < BACNET_DAKIKA + 5)
 
         if not (saat_tamam and _son_gun != bugun):
             time.sleep(60)
