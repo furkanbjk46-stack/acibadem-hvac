@@ -795,6 +795,7 @@
                         <th>Kural</th>
                         <th>Skor</th>
                         <th>Seviye</th>
+                        <th>Geçerli Ekipman</th>
                         <th>Ne Tespit Ediyor?</th>
                     </tr>
                 </thead>
@@ -803,88 +804,133 @@
                         <td><strong>SIMUL_HEAT_COOL</strong></td>
                         <td>10.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
                         <td>Eşzamanlı ısıtma ve soğutma → enerji israfı</td>
                     </tr>
                     <tr>
                         <td><strong>CHILLER_BYPASS</strong></td>
                         <td>9.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>Sadece CHILLER</td>
                         <td>Chiller ΔT &lt; 1°C → bypass veya arıza</td>
                     </tr>
                     <tr>
                         <td><strong>NOT_COOLING</strong></td>
                         <td>8.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
                         <td>SAT yüksek, soğutma yapamıyor</td>
                     </tr>
                     <tr>
                         <td><strong>NOT_HEATING</strong></td>
                         <td>8.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
                         <td>SAT düşük, ısıtma yapamıyor</td>
                     </tr>
                     <tr>
                         <td><strong>LOW_FLOW_DETECTED</strong></td>
                         <td>8.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU (CHILLER hariç)</td>
                         <td>Su akışı düşük → pompa/filtre sorunu</td>
                     </tr>
                     <tr>
                         <td><strong>INSUFFICIENT_CAPACITY</strong></td>
                         <td>7.0</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
-                        <td>Kapasite yetersiz, konfor sağlanamıyor</td>
+                        <td>Sadece FCU</td>
+                        <td>Kapasite yetersiz, konfor sağlanamıyor (oda-set sapması &gt;2°C ve vana &gt;%80)</td>
                     </tr>
                     <tr>
                         <td><strong>HEAT_EFF_LOW</strong></td>
                         <td>7.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
-                        <td>Isıtma vanası çok açık ama SAT düşük</td>
+                        <td>Sadece AHU</td>
+                        <td>Isıtma vanası çok açık (≥%90) ama üfleme &lt;28°C</td>
                     </tr>
                     <tr>
                         <td><strong>COOL_EFF_LOW</strong></td>
                         <td>7.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>Sadece AHU</td>
                         <td>Soğutma vanası çok açık ama approach yüksek</td>
                     </tr>
                     <tr>
                         <td><strong>CHILLER_LOW_DT</strong></td>
                         <td>6.0</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>Sadece CHILLER</td>
                         <td>Chiller ΔT &lt; 3°C, düşük verimlilik</td>
                     </tr>
                     <tr>
                         <td><strong>LOW_DT_SYNDROME</strong></td>
                         <td>5.0</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>AHU + FCU</td>
                         <td>Vana ≥90% ama ΔT ≤ 3°C</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SAT_WARNING / SAT_HIGH / SAT_LOW</strong></td>
+                        <td>5.0</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>AHU + FCU (farklı eşiklerle)</td>
+                        <td>SAT (üfleme) sıcaklığı hedef bandın dışında</td>
                     </tr>
                     <tr>
                         <td><strong>HIGH_DT / LOW_DT</strong></td>
                         <td>4-5</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>Sadece AHU</td>
                         <td>ΔT hedef bandının dışında</td>
                     </tr>
                     <tr>
                         <td><strong>COMFORT_OVERRIDE</strong></td>
                         <td>4.0</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>AHU + FCU</td>
                         <td>Oda sıcaklığı set'ten &gt;3°C uzak</td>
                     </tr>
                     <tr>
-                        <td><strong>BAND_HIGH / BAND_LOW</strong></td>
-                        <td>3.0</td>
+                        <td><strong>BAND_HIGH / BAND_LOW / IN_BAND</strong></td>
+                        <td>0-3</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
-                        <td>ΔT hedef altında/üstünde</td>
+                        <td>Sadece FCU</td>
+                        <td>ΔT hedef altında/üstünde/içinde</td>
                     </tr>
                     <tr>
-                        <td><strong>IN_BAND / NORMAL</strong></td>
+                        <td><strong>NORMAL</strong></td>
                         <td>0.0</td>
                         <td><span class="badge badge-optimal">OPTIMAL</span></td>
+                        <td>Sadece AHU</td>
                         <td>Sistem normal çalışıyor ✅</td>
                     </tr>
                 </tbody>
             </table>
+
+            <h3 style="margin-top:24px;">⚙️ Motor Mimarisi: AHU vs FCU Ayrımı</h3>
+            <p>Analiz motoru, ekipman tipine göre <strong>iki ayrı fonksiyona</strong> dallanır
+                (<code>analyze_ahu_performance()</code> / <code>analyze_fcu_performance()</code>),
+                ardından her ikisi de ortak <code>check_special_conditions()</code> fonksiyonunu çağırır.
+                Bu nedenle bazı kurallar yalnızca belirli ekipman tiplerinde tetiklenebilir:</p>
+            <ul>
+                <li><strong>Sadece AHU'da çalışanlar:</strong> NOT_HEATING, NOT_COOLING, SAT_HIGH, SAT_LOW,
+                    SAT_WARNING (AHU yolu), LOW_DT/HIGH_DT/NORMAL, COOL_EFF_LOW, HEAT_EFF_LOW</li>
+                <li><strong>Sadece FCU'da çalışanlar:</strong> INSUFFICIENT_CAPACITY (oda-set sapması + vana
+                    açıklığı kombinasyonu), BAND_LOW/BAND_HIGH/IN_BAND, SAT analizi (FCU yolu, farklı eşikler)</li>
+                <li><strong>Her ikisinde de çalışanlar (ortak):</strong> SIMUL_HEAT_COOL, COMFORT_OVERRIDE,
+                    LOW_FLOW_DETECTED, LOW_DT_SYNDROME</li>
+                <li><strong>Sadece CHILLER'da çalışanlar:</strong> CHILLER_BYPASS, CHILLER_LOW_DT</li>
+            </ul>
+            <p><strong>Çakışma önceliklendirmesi:</strong> Aynı cihazda birden fazla kuralın koşulu aynı anda
+                sağlanırsa, <strong>skoru daha yüksek olan kural</strong> kazanır (ör. LOW_FLOW_DETECTED skor 8,
+                INSUFFICIENT_CAPACITY/HEAT_EFF_LOW skor 7 → LOW_FLOW_DETECTED gösterilir). Bu önceliklendirme
+                <code>INSTRUCTION_GUIDE</code> skor tablosuna göre otomatik yapılır; eşit skorlarda önceden
+                set edilen kural korunur.</p>
+            <p><strong>AHU'da INSUFFICIENT_CAPACITY neden yok?</strong> AHU'larda genelde tek bir bölge/oda
+                sensörü olmadığından "oda-set sapması" kavramı tanımsızdır; bunun yerine AHU'da aynı senaryo
+                <strong>HEAT_EFF_LOW / COOL_EFF_LOW / NOT_HEATING / NOT_COOLING</strong> kuralları üzerinden
+                (üfleme sıcaklığı ve approach bazlı) tespit edilir.</p>
         </div>
 
         <!-- ========== 5. ENERJİ MODÜLÜ ========== -->

@@ -1394,6 +1394,20 @@ class HVACAnalyzer:
             return result
 
 
+        # 3a. Heating diagnostics - SAT kontrolü (LOW_FLOW_DETECTED, skor 8)
+        # AHU coil kontrolünden (HEAT_EFF_LOW, skor 7) ÖNCE çalışır — yüksek skorlu
+        # kural düşük skorlu kural tarafından ezilmesin.
+        if is_heating and eq_type != EquipmentType.CHILLER and delta_t is not None:
+            if (delta_t >= self.config["TARGET_DT_HEAT"] and
+                profile.temperatures.sat is not None and
+                profile.temperatures.sat < self.config["HEAT_SAT_LOW_THRESHOLD"]):
+                result.update({
+                    "action": "Düşük Debi / Pompa Basıncı Kontrolü",
+                    "reason": f"Su tarafı ΔT ({delta_t:.1f}°C) iyi ancak üfleme ({profile.temperatures.sat:.1f}°C) düşük.",
+                    "rule": "LOW_FLOW_DETECTED"
+                })
+                return result
+
         # 3. AHU coil effectiveness (AIR vs WATER)
         if eq_type == EquipmentType.AHU:
             supply_air = profile.temperatures.supply
@@ -1462,19 +1476,6 @@ class HVACAnalyzer:
                     "action": "Düşük ΔT Sendromu (Chiller)",
                     "reason": f"Chiller ΔT düşük ({delta_t:.1f}°C). Hedef ~{self.config['TARGET_DT_CHILLER']:.1f}°C.",
                     "rule": "CHILLER_LOW_DT"
-                })
-                return result
-        
-        # 4. Heating diagnostics - SAT kontrolü
-        if is_heating and eq_type != EquipmentType.CHILLER and delta_t is not None:
-            # Check SAT for heating - ΔT iyi ama SAT düşükse debi sorunu
-            if (delta_t >= self.config["TARGET_DT_HEAT"] and 
-                profile.temperatures.sat is not None and
-                profile.temperatures.sat < self.config["HEAT_SAT_LOW_THRESHOLD"]):
-                result.update({
-                    "action": "Düşük Debi / Pompa Basıncı Kontrolü",
-                    "reason": f"Su tarafı ΔT ({delta_t:.1f}°C) iyi ancak üfleme ({profile.temperatures.sat:.1f}°C) düşük.",
-                    "rule": "LOW_FLOW_DETECTED"
                 })
                 return result
         
@@ -1960,12 +1961,21 @@ class HVACAnalyzer:
                 result.rule = "INSUFFICIENT_CAPACITY"
         
         # Check special conditions
-        # NOT_COOLING / NOT_HEATING kritik kural — özel durum tarafından ezilmez
+        # NOT_COOLING / NOT_HEATING kritik kural — özel durum tarafından ezilmez.
+        # INSUFFICIENT_CAPACITY de daha önce set edildiyse, sadece special_conditions'ın
+        # kuralı SKOR olarak daha yüksekse onun yerini alabilir (eşitlikte korunur).
         special_conditions = self.check_special_conditions(profile, delta_t, effective_mode=effective_mode)
         if special_conditions["rule"] and result.rule not in ("NOT_COOLING", "NOT_HEATING"):
-            result.action = special_conditions["action"]
-            result.reason = special_conditions["reason"]
-            result.rule = special_conditions["rule"]
+            if result.rule == "INSUFFICIENT_CAPACITY":
+                current_score = INSTRUCTION_GUIDE.get("INSUFFICIENT_CAPACITY", {}).get("score", 0)
+                new_score = INSTRUCTION_GUIDE.get(special_conditions["rule"], {}).get("score", 0)
+                overwrite = new_score > current_score
+            else:
+                overwrite = True
+            if overwrite:
+                result.action = special_conditions["action"]
+                result.reason = special_conditions["reason"]
+                result.rule = special_conditions["rule"]
 
         else:
              # Standard Recommendations
