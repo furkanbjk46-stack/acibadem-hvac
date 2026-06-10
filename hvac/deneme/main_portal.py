@@ -918,6 +918,30 @@ class HVACUtils:
 
 # ================ HVAC ANALİZ MOTORU ================
 class HVACAnalyzer:
+    # Kural öncelik skorları — hem calculate_score hem de
+    # special_conditions override kararında kullanılır (ezme önleme)
+    RULE_PRIORITY = {
+        "SIMUL_HEAT_COOL":          10.0,
+        "CHILLER_BYPASS":            9.0,
+        "NOT_COOLING":               9.0,
+        "NOT_HEATING":               9.0,
+        "LOW_FLOW_DETECTED":         8.0,
+        "INSUFFICIENT_CAPACITY":     7.0,
+        "HEAT_EFF_LOW":              7.0,
+        "COOL_EFF_LOW":              7.0,
+        "CHILLER_LOW_DT":            6.0,
+        "LOW_DT_SYNDROME":           5.0,
+        "SAT_HIGH":                  5.0,
+        "SAT_LOW":                   5.0,
+        "SAT_WARNING":               5.0,
+        "AMBIGUOUS":                 5.0,
+        "BAND_HIGH":                 4.0,
+        "BAND_LOW":                  4.0,
+        "COMFORT_OVERRIDE":          4.0,
+        "HIGH_DT":                   3.0,
+        "LOW_DT":                    3.0,
+    }
+
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or CONFIG
         self.utils = HVACUtils()
@@ -1517,29 +1541,8 @@ class HVACAnalyzer:
             score += 2.0
 
         # Kural bazlı minimum skor — kural atanmışsa en az bu kadar olmalı
-        rule_boosts = {
-            "SIMUL_HEAT_COOL":          10.0,
-            "CHILLER_BYPASS":            9.0,
-            "NOT_COOLING":               9.0,
-            "NOT_HEATING":               9.0,
-            "LOW_FLOW_DETECTED":         8.0,
-            "INSUFFICIENT_CAPACITY":     7.0,  # Eksikti — eklendi
-            "HEAT_EFF_LOW":              7.0,
-            "COOL_EFF_LOW":              7.0,
-            "CHILLER_LOW_DT":            6.0,
-            "LOW_DT_SYNDROME":           5.0,
-            "SAT_HIGH":                  5.0,
-            "SAT_LOW":                   5.0,
-            "SAT_WARNING":               5.0,  # Eksikti — eklendi
-            "AMBIGUOUS":                 5.0,  # Eksikti — eklendi
-            "BAND_HIGH":                 4.0,
-            "BAND_LOW":                  4.0,
-            "COMFORT_OVERRIDE":          4.0,
-            "HIGH_DT":                   3.0,
-            "LOW_DT":                    3.0,
-        }
-        if special_rule in rule_boosts:
-            score = max(score, rule_boosts[special_rule])
+        if special_rule in self.RULE_PRIORITY:
+            score = max(score, self.RULE_PRIORITY[special_rule])
 
         # Öncelik çarpanı — kural boost'undan SONRA uygulanır
         # Böylece kritik ekipman hem kural skorundan hem sapma skorundan faydalanır
@@ -1961,11 +1964,16 @@ class HVACAnalyzer:
         
         # Check special conditions
         # NOT_COOLING / NOT_HEATING kritik kural — özel durum tarafından ezilmez
+        # Mevcut kuralın (örn. INSUFFICIENT_CAPACITY) önceliği, yeni özel durumdan
+        # yüksekse ezilmez — sadece daha öncelikli/eşit kurallar üzerine yazabilir
         special_conditions = self.check_special_conditions(profile, delta_t, effective_mode=effective_mode)
         if special_conditions["rule"] and result.rule not in ("NOT_COOLING", "NOT_HEATING"):
-            result.action = special_conditions["action"]
-            result.reason = special_conditions["reason"]
-            result.rule = special_conditions["rule"]
+            current_priority = self.RULE_PRIORITY.get(result.rule, -1.0)
+            new_priority = self.RULE_PRIORITY.get(special_conditions["rule"], -1.0)
+            if new_priority >= current_priority:
+                result.action = special_conditions["action"]
+                result.reason = special_conditions["reason"]
+                result.rule = special_conditions["rule"]
 
         else:
              # Standard Recommendations
