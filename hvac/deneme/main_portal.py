@@ -116,6 +116,18 @@ SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "configs", "hvac_setting
 MAINTENANCE_FILE = os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
 DEFAULT_CONFIG = CONFIG.copy()  # Varsayılan ayarları sakla
 
+AHU_SAT_LIMITLERI_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_sat_limitleri.json")
+
+def _ahu_sat_limit(location: str, name: str, tip: str):
+    """Verilen AHU için tanımlı özel SAT limitini döndürür (yoksa None).
+    tip: 'cooling' veya 'heating'."""
+    try:
+        with open(AHU_SAT_LIMITLERI_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get(location, {}).get(name, {}).get(tip)
+    except Exception:
+        return None
+
 def _get_settings_file(location_id: str = None) -> str:
     """Ayar dosyası yolunu döndür."""
     return os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json")
@@ -1807,6 +1819,12 @@ class HVACAnalyzer:
                 sat_min = self.config.get("SAT_HEATING_MIN", 28.0)
                 sat_max = self.config.get("SAT_HEATING_MAX", 35.0)
 
+                # AHU'ya özel max üfleme (heating) değeri varsa, o santralin
+                # kapasite tavanı olarak sat_min'i bununla değiştir.
+                ozel_sat_heat = _ahu_sat_limit(profile.location, profile.name, "heating")
+                if ozel_sat_heat is not None:
+                    sat_min = ozel_sat_heat
+
                 if sat < sat_min:
                     if relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
                         # Vana yüksek açık ama SAT düşük → gerçek sorun
@@ -1836,6 +1854,12 @@ class HVACAnalyzer:
                 # Soğutma: SAT 15-18°C aralığında olmalı
                 sat_min = self.config.get("SAT_COOLING_MIN", 15.0)
                 sat_max = self.config.get("SAT_COOLING_MAX", 18.0)
+
+                # AHU'ya özel min üfleme (cooling) değeri varsa, o santralin
+                # kapasite tavanı olarak sat_min/sat_max'ı bununla değiştir.
+                ozel_sat = _ahu_sat_limit(profile.location, profile.name, "cooling")
+                if ozel_sat is not None:
+                    sat_max = ozel_sat
 
                 if sat > sat_max:
                     if relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
@@ -3320,6 +3344,49 @@ async def health_check():
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
     }
 
+@app.get("/api/alarm_tekrar_raporu/pdf")
+async def alarm_tekrar_raporu_pdf(yil: int = None, ay: int = None):
+    """
+    Verilen (veya bu) ay icin AHU alarm tekrar raporunu PDF olarak uretir ve indirir.
+    """
+    try:
+        from monthly_report.ahu_alarm_pdf import olustur
+        now = datetime.datetime.now()
+        yil = yil or now.year
+        ay = ay or now.month
+        out_path = olustur(yil, ay)
+        return FileResponse(
+            out_path,
+            media_type="application/pdf",
+            filename=os.path.basename(out_path)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Rapor olusturulamadi: {e}")
+
+
+@app.get("/api/alarm_tekrar_ozet")
+async def alarm_tekrar_ozet(yil: int = None, ay: int = None):
+    """
+    Bu ay (veya verilen yıl/ay) için ekipman bazlı tekrar eden alarm özetini döndürür.
+    Kaynak: monthly_report/ahu_alarm_sayaclari_YYYYMM.csv
+    """
+    try:
+        from monthly_report.ahu_alarm_takip import ay_sonu_raporu, TEKRAR_ESIK
+        now = datetime.datetime.now()
+        yil = yil or now.year
+        ay = ay or now.month
+        df = ay_sonu_raporu(yil, ay)
+        return {
+            "success": True,
+            "yil": yil,
+            "ay": ay,
+            "esik": TEKRAR_ESIK,
+            "rows": df.to_dict(orient="records"),
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e), "rows": []}
+
+
 @app.post("/api/recommend")
 async def recommend(
     csv_file: UploadFile = File(...),
@@ -3765,6 +3832,30 @@ async def analyze_data(rows: List[Dict[str, Any]],
             f"Chiller Yük={chiller_load_float}%, COP={cop_str}"
         )
 
+    # ========== AYLIK ALARM TEKRAR SAYACI ==========
+    # Her satıra, bu ay aynı (Ekipman, Kural) kombinasyonunun kaç gündür
+    # tekrarlandığını gösteren bilgi ekle (ahu_alarm_takip.py tarafından üretilir)
+    try:
+        from monthly_report.ahu_alarm_takip import _sayac_dosyasi
+        sayac_path = _sayac_dosyasi(datetime.datetime.now())
+        if os.path.exists(sayac_path):
+            sayac_df = pd.read_csv(sayac_path)
+            sayac_map = {
+                (row.get("Mahal", ""), row["Ekipman"], row["Kural"]): int(row["Gun_Sayisi"])
+                for _, row in sayac_df.iterrows()
+            }
+        else:
+            sayac_map = {}
+    except Exception:
+        sayac_map = {}
+
+    for r in results:
+        mahal = r.get("Location", r.get("Mahal", ""))
+        ekipman = r.get("Name", r.get("Asset", ""))
+        kural = r.get("Rule") or r.get("Status", "")
+        gun_sayisi = sayac_map.get((mahal, ekipman, kural), 0)
+        r["Tekrar (Bu Ay)"] = gun_sayisi if gun_sayisi else ""
+
     # Sort by score (descending)
     results.sort(key=lambda x: float(x.get("Score", 0)), reverse=True)
 
@@ -3779,7 +3870,8 @@ async def analyze_data(rows: List[Dict[str, Any]],
         "ΔT Dev (°C)", "Band", "SAT Status", "Recommended SAT (°C)", "Score", 
         "Action", "Reason", "Rule", "DT Source",
         "Approach_Supply (°C)", "Approach_Return (°C)",
-        "Plant Supply (°C)", "Plant Return (°C)", "OAT (°C)"
+        "Plant Supply (°C)", "Plant Return (°C)", "OAT (°C)",
+        "Tekrar (Bu Ay)"
     ]
     
     # Save to CSV

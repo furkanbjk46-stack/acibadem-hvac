@@ -1142,6 +1142,13 @@
                                 onclick="filterResults('optimal')">
                                 <i class="fas fa-check-circle"></i> Optimal
                             </button>
+                            <button class="btn btn-sm filter-btn filter-tekrar" data-filter="tekrar"
+                                onclick="showTekrarOzet()">
+                                <i class="fas fa-redo"></i> Tekrarlayan Alarmlar
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="alarmRaporuIndir()" title="Bu ayın tekrar eden alarm raporunu PDF olarak indir">
+                                <i class="fas fa-file-pdf"></i> Alarm Raporu (PDF)
+                            </button>
                         </div>
                         <button class="btn btn-secondary btn-sm" onclick="exportCSV()">
                             <i class="fas fa-file-csv"></i>
@@ -1186,6 +1193,7 @@
                                 <th>Yaklaşım Dönüş</th>
                                 <th>Kural</th>
                                 <th>Talimat</th>
+                                <th>Tekrar (Bu Ay)</th>
                             </tr>
                         </thead>
                         <tbody id="resultsBody">
@@ -1193,6 +1201,30 @@
                                 <td colspan="15" class="empty-state">
                                     <i class="fas fa-inbox"></i>
                                     <div>Henüz analiz yapılmadı. Veri yükleyin veya örnek veri seçin.</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="table-container" id="tekrarContainer" style="display:none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mahal</th>
+                                <th>Ekipman</th>
+                                <th>Kural</th>
+                                <th>Gün Sayısı (Bu Ay)</th>
+                                <th>İlk Görülme</th>
+                                <th>Son Görülme</th>
+                                <th>Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tekrarBody">
+                            <tr>
+                                <td colspan="7" class="empty-state">
+                                    <i class="fas fa-inbox"></i>
+                                    <div>Bu ay için kayıtlı tekrarlayan alarm bulunamadı.</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -1607,6 +1639,10 @@
                 }
             });
 
+            // Tekrarlayan Alarmlar görünümünden çık, normal tabloya dön
+            document.getElementById('tekrarContainer').style.display = 'none';
+            document.querySelector('.table-container').style.display = '';
+
             // Tablo satırlarını filtrele
             const table = document.querySelector('.table-container table');
             if (!table) return;
@@ -1631,6 +1667,53 @@
 
                 row.style.display = show ? '' : 'none';
             });
+        }
+
+        // Tekrarlayan Alarmlar özetini göster
+        async function showTekrarOzet() {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.filter-tekrar').classList.add('active');
+
+            document.querySelector('.table-container').style.display = 'none';
+            const tekrarContainer = document.getElementById('tekrarContainer');
+            tekrarContainer.style.display = '';
+
+            const tbody = document.getElementById('tekrarBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><i class="fas fa-spinner fa-spin"></i><div>Yükleniyor...</div></td></tr>';
+
+            try {
+                const res = await fetch('/api/alarm_tekrar_ozet');
+                const data = await res.json();
+                const rows = data.rows || [];
+
+                if (rows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty-state"><i class="fas fa-inbox"></i><div>Bu ay için kayıtlı tekrarlayan alarm bulunamadı.</div></td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                rows.forEach(r => {
+                    const tr = document.createElement('tr');
+                    const ariza = r['Durum'] === 'MUHTEMEL ARIZA - SAHA KONTROLU ONERILIR';
+                    tr.innerHTML = `
+                        <td>${r['Mahal'] || ''}</td>
+                        <td><strong>${r['Ekipman'] || ''}</strong></td>
+                        <td>${r['Kural'] || ''}</td>
+                        <td>${r['Gun_Sayisi'] || 0}</td>
+                        <td>${r['Ilk_Gorulme'] || ''}</td>
+                        <td>${r['Son_Gorulme'] || ''}</td>
+                        <td><span class="badge ${ariza ? 'badge-critical' : 'badge-warning'}">${r['Durum'] || ''}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-state"><i class="fas fa-exclamation-triangle"></i><div>Yüklenemedi: ${e}</div></td></tr>`;
+            }
+        }
+
+        // Bu ayın AHU alarm tekrar raporunu PDF olarak indir
+        function alarmRaporuIndir() {
+            window.open('/api/alarm_tekrar_raporu/pdf', '_blank');
         }
 
         // Instruction data embedded from backend
@@ -2573,6 +2656,7 @@
                     <td>${row['Approach_Return (°C)'] || ''}</td>
                     <td><small>${row.Rule || ''}</small></td>
                     <td><button class="instruction-btn" onclick="showInstructions('${row.Rule || ''}')" >ℹ️ Talimat</button></td>
+                    <td>${row['Tekrar (Bu Ay)'] || ''}</td>
                 `;
 
                 tbody.appendChild(tr);

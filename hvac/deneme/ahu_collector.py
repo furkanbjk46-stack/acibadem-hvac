@@ -501,7 +501,19 @@ def sonuclari_kaydet(sonuc: dict, veriler: dict, ahu_sayisi: int, oat: float):
     bacnet_okuma_csv_kaydet(veriler, zaman_damgasi)
 
     # 3) Detaylı analiz CSV
-    analiz_detay_csv_kaydet(results, zaman_damgasi)
+    detay_dosya_adi = analiz_detay_csv_kaydet(results, zaman_damgasi)
+
+    # 3b) Aylık alarm sayacını güncelle (gün-gün karşılaştırma)
+    try:
+        from monthly_report.ahu_alarm_takip import gunluk_analiz_isle
+        detay_yolu = os.path.join(BASE_DIR, "ahu_analiz_gecmis", detay_dosya_adi)
+        karsilastirma = gunluk_analiz_isle(detay_yolu)
+        logger.info(
+            "Alarm sayacı güncellendi — yeni: %s, devam eden: %s, düzelen: %s",
+            karsilastirma["yeni"], karsilastirma["devam_eden"], karsilastirma["duzelen"]
+        )
+    except Exception as e:
+        logger.warning("Alarm sayacı güncellenemedi: %s", e)
 
     # 4) Supabase bildirim
     _bildirim_gonder(

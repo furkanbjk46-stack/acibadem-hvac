@@ -22,6 +22,7 @@ CONFIG_FILE = os.path.join(os.path.dirname(__file__), "supabase_config.json")
 DATA_FILE = os.path.join(os.path.dirname(__file__), "energy_data.csv")
 HVAC_FILE = os.path.join(os.path.dirname(__file__), "hvac_analysis_history.csv")
 HVAC_SON_CALISMA_FILE = os.path.join(os.path.dirname(__file__), "hvac_son_calisma.txt")
+ALARM_RAPORU_SON_AY_FILE = os.path.join(os.path.dirname(__file__), "alarm_raporu_son_ay.txt")
 
 
 def load_config():
@@ -530,6 +531,34 @@ def start_background_sync():
                                 _hvac_analiz()
                             except Exception as _ae:
                                 logger.error("HVAC analiz hatası: %s", _ae)
+
+                    # Ay sonu AHU alarm tekrar raporu: her ayın 1'inde, günde 1 kez
+                    # önceki ayın raporunu otomatik PDF olarak üretir
+                    _now2 = datetime.now()
+                    if _now2.day == 1:
+                        _ay_etiketi = _now2.strftime("%Y-%m")
+                        _son_uretilen = ""
+                        try:
+                            if os.path.exists(ALARM_RAPORU_SON_AY_FILE):
+                                with open(ALARM_RAPORU_SON_AY_FILE, "r") as _f:
+                                    _son_uretilen = _f.read().strip()
+                        except Exception:
+                            pass
+                        if _son_uretilen != _ay_etiketi:
+                            try:
+                                from monthly_report.ahu_alarm_pdf import olustur as _alarm_pdf_olustur
+                                _onceki_ay = _now2.month - 1 or 12
+                                _onceki_yil = _now2.year if _now2.month > 1 else _now2.year - 1
+                                _yol = _alarm_pdf_olustur(_onceki_yil, _onceki_ay)
+                                logger.info("📄 Ay sonu AHU alarm raporu oluşturuldu: %s", _yol)
+                            except Exception as _pe:
+                                logger.error("Ay sonu alarm raporu hatası: %s", _pe)
+                            try:
+                                with open(ALARM_RAPORU_SON_AY_FILE, "w") as _f:
+                                    _f.write(_ay_etiketi)
+                            except Exception:
+                                pass
+
                     _tick += 1
             except Exception as e:
                 logger.warning(f"Heartbeat döngüsü hatası: {e}")
