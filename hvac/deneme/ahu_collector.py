@@ -17,7 +17,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 BASE_DIR          = os.path.dirname(os.path.abspath(__file__))
-AHU_CONFIG_FILE   = os.path.join(BASE_DIR, "ahu_nokta_konfig.json")
+AHU_CONFIG_FILE   = os.path.join(BASE_DIR, "configs", "ahu_nokta_konfig.json")
 AHU_RESULTS_FILE  = os.path.join(BASE_DIR, "hvac_ahu_analiz_sonuclari.json")
 AHU_TRIGGER_FILE  = os.path.join(BASE_DIR, "hvac_analiz_trigger.txt")
 
@@ -256,19 +256,182 @@ def sogutma_outlet_oku(csv_yolu: str = None) -> float | None:
     return None
 
 
+def isitma_outlet_oku(csv_yolu: str = None) -> float | None:
+    """
+    hedefli_enerji_verileri.csv'den MAS-1 ve MAS-2 ısıtma sıcaklıklarını oku
+    (ısıtma kolektör gidiş), ortalamasını döndür. Hata / veri yoksa None.
+    """
+    if csv_yolu is None:
+        csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+    try:
+        import csv as _csv
+        degerler = []
+        with open(csv_yolu, "r", encoding="utf-8") as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                pn = str(row.get("Point_Name", "")).strip().upper()
+                if pn in ("MAS-1 ISITMA SICAKLIK", "MAS-2 ISITMA SICAKLIK"):
+                    try:
+                        val = float(row.get("Value", ""))
+                        degerler.append(val)
+                    except (ValueError, TypeError):
+                        pass
+        if degerler:
+            ort = round(sum(degerler) / len(degerler), 2)
+            logger.debug("Isıtma Outlet ortalaması: %.2f°C (%d nokta)", ort, len(degerler))
+            return ort
+    except Exception as e:
+        logger.warning("Isıtma outlet okunamadı: %s", e)
+    return None
+
+
+def isitma_donus_oku(csv_yolu: str = None) -> float | None:
+    """
+    hedefli_enerji_verileri.csv'den ortak kolektör ısıtma dönüş sıcaklığını
+    (KOLLEKTOR ISITMA DONUS SICAKLIK) okur. Hata / veri yoksa None.
+    """
+    if csv_yolu is None:
+        csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+    try:
+        import csv as _csv
+        with open(csv_yolu, "r", encoding="utf-8") as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                pn = str(row.get("Point_Name", "")).strip().upper()
+                if pn == "KOLLEKTOR ISITMA DONUS SICAKLIK":
+                    try:
+                        return float(row.get("Value", ""))
+                    except (ValueError, TypeError):
+                        pass
+    except Exception as e:
+        logger.warning("Kolektör ısıtma dönüş okunamadı: %s", e)
+    return None
+
+
+def kollektor_donus_oku(csv_yolu: str = None) -> float | None:
+    """
+    hedefli_enerji_verileri.csv'den ortak kolektör soğutma dönüş sıcaklığını
+    (KOLLEKTOR DONUS SICAKLIK) okur. Hata / veri yoksa None.
+    """
+    if csv_yolu is None:
+        csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+    try:
+        import csv as _csv
+        with open(csv_yolu, "r", encoding="utf-8") as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                pn = str(row.get("Point_Name", "")).strip().upper()
+                if pn in ("KOLLEKTOR SOGUTMA DONUS SICAKLIK", "KOLLEKTOR DONUS SICAKLIK"):
+                    try:
+                        return float(row.get("Value", ""))
+                    except (ValueError, TypeError):
+                        pass
+    except Exception as e:
+        logger.warning("Kolektör dönüş okunamadı: %s", e)
+    return None
+
+
+def _nokta_oku(point_name: str, csv_yolu: str = None) -> float | None:
+    """hedefli_enerji_verileri.csv'den tek bir Point_Name değerini okur. Yoksa None."""
+    if csv_yolu is None:
+        csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+    try:
+        import csv as _csv
+        with open(csv_yolu, "r", encoding="utf-8") as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                pn = str(row.get("Point_Name", "")).strip().upper()
+                if pn == point_name.upper():
+                    try:
+                        return float(row.get("Value", ""))
+                    except (ValueError, TypeError):
+                        pass
+    except Exception as e:
+        logger.warning("%s okunamadı: %s", point_name, e)
+    return None
+
+
+def ek_ekipman_satirlari_olustur(outlet: float | None, inlet: float | None,
+                                  outlet_heat: float | None, inlet_heat: float | None,
+                                  lokasyon: str = "MAS-1") -> list:
+    """
+    AHU dışındaki merkezi ekipmanlar için analiz satırları:
+    - Chiller        : soğutma kolektör gidiş/dönüş (TARGET_DT_CHILLER ~5°C)
+    - Isıtma Kolektörü: ısıtma kolektör gidiş/dönüş (TARGET_DT_COLLECTOR ~10°C)
+    - Kazan-1/2/3    : kendi INLET/OUTLET noktaları (TARGET_DT_HEAT_EXCHANGER ~8°C)
+    """
+    rows = []
+
+    CALISMA_DT_ESIGI = 0.5  # °C — bu değerin altındaki ΔT, cihaz çalışmıyor demektir
+
+    # CH-1..5 chiller'ları — kendi DURUM BILGISI ve INLET/OUTLET noktalarıyla
+    CH_OUTLET_ADLARI = {
+        1: "CH-1 OUTLET CIKIS SICAKLIK",
+        2: "CH-2 OUTLET SICAKLIK",
+        3: "CH-3 OUTLET SICAKLIK",
+        4: "CH-4 OUTLET SICAKLIK",
+        5: "CH-5 OUTLET CIKIS SICAKLIK",
+    }
+    for n in (1, 2, 3, 4, 5):
+        durum = _nokta_oku(f"CH-{n} DURUM BILGISI")
+        if durum is not None and durum == 0:
+            logger.info("CH-%d kapalı (DURUM=0) — analiz atlandı", n)
+            continue
+
+        c_inlet = _nokta_oku(f"CH-{n} INLET SICAKLIK")
+        c_outlet = _nokta_oku(CH_OUTLET_ADLARI[n])
+        if c_inlet is not None and c_outlet is not None:
+            if abs(c_outlet - c_inlet) < CALISMA_DT_ESIGI:
+                logger.info("CH-%d ΔT≈0 — çalışmıyor, analiz atlandı", n)
+                continue
+            rows.append({
+                "Name": f"CH-{n}", "Location": lokasyon, "Type": "Chiller",
+                "Inlet (°C)": c_inlet, "Outlet (°C)": c_outlet,
+            })
+
+    if outlet_heat is not None and inlet_heat is not None and abs(outlet_heat - inlet_heat) >= CALISMA_DT_ESIGI:
+        rows.append({
+            "Name": "Isitma Kollektoru", "Location": lokasyon, "Type": "Collector",
+            "Inlet (°C)": inlet_heat, "Outlet (°C)": outlet_heat,
+        })
+
+    for n in (1, 2, 3):
+        durum = _nokta_oku(f"KAZAN-{n} DURUM BILGISI")
+        if durum is not None and durum == 0:
+            logger.info("Kazan-%d kapalı (DURUM=0) — analiz atlandı", n)
+            continue
+
+        k_inlet = _nokta_oku(f"KAZAN-{n} INLET")
+        k_outlet = _nokta_oku(f"KAZAN-{n} OUTLET")
+        if k_inlet is not None and k_outlet is not None:
+            if abs(k_outlet - k_inlet) < CALISMA_DT_ESIGI:
+                logger.info("Kazan-%d ΔT≈0 — çalışmıyor, analiz atlandı", n)
+                continue
+            rows.append({
+                "Name": f"Kazan-{n}", "Location": lokasyon, "Type": "Heat Exchanger",
+                "Inlet (°C)": k_inlet, "Outlet (°C)": k_outlet,
+            })
+
+    return rows
+
+
 def _ahu_row_olustur(ahu_adi: str, lokasyon: str, veriler: dict,
-                     outlet: float | None = None) -> dict:
+                     outlet: float | None = None, inlet: float | None = None,
+                     outlet_heat: float | None = None, inlet_heat: float | None = None) -> dict:
     """
     AHU verisini /api/recommend_json formatına dönüştür.
     - Room    = emiş sıcaklığı (Return ile aynı)
-    - Outlet  = MAS-1/MAS-2 soğutma ortalaması (hedefli CSV'den)
-    - Inlet   = 15.0°C sabit (gerçek nokta alınınca güncellenir)
+    - Outlet/Inlet (soğutma) = MAS-1/MAS-2 soğutma gidiş ortalaması / kolektör soğutma dönüş
+    - Outlet/Inlet (ısıtma)  = MAS-1/MAS-2 ısıtma gidiş ortalaması / kolektör ısıtma dönüş
+
+    Hangi çiftin kullanılacağı AHU'nun Heat Valve / Cool Valve açıklığına göre
+    seçilir: Heat Valve > Cool Valve ise ısıtma kolektör çifti, aksi halde
+    soğutma kolektör çifti atanır.
     """
     row: dict = {
         "Name":     ahu_adi,
         "Location": lokasyon,
         "Type":     "AHU",
-        "Inlet (°C)": 15.0,   # TODO: yarın gerçek BACnet noktasıyla güncelle
     }
 
     # BACnet'ten okunan değerler
@@ -280,9 +443,17 @@ def _ahu_row_olustur(ahu_adi: str, lokasyon: str, veriler: dict,
     if veriler.get("Return (°C)") is not None:
         row["Room (°C)"] = veriler["Return (°C)"]
 
-    # Outlet = soğutma suyu sıcaklığı ortalaması
-    if outlet is not None:
-        row["Outlet (°C)"] = outlet
+    # AHU modu: Heat Valve > Cool Valve ise ısıtma kolektör çiftini kullan
+    cool_valve = veriler.get("Cool Valve (%)") or 0
+    heat_valve = veriler.get("Heat Valve (%)") or 0
+    if heat_valve > cool_valve and inlet_heat is not None and outlet_heat is not None:
+        row["Inlet (°C)"] = inlet_heat
+        row["Outlet (°C)"] = outlet_heat
+    else:
+        if inlet is not None:
+            row["Inlet (°C)"] = inlet
+        if outlet is not None:
+            row["Outlet (°C)"] = outlet
 
     return row
 
@@ -557,12 +728,33 @@ def hvac_analiz_calistir() -> dict | None:
     oat = _oat_cek()
     logger.info("Dış hava sıcaklığı: %.1f°C", oat)
 
-    # Soğutma suyu Outlet sıcaklığını çek (MAS-1 + MAS-2 ortalaması)
+    # Soğutma suyu Outlet (gidiş) sıcaklığını çek (MAS-1 + MAS-2 ortalaması)
     outlet = sogutma_outlet_oku()
     if outlet is not None:
-        logger.info("Soğutma Outlet (ortalama): %.2f°C", outlet)
+        logger.info("Soğutma Outlet/Gidiş (ortalama): %.2f°C", outlet)
     else:
-        logger.warning("Soğutma Outlet okunamadı — Outlet sütunu boş bırakılacak")
+        logger.warning("Soğutma Outlet/Gidiş okunamadı — Outlet sütunu boş bırakılacak")
+
+    # Kolektör soğutma Inlet (dönüş) sıcaklığını çek (ortak kolektör)
+    inlet = kollektor_donus_oku()
+    if inlet is not None:
+        logger.info("Soğutma Inlet/Dönüş (kolektör): %.2f°C", inlet)
+    else:
+        logger.warning("Soğutma Inlet/Dönüş okunamadı — Inlet sütunu boş bırakılacak")
+
+    # Isıtma suyu Outlet (gidiş) sıcaklığını çek (MAS-1 + MAS-2 ortalaması)
+    outlet_heat = isitma_outlet_oku()
+    if outlet_heat is not None:
+        logger.info("Isıtma Outlet/Gidiş (ortalama): %.2f°C", outlet_heat)
+    else:
+        logger.warning("Isıtma Outlet/Gidiş okunamadı")
+
+    # Kolektör ısıtma Inlet (dönüş) sıcaklığını çek (ortak kolektör)
+    inlet_heat = isitma_donus_oku()
+    if inlet_heat is not None:
+        logger.info("Isıtma Inlet/Dönüş (kolektör): %.2f°C", inlet_heat)
+    else:
+        logger.warning("Isıtma Inlet/Dönüş okunamadı")
 
     # BACnet okuma
     veriler = ahu_verileri_oku(config)
@@ -574,7 +766,11 @@ def hvac_analiz_calistir() -> dict | None:
         if nokta_verileri.get("SAT (°C)") is None:
             eksik += 1
             continue
-        rows.append(_ahu_row_olustur(ahu_adi, lokasyon, nokta_verileri, outlet=outlet))
+        rows.append(_ahu_row_olustur(ahu_adi, lokasyon, nokta_verileri, outlet=outlet, inlet=inlet,
+                                      outlet_heat=outlet_heat, inlet_heat=inlet_heat))
+
+    # Merkezi ekipmanlar: Chiller, Isıtma Kolektörü, Kazan-1/2/3
+    rows.extend(ek_ekipman_satirlari_olustur(outlet, inlet, outlet_heat, inlet_heat))
 
     logger.info(
         "AHU: toplam=%d, eksik SAT=%d, analiz edilecek=%d",

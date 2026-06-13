@@ -83,7 +83,8 @@ CONFIG = {
     # Chiller teşhis eşikleri
     "CHILLER_BYPASS_DT": 1.0,
     "CHILLER_LOW_DT_THRESHOLD": 3.0,
-    
+    "SAT_TOLERANS": 1.0,  # SAT min/max eşiklerinde ±1°C tolerans (örn. 15.1°C alarm vermesin)
+
     # Isıtma teşhis eşikleri
     "HEAT_EFF_LOW_THRESHOLD": 20.0,
     "HEAT_SAT_LOW_THRESHOLD": 27.0,
@@ -117,6 +118,8 @@ MAINTENANCE_FILE = os.path.join(os.path.dirname(__file__), "configs", "maintenan
 DEFAULT_CONFIG = CONFIG.copy()  # Varsayılan ayarları sakla
 
 AHU_SAT_LIMITLERI_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_sat_limitleri.json")
+AHU_TASARIM_KAPASITE_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_tasarim_kapasiteleri.json")
+CHILLER_FCU_AYARLAR_FILE = os.path.join(os.path.dirname(__file__), "configs", "chiller_fcu_ayarlari.json")
 
 def _ahu_sat_limit(location: str, name: str, tip: str):
     """Verilen AHU için tanımlı özel SAT limitini döndürür (yoksa None).
@@ -1063,8 +1066,15 @@ class HVACAnalyzer:
 
     def calculate_air_delta_t(self, profile: EquipmentProfile) -> Optional[float]:
         """Calculate AIR ΔT from Supply/Return (AHU discharge vs return air)."""
+        # Supply (°C) / Return (°C) yoksa SAT (üfleme) ve Room (dönüş) üzerinden hesapla
         supply_air = profile.temperatures.supply
+        if supply_air is None:
+            supply_air = profile.temperatures.sat
+
         return_air = profile.temperatures.return_
+        if return_air is None:
+            return_air = profile.temperatures.room
+
         if supply_air is None or return_air is None:
             return None
 
@@ -1284,8 +1294,13 @@ class HVACAnalyzer:
           Approach_Return = WaterOut - ReturnAir
         """
         supply_air = profile.temperatures.supply
+        if supply_air is None:
+            supply_air = profile.temperatures.sat
+
         return_air = profile.temperatures.return_
-        
+        if return_air is None:
+            return_air = profile.temperatures.room
+
         # Water temperatures - SADECE gerçek değerleri kullan, 0 fallback YOK
         water_in = profile.temperatures.inlet if profile.temperatures.inlet is not None else plant_supply
         water_out = profile.temperatures.outlet if profile.temperatures.outlet is not None else plant_return
@@ -1423,7 +1438,11 @@ class HVACAnalyzer:
         # 3. AHU coil effectiveness (AIR vs WATER)
         if eq_type == EquipmentType.AHU:
             supply_air = profile.temperatures.supply
+            if supply_air is None:
+                supply_air = profile.temperatures.sat
             return_air = profile.temperatures.return_
+            if return_air is None:
+                return_air = profile.temperatures.room
             water_in = profile.temperatures.inlet if profile.temperatures.inlet is not None else profile.temperatures.plant_supply
             water_out = profile.temperatures.outlet if profile.temperatures.outlet is not None else profile.temperatures.plant_return
             air_dt = self.calculate_air_delta_t(profile)
@@ -1825,7 +1844,9 @@ class HVACAnalyzer:
                 if ozel_sat_heat is not None:
                     sat_min = ozel_sat_heat
 
-                if sat < sat_min:
+                sat_tol = self.config.get("SAT_TOLERANS", 1.0)
+
+                if sat < sat_min - sat_tol:
                     if relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
                         # Vana yüksek açık ama SAT düşük → gerçek sorun
                         result.sat_status = "NOT_HEATING"
@@ -1842,7 +1863,7 @@ class HVACAnalyzer:
                         result.severity = "WARNING"
                         result.score = max(result.score, 5.0)
                         result.rule = "SAT_WARNING"
-                elif sat > sat_max:
+                elif sat > sat_max + sat_tol:
                     result.sat_status = "WARNING"
                     result.action = "UYARI: SAT Yüksek"
                     result.reason = f"Üfleme ({sat:.1f}°C) > {sat_max}°C. Aşırı ısıtma."
@@ -1861,7 +1882,9 @@ class HVACAnalyzer:
                 if ozel_sat is not None:
                     sat_max = ozel_sat
 
-                if sat > sat_max:
+                sat_tol = self.config.get("SAT_TOLERANS", 1.0)
+
+                if sat > sat_max + sat_tol:
                     if relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
                         # Vana yüksek açık ama SAT yüksek → gerçek soğutma sorunu
                         result.sat_status = "NOT_COOLING"
@@ -1878,7 +1901,7 @@ class HVACAnalyzer:
                         result.severity = "WARNING"
                         result.score = max(result.score, 5.0)
                         result.rule = "SAT_WARNING"
-                elif sat < sat_min:
+                elif sat < sat_min - sat_tol:
                     result.sat_status = "WARNING"
                     result.action = "UYARI: SAT Düşük"
                     result.reason = f"Üfleme ({sat:.1f}°C) < {sat_min}°C. Aşırı soğutma/donma riski."
@@ -2710,6 +2733,63 @@ def _iframe_wrapper_html(title: str, iframe_src: str) -> str:
 </html>"""
 
 # ================ AYARLAR API'LERİ ================
+
+@app.get("/api/ahu_tasarim_kapasiteleri")
+async def get_ahu_tasarim_kapasiteleri():
+    """AHU'ların tasarım toplam soğutma kapasitelerini (Qt, kW) döndürür."""
+    try:
+        with open(AHU_TASARIM_KAPASITE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+
+    tasarim_hava_dt = 5.0
+    try:
+        with open(CHILLER_FCU_AYARLAR_FILE, "r", encoding="utf-8") as f:
+            ayarlar = json.load(f)
+            tasarim_hava_dt = ayarlar.get("tasarim_hava_dt", 5.0)
+    except Exception:
+        pass
+
+    return {"success": True, "kapasiteler": data, "tasarim_hava_dt": tasarim_hava_dt}
+
+
+@app.get("/api/chiller_fcu_ayarlari")
+async def get_chiller_fcu_ayarlari():
+    """Chiller/FCU kapasite ayarlarını getirir."""
+    try:
+        with open(CHILLER_FCU_AYARLAR_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+    return {"success": True, "ayarlar": data}
+
+
+@app.post("/api/chiller_fcu_ayarlari")
+async def save_chiller_fcu_ayarlari(request: Request):
+    """Chiller/FCU kapasite ayarlarını kaydeder."""
+    try:
+        body = await request.json()
+        ayarlar = body.get("ayarlar", {})
+        if not ayarlar:
+            raise HTTPException(status_code=400, detail="Ayarlar boş olamaz")
+
+        numeric_keys = [
+            "chiller_adedi", "chiller_birim_kw", "chiller_t1_gidis", "chiller_t2_donus",
+            "fcu_adedi", "fcu_birim_kw_ortalama", "fcu_esanjor_diversity", "tasarim_hava_dt",
+        ]
+        cleaned = {}
+        for k in numeric_keys:
+            if k in ayarlar:
+                cleaned[k] = float(ayarlar[k])
+
+        with open(CHILLER_FCU_AYARLAR_FILE, "w", encoding="utf-8") as f:
+            json.dump(cleaned, f, ensure_ascii=False, indent=2)
+
+        return {"success": True, "message": "Ayarlar kaydedildi"}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Geçersiz JSON formatı")
+
 
 @app.get("/api/settings")
 async def get_settings():

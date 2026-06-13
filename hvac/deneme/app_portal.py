@@ -3923,66 +3923,6 @@ with tab5:
                 
                 st.divider()
                 
-                # ========== AHU KAPASİTE DURUMU ==========
-                st.markdown("### 🏭 AHU Kapasite Durumu")
-                st.caption("Klima santrallerinin ortalama vana açıklığına göre sistem kapasitesinin yeterliliği")
-                
-                ahu_cool_valve = summary.get("ahu_avg_cooling_valve")
-                ahu_heat_valve = summary.get("ahu_avg_heating_valve")
-                ahu_cool_cap = summary.get("ahu_cooling_capacity", "VERİ YOK")
-                ahu_heat_cap = summary.get("ahu_heating_capacity", "VERİ YOK")
-                
-                cap_col1, cap_col2 = st.columns(2)
-                
-                with cap_col1:
-                    st.markdown("#### ❄️ Soğutma Sistemi")
-                    if ahu_cool_valve is not None:
-                        # Renkli gösterge
-                        if ahu_cool_cap == "YETERLI":
-                            st.success(f"**Kapasite:** {ahu_cool_cap} 🟢")
-                        elif ahu_cool_cap == "NORMAL":
-                            st.info(f"**Kapasite:** {ahu_cool_cap} 🟡")
-                        elif ahu_cool_cap == "DIKKAT":
-                            st.warning(f"**Kapasite:** {ahu_cool_cap} 🟠")
-                        elif ahu_cool_cap == "YETERSIZ":
-                            st.error(f"**Kapasite:** {ahu_cool_cap} 🔴")
-                        else:
-                            st.info(f"**Kapasite:** {ahu_cool_cap}")
-                        st.metric("Ort. Soğutma Vanası", f"%{ahu_cool_valve:.1f}")
-                    else:
-                        st.info("Soğutma verisi yok")
-                
-                with cap_col2:
-                    st.markdown("#### 🔥 Isıtma Sistemi")
-                    if ahu_heat_valve is not None:
-                        # Renkli gösterge
-                        if ahu_heat_cap == "YETERLI":
-                            st.success(f"**Kapasite:** {ahu_heat_cap} 🟢")
-                        elif ahu_heat_cap == "NORMAL":
-                            st.info(f"**Kapasite:** {ahu_heat_cap} 🟡")
-                        elif ahu_heat_cap == "DIKKAT":
-                            st.warning(f"**Kapasite:** {ahu_heat_cap} 🟠")
-                        elif ahu_heat_cap == "YETERSIZ":
-                            st.error(f"**Kapasite:** {ahu_heat_cap} 🔴")
-                        else:
-                            st.info(f"**Kapasite:** {ahu_heat_cap}")
-                        st.metric("Ort. Isıtma Vanası", f"%{ahu_heat_valve:.1f}")
-                    else:
-                        st.info("Isıtma verisi yok")
-                
-                # Açıklama
-                with st.expander("📖 Kapasite Değerlendirme Kriterleri"):
-                    st.markdown("""
-                    | Ort. Vana | Durum | Açıklama |
-                    |-----------|-------|----------|
-                    | <%50 | 🟢 YETERLI | Kapasite rahat, rezerv var |
-                    | %50-70 | 🟡 NORMAL | Kapasite yeterli |
-                    | %70-85 | 🟠 DİKKAT | Kapasite sınırına yakın |
-                    | >%85 | 🔴 YETERSİZ | Sistem zorlanıyor, kapasite artırımı düşünülmeli |
-                    """)
-                
-                st.divider()
-                
                 # ========== MALİYET ÖZETİ ==========
                 try:
                     import json as _tab5_json

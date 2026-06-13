@@ -1,0 +1,10 @@
+{
+  "chiller_adedi": 5,
+  "chiller_birim_kw": 2000,
+  "chiller_t1_gidis": 7,
+  "chiller_t2_donus": 12,
+  "fcu_adedi": 1750,
+  "fcu_birim_kw_ortalama": 2.5,
+  "fcu_esanjor_diversity": 0.55,
+  "tasarim_hava_dt": 5
+}

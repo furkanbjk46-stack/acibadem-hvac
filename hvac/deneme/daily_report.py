@@ -492,6 +492,10 @@ class DailyReportGenerator:
             "optimal": int(row.get("Optimal_Adet", 0) or 0),
             "total_eq": int(row.get("Toplam_Ekipman", 0) or 0),
             "avg_score": float(row.get("Ort_Skor", 0) or 0),
+            "cooling_capacity": row.get("AHU_Sogutma_Kapasite") or "VERİ YOK",
+            "heating_capacity": row.get("AHU_Isitma_Kapasite") or "VERİ YOK",
+            "cooling_valve_avg": row.get("AHU_Ort_Sogutma_Vana"),
+            "heating_valve_avg": row.get("AHU_Ort_Isitma_Vana"),
         }
     
     def _pct_change(self, current: float, previous: float) -> str:
@@ -627,7 +631,37 @@ class DailyReportGenerator:
                      f"%{health}",
                      "Iyi" if health >= 80 else "Dikkat" if health >= 50 else "Kritik",
                      health_color)
-        
+
+        pdf.set_y(y + 28)
+
+        # AHU Kapasite Durumu (Soğutma / Isıtma)
+        cap_colors = {
+            "YETERLI": pdf.SUCCESS,
+            "NORMAL": (59, 130, 246),
+            "DIKKAT": pdf.WARNING_C,
+            "YETERSIZ": pdf.DANGER,
+        }
+
+        cooling_cap = hvac.get("cooling_capacity", "VERİ YOK")
+        heating_cap = hvac.get("heating_capacity", "VERİ YOK")
+        cooling_valve = hvac.get("cooling_valve_avg")
+        heating_valve = hvac.get("heating_valve_avg")
+
+        cool_color = cap_colors.get(cooling_cap, pdf.GRAY)
+        heat_color = cap_colors.get(heating_cap, pdf.GRAY)
+
+        y = pdf.get_y()
+        box_w = 88
+        gap = 4
+
+        cool_sub = f"Ort. Vana %{cooling_valve:.1f}" if cooling_valve is not None else ""
+        heat_sub = f"Ort. Vana %{heating_valve:.1f}" if heating_valve is not None else ""
+
+        pdf.info_box(10, y, box_w, 24, "Sogutma Kapasitesi (AHU)",
+                     _sanitize(cooling_cap), cool_sub, cool_color)
+        pdf.info_box(10 + box_w + gap, y, box_w, 24, "Isitma Kapasitesi (AHU)",
+                     _sanitize(heating_cap), heat_sub, heat_color)
+
         pdf.set_y(y + 28)
     
     def _add_charts(self, pdf: DailyReportPDF, df: pd.DataFrame, report: Dict, target_date: date):
