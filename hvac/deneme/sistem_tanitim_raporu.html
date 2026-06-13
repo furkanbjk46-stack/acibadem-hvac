@@ -672,6 +672,16 @@
                     </ul>
                 </div>
             </div>
+
+            <h3>❄️ Talep Edilen / Üretilen Soğutma kW Kartları</h3>
+            <p>Portal, tüm AHU'ların anlık vana ve ΔT verisinden iki canlı kW kartı üretir:</p>
+            <ul style="font-size:13px; padding-left:18px; color:var(--text-light);">
+                <li><strong>Talep Edilen kW</strong> = Σ (AHU tasarım Qt kapasitesi × Soğutma Vana %)</li>
+                <li><strong>Üretilen kW</strong> = Σ (AHU tasarım Qt kapasitesi × Hava ΔT / Tasarım Hava ΔT)</li>
+                <li>Hava ΔT, Supply/Return yoksa SAT (üfleme) ve Room (dönüş) üzerinden otomatik hesaplanır</li>
+                <li>AHU Qt kapasiteleri ve tasarım Hava ΔT, <code>configs/ahu_tasarim_kapasiteleri.json</code> ve
+                    <code>configs/chiller_fcu_ayarlari.json</code> dosyalarından okunur, ayarlar panelinden düzenlenebilir</li>
+            </ul>
         </div>
 
         <!-- ========== 3. OTOMATİK MOD ve SAT ========== -->
