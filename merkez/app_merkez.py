@@ -688,11 +688,11 @@ st.markdown("""
   </div>
   <div style="font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:34px; font-weight:600; color:#f8fafc;
               letter-spacing:1px; line-height:1.3;">
-    Enerji &amp; HVAC Komuta Merkezi
+    SYNAPSE // Merkezi Veri Bağlantısı
   </div>
   <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#38bdf8;
               letter-spacing:2px; margin-top:6px; text-transform:uppercase;">
-    Genel Merkez — Canlı İzleme
+    Operasyonel Zeka
   </div>
 </div>
 """, unsafe_allow_html=True)
