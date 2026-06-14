@@ -34,53 +34,65 @@ st.set_page_config(page_title="Enerji Yönetimi & Raporlama", layout="wide")
 # Custom Dark Theme CSS
 st.markdown("""
 <style>
-    /* Dark theme for Streamlit */
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+    /* Synergy koyu tema - sabit arka plan */
     .stApp {
-        background: linear-gradient(-45deg, #0a0e1a, #012D75, #1a2332, #1a4a9e);
-        background-size: 400% 400%;
-        animation: gradient 15s ease infinite;
+        background-color: #060b14;
+        background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
+        font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
     }
-    
-    @keyframes gradient {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+
+    /* Tam genişlik - kenar boşluklarını azalt */
+    .block-container {
+        max-width: 100% !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
     }
-    
+
     /* Glassmorphism for containers */
     .stTabs [data-baseweb="tab-panel"] {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(20px);
-        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 8px;
         padding: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    
+
     /* Metrics styling */
     [data-testid="stMetricValue"] {
         color: #ffffff !important;
-        font-size: 32px !important;
-        font-weight: 800 !important;
+        font-size: 28px !important;
+        font-weight: 300 !important;
     }
-    
+
     [data-testid="stMetricLabel"] {
-        color: rgba(255, 255, 255, 0.7) !important;
+        color: #94a3b8 !important;
         font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        font-size: 10px !important;
     }
-    
+
     [data-testid="stMetricDelta"] {
         color: rgba(255, 255, 255, 0.9) !important;
     }
-    
+
     /* Headers */
-    h1, h2, h3, h4, h5, h6 {
-        color: #ffffff !important;
-        font-family: 'Inter', sans-serif !important;
+    h1, h2, h3 {
+        color: #f8fafc !important;
+        font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important;
+        font-weight: 400 !important;
     }
-    
+    h4, h5, h6 {
+        color: #f8fafc !important;
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
     /* Genel metin rengi — tüm uygulama genelinde beyaz/açık */
     p, span, div {
-        color: rgba(255, 255, 255, 0.9) !important;
+        color: #cbd5e1 !important;
     }
 
     /* Markdown tabloları (st.markdown tablolar — Tahmin, Özet vb.) */
@@ -94,64 +106,89 @@ st.markdown("""
     .stMarkdown table th {
         color: #ffffff !important;
         font-weight: 700 !important;
-        border-bottom: 1px solid rgba(100, 160, 255, 0.3) !important;
+        border-bottom: 1px solid rgba(56, 189, 248, 0.3) !important;
     }
     
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        border-radius: 12px;
-        padding: 8px;
-        gap: 8px;
+        background: transparent;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        gap: 24px;
+        padding: 0;
     }
-    
+
     .stTabs [data-baseweb="tab"] {
         background: transparent;
-        color: rgba(255, 255, 255, 0.7);
-        border-radius: 8px;
-        font-weight: 600;
+        color: #64748b !important;
+        border-radius: 0;
+        font-weight: 500;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 8px 0 12px 0;
     }
-    
+
+    .stTabs [data-baseweb="tab"] p {
+        color: inherit !important;
+        font-size: 11px !important;
+        font-weight: 500 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+    }
+
+    .stTabs [data-baseweb="tab"]:hover {
+        color: #cbd5e1 !important;
+    }
+
     .stTabs [aria-selected="true"] {
-        background: rgba(255, 255, 255, 0.2) !important;
-        color: #ffffff !important;
+        background: transparent !important;
+        color: #38bdf8 !important;
+        box-shadow: inset 0 -2px 0 #38bdf8, 0 2px 8px rgba(56, 189, 248, 0.3) !important;
+    }
+
+    .stTabs [data-baseweb="tab-highlight"] {
+        background-color: #38bdf8 !important;
+        box-shadow: 0 -2px 8px rgba(56, 189, 248, 0.5) !important;
     }
     
     /* Normal butonlar */
     .stButton > button {
-        background: linear-gradient(135deg, #012D75, #1a4a9e) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(100, 160, 255, 0.3) !important;
-        border-radius: 12px !important;
-        font-weight: 700 !important;
-        padding: 10px 24px !important;
-        transition: all 0.3s;
+        background: rgba(14, 165, 233, 0.15) !important;
+        color: #38bdf8 !important;
+        border: 1px solid rgba(14, 165, 233, 0.3) !important;
+        border-radius: 6px !important;
+        font-weight: 500 !important;
+        padding: 8px 20px !important;
+        transition: all 0.2s;
     }
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(26, 74, 158, 0.5) !important;
+        background: rgba(14, 165, 233, 0.25) !important;
+        border-color: rgba(14, 165, 233, 0.4) !important;
+        color: #ffffff !important;
+        transform: none;
+        box-shadow: none !important;
     }
 
     /* Form submit butonları (Kaydet / Merkeze Gönder) */
     [data-testid="stFormSubmitButton"] button,
     .stFormSubmitButton button {
-        background: linear-gradient(135deg, #012D75, #1a4a9e) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(100, 160, 255, 0.35) !important;
-        border-radius: 12px !important;
-        font-weight: 700 !important;
-        font-size: 14px !important;
+        background: rgba(14, 165, 233, 0.15) !important;
+        color: #38bdf8 !important;
+        border: 1px solid rgba(14, 165, 233, 0.3) !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
         padding: 10px 20px !important;
         width: 100% !important;
-        transition: all 0.3s;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        transition: all 0.2s;
+        box-shadow: none !important;
     }
     [data-testid="stFormSubmitButton"] button:hover,
     .stFormSubmitButton button:hover {
-        background: linear-gradient(135deg, #1a4a9e, #2563eb) !important;
-        box-shadow: 0 4px 16px rgba(26, 74, 158, 0.6) !important;
-        transform: translateY(-1px);
+        background: rgba(14, 165, 233, 0.25) !important;
+        color: #ffffff !important;
+        box-shadow: none !important;
+        transform: none;
     }
 
     /* Input fields - soft köşeler, yumuşak glow */
@@ -166,9 +203,9 @@ st.markdown("""
     [data-baseweb="base-input"] input,
     input[type="number"],
     input[type="text"] {
-        background: rgba(15, 30, 65, 0.85) !important;
-        color: #d8eeff !important;
-        border: 1px solid rgba(80, 130, 220, 0.25) !important;
+        background: rgba(0, 0, 0, 0.85) !important;
+        color: #e2e8f0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
         border-radius: 10px !important;
         padding: 8px 12px !important;
         transition: border 0.2s, box-shadow 0.2s;
@@ -177,8 +214,8 @@ st.markdown("""
     [data-testid="stTextInput"] input:focus,
     [data-testid="stNumberInputField"]:focus,
     input:focus {
-        border: 1px solid rgba(100, 160, 255, 0.6) !important;
-        box-shadow: 0 0 0 3px rgba(26, 74, 158, 0.2) !important;
+        border: 1px solid rgba(56, 189, 248, 0.6) !important;
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
         outline: none !important;
     }
 
@@ -186,8 +223,8 @@ st.markdown("""
     [data-testid="stNumberInput"] > div,
     [data-baseweb="input"],
     [data-baseweb="base-input"] {
-        background: rgba(15, 30, 65, 0.85) !important;
-        border: 1px solid rgba(80, 130, 220, 0.25) !important;
+        background: rgba(0, 0, 0, 0.85) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
         border-radius: 10px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
     }
@@ -199,41 +236,41 @@ st.markdown("""
     [data-baseweb="input"] div,
     [data-baseweb="base-input"] span,
     [data-baseweb="base-input"] div {
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
     }
 
     /* Number input +/- butonları */
     [data-testid="stNumberInput"] button {
         background: rgba(10, 25, 55, 0.9) !important;
-        color: #7eb8f7 !important;
+        color: #38bdf8 !important;
         border: none !important;
         border-radius: 6px !important;
     }
     [data-testid="stNumberInput"] button:hover {
-        background: rgba(26, 74, 158, 0.5) !important;
+        background: rgba(56, 189, 248, 0.5) !important;
         color: #ffffff !important;
     }
 
     /* Selectbox dropdown */
     div[data-baseweb="select"] > div {
-        background: rgba(15, 30, 65, 0.85) !important;
-        color: #d8eeff !important;
-        border: 1px solid rgba(80, 130, 220, 0.25) !important;
+        background: rgba(0, 0, 0, 0.85) !important;
+        color: #e2e8f0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
         border-radius: 10px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
     }
 
     /* Dropdown menu */
     ul[data-baseweb="menu"] {
-        background: rgba(10, 25, 60, 0.98) !important;
-        border: 1px solid rgba(80, 130, 220, 0.2) !important;
+        background: rgba(0, 0, 0, 0.98) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
         border-radius: 10px !important;
     }
     ul[data-baseweb="menu"] li {
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
     }
     ul[data-baseweb="menu"] li:hover {
-        background: rgba(26, 74, 158, 0.4) !important;
+        background: rgba(56, 189, 248, 0.4) !important;
     }
 
     /* Input labels — daha okunabilir */
@@ -243,7 +280,7 @@ st.markdown("""
     [data-testid="stDateInput"] label,
     [data-testid="stRadio"] > label,
     [data-testid="stCheckbox"] > label {
-        color: #c8deff !important;
+        color: #94a3b8 !important;
         font-size: 13px !important;
         font-weight: 600 !important;
         letter-spacing: 0.3px !important;
@@ -275,7 +312,7 @@ st.markdown("""
     .stDataFrame thead tr th,
     div[data-testid="stDataFrame"] thead tr th,
     .dataframe thead tr th {
-        background-color: rgba(1, 45, 117, 0.9) !important;
+        background-color: rgba(15, 23, 42, 0.9) !important;
         color: #ffffff !important;
         font-weight: 700 !important;
         font-size: 13px !important;
@@ -342,25 +379,25 @@ st.markdown("""
     }
     
     .stDataFrame ::-webkit-scrollbar-thumb {
-        background: rgba(1, 45, 117, 0.6);
+        background: rgba(15, 23, 42, 0.6);
         border-radius: 5px;
     }
     
     .stDataFrame ::-webkit-scrollbar-thumb:hover {
-        background: rgba(1, 45, 117, 0.8);
+        background: rgba(15, 23, 42, 0.8);
     }
     
     /* Sidebar */
     [data-testid="stSidebar"] {
-        background: rgba(10, 14, 26, 0.95);
-        backdrop-filter: blur(20px);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(12px);
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
     
     /* File uploader alan */
     [data-testid="stFileUploader"] {
-        background: rgba(15, 30, 65, 0.7) !important;
-        border: 2px dashed rgba(80, 130, 220, 0.4) !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+        border: 2px dashed rgba(255, 255, 255, 0.4) !important;
         border-radius: 12px !important;
         padding: 16px !important;
     }
@@ -370,10 +407,10 @@ st.markdown("""
     [data-testid="stFileUploaderDropzone"] span,
     [data-testid="stFileUploaderDropzone"] p,
     [data-testid="stFileUploaderDropzone"] small {
-        color: #a0c8ff !important;
+        color: #94a3b8 !important;
     }
     [data-testid="stFileUploaderDropzone"] {
-        background: rgba(15, 30, 65, 0.5) !important;
+        background: rgba(0, 0, 0, 0.5) !important;
         border-radius: 10px !important;
     }
 
@@ -381,65 +418,67 @@ st.markdown("""
     [data-testid="stFileUploaderDropzone"] button,
     [data-testid="stFileUploader"] button,
     [data-testid="stFileUploaderDropzoneInput"] + div button {
-        background: linear-gradient(135deg, #012D75, #1a4a9e) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(100, 160, 255, 0.4) !important;
-        border-radius: 10px !important;
-        font-weight: 600 !important;
+        background: rgba(14, 165, 233, 0.15) !important;
+        color: #38bdf8 !important;
+        border: 1px solid rgba(14, 165, 233, 0.3) !important;
+        border-radius: 6px !important;
+        font-weight: 500 !important;
         font-size: 13px !important;
         padding: 7px 16px !important;
-        transition: all 0.3s;
+        transition: all 0.2s;
     }
     [data-testid="stFileUploaderDropzone"] button:hover {
-        background: linear-gradient(135deg, #1a4a9e, #2563eb) !important;
-        box-shadow: 0 3px 12px rgba(26, 74, 158, 0.5) !important;
+        background: rgba(14, 165, 233, 0.25) !important;
+        color: #ffffff !important;
+        box-shadow: none !important;
     }
 
     /* Download butonu */
     [data-testid="stDownloadButton"] button,
     .stDownloadButton button {
-        background: linear-gradient(135deg, #012D75, #1a4a9e) !important;
-        color: #ffffff !important;
-        border: 1px solid rgba(100, 160, 255, 0.35) !important;
-        border-radius: 12px !important;
-        font-weight: 700 !important;
+        background: rgba(14, 165, 233, 0.15) !important;
+        color: #38bdf8 !important;
+        border: 1px solid rgba(14, 165, 233, 0.3) !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
         font-size: 13px !important;
         padding: 8px 18px !important;
-        transition: all 0.3s;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+        transition: all 0.2s;
+        box-shadow: none !important;
     }
     [data-testid="stDownloadButton"] button:hover,
     .stDownloadButton button:hover {
-        background: linear-gradient(135deg, #1a4a9e, #2563eb) !important;
-        box-shadow: 0 4px 16px rgba(26, 74, 158, 0.6) !important;
-        transform: translateY(-1px);
+        background: rgba(14, 165, 233, 0.25) !important;
+        color: #ffffff !important;
+        box-shadow: none !important;
+        transform: none;
     }
 
     /* Divider / çizgiler — daha belirgin */
     hr {
         border: none !important;
-        border-top: 2px solid rgba(100, 160, 255, 0.60) !important;
+        border-top: 2px solid rgba(56, 189, 248, 0.60) !important;
         margin: 22px 0 !important;
         opacity: 1 !important;
-        box-shadow: 0 0 8px rgba(100, 160, 255, 0.25) !important;
+        box-shadow: 0 0 8px rgba(56, 189, 248, 0.25) !important;
     }
     [data-testid="stDivider"] > div {
-        border-top: 2px solid rgba(100, 160, 255, 0.60) !important;
-        box-shadow: 0 0 8px rgba(100, 160, 255, 0.25) !important;
+        border-top: 2px solid rgba(56, 189, 248, 0.60) !important;
+        box-shadow: 0 0 8px rgba(56, 189, 248, 0.25) !important;
     }
 
     /* Dataframe / tablolar - koyu arka plan, görünür çizgilerle */
     .stDataFrame {
-        background: rgba(10, 20, 50, 0.8) !important;
+        background: rgba(0, 0, 0, 0.8) !important;
         border-radius: 12px !important;
-        border: 1px solid rgba(80, 130, 220, 0.25) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
         overflow: hidden !important;
     }
     .stDataFrame table,
     div[data-testid="stDataFrame"] table,
     .dataframe {
         font-size: 13px !important;
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
         border-collapse: collapse !important;
         width: 100% !important;
     }
@@ -447,13 +486,13 @@ st.markdown("""
     .stDataFrame thead tr th,
     div[data-testid="stDataFrame"] thead tr th,
     .dataframe thead tr th {
-        background: rgba(1, 45, 117, 0.95) !important;
+        background: rgba(15, 23, 42, 0.95) !important;
         color: #ffffff !important;
         font-weight: 700 !important;
         font-size: 12px !important;
         padding: 10px 10px !important;
-        border-bottom: 2px solid rgba(100, 160, 255, 0.4) !important;
-        border-right: 1px solid rgba(100, 160, 255, 0.15) !important;
+        border-bottom: 2px solid rgba(56, 189, 248, 0.4) !important;
+        border-right: 1px solid rgba(56, 189, 248, 0.15) !important;
         text-align: left !important;
         letter-spacing: 0.3px !important;
     }
@@ -461,21 +500,21 @@ st.markdown("""
     .stDataFrame tbody tr td,
     div[data-testid="stDataFrame"] tbody tr td,
     .dataframe tbody tr td {
-        color: #d8eeff !important;
-        background-color: rgba(10, 25, 60, 0.7) !important;
+        color: #e2e8f0 !important;
+        background-color: rgba(0, 0, 0, 0.7) !important;
         padding: 8px 10px !important;
-        border-bottom: 1px solid rgba(80, 130, 220, 0.18) !important;
-        border-right: 1px solid rgba(80, 130, 220, 0.12) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
         font-size: 13px !important;
     }
     .stDataFrame tbody tr td *,
     div[data-testid="stDataFrame"] tbody tr td * {
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
     }
     /* Satır hover */
     .stDataFrame tbody tr:hover td,
     div[data-testid="stDataFrame"] tbody tr:hover td {
-        background-color: rgba(26, 74, 158, 0.3) !important;
+        background-color: rgba(56, 189, 248, 0.3) !important;
     }
     /* Çift satır rengi */
     .stDataFrame tbody tr:nth-child(even) td,
@@ -487,20 +526,20 @@ st.markdown("""
     [data-testid="stDataFrame"] td span,
     [data-testid="stDataFrame"] td div,
     .dvn-cell, .dvn-cell span, .gdg-cell {
-        color: #d8eeff !important;
-        background-color: rgba(10, 25, 60, 0.7) !important;
+        color: #e2e8f0 !important;
+        background-color: rgba(0, 0, 0, 0.7) !important;
     }
     /* render_styled_table (unsafe_allow_html tablo) — satır değerleri her zaman görünür */
     table.dataframe td,
     table[id^="T_"] td,
     table[id^="T_"] tbody td {
-        color: #d8eeff !important;
-        background-color: rgba(10, 25, 60, 0.75) !important;
+        color: #e2e8f0 !important;
+        background-color: rgba(0, 0, 0, 0.75) !important;
     }
     table.dataframe th,
     table[id^="T_"] th {
         color: #ffffff !important;
-        background-color: rgba(1, 45, 117, 0.9) !important;
+        background-color: rgba(15, 23, 42, 0.9) !important;
     }
     /* Scrollbar */
     .stDataFrame ::-webkit-scrollbar { height: 8px; width: 8px; }
@@ -512,51 +551,51 @@ st.markdown("""
     .stTable table {
         border-collapse: collapse !important;
         width: 100% !important;
-        background: rgba(10, 20, 50, 0.8) !important;
+        background: rgba(0, 0, 0, 0.8) !important;
         border-radius: 10px !important;
         overflow: hidden !important;
     }
     .stTable th {
-        background: rgba(1, 45, 117, 0.95) !important;
+        background: rgba(15, 23, 42, 0.95) !important;
         color: #ffffff !important;
         font-weight: 700 !important;
         padding: 10px 12px !important;
-        border-bottom: 2px solid rgba(100, 160, 255, 0.4) !important;
+        border-bottom: 2px solid rgba(56, 189, 248, 0.4) !important;
         font-size: 12px !important;
     }
     .stTable td {
-        color: #d8eeff !important;
-        background: rgba(10, 25, 60, 0.7) !important;
+        color: #e2e8f0 !important;
+        background: rgba(0, 0, 0, 0.7) !important;
         padding: 8px 12px !important;
-        border-bottom: 1px solid rgba(80, 130, 220, 0.18) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
         font-size: 13px !important;
     }
 
     /* Subheader ve section başlıkları */
     [data-testid="stSubheader"],
     .stSubheader {
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
     }
 
     /* Info / success / warning / error kutuları */
     [data-testid="stAlert"] {
         border-radius: 10px !important;
-        border: 1px solid rgba(80, 130, 220, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
 
     /* ════════ EXPANDER — standart koyu tema ════════ */
     [data-testid="stExpander"] {
-        border: 1px solid rgba(80, 130, 220, 0.30) !important;
+        border: 1px solid rgba(255, 255, 255, 0.30) !important;
         border-radius: 10px !important;
         overflow: hidden !important;
-        background: rgba(10, 20, 50, 0.6) !important;
+        background: rgba(0, 0, 0, 0.6) !important;
     }
     .streamlit-expanderHeader,
     [data-testid="stExpander"] summary {
-        background: rgba(15, 30, 65, 0.85) !important;
+        background: rgba(0, 0, 0, 0.85) !important;
         backdrop-filter: blur(10px) !important;
         border-radius: 10px !important;
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
         font-weight: 600 !important;
         padding: 10px 14px !important;
     }
@@ -566,23 +605,23 @@ st.markdown("""
     [data-testid="stExpander"] summary p,
     [data-testid="stExpander"] summary span,
     [data-testid="stExpander"] summary div {
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
     }
     /* Expander içeriği */
     [data-testid="stExpander"] > div > div {
         background: rgba(8, 18, 45, 0.55) !important;
-        border-top: 1px solid rgba(80, 130, 220, 0.18) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
         padding: 12px 14px !important;
     }
 
     /* Checkbox */
     [data-testid="stCheckbox"] label {
-        color: #a0c8ff !important;
+        color: #94a3b8 !important;
     }
 
     /* Radio butonları */
     [data-testid="stRadio"] label {
-        color: #c8deff !important;
+        color: #94a3b8 !important;
         font-weight: 600 !important;
     }
 
@@ -591,8 +630,8 @@ st.markdown("""
     [data-testid="stDateInput"] > div,
     [data-testid="stDateInput"] [data-baseweb="input"],
     [data-testid="stDateInput"] [data-baseweb="base-input"] {
-        background: rgba(15, 30, 65, 0.85) !important;
-        border: 1px solid rgba(80, 130, 220, 0.28) !important;
+        background: rgba(0, 0, 0, 0.85) !important;
+        border: 1px solid rgba(255, 255, 255, 0.28) !important;
         border-radius: 10px !important;
     }
     /* Tarih alanı giriş metni ve format (YYYY/MM/DD) */
@@ -600,66 +639,66 @@ st.markdown("""
     [data-testid="stDateInputField"]:focus,
     input[data-testid="stDateInputField"] {
         background: transparent !important;
-        color: #d8eeff !important;
-        caret-color: #7eb8f7 !important;
+        color: #e2e8f0 !important;
+        caret-color: #38bdf8 !important;
     }
     /* Format placeholder rengi — daha belirgin */
     [data-testid="stDateInputField"]::placeholder {
-        color: rgba(100, 160, 255, 0.55) !important;
+        color: rgba(56, 189, 248, 0.55) !important;
         font-style: italic !important;
     }
     /* Tarih alanı ikon/ok rengi */
     [data-testid="stDateInput"] svg {
-        fill: rgba(100, 160, 255, 0.7) !important;
+        fill: rgba(56, 189, 248, 0.7) !important;
     }
 
     /* ════════ SELECTBOX — kapsamlı koyu tema ════════ */
     /* Container */
     [data-baseweb="select"],
     div[data-baseweb="select"] {
-        background: rgba(15, 30, 65, 0.85) !important;
+        background: rgba(0, 0, 0, 0.85) !important;
         border-radius: 10px !important;
     }
     div[data-baseweb="select"] > div,
     [data-baseweb="select"] > div {
-        background: rgba(15, 30, 65, 0.85) !important;
-        color: #d8eeff !important;
-        border: 1px solid rgba(80, 130, 220, 0.28) !important;
+        background: rgba(0, 0, 0, 0.85) !important;
+        color: #e2e8f0 !important;
+        border: 1px solid rgba(255, 255, 255, 0.28) !important;
         border-radius: 10px !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
     }
     div[data-baseweb="select"] > div:hover {
-        border-color: rgba(100, 160, 255, 0.55) !important;
+        border-color: rgba(56, 189, 248, 0.55) !important;
     }
     /* Seçili değer metni */
     [data-baseweb="select"] [data-testid="stSelectboxVirtualDropdown"],
     [data-baseweb="select"] span,
     [data-baseweb="select"] input,
     [data-baseweb="select"] input[readonly] {
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
         background: transparent !important;
     }
     /* Ok simgesi */
     [data-baseweb="select"] svg {
-        fill: rgba(100, 160, 255, 0.8) !important;
+        fill: rgba(56, 189, 248, 0.8) !important;
     }
     /* Dropdown açılır liste */
     [data-baseweb="popover"] ul[data-baseweb="menu"],
     ul[data-baseweb="menu"] {
-        background: rgba(8, 18, 50, 0.98) !important;
-        border: 1px solid rgba(80, 130, 220, 0.25) !important;
+        background: rgba(2, 6, 23, 0.98) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
         border-radius: 10px !important;
         box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
     }
     ul[data-baseweb="menu"] li,
     ul[data-baseweb="menu"] [role="option"] {
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
         background: transparent !important;
     }
     ul[data-baseweb="menu"] li:hover,
     ul[data-baseweb="menu"] [aria-selected="true"],
     ul[data-baseweb="menu"] [role="option"]:hover {
-        background: rgba(26, 74, 158, 0.45) !important;
+        background: rgba(56, 189, 248, 0.45) !important;
         color: #ffffff !important;
     }
 
@@ -672,7 +711,7 @@ st.markdown("""
     [data-baseweb="tag"] span,
     [data-baseweb="tag"] [data-testid="stMultiSelectItem"],
     [data-baseweb="tag"] > span {
-        color: #c8e0ff !important;
+        color: #cbd5e1 !important;
         font-weight: 600 !important;
     }
     /* Chip silme (X) butonu */
@@ -687,26 +726,26 @@ st.markdown("""
     }
     /* Multiselect container */
     [data-baseweb="multi-select"] {
-        background: rgba(15, 30, 65, 0.85) !important;
-        border: 1px solid rgba(80, 130, 220, 0.28) !important;
+        background: rgba(0, 0, 0, 0.85) !important;
+        border: 1px solid rgba(255, 255, 255, 0.28) !important;
         border-radius: 10px !important;
     }
     [data-baseweb="multi-select"] input {
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
         background: transparent !important;
     }
     [data-baseweb="multi-select"] input::placeholder {
-        color: rgba(100, 160, 255, 0.45) !important;
+        color: rgba(56, 189, 248, 0.45) !important;
     }
 
     /* ════════ TAKVIM (Date Picker) FİX — Soft Glassmorphism ════════ */
 
     /* Ana kutu — eski soft hissi korunuyor */
     [data-baseweb="calendar"] {
-        background: rgba(10, 22, 58, 0.88) !important;
+        background: rgba(0, 0, 0, 0.88) !important;
         backdrop-filter: blur(18px) !important;
         -webkit-backdrop-filter: blur(18px) !important;
-        border: 1px solid rgba(100, 160, 255, 0.35) !important;
+        border: 1px solid rgba(56, 189, 248, 0.35) !important;
         border-radius: 16px !important;
         box-shadow:
             0 8px 32px rgba(0, 10, 40, 0.55),
@@ -725,34 +764,34 @@ st.markdown("""
     [data-baseweb="calendar"] [role="gridcell"],
     [data-baseweb="calendar"] [role="columnheader"] {
         background-color: transparent !important;
-        color: #d8eeff !important;
+        color: #e2e8f0 !important;
     }
 
     /* Butonlar — saydam, soft hover */
     [data-baseweb="calendar"] button {
         background-color: transparent !important;
-        color: #cce4ff !important;
+        color: #cbd5e1 !important;
         border: none !important;
         border-radius: 8px !important;
         transition: background 0.15s ease !important;
     }
     [data-baseweb="calendar"] button:hover {
-        background-color: rgba(37, 99, 235, 0.3) !important;
+        background-color: rgba(56, 189, 248, 0.3) !important;
         color: #ffffff !important;
     }
 
     /* Seçili gün — mavi daire */
     [data-baseweb="calendar"] [aria-selected="true"] button,
     [data-baseweb="calendar"] button[aria-selected="true"] {
-        background-color: rgba(37, 99, 235, 0.85) !important;
+        background-color: rgba(56, 189, 248, 0.85) !important;
         color: #ffffff !important;
         border-radius: 50% !important;
-        box-shadow: 0 0 8px rgba(37, 99, 235, 0.5) !important;
+        box-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
     }
 
     /* Bugün — ince mavi kenarlık */
     [data-baseweb="calendar"] button[aria-current="date"] {
-        border: 1px solid rgba(100, 160, 255, 0.55) !important;
+        border: 1px solid rgba(56, 189, 248, 0.55) !important;
         border-radius: 50% !important;
     }
 
@@ -776,11 +815,11 @@ st.markdown("""
     [data-baseweb="calendar"] [data-baseweb="select"] span,
     [data-baseweb="calendar"] [data-baseweb="select"] input {
         background-color: rgba(15, 30, 70, 0.7) !important;
-        color: #d8eeff !important;
-        border-color: rgba(80, 130, 220, 0.25) !important;
+        color: #e2e8f0 !important;
+        border-color: rgba(255, 255, 255, 0.25) !important;
     }
     [data-baseweb="calendar"] [data-baseweb="select"] svg {
-        fill: rgba(100, 160, 255, 0.7) !important;
+        fill: rgba(56, 189, 248, 0.7) !important;
     }
 
     /* ════ Ay/Yıl açılır liste (tıklayınca çıkan seçenekler) ════
@@ -789,8 +828,8 @@ st.markdown("""
        burada daha yüksek özgüllükle tekrar hedefliyoruz. */
     ul[data-baseweb="menu"],
     [data-baseweb="menu"] {
-        background: rgba(8, 18, 52, 0.97) !important;
-        border: 1px solid rgba(80, 130, 220, 0.3) !important;
+        background: rgba(2, 6, 23, 0.97) !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 10px !important;
         box-shadow: 0 8px 24px rgba(0,0,0,0.55) !important;
         backdrop-filter: blur(12px) !important;
@@ -801,7 +840,7 @@ st.markdown("""
     [data-baseweb="menu"] [role="option"],
     [data-baseweb="menu-item"],
     [role="listbox"] [role="option"] {
-        color: #cce4ff !important;
+        color: #cbd5e1 !important;
         background-color: transparent !important;
         font-size: 13px !important;
     }
@@ -811,7 +850,7 @@ st.markdown("""
     [role="listbox"] [role="option"]:hover,
     ul[data-baseweb="menu"] [aria-selected="true"],
     [role="listbox"] [aria-selected="true"] {
-        background-color: rgba(37, 99, 235, 0.4) !important;
+        background-color: rgba(56, 189, 248, 0.4) !important;
         color: #ffffff !important;
     }
     /* Liste içindeki tüm span/div metinleri */
@@ -820,36 +859,36 @@ st.markdown("""
     ul[data-baseweb="menu"] [role="option"] span,
     [data-baseweb="menu-item"] span,
     [data-baseweb="menu-item"] div {
-        color: #cce4ff !important;
+        color: #cbd5e1 !important;
         background-color: transparent !important;
     }
 
     /* Takvim içi ay/yıl listesi — role=option LI elemanları */
     [data-baseweb="calendar"] [role="option"],
     [data-baseweb="calendar"] li[role="option"] {
-        color: #cce4ff !important;
+        color: #cbd5e1 !important;
         background-color: transparent !important;
         border-radius: 8px !important;
         padding: 4px 10px !important;
     }
     [data-baseweb="calendar"] [role="option"]:hover {
-        background-color: rgba(37, 99, 235, 0.35) !important;
+        background-color: rgba(56, 189, 248, 0.35) !important;
         color: #ffffff !important;
     }
     [data-baseweb="calendar"] [role="option"][aria-selected="true"],
     [data-baseweb="calendar"] li[role="option"][aria-selected="true"] {
-        background-color: rgba(37, 99, 235, 0.55) !important;
+        background-color: rgba(56, 189, 248, 0.55) !important;
         color: #ffffff !important;
         font-weight: 600 !important;
     }
 
     /* ════════ SLIDER — standart ════════ */
     [data-testid="stSlider"] [data-baseweb="slider"] [role="slider"] {
-        background: #1a4a9e !important;
-        border: 2px solid rgba(100, 160, 255, 0.7) !important;
+        background: #38bdf8 !important;
+        border: 2px solid rgba(56, 189, 248, 0.7) !important;
     }
     [data-testid="stSlider"] [data-baseweb="slider"] div[class*="Track"] {
-        background: rgba(26, 74, 158, 0.4) !important;
+        background: rgba(56, 189, 248, 0.4) !important;
     }
 
     /* ════════ GENEL METİN OKUNABİLİRLİK FİX ════════ */
@@ -858,7 +897,7 @@ st.markdown("""
         color: #ffffff !important;
         font-weight: 700 !important;
         padding-bottom: 6px !important;
-        border-bottom: 1px solid rgba(100, 160, 255, 0.35) !important;
+        border-bottom: 1px solid rgba(56, 189, 248, 0.35) !important;
         margin-bottom: 12px !important;
     }
     .stMarkdown p, .stMarkdown li {
@@ -2624,7 +2663,7 @@ def generate_pdf_report(start: date, end_exclusive: date, df_period: pd.DataFram
 # =============================
 # UI
 # =============================
-st.title("🏥 Enerji ve Verimlilik")
+st.title("⚡ Enerji ve Verimlilik")
 
 # Sağ üst: Günlük + Aylık Rapor butonları
 # Otomatik rapor bildirimlerini kontrol et
