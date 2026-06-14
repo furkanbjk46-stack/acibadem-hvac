@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enerji ve Verimlilik — Tanıtım Sunumu</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --green: #10b981;
+            --green-dark: #065f46;
+            --blue: #3b82f6;
+            --blue-dark: #1e40af;
+            --orange: #f59e0b;
+            --orange-dark: #92400e;
+            --purple: #8b5cf6;
+            --purple-dark: #5b21b6;
+            --red: #ef4444;
+            --red-dark: #991b1b;
+            --gray: #6b7280;
+            --gray-dark: #374151;
+            --teal: #14b8a6;
+            --teal-dark: #0d9488;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 30px 40px; }
+
+        .header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 40%, #0d6e5f 100%);
+            color: white;
+            padding: 40px 50px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::after {
+            content: '⚡';
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 72px;
+            opacity: 0.15;
+        }
+
+        .header h1 { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+        .header .subtitle { font-size: 18px; font-weight: 300; opacity: 0.9; margin-bottom: 12px; }
+        .header .tagline { font-size: 13px; opacity: 0.7; line-height: 1.5; max-width: 80%; }
+
+        .section {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .section h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h3 { font-size: 16px; font-weight: 600; color: var(--blue-dark); margin: 20px 0 10px 0; }
+        .section h4 { font-size: 14px; font-weight: 600; color: var(--text); margin: 16px 0 8px 0; }
+        .section p { margin-bottom: 10px; color: var(--text-light); font-size: 13px; }
+        .section ul { font-size: 13px; padding-left: 18px; color: var(--text-light); }
+        .section li { margin-bottom: 4px; }
+
+        table { width: 100%; border-collapse: collapse; margin: 12px 0 16px 0; font-size: 13px; }
+        th { background: #f1f5f9; color: var(--text); font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); }
+        td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; color: white; }
+        .badge-critical { background: var(--red); }
+        .badge-warning { background: var(--orange); }
+        .badge-optimal { background: var(--green); }
+        .badge-info { background: var(--blue); }
+        .badge-purple { background: var(--purple); }
+
+        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0; }
+        .info-card { border: 1px solid var(--border); border-radius: 10px; padding: 18px; text-align: center; background: linear-gradient(135deg, #fafbfc, #fff); }
+        .info-card .icon { font-size: 28px; margin-bottom: 6px; }
+        .info-card .value { font-size: 22px; font-weight: 800; color: var(--blue-dark); }
+        .info-card .label { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+
+        .mermaid { margin: 16px 0; text-align: center; background: #fafbfc; border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+
+        .alert { padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 13px; }
+        .alert-info { background: #dbeafe; border-left: 4px solid var(--blue); color: #1e40af; }
+        .alert-warning { background: #fef3c7; border-left: 4px solid var(--orange); color: #92400e; }
+        .alert-green { background: #ecfdf5; border-left: 4px solid var(--green); color: #065f46; }
+
+        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+        .feature-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+        .feature-card h4 { font-size: 14px; margin: 0 0 10px 0; color: var(--blue-dark); }
+        .feature-card ul { list-style: none; padding: 0; font-size: 12px; }
+        .feature-card ul li { padding: 3px 0; color: var(--text-light); display: flex; align-items: center; gap: 6px; }
+        .feature-card ul li::before { content: '▸'; color: var(--blue); font-weight: 700; }
+
+        .severity-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0; }
+        .severity-card { padding: 14px; border-radius: 10px; text-align: center; color: white; }
+        .severity-card .emoji { font-size: 24px; }
+        .severity-card .title { font-weight: 700; font-size: 13px; margin-top: 4px; }
+        .severity-card .desc { font-size: 11px; opacity: 0.85; margin-top: 4px; }
+
+        .footer { text-align: center; padding: 20px; margin-top: 10px; font-size: 13px; color: var(--text-light); border-top: 1px solid var(--border); }
+        .page-break { page-break-before: always; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 12px 0; }
+        .kpi-item { text-align: center; padding: 12px 8px; border-radius: 8px; border: 1px solid var(--border); }
+        .kpi-item .val { font-size: 18px; font-weight: 800; }
+        .kpi-item .lbl { font-size: 10px; color: var(--text-light); }
+
+        @media print {
+            body { background: white; font-size: 12px; }
+            .container { padding: 0; max-width: 100%; }
+            .header { border-radius: 0; margin-bottom: 20px; padding: 30px; }
+            .section { box-shadow: none; break-inside: avoid; margin-bottom: 16px; page-break-inside: avoid; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- ========== HEADER ========== -->
+        <div class="header">
+            <h1>⚡ Enerji ve Verimlilik</h1>
+            <div class="subtitle">Enerji Takip ve Tasarruf Motoru — Tanıtım Sunumu</div>
+            <div class="tagline">
+                Synapse (SYN) sisteminin enerji modülü. Acıbadem Hastanesi'nin elektrik, doğalgaz, su ve
+                chiller tüketimini günlük takip eder, anomalileri tespit eder ve maliyet düşürme
+                fırsatlarını otomatik olarak raporlar.
+            </div>
+        </div>
+
+        <!-- ========== 1. AMAÇ ========== -->
+        <div class="section">
+            <h2>🎯 Amaç — Enerji ve Verimlilik Ne İşe Yarar?</h2>
+            <p>Enerji ve Verimlilik modülü, hastanenin <strong>günlük enerji tüketimini takip eder</strong>,
+                geçmiş ve geçen yıl ile karşılaştırarak <strong>anormal artışları</strong> tespit eder ve
+                <strong>tasarruf fırsatlarını</strong> sayısal olarak ortaya koyar.</p>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="icon">📈</div>
+                    <div class="value">Tüketim Takibi</div>
+                    <div class="label">Elektrik, gaz, su, chiller — günlük kayıt ve trend</div>
+                </div>
+                <div class="info-card">
+                    <div class="icon">🚨</div>
+                    <div class="value">Anomali Tespiti</div>
+                    <div class="label">Dünle ve geçen yılla kıyaslayarak sapmaları yakalar</div>
+                </div>
+                <div class="info-card">
+                    <div class="icon">💰</div>
+                    <div class="value">Tasarruf Önerisi</div>
+                    <div class="label">7 kurallık motor ile somut, uygulanabilir öneriler üretir</div>
+                </div>
+            </div>
+
+            <div class="alert alert-green">
+                <strong>Özetle:</strong> Enerji ve Verimlilik, "ne kadar tükettik, normal mi, normal değilse
+                neden ve nasıl tasarruf edebiliriz?" sorusunu her gün otomatik olarak cevaplar.
+            </div>
+        </div>
+
+        <!-- ========== 2. TAKİP EDİLEN VERİLER ========== -->
+        <div class="section">
+            <h2>📊 Takip Edilen Enerji Verileri</h2>
+            <p>Modül, Modbus üzerinden 22 enerji analizöründen ve manuel girişlerden gelen verileri günlük
+                olarak kaydeder.</p>
+
+            <div class="kpi-strip">
+                <div class="kpi-item">
+                    <div class="val" style="color:var(--orange);">⚡</div>
+                    <div class="lbl">Genel Elektrik<br>(kWh)</div>
+                </div>
+                <div class="kpi-item">
+                    <div class="val" style="color:var(--blue);">🧊</div>
+                    <div class="lbl">Chiller Tüketim<br>(kWh)</div>
+                </div>
+                <div class="kpi-item">
+                    <div class="val" style="color:var(--red);">🔥</div>
+                    <div class="lbl">Doğalgaz<br>(m³)</div>
+                </div>
+                <div class="kpi-item">
+                    <div class="val" style="color:var(--teal);">💧</div>
+                    <div class="lbl">Su Tüketimi<br>(m³)</div>
+                </div>
+                <div class="kpi-item">
+                    <div class="val" style="color:var(--purple);">🏭</div>
+                    <div class="lbl">Kojen + MCC + VRF<br>(kWh)</div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Veri Alanı</th>
+                        <th>Birim</th>
+                        <th>Birim Fiyat</th>
+                        <th>Kullanım</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Toplam Hastane Tüketim</td>
+                        <td>kWh</td>
+                        <td>₺6.319/kWh</td>
+                        <td>Ana elektrik faturalandırma</td>
+                    </tr>
+                    <tr>
+                        <td>Chiller Tüketim</td>
+                        <td>kWh</td>
+                        <td>₺6.319/kWh</td>
+                        <td>Soğutma yükü analizi</td>
+                    </tr>
+                    <tr>
+                        <td>Kojen Doğalgaz</td>
+                        <td>m³</td>
+                        <td>₺8.50/m³</td>
+                        <td>Kojenerasyon verimlilik</td>
+                    </tr>
+                    <tr>
+                        <td>Su Tüketimi</td>
+                        <td>m³</td>
+                        <td>₺15.00/m³</td>
+                        <td>Su anomali tespiti</td>
+                    </tr>
+                    <tr>
+                        <td>Dış Hava Sıcaklığı</td>
+                        <td>°C</td>
+                        <td>—</td>
+                        <td>Reset eğrisi + mevsimsel korelasyon</td>
+                    </tr>
+                    <tr>
+                        <td>MAS Santral Sıcaklıkları</td>
+                        <td>°C</td>
+                        <td>—</td>
+                        <td>Isıtma/soğutma dengesi</td>
+                    </tr>
+                    <tr>
+                        <td>Chiller Adet + Set</td>
+                        <td>adet / °C</td>
+                        <td>—</td>
+                        <td>Chiller yük dengeleme</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== 3. ANOMALİ TESPİTİ ========== -->
+        <div class="section page-break">
+            <h2>🚨 Günlük Anomali Tespit Sistemi — Nasıl Çalışır?</h2>
+            <p>Her gün kaydedilen yeni veri, iki referansla karşılaştırılır: <strong>önceki gün</strong> ve
+                <strong>geçen yılın aynı günü</strong>. Sapma yüzdesine göre seviyelendirme yapılır.</p>
+
+            <div class="mermaid">
+                graph LR
+                NEW["📥 Yeni Günlük Veri"]:::input --> COMPARE["📊 Karşılaştırma"]
+                COMPARE --> D1["Dünkü değer<br />ile fark"]
+                COMPARE --> D2["Geçen yıl<br />aynı gün farkı"]
+                D1 --> CHECK{"Fark > %15?"}
+                D2 --> CHECK
+                CHECK -->|"%15-25"| WARN["🟡 UYARI<br />Dikkat edin"]:::orange
+                CHECK -->|"> %25"| CRIT["🔴 KRİTİK<br />Acil kontrol"]:::red
+                CHECK -->|"
+                < %15"| OK["🟢 NORMAL<br />Sapma yok"]:::green
+
+                classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
+                classDef orange fill:#f59e0b,stroke:#92400e,color:#fff
+                classDef red fill:#ef4444,stroke:#991b1b,color:#fff
+                classDef green fill:#10b981,stroke:#065f46,color:#fff
+            </div>
+
+            <h3>Seviyeler</h3>
+            <div class="severity-grid">
+                <div class="severity-card" style="background:linear-gradient(135deg, var(--red), var(--red-dark));">
+                    <div class="emoji">🔴</div>
+                    <div class="title">KRİTİK</div>
+                    <div class="desc">Sapma &gt; %25<br>Acil kontrol gerekir</div>
+                </div>
+                <div class="severity-card" style="background:linear-gradient(135deg, var(--orange), var(--orange-dark));">
+                    <div class="emoji">🟡</div>
+                    <div class="title">UYARI</div>
+                    <div class="desc">Sapma %15–25<br>Dikkat / izleme</div>
+                </div>
+                <div class="severity-card" style="background:linear-gradient(135deg, var(--green), var(--green-dark));">
+                    <div class="emoji">🟢</div>
+                    <div class="title">NORMAL</div>
+                    <div class="desc">Sapma &lt; %15<br>Beklenen aralık</div>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>Neden iki referans?</strong> Sadece "dünle kıyas" mevsim etkisini ayırt edemez
+                (örn. yazın elektrik artışı normaldir). Geçen yılın aynı günüyle kıyas, mevsimsel etkiyi
+                ayrıştırarak "gerçekten anormal mi?" sorusuna daha güvenilir cevap verir.
+            </div>
+        </div>
+
+        <!-- ========== 4. TASARRUF KURALLARI ========== -->
+        <div class="section page-break">
+            <h2>💰 Tasarruf Öneri Motoru — 7 Kural</h2>
+            <p>Tasarruf motoru, enerji verilerini analiz ederek maliyet düşürme fırsatlarını tespit eder ve
+                her birini bir <strong>tasarruf potansiyeli</strong> ile etiketler.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Kural</th>
+                        <th>Mantık</th>
+                        <th>Potansiyel Tasarruf</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>1</td>
+                        <td><strong>CHILLER_SET_DYNAMIC</strong></td>
+                        <td>Dış hava sıcaklığına göre Chiller set sıcaklığı optimize edilmeli.<br>
+                            <em>Dış hava 25°C iken chiller 6°C yerine 8°C'de çalışabilir → %8-12 tasarruf</em>
+                        </td>
+                        <td style="color:var(--green);font-weight:700;">Yüksek</td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td><strong>VRF_BYPASS_DETECTED</strong></td>
+                        <td>VRF/Split cihaz kullanımı merkezi sistemi bypass ediyor.<br>
+                            <em>VRF kWh > toplam soğutma %20 → gereksiz ikili çalışma</em>
+                        </td>
+                        <td style="color:var(--orange);font-weight:700;">Orta-Yüksek</td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td><strong>FREE_COOLING_POTENTIAL</strong></td>
+                        <td>Dış hava yeterince serin iken chiller çalıştırmak yerine free cooling.<br>
+                            <em>Dış hava &lt;15°C ve chiller hala çalışıyor → doğal soğutma fırsatı</em>
+                        </td>
+                        <td style="color:var(--green);font-weight:700;">Yüksek</td>
+                    </tr>
+                    <tr>
+                        <td>4</td>
+                        <td><strong>EFFICIENCY_INDEX_DROP</strong></td>
+                        <td>kWh/m² endeksi anormal yükseldi → sistemde verimlilik kaybı.<br>
+                            <em>Haftalık bazda %10+ düşüş → acil kontrol</em>
+                        </td>
+                        <td style="color:var(--orange);font-weight:700;">Değişken</td>
+                    </tr>
+                    <tr>
+                        <td>5</td>
+                        <td><strong>MAS_IMBALANCE</strong></td>
+                        <td>MAS santral sıcaklıkları dengesiz → enerji sirkülasyonu verimsiz.<br>
+                            <em>MAS1 vs MAS2 Isıtma/Soğutma templerinde &gt;5°C fark</em>
+                        </td>
+                        <td style="color:var(--orange);font-weight:700;">Orta</td>
+                    </tr>
+                    <tr>
+                        <td>6</td>
+                        <td><strong>WATER_CONSUMPTION_ANOMALY</strong></td>
+                        <td>Su tüketiminde anomali → kaçak veya ekipman sorunu.<br>
+                            <em>Günlük %25+ artış → soğutma kulesi kaçağı olabilir</em>
+                        </td>
+                        <td style="color:var(--red);font-weight:700;">Değişken</td>
+                    </tr>
+                    <tr>
+                        <td>7</td>
+                        <td><strong>YoY Karşılaştırma</strong></td>
+                        <td>Geçen yıl aynı ayda tüketim ne kadardı?<br>
+                            <em>YoY artış &gt;%10 → yapısal sorun veya davranış değişikliği</em>
+                        </td>
+                        <td style="color:var(--orange);font-weight:700;">Takip</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert alert-warning">
+                <strong>Önemli:</strong> Bu kurallar birbirini dışlamaz — aynı gün için birden fazla öneri
+                aynı anda üretilebilir (örn. hem CHILLER_SET_DYNAMIC hem FREE_COOLING_POTENTIAL). Her öneri
+                portalda ayrı satır olarak listelenir.
+            </div>
+        </div>
+
+        <!-- ========== 5. RAPORLAMA ========== -->
+        <div class="section page-break">
+            <h2>📄 Otomatik Raporlama</h2>
+            <p>Modül, anlık dashboard'un yanında düzenli aralıklarla PDF rapor üretir; böylece veriler
+                yönetimle paylaşılabilir hale gelir.</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rapor</th>
+                        <th>Zamanlama</th>
+                        <th>İçerik</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>📄 Günlük PDF</td>
+                        <td>Her gün 17:00</td>
+                        <td>Tüketim özeti, anomaliler, öneriler, grafikler</td>
+                    </tr>
+                    <tr>
+                        <td>📄 Aylık PDF</td>
+                        <td>Her ayın 5'i 17:00</td>
+                        <td>Aylık trend, YoY karşılaştırma, maliyet analizi</td>
+                    </tr>
+                    <tr>
+                        <td>📊 Dashboard</td>
+                        <td>Anlık (Streamlit)</td>
+                        <td>KPI kartları, interaktif grafikler, veri tabloları</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Dashboard Özet Kartları (5 KPI)</h3>
+            <div class="kpi-strip">
+                <div class="kpi-item" style="border-left:3px solid var(--orange);">
+                    <div class="val">⚡</div>
+                    <div class="lbl">Dünkü<br>Toplam kWh</div>
+                </div>
+                <div class="kpi-item" style="border-left:3px solid var(--blue);">
+                    <div class="val">🧊</div>
+                    <div class="lbl">Dünkü<br>Chiller kWh</div>
+                </div>
+                <div class="kpi-item" style="border-left:3px solid var(--red);">
+                    <div class="val">🔥</div>
+                    <div class="lbl">Dünkü<br>Gaz m³</div>
+                </div>
+                <div class="kpi-item" style="border-left:3px solid var(--purple);">
+                    <div class="val">⚠️</div>
+                    <div class="lbl">Aktif<br>Uyarılar</div>
+                </div>
+                <div class="kpi-item" style="border-left:3px solid var(--green);">
+                    <div class="val">💚</div>
+                    <div class="lbl">Sistem<br>Sağlık %</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 6. KULLANIM ========== -->
+        <div class="section page-break">
+            <h2>👤 Kullanım — Operasyon Ekibi İçin</h2>
+
+            <h3>Günlük Akış</h3>
+            <div class="mermaid">
+                graph LR
+                A["📥 Sayaç Verisi<br />Modbus + Manuel"]:::input --> B["📊 Karşılaştırma<br />Dün + Geçen Yıl"]:::proc
+                B --> C["🚨 Anomali<br />Seviyesi Belirle"]:::proc
+                C --> D["💰 Tasarruf<br />Önerileri Üret"]:::proc
+                D --> E["📊 Dashboard<br />KPI Kartları"]:::output
+                E --> F["📄 17:00<br />Günlük PDF"]:::output
+
+                classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
+                classDef proc fill:#f59e0b,stroke:#92400e,color:#fff
+                classDef output fill:#10b981,stroke:#065f46,color:#fff
+            </div>
+
+            <h3>Portalda Neler Görülür?</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>📊 Genel Durum</h4>
+                    <ul>
+                        <li>5 KPI kartı — dünkü tüketimler ve sistem sağlığı</li>
+                        <li>Trend grafikleri (günlük/aylık)</li>
+                        <li>YoY karşılaştırma badge'leri</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>🚨 Anomali Listesi</h4>
+                    <ul>
+                        <li>Kritik/Uyarı seviyesindeki tüketim sapmaları</li>
+                        <li>Hangi veri alanında, ne kadar sapma</li>
+                        <li>Dünle ve geçen yılla kıyas yüzdeleri</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>💰 Tasarruf Önerileri</h4>
+                    <ul>
+                        <li>7 kuraldan tetiklenen aktif öneriler</li>
+                        <li>Potansiyel tasarruf seviyesi (Yüksek/Orta/Değişken)</li>
+                        <li>Gerekçe ve önerilen aksiyon metni</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>📄 Raporlar</h4>
+                    <ul>
+                        <li>Günlük PDF (17:00) — özet + grafikler</li>
+                        <li>Aylık PDF (her ayın 5'i) — trend + maliyet</li>
+                        <li>Geçmiş raporlara portal üzerinden erişim</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>Pratik kural:</strong> Önce 🔴 KRİTİK anomaliler kontrol edilir (sayaç/ekipman arızası
+                veya kaçak olasılığı), sonra 💰 tasarruf önerileri değerlendirilir. 🟡 UYARI seviyesindeki
+                sapmalar izleme listesine eklenir.
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <strong>Enerji ve Verimlilik</strong> — Synapse (SYN) Enerji Modülü — Acıbadem Hastanesi<br>
+            Bu belge, kullanım ve teşhis mantığının özetidir; mevcut kod ve dosya yapısı değişmemiştir.
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+
+</html>

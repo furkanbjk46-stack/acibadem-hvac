@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mekanik Zeka — Tanıtım Sunumu</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --green: #10b981;
+            --green-dark: #065f46;
+            --blue: #3b82f6;
+            --blue-dark: #1e40af;
+            --orange: #f59e0b;
+            --orange-dark: #92400e;
+            --purple: #8b5cf6;
+            --purple-dark: #5b21b6;
+            --red: #ef4444;
+            --red-dark: #991b1b;
+            --gray: #6b7280;
+            --gray-dark: #374151;
+            --teal: #14b8a6;
+            --teal-dark: #0d9488;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            font-size: 14px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; padding: 30px 40px; }
+
+        .header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 40%, #0d6e5f 100%);
+            color: white;
+            padding: 40px 50px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::after {
+            content: '🧠';
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 72px;
+            opacity: 0.15;
+        }
+
+        .header h1 { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+        .header .subtitle { font-size: 18px; font-weight: 300; opacity: 0.9; margin-bottom: 12px; }
+        .header .tagline { font-size: 13px; opacity: 0.7; line-height: 1.5; max-width: 80%; }
+
+        .section {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 28px 32px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .section h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section h3 { font-size: 16px; font-weight: 600; color: var(--blue-dark); margin: 20px 0 10px 0; }
+        .section h4 { font-size: 14px; font-weight: 600; color: var(--text); margin: 16px 0 8px 0; }
+        .section p { margin-bottom: 10px; color: var(--text-light); font-size: 13px; }
+        .section ul { font-size: 13px; padding-left: 18px; color: var(--text-light); }
+        .section li { margin-bottom: 4px; }
+
+        table { width: 100%; border-collapse: collapse; margin: 12px 0 16px 0; font-size: 13px; }
+        th { background: #f1f5f9; color: var(--text); font-weight: 600; text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); }
+        td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; color: white; }
+        .badge-critical { background: var(--red); }
+        .badge-warning { background: var(--orange); }
+        .badge-optimal { background: var(--green); }
+        .badge-info { background: var(--blue); }
+        .badge-purple { background: var(--purple); }
+
+        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0; }
+        .info-card { border: 1px solid var(--border); border-radius: 10px; padding: 18px; text-align: center; background: linear-gradient(135deg, #fafbfc, #fff); }
+        .info-card .icon { font-size: 28px; margin-bottom: 6px; }
+        .info-card .value { font-size: 22px; font-weight: 800; color: var(--blue-dark); }
+        .info-card .label { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+
+        .mermaid { margin: 16px 0; text-align: center; background: #fafbfc; border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+
+        .alert { padding: 12px 16px; border-radius: 8px; margin: 12px 0; font-size: 13px; }
+        .alert-info { background: #dbeafe; border-left: 4px solid var(--blue); color: #1e40af; }
+        .alert-warning { background: #fef3c7; border-left: 4px solid var(--orange); color: #92400e; }
+        .alert-green { background: #ecfdf5; border-left: 4px solid var(--green); color: #065f46; }
+
+        .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0; }
+        .feature-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+        .feature-card h4 { font-size: 14px; margin: 0 0 10px 0; color: var(--blue-dark); }
+        .feature-card ul { list-style: none; padding: 0; font-size: 12px; }
+        .feature-card ul li { padding: 3px 0; color: var(--text-light); display: flex; align-items: center; gap: 6px; }
+        .feature-card ul li::before { content: '▸'; color: var(--blue); font-weight: 700; }
+
+        .severity-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+        .severity-card { padding: 14px; border-radius: 10px; text-align: center; color: white; }
+        .severity-card .emoji { font-size: 24px; }
+        .severity-card .title { font-weight: 700; font-size: 13px; margin-top: 4px; }
+        .severity-card .desc { font-size: 11px; opacity: 0.85; margin-top: 4px; }
+
+        .chain { display: flex; align-items: center; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+        .chain-node { background: linear-gradient(135deg, var(--blue), var(--blue-dark)); color: white; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; text-align: center; }
+        .chain-arrow { font-size: 16px; color: var(--gray); }
+
+        .footer { text-align: center; padding: 20px; margin-top: 10px; font-size: 13px; color: var(--text-light); border-top: 1px solid var(--border); }
+        .page-break { page-break-before: always; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+        .kpi-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 12px 0; }
+        .kpi-item { text-align: center; padding: 12px 8px; border-radius: 8px; border: 1px solid var(--border); }
+        .kpi-item .val { font-size: 18px; font-weight: 800; }
+        .kpi-item .lbl { font-size: 10px; color: var(--text-light); }
+
+        @media print {
+            body { background: white; font-size: 12px; }
+            .container { padding: 0; max-width: 100%; }
+            .header { border-radius: 0; margin-bottom: 20px; padding: 30px; }
+            .section { box-shadow: none; break-inside: avoid; margin-bottom: 16px; page-break-inside: avoid; }
+            .page-break { page-break-before: always; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <!-- ========== HEADER ========== -->
+        <div class="header">
+            <h1>🧠 Mekanik Zeka</h1>
+            <div class="subtitle">HVAC Otomatik Teşhis Motoru — Tanıtım Sunumu</div>
+            <div class="tagline">
+                Synapse (SYN) sisteminin HVAC analiz modülü. Acıbadem Hastanesi'ndeki AHU, FCU, Chiller, Kolektör ve
+                Eşanjör ekipmanlarının sıcaklık/vana verilerini her gün otomatik analiz eder, sorunları teşhis eder
+                ve sahaya uygulanabilir aksiyon önerileri üretir.
+            </div>
+        </div>
+
+        <!-- ========== 1. AMAÇ ========== -->
+        <div class="section">
+            <h2>🎯 Amaç — Mekanik Zeka Ne İşe Yarar?</h2>
+            <p>Mekanik Zeka, HVAC ekipmanlarının <strong>verimsiz veya hatalı çalıştığı durumları otomatik
+                    olarak tespit eden</strong> bir teşhis motorudur. Manuel saha turları ve gözle kontrol
+                yerine, BMS'den (Desigo) gelen sıcaklık ve vana verilerini sürekli analiz ederek
+                <strong>enerji israfını</strong> ve <strong>konfor sorunlarını</strong> erken yakalar.</p>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="icon">📉</div>
+                    <div class="value">Enerji İsrafı</div>
+                    <div class="label">Düşük ΔT, bypass, eşzamanlı ısıtma/soğutma gibi gizli kayıpları yakalar</div>
+                </div>
+                <div class="info-card">
+                    <div class="icon">🩺</div>
+                    <div class="value">Erken Teşhis</div>
+                    <div class="label">Arıza/ayar sorununu büyümeden, günlük analizde tespit eder</div>
+                </div>
+                <div class="info-card">
+                    <div class="icon">🛠️</div>
+                    <div class="value">Aksiyon Önerisi</div>
+                    <div class="label">"Ne yapılmalı" sorusuna saha personeline net cevap verir</div>
+                </div>
+            </div>
+
+            <div class="alert alert-green">
+                <strong>Özetle:</strong> Mekanik Zeka, "bu cihaz şu an doğru çalışıyor mu, çalışmıyorsa neden ve
+                ne yapılmalı?" sorusunu her ekipman için her gün otomatik olarak cevaplar.
+            </div>
+        </div>
+
+        <!-- ========== 2. NASIL ÇALIŞIR ========== -->
+        <div class="section">
+            <h2>⚙️ Nasıl Çalışır? — Otomatik Analiz Akışı</h2>
+            <p>Motor, her ekipmandan gelen sıcaklık ve vana verilerini alır, <strong>ΔT (sıcaklık farkı)</strong>
+                analizi yapar ve sorunları tespit ederek <strong>aksiyon önerileri</strong> üretir.</p>
+
+            <div class="mermaid">
+                graph LR
+                A["🌐 BACnet/IP<br />Desigo BMS<br />56 AHU/FCU"]:::input --> B["📥 ahu_collector.py<br />Otomatik Okuma<br />(cloud_sync tetikler)"]:::proc
+                B --> C["🔍 Tip Algılama<br />+ ΔT Hesaplama<br />Su + Hava ΔT"]:::proc
+                C --> D["📏 15+ Kural<br />Band Kontrolü<br />Severity Skoru"]:::proc
+                D --> E["📲 Personel Bildirimi<br />Supabase bildirimler"]:::output
+                E --> F["✅ Onay + Excel<br />İndir / Saha Uygula"]:::output
+
+                classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
+                classDef proc fill:#f59e0b,stroke:#92400e,color:#fff
+                classDef output fill:#10b981,stroke:#065f46,color:#fff
+            </div>
+
+            <h3>Çalışma Zamanlaması</h3>
+            <div class="kpi-strip">
+                <div class="kpi-item"><div class="val">07:00</div><div class="lbl">Modbus okuma</div></div>
+                <div class="kpi-item"><div class="val">07:05</div><div class="lbl">BACnet okuma</div></div>
+                <div class="kpi-item"><div class="val">07:10</div><div class="lbl">Günlük snapshot</div></div>
+                <div class="kpi-item"><div class="val">08:30</div><div class="lbl">Mekanik Zeka analizi</div></div>
+                <div class="kpi-item"><div class="val">13:00</div><div class="lbl">AHU analiz tekrarı</div></div>
+            </div>
+            <p>Zamanlamalar kasıtlı olarak 5 dk arayla yapılır; böylece veri okuma ve analiz adımları birbirine
+                çakışmaz, her analiz güncel veri üzerinden çalışır.</p>
+
+            <h3>Ekipman Tipleri ve Hedef ΔT Değerleri</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ekipman Tipi</th>
+                        <th>Açıklama</th>
+                        <th>Hedef ΔT</th>
+                        <th>Tolerans</th>
+                        <th>Ne Kontrol Ediyor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>🌀 <strong>AHU</strong></td>
+                        <td>Klima Santrali</td>
+                        <td>5.0°C</td>
+                        <td>±3.0°C</td>
+                        <td>Üfleme/Emiş hava, SAT, Vana %</td>
+                    </tr>
+                    <tr>
+                        <td>🧊 <strong>Chiller</strong></td>
+                        <td>Soğutma Grubu</td>
+                        <td>3.0°C</td>
+                        <td>±1.0°C</td>
+                        <td>Giriş/Çıkış su, Bypass, COP</td>
+                    </tr>
+                    <tr>
+                        <td>🏠 <strong>FCU</strong></td>
+                        <td>Fan Coil Ünitesi</td>
+                        <td>4.0°C</td>
+                        <td>±3.0°C</td>
+                        <td>Oda sıcaklığı, Set, Vana %</td>
+                    </tr>
+                    <tr>
+                        <td>🔗 <strong>Kolektör</strong></td>
+                        <td>Ana Dağıtım</td>
+                        <td>3.0°C</td>
+                        <td>±1.0°C</td>
+                        <td>Ana gidiş/dönüş su</td>
+                    </tr>
+                    <tr>
+                        <td>🔥 <strong>Eşanjör</strong></td>
+                        <td>Isı Değiştirici</td>
+                        <td>8.0°C</td>
+                        <td>±3.0°C</td>
+                        <td>Primer/Sekonder su</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>ΔT Nedir? Neden Önemli?</h3>
+            <div class="two-col">
+                <div>
+                    <div class="alert alert-info">
+                        <strong>ΔT = Gidiş Sıcaklığı − Dönüş Sıcaklığı</strong><br>
+                        Bir ekipmandan geçen suyun/havanın ne kadar ısı alıp verdiğini gösterir.
+                    </div>
+                    <ul>
+                        <li><strong>Düşük ΔT:</strong> Su çok hızlı akıyor → enerji israfı (pompa enerji tüketimi ↑)</li>
+                        <li><strong>Yüksek ΔT:</strong> Su yetersiz akıyor → konfor kaybı riski</li>
+                        <li><strong>Hedef ΔT:</strong> Optimum enerji-konfor dengesi</li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="alert alert-green">
+                        <strong>🎯 Hedef:</strong> Her ekipmanı kendi ΔT bandında tutarak minimum enerji ile maksimum
+                        konfor sağlamak
+                    </div>
+                    <ul>
+                        <li><strong>Band içi:</strong> Sistem optimal → müdahale gerekmez ✅</li>
+                        <li><strong>Band dışı:</strong> Otomatik teşhis + aksiyon önerisi ⚠️</li>
+                        <li><strong>Kritik:</strong> Acil müdahale gerekli 🔴</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 3. MOD ALGILAMA ve SAT ========== -->
+        <div class="section page-break">
+            <h2>🔄 Akıllı Mod Algılama ve SAT Analizi</h2>
+
+            <h3>Otomatik Mod Tespiti</h3>
+            <p>Sistem, ekipmanın soğutma mı ısıtma mı yaptığını <strong>vana verilerinden</strong> otomatik tespit eder:</p>
+
+            <div class="mermaid">
+                graph TD
+                V["📊 Vana Verisi<br />Soğutma % + Isıtma %"]:::input --> CHECK{"Her iki vana<br />&ge; 5%?"}
+                CHECK -->|Evet| AMB["⚠️ AMBIGUOUS<br />Eşzamanlı çakışma"]:::red
+                CHECK -->|Hayır| C2{"Soğutma &ge; 5%?"}
+                C2 -->|Evet| COOL["❄️ COOLING<br />Soğutma modu"]:::blue
+                C2 -->|Hayır| C3{"Isıtma &ge; 5%?"}
+                C3 -->|Evet| HEAT["🔥 HEATING<br />Isıtma modu"]:::orange
+                C3 -->|Hayır| STBY["💤 STANDBY<br />Bekleme modu"]:::gray
+
+                classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
+                classDef blue fill:#3b82f6,stroke:#1e40af,color:#fff
+                classDef orange fill:#f59e0b,stroke:#92400e,color:#fff
+                classDef red fill:#ef4444,stroke:#991b1b,color:#fff
+                classDef gray fill:#6b7280,stroke:#374151,color:#fff
+            </div>
+
+            <h3>SAT Status (Üfleme Sıcaklığı Analizi)</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Mod</th>
+                        <th>Normal Aralık</th>
+                        <th>Önerilen SAT</th>
+                        <th>Anormal Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>❄️ Soğutma</td>
+                        <td>15°C – 18°C</td>
+                        <td>16.5°C</td>
+                        <td>SAT &gt; 18°C → <span class="badge badge-warning">NOT_COOLING</span></td>
+                    </tr>
+                    <tr>
+                        <td>🔥 Isıtma</td>
+                        <td>28°C – 31°C</td>
+                        <td>29.5°C</td>
+                        <td>SAT &lt; 28°C → <span class="badge badge-critical">NOT_HEATING</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Sıcaklık Setpoint Zinciri (örnek)</h3>
+            <p>Her kontrol noktası bir sonrakini besler — enerji tasarrufu zincirin tamamında optimize edilir:</p>
+            <h4>Soğutma Zinciri</h4>
+            <div class="chain">
+                <div class="chain-node">🧊 Chiller<br>6–7°C</div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node">🔗 Kolektör<br>8–10°C</div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node" style="background:linear-gradient(135deg, var(--teal), var(--teal-dark));">🌀
+                    AHU SAT<br>12–14°C</div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node" style="background:linear-gradient(135deg, var(--green), var(--green-dark));">🏠
+                    Oda<br>22–24°C</div>
+            </div>
+            <h4>Isıtma Zinciri</h4>
+            <div class="chain">
+                <div class="chain-node" style="background:linear-gradient(135deg, var(--red), var(--red-dark));">🔥
+                    Kazan<br>70–80°C</div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node" style="background:linear-gradient(135deg, var(--orange), var(--orange-dark));">
+                    🔗 Kolektör<br>50–60°C</div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node" style="background:linear-gradient(135deg, var(--teal), var(--teal-dark));">🌀
+                    AHU SAT<br>30–35°C</div>
+                <div class="chain-arrow">→</div>
+                <div class="chain-node" style="background:linear-gradient(135deg, var(--green), var(--green-dark));">🏠
+                    Oda<br>20–22°C</div>
+            </div>
+        </div>
+
+        <!-- ========== 4. TEŞHİS KURALLARI ========== -->
+        <div class="section page-break">
+            <h2>🩺 Teşhis Sistemi — 15+ Akıllı Kural</h2>
+            <p>Motor, her ekipmanı bir dizi kuralla kontrol eder. Her kural bir <strong>severity (önem)</strong>
+                seviyesi ve <strong>skor</strong> üretir.</p>
+
+            <h3>Severity Seviyeleri</h3>
+            <div class="severity-grid">
+                <div class="severity-card" style="background:linear-gradient(135deg, var(--red), var(--red-dark));">
+                    <div class="emoji">🔴</div>
+                    <div class="title">CRITICAL</div>
+                    <div class="desc">Skor ≥ 7.0<br>Acil müdahale</div>
+                </div>
+                <div class="severity-card" style="background:linear-gradient(135deg, var(--orange), var(--orange-dark));">
+                    <div class="emoji">🟡</div>
+                    <div class="title">WARNING</div>
+                    <div class="desc">Skor 3.0–6.9<br>Planlı bakım</div>
+                </div>
+                <div class="severity-card" style="background:linear-gradient(135deg, var(--green), var(--green-dark));">
+                    <div class="emoji">🟢</div>
+                    <div class="title">OPTIMAL</div>
+                    <div class="desc">Skor 0<br>Normal çalışma</div>
+                </div>
+                <div class="severity-card" style="background:linear-gradient(135deg, var(--gray), var(--gray-dark));">
+                    <div class="emoji">⚪</div>
+                    <div class="title">MISSING_DATA</div>
+                    <div class="desc">Sensör eksik<br>Veri yok</div>
+                </div>
+            </div>
+
+            <h3>Teşhis Kuralları Tablosu</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kural</th>
+                        <th>Skor</th>
+                        <th>Seviye</th>
+                        <th>Geçerli Ekipman</th>
+                        <th>Ne Tespit Ediyor?</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>SIMUL_HEAT_COOL</strong></td>
+                        <td>10.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
+                        <td>Eşzamanlı ısıtma ve soğutma → enerji israfı</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CHILLER_BYPASS</strong></td>
+                        <td>9.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>Sadece CHILLER</td>
+                        <td>Chiller ΔT &lt; 1°C → bypass veya arıza</td>
+                    </tr>
+                    <tr>
+                        <td><strong>NOT_COOLING</strong></td>
+                        <td>8.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
+                        <td>SAT yüksek, soğutma yapamıyor</td>
+                    </tr>
+                    <tr>
+                        <td><strong>NOT_HEATING</strong></td>
+                        <td>8.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
+                        <td>SAT düşük, ısıtma yapamıyor</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LOW_FLOW_DETECTED</strong></td>
+                        <td>8.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU (CHILLER hariç)</td>
+                        <td>Su akışı düşük → pompa/filtre sorunu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>INSUFFICIENT_CAPACITY</strong></td>
+                        <td>7.0</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>Sadece FCU</td>
+                        <td>Kapasite yetersiz, konfor sağlanamıyor (oda-set sapması &gt;2°C ve vana &gt;%80)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>HEAT_EFF_LOW</strong></td>
+                        <td>7.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>Sadece AHU</td>
+                        <td>Isıtma vanası çok açık (≥%90) ama üfleme &lt;28°C</td>
+                    </tr>
+                    <tr>
+                        <td><strong>COOL_EFF_LOW</strong></td>
+                        <td>7.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>Sadece AHU</td>
+                        <td>Soğutma vanası çok açık ama approach yüksek</td>
+                    </tr>
+                    <tr>
+                        <td><strong>CHILLER_LOW_DT</strong></td>
+                        <td>6.0</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>Sadece CHILLER</td>
+                        <td>Chiller ΔT &lt; 3°C, düşük verimlilik</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LOW_DT_SYNDROME</strong></td>
+                        <td>5.0</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>AHU + FCU</td>
+                        <td>Vana ≥90% ama ΔT ≤ 3°C</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SAT_WARNING / SAT_HIGH / SAT_LOW</strong></td>
+                        <td>5.0</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>AHU + FCU (farklı eşiklerle)</td>
+                        <td>SAT (üfleme) sıcaklığı hedef bandın dışında</td>
+                    </tr>
+                    <tr>
+                        <td><strong>HIGH_DT / LOW_DT</strong></td>
+                        <td>4-5</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>Sadece AHU</td>
+                        <td>ΔT hedef bandının dışında</td>
+                    </tr>
+                    <tr>
+                        <td><strong>COMFORT_OVERRIDE</strong></td>
+                        <td>4.0</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>AHU + FCU</td>
+                        <td>Oda sıcaklığı set'ten &gt;3°C uzak</td>
+                    </tr>
+                    <tr>
+                        <td><strong>BAND_HIGH / BAND_LOW / IN_BAND</strong></td>
+                        <td>0-3</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>Sadece FCU</td>
+                        <td>ΔT hedef altında/üstünde/içinde</td>
+                    </tr>
+                    <tr>
+                        <td><strong>NORMAL</strong></td>
+                        <td>0.0</td>
+                        <td><span class="badge badge-optimal">OPTIMAL</span></td>
+                        <td>Sadece AHU</td>
+                        <td>Sistem normal çalışıyor ✅</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top:24px;">⚙️ Motor Mimarisi: AHU vs FCU Ayrımı</h3>
+            <p>Analiz motoru, ekipman tipine göre <strong>iki ayrı fonksiyona</strong> dallanır
+                (<code>analyze_ahu_performance()</code> / <code>analyze_fcu_performance()</code>),
+                ardından her ikisi de ortak <code>check_special_conditions()</code> fonksiyonunu çağırır.
+                Bu nedenle bazı kurallar yalnızca belirli ekipman tiplerinde tetiklenebilir:</p>
+            <ul>
+                <li><strong>Sadece AHU'da çalışanlar:</strong> NOT_HEATING, NOT_COOLING, SAT_HIGH, SAT_LOW,
+                    SAT_WARNING (AHU yolu), LOW_DT/HIGH_DT/NORMAL, COOL_EFF_LOW, HEAT_EFF_LOW</li>
+                <li><strong>Sadece FCU'da çalışanlar:</strong> INSUFFICIENT_CAPACITY (oda-set sapması + vana
+                    açıklığı kombinasyonu), BAND_LOW/BAND_HIGH/IN_BAND, SAT analizi (FCU yolu, farklı eşikler)</li>
+                <li><strong>Her ikisinde de çalışanlar (ortak):</strong> SIMUL_HEAT_COOL, COMFORT_OVERRIDE,
+                    LOW_FLOW_DETECTED, LOW_DT_SYNDROME</li>
+                <li><strong>Sadece CHILLER'da çalışanlar:</strong> CHILLER_BYPASS, CHILLER_LOW_DT</li>
+            </ul>
+            <p><strong>Çakışma önceliklendirmesi:</strong> Aynı cihazda birden fazla kuralın koşulu aynı anda
+                sağlanırsa, <strong>skoru daha yüksek olan kural</strong> kazanır (ör. LOW_FLOW_DETECTED skor 8,
+                INSUFFICIENT_CAPACITY/HEAT_EFF_LOW skor 7 → LOW_FLOW_DETECTED gösterilir). Bu önceliklendirme
+                <code>INSTRUCTION_GUIDE</code> skor tablosuna göre otomatik yapılır; eşit skorlarda önceden
+                set edilen kural korunur.</p>
+            <p><strong>AHU'da INSUFFICIENT_CAPACITY neden yok?</strong> AHU'larda genelde tek bir bölge/oda
+                sensörü olmadığından "oda-set sapması" kavramı tanımsızdır; bunun yerine AHU'da aynı senaryo
+                <strong>HEAT_EFF_LOW / COOL_EFF_LOW / NOT_HEATING / NOT_COOLING</strong> kuralları üzerinden
+                (üfleme sıcaklığı ve approach bazlı) tespit edilir.</p>
+        </div>
+
+        <!-- ========== 5. kW KARTLARI ========== -->
+        <div class="section page-break">
+            <h2>❄️ Talep Edilen / Üretilen Soğutma kW Kartları</h2>
+            <p>Mekanik Zeka, tüm AHU'ların anlık vana ve ΔT verisinden iki canlı kW kartı üretir; bu kartlar
+                sistemin <strong>ne kadar soğutma talep ettiğini</strong> ve <strong>ne kadar soğutma
+                    üretebildiğini</strong> karşılaştırarak kapasite yetersizliğini görünür kılar.</p>
+            <ul>
+                <li><strong>Talep Edilen kW</strong> = Σ (AHU tasarım Qt kapasitesi × Soğutma Vana %)</li>
+                <li><strong>Üretilen kW</strong> = Σ (AHU tasarım Qt kapasitesi × Hava ΔT / Tasarım Hava ΔT)</li>
+                <li>Hava ΔT, Supply/Return yoksa SAT (üfleme) ve Room (dönüş) üzerinden otomatik hesaplanır</li>
+                <li>AHU Qt kapasiteleri ve tasarım Hava ΔT, <code>configs/ahu_tasarim_kapasiteleri.json</code> ve
+                    <code>configs/chiller_fcu_ayarlari.json</code> dosyalarından okunur, ayarlar panelinden
+                    düzenlenebilir</li>
+            </ul>
+            <div class="alert alert-warning">
+                Üretilen kW, Talep Edilen kW'ın belirgin şekilde altındaysa, sistem <strong>kapasite
+                    yetersizliği</strong> durumundadır — bu durum NOT_COOLING / NOT_HEATING kurallarıyla
+                AHU bazında da raporlanır.
+            </div>
+        </div>
+
+        <!-- ========== 6. KULLANIM ========== -->
+        <div class="section page-break">
+            <h2>👤 Kullanım — Saha Personeli İçin</h2>
+
+            <h3>Günlük Akış</h3>
+            <div class="mermaid">
+                graph LR
+                A["📲 Bildirim<br />08:30 analizi hazır"]:::input --> B["📋 Portal<br />Mekanik Zeka sekmesi"]:::proc
+                B --> C["🔍 Kritik/Uyarı<br />Listesini İncele"]:::proc
+                C --> D["✅ Onayla<br />veya Not Ekle"]:::proc
+                D --> E["📥 Excel İndir<br />Saha Ekibine Ver"]:::output
+                E --> F["🛠️ Sahada Uygula<br />+ Sonucu İşaretle"]:::output
+
+                classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
+                classDef proc fill:#f59e0b,stroke:#92400e,color:#fff
+                classDef output fill:#10b981,stroke:#065f46,color:#fff
+            </div>
+
+            <h3>Portalda Neler Görülür?</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>📊 Genel Durum</h4>
+                    <ul>
+                        <li>Tüm ekipmanların anlık severity dağılımı</li>
+                        <li>Kritik / Uyarı / Optimal sayıları</li>
+                        <li>Talep/Üretim kW kartları ve kapasite durumu</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>🩺 Cihaz Detayı</h4>
+                    <ul>
+                        <li>ΔT, SAT, vana %, mod (Soğutma/Isıtma/Standby)</li>
+                        <li>Tetiklenen kural ve skoru</li>
+                        <li>Önerilen aksiyon metni</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>📲 Bildirim & Onay</h4>
+                    <ul>
+                        <li>Yeni kritik/uyarı tespitlerinde otomatik bildirim</li>
+                        <li>Personel "onaylandı / yapıldı" işaretler</li>
+                        <li>Geçmiş kayıtları AHU analiz geçmişinde tutulur</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>📥 Rapor & Excel</h4>
+                    <ul>
+                        <li>Günlük/aylık özet raporlar</li>
+                        <li>Aylık tekrarlayan alarm takibi + PDF rapor</li>
+                        <li>Excel formatında saha ekibine aktarılabilir liste</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>Pratik kural:</strong> Önce 🔴 CRITICAL satırlarına bakılır (acil müdahale), sonra
+                🟡 WARNING satırları planlı bakım listesine eklenir. ⚪ MISSING_DATA satırları sensör/iletişim
+                kontrolü gerektirir.
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <strong>Mekanik Zeka</strong> — Synapse (SYN) HVAC Analiz Modülü — Acıbadem Hastanesi<br>
+            Bu belge, kullanım ve teşhis mantığının özetidir; mevcut kod ve dosya yapısı değişmemiştir.
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+
+</html>
