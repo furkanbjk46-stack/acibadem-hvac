@@ -33,6 +33,7 @@ IZIN_VERILEN_DOSYALAR = {
     "rules/location_config.py",
     "rules/temperature_cascade.py",
     "static/index.html",
+    "static/portal.html",
     "GUNCELLE.bat",
 }
 
