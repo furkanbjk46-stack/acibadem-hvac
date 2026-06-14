@@ -2624,7 +2624,7 @@ def generate_pdf_report(start: date, end_exclusive: date, df_period: pd.DataFram
 # =============================
 # UI
 # =============================
-st.title("🏥 Enerji Yönetimi & Raporlama Sistemi")
+st.title("🏥 Enerji ve Verimlilik")
 
 # Sağ üst: Günlük + Aylık Rapor butonları
 # Otomatik rapor bildirimlerini kontrol et
@@ -2664,7 +2664,7 @@ if _daily_auto_ready or _monthly_auto_ready:
 
 _dr_col1, _dr_col2, _dr_col3 = st.columns([3, 1, 1])
 with _dr_col1:
-    st.caption("Günlük veri • Excel import • Karşılaştır • PDF rapor")
+    st.caption("Merkezi Performans İzleme")
 with _dr_col2:
     if _daily_auto_ready:
         st.markdown('<div class="auto-report-ready">✅ Günlük Rapor Hazır!</div>', unsafe_allow_html=True)
