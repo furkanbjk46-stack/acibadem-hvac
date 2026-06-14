@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 st.set_page_config(
-    page_title="Acıbadem GM — Komuta Merkezi",
+    page_title="ACIBADEM SYNERGY — Akıllı Tesis Ekosistemi",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="collapsed",
