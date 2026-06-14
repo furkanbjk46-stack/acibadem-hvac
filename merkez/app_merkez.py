@@ -24,13 +24,15 @@ st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 # ============ CSS ============
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
 html, body, [data-testid="stAppViewContainer"] {
-    background: #162d47 !important;
+    background-color: #060b14 !important;
+    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
 [data-testid="stAppViewContainer"] {
-    background: #162d47 !important;
+    background-color: #060b14 !important;
+    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
 [data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
@@ -45,8 +47,8 @@ header[data-testid="stHeader"] button    { display: none !important; }
 .block-container { padding: 0.5rem 1.5rem 1rem 1.5rem !important; max-width: 100% !important; }
 
 /* Tüm yazılar */
-h1,h2,h3,h4,h5,h6 { color: #e0f2fe !important; font-family: 'Orbitron', sans-serif !important; }
-p, span, div, label { color: rgba(200,230,255,0.85) !important; font-family: 'Inter', sans-serif !important; }
+h1,h2,h3,h4,h5,h6 { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
+p, span, div, label { color: #cbd5e1 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
 
 /* Streamlit Material ikon istisnası — _arrow_right gibi ikonların bozulmaması için */
 span[data-testid="stIconMaterial"],
@@ -57,30 +59,32 @@ button span[data-testid="stIconMaterial"] {
 }
 
 /* Metrik */
-[data-testid="stMetricValue"]  { color: #00d4ff !important; font-size: 22px !important; font-weight: 800 !important; font-family: 'Orbitron', sans-serif !important; text-shadow: 0 0 15px rgba(0,212,255,0.5) !important; }
+[data-testid="stMetricValue"]  { color: #38bdf8 !important; font-size: 22px !important; font-weight: 800 !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; text-shadow: 0 0 15px rgba(56, 189, 248,0.5) !important; }
 [data-testid="stMetricLabel"]  { color: rgba(150,210,255,0.7) !important; font-size: 10px !important; letter-spacing: 1px !important; text-transform: uppercase !important; }
 [data-testid="stMetricDelta"]  { color: #10b981 !important; }
 [data-testid="metric-container"] {
-    background: linear-gradient(135deg, rgba(18,62,110,0.85), rgba(10,42,80,0.95)) !important;
-    border: 1px solid rgba(0,212,255,0.3) !important;
-    border-radius: 12px !important;
+    background: rgba(15, 23, 42, 0.4) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 8px !important;
     padding: 12px !important;
-    box-shadow: 0 0 15px rgba(0,212,255,0.10) !important;
+    box-shadow: none !important;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: #162d47; }
-::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.3); border-radius: 3px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
 
 /* Neon kart */
 .nk {
-    background: linear-gradient(135deg, rgba(16,55,100,0.9), rgba(9,32,70,0.95));
-    border: 1px solid rgba(0,212,255,0.3);
-    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
     padding: 14px;
     margin-bottom: 10px;
-    box-shadow: 0 0 18px rgba(0,212,255,0.10);
+    box-shadow: none;
 }
 .nk-green { border-color: rgba(16,185,129,0.45) !important; box-shadow: 0 0 15px rgba(16,185,129,0.08) !important; }
 .nk-red   { border-color: rgba(239,68,68,0.45) !important;  box-shadow: 0 0 15px rgba(239,68,68,0.08) !important;  }
@@ -92,15 +96,15 @@ button span[data-testid="stIconMaterial"] {
     overflow-x: hidden;
     padding-right: 3px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0,212,255,0.35) rgba(14,38,72,0.6);
+    scrollbar-color: rgba(56, 189, 248,0.35) rgba(15,23,42,0.6);
 }
 .lok-scroll::-webkit-scrollbar { width: 4px; }
-.lok-scroll::-webkit-scrollbar-track { background: rgba(14,38,72,0.6); border-radius: 2px; }
-.lok-scroll::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.28); border-radius: 2px; }
-.lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.55); }
+.lok-scroll::-webkit-scrollbar-track { background: rgba(15,23,42,0.6); border-radius: 2px; }
+.lok-scroll::-webkit-scrollbar-thumb { background: rgba(56, 189, 248,0.28); border-radius: 2px; }
+.lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248,0.55); }
 
-.sec { font-family:'Orbitron',sans-serif; font-size:10px; color:rgba(0,212,255,0.7);
-       letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(0,212,255,0.15);
+.sec { font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:10px; color:rgba(56, 189, 248,0.7);
+       letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(56, 189, 248,0.15);
        padding-bottom:5px; margin-bottom:10px; }
 
 .alrt-r { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35);
@@ -126,17 +130,17 @@ button span[data-testid="stIconMaterial"] {
 @keyframes neon-breathe {
   0%, 100% {
     text-shadow:
-      0 0 10px rgba(0,212,255,0.4),
-      0 0 25px rgba(0,212,255,0.2),
-      0 0 50px rgba(0,212,255,0.08);
+      0 0 10px rgba(56, 189, 248,0.4),
+      0 0 25px rgba(56, 189, 248,0.2),
+      0 0 50px rgba(56, 189, 248,0.08);
     opacity: 0.82;
   }
   50% {
     text-shadow:
-      0 0 20px rgba(0,212,255,1),
-      0 0 45px rgba(0,212,255,0.7),
-      0 0 90px rgba(0,212,255,0.35),
-      0 0 140px rgba(0,212,255,0.15);
+      0 0 20px rgba(56, 189, 248,1),
+      0 0 45px rgba(56, 189, 248,0.7),
+      0 0 90px rgba(56, 189, 248,0.35),
+      0 0 140px rgba(56, 189, 248,0.15);
     opacity: 1;
   }
 }
@@ -146,17 +150,21 @@ button span[data-testid="stIconMaterial"] {
 }
 
 .btn-refresh button {
-    background: linear-gradient(135deg,#003d80,#0066cc) !important;
-    color: #fff !important; border: 1px solid rgba(0,212,255,0.4) !important;
-    border-radius: 8px !important; font-size: 11px !important;
-    padding: 4px 12px !important; font-family:'Inter',sans-serif !important;
+    background: rgba(14, 165, 233, 0.15) !important;
+    color: #38bdf8 !important; border: 1px solid rgba(14, 165, 233, 0.3) !important;
+    border-radius: 6px !important; font-size: 11px !important;
+    padding: 4px 12px !important; font-family:'Plus Jakarta Sans',sans-serif !important;
+}
+.btn-refresh button:hover {
+    background: rgba(14, 165, 233, 0.25) !important;
+    color: #ffffff !important;
 }
 
 /* Alarm expander */
 [data-testid="stExpander"] {
-    background: rgba(14,38,80,0.80) !important;
-    border: 1px solid rgba(0,212,255,0.25) !important;
-    border-radius: 10px !important;
+    background: rgba(15, 23, 42, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 8px !important;
     margin-bottom: 5px !important;
 }
 [data-testid="stExpander"]:has(.alrt-exp-r) {
@@ -167,7 +175,7 @@ button span[data-testid="stIconMaterial"] {
     border-color: rgba(245,158,11,0.35) !important;
     background: rgba(245,158,11,0.04) !important;
 }
-[data-testid="stExpanderToggleIcon"] { color: rgba(0,212,255,0.6) !important; }
+[data-testid="stExpanderToggleIcon"] { color: rgba(56, 189, 248,0.6) !important; }
 .alrt-detay-r {
     background: rgba(239,68,68,0.10); border-left: 3px solid #ef4444;
     border-radius: 6px; padding: 8px 12px; margin: 4px 0;
@@ -179,20 +187,20 @@ button span[data-testid="stIconMaterial"] {
     font-size: 12px; color: #fcd34d !important;
 }
 .alarm-detay-kart {
-    background: rgba(8,35,75,0.7);
-    border: 1px solid rgba(0,212,255,0.22);
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.05);
     border-radius: 8px; padding: 10px 14px; margin-top: 8px;
 }
 .btn-goto button {
-    background: rgba(0,212,255,0.08) !important;
-    color: #00d4ff !important;
-    border: 1px solid rgba(0,212,255,0.3) !important;
-    border-radius: 8px !important;
+    background: rgba(14, 165, 233, 0.15) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(14, 165, 233, 0.3) !important;
+    border-radius: 6px !important;
     font-size: 11px !important;
     padding: 4px 14px !important;
     width: 100% !important;
 }
-.btn-goto button:hover { background: rgba(0,212,255,0.18) !important; }
+.btn-goto button:hover { background: rgba(14, 165, 233, 0.25) !important; color: #ffffff !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -200,7 +208,7 @@ button span[data-testid="stIconMaterial"] {
 # ============ SABİT VERİ ============
 HASTANELER = {
     # ── İstanbul ──
-    "maslak":       {"isim": "Acıbadem Maslak",        "kisa": "MASLAK",        "lat": 41.1273, "lon": 29.0246, "m2": 15000, "renk": "#00d4ff"},
+    "maslak":       {"isim": "Acıbadem Maslak",        "kisa": "MASLAK",        "lat": 41.1273, "lon": 29.0246, "m2": 15000, "renk": "#38bdf8"},
     "altunizade":   {"isim": "Acıbadem Altunizade",    "kisa": "ALTUNİZADE",    "lat": 41.0189, "lon": 29.0458, "m2": 10000, "renk": "#f59e0b"},
     "kozyatagi":    {"isim": "Acıbadem Kozyatağı",     "kisa": "KOZYATAĞİ",    "lat": 40.9766, "lon": 29.0928, "m2": 12000, "renk": "#10b981"},
     "taksim":       {"isim": "Acıbadem Taksim",        "kisa": "TAKSİM",        "lat": 41.0417, "lon": 28.9827, "m2":  8000, "renk": "#a855f7"},
@@ -674,20 +682,17 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 # ============ HEADER ============
 st.markdown("""
 <div style="text-align:center; padding:12px 0 8px;">
-  <div style="font-family:'Orbitron',sans-serif; font-size:9px; color:rgba(0,212,255,0.45);
-              letter-spacing:5px; text-transform:uppercase;
-              animation:neon-breathe-sub 3.5s ease-in-out infinite;">
+  <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a3b8;
+              letter-spacing:3px; text-transform:uppercase;">
     ACIBADEM SAĞLIK GRUBU
   </div>
-  <div style="font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900; color:#00d4ff;
-              letter-spacing:4px; text-transform:uppercase; line-height:1.3;
-              animation:neon-breathe 3s ease-in-out infinite;">
-    ENERJİ &amp; HVAC KOMUTA MERKEZİ
+  <div style="font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:34px; font-weight:600; color:#f8fafc;
+              letter-spacing:1px; line-height:1.3;">
+    Enerji &amp; HVAC Komuta Merkezi
   </div>
-  <div style="font-family:'Inter',sans-serif; font-size:10px; color:rgba(150,210,255,0.4);
-              letter-spacing:2px; margin-top:2px;
-              animation:neon-breathe-sub 3.5s ease-in-out infinite; animation-delay:0.8s;">
-    GENEL MERKEZ — CANLI İZLEME
+  <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#38bdf8;
+              letter-spacing:2px; margin-top:6px; text-transform:uppercase;">
+    Genel Merkez — Canlı İzleme
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -855,7 +860,7 @@ with sol:
         kwh_str   = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
         m2_lok    = lok_info.get("m2", 10000)
         verim_str = f"{kwh/m2_lok:.2f}".replace(".", ",") if kwh else "—"
-        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Orbitron,sans-serif;font-size:8px;color:rgba(150,210,255,0.35);font-weight:700;">#{i+1}</span>' if i < 4 else ""
+        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;color:rgba(150,210,255,0.35);font-weight:700;">#{i+1}</span>' if i < 4 else ""
 
         # % değişim hesapla (dün vs önceki gün)
         onceki_kwh = onceki_gun_kwh(lok_id)
@@ -889,25 +894,25 @@ with sol:
             f'<div style="font-size:36px;line-height:1;position:relative;z-index:1;'
             f'filter:drop-shadow(0 0 8px rgba({rr},{rg},{rb},0.8));">🏥</div>'
             f'<div style="position:absolute;top:2px;right:2px;z-index:2;width:11px;height:11px;'
-            f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020b18;'
+            f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020617;'
             f'box-shadow:0 0 5px rgba({dr},{dg},{db},0.9);"></div>'
             f'</div>'
             f'<div style="flex:1;min-width:0;">'
-            f'<div style="font-family:Orbitron,sans-serif;font-size:10px;font-weight:700;'
+            f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:10px;font-weight:700;'
             f'color:{renk};letter-spacing:1.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);'
             f'margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{lok_info["kisa"]}</div>'
             f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:5px;">{durum_lbl}</div>'
             f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">'
-            f'<span style="font-family:Orbitron,sans-serif;font-size:16px;font-weight:900;'
+            f'<span style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:16px;font-weight:900;'
             f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</span>'
             f'<span style="font-size:8px;color:rgba(150,210,255,0.5);">kWh</span>'
             f'<span style="margin-left:4px;">{degisim_html}</span>'
             f'</div>'
             f'<div style="display:inline-flex;align-items:center;gap:5px;'
-            f'background:rgba(0,212,255,0.05);border-radius:5px;padding:3px 8px;'
-            f'border:1px solid rgba(0,212,255,0.10);">'
+            f'background:rgba(56, 189, 248,0.05);border-radius:5px;padding:3px 8px;'
+            f'border:1px solid rgba(56, 189, 248,0.10);">'
             f'<span style="font-size:7px;color:rgba(150,210,255,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
-            f'<span style="font-family:Orbitron,sans-serif;font-size:11px;color:#00d4ff;font-weight:700;">{verim_str}</span>'
+            f'<span style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:11px;color:#38bdf8;font-weight:700;">{verim_str}</span>'
             f'</div>'
             f'</div></div></div>'
         )
@@ -988,11 +993,11 @@ with sol:
 
             st.markdown(f"""
             <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
-                        border-radius:8px; border:1px solid rgba(0,212,255,0.1);">
+                        border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}</span>
-                <span style="font-size:12px; font-weight:700; color:#00d4ff;
-                             font-family:'Orbitron',sans-serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>
+                <span style="font-size:12px; font-weight:700; color:#38bdf8;
+                             font-family:'Playfair Display','Plus Jakarta Sans',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>
               </div>
               {_trend_html}
             </div>
@@ -1032,25 +1037,26 @@ with merkez:
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ background:#020b18; }}
-#map {{ width:100%; height:608px; background:#020b18; }}
-.leaflet-container {{ background:#020b18 !important; font-family:Inter,sans-serif; }}
+body {{ background:#020617; }}
+#map {{ width:100%; height:608px; background:#020617; }}
+.leaflet-container {{ background:#020617 !important; font-family:'Plus Jakarta Sans',sans-serif; }}
 .leaflet-popup-content-wrapper {{
-    background:rgba(2,11,30,0.96) !important;
-    border:1px solid rgba(0,212,255,0.35) !important;
-    border-radius:12px !important;
-    box-shadow:0 0 24px rgba(0,212,255,0.18), 0 4px 20px rgba(0,0,0,0.6) !important;
+    background:rgba(15, 23, 42, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    border:1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius:8px !important;
+    box-shadow:0 4px 20px rgba(0,0,0,0.6) !important;
     padding:0 !important;
 }}
 .leaflet-popup-content {{ margin:0 !important; color:white !important; }}
 .leaflet-popup-tip-container {{ display:none; }}
-.leaflet-popup-close-button {{ color:rgba(0,212,255,0.5) !important; font-size:16px !important; top:8px !important; right:10px !important; }}
+.leaflet-popup-close-button {{ color:rgba(56, 189, 248,0.5) !important; font-size:16px !important; top:8px !important; right:10px !important; }}
 .leaflet-control-zoom a {{
-    background:rgba(0,15,40,0.9) !important;
-    color:#00d4ff !important;
-    border-color:rgba(0,212,255,0.25) !important;
+    background:rgba(15, 23, 42, 0.7) !important;
+    color:#38bdf8 !important;
+    border-color:rgba(255, 255, 255, 0.08) !important;
 }}
-.leaflet-control-zoom a:hover {{ background:rgba(0,30,70,0.95) !important; }}
+.leaflet-control-zoom a:hover {{ background:rgba(15, 23, 42, 0.9) !important; }}
 .leaflet-control-attribution {{ display:none !important; }}
 @keyframes breathe-outer {{
     0%,100% {{ opacity:0.10; transform:scale(0.92); }}
@@ -1126,7 +1132,7 @@ hospitals.forEach(function(h) {{
 
     // ── Popup ──
     var kwh_bar = h.kwh !== '—'
-        ? '<div style="margin-top:8px;height:3px;background:rgba(0,212,255,0.15);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;"></div></div>'
+        ? '<div style="margin-top:8px;height:3px;background:rgba(56, 189, 248,0.15);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;"></div></div>'
         : '';
     dot.bindPopup(
         '<div style="padding:14px 16px;min-width:170px;">' +
@@ -1169,7 +1175,7 @@ hospitals.forEach(function(h) {{
             max_lok = max(chiller_vals, key=chiller_vals.get)
             min_val = chiller_vals[min_lok]
             max_val = chiller_vals[max_lok]
-            min_renk = HASTANELER.get(min_lok, {}).get("renk", "#00d4ff")
+            min_renk = HASTANELER.get(min_lok, {}).get("renk", "#38bdf8")
             max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
             min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
             max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
@@ -1249,7 +1255,7 @@ with sag:
             unsafe_allow_html=True
         )
     else:
-        uyari_html = "<div style='max-height:195px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;'>"
+        uyari_html = "<div style='max-height:195px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(56, 189, 248,0.3) transparent;'>"
         for lid, uyarilar in lok_ile_uyari:
             lok_inf  = HASTANELER.get(lid, {})
             isim     = lok_inf.get("kisa", lid)
@@ -1363,53 +1369,53 @@ with sag:
         try: _son_ok = _eski_yeni_ikon(_ml_son["eski_mod"], _ml_son["yeni_mod"])
         except: _son_ok = "↔️"
         _son_gecis_html = (
-            f"<div style='font-size:9px;border-top:1px solid rgba(0,212,255,0.08);"
+            f"<div style='font-size:9px;border-top:1px solid rgba(56, 189, 248,0.08);"
             f"padding-top:6px;margin-top:6px;color:rgba(180,220,255,0.5);'>"
             f"Son geçiş: {_son_tip} &nbsp;{_son_ok}&nbsp; "
             f"<b style='color:rgba(200,230,255,0.75);'>{_ml_son['eski_mod']}</b> → "
-            f"<b style='color:#00d4ff;'>{_ml_son['yeni_mod']}</b> &nbsp;·&nbsp; "
+            f"<b style='color:#38bdf8;'>{_ml_son['yeni_mod']}</b> &nbsp;·&nbsp; "
             f"<span style='color:#f59e0b;'>{_ml_son['tahmin_ort']}°C</span></div>"
         )
 
     # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
     st.markdown(
-        f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
-        f"border:1px solid rgba(0,212,255,0.18);border-radius:14px;padding:14px 16px;'>"
+        f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+        f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
         # ── Satır 1: Başlık ──
         f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
         f"<div>"
-        f"<div style='font-family:Orbitron,sans-serif;font-size:9px;font-weight:700;"
-        f"color:rgba(0,212,255,0.7);letter-spacing:2px;margin-bottom:2px;'>🤖 OTO SET</div>"
+        f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:9px;font-weight:700;"
+        f"color:rgba(56, 189, 248,0.7);letter-spacing:2px;margin-bottom:2px;'>🤖 OTO SET</div>"
         f"<div style='font-size:11px;font-weight:700;color:{_st_renk};'>{_st_txt}"
         f"<span style='font-size:9px;font-weight:400;color:rgba(180,220,255,0.4);margin-left:6px;'>{_alt_txt}</span></div>"
         f"</div>"
         f"</div>"
         # ── Ayırıcı ──
-        f"<div style='border-top:1px solid rgba(0,212,255,0.08);margin-bottom:10px;'></div>"
+        f"<div style='border-top:1px solid rgba(56, 189, 248,0.08);margin-bottom:10px;'></div>"
         # ── Satır 2: Sıcaklık + zaman ──
         f"<div style='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;'>"
         f"<div style='display:flex;align-items:baseline;gap:6px;'>"
-        f"<span style='font-family:Orbitron,sans-serif;font-size:18px;font-weight:900;"
-        f"color:#00d4ff;text-shadow:0 0 12px rgba(0,212,255,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
+        f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:18px;font-weight:900;"
+        f"color:#38bdf8;text-shadow:0 0 12px rgba(56, 189, 248,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
         f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>yarın max:{_os_max} / min:{_os_min}</span>"
         f"</div>"
         f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>{_os_zaman}</span>"
         f"</div>"
         # ── Satır 3: Rozetler ──
         f"<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;'>"
-        f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+        f"<div style='background:rgba(56, 189, 248,0.08);border:1px solid rgba(56, 189, 248,0.2);"
         f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-        f"❄️ Chiller &nbsp;<b style='color:#00d4ff;'>{_ch_label}</b></div>"
-        f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+        f"❄️ Chiller &nbsp;<b style='color:#38bdf8;'>{_ch_label}</b></div>"
+        f"<div style='background:rgba(56, 189, 248,0.08);border:1px solid rgba(56, 189, 248,0.2);"
         f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-        f"🌀 KOL/FCU &nbsp;<b style='color:#00d4ff;'>{_dig_label}</b></div>"
-        f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+        f"🌀 KOL/FCU &nbsp;<b style='color:#38bdf8;'>{_dig_label}</b></div>"
+        f"<div style='background:rgba(56, 189, 248,0.08);border:1px solid rgba(56, 189, 248,0.2);"
         f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(200,230,255,0.8);'>"
         f"🧊 {len(_ml_ch)} &nbsp;·&nbsp; 🌀 {len(_ml_dig)} &nbsp;·&nbsp; "
         f"<span style='color:#f59e0b;'>Σ {_ml_top}</span></div>"
         f"</div>"
         # ── Satır 4: Komut + son geçiş ──
-        f"<div style='font-size:9px;border-top:1px solid rgba(0,212,255,0.08);padding-top:6px;'>"
+        f"<div style='font-size:9px;border-top:1px solid rgba(56, 189, 248,0.08);padding-top:6px;'>"
         f"{_cnt_html}</div>"
         f"{_son_gecis_html}"
         f"</div>",
@@ -1448,17 +1454,17 @@ with sag:
                     _mk_ok = "↔️"
                 _gecis_satirlari += (
                     f"<div style='font-size:10px;padding:4px 0;"
-                    f"border-bottom:1px solid rgba(0,212,255,0.06);'>"
+                    f"border-bottom:1px solid rgba(56, 189, 248,0.06);'>"
                     f"<span style='color:rgba(150,210,255,0.35);'>{_mk_z}</span>"
                     f" &nbsp;{_mk_ti} {_mk_ok}&nbsp; "
                     f"<b style='color:rgba(200,230,255,0.7);'>{_mk['eski_mod']}</b>"
-                    f" → <b style='color:#00d4ff;'>{_mk['yeni_mod']}</b>"
+                    f" → <b style='color:#38bdf8;'>{_mk['yeni_mod']}</b>"
                     f" &nbsp;<span style='color:#f59e0b;'>{_mk['tahmin_ort']}°C</span>"
                     f" &nbsp;<span style='color:rgba(16,185,129,0.7);'>{_mk['komut_sayisi']} komut</span>"
                     f"</div>"
                 )
             st.markdown(
-                f"<div style='background:rgba(14,38,80,0.80);border:1px solid rgba(0,212,255,0.25);"
+                f"<div style='background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.05);"
                 f"border-radius:10px;padding:8px 12px;margin-bottom:5px;'>"
                 f"{_gecis_satirlari}</div>",
                 unsafe_allow_html=True
@@ -1471,7 +1477,7 @@ with sag:
     if dis_hava_val is not None:
         _ch_ic += (
             f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:8px;'>"
-            f"<span style='font-family:Orbitron,sans-serif;font-size:18px;font-weight:900;"
+            f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:18px;font-weight:900;"
             f"color:#f59e0b;text-shadow:0 0 12px rgba(245,158,11,0.5);'>"
             f"🌡️ {dis_hava_val:.1f}°C</span>"
             f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>Dış Hava İstanbul"
@@ -1481,24 +1487,24 @@ with sag:
     _rozet_ic = ""
     if min_val is not None:
         _rozet_ic += (
-            f"<div style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);"
+            f"<div style='background:rgba(56, 189, 248,0.08);border:1px solid rgba(56, 189, 248,0.2);"
             f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-            f"❄️ Min &nbsp;<b style='color:#00d4ff;font-family:Orbitron,sans-serif;'>{min_val:.1f}°C</b>"
+            f"❄️ Min &nbsp;<b style='color:#38bdf8;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{min_val:.1f}°C</b>"
             f"&nbsp;<span style='color:{min_renk};'>{min_isim}</span></div>"
         )
     if max_val is not None and max_isim != min_isim:
         _rozet_ic += (
             f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);"
             f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-            f"🔥 Max &nbsp;<b style='color:#ef4444;font-family:Orbitron,sans-serif;'>{max_val:.1f}°C</b>"
+            f"🔥 Max &nbsp;<b style='color:#ef4444;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{max_val:.1f}°C</b>"
             f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
         )
     if dis_hava_val is not None or min_val is not None:
         st.markdown(
-            f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
-            f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:14px 16px;'>"
-            f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
-            f"color:rgba(0,212,255,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
+            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
+            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
             f"{_ch_ic}"
             f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
             f"</div>",
@@ -1594,14 +1600,14 @@ with sag:
         # ── Enerji Zekası Kartı ──
         _ez_satirlar = ""
         for _lid, _mv in _sirali:
-            _ez_renk = "#ef4444" if _mv["anormal"] else "#00d4ff"
+            _ez_renk = "#ef4444" if _mv["anormal"] else "#38bdf8"
             _flag    = " ⚠️" if _mv["anormal"] else ""
             _ez_satirlar += (
                 f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                f"padding:5px 0;border-bottom:1px solid rgba(0,212,255,0.06);'>"
+                f"padding:5px 0;border-bottom:1px solid rgba(56, 189, 248,0.06);'>"
                 f"<span style='font-size:10px;font-weight:600;color:rgba(200,230,255,0.8);'>"
                 f"{_mv['isim']}{_flag}</span>"
-                f"<span style='font-family:Orbitron,sans-serif;font-size:10px;color:{_ez_renk};'>"
+                f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:10px;color:{_ez_renk};'>"
                 f"{_mv['kwh_m2']} kWh/m²/gün</span>"
                 f"</div>"
             )
@@ -1615,10 +1621,10 @@ with sag:
             )
 
         st.markdown(
-            f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
-            f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:14px 16px;'>"
-            f"<div style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
-            f"color:rgba(0,212,255,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
+            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
+            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
             f"{_ez_satirlar}"
             f"{_anormal_html}"
             f"</div>",
@@ -1905,9 +1911,9 @@ with sag:
                 # Kart başlığı — sol başlık sağ buton
                 st.markdown("""<style>
                 div[data-testid="stButton"] > button[kind="secondary"] {
-                    background: rgba(0,212,255,0.06) !important;
-                    border: 1px solid rgba(0,212,255,0.2) !important;
-                    color: rgba(0,212,255,0.7) !important;
+                    background: rgba(56, 189, 248,0.06) !important;
+                    border: 1px solid rgba(56, 189, 248,0.2) !important;
+                    color: rgba(56, 189, 248,0.7) !important;
                     font-size: 9px !important;
                     padding: 2px 10px !important;
                     border-radius: 6px !important;
@@ -1917,28 +1923,28 @@ with sag:
                     line-height: 1 !important;
                 }
                 div[data-testid="stButton"] > button[kind="secondary"]:hover {
-                    background: rgba(0,212,255,0.12) !important;
-                    border-color: rgba(0,212,255,0.4) !important;
-                    color: #00d4ff !important;
+                    background: rgba(56, 189, 248,0.12) !important;
+                    border-color: rgba(56, 189, 248,0.4) !important;
+                    color: #38bdf8 !important;
                 }
                 </style>""", unsafe_allow_html=True)
 
                 # Kart dış çerçevesi — üst kısım
                 st.markdown(
-                    f"<div style='background:linear-gradient(135deg,rgba(16,55,100,0.9),rgba(9,32,70,0.95));"
-                    f"border:1px solid rgba(0,212,255,0.15);border-radius:14px;margin-top:6px;overflow:hidden;'>"
+                    f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+                    f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-top:6px;overflow:hidden;'>"
                     f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                    f"padding:10px 14px;border-bottom:1px solid rgba(0,212,255,0.08);'>"
-                    f"<span style='font-family:Orbitron,sans-serif;font-size:8px;font-weight:700;"
-                    f"color:rgba(0,212,255,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
+                    f"padding:10px 14px;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
+                    f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+                    f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
                     f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>🕐 {_ai_zaman_str}</span>"
                     f"</div>"
                     f"<div style='padding:12px 14px;font-size:11px;color:rgba(200,230,255,0.85);"
                     f"line-height:1.7;max-height:220px;overflow-y:auto;"
-                    f"scrollbar-width:thin;scrollbar-color:rgba(0,212,255,0.3) transparent;'>"
+                    f"scrollbar-width:thin;scrollbar-color:rgba(56, 189, 248,0.3) transparent;'>"
                     + _ai_temiz.replace("\n", "<br>") +
                     f"</div>"
-                    f"<div style='padding:6px 14px 10px;border-top:1px solid rgba(0,212,255,0.08);'></div>"
+                    f"<div style='padding:6px 14px 10px;border-top:1px solid rgba(56, 189, 248,0.08);'></div>"
                     f"</div>",
                     unsafe_allow_html=True)
 
@@ -1959,8 +1965,8 @@ with sag:
 
 # ============ FOOTER ============
 st.markdown(f"""
-<div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(0,212,255,0.08); margin-top:10px;">
-  <span style="font-family:'Orbitron',sans-serif; font-size:9px; color:rgba(0,212,255,0.25); letter-spacing:2px;">
+<div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(56, 189, 248,0.08); margin-top:10px;">
+  <span style="font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:9px; color:rgba(56, 189, 248,0.25); letter-spacing:2px;">
     ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; {now_display.strftime('%d.%m.%Y %H:%M')}
   </span>
 </div>
@@ -2024,7 +2030,7 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                 isim = lok.get("isim") or lok.get("lokasyon_id", "?")
                 st.markdown(f"""
                 <div style="padding:8px 12px; margin:4px 0; background:rgba(0,20,50,0.6);
-                            border-radius:8px; border:1px solid rgba(0,212,255,0.1);
+                            border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);
                             display:flex; justify-content:space-between; align-items:center;">
                   <span style="font-size:12px; color:#e0f2fe; font-weight:600;">🏥 {isim}</span>
                   <span style="font-size:10px; color:rgba(150,210,255,0.45);">Son ping: {ping}</span>

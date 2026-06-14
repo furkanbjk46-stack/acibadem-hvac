@@ -4,7 +4,7 @@
     {
       "name": "Maslak Portal",
       "runtimeExecutable": "streamlit",
-      "runtimeArgs": ["run", "deneme/app_portal.py", "--server.port=8502", "--server.headless=true"],
+      "runtimeArgs": ["run", "hvac/deneme/app_portal.py", "--server.port=8502", "--server.headless=true"],
       "port": 8502
     },
     {
@@ -16,7 +16,7 @@
     {
       "name": "GM Merkez",
       "runtimeExecutable": "streamlit",
-      "runtimeArgs": ["run", "../genel merkez gelıstırme dosyası/merkez/app_merkez.py", "--server.port=8505", "--server.headless=true"],
+      "runtimeArgs": ["run", "merkez/app_merkez.py", "--server.port=8505", "--server.headless=true"],
       "port": 8505
     }
   ]
