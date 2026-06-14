@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Maslak Portal",
+      "runtimeExecutable": "streamlit",
+      "runtimeArgs": ["run", "deneme/app_portal.py", "--server.port=8502", "--server.headless=true"],
+      "port": 8502
+    },
+    {
+      "name": "HVAC Static Preview",
+      "runtimeExecutable": "py",
+      "runtimeArgs": ["-3", "-m", "http.server", "8010", "--directory", "hvac/deneme/static"],
+      "port": 8010
+    },
+    {
+      "name": "GM Merkez",
+      "runtimeExecutable": "streamlit",
+      "runtimeArgs": ["run", "../genel merkez gelıstırme dosyası/merkez/app_merkez.py", "--server.port=8505", "--server.headless=true"],
+      "port": 8505
+    }
+  ]
+}
