@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
 st.set_page_config(
-    page_title="SYN",
+    page_title="ACIBADEM-SYNAPSE",
     page_icon="🏥",
     layout="wide",
     initial_sidebar_state="collapsed",
