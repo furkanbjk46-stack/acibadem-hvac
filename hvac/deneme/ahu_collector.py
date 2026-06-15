@@ -18,10 +18,14 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR          = os.path.dirname(os.path.abspath(__file__))
 AHU_CONFIG_FILE   = os.path.join(BASE_DIR, "ahu_nokta_konfig.json")
-ENERGY_CONFIG_FILE = os.path.join(BASE_DIR, "enerji_nokta_konfig.json")
 AHU_RESULTS_FILE  = os.path.join(BASE_DIR, "hvac_ahu_analiz_sonuclari.json")
 AHU_TRIGGER_FILE  = os.path.join(BASE_DIR, "hvac_analiz_trigger.txt")
 ENERGY_CSV_TAZELIK_ESIK_SAAT = 3  # bu süreden eski hedefli_enerji_verileri.csv için uyarı
+
+# data_collector.py ile aynı Excel kaynağı — enerji/kolektör/chiller/kazan noktaları
+_ENERGY_EXCEL_CONFIGS = os.path.join(BASE_DIR, "configs", "hedefli_okuma_sablonu_2.xlsx")
+_ENERGY_EXCEL_ROOT    = os.path.join(BASE_DIR, "hedefli_okuma_sablonu_2.xlsx")
+ENERGY_EXCEL_FILE     = _ENERGY_EXCEL_CONFIGS if os.path.exists(_ENERGY_EXCEL_CONFIGS) else _ENERGY_EXCEL_ROOT
 
 MAIN_PORTAL_URL   = "http://localhost:8005/api/recommend_json"
 BACNET_PORT       = 47808
@@ -113,31 +117,28 @@ def build_config_from_excel(excel_path: str) -> list:
 
 
 def load_energy_config() -> list:
-    """Kolektör/Chiller/Kazan nokta konfigürasyonunu JSON dosyasından yükle."""
-    if not os.path.exists(ENERGY_CONFIG_FILE):
-        logger.warning("Enerji nokta konfig dosyası bulunamadı: %s", ENERGY_CONFIG_FILE)
-        logger.warning("Çalıştır: python ahu_collector.py --setup-energy <hedefli_okuma_sablonu_2.xlsx>")
+    """
+    Kolektör/Chiller/Kazan nokta konfigürasyonunu data_collector.py'nin kullandığı
+    aynı Excel dosyasından (hedefli_okuma_sablonu_2.xlsx) doğrudan oku.
+    Ayrı bir JSON konfig dosyası tutulmaz — tek kaynak Excel'dir.
+    """
+    if not os.path.exists(ENERGY_EXCEL_FILE):
+        logger.warning("Enerji Excel dosyası bulunamadı: %s", ENERGY_EXCEL_FILE)
         return []
-    with open(ENERGY_CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def build_energy_config_from_excel(excel_path: str) -> list:
-    """
-    hedefli_okuma_sablonu_2.xlsx formatından kolektör/chiller/kazan nokta konfig
-    JSON üret ve kaydet (enerji_nokta_konfig.json). data_collector.py'nin
-    kullandığı şablonla aynı kolon yapısı: Gateway IP | Network (DNET) |
-    MAC (DADR) | Device Instance ID | Object Type | Object Instance | Point Name
-    """
     try:
         import pandas as pd
     except ImportError:
-        raise RuntimeError("pandas gerekli: pip install pandas openpyxl")
+        logger.warning("pandas/openpyxl yüklü değil — enerji noktaları canlı okunamayacak")
+        return []
 
-    df = pd.read_excel(excel_path)
-    df["Gateway IP"]     = df["Gateway IP"].ffill()
-    df["Network (DNET)"] = df["Network (DNET)"].ffill()
-    df["MAC (DADR)"]     = df["MAC (DADR)"].ffill()
+    try:
+        df = pd.read_excel(ENERGY_EXCEL_FILE)
+        df["Gateway IP"]     = df["Gateway IP"].ffill()
+        df["Network (DNET)"] = df["Network (DNET)"].ffill()
+        df["MAC (DADR)"]     = df["MAC (DADR)"].ffill()
+    except Exception as e:
+        logger.warning("Enerji Excel okunamadı: %s", e)
+        return []
 
     config = []
     for _, row in df.iterrows():
@@ -156,10 +157,6 @@ def build_energy_config_from_excel(excel_path: str) -> list:
         except Exception as e:
             logger.warning("Enerji nokta satırı atlandı (%s): %s", point_name, e)
 
-    with open(ENERGY_CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
-
-    logger.info("Enerji nokta konfig oluşturuldu: %d nokta → %s", len(config), ENERGY_CONFIG_FILE)
     return config
 
 
@@ -896,16 +893,11 @@ if __name__ == "__main__":
         print(f"Excel okunuyor: {excel_yolu}")
         cfg = build_config_from_excel(excel_yolu)
         print(f"Konfig oluşturuldu: {len(cfg)} nokta → {AHU_CONFIG_FILE}")
-    elif len(sys.argv) >= 3 and sys.argv[1] == "--setup-energy":
-        excel_yolu = sys.argv[2]
-        print(f"Excel okunuyor: {excel_yolu}")
-        cfg = build_energy_config_from_excel(excel_yolu)
-        print(f"Enerji konfig oluşturuldu: {len(cfg)} nokta → {ENERGY_CONFIG_FILE}")
     else:
         print("Kullanım:")
-        print("  AHU konfig oluştur    : python ahu_collector.py --setup <Book2.xlsx>")
-        print("  Enerji konfig oluştur : python ahu_collector.py --setup-energy <hedefli_okuma_sablonu_2.xlsx>")
+        print("  AHU konfig oluştur : python ahu_collector.py --setup <Book2.xlsx>")
         print("  Analiz çalıştır: import ahu_collector; ahu_collector.hvac_analiz_calistir()")
+        print("  (Enerji/kolektör noktaları otomatik olarak hedefli_okuma_sablonu_2.xlsx'ten okunur)")
         print()
         print("Tek seferlik analiz başlatılıyor...")
         hvac_analiz_calistir()
