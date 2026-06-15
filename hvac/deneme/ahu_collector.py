@@ -18,8 +18,10 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR          = os.path.dirname(os.path.abspath(__file__))
 AHU_CONFIG_FILE   = os.path.join(BASE_DIR, "ahu_nokta_konfig.json")
+ENERGY_CONFIG_FILE = os.path.join(BASE_DIR, "enerji_nokta_konfig.json")
 AHU_RESULTS_FILE  = os.path.join(BASE_DIR, "hvac_ahu_analiz_sonuclari.json")
 AHU_TRIGGER_FILE  = os.path.join(BASE_DIR, "hvac_analiz_trigger.txt")
+ENERGY_CSV_TAZELIK_ESIK_SAAT = 3  # bu süreden eski hedefli_enerji_verileri.csv için uyarı
 
 MAIN_PORTAL_URL   = "http://localhost:8005/api/recommend_json"
 BACNET_PORT       = 47808
@@ -107,6 +109,57 @@ def build_config_from_excel(excel_path: str) -> list:
         json.dump(config, f, ensure_ascii=False, indent=2)
 
     logger.info("AHU konfig oluşturuldu: %d nokta → %s", len(config), AHU_CONFIG_FILE)
+    return config
+
+
+def load_energy_config() -> list:
+    """Kolektör/Chiller/Kazan nokta konfigürasyonunu JSON dosyasından yükle."""
+    if not os.path.exists(ENERGY_CONFIG_FILE):
+        logger.warning("Enerji nokta konfig dosyası bulunamadı: %s", ENERGY_CONFIG_FILE)
+        logger.warning("Çalıştır: python ahu_collector.py --setup-energy <hedefli_okuma_sablonu_2.xlsx>")
+        return []
+    with open(ENERGY_CONFIG_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def build_energy_config_from_excel(excel_path: str) -> list:
+    """
+    hedefli_okuma_sablonu_2.xlsx formatından kolektör/chiller/kazan nokta konfig
+    JSON üret ve kaydet (enerji_nokta_konfig.json). data_collector.py'nin
+    kullandığı şablonla aynı kolon yapısı: Gateway IP | Network (DNET) |
+    MAC (DADR) | Device Instance ID | Object Type | Object Instance | Point Name
+    """
+    try:
+        import pandas as pd
+    except ImportError:
+        raise RuntimeError("pandas gerekli: pip install pandas openpyxl")
+
+    df = pd.read_excel(excel_path)
+    df["Gateway IP"]     = df["Gateway IP"].ffill()
+    df["Network (DNET)"] = df["Network (DNET)"].ffill()
+    df["MAC (DADR)"]     = df["MAC (DADR)"].ffill()
+
+    config = []
+    for _, row in df.iterrows():
+        point_name = str(row.get("Point Name", "")).strip()
+        if not point_name or point_name.lower() == "nan":
+            continue
+        try:
+            config.append({
+                "point_name": point_name.upper(),
+                "gateway_ip": str(row.get("Gateway IP", "")).strip(),
+                "dnet":       int(float(row.get("Network (DNET)", 0))),
+                "mac_hex":    str(row.get("MAC (DADR)", "0x01")).strip(),
+                "obj_type":   int(float(row.get("Object Type", 0))),
+                "obj_inst":   int(float(row.get("Object Instance", 0))),
+            })
+        except Exception as e:
+            logger.warning("Enerji nokta satırı atlandı (%s): %s", point_name, e)
+
+    with open(ENERGY_CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+    logger.info("Enerji nokta konfig oluşturuldu: %d nokta → %s", len(config), ENERGY_CONFIG_FILE)
     return config
 
 
@@ -227,111 +280,55 @@ def ahu_verileri_oku(config: list) -> dict:
     return sonuclar
 
 
-def sogutma_outlet_oku(csv_yolu: str = None) -> float | None:
+def energy_verileri_oku(config: list) -> dict:
     """
-    hedefli_enerji_verileri.csv'den MAS-1 ve MAS-2 soğutma sıcaklıklarını oku,
-    ortalamasını döndür. Hata / veri yoksa None.
+    Kolektör/Chiller/Kazan noktalarını BACnet ile canlı oku.
+    Dönüş: {"POINT_NAME": deger_veya_None}
     """
+    sonuclar: dict = {}
+    toplam = len(config)
+    ok = 0
+    for nokta in config:
+        deger = _bacnet_oku(
+            nokta["gateway_ip"], nokta["dnet"], nokta["mac_hex"],
+            nokta["obj_type"], nokta["obj_inst"]
+        )
+        sonuclar[nokta["point_name"]] = deger
+        if deger is not None:
+            ok += 1
+
+    logger.info("Enerji noktaları BACnet okuma tamamlandı: %d/%d başarılı", ok, toplam)
+    return sonuclar
+
+
+def _csv_tazelik_kontrol(csv_yolu: str = None, esik_saat: float = ENERGY_CSV_TAZELIK_ESIK_SAAT):
+    """hedefli_enerji_verileri.csv'nin son satırının Timestamp'i çok eskiyse uyarı logla."""
     if csv_yolu is None:
         csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
     try:
         import csv as _csv
-        degerler = []
+        son_ts = None
         with open(csv_yolu, "r", encoding="utf-8") as f:
             reader = _csv.DictReader(f)
             for row in reader:
-                pn = str(row.get("Point_Name", "")).strip().upper()
-                if pn in ("MAS-1 SOGUTMA SICAKLIK", "MAS-2 SOGUTMA SICAKLIK"):
-                    try:
-                        val = float(row.get("Value", ""))
-                        degerler.append(val)
-                    except (ValueError, TypeError):
-                        pass
-        if degerler:
-            ort = round(sum(degerler) / len(degerler), 2)
-            logger.debug("Soğutma Outlet ortalaması: %.2f°C (%d nokta)", ort, len(degerler))
-            return ort
+                ts = row.get("Timestamp", "").strip()
+                if ts:
+                    son_ts = ts
+        if not son_ts:
+            return
+        dt = datetime.strptime(son_ts, "%Y-%m-%d %H:%M:%S")
+        fark_saat = (datetime.now() - dt).total_seconds() / 3600
+        if fark_saat > esik_saat:
+            logger.warning(
+                "hedefli_enerji_verileri.csv %.1f saat eski (son okuma: %s) — "
+                "fallback olarak kullanılacaksa kolektör/chiller/kazan verileri bayat olabilir",
+                fark_saat, son_ts
+            )
     except Exception as e:
-        logger.warning("Soğutma outlet okunamadı: %s", e)
-    return None
+        logger.warning("hedefli_enerji_verileri.csv tazelik kontrolü yapılamadı: %s", e)
 
 
-def isitma_outlet_oku(csv_yolu: str = None) -> float | None:
-    """
-    hedefli_enerji_verileri.csv'den MAS-1 ve MAS-2 ısıtma sıcaklıklarını oku
-    (ısıtma kolektör gidiş), ortalamasını döndür. Hata / veri yoksa None.
-    """
-    if csv_yolu is None:
-        csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
-    try:
-        import csv as _csv
-        degerler = []
-        with open(csv_yolu, "r", encoding="utf-8") as f:
-            reader = _csv.DictReader(f)
-            for row in reader:
-                pn = str(row.get("Point_Name", "")).strip().upper()
-                if pn in ("MAS-1 ISITMA SICAKLIK", "MAS-2 ISITMA SICAKLIK"):
-                    try:
-                        val = float(row.get("Value", ""))
-                        degerler.append(val)
-                    except (ValueError, TypeError):
-                        pass
-        if degerler:
-            ort = round(sum(degerler) / len(degerler), 2)
-            logger.debug("Isıtma Outlet ortalaması: %.2f°C (%d nokta)", ort, len(degerler))
-            return ort
-    except Exception as e:
-        logger.warning("Isıtma outlet okunamadı: %s", e)
-    return None
-
-
-def isitma_donus_oku(csv_yolu: str = None) -> float | None:
-    """
-    hedefli_enerji_verileri.csv'den ortak kolektör ısıtma dönüş sıcaklığını
-    (KOLLEKTOR ISITMA DONUS SICAKLIK) okur. Hata / veri yoksa None.
-    """
-    if csv_yolu is None:
-        csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
-    try:
-        import csv as _csv
-        with open(csv_yolu, "r", encoding="utf-8") as f:
-            reader = _csv.DictReader(f)
-            for row in reader:
-                pn = str(row.get("Point_Name", "")).strip().upper()
-                if pn == "KOLLEKTOR ISITMA DONUS SICAKLIK":
-                    try:
-                        return float(row.get("Value", ""))
-                    except (ValueError, TypeError):
-                        pass
-    except Exception as e:
-        logger.warning("Kolektör ısıtma dönüş okunamadı: %s", e)
-    return None
-
-
-def kollektor_donus_oku(csv_yolu: str = None) -> float | None:
-    """
-    hedefli_enerji_verileri.csv'den ortak kolektör soğutma dönüş sıcaklığını
-    (KOLLEKTOR DONUS SICAKLIK) okur. Hata / veri yoksa None.
-    """
-    if csv_yolu is None:
-        csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
-    try:
-        import csv as _csv
-        with open(csv_yolu, "r", encoding="utf-8") as f:
-            reader = _csv.DictReader(f)
-            for row in reader:
-                pn = str(row.get("Point_Name", "")).strip().upper()
-                if pn in ("KOLLEKTOR SOGUTMA DONUS SICAKLIK", "KOLLEKTOR DONUS SICAKLIK"):
-                    try:
-                        return float(row.get("Value", ""))
-                    except (ValueError, TypeError):
-                        pass
-    except Exception as e:
-        logger.warning("Kolektör dönüş okunamadı: %s", e)
-    return None
-
-
-def _nokta_oku(point_name: str, csv_yolu: str = None) -> float | None:
+def _enerji_nokta_csv_oku(point_name: str, csv_yolu: str = None) -> float | None:
     """hedefli_enerji_verileri.csv'den tek bir Point_Name değerini okur. Yoksa None."""
     if csv_yolu is None:
         csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
@@ -351,9 +348,93 @@ def _nokta_oku(point_name: str, csv_yolu: str = None) -> float | None:
     return None
 
 
+def sogutma_outlet_oku(enerji_verileri: dict = None, csv_yolu: str = None) -> float | None:
+    """
+    MAS-1 ve MAS-2 soğutma sıcaklıklarının ortalamasını döndür.
+    Önce canlı BACnet (enerji_verileri), yoksa hedefli_enerji_verileri.csv. Veri yoksa None.
+    """
+    noktalar = ("MAS-1 SOGUTMA SICAKLIK", "MAS-2 SOGUTMA SICAKLIK")
+    degerler = []
+    for pn in noktalar:
+        val = None
+        if enerji_verileri:
+            val = enerji_verileri.get(pn)
+        if val is None:
+            val = _enerji_nokta_csv_oku(pn, csv_yolu)
+        if val is not None:
+            degerler.append(val)
+    if degerler:
+        ort = round(sum(degerler) / len(degerler), 2)
+        logger.debug("Soğutma Outlet ortalaması: %.2f°C (%d nokta)", ort, len(degerler))
+        return ort
+    return None
+
+
+def isitma_outlet_oku(enerji_verileri: dict = None, csv_yolu: str = None) -> float | None:
+    """
+    MAS-1 ve MAS-2 ısıtma sıcaklıklarının (ısıtma kolektör gidiş) ortalamasını döndür.
+    Önce canlı BACnet (enerji_verileri), yoksa hedefli_enerji_verileri.csv. Veri yoksa None.
+    """
+    noktalar = ("MAS-1 ISITMA SICAKLIK", "MAS-2 ISITMA SICAKLIK")
+    degerler = []
+    for pn in noktalar:
+        val = None
+        if enerji_verileri:
+            val = enerji_verileri.get(pn)
+        if val is None:
+            val = _enerji_nokta_csv_oku(pn, csv_yolu)
+        if val is not None:
+            degerler.append(val)
+    if degerler:
+        ort = round(sum(degerler) / len(degerler), 2)
+        logger.debug("Isıtma Outlet ortalaması: %.2f°C (%d nokta)", ort, len(degerler))
+        return ort
+    return None
+
+
+def isitma_donus_oku(enerji_verileri: dict = None, csv_yolu: str = None) -> float | None:
+    """
+    Ortak kolektör ısıtma dönüş sıcaklığını (KOLLEKTOR ISITMA DONUS SICAKLIK) döndür.
+    Önce canlı BACnet (enerji_verileri), yoksa hedefli_enerji_verileri.csv. Veri yoksa None.
+    """
+    pn = "KOLLEKTOR ISITMA DONUS SICAKLIK"
+    if enerji_verileri and enerji_verileri.get(pn) is not None:
+        return enerji_verileri[pn]
+    return _enerji_nokta_csv_oku(pn, csv_yolu)
+
+
+def kollektor_donus_oku(enerji_verileri: dict = None, csv_yolu: str = None) -> float | None:
+    """
+    Ortak kolektör soğutma dönüş sıcaklığını (KOLLEKTOR DONUS SICAKLIK) döndür.
+    Önce canlı BACnet (enerji_verileri), yoksa hedefli_enerji_verileri.csv. Veri yoksa None.
+    """
+    adlar = ("KOLLEKTOR SOGUTMA DONUS SICAKLIK", "KOLLEKTOR DONUS SICAKLIK")
+    if enerji_verileri:
+        for pn in adlar:
+            if enerji_verileri.get(pn) is not None:
+                return enerji_verileri[pn]
+    for pn in adlar:
+        val = _enerji_nokta_csv_oku(pn, csv_yolu)
+        if val is not None:
+            return val
+    return None
+
+
+def _nokta_oku(point_name: str, enerji_verileri: dict = None, csv_yolu: str = None) -> float | None:
+    """
+    Tek bir nokta değerini döndür (CH-x / KAZAN-x DURUM/INLET/OUTLET vb.).
+    Önce canlı BACnet (enerji_verileri), yoksa hedefli_enerji_verileri.csv. Yoksa None.
+    """
+    if enerji_verileri:
+        val = enerji_verileri.get(point_name.upper())
+        if val is not None:
+            return val
+    return _enerji_nokta_csv_oku(point_name, csv_yolu)
+
+
 def ek_ekipman_satirlari_olustur(outlet: float | None, inlet: float | None,
                                   outlet_heat: float | None, inlet_heat: float | None,
-                                  lokasyon: str = "MAS-1") -> list:
+                                  lokasyon: str = "MAS-1", enerji_verileri: dict = None) -> list:
     """
     AHU dışındaki merkezi ekipmanlar için analiz satırları:
     - Chiller        : soğutma kolektör gidiş/dönüş (TARGET_DT_CHILLER ~5°C)
@@ -373,13 +454,13 @@ def ek_ekipman_satirlari_olustur(outlet: float | None, inlet: float | None,
         5: "CH-5 OUTLET CIKIS SICAKLIK",
     }
     for n in (1, 2, 3, 4, 5):
-        durum = _nokta_oku(f"CH-{n} DURUM BILGISI")
+        durum = _nokta_oku(f"CH-{n} DURUM BILGISI", enerji_verileri)
         if durum is not None and durum == 0:
             logger.info("CH-%d kapalı (DURUM=0) — analiz atlandı", n)
             continue
 
-        c_inlet = _nokta_oku(f"CH-{n} INLET SICAKLIK")
-        c_outlet = _nokta_oku(CH_OUTLET_ADLARI[n])
+        c_inlet = _nokta_oku(f"CH-{n} INLET SICAKLIK", enerji_verileri)
+        c_outlet = _nokta_oku(CH_OUTLET_ADLARI[n], enerji_verileri)
         if c_inlet is not None and c_outlet is not None:
             if abs(c_outlet - c_inlet) < CALISMA_DT_ESIGI:
                 logger.info("CH-%d ΔT≈0 — çalışmıyor, analiz atlandı", n)
@@ -396,13 +477,13 @@ def ek_ekipman_satirlari_olustur(outlet: float | None, inlet: float | None,
         })
 
     for n in (1, 2, 3):
-        durum = _nokta_oku(f"KAZAN-{n} DURUM BILGISI")
+        durum = _nokta_oku(f"KAZAN-{n} DURUM BILGISI", enerji_verileri)
         if durum is not None and durum == 0:
             logger.info("Kazan-%d kapalı (DURUM=0) — analiz atlandı", n)
             continue
 
-        k_inlet = _nokta_oku(f"KAZAN-{n} INLET")
-        k_outlet = _nokta_oku(f"KAZAN-{n} OUTLET")
+        k_inlet = _nokta_oku(f"KAZAN-{n} INLET", enerji_verileri)
+        k_outlet = _nokta_oku(f"KAZAN-{n} OUTLET", enerji_verileri)
         if k_inlet is not None and k_outlet is not None:
             if abs(k_outlet - k_inlet) < CALISMA_DT_ESIGI:
                 logger.info("Kazan-%d ΔT≈0 — çalışmıyor, analiz atlandı", n)
@@ -728,29 +809,36 @@ def hvac_analiz_calistir() -> dict | None:
     oat = _oat_cek()
     logger.info("Dış hava sıcaklığı: %.1f°C", oat)
 
+    # hedefli_enerji_verileri.csv bayatsa uyar (fallback olarak kullanılacaksa)
+    _csv_tazelik_kontrol()
+
+    # Kolektör/Chiller/Kazan noktalarını canlı BACnet ile oku (config varsa)
+    enerji_config = load_energy_config()
+    enerji_verileri = energy_verileri_oku(enerji_config) if enerji_config else None
+
     # Soğutma suyu Outlet (gidiş) sıcaklığını çek (MAS-1 + MAS-2 ortalaması)
-    outlet = sogutma_outlet_oku()
+    outlet = sogutma_outlet_oku(enerji_verileri)
     if outlet is not None:
         logger.info("Soğutma Outlet/Gidiş (ortalama): %.2f°C", outlet)
     else:
         logger.warning("Soğutma Outlet/Gidiş okunamadı — Outlet sütunu boş bırakılacak")
 
     # Kolektör soğutma Inlet (dönüş) sıcaklığını çek (ortak kolektör)
-    inlet = kollektor_donus_oku()
+    inlet = kollektor_donus_oku(enerji_verileri)
     if inlet is not None:
         logger.info("Soğutma Inlet/Dönüş (kolektör): %.2f°C", inlet)
     else:
         logger.warning("Soğutma Inlet/Dönüş okunamadı — Inlet sütunu boş bırakılacak")
 
     # Isıtma suyu Outlet (gidiş) sıcaklığını çek (MAS-1 + MAS-2 ortalaması)
-    outlet_heat = isitma_outlet_oku()
+    outlet_heat = isitma_outlet_oku(enerji_verileri)
     if outlet_heat is not None:
         logger.info("Isıtma Outlet/Gidiş (ortalama): %.2f°C", outlet_heat)
     else:
         logger.warning("Isıtma Outlet/Gidiş okunamadı")
 
     # Kolektör ısıtma Inlet (dönüş) sıcaklığını çek (ortak kolektör)
-    inlet_heat = isitma_donus_oku()
+    inlet_heat = isitma_donus_oku(enerji_verileri)
     if inlet_heat is not None:
         logger.info("Isıtma Inlet/Dönüş (kolektör): %.2f°C", inlet_heat)
     else:
@@ -770,7 +858,8 @@ def hvac_analiz_calistir() -> dict | None:
                                       outlet_heat=outlet_heat, inlet_heat=inlet_heat))
 
     # Merkezi ekipmanlar: Chiller, Isıtma Kolektörü, Kazan-1/2/3
-    rows.extend(ek_ekipman_satirlari_olustur(outlet, inlet, outlet_heat, inlet_heat))
+    rows.extend(ek_ekipman_satirlari_olustur(outlet, inlet, outlet_heat, inlet_heat,
+                                              enerji_verileri=enerji_verileri))
 
     logger.info(
         "AHU: toplam=%d, eksik SAT=%d, analiz edilecek=%d",
@@ -807,9 +896,15 @@ if __name__ == "__main__":
         print(f"Excel okunuyor: {excel_yolu}")
         cfg = build_config_from_excel(excel_yolu)
         print(f"Konfig oluşturuldu: {len(cfg)} nokta → {AHU_CONFIG_FILE}")
+    elif len(sys.argv) >= 3 and sys.argv[1] == "--setup-energy":
+        excel_yolu = sys.argv[2]
+        print(f"Excel okunuyor: {excel_yolu}")
+        cfg = build_energy_config_from_excel(excel_yolu)
+        print(f"Enerji konfig oluşturuldu: {len(cfg)} nokta → {ENERGY_CONFIG_FILE}")
     else:
         print("Kullanım:")
-        print("  Konfig oluştur : python ahu_collector.py --setup <Book2.xlsx>")
+        print("  AHU konfig oluştur    : python ahu_collector.py --setup <Book2.xlsx>")
+        print("  Enerji konfig oluştur : python ahu_collector.py --setup-energy <hedefli_okuma_sablonu_2.xlsx>")
         print("  Analiz çalıştır: import ahu_collector; ahu_collector.hvac_analiz_calistir()")
         print()
         print("Tek seferlik analiz başlatılıyor...")
