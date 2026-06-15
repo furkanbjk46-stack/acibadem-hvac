@@ -71,7 +71,7 @@ BACNET_DAKIKA  = 5    # Günlük BACnet okuma dakikası (Modbus'tan 5 dk sonra)
 # ================================================================
 BACNET_PORT   = 47808
 BACNET_TIMEOUT = 50.0
-_EXCEL_FILE_CONFIGS = os.path.join(BASE_DIR, "configs", "hedefli_okuma_sablonu_2.xlsx")
+_EXCEL_FILE_CONFIGS = os.path.join(BASE_DIR, "hedefli_okuma_sablonu_2.xlsx")
 _EXCEL_FILE_ROOT = os.path.join(BASE_DIR, "hedefli_okuma_sablonu_2.xlsx")
 EXCEL_FILE = _EXCEL_FILE_CONFIGS if os.path.exists(_EXCEL_FILE_CONFIGS) else _EXCEL_FILE_ROOT
 BACNET_CSV    = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
