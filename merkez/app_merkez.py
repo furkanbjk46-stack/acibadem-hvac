@@ -24,15 +24,15 @@ st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 # ============ CSS ============
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
 html, body, [data-testid="stAppViewContainer"] {
-    background-color: #060a13 !important;
-    background-image: radial-gradient(circle at 50% 0%, #0d1527 0%, #020617 100%) !important;
+    background-color: #060b14 !important;
+    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
 [data-testid="stAppViewContainer"] {
-    background-color: #060a13 !important;
-    background-image: radial-gradient(circle at 50% 0%, #0d1527 0%, #020617 100%) !important;
+    background-color: #060b14 !important;
+    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
 [data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
@@ -50,7 +50,7 @@ header[data-testid="stHeader"] button    { display: none !important; }
 h1,h2,h3,h4,h5,h6 { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
 p, span, div, label { color: #cbd5e1 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
 
-/* Streamlit Material ikon istisnası */
+/* Streamlit Material ikon istisnası — _arrow_right gibi ikonların bozulmaması için */
 span[data-testid="stIconMaterial"],
 [data-testid="stExpanderToggleIcon"] span,
 button span[data-testid="stIconMaterial"] {
@@ -59,59 +59,36 @@ button span[data-testid="stIconMaterial"] {
 }
 
 /* Metrik */
-[data-testid="stMetricValue"]  { color: #00e5ff !important; font-size: 22px !important; font-weight: 800 !important; font-family: 'Orbitron', 'Playfair Display', serif !important; text-shadow: 0 0 18px rgba(0,229,255,0.6) !important; }
-[data-testid="stMetricLabel"]  { color: rgba(100,180,220,0.7) !important; font-size: 10px !important; letter-spacing: 1px !important; text-transform: uppercase !important; }
-[data-testid="stMetricDelta"]  { color: #00e87a !important; }
+[data-testid="stMetricValue"]  { color: #38bdf8 !important; font-size: 22px !important; font-weight: 800 !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; text-shadow: 0 0 15px rgba(56, 189, 248,0.5) !important; }
+[data-testid="stMetricLabel"]  { color: rgba(150,210,255,0.7) !important; font-size: 10px !important; letter-spacing: 1px !important; text-transform: uppercase !important; }
+[data-testid="stMetricDelta"]  { color: #10b981 !important; }
 [data-testid="metric-container"] {
-    background: rgba(13, 21, 39, 0.7) !important;
+    background: rgba(15, 23, 42, 0.4) !important;
     backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(0, 229, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
     border-radius: 8px !important;
     padding: 12px !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;
+    box-shadow: none !important;
 }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: #060a13; }
-::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.3); border-radius: 3px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
 
-/* Neon kart — Gemini dark card style */
+/* Neon kart */
 .nk {
-    background: #0d1527;
-    border: 1px solid #1a263f;
-    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
     padding: 14px;
     margin-bottom: 10px;
-    box-shadow: 0 8px 32px 0 rgba(0,0,0,0.5);
+    box-shadow: none;
 }
-.nk-green { border-left: 3px solid #00e87a !important; box-shadow: 0 8px 32px rgba(0,232,122,0.06) !important; }
-.nk-red   { border-left: 3px solid #ff1755 !important; box-shadow: 0 8px 32px rgba(255,23,85,0.06) !important; }
-.nk-gray  { border-color: #1a263f !important; opacity: 0.55; }
-
-/* Gemini-style device card (anomali konsolu) */
-.dev-card-r {
-    padding: 12px 14px; background: #141d33; border-radius: 8px;
-    margin-bottom: 8px; border-left: 4px solid #ff1755;
-    box-shadow: 0 2px 12px rgba(255,23,85,0.1);
-}
-.dev-card-y {
-    padding: 12px 14px; background: #141d33; border-radius: 8px;
-    margin-bottom: 8px; border-left: 4px solid #ff9d00;
-    box-shadow: 0 2px 12px rgba(255,157,0,0.1);
-}
-.dev-card-g {
-    padding: 12px 14px; background: #141d33; border-radius: 8px;
-    margin-bottom: 8px; border-left: 4px solid #00e87a;
-    box-shadow: 0 2px 12px rgba(0,232,122,0.06);
-}
-
-/* KPI progress bar */
-.kpi-bar-wrap {
-    width: 100%; background: #1a263f; height: 6px;
-    border-radius: 3px; margin-top: 5px; overflow: hidden;
-}
-.kpi-bar-fill { height: 100%; border-radius: 3px; }
+.nk-green { border-color: rgba(16,185,129,0.45) !important; box-shadow: 0 0 15px rgba(16,185,129,0.08) !important; }
+.nk-red   { border-color: rgba(239,68,68,0.45) !important;  box-shadow: 0 0 15px rgba(239,68,68,0.08) !important;  }
+.nk-gray  { border-color: rgba(100,120,150,0.3) !important; opacity: 0.6; }
 
 .lok-scroll {
     max-height: 492px;
@@ -119,45 +96,23 @@ button span[data-testid="stIconMaterial"] {
     overflow-x: hidden;
     padding-right: 3px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0,229,255,0.3) rgba(13,21,39,0.6);
+    scrollbar-color: rgba(56, 189, 248,0.35) rgba(15,23,42,0.6);
 }
 .lok-scroll::-webkit-scrollbar { width: 4px; }
-.lok-scroll::-webkit-scrollbar-track { background: rgba(13,21,39,0.6); border-radius: 2px; }
-.lok-scroll::-webkit-scrollbar-thumb { background: rgba(0,229,255,0.25); border-radius: 2px; }
-.lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(0,229,255,0.5); }
+.lok-scroll::-webkit-scrollbar-track { background: rgba(15,23,42,0.6); border-radius: 2px; }
+.lok-scroll::-webkit-scrollbar-thumb { background: rgba(56, 189, 248,0.28); border-radius: 2px; }
+.lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248,0.55); }
 
-/* Section header — cinematic Gemini style */
-.sec {
-    font-family: 'Orbitron', 'Plus Jakarta Sans', monospace;
-    font-size: 10px; color: rgba(0,229,255,0.6);
-    letter-spacing: 2px; text-transform: uppercase;
-    border-bottom: 1px solid rgba(0,229,255,0.12);
-    padding-bottom: 6px; margin-bottom: 10px;
-    display: flex; align-items: center; gap: 6px;
-}
-.sec::after {
-    content: ''; flex: 1; height: 1px;
-    background: linear-gradient(90deg, rgba(0,229,255,0.12), transparent);
-}
+.sec { font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:10px; color:rgba(56, 189, 248,0.7);
+       letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(56, 189, 248,0.15);
+       padding-bottom:5px; margin-bottom:10px; }
 
-/* Live indicator */
-.live-dot {
-    display: inline-block; width: 7px; height: 7px;
-    border-radius: 50%; background: #00e87a;
-    box-shadow: 0 0 8px #00e87a;
-    animation: live-blink 1.8s ease-in-out infinite;
-}
-@keyframes live-blink {
-  0%, 100% { opacity: 1; box-shadow: 0 0 8px #00e87a; }
-  50%       { opacity: 0.5; box-shadow: 0 0 3px #00e87a; }
-}
-
-.alrt-r { background:rgba(255,23,85,0.1); border-left:3px solid rgba(255,23,85,0.7);
-           border-radius:0 8px 8px 0; padding:7px 10px; margin:3px 0; font-size:11px; color:#fca5a5 !important; }
-.alrt-y { background:rgba(255,157,0,0.1); border-left:3px solid rgba(255,157,0,0.7);
-           border-radius:0 8px 8px 0; padding:7px 10px; margin:3px 0; font-size:11px; color:#fcd34d !important; }
-.alrt-g { background:rgba(0,232,122,0.1); border-left:3px solid rgba(0,232,122,0.5);
-           border-radius:0 8px 8px 0; padding:7px 10px; margin:3px 0; font-size:11px; color:#6ee7b7 !important; }
+.alrt-r { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35);
+           border-radius:8px; padding:7px 10px; margin:3px 0; font-size:11px; color:#fca5a5 !important; }
+.alrt-y { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35);
+           border-radius:8px; padding:7px 10px; margin:3px 0; font-size:11px; color:#fcd34d !important; }
+.alrt-g { background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35);
+           border-radius:8px; padding:7px 10px; margin:3px 0; font-size:11px; color:#6ee7b7 !important; }
 
 @keyframes pulse {
   0%   { opacity: 0.6; transform: scale(0.95); }
@@ -175,17 +130,17 @@ button span[data-testid="stIconMaterial"] {
 @keyframes neon-breathe {
   0%, 100% {
     text-shadow:
-      0 0 12px rgba(0,229,255,0.5),
-      0 0 30px rgba(0,229,255,0.25),
-      0 0 60px rgba(0,229,255,0.1);
+      0 0 10px rgba(56, 189, 248,0.4),
+      0 0 25px rgba(56, 189, 248,0.2),
+      0 0 50px rgba(56, 189, 248,0.08);
     opacity: 0.82;
   }
   50% {
     text-shadow:
-      0 0 22px rgba(0,229,255,1),
-      0 0 50px rgba(0,229,255,0.7),
-      0 0 100px rgba(0,229,255,0.35),
-      0 0 160px rgba(0,229,255,0.15);
+      0 0 20px rgba(56, 189, 248,1),
+      0 0 45px rgba(56, 189, 248,0.7),
+      0 0 90px rgba(56, 189, 248,0.35),
+      0 0 140px rgba(56, 189, 248,0.15);
     opacity: 1;
   }
 }
@@ -195,57 +150,57 @@ button span[data-testid="stIconMaterial"] {
 }
 
 .btn-refresh button {
-    background: rgba(0,229,255,0.1) !important;
-    color: #00e5ff !important; border: 1px solid rgba(0,229,255,0.25) !important;
+    background: rgba(14, 165, 233, 0.15) !important;
+    color: #38bdf8 !important; border: 1px solid rgba(14, 165, 233, 0.3) !important;
     border-radius: 6px !important; font-size: 11px !important;
     padding: 4px 12px !important; font-family:'Plus Jakarta Sans',sans-serif !important;
 }
 .btn-refresh button:hover {
-    background: rgba(0,229,255,0.2) !important;
+    background: rgba(14, 165, 233, 0.25) !important;
     color: #ffffff !important;
 }
 
 /* Alarm expander */
 [data-testid="stExpander"] {
-    background: rgba(13, 21, 39, 0.7) !important;
-    border: 1px solid #1a263f !important;
+    background: rgba(15, 23, 42, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
     border-radius: 8px !important;
     margin-bottom: 5px !important;
 }
 [data-testid="stExpander"]:has(.alrt-exp-r) {
-    border-color: rgba(255,23,85,0.4) !important;
-    background: rgba(255,23,85,0.04) !important;
+    border-color: rgba(239,68,68,0.45) !important;
+    background: rgba(239,68,68,0.05) !important;
 }
 [data-testid="stExpander"]:has(.alrt-exp-y) {
-    border-color: rgba(255,157,0,0.3) !important;
-    background: rgba(255,157,0,0.04) !important;
+    border-color: rgba(245,158,11,0.35) !important;
+    background: rgba(245,158,11,0.04) !important;
 }
-[data-testid="stExpanderToggleIcon"] { color: rgba(0,229,255,0.5) !important; }
+[data-testid="stExpanderToggleIcon"] { color: rgba(56, 189, 248,0.6) !important; }
 .alrt-detay-r {
-    background: rgba(255,23,85,0.08); border-left: 3px solid #ff1755;
+    background: rgba(239,68,68,0.10); border-left: 3px solid #ef4444;
     border-radius: 6px; padding: 8px 12px; margin: 4px 0;
     font-size: 12px; color: #fca5a5 !important;
 }
 .alrt-detay-y {
-    background: rgba(255,157,0,0.08); border-left: 3px solid #ff9d00;
+    background: rgba(245,158,11,0.10); border-left: 3px solid #f59e0b;
     border-radius: 6px; padding: 8px 12px; margin: 4px 0;
     font-size: 12px; color: #fcd34d !important;
 }
 .alarm-detay-kart {
-    background: rgba(0,0,0,0.3);
-    border: 1px solid rgba(0,229,255,0.06);
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(255,255,255,0.05);
     border-radius: 8px; padding: 10px 14px; margin-top: 8px;
 }
 .btn-goto button {
-    background: rgba(0,229,255,0.1) !important;
-    color: #00e5ff !important;
-    border: 1px solid rgba(0,229,255,0.25) !important;
+    background: rgba(14, 165, 233, 0.15) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(14, 165, 233, 0.3) !important;
     border-radius: 6px !important;
     font-size: 11px !important;
     padding: 4px 14px !important;
     width: 100% !important;
 }
-.btn-goto button:hover { background: rgba(0,229,255,0.2) !important; color: #ffffff !important; }
+.btn-goto button:hover { background: rgba(14, 165, 233, 0.25) !important; color: #ffffff !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -726,23 +681,18 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
 st.markdown("""
-<div style="text-align:center; padding:14px 0 10px; border-bottom:1px solid rgba(0,229,255,0.08); margin-bottom:6px;">
-  <div style="font-family:'Orbitron',monospace; font-size:10px; color:rgba(100,180,220,0.55);
-              letter-spacing:4px; text-transform:uppercase; margin-bottom:4px;">
+<div style="text-align:center; padding:12px 0 8px;">
+  <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a3b8;
+              letter-spacing:3px; text-transform:uppercase;">
     ACIBADEM SAĞLIK GRUBU
   </div>
-  <div style="font-family:'Orbitron','Playfair Display',serif; font-size:28px; font-weight:700; color:#ffffff;
-              letter-spacing:3px; line-height:1.2;
-              text-shadow:0 0 30px rgba(0,229,255,0.4), 0 0 60px rgba(0,229,255,0.15);">
-    SYNAPSE
+  <div style="font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:34px; font-weight:600; color:#f8fafc;
+              letter-spacing:1px; line-height:1.3;">
+    SYNAPSE // Merkezi Veri Bağlantısı
   </div>
-  <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:12px; color:rgba(0,229,255,0.7);
-              letter-spacing:3px; margin-top:4px; text-transform:uppercase;">
-    Merkezi Veri Bağlantısı &nbsp;·&nbsp; Operasyonel Zeka
-  </div>
-  <div style="margin-top:8px; display:flex; align-items:center; justify-content:center; gap:6px;">
-    <span class="live-dot"></span>
-    <span style="font-family:'Orbitron',monospace; font-size:9px; color:#00e87a; letter-spacing:2px;">CANLI SİSTEM İZLEME AKTİF</span>
+  <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#38bdf8;
+              letter-spacing:2px; margin-top:6px; text-transform:uppercase;">
+    Operasyonel Zeka
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -1020,9 +970,6 @@ with sol:
             ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh"),
         ]
 
-        # Maksimum değerler (progress bar için)
-        _max_kwh = max((_cs(_df_bu_ay, "Toplam_Hastane_Tuketim_kWh") or 1), 1)
-
         for _lbl, _col, _birim in _metrikler:
             if _col is None:  # Doğalgaz: kazan + kojen toplamı
                 _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
@@ -1036,29 +983,22 @@ with sol:
                 _gy = _cs(_df_gec_yil, _col)
 
             _trend_parts = []
-            if _ga > 0: _trend_parts.append(f"{_gec_ay_label}: {tr(_ga)}")
-            if _by > 0: _trend_parts.append(f"YTD: {tr(_by)}")
+            if _ga > 0: _trend_parts.append(f"{_gec_ay_label}: {tr(_ga)} {_birim}")
+            if _by > 0: _trend_parts.append(f"{_bu_yil} YTD: {tr(_by)} {_birim}")
+            if _gy > 0: _trend_parts.append(f"{_bu_yil-1}: {tr(_gy)} {_birim}")
             _trend_html = (
-                f'<div style="font-size:9px;color:rgba(100,180,220,0.45);margin-top:1px;font-family:Plus Jakarta Sans,sans-serif;">'
-                + " · ".join(_trend_parts) + f" {_birim}</div>"
+                f'<div style="font-size:9px;color:rgba(120,170,220,0.5);margin-top:2px;">'
+                + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
             ) if _trend_parts else ""
 
-            # Progress bar: bu ay / geçen yıl aynı ay (göreceli oran)
-            _bar_ref = max(_ga, _by / 12, 1) if (_ga > 0 or _by > 0) else 1
-            _bar_pct = min(int(_bu / _bar_ref * 100), 100) if _bar_ref > 0 else 0
-            # Renk: enerji/gaz için düşük iyi, kojen üretimi için yüksek iyi
-            _bar_clr = "#00e5ff" if "Kojen" in _lbl else ("#00e87a" if _bar_pct < 80 else "#ff9d00")
-
             st.markdown(f"""
-            <div style="padding:9px 12px; margin:4px 0; background:#0d1527;
-                        border-radius:8px; border:1px solid #1a263f;
-                        box-shadow:0 4px 16px rgba(0,0,0,0.3);">
+            <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
+                        border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);">
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-family:Plus Jakarta Sans,sans-serif;font-size:11px; color:rgba(100,180,220,0.7);">{_lbl}</span>
-                <span style="font-family:Orbitron,monospace;font-size:11px; font-weight:700; color:{_bar_clr};
-                             text-shadow:0 0 8px {_bar_clr}40;">{tr(_bu)} <span style="font-size:8px;opacity:0.6">{_birim}</span>{_pct_html(_bu, _ga)}</span>
+                <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}</span>
+                <span style="font-size:12px; font-weight:700; color:#38bdf8;
+                             font-family:'Playfair Display','Plus Jakarta Sans',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>
               </div>
-              <div class="kpi-bar-wrap"><div class="kpi-bar-fill" style="width:{_bar_pct}%;background:{_bar_clr};box-shadow:0 0 6px {_bar_clr}60;"></div></div>
               {_trend_html}
             </div>
             """, unsafe_allow_html=True)
@@ -1192,7 +1132,7 @@ hospitals.forEach(function(h) {{
 
     // ── Popup ──
     var kwh_bar = h.kwh !== '—'
-        ? '<div style="margin-top:8px;height:3px;background:rgba(0,229,255,0.12);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;box-shadow:0 0 6px '+c+';"></div></div>'
+        ? '<div style="margin-top:8px;height:3px;background:rgba(56, 189, 248,0.15);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;"></div></div>'
         : '';
     dot.bindPopup(
         '<div style="padding:14px 16px;min-width:170px;">' +
@@ -1245,63 +1185,6 @@ hospitals.forEach(function(h) {{
 # SAĞ KOLON
 # ════════════════════════════════
 with sag:
-    # ── Gelişmiş Metrikler (Gemini tarzı progress bar KPI'lar) ──
-    st.markdown('<div class="sec">📊 GELİŞMİŞ METRİKLER</div>', unsafe_allow_html=True)
-
-    # Tüm aktif lokasyonlar için dün verileri topla
-    _gm_toplam_kwh  = sum(dun_kwh(lid) for lid in HASTANELER)
-    _gm_aktif_n     = sum(1 for lid in HASTANELER if online_bilgi(lid)[0])
-    _gm_toplam_n    = len(HASTANELER)
-    _gm_cevrimdisi  = sum(1 for lid in HASTANELER if not online_bilgi(lid)[0] and online_bilgi(lid)[1] is not None)
-
-    # Ortalama chiller yükü
-    _gm_ch_yukleri = [hvac_yuzdesi(lid) for lid in HASTANELER if hvac_yuzdesi(lid) is not None]
-    _gm_ch_ort     = round(sum(_gm_ch_yukleri)/len(_gm_ch_yukleri), 1) if _gm_ch_yukleri else None
-
-    # Toplam m²
-    _gm_toplam_m2 = sum(HASTANELER[lid].get("m2", 10000) for lid in HASTANELER if dun_kwh(lid) > 0)
-    _gm_yogunluk  = round(_gm_toplam_kwh / _gm_toplam_m2, 2) if _gm_toplam_m2 > 0 and _gm_toplam_kwh > 0 else None
-
-    def _kpi_bar(lbl, val_str, pct, clr, alt=""):
-        return f"""<div style='margin-bottom:14px;'>
-          <div style='display:flex;justify-content:space-between;align-items:center;'>
-            <span style='font-family:Plus Jakarta Sans,sans-serif;font-size:12px;color:rgba(140,190,220,0.8);'>{lbl}</span>
-            <span style='font-family:Orbitron,monospace;font-size:12px;font-weight:700;color:{clr};text-shadow:0 0 8px {clr}50;'>{val_str}</span>
-          </div>
-          <div class='kpi-bar-wrap'><div class='kpi-bar-fill' style='width:{pct}%;background:{clr};box-shadow:0 0 8px {clr}50;'></div></div>
-          {f'<div style="font-size:9px;color:rgba(100,160,200,0.45);margin-top:2px;">{alt}</div>' if alt else ''}
-        </div>"""
-
-    _kpi_html = f"""<div style='background:#0d1527;border:1px solid #1a263f;border-radius:12px;
-                               padding:16px 18px;box-shadow:0 8px 32px rgba(0,0,0,0.5);margin-bottom:10px;'>"""
-
-    # 1) Ağ Bağlantısı
-    _ag_pct = int(_gm_aktif_n / _gm_toplam_n * 100) if _gm_toplam_n > 0 else 0
-    _ag_clr = "#00e87a" if _ag_pct >= 80 else ("#ff9d00" if _ag_pct >= 50 else "#ff1755")
-    _kpi_html += _kpi_bar("Ağ Bağlantısı", f"{_gm_aktif_n}/{_gm_toplam_n}", _ag_pct, _ag_clr, f"{_gm_cevrimdisi} çevrimdışı lokasyon")
-
-    # 2) Enerji Yoğunluğu
-    if _gm_yogunluk:
-        _yo_pct = min(int(_gm_yogunluk / 2.0 * 100), 100)  # 2.0 kWh/m² üstü kritik
-        _yo_clr = "#00e5ff" if _gm_yogunluk < 1.0 else ("#ff9d00" if _gm_yogunluk < 1.5 else "#ff1755")
-        _kpi_html += _kpi_bar("Enerji Yoğunluğu", f"{_gm_yogunluk} kWh/m²", _yo_pct, _yo_clr, "Hedef: &lt;1.0 kWh/m²/gün")
-
-    # 3) Chiller Yük
-    if _gm_ch_ort is not None:
-        _ch_clr = "#00e87a" if _gm_ch_ort < 70 else ("#ff9d00" if _gm_ch_ort < 85 else "#ff1755")
-        _kpi_html += _kpi_bar("Ortalama Chiller Yük", f"%{_gm_ch_ort}", int(_gm_ch_ort), _ch_clr, "Kritik eşik: %90")
-
-    # 4) Toplam Tüketim
-    _kwh_str = f"{_gm_toplam_kwh:,.0f}".replace(",", ".") if _gm_toplam_kwh else "—"
-    _kpi_html += f"""<div style='border-top:1px solid #1a263f;padding-top:12px;margin-top:2px;
-                                display:flex;justify-content:space-between;align-items:center;'>
-      <span style='font-size:11px;color:rgba(140,190,220,0.6);'>Günlük Toplam</span>
-      <span style='font-family:Orbitron,monospace;font-size:16px;font-weight:700;color:#00e5ff;
-                   text-shadow:0 0 15px rgba(0,229,255,0.5);'>{_kwh_str} <span style='font-size:9px;opacity:0.6'>kWh</span></span>
-    </div>"""
-    _kpi_html += "</div>"
-    st.markdown(_kpi_html, unsafe_allow_html=True)
-
     # ── Canlı Uyarılar ──
     st.markdown('<div class="sec">🚨 CANLI UYARILAR</div>', unsafe_allow_html=True)
 
@@ -1367,38 +1250,37 @@ with sag:
 
     if not lok_ile_uyari:
         st.markdown(
-            "<div class='dev-card-g'>"
-            "<div style='display:flex;align-items:center;gap:8px;'>"
-            "<span style='font-weight:700;font-size:12px;color:#f0fdf4;'>✅ TÜM SİSTEMLER NORMAL</span>"
-            "<span style='color:#00e87a;float:right;font-size:10px;font-family:Orbitron,monospace;margin-left:auto;'>STABİL</span>"
-            "</div>"
-            "<div style='font-size:11px;color:rgba(100,200,150,0.6);margin-top:4px;'>Aktif lokasyonlarda uyarı tespit edilmedi</div>"
-            "</div>",
+            "<div style='background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);"
+            "border-radius:8px;padding:8px 12px;font-size:11px;color:#6ee7b7;'>✅ Tüm sistemler normal</div>",
             unsafe_allow_html=True
         )
     else:
-        uyari_html = "<div style='max-height:200px;overflow-y:auto;padding-right:3px;scrollbar-width:thin;scrollbar-color:rgba(0,229,255,0.2) transparent;'>"
+        uyari_html = "<div style='max-height:195px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(56, 189, 248,0.3) transparent;'>"
         for lid, uyarilar in lok_ile_uyari:
             lok_inf  = HASTANELER.get(lid, {})
             isim     = lok_inf.get("kisa", lid)
             has_crit = any(s == "r" for s, _ in uyarilar)
-            kart_cls = "dev-card-r" if has_crit else "dev-card-y"
-            lbl_renk = "#ff1755" if has_crit else "#ff9d00"
-            lbl_txt  = "KRİTİK" if has_crit else "UYARI"
+            kart_bg  = "rgba(239,68,68,0.06)" if has_crit else "rgba(245,158,11,0.06)"
+            kart_br  = "rgba(239,68,68,0.30)" if has_crit else "rgba(245,158,11,0.25)"
+            dot_renk = "#ef4444" if has_crit else "#f59e0b"
             satirlar = ""
             for sev, msg in uyarilar:
                 s_renk = "#fca5a5" if sev == "r" else "#fcd34d"
+                s_bg   = "rgba(239,68,68,0.08)" if sev == "r" else "rgba(245,158,11,0.08)"
                 satirlar += (
-                    f"<div style='font-size:10px;color:{s_renk};margin-top:3px;'>{msg}</div>"
+                    f"<div style='background:{s_bg};border-radius:5px;padding:4px 8px;"
+                    f"margin-top:4px;font-size:10px;color:{s_renk};'>{msg}</div>"
                 )
             uyari_html += (
-                f"<details class='{kart_cls}' style='cursor:pointer;padding:10px 14px;margin-bottom:6px;border-radius:8px;background:#141d33;border-left:4px solid {lbl_renk};'>"
-                f"<summary style='list-style:none;display:flex;align-items:center;gap:8px;'>"
-                f"<span style='font-family:Plus Jakarta Sans,sans-serif;font-weight:700;font-size:11px;color:rgba(220,240,255,0.9);flex:1;'>{isim}</span>"
-                f"<span style='color:{lbl_renk};font-family:Orbitron,monospace;font-size:9px;font-weight:700;letter-spacing:1px;'>{lbl_txt}</span>"
-                f"<span style='font-size:9px;color:rgba(150,200,240,0.4);'>{len(uyarilar)} uyarı</span>"
+                f"<details style='background:{kart_bg};border:1px solid {kart_br};"
+                f"border-radius:8px;padding:6px 10px;margin-bottom:5px;cursor:pointer;'>"
+                f"<summary style='list-style:none;display:flex;align-items:center;gap:6px;"
+                f"font-size:11px;font-weight:600;color:rgba(200,230,255,0.85);'>"
+                f"<span style='width:7px;height:7px;border-radius:50%;background:{dot_renk};"
+                f"box-shadow:0 0 5px {dot_renk};flex-shrink:0;display:inline-block;'></span>"
+                f"{isim} — {len(uyarilar)} uyarı"
                 f"</summary>"
-                f"<div style='margin-top:6px;border-top:1px solid rgba(255,255,255,0.06);padding-top:6px;'>{satirlar}</div>"
+                f"<div style='margin-top:4px;'>{satirlar}</div>"
                 f"</details>"
             )
         uyari_html += "</div>"
@@ -1497,8 +1379,8 @@ with sag:
 
     # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
     st.markdown(
-        f"<div style='background:#0d1527;border:1px solid #1a263f;"
-        f"border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.5);'>"
+        f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+        f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
         # ── Satır 1: Başlık ──
         f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
         f"<div>"
@@ -1619,10 +1501,10 @@ with sag:
         )
     if dis_hava_val is not None or min_val is not None:
         st.markdown(
-            f"<div style='background:#0d1527;border:1px solid #1a263f;"
-            f"border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.5);'>"
-            f"<div style='font-family:Orbitron,monospace;font-size:8px;font-weight:700;"
-            f"color:rgba(0,229,255,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA &amp; CHİLLER SET</div>"
+            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
+            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
             f"{_ch_ic}"
             f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
             f"</div>",
@@ -1739,10 +1621,10 @@ with sag:
             )
 
         st.markdown(
-            f"<div style='background:#0d1527;border:1px solid #1a263f;"
-            f"border-radius:12px;padding:14px 16px;box-shadow:0 8px 32px rgba(0,0,0,0.5);'>"
-            f"<div style='font-family:Orbitron,monospace;font-size:8px;font-weight:700;"
-            f"color:rgba(0,229,255,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
+            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
+            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
             f"{_ez_satirlar}"
             f"{_anormal_html}"
             f"</div>",
@@ -2049,12 +1931,12 @@ with sag:
 
                 # Kart dış çerçevesi — üst kısım
                 st.markdown(
-                    f"<div style='background:#0d1527;border:1px solid #1a263f;"
-                    f"border-radius:12px;margin-top:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.5);'>"
+                    f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+                    f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-top:6px;overflow:hidden;'>"
                     f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                    f"padding:10px 14px;border-bottom:1px solid rgba(0,229,255,0.08);'>"
-                    f"<span style='font-family:Orbitron,monospace;font-size:8px;font-weight:700;"
-                    f"color:rgba(0,229,255,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
+                    f"padding:10px 14px;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
+                    f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+                    f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
                     f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>🕐 {_ai_zaman_str}</span>"
                     f"</div>"
                     f"<div style='padding:12px 14px;font-size:11px;color:rgba(200,230,255,0.85);"
@@ -2083,9 +1965,9 @@ with sag:
 
 # ============ FOOTER ============
 st.markdown(f"""
-<div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(0,229,255,0.08); margin-top:10px;">
-  <span style="font-family:'Orbitron',monospace; font-size:9px; color:rgba(0,229,255,0.22); letter-spacing:3px;">
-    SYNAPSE (SYN) &nbsp;·&nbsp; ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; {now_display.strftime('%d.%m.%Y %H:%M')}
+<div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(56, 189, 248,0.08); margin-top:10px;">
+  <span style="font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:9px; color:rgba(56, 189, 248,0.25); letter-spacing:2px;">
+    ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; {now_display.strftime('%d.%m.%Y %H:%M')}
   </span>
 </div>
 """, unsafe_allow_html=True)
