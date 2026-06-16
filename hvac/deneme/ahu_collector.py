@@ -267,6 +267,10 @@ def ahu_verileri_oku(config: list) -> dict:
             nokta["gateway_ip"], nokta["dnet"], nokta["mac_hex"],
             nokta["obj_type"], nokta["obj_inst"]
         )
+        # Sıcaklık noktalarında BACnet'ten 0.0 gelmesi sensör arızasına işaret eder
+        # (0°C oda/üfleme sıcaklığı fiziksel olarak imkânsız). Vana değerleri için 0.0 geçerlidir.
+        if deger == 0.0 and nokta["nokta_tipi"].endswith("°C)"):
+            deger = None
         sonuclar[key][nokta["nokta_tipi"]] = deger
         if deger is not None:
             ok += 1
