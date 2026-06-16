@@ -911,8 +911,8 @@ with tab1:
                         f"</div>"
                     )
                 st.markdown(
-                    f"<div style='background:rgba(14,38,80,0.85);border:1px solid rgba(0,212,255,0.22);"
-                    f"border-radius:12px;overflow:hidden;'>{rows_html}</div>",
+                    f"<div style='background:rgba(15,23,42,0.4);border:1px solid rgba(56,189,248,0.15);"
+                    f"border-radius:12px;overflow:hidden;backdrop-filter:blur(8px);'>{rows_html}</div>",
                     unsafe_allow_html=True
                 )
             else:
@@ -1096,7 +1096,7 @@ with tab1:
     hvac_uyari   = hvac_ozet.get("uyari",  [])
     hvac_normal  = hvac_ozet.get("normal", [])
 
-    KART  = "background:rgba(14,38,80,0.80);border-radius:12px;padding:14px;"
+    KART  = "background:rgba(15,23,42,0.4);border:1px solid rgba(255,255,255,0.05);backdrop-filter:blur(8px);border-radius:12px;padding:14px;"
     LBL   = ("font-size:8px;color:rgba(150,210,255,0.5);letter-spacing:1.5px;"
              "text-transform:uppercase;margin-bottom:8px;font-weight:700;")
 
@@ -1234,7 +1234,7 @@ with tab1:
                 "</div>"
             )
         st.markdown(
-            "<div style='" + KART + "border:1px solid rgba(0,212,255,0.12);'>"
+            "<div style='" + KART + "'>"
             "<div style='" + LBL + "'>HVAC ANALIZ DURUMU</div>"
             + hv_rows + "</div>",
             unsafe_allow_html=True
@@ -1327,8 +1327,8 @@ with tab4:
     st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
     st.markdown(
         f"""<div style='text-align:center;padding:30px 40px 20px;
-            background:rgba(14,42,85,0.80);border:1px solid rgba(0,212,255,0.25);
-            border-radius:16px;max-width:560px;margin:0 auto;'>
+            background:rgba(15,23,42,0.4);border:1px solid rgba(56,189,248,0.15);
+            backdrop-filter:blur(8px);border-radius:16px;max-width:560px;margin:0 auto;'>
             <div style='font-size:40px;margin-bottom:12px;'>📄</div>
             <div style='font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;
                 color:{renk};letter-spacing:2px;margin-bottom:6px;'>RAPOR OLUŞTUR</div>
