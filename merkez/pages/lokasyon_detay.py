@@ -23,12 +23,15 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Playfair+Display:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
 
-/* ── ARKA PLAN — app_merkez ile aynı ── */
-html, body, [data-testid="stAppViewContainer"],
-[data-testid="stAppViewContainer"] > div:first-child,
-[data-testid="stAppViewContainer"] > div:first-child > div:first-child {
+/* ── ARKA PLAN ── */
+html, body {
     background-color: #060b14 !important;
     background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
+}
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] > div:first-child,
+[data-testid="stAppViewContainer"] > div:first-child > div:first-child {
+    background: transparent !important;
 }
 [data-testid="stHeader"]          { background: transparent !important; }
 [data-testid="stToolbar"]         { display: none !important; }
