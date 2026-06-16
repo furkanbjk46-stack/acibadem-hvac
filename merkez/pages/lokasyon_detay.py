@@ -259,14 +259,6 @@ if isinstance(hvac_ozet, str):
     try:    hvac_ozet = json.loads(hvac_ozet)
     except: hvac_ozet = {}
 
-# ── DEBUG: Supabase'deki tüm lokasyon_id'leri göster ──
-with st.expander("🔍 Supabase Debug — Tüm Lokasyon ID'leri", expanded=False):
-    debug_df = fetch_tum_lokasyonlar_debug(url, key)
-    if not debug_df.empty:
-        st.dataframe(debug_df, use_container_width=True, hide_index=True)
-        st.caption(f"Bu sayfada aranan lok_id: **`{lok_id}`**")
-    else:
-        st.warning("Veri alınamadı.")
 now = datetime.now()
 dun = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
