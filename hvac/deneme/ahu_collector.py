@@ -848,6 +848,65 @@ def hvac_analiz_calistir() -> dict | None:
     # BACnet okuma
     veriler = ahu_verileri_oku(config)
 
+    # Ham BACnet verilerini debug Excel'e yaz
+    try:
+        import openpyxl
+        from openpyxl.styles import PatternFill, Font
+        from datetime import datetime as _dt
+
+        # Tüm nokta tiplerini topla (sütun başlıkları)
+        tum_nokta_tipleri = sorted({
+            pt for nokta_verileri in veriler.values()
+            for pt in nokta_verileri.keys()
+        })
+
+        wb_debug = openpyxl.Workbook()
+        ws_debug = wb_debug.active
+        ws_debug.title = "Ham BACnet Verileri"
+
+        basliklar = ["AHU", "Lokasyon"] + tum_nokta_tipleri
+        ws_debug.append(basliklar)
+
+        # Başlık satırı formatla
+        header_fill = PatternFill("solid", fgColor="1F4E79")
+        for cell in ws_debug[1]:
+            cell.fill = header_fill
+            cell.font = Font(color="FFFFFF", bold=True)
+
+        # None = kırmızı, değer var = beyaz
+        none_fill = PatternFill("solid", fgColor="FFCCCC")
+
+        for (ahu_adi, lokasyon), nokta_verileri in sorted(veriler.items()):
+            satir = [ahu_adi, lokasyon] + [
+                nokta_verileri.get(pt) for pt in tum_nokta_tipleri
+            ]
+            ws_debug.append(satir)
+            row_idx = ws_debug.max_row
+            for col_idx, pt in enumerate(tum_nokta_tipleri, start=3):
+                if nokta_verileri.get(pt) is None:
+                    ws_debug.cell(row=row_idx, column=col_idx).fill = none_fill
+
+        # Enerji verileri — ayrı sheet
+        if enerji_verileri:
+            ws_enerji = wb_debug.create_sheet("Enerji Ham Verileri")
+            ws_enerji.append(["Nokta Adı", "Değer", "Durum"])
+            for cell in ws_enerji[1]:
+                cell.fill = header_fill
+                cell.font = Font(color="FFFFFF", bold=True)
+            for nokta_adi, deger in sorted(enerji_verileri.items()):
+                durum = "OK" if deger is not None else "OKUNAMADI"
+                ws_enerji.append([nokta_adi, deger, durum])
+                if deger is None:
+                    for col in range(1, 4):
+                        ws_enerji.cell(row=ws_enerji.max_row, column=col).fill = none_fill
+
+        zaman_str = _dt.now().strftime("%Y%m%d_%H%M")
+        debug_dosya = os.path.join(BASE_DIR, f"bacnet_ham_veriler_{zaman_str}.xlsx")
+        wb_debug.save(debug_dosya)
+        logger.info("Ham BACnet verileri kaydedildi: %s", debug_dosya)
+    except Exception as _e:
+        logger.warning("Ham BACnet debug Excel yazılamadı: %s", _e)
+
     # Satırları oluştur (SAT yoksa AHU analiz edilemez)
     rows = []
     eksik = 0
