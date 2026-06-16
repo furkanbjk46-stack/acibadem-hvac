@@ -31,8 +31,13 @@ html, body {
     background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
 [data-testid="stAppViewContainer"],
-[data-testid="stAppViewContainer"] > div:first-child,
-[data-testid="stAppViewContainer"] > div:first-child > div:first-child {
+[data-testid="stAppViewContainer"] > div,
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stMainBlockContainer"],
+[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stVerticalBlock"],
+.main, .block-container,
+section.main > div.block-container {
     background: transparent !important;
 }
 [data-testid="stHeader"]                  { background: transparent !important; }
@@ -207,7 +212,7 @@ button span[data-testid="stIconMaterial"] {
 
 # ── Animasyonlu Arka Plan: Dünya + Rüzgar Türbini + Güneş Paneli ──
 st.markdown("""
-<div id="enerji-bg" style="position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;">
+<div id="enerji-bg" style="position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden;">
 <svg width="100%" height="100%" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"
      xmlns="http://www.w3.org/2000/svg" style="opacity:1;">
   <defs>
