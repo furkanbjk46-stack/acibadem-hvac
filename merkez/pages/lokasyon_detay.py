@@ -1062,6 +1062,8 @@ with tab1:
         _kaynak_item("⚙️", "Kojen Üretim",   kurt_str,   "kWh", "#10b981"),
         _kaynak_item("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#a855f7"),
         _kaynak_item("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#f59e0b"),
+        _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str,   "m³",  "#ef4444"),
+        _kaynak_item("💧", "Su Tüketimi",    su_str,     "m³",  "#38bdf8"),
     ]
 
     # ── TRDP Kırılımı (sadece Maslak) ──
@@ -1070,16 +1072,11 @@ with tab1:
         trdp2_val = son_df["TRDP2_kWh"].sum() if "TRDP2_kWh" in son_df.columns else None
         trdp3_val = son_df["TRDP3_kWh"].sum() if "TRDP3_kWh" in son_df.columns else None
         trdp4_val = son_df["TRDP4_kWh"].sum() if "TRDP4_kWh" in son_df.columns else None
-        _kaynak_items += [
+        _kaynak_items[4:4] = [
             _kaynak_item("🔹", "TRDP-1 (Bina)", f"{trdp1_val:,.0f}" if trdp1_val else "—", "kWh", "#06b6d4"),
             _kaynak_item("🔸", "TRDP-2 (Mek.)", f"{trdp2_val:,.0f}" if trdp2_val else "—", "kWh", "#f59e0b"),
-            _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str,   "m³",  "#ef4444"),
-            _kaynak_item("💧", "Su Tüketimi",    su_str,     "m³",  "#38bdf8"),
-        ]
-    else:
-        _kaynak_items += [
-            _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str, "m³", "#ef4444"),
-            _kaynak_item("💧", "Su Tüketimi",    su_str,   "m³", "#38bdf8"),
+            _kaynak_item("🔹", "TRDP-3 (Bina)", f"{trdp3_val:,.0f}" if trdp3_val else "—", "kWh", "#06b6d4"),
+            _kaynak_item("🔸", "TRDP-4 (Mek.)", f"{trdp4_val:,.0f}" if trdp4_val else "—", "kWh", "#f59e0b"),
         ]
 
     _cols_count = 4 if lok_id == "maslak" else 3
