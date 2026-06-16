@@ -451,8 +451,8 @@ with tab1:
                  else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in son_df.columns else None)
     sog_tuk    = son_df[_sog_col].sum() if _sog_col else None
 
-    # ── 3 SÜTUN LAYOUT ────────────────────────────────
-    col_left, col_mid, col_right = st.columns([2, 4, 2])
+    # ── 2 SÜTUN LAYOUT — sol KPI + sağ grafik ─────────
+    col_left, col_mid = st.columns([1.6, 5.4])
 
     # ──────────── SÜTUN 1: Stacked metrik kartlar ────────────
     with col_left:
@@ -465,14 +465,16 @@ with tab1:
                 f"letter-spacing:0.5px;'>{alt_bilgi}</div>"
             ) if alt_bilgi else ""
             st.markdown(
-                f"""<div class="metric-card" style="margin-bottom:10px;">
-                <div style='font-size:18px;margin-bottom:2px;'>{ikon}</div>
-                <div style='font-size:8px;color:rgba(150,210,255,0.5);letter-spacing:1px;
-                            text-transform:uppercase;margin-bottom:4px;'>{baslik}</div>
-                <div style='font-family:Orbitron,sans-serif;font-size:17px;font-weight:900;
-                            color:{renk_hex};text-shadow:0 0 12px rgba({r2},{g2},{b2},0.7);'>
-                    {deger}<span style='font-size:8px;color:rgba(150,210,255,0.5);margin-left:3px;'>{birim}</span>
-                </div>{alt_html}</div>""",
+                f"""<div class="metric-card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;text-align:left;">
+                <div style='font-size:20px;flex-shrink:0;'>{ikon}</div>
+                <div style='min-width:0;'>
+                  <div style='font-size:8px;color:rgba(150,210,255,0.5);letter-spacing:1px;
+                              text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>
+                  <div style='font-family:Orbitron,sans-serif;font-size:16px;font-weight:900;
+                              color:{renk_hex};text-shadow:0 0 10px rgba({r2},{g2},{b2},0.6);line-height:1.2;'>
+                      {deger}<span style='font-size:8px;color:rgba(150,210,255,0.5);margin-left:3px;'>{birim}</span>
+                  </div>{alt_html}
+                </div></div>""",
                 unsafe_allow_html=True
             )
 
@@ -1030,57 +1032,60 @@ with tab1:
             else:
                 st.info("Kojen verisi bulunamadı.")
 
-    # ──────────── SÜTUN 3: Kojen Doğalgaz & Kaynak Verileri ────────────
-    with col_right:
-        st.markdown('<div class="sec">⚙️ KOJEN & KAYNAK</div>', unsafe_allow_html=True)
+    # ──────────── KOJEN & KAYNAK — tam genişlik yatay grid ────────────
+    kgaz_str   = f"{kojen_gaz:,.1f}"  if kojen_gaz  is not None else "—"
+    kurt_str   = f"{kojen_urt:,.0f}"  if kojen_urt  is not None else "—"
+    kzan_str   = f"{kazan_gaz:,.1f}"  if kazan_gaz  is not None else "—"
+    su_str     = f"{su_tuk:,.1f}"     if su_tuk     is not None else "—"
+    sebeke_str = f"{sebeke_tuk:,.0f}" if sebeke_tuk is not None else "—"
+    mcc_str    = f"{mcc_tuk:,.0f}"    if mcc_tuk   is not None else "—"
 
-        def info_card(ikon, baslik, deger, birim, renk_hex):
-            r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
-            st.markdown(
-                f"""<div class="metric-card" style="margin-bottom:10px;">
-                <div style='font-size:16px;margin-bottom:2px;'>{ikon}</div>
-                <div style='font-size:8px;color:rgba(150,210,255,0.5);letter-spacing:1px;
-                            text-transform:uppercase;margin-bottom:4px;'>{baslik}</div>
-                <div style='font-family:Orbitron,sans-serif;font-size:15px;font-weight:900;
-                            color:{renk_hex};text-shadow:0 0 10px rgba({r2},{g2},{b2},0.6);'>
-                    {deger}<span style='font-size:8px;color:rgba(150,210,255,0.5);margin-left:3px;'>{birim}</span>
-                </div></div>""",
-                unsafe_allow_html=True
-            )
+    def _kaynak_item(ikon, baslik, deger, birim, renk_hex):
+        r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
+        return (
+            f"<div style='background:rgba(15,23,42,0.4);border:1px solid rgba(255,255,255,0.06);"
+            f"border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;backdrop-filter:blur(8px);'>"
+            f"<div style='font-size:18px;flex-shrink:0;'>{ikon}</div>"
+            f"<div>"
+            f"<div style='font-size:8px;color:rgba(150,210,255,0.5);letter-spacing:1px;"
+            f"text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>"
+            f"<div style='font-family:Orbitron,sans-serif;font-size:14px;font-weight:900;"
+            f"color:{renk_hex};text-shadow:0 0 8px rgba({r2},{g2},{b2},0.5);line-height:1.2;'>"
+            f"{deger}<span style='font-size:8px;color:rgba(150,210,255,0.4);margin-left:3px;'>{birim}</span>"
+            f"</div></div></div>"
+        )
 
-        kgaz_str   = f"{kojen_gaz:,.1f}"  if kojen_gaz  is not None else "—"
-        kurt_str   = f"{kojen_urt:,.0f}"  if kojen_urt  is not None else "—"
-        kzan_str   = f"{kazan_gaz:,.1f}"  if kazan_gaz  is not None else "—"
-        su_str     = f"{su_tuk:,.1f}"     if su_tuk     is not None else "—"
-        sebeke_str = f"{sebeke_tuk:,.0f}" if sebeke_tuk is not None else "—"
-        mcc_str    = f"{mcc_tuk:,.0f}"    if mcc_tuk   is not None else "—"
+    st.markdown('<div class="sec">⚙️ KOJEN & KAYNAK</div>', unsafe_allow_html=True)
 
-        info_card("🔥", "Kojen Doğalgaz", kgaz_str,   "m³",  "#f97316")
-        info_card("⚙️", "Kojen Üretim",  kurt_str,   "kWh", "#10b981")
-        info_card("🏭", "Kazan Doğalgaz", kzan_str,   "m³",  "#ef4444")
-        info_card("💧", "Su Tüketimi",    su_str,     "m³",  "#38bdf8")
-        info_card("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#a855f7")
-        info_card("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#f59e0b")
+    _kaynak_items = [
+        _kaynak_item("🔥", "Kojen Doğalgaz", kgaz_str,   "m³",  "#f97316"),
+        _kaynak_item("⚙️", "Kojen Üretim",   kurt_str,   "kWh", "#10b981"),
+        _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str,   "m³",  "#ef4444"),
+        _kaynak_item("💧", "Su Tüketimi",    su_str,     "m³",  "#38bdf8"),
+        _kaynak_item("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#a855f7"),
+        _kaynak_item("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#f59e0b"),
+    ]
 
-        # ── TRDP Kırılımı (sadece Maslak) ──
-        if lok_id == "maslak":
-            trdp1_val = son_df["TRDP1_kWh"].sum() if "TRDP1_kWh" in son_df.columns else None
-            trdp2_val = son_df["TRDP2_kWh"].sum() if "TRDP2_kWh" in son_df.columns else None
-            trdp3_val = son_df["TRDP3_kWh"].sum() if "TRDP3_kWh" in son_df.columns else None
-            trdp4_val = son_df["TRDP4_kWh"].sum() if "TRDP4_kWh" in son_df.columns else None
-            st.markdown(
-                "<div style='font-size:8px;color:rgba(150,210,255,0.4);letter-spacing:1px;"
-                "text-transform:uppercase;margin:8px 0 4px 0;'>⚡ TRDP Trafo Kırılımı</div>",
-                unsafe_allow_html=True
-            )
-            t1_str = f"{trdp1_val:,.0f}" if trdp1_val else "—"
-            t2_str = f"{trdp2_val:,.0f}" if trdp2_val else "—"
-            t3_str = f"{trdp3_val:,.0f}" if trdp3_val else "—"
-            t4_str = f"{trdp4_val:,.0f}" if trdp4_val else "—"
-            info_card("🔹", "TRDP-1 (Bina Yükü)",    t1_str, "kWh", "#06b6d4")
-            info_card("🔸", "TRDP-2 (Mekanik)",       t2_str, "kWh", "#f59e0b")
-            info_card("🔹", "TRDP-3 (Bina Yükü)",    t3_str, "kWh", "#06b6d4")
-            info_card("🔸", "TRDP-4 (Mekanik)",       t4_str, "kWh", "#f59e0b")
+    # ── TRDP Kırılımı (sadece Maslak) ──
+    if lok_id == "maslak":
+        trdp1_val = son_df["TRDP1_kWh"].sum() if "TRDP1_kWh" in son_df.columns else None
+        trdp2_val = son_df["TRDP2_kWh"].sum() if "TRDP2_kWh" in son_df.columns else None
+        trdp3_val = son_df["TRDP3_kWh"].sum() if "TRDP3_kWh" in son_df.columns else None
+        trdp4_val = son_df["TRDP4_kWh"].sum() if "TRDP4_kWh" in son_df.columns else None
+        _kaynak_items += [
+            _kaynak_item("🔹", "TRDP-1 (Bina)", f"{trdp1_val:,.0f}" if trdp1_val else "—", "kWh", "#06b6d4"),
+            _kaynak_item("🔸", "TRDP-2 (Mek.)", f"{trdp2_val:,.0f}" if trdp2_val else "—", "kWh", "#f59e0b"),
+            _kaynak_item("🔹", "TRDP-3 (Bina)", f"{trdp3_val:,.0f}" if trdp3_val else "—", "kWh", "#06b6d4"),
+            _kaynak_item("🔸", "TRDP-4 (Mek.)", f"{trdp4_val:,.0f}" if trdp4_val else "—", "kWh", "#f59e0b"),
+        ]
+
+    _cols_count = 4 if lok_id == "maslak" else 3
+    _grid_items = "".join(_kaynak_items)
+    st.markdown(
+        f"<div style='display:grid;grid-template-columns:repeat({_cols_count},1fr);gap:10px;margin-bottom:8px;'>"
+        f"{_grid_items}</div>",
+        unsafe_allow_html=True
+    )
 
     # ══════════════════════════════════════════════════════
     # HVAC & BAKIM DURUMU
