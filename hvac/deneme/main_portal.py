@@ -1267,10 +1267,16 @@ class HVACAnalyzer:
 
         # Heating mode recommendations
         else:
+            set_point = profile.temperatures.setpoint
+
+            # SAT zaten setpoint üzerindeyse öneri yönü tersine: düşür
+            if set_point is not None and current_sat > set_point:
+                return max(round(set_point - 1.0, 1), sat_cool_max)
+
             # SAT too low - recommend target (middle of sat_heat_min - sat_heat_max)
             if rule == "NOT_HEATING" or sat_status == "NOT_HEATING":
                 return (sat_heat_min + sat_heat_max) / 2
-            elif rule == "SAT_HIGH" or "SAT Yüksek" in str(sat_status):
+            elif rule == "SAT_HIGH":
                 # SAT too high - recommend middle of heating range
                 return (sat_heat_min + sat_heat_max) / 2
             elif rule == "HEAT_EFF_LOW":
@@ -1686,7 +1692,7 @@ class HVACAnalyzer:
             result.departure = delta_t - target_dt
 
         # Chiller, Kazan ve Kolektörler vana ile kontrol edilmez (veya farklı mantık), bu yüzden STANDBY'a düşmemeli
-        SKIP_STANDBY_TYPES = ["CHILLER", "KAZAN", "KOLLEKTOR", "COLLECTOR", "POMPA", "PUMP"]
+        SKIP_STANDBY_TYPES = ["CHILLER", "KAZAN", "KOLLEKTOR", "COLLECTOR", "POMPA", "PUMP", "HEAT_EXCHANGER", "HEAT EXCHANGER"]
         eq_type_upper = profile.type.upper() if profile.type else ""
 
         cooling_valve = profile.valves.cooling if profile.valves.cooling is not None else 0
@@ -1707,8 +1713,9 @@ class HVACAnalyzer:
             return result
 
         # AUTO + vanalar kapalı → STANDBY (talep bekliyor)
+        # < 0.5 toleransı: sahadan gelen gürültü/kalibrasyon sürüklenmesi için
         if (not any(t in eq_type_upper for t in SKIP_STANDBY_TYPES)) and \
-           mode_upper == "AUTO" and cooling_valve == 0 and heating_valve == 0:
+           mode_upper == "AUTO" and cooling_valve < 0.5 and heating_valve < 0.5:
             result.status = "STANDBY"
             result.action = "Bekleme Modu"
             result.reason = "Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor."
@@ -2031,8 +2038,12 @@ class HVACAnalyzer:
                 result.reason = f"ΔT ({delta_t:.1f}°C) < Hedef ({target_dt:.1f}°C)"
                 result.rule = "BAND_LOW"
             elif result.status == "HIGH":
-                result.action = "ΔT Hedef Üstünde - Akış Artır"
-                result.reason = f"ΔT ({delta_t:.1f}°C) > Hedef ({target_dt:.1f}°C)"
+                if eq_type == EquipmentType.HEAT_EXCHANGER:
+                    result.action = "Yüksek ΔT - Akış Azalt / Pompa Hızını Kontrol Et"
+                    result.reason = f"ΔT ({delta_t:.1f}°C) > Hedef ({target_dt:.1f}°C) — ısı eşanjörü akışı fazla kısılmış olabilir"
+                else:
+                    result.action = "ΔT Hedef Üstünde - Akış Artır"
+                    result.reason = f"ΔT ({delta_t:.1f}°C) > Hedef ({target_dt:.1f}°C)"
                 result.rule = "BAND_HIGH"
             elif result.status == "IN_BAND":
                 result.action = "Normal"
