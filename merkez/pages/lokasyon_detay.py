@@ -270,18 +270,42 @@ else:
     son_tarih_str = dun
 
 # ── Header ───────────────────────────────────────────
+_bagli = not df.empty
+_bagli_html = (
+    f"<span style='background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.35);"
+    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#10b981;font-weight:600;'>🟢 Bağlı</span>"
+    if _bagli else
+    f"<span style='background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.35);"
+    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#ef4444;font-weight:600;'>🔴 Veri Yok</span>"
+)
+_son_tarih_goster = son_tarih_str if _bagli else "—"
+_m2_goster = f"{m2:,.0f}".replace(",", ".")
+
 col_geri, col_baslik = st.columns([1, 9])
 with col_geri:
     if st.button("⬅ Geri"):
         st.switch_page("app_merkez.py")
 with col_baslik:
     st.markdown(
-        f"""<div style='padding:8px 0;'>
-        <div style='font-family:Orbitron,sans-serif;font-size:8px;color:rgba(0,212,255,0.45);
-                    letter-spacing:5px;text-transform:uppercase;'>ACIBADEM SAĞLIK GRUBU — LOKASYON DETAY</div>
-        <div style='font-family:Orbitron,sans-serif;font-size:22px;font-weight:900;
-                    color:{renk};text-shadow:0 0 25px rgba({rr},{rg},{rb},0.8);
-                    letter-spacing:3px;'>{lok_info["isim"].upper()}</div>
+        f"""<div style='display:flex;align-items:center;justify-content:space-between;padding:8px 0;flex-wrap:wrap;gap:8px;'>
+          <div>
+            <div style='font-family:Orbitron,sans-serif;font-size:8px;color:rgba(0,212,255,0.45);
+                        letter-spacing:5px;text-transform:uppercase;'>ACIBADEM SAĞLIK GRUBU — LOKASYON DETAY</div>
+            <div style='font-family:Orbitron,sans-serif;font-size:22px;font-weight:900;
+                        color:{renk};text-shadow:0 0 25px rgba({rr},{rg},{rb},0.8);
+                        letter-spacing:3px;'>{lok_info["isim"].upper()}</div>
+          </div>
+          <div style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>
+            <span style='background:rgba({rr},{rg},{rb},0.1);border:1px solid rgba({rr},{rg},{rb},0.3);
+                         border-radius:6px;padding:2px 10px;font-size:10px;color:{renk};font-weight:600;'>
+              📐 {_m2_goster} m²
+            </span>
+            <span style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);
+                         border-radius:6px;padding:2px 10px;font-size:10px;color:rgba(0,212,255,0.7);font-weight:600;'>
+              📅 Son: {_son_tarih_goster}
+            </span>
+            {_bagli_html}
+          </div>
         </div>""",
         unsafe_allow_html=True
     )
