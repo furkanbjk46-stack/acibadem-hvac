@@ -852,7 +852,6 @@ def hvac_analiz_calistir() -> dict | None:
     try:
         import openpyxl
         from openpyxl.styles import PatternFill, Font
-        from datetime import datetime as _dt
 
         # Tüm nokta tiplerini topla (sütun başlıkları)
         tum_nokta_tipleri = sorted({
@@ -900,8 +899,7 @@ def hvac_analiz_calistir() -> dict | None:
                     for col in range(1, 4):
                         ws_enerji.cell(row=ws_enerji.max_row, column=col).fill = none_fill
 
-        zaman_str = _dt.now().strftime("%Y%m%d_%H%M")
-        debug_dosya = os.path.join(BASE_DIR, f"bacnet_ham_veriler_{zaman_str}.xlsx")
+        debug_dosya = os.path.join(BASE_DIR, "bacnet_ham_veriler.xlsx")
         wb_debug.save(debug_dosya)
         logger.info("Ham BACnet verileri kaydedildi: %s", debug_dosya)
     except Exception as _e:
