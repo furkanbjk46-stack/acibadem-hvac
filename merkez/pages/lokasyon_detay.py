@@ -21,78 +21,173 @@ st.set_page_config(
 # ── CSS ──────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
-html, body, [data-testid="stAppViewContainer"] {
-    background: #162d47 !important;
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Playfair+Display:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
+
+/* ── ARKA PLAN — app_merkez ile aynı ── */
+html, body, [data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] > div:first-child,
+[data-testid="stAppViewContainer"] > div:first-child > div:first-child {
+    background-color: #060b14 !important;
+    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
-[data-testid="stAppViewContainer"] {
-    background: radial-gradient(ellipse at 50% 40%, #1a3555 0%, #162d47 70%) !important;
-}
-[data-testid="stHeader"]                  { background: transparent !important; }
-[data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
-[data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
-section[data-testid="stSidebarCollapsedControl"] { display: none !important; }
-.stSidebarCollapsedControl               { display: none !important; }
-button[kind="header"]                    { display: none !important; }
-#MainMenu                                { display: none !important; }
-header[data-testid="stHeader"] button    { display: none !important; }
-* { font-family: 'Inter', sans-serif; }
-/* Streamlit Material ikon istisnası */
+[data-testid="stHeader"]          { background: transparent !important; }
+[data-testid="stToolbar"]         { display: none !important; }
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapsedControl"],
+section[data-testid="stSidebarCollapsedControl"],
+.stSidebarCollapsedControl,
+button[kind="header"],
+#MainMenu,
+header[data-testid="stHeader"] button { display: none !important; visibility: hidden !important; }
+
+/* ── GENEL YAZI ── */
+* { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; }
 span[data-testid="stIconMaterial"],
 [data-testid="stExpanderToggleIcon"] span,
 button span[data-testid="stIconMaterial"] {
     font-family: 'Material Symbols Rounded' !important;
 }
+p, li, span, div { color: rgba(200,225,255,0.85); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
+
+/* ── BÖLÜM BAŞLIĞI ── */
 .sec {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 9px; font-weight: 700;
-    color: rgba(0,212,255,0.5);
-    letter-spacing: 3px; text-transform: uppercase;
+    font-family: 'Playfair Display', 'Plus Jakarta Sans', serif;
+    font-size: 10px; font-weight: 700;
+    color: rgba(56,189,248,0.7);
+    letter-spacing: 2px; text-transform: uppercase;
     padding: 4px 0 8px; margin-top: 16px;
-    border-bottom: 1px solid rgba(0,212,255,0.12);
+    border-bottom: 1px solid rgba(56,189,248,0.15);
 }
+
+/* ── METRIC KART ── */
 .metric-card {
-    background: rgba(14,42,85,0.85);
-    border: 1px solid rgba(0,212,255,0.28);
+    background: rgba(15,23,42,0.4);
+    border: 1px solid rgba(255,255,255,0.05);
     border-radius: 12px;
     padding: 16px;
     text-align: center;
+    backdrop-filter: blur(8px);
 }
+[data-testid="stMetricValue"]  {
+    color: #38bdf8 !important;
+    font-size: 22px !important;
+    font-weight: 800 !important;
+    font-family: 'Playfair Display','Plus Jakarta Sans',serif !important;
+    text-shadow: 0 0 15px rgba(56,189,248,0.5) !important;
+}
+[data-testid="stMetricLabel"]  {
+    color: rgba(150,210,255,0.7) !important;
+    font-size: 10px !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+}
+[data-testid="metric-container"] {
+    background: rgba(15,23,42,0.4) !important;
+    border: 1px solid rgba(255,255,255,0.05) !important;
+    border-radius: 12px !important;
+    padding: 14px !important;
+    backdrop-filter: blur(8px) !important;
+}
+
+/* ── TABS ── */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
-    background: rgba(14,42,85,0.65);
-    border-radius: 10px; padding: 4px; gap: 4px;
+    background: transparent;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    gap: 0;
 }
 [data-testid="stTabs"] [data-baseweb="tab"] {
-    color: rgba(160,200,255,0.6);
-    border-radius: 8px; font-weight: 600;
+    background: transparent;
+    color: rgba(150,200,255,0.5);
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 2px solid transparent;
+    padding: 10px 20px;
+    transition: color 0.2s;
+}
+[data-testid="stTabs"] [data-baseweb="tab"]:hover {
+    color: rgba(56,189,248,0.85);
 }
 [data-testid="stTabs"] [aria-selected="true"] {
-    background: rgba(0,212,255,0.22) !important;
-    color: #00d4ff !important;
+    background: transparent !important;
+    color: #38bdf8 !important;
+    box-shadow: inset 0 -2px 0 #38bdf8, 0 2px 8px rgba(56,189,248,0.3) !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+    background-color: #38bdf8 !important;
+    box-shadow: 0 -2px 8px rgba(56,189,248,0.5) !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] {
-    background: rgba(10,30,62,0.6);
-    border-radius: 12px; padding: 20px;
-    border: 1px solid rgba(0,212,255,0.15);
+    background: rgba(15,23,42,0.4);
+    border-radius: 0 0 12px 12px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-top: none;
+    backdrop-filter: blur(8px);
 }
-.stDataFrame thead tr th {
-    background: rgba(8,65,148,0.95) !important;
-    color: #fff !important; font-weight:700 !important;
-}
-.stDataFrame tbody tr td {
-    background: rgba(18,44,88,0.85) !important;
-    color: #d8eeff !important;
-    border-bottom: 1px solid rgba(80,130,220,0.15) !important;
-}
+
+/* ── BUTONLAR ── */
 .stButton > button {
-    background: rgba(0,212,255,0.1) !important;
-    color: #00d4ff !important;
-    border: 1px solid rgba(0,212,255,0.3) !important;
+    background: rgba(14,165,233,0.15) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(14,165,233,0.3) !important;
     border-radius: 10px !important;
     font-weight: 600 !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    transition: all 0.2s !important;
 }
 .stButton > button:hover {
-    background: rgba(0,212,255,0.2) !important;
+    background: rgba(14,165,233,0.25) !important;
+    border-color: rgba(14,165,233,0.5) !important;
+}
+
+/* ── DATAFRAME ── */
+.stDataFrame thead tr th {
+    background: rgba(15,23,42,0.9) !important;
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+    border-bottom: 2px solid rgba(56,189,248,0.3) !important;
+}
+.stDataFrame tbody tr td {
+    background: rgba(15,23,42,0.4) !important;
+    color: rgba(200,225,255,0.85) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+}
+.stDataFrame tbody tr:hover td {
+    background: rgba(56,189,248,0.06) !important;
+}
+
+/* ── SELECT / INPUT ── */
+[data-testid="stSelectbox"] > div > div,
+[data-testid="stDateInput"] input,
+[data-testid="stNumberInput"] input {
+    background: rgba(15,23,42,0.6) !important;
+    color: rgba(200,225,255,0.9) !important;
+    border: 1px solid rgba(56,189,248,0.2) !important;
+    border-radius: 8px !important;
+}
+
+/* ── EXPANDER ── */
+[data-testid="stExpander"] {
+    background: rgba(15,23,42,0.4) !important;
+    border: 1px solid rgba(255,255,255,0.05) !important;
+    border-radius: 10px !important;
+}
+[data-testid="stExpanderToggleIcon"] { color: rgba(56,189,248,0.6) !important; }
+
+/* ── AYIRICI ── */
+hr { border-color: rgba(56,189,248,0.1) !important; }
+
+/* ── UYARI / INFO KUTUSU ── */
+[data-testid="stAlert"] {
+    background: rgba(15,23,42,0.5) !important;
+    border: 1px solid rgba(56,189,248,0.2) !important;
+    border-radius: 10px !important;
+    color: rgba(200,225,255,0.85) !important;
 }
 </style>
 """, unsafe_allow_html=True)
