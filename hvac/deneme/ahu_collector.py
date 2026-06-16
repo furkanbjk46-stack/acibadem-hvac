@@ -18,10 +18,14 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR          = os.path.dirname(os.path.abspath(__file__))
 AHU_CONFIG_FILE   = os.path.join(BASE_DIR, "ahu_nokta_konfig.json")
-ENERGY_CONFIG_FILE = os.path.join(BASE_DIR, "enerji_nokta_konfig.json")
 AHU_RESULTS_FILE  = os.path.join(BASE_DIR, "hvac_ahu_analiz_sonuclari.json")
 AHU_TRIGGER_FILE  = os.path.join(BASE_DIR, "hvac_analiz_trigger.txt")
 ENERGY_CSV_TAZELIK_ESIK_SAAT = 3  # bu süreden eski hedefli_enerji_verileri.csv için uyarı
+
+# data_collector.py ile aynı Excel kaynağı — enerji/kolektör/chiller/kazan noktaları
+_ENERGY_EXCEL_CONFIGS = os.path.join(BASE_DIR, "configs", "hedefli_okuma_sablonu_2.xlsx")
+_ENERGY_EXCEL_ROOT    = os.path.join(BASE_DIR, "hedefli_okuma_sablonu_2.xlsx")
+ENERGY_EXCEL_FILE     = _ENERGY_EXCEL_CONFIGS if os.path.exists(_ENERGY_EXCEL_CONFIGS) else _ENERGY_EXCEL_ROOT
 
 MAIN_PORTAL_URL   = "http://localhost:8005/api/recommend_json"
 BACNET_PORT       = 47808
@@ -113,31 +117,28 @@ def build_config_from_excel(excel_path: str) -> list:
 
 
 def load_energy_config() -> list:
-    """Kolektör/Chiller/Kazan nokta konfigürasyonunu JSON dosyasından yükle."""
-    if not os.path.exists(ENERGY_CONFIG_FILE):
-        logger.warning("Enerji nokta konfig dosyası bulunamadı: %s", ENERGY_CONFIG_FILE)
-        logger.warning("Çalıştır: python ahu_collector.py --setup-energy <hedefli_okuma_sablonu_2.xlsx>")
+    """
+    Kolektör/Chiller/Kazan nokta konfigürasyonunu data_collector.py'nin kullandığı
+    aynı Excel dosyasından (hedefli_okuma_sablonu_2.xlsx) doğrudan oku.
+    Ayrı bir JSON konfig dosyası tutulmaz — tek kaynak Excel'dir.
+    """
+    if not os.path.exists(ENERGY_EXCEL_FILE):
+        logger.warning("Enerji Excel dosyası bulunamadı: %s", ENERGY_EXCEL_FILE)
         return []
-    with open(ENERGY_CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def build_energy_config_from_excel(excel_path: str) -> list:
-    """
-    hedefli_okuma_sablonu_2.xlsx formatından kolektör/chiller/kazan nokta konfig
-    JSON üret ve kaydet (enerji_nokta_konfig.json). data_collector.py'nin
-    kullandığı şablonla aynı kolon yapısı: Gateway IP | Network (DNET) |
-    MAC (DADR) | Device Instance ID | Object Type | Object Instance | Point Name
-    """
     try:
         import pandas as pd
     except ImportError:
-        raise RuntimeError("pandas gerekli: pip install pandas openpyxl")
+        logger.warning("pandas/openpyxl yüklü değil — enerji noktaları canlı okunamayacak")
+        return []
 
-    df = pd.read_excel(excel_path)
-    df["Gateway IP"]     = df["Gateway IP"].ffill()
-    df["Network (DNET)"] = df["Network (DNET)"].ffill()
-    df["MAC (DADR)"]     = df["MAC (DADR)"].ffill()
+    try:
+        df = pd.read_excel(ENERGY_EXCEL_FILE)
+        df["Gateway IP"]     = df["Gateway IP"].ffill()
+        df["Network (DNET)"] = df["Network (DNET)"].ffill()
+        df["MAC (DADR)"]     = df["MAC (DADR)"].ffill()
+    except Exception as e:
+        logger.warning("Enerji Excel okunamadı: %s", e)
+        return []
 
     config = []
     for _, row in df.iterrows():
@@ -156,10 +157,6 @@ def build_energy_config_from_excel(excel_path: str) -> list:
         except Exception as e:
             logger.warning("Enerji nokta satırı atlandı (%s): %s", point_name, e)
 
-    with open(ENERGY_CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
-
-    logger.info("Enerji nokta konfig oluşturuldu: %d nokta → %s", len(config), ENERGY_CONFIG_FILE)
     return config
 
 
@@ -270,6 +267,10 @@ def ahu_verileri_oku(config: list) -> dict:
             nokta["gateway_ip"], nokta["dnet"], nokta["mac_hex"],
             nokta["obj_type"], nokta["obj_inst"]
         )
+        # Sıcaklık noktalarında BACnet'ten 0.0 gelmesi sensör arızasına işaret eder
+        # (0°C oda/üfleme sıcaklığı fiziksel olarak imkânsız). Vana değerleri için 0.0 geçerlidir.
+        if deger == 0.0 and nokta["nokta_tipi"].endswith("°C)"):
+            deger = None
         sonuclar[key][nokta["nokta_tipi"]] = deger
         if deger is not None:
             ok += 1
@@ -847,6 +848,63 @@ def hvac_analiz_calistir() -> dict | None:
     # BACnet okuma
     veriler = ahu_verileri_oku(config)
 
+    # Ham BACnet verilerini debug Excel'e yaz
+    try:
+        import openpyxl
+        from openpyxl.styles import PatternFill, Font
+
+        # Tüm nokta tiplerini topla (sütun başlıkları)
+        tum_nokta_tipleri = sorted({
+            pt for nokta_verileri in veriler.values()
+            for pt in nokta_verileri.keys()
+        })
+
+        wb_debug = openpyxl.Workbook()
+        ws_debug = wb_debug.active
+        ws_debug.title = "Ham BACnet Verileri"
+
+        basliklar = ["AHU", "Lokasyon"] + tum_nokta_tipleri
+        ws_debug.append(basliklar)
+
+        # Başlık satırı formatla
+        header_fill = PatternFill("solid", fgColor="1F4E79")
+        for cell in ws_debug[1]:
+            cell.fill = header_fill
+            cell.font = Font(color="FFFFFF", bold=True)
+
+        # None = kırmızı, değer var = beyaz
+        none_fill = PatternFill("solid", fgColor="FFCCCC")
+
+        for (ahu_adi, lokasyon), nokta_verileri in sorted(veriler.items()):
+            satir = [ahu_adi, lokasyon] + [
+                nokta_verileri.get(pt) for pt in tum_nokta_tipleri
+            ]
+            ws_debug.append(satir)
+            row_idx = ws_debug.max_row
+            for col_idx, pt in enumerate(tum_nokta_tipleri, start=3):
+                if nokta_verileri.get(pt) is None:
+                    ws_debug.cell(row=row_idx, column=col_idx).fill = none_fill
+
+        # Enerji verileri — ayrı sheet
+        if enerji_verileri:
+            ws_enerji = wb_debug.create_sheet("Enerji Ham Verileri")
+            ws_enerji.append(["Nokta Adı", "Değer", "Durum"])
+            for cell in ws_enerji[1]:
+                cell.fill = header_fill
+                cell.font = Font(color="FFFFFF", bold=True)
+            for nokta_adi, deger in sorted(enerji_verileri.items()):
+                durum = "OK" if deger is not None else "OKUNAMADI"
+                ws_enerji.append([nokta_adi, deger, durum])
+                if deger is None:
+                    for col in range(1, 4):
+                        ws_enerji.cell(row=ws_enerji.max_row, column=col).fill = none_fill
+
+        debug_dosya = os.path.join(BASE_DIR, "bacnet_ham_veriler.xlsx")
+        wb_debug.save(debug_dosya)
+        logger.info("Ham BACnet verileri kaydedildi: %s", debug_dosya)
+    except Exception as _e:
+        logger.warning("Ham BACnet debug Excel yazılamadı: %s", _e)
+
     # Satırları oluştur (SAT yoksa AHU analiz edilemez)
     rows = []
     eksik = 0
@@ -896,16 +954,11 @@ if __name__ == "__main__":
         print(f"Excel okunuyor: {excel_yolu}")
         cfg = build_config_from_excel(excel_yolu)
         print(f"Konfig oluşturuldu: {len(cfg)} nokta → {AHU_CONFIG_FILE}")
-    elif len(sys.argv) >= 3 and sys.argv[1] == "--setup-energy":
-        excel_yolu = sys.argv[2]
-        print(f"Excel okunuyor: {excel_yolu}")
-        cfg = build_energy_config_from_excel(excel_yolu)
-        print(f"Enerji konfig oluşturuldu: {len(cfg)} nokta → {ENERGY_CONFIG_FILE}")
     else:
         print("Kullanım:")
-        print("  AHU konfig oluştur    : python ahu_collector.py --setup <Book2.xlsx>")
-        print("  Enerji konfig oluştur : python ahu_collector.py --setup-energy <hedefli_okuma_sablonu_2.xlsx>")
+        print("  AHU konfig oluştur : python ahu_collector.py --setup <Book2.xlsx>")
         print("  Analiz çalıştır: import ahu_collector; ahu_collector.hvac_analiz_calistir()")
+        print("  (Enerji/kolektör noktaları otomatik olarak hedefli_okuma_sablonu_2.xlsx'ten okunur)")
         print()
         print("Tek seferlik analiz başlatılıyor...")
         hvac_analiz_calistir()
