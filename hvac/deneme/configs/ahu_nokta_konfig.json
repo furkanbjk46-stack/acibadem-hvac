@@ -647,7 +647,7 @@
     "dnet": 10,
     "mac_hex": "0x0101",
     "obj_type": 2,
-    "obj_inst": 47
+    "obj_inst": 407
   },
   {
     "ahu_adi": "Ahu-17",
@@ -948,56 +948,6 @@
     "mac_hex": "0x010D",
     "obj_type": 2,
     "obj_inst": 426
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 204
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 192
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 149
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 147
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 2,
-    "obj_inst": 1379
   },
   {
     "ahu_adi": "Ahu-24",
