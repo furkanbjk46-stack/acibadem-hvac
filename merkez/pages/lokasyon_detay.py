@@ -192,6 +192,153 @@ hr { border-color: rgba(56,189,248,0.1) !important; }
 </style>
 """, unsafe_allow_html=True)
 
+# ── Animasyonlu Arka Plan: Rüzgar Türbini + Güneş Paneli ──
+st.markdown("""
+<div id="enerji-bg" style="position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;">
+<svg width="100%" height="100%" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"
+     xmlns="http://www.w3.org/2000/svg" style="opacity:1;">
+  <defs>
+    <!-- Güneş paneli ısı shimmer gradyanı -->
+    <radialGradient id="heat1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ff6b00" stop-opacity="0.18"/>
+      <stop offset="60%"  stop-color="#ff9d00" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#ff6b00" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="heat2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#ffcc00" stop-opacity="0.14"/>
+      <stop offset="70%"  stop-color="#ff8800" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#ff6b00" stop-opacity="0"/>
+    </radialGradient>
+    <!-- Türbin glow -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softglow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- RÜZGAR TÜRBİNİ 1  (sağ, büyük)    -->
+  <!-- ═══════════════════════════════════ -->
+  <g transform="translate(1380,520)" opacity="0.22" filter="url(#softglow)">
+    <!-- Kule -->
+    <polygon points="-7,0 7,0 4,-260 -4,-260" fill="rgba(100,180,255,0.6)"/>
+    <!-- Temel -->
+    <ellipse cx="0" cy="2" rx="22" ry="6" fill="rgba(100,180,255,0.3)"/>
+    <!-- Kanatlar — dönen grup -->
+    <g id="turbine1-blades">
+      <animateTransform attributeName="transform" type="rotate"
+        from="0 0 -260" to="360 0 -260" dur="8s" repeatCount="indefinite"/>
+      <!-- Kanat 1 (yukarı) -->
+      <path d="M0,-260 C-4,-340 -2,-400 0,-420 C2,-400 4,-340 0,-260"
+            fill="rgba(150,210,255,0.75)" stroke="rgba(56,189,248,0.4)" stroke-width="0.5"/>
+      <!-- Kanat 2 (sağ alt) -->
+      <path d="M0,-260 C60,-285 110,-295 130,-285 C115,-270 65,-255 0,-260"
+            fill="rgba(150,210,255,0.75)" stroke="rgba(56,189,248,0.4)" stroke-width="0.5"/>
+      <!-- Kanat 3 (sol alt) -->
+      <path d="M0,-260 C-60,-285 -110,-295 -130,-285 C-115,-270 -65,-255 0,-260"
+            fill="rgba(150,210,255,0.75)" stroke="rgba(56,189,248,0.4)" stroke-width="0.5"/>
+      <!-- Göbek -->
+      <circle cx="0" cy="-260" r="8" fill="rgba(56,189,248,0.9)" stroke="rgba(200,240,255,0.5)" stroke-width="1"/>
+    </g>
+  </g>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- RÜZGAR TÜRBİNİ 2  (sol, küçük)    -->
+  <!-- ═══════════════════════════════════ -->
+  <g transform="translate(180,620) scale(0.55)" opacity="0.16" filter="url(#softglow)">
+    <polygon points="-7,0 7,0 4,-260 -4,-260" fill="rgba(100,180,255,0.6)"/>
+    <ellipse cx="0" cy="2" rx="22" ry="6" fill="rgba(100,180,255,0.3)"/>
+    <g id="turbine2-blades">
+      <animateTransform attributeName="transform" type="rotate"
+        from="120 0 -260" to="480 0 -260" dur="11s" repeatCount="indefinite"/>
+      <path d="M0,-260 C-4,-340 -2,-400 0,-420 C2,-400 4,-340 0,-260"
+            fill="rgba(150,210,255,0.75)" stroke="rgba(56,189,248,0.4)" stroke-width="0.5"/>
+      <path d="M0,-260 C60,-285 110,-295 130,-285 C115,-270 65,-255 0,-260"
+            fill="rgba(150,210,255,0.75)" stroke="rgba(56,189,248,0.4)" stroke-width="0.5"/>
+      <path d="M0,-260 C-60,-285 -110,-295 -130,-285 C-115,-270 -65,-255 0,-260"
+            fill="rgba(150,210,255,0.75)" stroke="rgba(56,189,248,0.4)" stroke-width="0.5"/>
+      <circle cx="0" cy="-260" r="8" fill="rgba(56,189,248,0.9)" stroke="rgba(200,240,255,0.5)" stroke-width="1"/>
+    </g>
+  </g>
+
+  <!-- ═══════════════════════════════════════════════ -->
+  <!-- GÜNEŞ PANELİ GRUBU  (sol-orta, yatık açıda)   -->
+  <!-- ═══════════════════════════════════════════════ -->
+  <g transform="translate(60,680) rotate(-12)" opacity="0.18">
+    <!-- Panel çerçevesi -->
+    <rect x="0" y="0" width="220" height="140" rx="4"
+          fill="rgba(8,20,50,0.7)" stroke="rgba(56,189,248,0.3)" stroke-width="1.2"/>
+    <!-- Panel hücreleri (4x3 grid) -->
+    <g stroke="rgba(56,189,248,0.25)" stroke-width="0.8" fill="rgba(10,40,100,0.6)">
+      <rect x="6"   y="6"   width="46" height="38" rx="2"/>
+      <rect x="58"  y="6"   width="46" height="38" rx="2"/>
+      <rect x="110" y="6"   width="46" height="38" rx="2"/>
+      <rect x="162" y="6"   width="52" height="38" rx="2"/>
+      <rect x="6"   y="50"  width="46" height="38" rx="2"/>
+      <rect x="58"  y="50"  width="46" height="38" rx="2"/>
+      <rect x="110" y="50"  width="46" height="38" rx="2"/>
+      <rect x="162" y="50"  width="52" height="38" rx="2"/>
+      <rect x="6"   y="94"  width="46" height="40" rx="2"/>
+      <rect x="58"  y="94"  width="46" height="40" rx="2"/>
+      <rect x="110" y="94"  width="46" height="40" rx="2"/>
+      <rect x="162" y="94"  width="52" height="40" rx="2"/>
+    </g>
+    <!-- Isı shimmer 1 -->
+    <ellipse cx="110" cy="70" rx="130" ry="80" fill="url(#heat1)">
+      <animate attributeName="rx" values="120;145;120" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="ry" values="75;95;75"   dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
+    </ellipse>
+    <!-- Isı shimmer 2 (ofset, farklı hız) -->
+    <ellipse cx="110" cy="70" rx="90" ry="55" fill="url(#heat2)">
+      <animate attributeName="rx" values="85;105;85" dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="ry" values="50;68;50"  dur="2.2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.5;0.9;0.5" dur="2.2s" repeatCount="indefinite"/>
+    </ellipse>
+    <!-- Işık yansıması çizgisi -->
+    <line x1="30" y1="10" x2="190" y2="130" stroke="rgba(255,200,80,0.12)" stroke-width="40"
+          stroke-linecap="round">
+      <animate attributeName="opacity" values="0;0.5;0" dur="4s" repeatCount="indefinite"/>
+    </line>
+  </g>
+
+  <!-- GÜNEŞ PANELİ 2 (sağ alt köşe, küçük) -->
+  <g transform="translate(1290,800) rotate(-10) scale(0.65)" opacity="0.14">
+    <rect x="0" y="0" width="220" height="140" rx="4"
+          fill="rgba(8,20,50,0.7)" stroke="rgba(56,189,248,0.3)" stroke-width="1.2"/>
+    <g stroke="rgba(56,189,248,0.25)" stroke-width="0.8" fill="rgba(10,40,100,0.6)">
+      <rect x="6"   y="6"   width="46" height="38" rx="2"/>
+      <rect x="58"  y="6"   width="46" height="38" rx="2"/>
+      <rect x="110" y="6"   width="46" height="38" rx="2"/>
+      <rect x="162" y="6"   width="52" height="38" rx="2"/>
+      <rect x="6"   y="50"  width="46" height="38" rx="2"/>
+      <rect x="58"  y="50"  width="46" height="38" rx="2"/>
+      <rect x="110" y="50"  width="46" height="38" rx="2"/>
+      <rect x="162" y="50"  width="52" height="38" rx="2"/>
+      <rect x="6"   y="94"  width="46" height="40" rx="2"/>
+      <rect x="58"  y="94"  width="46" height="40" rx="2"/>
+      <rect x="110" y="94"  width="46" height="40" rx="2"/>
+      <rect x="162" y="94"  width="52" height="40" rx="2"/>
+    </g>
+    <ellipse cx="110" cy="70" rx="130" ry="80" fill="url(#heat1)">
+      <animate attributeName="rx" values="120;145;120" dur="3.5s" repeatCount="indefinite"/>
+      <animate attributeName="ry" values="75;95;75"    dur="3.5s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="3.5s" repeatCount="indefinite"/>
+    </ellipse>
+    <line x1="30" y1="10" x2="190" y2="130" stroke="rgba(255,200,80,0.12)" stroke-width="40"
+          stroke-linecap="round">
+      <animate attributeName="opacity" values="0;0.4;0" dur="5s" repeatCount="indefinite"/>
+    </line>
+  </g>
+
+</svg>
+</div>
+""", unsafe_allow_html=True)
+
 # ── Lokasyon bilgileri (app_merkez.py ile senkron) ───────
 HASTANELER = {
     # ── İstanbul ──
