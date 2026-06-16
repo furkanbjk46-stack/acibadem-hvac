@@ -405,7 +405,7 @@ with col_baslik:
         unsafe_allow_html=True
     )
 
-st.markdown("---")
+st.markdown("<div style='height:1px;background:rgba(56,189,248,0.1);margin:8px 0 16px;'></div>", unsafe_allow_html=True)
 
 if df.empty:
     st.warning("Bu lokasyon için veri bulunamadı.")
@@ -564,10 +564,10 @@ with tab1:
             ))
             fig.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#a0c8ff", family="Inter"),
+                font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                 margin=dict(t=4, b=20, l=50, r=10), height=355,
-                xaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True),
-                yaxis=dict(gridcolor="rgba(0,212,255,0.07)", showgrid=True,
+                xaxis=dict(gridcolor="rgba(56,189,248,0.07)", showgrid=True),
+                yaxis=dict(gridcolor="rgba(56,189,248,0.07)", showgrid=True,
                            title=dict(text="kWh", font=dict(size=10))),
             )
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
@@ -619,11 +619,11 @@ with tab1:
                 ))
                 fig_ch.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=10,b=20,l=50,r=50), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
                     yaxis=dict(title=dict(text="Set °C", font=dict(size=10)),
-                               gridcolor="rgba(0,212,255,0.07)"),
+                               gridcolor="rgba(56,189,248,0.07)"),
                     yaxis2=dict(title=dict(text="Dış Hava °C", font=dict(size=10)),
                                 overlaying="y", side="right"),
                     legend=dict(orientation="h", y=1.12, font=dict(size=10)),
@@ -647,10 +647,10 @@ with tab1:
                 ))
                 fig_v.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                                title=dict(text="kWh/m²", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_v, use_container_width=True, config={"displayModeBar": False})
@@ -671,10 +671,10 @@ with tab1:
                 ))
                 fig_su.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                                title=dict(text="m³", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_su, use_container_width=True, config={"displayModeBar": False})
@@ -694,10 +694,10 @@ with tab1:
                 ))
                 fig_sb.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_sb, use_container_width=True, config={"displayModeBar": False})
@@ -718,10 +718,10 @@ with tab1:
                 ))
                 fig_mcc.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_mcc, use_container_width=True, config={"displayModeBar": False})
@@ -744,10 +744,10 @@ with tab1:
                 ))
                 fig_sog.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_sog, use_container_width=True, config={"displayModeBar": False})
@@ -768,10 +768,10 @@ with tab1:
                 ))
                 fig_kaz.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                                title=dict(text="m³", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_kaz, use_container_width=True, config={"displayModeBar": False})
@@ -803,10 +803,10 @@ with tab1:
                 ))
                 fig_ay.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=30,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)", title="Gün"),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)", title=dict(text="kWh", font=dict(size=10))),
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)", title="Gün"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)", title=dict(text="kWh", font=dict(size=10))),
                     barmode="group",
                     legend=dict(orientation="h", y=1.1, font=dict(size=10)),
                 )
@@ -856,10 +856,10 @@ with tab1:
                     ))
                 fig_dv.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                                title=dict(text="kWh / m³ gaz", font=dict(size=10))),
                     legend=dict(orientation="h", y=1.1, font=dict(size=10)),
                 )
@@ -955,7 +955,7 @@ with tab1:
                     ))
                     fig.update_layout(
                         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                        font=dict(color="#a0c8ff", family="Inter"),
+                        font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                         margin=dict(t=52, b=28, l=10, r=10), height=360,
                         showlegend=False,
                         annotations=[dict(
@@ -1016,10 +1016,10 @@ with tab1:
                     ))
                 fig_kj.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Inter"),
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
                     margin=dict(t=10,b=20,l=50,r=50), height=370,
-                    xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
-                    yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                     yaxis2=dict(title=dict(text="m³", font=dict(size=10)),
                                 overlaying="y", side="right"),
@@ -1263,11 +1263,11 @@ with tab2:
             ))
         fig_tr.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#a0c8ff", family="Inter"),
+            font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
             margin=dict(t=10,b=30,l=60,r=10), height=300,
-            xaxis=dict(gridcolor="rgba(0,212,255,0.07)", tickvals=list(range(1,13)),
+            xaxis=dict(gridcolor="rgba(56,189,248,0.07)", tickvals=list(range(1,13)),
                        ticktext=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"]),
-            yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+            yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                        title=dict(text="kWh", font=dict(size=10))),
             legend=dict(orientation="h", y=1.1, font=dict(size=11)),
         )
@@ -1289,10 +1289,10 @@ with tab2:
         ))
         fig_v.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#a0c8ff", family="Inter"),
+            font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
             margin=dict(t=10,b=30,l=50,r=10), height=220,
-            xaxis=dict(gridcolor="rgba(0,212,255,0.07)"),
-            yaxis=dict(gridcolor="rgba(0,212,255,0.07)",
+            xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+            yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
                        title=dict(text="kWh/m²", font=dict(size=10))),
         )
         st.plotly_chart(fig_v, use_container_width=True, config={"displayModeBar": False})
