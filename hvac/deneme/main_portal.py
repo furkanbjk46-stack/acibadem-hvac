@@ -2038,7 +2038,7 @@ class HVACAnalyzer:
                 result.reason = f"ΔT ({delta_t:.1f}°C) < Hedef ({target_dt:.1f}°C)"
                 result.rule = "BAND_LOW"
             elif result.status == "HIGH":
-                if eq_type == EquipmentType.HEAT_EXCHANGER:
+                if profile.type and "heat" in profile.type.lower() and "exchanger" in profile.type.lower():
                     result.action = "Yüksek ΔT - Akış Azalt / Pompa Hızını Kontrol Et"
                     result.reason = f"ΔT ({delta_t:.1f}°C) > Hedef ({target_dt:.1f}°C) — ısı eşanjörü akışı fazla kısılmış olabilir"
                 else:
