@@ -260,7 +260,24 @@ if not lok_id or lok_id not in HASTANELER:
 
 lok_info = HASTANELER[lok_id]
 renk     = lok_info["renk"]
-m2       = lok_info.get("m2", 10000)
+
+# m² — önce Supabase ayarlar tablosundan al, yoksa HASTANELER dict'indeki sabit değer
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_m2_detay(url, key):
+    try:
+        from supabase import create_client
+        import json as _j
+        c = create_client(url, key)
+        r = c.table("ayarlar").select("value").eq("key", "m2_degerler").execute()
+        if r.data:
+            return _j.loads(r.data[0]["value"])
+    except Exception:
+        pass
+    return {}
+
+_m2_sb = fetch_m2_detay(url, key)
+m2 = int(_m2_sb.get(lok_id, lok_info.get("m2", 10000)))
+
 rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
 
 # ── Veri çek ────────────────────────────────────────
