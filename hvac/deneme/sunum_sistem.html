@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SYNAPSE — Sistem Sunumu</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;background:#060b14;overflow:hidden;font-family:'Plus Jakarta Sans',sans-serif;color:#e0f2fe;}
+
+/* ── SLIDE CONTAINER ── */
+.deck{position:relative;width:100vw;height:100vh;overflow:hidden;}
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  padding:48px 64px;
+  opacity:0;pointer-events:none;
+  transition:opacity .55s ease, transform .55s ease;
+  transform:translateX(60px);
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0);}
+.slide.exit{opacity:0;transform:translateX(-60px);}
+
+/* ── GLOBAL BG ── */
+#global-bg{position:fixed;inset:0;pointer-events:none;z-index:0;}
+.slide-content{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;}
+
+/* ── NAV ── */
+.nav{
+  position:fixed;bottom:32px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:16px;z-index:100;
+  background:rgba(6,11,20,0.7);border:1px solid rgba(56,189,248,0.2);
+  border-radius:40px;padding:10px 24px;backdrop-filter:blur(12px);
+}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(56,189,248,0.3);cursor:pointer;transition:.3s;}
+.dot.on{background:#00e5ff;box-shadow:0 0 8px #00e5ff;}
+.nav-btn{
+  background:none;border:1px solid rgba(56,189,248,0.3);color:rgba(56,189,248,0.8);
+  border-radius:20px;padding:4px 14px;cursor:pointer;font-size:12px;
+  font-family:'Plus Jakarta Sans',sans-serif;transition:.2s;
+}
+.nav-btn:hover{background:rgba(56,189,248,0.12);border-color:#00e5ff;color:#fff;}
+.slide-counter{font-family:'Orbitron',monospace;font-size:10px;color:rgba(56,189,248,0.5);min-width:40px;text-align:center;}
+
+/* ── TYPOGRAPHY ── */
+.tag{
+  font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:3px;
+  color:rgba(0,229,255,0.7);margin-bottom:10px;text-transform:uppercase;
+}
+h1{font-family:'Orbitron',monospace;font-size:52px;font-weight:900;line-height:1.1;
+   color:#fff;text-shadow:0 0 40px rgba(0,229,255,0.4);}
+h2{font-family:'Orbitron',monospace;font-size:28px;font-weight:700;color:#fff;
+   text-shadow:0 0 20px rgba(0,229,255,0.3);margin-bottom:6px;}
+h3{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:#38bdf8;letter-spacing:1.5px;}
+.sub{font-size:15px;color:rgba(180,220,255,0.65);line-height:1.6;max-width:640px;}
+.accent{color:#00e5ff;}
+.green{color:#10b981;}
+.orange{color:#f59e0b;}
+.purple{color:#a855f7;}
+.red{color:#ef4444;}
+
+/* ── CARDS ── */
+.card{
+  background:rgba(13,21,39,0.75);border:1px solid rgba(56,189,248,0.15);
+  border-radius:14px;padding:20px 22px;backdrop-filter:blur(8px);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+.card-sm{
+  background:rgba(13,21,39,0.6);border:1px solid rgba(56,189,248,0.12);
+  border-radius:10px;padding:14px 16px;
+}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:linear-gradient(90deg,rgba(0,229,255,0.5),rgba(0,229,255,0.05));
+  margin:14px 0;}
+
+/* ── GRID LAYOUTS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}
+.row{display:flex;align-items:center;gap:12px;}
+
+/* ── BADGE ── */
+.badge{
+  display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;
+  font-family:'Orbitron',monospace;letter-spacing:1px;
+}
+.badge-blue{background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);color:#38bdf8;}
+.badge-green{background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);color:#10b981;}
+.badge-orange{background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);color:#f59e0b;}
+.badge-purple{background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.35);color:#a855f7;}
+
+/* ── CONNECTOR ── */
+.conn{display:flex;align-items:center;justify-content:center;color:rgba(56,189,248,0.4);font-size:20px;}
+
+/* ── ANIMATED ENTRANCE ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.slide.active .anim-1{animation:fadeUp .5s ease .1s both;}
+.slide.active .anim-2{animation:fadeUp .5s ease .25s both;}
+.slide.active .anim-3{animation:fadeUp .5s ease .4s both;}
+.slide.active .anim-4{animation:fadeUp .5s ease .55s both;}
+.slide.active .anim-5{animation:fadeUp .5s ease .7s both;}
+.slide.active .anim-6{animation:fadeUp .5s ease .85s both;}
+
+/* ── PULSE ── */
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,255,0.4);}50%{box-shadow:0 0 0 8px rgba(0,229,255,0);}}
+.pulse{animation:pulse 2.5s infinite;}
+
+/* ── GLOW LINE ── */
+@keyframes glowLine{0%{width:0;}100%{width:100%;}}
+.glow-line{height:2px;background:linear-gradient(90deg,#00e5ff,#38bdf8,rgba(56,189,248,0.1));
+  border-radius:2px;margin:8px 0;}
+.slide.active .glow-line{animation:glowLine .8s ease .3s both;}
+
+/* ── SCREEN MOCKUP ── */
+.screen{
+  background:#0a0f1e;border:1px solid rgba(56,189,248,0.25);border-radius:10px;
+  overflow:hidden;position:relative;
+}
+.screen-bar{height:24px;background:rgba(6,11,20,0.9);border-bottom:1px solid rgba(56,189,248,0.15);
+  display:flex;align-items:center;padding:0 10px;gap:6px;}
+.dot-r{width:7px;height:7px;border-radius:50%;background:#ef4444;}
+.dot-y{width:7px;height:7px;border-radius:50%;background:#f59e0b;}
+.dot-g{width:7px;height:7px;border-radius:50%;background:#10b981;}
+.screen-title{font-family:'Orbitron',monospace;font-size:7px;color:rgba(56,189,248,0.5);margin-left:8px;letter-spacing:1.5px;}
+
+/* ── FLOW ARROW ── */
+.arrow-down{text-align:center;font-size:24px;color:rgba(56,189,248,0.5);line-height:1;}
+
+/* ── STATUS DOT ── */
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+.online{background:#10b981;box-shadow:0 0 6px #10b981;}
+.warning{background:#f59e0b;box-shadow:0 0 6px #f59e0b;}
+.offline{background:#ef4444;box-shadow:0 0 6px #ef4444;}
+
+/* ── FLOW DIAGRAM ── */
+.flow-node{
+  border-radius:10px;padding:12px 16px;text-align:center;
+  font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:1px;
+}
+.flow-arrow{font-size:28px;color:rgba(56,189,248,0.4);display:flex;align-items:center;justify-content:center;}
+
+/* ── HEADER ── */
+.slide-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:28px;
+}
+.logo-txt{font-family:'Orbitron',monospace;font-size:11px;font-weight:700;
+  color:rgba(56,189,248,0.5);letter-spacing:3px;}
+</style>
+</head>
+<body>
+
+<!-- GLOBAL BACKGROUND -->
+<div id="global-bg">
+<svg width="100%" height="100%" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="g1" cx="38%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#065f46" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="fg" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="gc"><circle cx="800" cy="450" r="320"/></clipPath>
+  </defs>
+  <!-- Globe -->
+  <g opacity="0.09">
+    <circle cx="800" cy="450" r="338" fill="none" stroke="rgba(14,165,233,0.3)" stroke-width="1.2"/>
+    <circle cx="800" cy="450" r="320" fill="url(#g1)"/>
+    <g clip-path="url(#gc)" stroke="rgba(56,189,248,0.18)" stroke-width="0.6" fill="none">
+      <ellipse cx="800" cy="450" rx="320" ry="55"/>
+      <ellipse cx="800" cy="450" rx="320" ry="140"/>
+      <ellipse cx="800" cy="450" rx="320" ry="230"/>
+      <ellipse cx="800" cy="450" rx="160" ry="320"/>
+      <ellipse cx="800" cy="450" rx="160" ry="320" transform="rotate(45,800,450)"/>
+      <ellipse cx="800" cy="450" rx="160" ry="320" transform="rotate(90,800,450)"/>
+      <ellipse cx="800" cy="450" rx="160" ry="320" transform="rotate(135,800,450)"/>
+    </g>
+    <g clip-path="url(#gc)" fill="url(#g2)" stroke="rgba(16,185,129,0.25)" stroke-width="0.7">
+      <path d="M720,330 C745,318 808,312 862,322 C908,332 935,360 924,393 C912,425 882,443 852,448 C822,453 793,447 769,432 C739,414 714,390 706,368 C696,344 707,340 720,330Z"/>
+      <path d="M775,458 C793,448 822,451 841,463 C857,474 860,502 852,530 C844,556 826,572 805,575 C782,577 764,560 756,537 C746,510 748,472 775,458Z"/>
+      <path d="M602,318 C618,306 638,308 649,325 C659,340 657,364 644,380 C630,398 610,404 594,394 C577,382 570,358 574,338 C578,320 588,328 602,318Z"/>
+      <path d="M940,494 C956,486 976,489 985,504 C994,520 989,542 975,551 C960,560 941,555 931,540 C921,524 925,501 940,494Z"/>
+    </g>
+  </g>
+  <!-- Turbine 1 -->
+  <g transform="translate(1420,540)" opacity="0.18" filter="url(#fg)">
+    <polygon points="-6,0 6,0 3,-240 -3,-240" fill="rgba(100,180,255,0.5)"/>
+    <ellipse cx="0" cy="2" rx="20" ry="5" fill="rgba(100,180,255,0.25)"/>
+    <g><animateTransform attributeName="transform" type="rotate" from="0 0 -240" to="360 0 -240" dur="9s" repeatCount="indefinite"/>
+      <path d="M0,-240 C-4,-310 -2,-370 0,-388 C2,-370 4,-310 0,-240" fill="rgba(150,210,255,0.7)"/>
+      <path d="M0,-240 C56,-262 102,-272 120,-263 C106,-249 60,-236 0,-240" fill="rgba(150,210,255,0.7)"/>
+      <path d="M0,-240 C-56,-262 -102,-272 -120,-263 C-106,-249 -60,-236 0,-240" fill="rgba(150,210,255,0.7)"/>
+      <circle cx="0" cy="-240" r="7" fill="rgba(56,189,248,0.9)"/>
+    </g>
+  </g>
+  <!-- Turbine 2 -->
+  <g transform="translate(160,600) scale(0.5)" opacity="0.14" filter="url(#fg)">
+    <polygon points="-6,0 6,0 3,-240 -3,-240" fill="rgba(100,180,255,0.5)"/>
+    <ellipse cx="0" cy="2" rx="20" ry="5" fill="rgba(100,180,255,0.25)"/>
+    <g><animateTransform attributeName="transform" type="rotate" from="90 0 -240" to="450 0 -240" dur="12s" repeatCount="indefinite"/>
+      <path d="M0,-240 C-4,-310 -2,-370 0,-388 C2,-370 4,-310 0,-240" fill="rgba(150,210,255,0.7)"/>
+      <path d="M0,-240 C56,-262 102,-272 120,-263 C106,-249 60,-236 0,-240" fill="rgba(150,210,255,0.7)"/>
+      <path d="M0,-240 C-56,-262 -102,-272 -120,-263 C-106,-249 -60,-236 0,-240" fill="rgba(150,210,255,0.7)"/>
+      <circle cx="0" cy="-240" r="7" fill="rgba(56,189,248,0.9)"/>
+    </g>
+  </g>
+  <!-- Solar panel -->
+  <g transform="translate(55,670) rotate(-10)" opacity="0.14">
+    <rect x="0" y="0" width="200" height="130" rx="3" fill="rgba(8,20,50,0.6)" stroke="rgba(56,189,248,0.25)" stroke-width="1"/>
+    <g stroke="rgba(56,189,248,0.2)" stroke-width="0.7" fill="rgba(10,40,100,0.5)">
+      <rect x="5" y="5" width="42" height="35" rx="2"/><rect x="53" y="5" width="42" height="35" rx="2"/>
+      <rect x="101" y="5" width="42" height="35" rx="2"/><rect x="149" y="5" width="46" height="35" rx="2"/>
+      <rect x="5" y="46" width="42" height="35" rx="2"/><rect x="53" y="46" width="42" height="35" rx="2"/>
+      <rect x="101" y="46" width="42" height="35" rx="2"/><rect x="149" y="46" width="46" height="35" rx="2"/>
+      <rect x="5" y="87" width="42" height="38" rx="2"/><rect x="53" y="87" width="42" height="38" rx="2"/>
+      <rect x="101" y="87" width="42" height="38" rx="2"/><rect x="149" y="87" width="46" height="38" rx="2"/>
+    </g>
+    <ellipse cx="100" cy="65" rx="110" ry="70" fill="rgba(255,107,0,0.08)">
+      <animate attributeName="rx" values="105;130;105" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;1;0.6" dur="3s" repeatCount="indefinite"/>
+    </ellipse>
+  </g>
+  <!-- Energy icons -->
+  <g transform="translate(1480,680)" opacity="0.13"><path d="M0,48 C-7,24 4,-7 30,-22 C47,-32 65,-27 67,-14 C69,-1 58,17 43,28 C28,40 10,52 0,48Z" fill="none" stroke="rgba(16,185,129,0.8)" stroke-width="2.2"/><path d="M0,48 C14,30 37,8 67,-14" stroke="rgba(16,185,129,0.45)" stroke-width="1.3" fill="none"/><animate attributeName="opacity" values="0.13;0.2;0.13" dur="5s" repeatCount="indefinite"/></g>
+  <g transform="translate(1230,100)" opacity="0.15"><path d="M28,0 L9,42 L23,42 L4,84 L42,32 L26,32 L47,0Z" fill="rgba(250,204,21,0.75)" stroke="rgba(250,204,21,0.4)" stroke-width="1.2"/><animate attributeName="opacity" values="0.15;0.25;0.15" dur="2.5s" repeatCount="indefinite"/></g>
+</svg>
+</div>
+
+<div class="deck" id="deck">
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 1 — KAPAK                                       -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide active" id="s0">
+<div class="slide-content" style="justify-content:center;align-items:flex-start;padding-top:60px;">
+  <div class="tag anim-1">ACIBADEM SAĞLIK GRUBU // ENERJİ YÖNETİM SİSTEMİ</div>
+  <h1 class="anim-2" style="font-size:72px;margin-bottom:8px;">SYNAPSE</h1>
+  <div class="glow-line" style="width:420px;"></div>
+  <div class="anim-3" style="font-family:'Orbitron',monospace;font-size:16px;color:rgba(56,189,248,0.7);letter-spacing:4px;margin-bottom:32px;">SYN // MERKEZİ VERİ BAĞLANTISI</div>
+  <p class="sub anim-4" style="font-size:16px;">Acıbadem hastanelerinin enerji, HVAC ve mekanik sistemlerini<br>tek çatı altında izleyen, analiz eden ve yöneten entegre platform.</p>
+  <div class="row anim-5" style="margin-top:36px;gap:14px;flex-wrap:wrap;">
+    <span class="badge badge-blue">SYNAPSE // GM MERKEZ</span>
+    <span class="badge badge-green">EKOSİSTEM // LOKASYONLAR</span>
+    <span class="badge badge-orange">MEKANİK ZEKA // HVAC</span>
+    <span class="badge badge-purple">ENERJİ & VERİMLİLİK</span>
+  </div>
+
+  <!-- Mini architecture preview -->
+  <div class="anim-6" style="position:absolute;right:64px;top:50%;transform:translateY(-50%);width:420px;">
+    <div class="card" style="padding:24px;">
+      <div style="text-align:center;font-family:'Orbitron',monospace;font-size:8px;color:rgba(56,189,248,0.5);letter-spacing:2px;margin-bottom:16px;">SİSTEM MİMARİSİ</div>
+      <!-- Cloud -->
+      <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:10px;padding:12px;text-align:center;margin-bottom:10px;" class="pulse">
+        <div style="font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:#00e5ff;">☁ SYNAPSE</div>
+        <div style="font-size:10px;color:rgba(150,210,255,0.5);">Streamlit Cloud // GM Portal</div>
+      </div>
+      <div class="arrow-down" style="font-size:18px;margin:6px 0;">⇅</div>
+      <!-- Supabase -->
+      <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px;padding:10px;text-align:center;margin-bottom:10px;">
+        <div style="font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:#10b981;">⬡ SUPABASE</div>
+        <div style="font-size:10px;color:rgba(150,210,255,0.5);">Gerçek Zamanlı Veri Katmanı</div>
+      </div>
+      <div class="arrow-down" style="font-size:18px;margin:6px 0;">⇅</div>
+      <!-- Lokasyonlar -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#f59e0b;font-family:'Orbitron',monospace;">MASLAK</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);">Ekosistem PC</div>
+        </div>
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;color:#f59e0b;font-family:'Orbitron',monospace;">ALTUNİZADE</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);">Ekosistem PC</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 2 — SİSTEM MİMARİSİ                            -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" id="s1">
+<div class="slide-content">
+  <div class="slide-header anim-1">
+    <div><div class="tag">KATMAN MİMARİSİ</div><h2>Sistemin Yapısı</h2></div>
+    <div class="logo-txt">SYNAPSE // SYN</div>
+  </div>
+  <div class="glow-line anim-1"></div>
+
+  <!-- 3 tier diagram -->
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:0;">
+
+    <!-- Tier 1: GM -->
+    <div class="anim-2" style="display:flex;align-items:center;gap:16px;">
+      <div style="width:180px;text-align:right;font-size:12px;color:rgba(150,210,255,0.5);">☁ Bulut Katmanı</div>
+      <div style="flex:1;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.3);border-radius:12px;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:#00e5ff;">SYNAPSE — GM MERKEZ PORTAL</div>
+          <div style="font-size:11px;color:rgba(150,210,255,0.55);margin-top:4px;">Streamlit Cloud • Harita • AI Analiz • Oto Set • Tüm Lokasyon Özeti</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <span class="badge badge-blue">app_merkez.py</span>
+          <span class="badge badge-blue">lokasyon_detay.py</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="anim-2" style="display:flex;align-items:center;gap:16px;margin:8px 0;">
+      <div style="width:180px;"></div>
+      <div style="flex:1;text-align:center;color:rgba(56,189,248,0.4);font-size:22px;">⇅ &nbsp; REST API / Realtime WebSocket</div>
+    </div>
+
+    <!-- Tier 2: Supabase -->
+    <div class="anim-3" style="display:flex;align-items:center;gap:16px;">
+      <div style="width:180px;text-align:right;font-size:12px;color:rgba(150,210,255,0.5);">🗄 Veri Katmanı</div>
+      <div style="flex:1;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:16px 24px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:#10b981;">SUPABASE — GERÇEK ZAMANLI VERİTABANI</div>
+            <div style="font-size:11px;color:rgba(150,210,255,0.55);margin-top:4px;">PostgreSQL • Row-Level Security • Realtime Subscriptions</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <span class="badge badge-green">energy_data</span>
+          <span class="badge badge-green">lokasyonlar</span>
+          <span class="badge badge-green">ayarlar</span>
+          <span class="badge badge-green">komutlar</span>
+          <span class="badge badge-green">oto_mod_log</span>
+          <span class="badge badge-green">ai_analizler</span>
+          <span class="badge badge-green">bildirimler</span>
+          <span class="badge badge-green">guncellemeler</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="anim-3" style="display:flex;align-items:center;gap:16px;margin:8px 0;">
+      <div style="width:180px;"></div>
+      <div style="flex:1;text-align:center;color:rgba(56,189,248,0.4);font-size:22px;">⇅ &nbsp; BACnet / Modbus / İnternet</div>
+    </div>
+
+    <!-- Tier 3: Ekosistem -->
+    <div class="anim-4" style="display:flex;align-items:center;gap:16px;">
+      <div style="width:180px;text-align:right;font-size:12px;color:rgba(150,210,255,0.5);">🏥 Saha Katmanı</div>
+      <div style="flex:1;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:16px 24px;">
+        <div style="font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:10px;">EKOSİSTEM — LOKASYON PC'LERİ</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+          <div class="card-sm" style="text-align:center;"><div style="font-size:10px;font-weight:700;color:#f59e0b;font-family:'Orbitron',monospace;">MASLAK</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">app_portal.py</div></div>
+          <div class="card-sm" style="text-align:center;"><div style="font-size:10px;font-weight:700;color:#f59e0b;font-family:'Orbitron',monospace;">ALTUNİZADE</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">app_portal.py</div></div>
+          <div class="card-sm" style="text-align:center;"><div style="font-size:10px;font-weight:700;color:#f59e0b;font-family:'Orbitron',monospace;">FULYA +3</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">app_portal.py</div></div>
+          <div class="card-sm" style="text-align:center;border-style:dashed;"><div style="font-size:9px;color:rgba(150,210,255,0.3);">+ Yeni Lokasyon</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 3 — SYNAPSE GM MERKEZ                          -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+<div class="slide-content">
+  <div class="slide-header anim-1">
+    <div><div class="tag">KATMAN 1 // BULUT</div><h2>SYNAPSE — GM Merkez Portal</h2></div>
+    <div class="logo-txt">SYNAPSE // SYN</div>
+  </div>
+  <div class="glow-line anim-1"></div>
+
+  <div style="flex:1;display:flex;gap:20px;align-items:stretch;">
+    <!-- Sol: Ekran mockup -->
+    <div class="anim-2" style="flex:1.2;">
+      <div class="screen" style="height:100%;">
+        <div class="screen-bar"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div><div class="screen-title">SYNAPSE — GM MERKEZ // streamlit.app</div></div>
+        <!-- Mock içerik -->
+        <div style="padding:12px;display:flex;gap:10px;height:calc(100% - 24px);">
+          <!-- Sol kolon -->
+          <div style="flex:0.85;display:flex;flex-direction:column;gap:8px;">
+            <div style="background:rgba(0,229,255,0.05);border:1px solid rgba(0,229,255,0.15);border-radius:6px;padding:8px;">
+              <div style="font-size:7px;color:rgba(56,189,248,0.5);font-family:'Orbitron',monospace;letter-spacing:1px;margin-bottom:6px;">📍 LOKASYON DURUMU</div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(13,21,39,0.5);border-radius:4px;padding:5px 8px;">
+                  <span style="font-size:8px;color:#e0f2fe;font-weight:600;">MASLAK</span>
+                  <span style="font-size:8px;color:#10b981;">● 45,386 kWh</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(13,21,39,0.5);border-radius:4px;padding:5px 8px;">
+                  <span style="font-size:8px;color:#e0f2fe;font-weight:600;">ALTUNİZADE</span>
+                  <span style="font-size:8px;color:#10b981;">● 21,062 kWh</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(13,21,39,0.5);border-radius:4px;padding:5px 8px;">
+                  <span style="font-size:8px;color:#e0f2fe;font-weight:600;">FULYA</span>
+                  <span style="font-size:8px;color:#ef4444;">● Çevrimdışı</span>
+                </div>
+              </div>
+            </div>
+            <div style="background:rgba(56,189,248,0.04);border:1px solid rgba(56,189,248,0.12);border-radius:6px;padding:8px;flex:1;">
+              <div style="font-size:7px;color:rgba(56,189,248,0.5);font-family:'Orbitron',monospace;letter-spacing:1px;margin-bottom:5px;">🌐 GLOBAL ÖZET</div>
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <div style="font-size:8px;color:rgba(150,210,255,0.7);">⚡ Bu ay: <span style="color:#00e5ff;">967,354 kWh</span></div>
+                <div style="font-size:8px;color:rgba(150,210,255,0.7);">🔥 Doğalgaz: <span style="color:#f59e0b;">12,840 m³</span></div>
+                <div style="font-size:8px;color:rgba(150,210,255,0.7);">❄ Soğutma: <span style="color:#38bdf8;">5,875 kWh</span></div>
+                <div style="font-size:8px;color:rgba(150,210,255,0.7);">💧 Su: <span style="color:#38bdf8;">—</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- Merkez: Harita -->
+          <div style="flex:2;background:rgba(4,10,25,0.8);border-radius:6px;border:1px solid rgba(56,189,248,0.1);position:relative;overflow:hidden;">
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+              <div style="font-size:9px;color:rgba(56,189,248,0.4);font-family:'Orbitron',monospace;margin-bottom:8px;">🗺️ HASTANE ENERJİ AĞI</div>
+              <svg width="160" height="90" viewBox="0 0 160 90">
+                <rect width="160" height="90" fill="rgba(2,6,23,0.5)"/>
+                <!-- Turkey outline simplified -->
+                <path d="M20,45 Q30,30 50,32 Q70,28 90,35 Q110,30 130,38 Q140,42 142,48 Q135,55 120,52 Q100,58 80,54 Q60,58 40,52 Q28,52 20,45Z" fill="rgba(56,189,248,0.06)" stroke="rgba(56,189,248,0.2)" stroke-width="0.8"/>
+                <!-- Location dots -->
+                <circle cx="85" cy="38" r="4" fill="#00d4ff" opacity="0.9"><animate attributeName="r" values="4;6;4" dur="2s" repeatCount="indefinite"/></circle>
+                <circle cx="83" cy="40" r="4" fill="#f59e0b" opacity="0.9"><animate attributeName="r" values="4;6;4" dur="2.4s" repeatCount="indefinite"/></circle>
+                <circle cx="78" cy="36" r="3" fill="#10b981" opacity="0.7"/>
+                <circle cx="110" cy="44" r="3" fill="#a855f7" opacity="0.7"/>
+                <text x="87" y="36" font-size="5" fill="rgba(200,240,255,0.6)" font-family="monospace">MAS</text>
+              </svg>
+            </div>
+          </div>
+          <!-- Sağ kolon -->
+          <div style="flex:0.9;display:flex;flex-direction:column;gap:6px;">
+            <div style="background:rgba(13,21,39,0.5);border:1px solid rgba(56,189,248,0.1);border-radius:5px;padding:7px;">
+              <div style="font-size:7px;color:rgba(56,189,248,0.4);font-family:'Orbitron',monospace;margin-bottom:4px;">🤖 OTO SET</div>
+              <div style="font-size:9px;color:#10b981;font-weight:600;">AKTİF</div>
+              <div style="font-size:8px;color:rgba(150,210,255,0.6);">🌡 7.5°C • 🌙 Gece</div>
+            </div>
+            <div style="background:rgba(13,21,39,0.5);border:1px solid rgba(56,189,248,0.1);border-radius:5px;padding:7px;flex:1;">
+              <div style="font-size:7px;color:rgba(56,189,248,0.4);font-family:'Orbitron',monospace;margin-bottom:4px;">🚨 CANLI UYARILAR</div>
+              <div style="font-size:8px;color:#ef4444;">🔴 MAS: 6 ARIZALI</div>
+              <div style="font-size:8px;color:#f59e0b;margin-top:3px;">🟡 ALT: 2 bakımda</div>
+              <div style="font-size:8px;color:#10b981;margin-top:3px;">✅ Diğerleri normal</div>
+            </div>
+            <div style="background:rgba(13,21,39,0.5);border:1px solid rgba(56,189,248,0.1);border-radius:5px;padding:7px;">
+              <div style="font-size:7px;color:rgba(56,189,248,0.4);font-family:'Orbitron',monospace;margin-bottom:3px;">🤖 AI ANALİZ</div>
+              <div style="font-size:8px;color:rgba(150,210,255,0.6);line-height:1.4;">Şebeke bağımlılığı %73 ile hedefin üzerinde...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sağ: Özellikler -->
+    <div class="anim-3" style="flex:0.75;display:flex;flex-direction:column;gap:10px;">
+      <div class="card-sm">
+        <h3 style="margin-bottom:6px;">🗺️ Canlı Harita</h3>
+        <p style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">Leaflet.js ile tüm Türkiye genelinde hastane enerji ağı. Renk kodu ile kWh ve çevrimiçi durum.</p>
+      </div>
+      <div class="card-sm">
+        <h3 style="margin-bottom:6px;">🤖 Oto Set</h3>
+        <p style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">Hava tahmini okuyarak Chiller setpoint'i otomatik ayarlar. BACnet komut gönderir, mod geçişlerini loglar.</p>
+      </div>
+      <div class="card-sm">
+        <h3 style="margin-bottom:6px;">🤖 AI Sabah Analizi</h3>
+        <p style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">Claude Haiku ile her sabah otomatik enerji raporu. Supabase <code style="color:#38bdf8;font-size:10px;">ai_analizler</code> tablosuna kaydeder.</p>
+      </div>
+      <div class="card-sm">
+        <h3 style="margin-bottom:6px;">📡 Uzaktan Kontrol</h3>
+        <p style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">GM'den lokasyon BACnet noktasına değer gönder. <code style="color:#38bdf8;font-size:10px;">komutlar</code> tablosu üzerinden 1 dakikada uygulanır.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 4 — EKOSİSTEM / SYNERGY                        -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+<div class="slide-content">
+  <div class="slide-header anim-1">
+    <div><div class="tag">KATMAN 3 // SAHA</div><h2>EKOSİSTEM — Lokasyon Portalı</h2></div>
+    <div class="logo-txt">SYNERGY // EKOSİSTEM</div>
+  </div>
+  <div class="glow-line anim-1"></div>
+
+  <div style="flex:1;display:flex;gap:20px;align-items:stretch;">
+    <!-- Sol: Özellikler -->
+    <div class="anim-2" style="flex:0.75;display:flex;flex-direction:column;gap:10px;">
+      <p class="sub anim-2" style="font-size:13px;margin-bottom:4px;">Her hastanede çalışan <span class="accent">app_portal.py</span> — biri <strong>Mekanik Zeka</strong>, diğeri <strong>Enerji ve Verimlilik</strong> olmak üzere iki ana modülden oluşur.</p>
+      <div class="card-sm">
+        <h3 style="margin-bottom:6px;color:#f59e0b;">🔧 Mekanik Zeka (HVAC)</h3>
+        <p style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">AHU / Chiller / FCU alarmları, bakım kartları, HVAC trend grafikleri, anlık set değerleri.</p>
+      </div>
+      <div class="card-sm">
+        <h3 style="margin-bottom:6px;color:#10b981;">⚡ Enerji ve Verimlilik</h3>
+        <p style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">kWh tüketim, kojen üretimi, şebeke/TRDP kırılımları, su & doğalgaz, aylık rapor PDF.</p>
+      </div>
+      <div class="card-sm">
+        <h3 style="margin-bottom:6px;color:#a855f7;">🔄 Güncelleme Mekanizması</h3>
+        <p style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">Supabase <code style="color:#38bdf8;font-size:10px;">guncellemeler</code> tablosunu takip eder. GM'den yama geldiğinde otomatik uygular.</p>
+      </div>
+      <div class="card-sm">
+        <h3 style="margin-bottom:6px;color:#38bdf8;">📡 BACnet Okuma</h3>
+        <p style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">Yerel ağdan BACnet/IP protokolüyle sahadan veri okur, işler ve Supabase'e yazar.</p>
+      </div>
+    </div>
+
+    <!-- Sağ: Ekran mockup -->
+    <div class="anim-3" style="flex:1.2;">
+      <div class="screen" style="height:100%;">
+        <div class="screen-bar"><div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div><div class="screen-title">EKOSİSTEM — MASLAK // localhost:8502</div></div>
+        <div style="padding:10px;height:calc(100% - 24px);display:flex;flex-direction:column;gap:8px;">
+          <!-- Header -->
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid rgba(56,189,248,0.1);padding-bottom:6px;">
+            <div style="font-family:'Orbitron',monospace;font-size:10px;color:#00d4ff;font-weight:700;">ACIBADEM MASLAK</div>
+            <div style="display:flex;gap:8px;">
+              <span style="font-size:8px;padding:2px 7px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:10px;color:#10b981;">● Bağlı</span>
+              <span style="font-size:8px;padding:2px 7px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:10px;color:#38bdf8;">15.000 m²</span>
+            </div>
+          </div>
+          <!-- Tabs -->
+          <div style="display:flex;gap:6px;">
+            <div style="font-size:8px;padding:3px 10px;background:rgba(0,229,255,0.1);border-bottom:2px solid #00e5ff;color:#00e5ff;border-radius:4px 4px 0 0;">Dashboard</div>
+            <div style="font-size:8px;padding:3px 10px;color:rgba(150,210,255,0.4);">Trend & Tahmin</div>
+            <div style="font-size:8px;padding:3px 10px;color:rgba(150,210,255,0.4);">Veri Tablosu</div>
+            <div style="font-size:8px;padding:3px 10px;color:rgba(150,210,255,0.4);">Rapor Oluştur</div>
+          </div>
+          <!-- Content -->
+          <div style="flex:1;display:flex;gap:8px;">
+            <!-- Özet sol -->
+            <div style="flex:0.7;display:flex;flex-direction:column;gap:5px;">
+              <div style="font-size:7px;color:rgba(56,189,248,0.5);font-family:'Orbitron',monospace;letter-spacing:1px;">⚡ ÖZET</div>
+              <div style="background:rgba(13,21,39,0.5);border-radius:4px;padding:6px;"><div style="font-size:7px;color:rgba(150,210,255,0.5);">TÜKETİM</div><div style="font-size:12px;font-family:'Orbitron',monospace;color:#00e5ff;font-weight:700;">45,386</div><div style="font-size:7px;color:rgba(150,210,255,0.4);">kWh</div></div>
+              <div style="background:rgba(13,21,39,0.5);border-radius:4px;padding:6px;"><div style="font-size:7px;color:rgba(150,210,255,0.5);">kWh/m²</div><div style="font-size:12px;font-family:'Orbitron',monospace;color:#f59e0b;font-weight:700;">3.02</div></div>
+              <div style="background:rgba(13,21,39,0.5);border-radius:4px;padding:6px;"><div style="font-size:7px;color:rgba(150,210,255,0.5);">CHİLLER SET</div><div style="font-size:12px;font-family:'Orbitron',monospace;color:#38bdf8;font-weight:700;">7.0°C</div></div>
+            </div>
+            <!-- Grafik -->
+            <div style="flex:2;background:rgba(4,10,25,0.6);border-radius:5px;border:1px solid rgba(56,189,248,0.1);position:relative;overflow:hidden;padding:8px;">
+              <div style="font-size:7px;color:rgba(56,189,248,0.4);font-family:'Orbitron',monospace;margin-bottom:4px;">📊 TÜKETİM GRAFİĞİ</div>
+              <svg width="100%" height="80%" viewBox="0 0 200 80">
+                <defs><linearGradient id="bar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00e5ff" stop-opacity="0.8"/><stop offset="100%" stop-color="#00e5ff" stop-opacity="0.2"/></linearGradient></defs>
+                <rect x="5"  y="20" width="14" height="55" fill="url(#bar)" rx="2"/>
+                <rect x="23" y="22" width="14" height="53" fill="url(#bar)" rx="2"/>
+                <rect x="41" y="15" width="14" height="60" fill="url(#bar)" rx="2"/>
+                <rect x="59" y="18" width="14" height="57" fill="url(#bar)" rx="2"/>
+                <rect x="77" y="20" width="14" height="55" fill="url(#bar)" rx="2"/>
+                <rect x="95" y="25" width="14" height="50" fill="url(#bar)" rx="2"/>
+                <rect x="113" y="10" width="14" height="65" fill="url(#bar)" rx="2"/>
+                <rect x="131" y="30" width="14" height="45" fill="rgba(56,189,248,0.35)" rx="2"/>
+                <rect x="149" y="35" width="14" height="40" fill="rgba(56,189,248,0.35)" rx="2"/>
+              </svg>
+            </div>
+          </div>
+          <!-- Kojen & Kaynak -->
+          <div style="border-top:1px solid rgba(56,189,248,0.08);padding-top:6px;">
+            <div style="font-size:7px;color:rgba(56,189,248,0.4);font-family:'Orbitron',monospace;margin-bottom:4px;">⚙️ KOJEN & KAYNAK</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">
+              <div style="background:rgba(13,21,39,0.4);border-radius:3px;padding:4px;text-align:center;"><div style="font-size:7px;color:#f97316;">🔥 Kojen Gaz</div><div style="font-size:8px;font-weight:700;color:#f97316;">0.0 m³</div></div>
+              <div style="background:rgba(13,21,39,0.4);border-radius:3px;padding:4px;text-align:center;"><div style="font-size:7px;color:#a855f7;">🔌 Şebeke</div><div style="font-size:8px;font-weight:700;color:#a855f7;">45,386</div></div>
+              <div style="background:rgba(13,21,39,0.4);border-radius:3px;padding:4px;text-align:center;"><div style="font-size:7px;color:#06b6d4;">🔹 TRDP-1</div><div style="font-size:8px;font-weight:700;color:#06b6d4;">21,062</div></div>
+              <div style="background:rgba(13,21,39,0.4);border-radius:3px;padding:4px;text-align:center;"><div style="font-size:7px;color:#06b6d4;">🔹 TRDP-3</div><div style="font-size:8px;font-weight:700;color:#06b6d4;">7,727</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 5 — MEKANİK ZEKA                               -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+<div class="slide-content">
+  <div class="slide-header anim-1">
+    <div><div class="tag">MODÜL // HVAC ANALİZ</div><h2>Mekanik Zeka</h2></div>
+    <div class="logo-txt">HVAC INTELLIGENCE</div>
+  </div>
+  <div class="glow-line anim-1"></div>
+
+  <div style="flex:1;display:flex;gap:20px;">
+    <!-- Sol açıklama -->
+    <div class="anim-2" style="flex:0.8;display:flex;flex-direction:column;justify-content:center;gap:14px;">
+      <p class="sub" style="font-size:14px;">Sahadan okunan HVAC verisini analiz eder, alarm üretir, bakım durumunu takip eder ve Synapse'e raporlar.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="row">
+          <div style="width:36px;height:36px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🚨</div>
+          <div><div style="font-size:13px;font-weight:600;color:#e0f2fe;margin-bottom:2px;">Alarm Yönetimi</div><div style="font-size:11px;color:rgba(150,210,255,0.55);">AHU, Chiller, FCU kritik/uyarı alarmları, okunmadı sayacı, detay açılır panel</div></div>
+        </div>
+        <div class="row">
+          <div style="width:36px;height:36px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🔧</div>
+          <div><div style="font-size:13px;font-weight:600;color:#e0f2fe;margin-bottom:2px;">Bakım Kartları</div><div style="font-size:11px;color:rgba(150,210,255,0.55);">Her ekipman için arıza / bakımda / normal durum. <code style="color:#38bdf8;font-size:10px;">maintenance_cards.json</code> ile konfigüre</div></div>
+        </div>
+        <div class="row">
+          <div style="width:36px;height:36px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📊</div>
+          <div><div style="font-size:13px;font-weight:600;color:#e0f2fe;margin-bottom:2px;">HVAC Trend & Tahmin</div><div style="font-size:11px;color:rgba(150,210,255,0.55);">Chiller Set, Chiller Load, AHU sıcaklık trendleri. ML tahmin modeli (ml_forecast_model.pkl)</div></div>
+        </div>
+        <div class="row">
+          <div style="width:36px;height:36px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">📋</div>
+          <div><div style="font-size:13px;font-weight:600;color:#e0f2fe;margin-bottom:2px;">Aylık AHU Alarm Raporu</div><div style="font-size:11px;color:rgba(150,210,255,0.55);">FPDF2 ile Türkçe PDF. DejaVu font. Her AHU için alarm sayacı ve özeti.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sağ: Veri akışı -->
+    <div class="anim-3" style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:10px;">
+      <!-- BACnet -->
+      <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:14px 18px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="font-size:22px;">🏭</div>
+          <div><div style="font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:#f59e0b;">SAHA EKİPMANLARI</div><div style="font-size:10px;color:rgba(150,210,255,0.5);">AHU • Chiller • FCU • Kule Soğutma • Pompa</div></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <span class="badge badge-orange">BACnet/IP</span><span class="badge badge-orange">Modbus TCP</span><span class="badge badge-orange">Analog/Dijital I/O</span>
+        </div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:10px;padding:14px 18px;">
+        <div style="font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:#38bdf8;margin-bottom:6px;">⚙️ MEKANİK ZEKA ANALİZÖR</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <div style="font-size:10px;color:rgba(150,210,255,0.6);">• Çevrim süresi takibi</div>
+          <div style="font-size:10px;color:rgba(150,210,255,0.6);">• Set/gerçek sapma alarmı</div>
+          <div style="font-size:10px;color:rgba(150,210,255,0.6);">• Bakım zamanı tahmini</div>
+          <div style="font-size:10px;color:rgba(150,210,255,0.6);">• Kural motoru (JSON)</div>
+        </div>
+      </div>
+      <div class="arrow-down">↓</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">🗄</div>
+          <div style="font-family:'Orbitron',monospace;font-size:9px;color:#10b981;">SUPABASE</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);">lokasyonlar.bakim_ozet</div>
+        </div>
+        <div style="background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.2);border-radius:8px;padding:10px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">📄</div>
+          <div style="font-family:'Orbitron',monospace;font-size:9px;color:#a855f7;">PDF RAPOR</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);">AHU alarm aylık özet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 6 — ENERJİ VE VERİMLİLİK                      -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+<div class="slide-content">
+  <div class="slide-header anim-1">
+    <div><div class="tag">MODÜL // ENERJİ TAKİP</div><h2>Enerji ve Verimlilik</h2></div>
+    <div class="logo-txt">ENERGY INTELLIGENCE</div>
+  </div>
+  <div class="glow-line anim-1"></div>
+
+  <div style="flex:1;display:flex;gap:20px;">
+    <!-- Sol: Metrikler grid -->
+    <div class="anim-2" style="flex:1;display:flex;flex-direction:column;gap:12px;">
+      <p class="sub" style="font-size:13px;">Hastane enerji tüketimini çok boyutlu olarak izler — elektrik, gaz, su, kojen, TRDP kırılımları ve verimlilik endeksleri.</p>
+
+      <div class="g2" style="flex:1;">
+        <div class="card" style="display:flex;flex-direction:column;gap:8px;">
+          <h3 style="color:#00e5ff;">⚡ Elektrik Tüketimi</h3>
+          <div style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">
+            • Toplam Hastane kWh<br>
+            • Chiller Tüketim kWh<br>
+            • MCC Tüketim kWh<br>
+            • Şebeke vs Kojen ayrımı<br>
+            • TRDP-1/2/3/4 kırılımı (Maslak)
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <span class="badge badge-blue" style="font-size:8px;">Toplam_Hastane_Tuketim_kWh</span>
+            <span class="badge badge-blue" style="font-size:8px;">Sebeke_Tuketim_kWh</span>
+          </div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:8px;">
+          <h3 style="color:#10b981;">⚙️ Kojen & Gaz</h3>
+          <div style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">
+            • Kojen Üretim kWh<br>
+            • Kojen Doğalgaz m³<br>
+            • Kazan Doğalgaz m³<br>
+            • Verim: kWh/m³ (≥3.5 hedef)<br>
+            • Şebeke bağımlılığı % (&lt;30 hedef)
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <span class="badge badge-green" style="font-size:8px;">Kojen_Uretim_kWh</span>
+            <span class="badge badge-green" style="font-size:8px;">Kojen_Dogalgaz_m3</span>
+          </div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:8px;">
+          <h3 style="color:#38bdf8;">💧 Su & Soğutma</h3>
+          <div style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">
+            • Su Tüketimi m³<br>
+            • Soğutma Tüketim kWh<br>
+            • Chiller Load %<br>
+            • Chiller Set Temp °C<br>
+            • Kar Eritme durumu
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <span class="badge badge-blue" style="font-size:8px;">Chiller_Load_Percent</span>
+            <span class="badge badge-blue" style="font-size:8px;">Su_Tuketimi_m3</span>
+          </div>
+        </div>
+        <div class="card" style="display:flex;flex-direction:column;gap:8px;">
+          <h3 style="color:#f59e0b;">📐 Verimlilik KPI</h3>
+          <div style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">
+            • kWh/m²/gün yoğunluk<br>
+            • YoY karşılaştırma badge<br>
+            • Aylık trend grafiği<br>
+            • Çoklu period analiz<br>
+            • Hedef: &lt;1.0 kWh/m²/gün
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <span class="badge badge-orange" style="font-size:8px;">kWh/m²/gün</span>
+            <span class="badge badge-orange" style="font-size:8px;">YoY Badge</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="anim-3" style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:14px;">
+        <div style="font-family:'Orbitron',monospace;font-size:10px;color:#10b981;margin-bottom:6px;">📋 AYLLIK RAPOR PDF</div>
+        <p style="font-size:11px;color:rgba(150,210,255,0.6);">FPDF2 + matplotlib ile otomatik oluşturulan aylık enerji raporu. DejaVu font ile tam Türkçe karakter desteği. Tüketim grafikleri, verimlilik tablosu, YoY karşılaştırma dahil.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 7 — VERİ AKIŞI                                 -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+<div class="slide-content">
+  <div class="slide-header anim-1">
+    <div><div class="tag">ENTEGRASYOn // VERİ AKIŞI</div><h2>Canlı Veri Döngüsü</h2></div>
+    <div class="logo-txt">SUPABASE // REALTIME</div>
+  </div>
+  <div class="glow-line anim-1"></div>
+
+  <div style="flex:1;display:flex;gap:24px;align-items:center;">
+    <!-- Flow diagram -->
+    <div class="anim-2" style="flex:1.4;display:flex;flex-direction:column;gap:6px;">
+
+      <!-- Row 1 -->
+      <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:center;">
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">🏭</div>
+          <div style="font-family:'Orbitron',monospace;font-size:9px;color:#f59e0b;font-weight:700;">SAHA EKİPMANI</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);margin-top:2px;">BACnet / Modbus</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.3);border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">💻</div>
+          <div style="font-family:'Orbitron',monospace;font-size:9px;color:#38bdf8;font-weight:700;">EKOSİSTEM PC</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);margin-top:2px;">app_portal.py</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">🗄</div>
+          <div style="font-family:'Orbitron',monospace;font-size:9px;color:#10b981;font-weight:700;">SUPABASE</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);margin-top:2px;">energy_data yazılır</div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;padding-right:calc(16.66% + 4px);font-size:20px;color:rgba(56,189,248,0.4);">↓</div>
+
+      <!-- Row 2 -->
+      <div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:center;">
+        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">📡</div>
+          <div style="font-family:'Orbitron',monospace;font-size:9px;color:#ef4444;font-weight:700;">BACnet KOMUT</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);margin-top:2px;">Set değeri yaz</div>
+        </div>
+        <div class="flow-arrow">←</div>
+        <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.3);border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">🤖</div>
+          <div style="font-family:'Orbitron',monospace;font-size:9px;color:#a855f7;font-weight:700;">OTO SET / GM</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);margin-top:2px;">komutlar tablosu</div>
+        </div>
+        <div class="flow-arrow">←</div>
+        <div style="background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.3);border-radius:10px;padding:12px;text-align:center;">
+          <div style="font-size:20px;margin-bottom:4px;">☁</div>
+          <div style="font-family:'Orbitron',monospace;font-size:9px;color:#00e5ff;font-weight:700;">SYNAPSE</div>
+          <div style="font-size:9px;color:rgba(150,210,255,0.45);margin-top:2px;">Hava tahmini → analiz</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;margin-top:6px;">
+        <div></div>
+        <div style="font-size:20px;color:rgba(56,189,248,0.4);text-align:center;">↓</div>
+        <div></div>
+      </div>
+
+      <!-- Row 3: Güncelleme -->
+      <div style="background:rgba(56,189,248,0.04);border:1px solid rgba(56,189,248,0.15);border-radius:10px;padding:14px;display:flex;align-items:center;gap:20px;">
+        <div style="font-size:28px;">🔄</div>
+        <div style="flex:1;">
+          <div style="font-family:'Orbitron',monospace;font-size:11px;color:#38bdf8;margin-bottom:4px;">GÜNCELLEME MEKANİZMASI</div>
+          <div style="font-size:11px;color:rgba(150,210,255,0.6);line-height:1.5;">GM <code style="color:#38bdf8;">guncellemeler</code> tablosuna insert eder → Ekosistem PC'ler bağlandığında <code style="color:#38bdf8;">durum=bekliyor</code> kayıtları bulur → dosyaları günceller → <code style="color:#38bdf8;">durum=tamamlandi</code></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <span class="badge badge-orange">bekliyor</span>
+          <span style="font-size:18px;text-align:center;">↓</span>
+          <span class="badge badge-green">tamamlandi</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sağ: Tablolar -->
+    <div class="anim-3" style="flex:0.6;display:flex;flex-direction:column;gap:8px;">
+      <div style="font-family:'Orbitron',monospace;font-size:10px;color:rgba(56,189,248,0.6);letter-spacing:1.5px;margin-bottom:4px;">SUPABASE TABLOLARI</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="card-sm" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+          <div><div style="font-size:10px;font-weight:600;color:#e0f2fe;">energy_data</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">kWh, m³, °C verileri</div></div>
+          <span class="badge badge-blue" style="font-size:8px;">R/W</span>
+        </div>
+        <div class="card-sm" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+          <div><div style="font-size:10px;font-weight:600;color:#e0f2fe;">lokasyonlar</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">ping, bakim_ozet</div></div>
+          <span class="badge badge-blue" style="font-size:8px;">R/W</span>
+        </div>
+        <div class="card-sm" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+          <div><div style="font-size:10px;font-weight:600;color:#e0f2fe;">komutlar</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">BACnet set komutları</div></div>
+          <span class="badge badge-green" style="font-size:8px;">R/W</span>
+        </div>
+        <div class="card-sm" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+          <div><div style="font-size:10px;font-weight:600;color:#e0f2fe;">oto_mod_log</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">Oto set geçiş geçmişi</div></div>
+          <span class="badge badge-purple" style="font-size:8px;">W</span>
+        </div>
+        <div class="card-sm" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+          <div><div style="font-size:10px;font-weight:600;color:#e0f2fe;">ai_analizler</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">Claude sabah analizi</div></div>
+          <span class="badge badge-blue" style="font-size:8px;">R/W</span>
+        </div>
+        <div class="card-sm" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+          <div><div style="font-size:10px;font-weight:600;color:#e0f2fe;">bildirimler</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">GM→Lokasyon mesaj</div></div>
+          <span class="badge badge-purple" style="font-size:8px;">W</span>
+        </div>
+        <div class="card-sm" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;">
+          <div><div style="font-size:10px;font-weight:600;color:#e0f2fe;">guncellemeler</div><div style="font-size:9px;color:rgba(150,210,255,0.45);">Yama / kod güncellemesi</div></div>
+          <span class="badge badge-green" style="font-size:8px;">R/W</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 8 — KAPANIŞ                                    -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+<div class="slide-content" style="justify-content:center;align-items:center;text-align:center;">
+  <div class="tag anim-1">SİSTEM ÖZETİ</div>
+  <h1 class="anim-2" style="font-size:56px;margin-bottom:8px;">SYNAPSE <span style="color:rgba(56,189,248,0.4)">×</span> EKOSİSTEM</h1>
+  <div class="glow-line" style="width:500px;margin:0 auto 32px;"></div>
+
+  <div class="anim-3 g4" style="max-width:900px;margin:0 auto 36px;">
+    <div class="card" style="text-align:center;padding:20px 14px;">
+      <div style="font-size:32px;margin-bottom:8px;">☁</div>
+      <div style="font-family:'Orbitron',monospace;font-size:10px;color:#00e5ff;margin-bottom:4px;">SYNAPSE</div>
+      <div style="font-size:10px;color:rgba(150,210,255,0.55);">GM Merkez<br>Streamlit Cloud</div>
+    </div>
+    <div class="card" style="text-align:center;padding:20px 14px;">
+      <div style="font-size:32px;margin-bottom:8px;">🏥</div>
+      <div style="font-family:'Orbitron',monospace;font-size:10px;color:#f59e0b;margin-bottom:4px;">EKOSİSTEM</div>
+      <div style="font-size:10px;color:rgba(150,210,255,0.55);">Lokasyon PC'leri<br>Saha Portalı</div>
+    </div>
+    <div class="card" style="text-align:center;padding:20px 14px;">
+      <div style="font-size:32px;margin-bottom:8px;">🔧</div>
+      <div style="font-family:'Orbitron',monospace;font-size:10px;color:#a855f7;margin-bottom:4px;">MEKANİK ZEKA</div>
+      <div style="font-size:10px;color:rgba(150,210,255,0.55);">HVAC Analiz<br>Bakım Takip</div>
+    </div>
+    <div class="card" style="text-align:center;padding:20px 14px;">
+      <div style="font-size:32px;margin-bottom:8px;">⚡</div>
+      <div style="font-family:'Orbitron',monospace;font-size:10px;color:#10b981;margin-bottom:4px;">ENERJİ & VERİM</div>
+      <div style="font-size:10px;color:rgba(150,210,255,0.55);">Tüketim Analiz<br>Verimlilik KPI</div>
+    </div>
+  </div>
+
+  <div class="anim-4 row" style="justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:16px;">
+    <span class="badge badge-blue">Supabase Realtime</span>
+    <span class="badge badge-green">BACnet / Modbus</span>
+    <span class="badge badge-orange">Claude AI Analiz</span>
+    <span class="badge badge-purple">Otomatik Güncelleme</span>
+    <span class="badge badge-blue">PDF Raporlama</span>
+    <span class="badge badge-green">Uzaktan Kontrol</span>
+  </div>
+
+  <div class="anim-5" style="font-family:'Orbitron',monospace;font-size:10px;color:rgba(56,189,248,0.35);letter-spacing:3px;margin-top:20px;">
+    SYNAPSE (SYN) &nbsp;·&nbsp; ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; 2026
+  </div>
+</div>
+</div>
+
+</div><!-- /deck -->
+
+<!-- NAVIGATION -->
+<div class="nav" id="nav">
+  <button class="nav-btn" onclick="prev()">◀</button>
+  <div id="dots"></div>
+  <span class="slide-counter" id="counter">1 / 8</span>
+  <button class="nav-btn" onclick="next()">▶</button>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total  = slides.length;
+let cur = 0;
+
+// Dots oluştur
+const dotsEl = document.getElementById('dots');
+slides.forEach((_,i)=>{
+  const d = document.createElement('div');
+  d.className = 'dot' + (i===0?' on':'');
+  d.onclick = ()=>goto(i);
+  dotsEl.appendChild(d);
+});
+
+function goto(n){
+  if(n<0||n>=total) return;
+  slides[cur].classList.remove('active');
+  slides[cur].classList.add('exit');
+  setTimeout(()=>{ slides[cur].classList.remove('exit'); },600);
+  cur = n;
+  slides[cur].classList.add('active');
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('on',i===cur));
+  document.getElementById('counter').textContent = (cur+1)+' / '+total;
+}
+function next(){ goto(cur+1); }
+function prev(){ goto(cur-1); }
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' ') next();
+  if(e.key==='ArrowLeft')  prev();
+});
+// Touch swipe
+let tx=0;
+document.addEventListener('touchstart',e=>{ tx=e.touches[0].clientX; });
+document.addEventListener('touchend',e=>{
+  const dx = e.changedTouches[0].clientX - tx;
+  if(dx<-50) next();
+  if(dx>50)  prev();
+});
+</script>
+</body>
+</html>
