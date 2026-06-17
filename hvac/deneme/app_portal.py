@@ -31,6 +31,15 @@ except Exception:
 
 st.set_page_config(page_title="Enerji Yönetimi & Raporlama", layout="wide")
 
+
+@st.cache_resource(ttl=300)
+def _get_forecast_engine():
+    """ConsumptionForecastEngine'i (ML modeli dahil) tek seferde yükler ve
+    rerun'lar arasında bellekte tutar — her widget etkileşiminde diskten
+    pickle yeniden okunmasını engeller."""
+    from monthly_report.forecast_engine import ConsumptionForecastEngine
+    return ConsumptionForecastEngine()
+
 # Custom Dark Theme CSS
 st.markdown("""
 <style>
@@ -4014,7 +4023,7 @@ with tab5:
                     pass
                 # ═══ TAHMİN VE TREND ANALİZİ ═══
                 try:
-                    forecast_engine = ConsumptionForecastEngine()
+                    forecast_engine = _get_forecast_engine()
                     forecast_data = forecast_engine.full_analysis(report_year)
                     
                     yearly = forecast_data.get("yearly_summary", [])
@@ -4271,7 +4280,7 @@ with tab5:
                     # PDF Oluştur (tahmin verisiyle)
                     pdf_gen = MonthlyReportPDFGenerator()
                     try:
-                        _fc_engine = ConsumptionForecastEngine()
+                        _fc_engine = _get_forecast_engine()
                         _fc_data = _fc_engine.full_analysis(report_year)
                     except Exception:
                         _fc_data = None
@@ -4485,14 +4494,13 @@ with tab6:
     st.caption("Geçmiş verilerden geleceğe yönelik projeksiyon ve tasarruf analizi")
     
     try:
-        from monthly_report.forecast_engine import ConsumptionForecastEngine as _FCEngine
         from monthly_report.forecast_engine import AYLAR
-        
+
         _fc_col1, _fc_col2 = st.columns([1, 3])
         with _fc_col1:
             _fc_year = st.selectbox("Tahmin Yılı", options=list(range(2024, 2028)), index=2, key="forecast_year_select")
-        
-        _fc_eng = _FCEngine()
+
+        _fc_eng = _get_forecast_engine()
         _fc_result = _fc_eng.full_analysis(_fc_year)
         
         _fc_yearly = _fc_result.get("yearly_summary", [])
