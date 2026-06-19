@@ -480,25 +480,24 @@ def start_background_sync():
     _sb_url = config.get("supabase_url", "")
     _sb_key = config.get("supabase_key", "")
 
-    # HVAC günlük analiz saati (07:00)
-    _HVAC_SAAT   = 13
-    _HVAC_DAKIKA = 0
+    # HVAC analiz periyodu (dakika) — canlı üretim/talep grafiği için sık çalışır
+    _HVAC_PERIYOT_DK = 10
 
-    def _hvac_son_gun_oku():
-        """Disk'ten son HVAC çalışma tarihini oku — program restart'ına karşı kalıcı."""
+    def _hvac_son_calisma_oku():
+        """Disk'ten son HVAC çalışma zamanını oku — program restart'ına karşı kalıcı."""
         try:
             if os.path.exists(HVAC_SON_CALISMA_FILE):
                 with open(HVAC_SON_CALISMA_FILE, "r") as f:
-                    return datetime.strptime(f.read().strip(), "%Y-%m-%d").date()
+                    return datetime.strptime(f.read().strip(), "%Y-%m-%d %H:%M:%S")
         except Exception:
             pass
         return None
 
-    def _hvac_son_gun_yaz(tarih):
-        """Son HVAC çalışma tarihini disk'e yaz."""
+    def _hvac_son_calisma_yaz(zaman):
+        """Son HVAC çalışma zamanını disk'e yaz."""
         try:
             with open(HVAC_SON_CALISMA_FILE, "w") as f:
-                f.write(tarih.strftime("%Y-%m-%d"))
+                f.write(zaman.strftime("%Y-%m-%d %H:%M:%S"))
         except Exception:
             pass
 
@@ -515,19 +514,19 @@ def start_background_sync():
                     if _tick % 2 == 0:
                         send_heartbeat(client, lokasyon_id)
                         check_and_apply_update(client, lokasyon_id)
-                    # Günlük HVAC analizi: saat 13:00'da, günde 1 kez
-                    # _hvac_son_gun DOSYAYA yazılır — program restart'ta tekrar çalışmaz
+                    # HVAC analizi: her _HVAC_PERIYOT_DK dakikada bir
+                    # son çalışma zamanı DOSYAYA yazılır — program restart'ta tekrar tetiklenmez
                     if _ahu_ok:
                         _now = datetime.now()
-                        _bugun = _now.date()
-                        _saat_tamam = (
-                            _now.hour == _HVAC_SAAT and
-                            _HVAC_DAKIKA <= _now.minute < _HVAC_DAKIKA + 5
+                        _son_calisma = _hvac_son_calisma_oku()
+                        _periyot_gecti = (
+                            _son_calisma is None or
+                            (_now - _son_calisma).total_seconds() >= _HVAC_PERIYOT_DK * 60
                         )
-                        if _saat_tamam and _hvac_son_gun_oku() != _bugun:
-                            _hvac_son_gun_yaz(_bugun)  # önce yaz — tekrar tetiklenmesin
+                        if _periyot_gecti:
+                            _hvac_son_calisma_yaz(_now)  # önce yaz — tekrar tetiklenmesin
                             try:
-                                logger.info("⏰ 13:00 HVAC AHU analizi başlatılıyor...")
+                                logger.info("⏰ HVAC AHU analizi başlatılıyor...")
                                 _hvac_analiz()
                             except Exception as _ae:
                                 logger.error("HVAC analiz hatası: %s", _ae)

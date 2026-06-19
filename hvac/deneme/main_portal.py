@@ -2786,6 +2786,18 @@ async def get_ahu_tasarim_kapasiteleri():
     }
 
 
+@app.get("/api/uretim_tuketim_gecmis")
+async def get_uretim_tuketim_gecmis():
+    """Üretilen/talep edilen soğutma kW geçmişini döndürür (canlı çizgi grafik için)."""
+    gecmis_file = os.path.join(os.path.dirname(__file__), "configs", "uretim_tuketim_gecmis.json")
+    try:
+        with open(gecmis_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        data = []
+    return {"success": True, "gecmis": data}
+
+
 @app.get("/api/chiller_fcu_ayarlari")
 async def get_chiller_fcu_ayarlari():
     """Chiller/FCU kapasite ayarlarını getirir."""
