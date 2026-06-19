@@ -857,8 +857,7 @@ class HVACUtils:
             "name": "Name",
             "type": "Type",
             "mode": "Mode",
-            "priority": "Priority",
-            
+
             # Temperature readings - tüm varyasyonlar
             "supply_temp": "Supply (°C)",
             "supply": "Supply (°C)",
@@ -1584,12 +1583,6 @@ class HVACAnalyzer:
         if special_rule in rule_boosts:
             score = max(score, rule_boosts[special_rule])
 
-        # Öncelik çarpanı — kural boost'undan SONRA uygulanır
-        # Böylece kritik ekipman hem kural skorundan hem sapma skorundan faydalanır
-        priority = profile.priority.lower()
-        if "kritik" in priority or "critical" in priority or priority == "1":
-            score *= 1.5
-
         return min(score, 10.0)
     
     def map_severity(self, status: str, score: float) -> str:
@@ -1805,7 +1798,7 @@ class HVACAnalyzer:
             result.rule = "MISSING_DATA"
             result.score = 5.0  # Sıralamada dibe düşmemesi için minimum skor
         else:
-            check_tolerance = tol_crit if "kritik" in profile.priority.lower() else tol_norm
+            check_tolerance = tol_norm
             if delta_t < (target_dt - check_tolerance):
                 result.status = "LOW"
                 result.action = "Düşük ΔT"
@@ -1976,7 +1969,7 @@ class HVACAnalyzer:
             result.band = "N/A"
             result.score = 5.0  # Sıralamada dibe düşmemesi için minimum skor
         else:
-            tolerance = tol_crit if "kritik" in profile.priority.lower() else tol_norm
+            tolerance = tol_norm
             lower = target_dt - tolerance
             upper = target_dt + tolerance
             
@@ -3846,7 +3839,6 @@ async def analyze_data(rows: List[Dict[str, Any]],
                 "Type": profile.type,
                 "Name": profile.name,
                 "Mode": profile.mode,
-                "Priority": profile.priority,
                 "Supply (°C)": profile.temperatures.supply,
                 "Return (°C)": profile.temperatures.return_,
                 "Inlet (°C)": profile.temperatures.inlet,
