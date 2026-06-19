@@ -511,11 +511,10 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
     soğutma kW'ını hesaplar. Debi ölçümü olmadığı için bu, su ΔT'sinden değil
     chiller'ın kendi bildirdiği yük yüzdesinden türetilir.
 
-    Sonuç ayrıca Sistem Ayarları'ndaki FCU filosunun (fcu_adedi x
-    fcu_birim_kw_ortalama x fcu_esanjor_diversity) gerçekte ne kadar soğutmayı
-    aynı anda tüketebileceğiyle sınırlandırılır — chiller'lar fiziksel olarak
-    terminal ünitelerin (FCU) absorbe edebileceğinden fazla soğutmayı binaya
-    teslim edemez.
+    fcu_kapasite_kw, Sistem Ayarları'ndaki FCU filosunun (fcu_adedi x
+    fcu_birim_kw_ortalama x fcu_esanjor_diversity) tüketim/dağıtım tarafındaki
+    teorik kapasitesidir — bilgi amaçlıdır, üretim değerini sınırlamaz
+    (üretim tamamen chiller tarafına ait bir değer).
     Dönen: {"uretilen_kw": float, "calisan_adet": int, "ortalama_yuzde": float|None,
             "fcu_kapasite_kw": float}
     """
@@ -553,10 +552,6 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
         calisan_adet += 1
         yuzdeler.append(yuzde)
         uretilen_kw += birim_kw * (yuzde / 100.0)
-
-    # FCU filosu aynı anda fcu_kapasite_kw'dan fazlasını absorbe edemez
-    if fcu_kapasite_kw > 0:
-        uretilen_kw = min(uretilen_kw, fcu_kapasite_kw)
 
     ortalama_yuzde = sum(yuzdeler) / len(yuzdeler) if yuzdeler else None
     return {
