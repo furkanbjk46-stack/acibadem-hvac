@@ -2371,11 +2371,12 @@
                 const uretim = data.gecmis.map(g => g.uretilen_kw);
                 const talep = data.gecmis.map(g => g.talep_kw);
 
+                container.style.display = 'block';
                 uretimTuketimChart.data.labels = labels;
                 uretimTuketimChart.data.datasets[0].data = uretim;
                 uretimTuketimChart.data.datasets[1].data = talep;
+                uretimTuketimChart.resize();
                 uretimTuketimChart.update();
-                container.style.display = 'block';
             } catch (e) {
                 console.error('Üretim/talep geçmişi yüklenirken hata:', e);
             }
