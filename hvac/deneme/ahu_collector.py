@@ -817,13 +817,17 @@ def _bildirim_gunde_bir_gonder(kritik: int, uyari: int, optimal: int, toplam: in
     except Exception:
         pass
 
-    _bildirim_gonder(kritik, uyari, optimal, toplam)
-
+    # Slot'u önce burada "kullanılmış" işaretle — aynı saatte art arda
+    # (örn. zamanlayıcı + manuel "Yeniden Analiz") iki analiz çalışırsa
+    # ikincisi bildirim gönderilmeden önce bu dosyayı görüp atlasın
     try:
         with open(BILDIRIM_SON_GUN_FILE, "w") as f:
             f.write(bugun)
     except Exception:
         pass
+
+    _bildirim_gonder(kritik, uyari, optimal, toplam)
+
 
 
 def _bildirim_gonder(kritik: int, uyari: int, optimal: int, toplam: int):
