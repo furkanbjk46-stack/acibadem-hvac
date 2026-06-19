@@ -570,8 +570,9 @@ def talep_hesapla(rows: list) -> float:
     AHU'ların soğutma vana açıklığı (%) ve Sistem Ayarları'ndaki tasarım
     kapasitelerine (ahu_tasarim_kapasiteleri.json) göre talep edilen soğutma
     kW'ını hesaplar (frontend'deki updateCoolingKw ile aynı mantık).
-    FCU filosunun (Sistem Ayarları) aynı anda tüketebileceği teorik kapasite
-    ile üst sınırlandırılır.
+    FCU filosu, chiller -> kolektör -> FCU hiyerarşisinde üretilen soğutmayı
+    tüketen taraf olduğu için talebe ayrıca eklenmez/tavan olarak kullanılmaz
+    (çift sayım olur) — fcu_kapasite_kw sadece bilgi amaçlı ayrı tutulur.
     """
     try:
         with open(AHU_TASARIM_KAPASITE_FILE, "r", encoding="utf-8") as f:
@@ -590,20 +591,6 @@ def talep_hesapla(rows: list) -> float:
         if qt is None:
             continue
         talep_kw += qt * (cv / 100.0)
-
-    try:
-        chiller_fcu_dosya = os.path.join(BASE_DIR, "configs", "chiller_fcu_ayarlari.json")
-        with open(chiller_fcu_dosya, "r", encoding="utf-8") as f:
-            ayarlar = json.load(f)
-        fcu_kapasite_kw = (
-            float(ayarlar.get("fcu_adedi", 0))
-            * float(ayarlar.get("fcu_birim_kw_ortalama", 0))
-            * float(ayarlar.get("fcu_esanjor_diversity", 1.0))
-        )
-        if fcu_kapasite_kw > 0:
-            talep_kw = min(talep_kw, fcu_kapasite_kw)
-    except Exception:
-        pass
 
     return round(talep_kw, 1)
 

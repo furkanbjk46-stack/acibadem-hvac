@@ -2875,12 +2875,6 @@
                 return;
             }
 
-            // Talep edilen soğutma, FCU filosunun aynı anda tüketebileceği teorik
-            // kapasiteyi (Sistem Ayarları'ndaki diversity ile) aşamaz
-            if (_fcuKapasiteKw > 0) {
-                talep = Math.min(talep, _fcuKapasiteKw);
-            }
-
             document.getElementById('cool_kw_talep').textContent = `${talep.toFixed(0)} kW`;
             const uretimGosterilen = _uretilenOverrideKw !== null ? _uretilenOverrideKw : uretim;
             document.getElementById('cool_kw_uretim').textContent = `${uretimGosterilen.toFixed(0)} kW`;
