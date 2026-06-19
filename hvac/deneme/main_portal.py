@@ -44,7 +44,9 @@ CONFIG = {
     "APP_TITLE": "HVAC ΔT Öneri Motoru — Engine v2",
     
     # Hedef ΔT değerleri
-    "TARGET_DT_AHU": 5.0,
+    "TARGET_DT_AHU": 5.0,           # Eski su-bazlı hedef — artık AHU skorlamasında kullanılmıyor (geriye dönük referans)
+    "TARGET_AIR_DT_AHU_COOL": 10.0, # AHU hava ΔT hedefi (Return-SAT, soğutma)
+    "TARGET_AIR_DT_AHU_HEAT": 10.0, # AHU hava ΔT hedefi (SAT-Return, ısıtma)
     "TARGET_DT_CHILLER": 5.0,
     "TARGET_DT_FCU": 5.0,
     "TARGET_DT_COLLECTOR": 10.0,
@@ -1098,8 +1100,11 @@ class HVACAnalyzer:
         
         # Heating mode target (type-specific)
         if is_heating and eq_type != EquipmentType.CHILLER:
-            # AHU/FCU ısıtma coil'leri için düşük ΔT (10°C)
-            if eq_type in [EquipmentType.AHU, EquipmentType.FCU]:
+            # AHU: hava ΔT hedefi (SAT-Return)
+            if eq_type == EquipmentType.AHU:
+                return self.config["TARGET_AIR_DT_AHU_HEAT"]
+            # FCU ısıtma coil'i için su-bazlı düşük ΔT (10°C)
+            elif eq_type == EquipmentType.FCU:
                 return 10.0
             # Heat exchanger için
             elif eq_type == EquipmentType.HEAT_EXCHANGER:
@@ -1122,7 +1127,7 @@ class HVACAnalyzer:
         
         # Equipment specific targets (cooling mode)
         if eq_type == EquipmentType.AHU:
-            return self.config["TARGET_DT_AHU"] + oat_bias
+            return self.config["TARGET_AIR_DT_AHU_COOL"] + oat_bias
         elif eq_type == EquipmentType.CHILLER:
             return self.config["TARGET_DT_CHILLER"]
         elif eq_type == EquipmentType.FCU:
@@ -1682,10 +1687,21 @@ class HVACAnalyzer:
     def _analyze_base(self, profile: EquipmentProfile, result: AnalysisResult, oat, effective_mode: Optional[str] = None) -> Optional[AnalysisResult]:
         """Ortak delta_t hesaplaması ve STANDBY kontrolü. STANDBY ise doldurulmuş result döner, değilse None."""
         # Delta T hesaplamaları (tüm path'ler için ortak)
+        eq_type = self.classify_equipment_type(profile.type)
         delta_t, dt_source = self.calculate_delta_t(profile)
+        air_dt = self.calculate_air_delta_t(profile)
+        result.air_delta_t = air_dt
+
+        # AHU'larda bireysel su sensörü yok — kolektör suyu tüm AHU'lara aynı
+        # değeri verir, bu yüzden AHU performansı için ana metrik hava ΔT'si
+        # (SAT-Return) olmalı. Su ΔT'si sadece Chiller/Kazan/Kolektör gibi
+        # merkezi ekipman satırlarında kullanılır.
+        if eq_type == EquipmentType.AHU and air_dt is not None:
+            delta_t = air_dt
+            dt_source = "Supply/Return (Air)"
+
         result.delta_t = delta_t
         result.dt_source = dt_source
-        result.air_delta_t = self.calculate_air_delta_t(profile)
         target_dt = self.get_target_delta_t(profile, oat, effective_mode=effective_mode)
         result.target_delta_t = target_dt
         if delta_t is not None:
