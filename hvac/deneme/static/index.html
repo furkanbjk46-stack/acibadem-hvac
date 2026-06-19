@@ -1061,11 +1061,7 @@
                         <input type="number" id="oatInput" step="0.1" value="20.0">
                     </div>
                     <div class="form-group">
-                        <label>Kritik Tolerans (±°C)</label>
-                        <input type="number" id="tolCritical" step="0.1" value="1.0">
-                    </div>
-                    <div class="form-group">
-                        <label>Normal Tolerans (±°C)</label>
+                        <label>Tolerans (±°C)</label>
                         <input type="number" id="tolNormal" step="0.1" value="3.0">
                     </div>
                 </div>
@@ -1333,8 +1329,12 @@
                     <h3><i class="fas fa-thermometer-half"></i> Hedef ΔT Değerleri (°C)</h3>
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
                         <div class="setting-item">
-                            <label>AHU</label>
-                            <input type="number" id="set_TARGET_DT_AHU" step="0.5" min="1" max="20">
+                            <label>AHU Hava ΔT - Soğutma</label>
+                            <input type="number" id="set_TARGET_AIR_DT_AHU_COOL" step="0.5" min="1" max="20">
+                        </div>
+                        <div class="setting-item">
+                            <label>AHU Hava ΔT - Isıtma</label>
+                            <input type="number" id="set_TARGET_AIR_DT_AHU_HEAT" step="0.5" min="1" max="20">
                         </div>
                         <div class="setting-item">
                             <label>FCU</label>
@@ -1403,14 +1403,10 @@
 
                 <!-- Toleranslar -->
                 <div class="instruction-section">
-                    <h3><i class="fas fa-balance-scale"></i> Toleranslar (°C)</h3>
+                    <h3><i class="fas fa-balance-scale"></i> Tolerans (°C)</h3>
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
                         <div class="setting-item">
-                            <label>Kritik Ekipman</label>
-                            <input type="number" id="set_TOLERANCE_CRITICAL" step="0.5" min="0.5" max="5">
-                        </div>
-                        <div class="setting-item">
-                            <label>Normal Ekipman</label>
+                            <label>ΔT Toleransı</label>
                             <input type="number" id="set_TOLERANCE_NORMAL" step="0.5" min="1" max="10">
                         </div>
                     </div>
@@ -2514,7 +2510,6 @@
                 rows: manualData,
                 engine: document.getElementById('engineSelect').value,
                 oat: document.getElementById('oatInput').value,
-                tol_ahu_critical: document.getElementById('tolCritical').value,
                 tol_ahu_normal: document.getElementById('tolNormal').value
             };
 
@@ -2553,6 +2548,7 @@
                 }
                 const data = await resp.json();
                 if (data.success && data.recs_table) {
+                    _uretilenOverrideKw = (typeof data.uretilen_sogutma_kw === 'number') ? data.uretilen_sogutma_kw : null;
                     displayResults(data.recs_table);
                     isAutoAnalysis = true;
                     document.getElementById('onayBtn').style.display = 'inline-flex';
@@ -2621,7 +2617,6 @@
             formData.append('csv_file', file);
             formData.append('oat', document.getElementById('oatInput').value);
             formData.append('engine', document.getElementById('engineSelect').value);
-            formData.append('tol_ahu_critical', document.getElementById('tolCritical').value);
             formData.append('tol_ahu_normal', document.getElementById('tolNormal').value);
 
             showLoading(true);
@@ -2635,6 +2630,7 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    _uretilenOverrideKw = null;
                     displayResults(result.recs_table);
                     showAlert('Analiz başarıyla tamamlandı!', 'success');
                 } else {
@@ -2661,6 +2657,7 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    _uretilenOverrideKw = null;
                     displayResults(result.recs_table);
                     showAlert('Analiz başarıyla tamamlandı!', 'success');
                 } else {
@@ -2737,6 +2734,8 @@
         // Talep edilen / üretilen soğutma kW (AHU bazlı)
         let _ahuKapasiteler = null;
         let _tasarimHavaDt = 5.0;
+        // Otomatik analizden gelen, chiller yük yüzdesine dayalı gerçek üretim (varsa AHU tahminine üstündür)
+        let _uretilenOverrideKw = null;
         async function _loadAhuKapasiteler() {
             if (_ahuKapasiteler !== null) return;
             try {
@@ -2791,7 +2790,8 @@
             }
 
             document.getElementById('cool_kw_talep').textContent = `${talep.toFixed(0)} kW`;
-            document.getElementById('cool_kw_uretim').textContent = `${uretim.toFixed(0)} kW`;
+            const uretimGosterilen = _uretilenOverrideKw !== null ? _uretilenOverrideKw : uretim;
+            document.getElementById('cool_kw_uretim').textContent = `${uretimGosterilen.toFixed(0)} kW`;
             container.style.display = 'flex';
         }
 
@@ -3307,11 +3307,11 @@
         // Form alanlarını doldur
         function populateSettingsForm(settings) {
             const settingKeys = [
-                'TARGET_DT_AHU', 'TARGET_DT_FCU', 'TARGET_DT_CHILLER', 'TARGET_DT_COLLECTOR',
+                'TARGET_AIR_DT_AHU_COOL', 'TARGET_AIR_DT_AHU_HEAT', 'TARGET_DT_FCU', 'TARGET_DT_CHILLER', 'TARGET_DT_COLLECTOR',
                 'TARGET_DT_HEAT_EXCHANGER', 'TARGET_DT_HEAT',
                 'SAT_COOLING_MIN', 'SAT_COOLING_MAX', 'SAT_HEATING_MIN', 'SAT_HEATING_MAX',
                 'VALVE_THRESHOLD', 'HIGH_VALVE_THRESHOLD', 'VALVE_SIMUL_THRESHOLD',
-                'TOLERANCE_CRITICAL', 'TOLERANCE_NORMAL',
+                'TOLERANCE_NORMAL',
                 'APPROACH_MAX', 'SCORE_CRITICAL_THRESHOLD', 'LOW_DT_THRESHOLD', 'CHILLER_LOW_DT_THRESHOLD',
                 'BUILDING_AREA_M2',
                 'UNIT_PRICE_ELECTRICITY', 'UNIT_PRICE_GAS', 'UNIT_PRICE_WATER',
