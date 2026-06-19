@@ -517,14 +517,18 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
         with open(chiller_fcu_dosya, "r", encoding="utf-8") as f:
             ayarlar = json.load(f)
         birim_kw = float(ayarlar.get("chiller_birim_kw", 0))
+        chiller_adedi = int(ayarlar.get("chiller_adedi", 5))
     except Exception:
         birim_kw = 0
+        chiller_adedi = 5
 
     uretilen_kw = 0.0
     calisan_adet = 0
     yuzdeler = []
 
-    for n in (1, 2, 3, 4, 5):
+    # BACnet şablonunda CH-1..CH-5 tanımlı — lokasyondaki gerçek chiller adedi
+    # (Sistem Ayarları'ndan) bu üst sınırı aşamaz
+    for n in range(1, min(chiller_adedi, 5) + 1):
         durum = _nokta_oku(f"CH-{n} DURUM BILGISI", enerji_verileri)
         if durum is not None and durum == 0:
             continue
