@@ -47,6 +47,7 @@ CONFIG = {
     "TARGET_DT_AHU": 5.0,           # Eski su-bazlı hedef — artık AHU skorlamasında kullanılmıyor (geriye dönük referans)
     "TARGET_AIR_DT_AHU_COOL": 10.0, # AHU hava ΔT hedefi (Return-SAT, soğutma)
     "TARGET_AIR_DT_AHU_HEAT": 10.0, # AHU hava ΔT hedefi (SAT-Return, ısıtma)
+    "VALVE_THRESHOLD": 40.0,        # AHU vana minimum analiz eşiği (%)
     "TARGET_DT_CHILLER": 5.0,
     "TARGET_DT_FCU": 5.0,
     "TARGET_DT_COLLECTOR": 10.0,
@@ -1158,9 +1159,9 @@ class HVACAnalyzer:
             return "NO DATA"
         
         # =================== VANA EŞİK KONTROLÜ ===================
-        # Vana açıklığı <%40 ise SAT analizi yapılamaz
+        # Vana açıklığı eşik altında ise SAT analizi yapılamaz
         # Çünkü vana düşükken doğru üfleme değeri alınamaz
-        VALVE_THRESHOLD = 40.0  # %40 eşik değeri
+        VALVE_THRESHOLD = self.config["VALVE_THRESHOLD"]
         
         # Vana değerlerini al
         heating_valve = profile.valves.heating if profile.valves.heating is not None else 0.0
@@ -1322,8 +1323,8 @@ class HVACAnalyzer:
         is_heating = self.utils.is_heating_mode(profile.mode)
         
         # ========== VANA EŞİK KONTROLÜ ==========
-        # Vana <%40 ise mod ataması yapılmaz - doğru üfleme değeri alınamaz
-        VALVE_THRESHOLD = 40.0
+        # Vana eşik altında ise mod ataması yapılmaz - doğru üfleme değeri alınamaz
+        VALVE_THRESHOLD = self.config["VALVE_THRESHOLD"]
         heating_valve = profile.valves.heating if profile.valves.heating is not None else 0
         cooling_valve = profile.valves.cooling if profile.valves.cooling is not None else 0
         
