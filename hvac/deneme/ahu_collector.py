@@ -20,6 +20,9 @@ BASE_DIR          = os.path.dirname(os.path.abspath(__file__))
 AHU_CONFIG_FILE   = os.path.join(BASE_DIR, "ahu_nokta_konfig.json")
 AHU_RESULTS_FILE  = os.path.join(BASE_DIR, "hvac_ahu_analiz_sonuclari.json")
 AHU_TRIGGER_FILE  = os.path.join(BASE_DIR, "hvac_analiz_trigger.txt")
+AHU_TASARIM_KAPASITE_FILE = os.path.join(BASE_DIR, "configs", "ahu_tasarim_kapasiteleri.json")
+URETIM_TUKETIM_GECMIS_FILE = os.path.join(BASE_DIR, "configs", "uretim_tuketim_gecmis.json")
+GECMIS_MAKS_KAYIT = 1008  # 10 dk aralıkla ~1 hafta
 ENERGY_CSV_TAZELIK_ESIK_SAAT = 3  # bu süreden eski hedefli_enerji_verileri.csv için uyarı
 
 # data_collector.py ile aynı Excel kaynağı — enerji/kolektör/chiller/kazan noktaları
@@ -510,7 +513,13 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
     Ayarları'ndaki birim kapasiteye (chiller_birim_kw) göre gerçek üretilen
     soğutma kW'ını hesaplar. Debi ölçümü olmadığı için bu, su ΔT'sinden değil
     chiller'ın kendi bildirdiği yük yüzdesinden türetilir.
-    Dönen: {"uretilen_kw": float, "calisan_adet": int, "ortalama_yuzde": float|None}
+
+    fcu_kapasite_kw, Sistem Ayarları'ndaki FCU filosunun (fcu_adedi x
+    fcu_birim_kw_ortalama x fcu_esanjor_diversity) tüketim/dağıtım tarafındaki
+    teorik kapasitesidir — bilgi amaçlıdır, üretim değerini sınırlamaz
+    (üretim tamamen chiller tarafına ait bir değer).
+    Dönen: {"uretilen_kw": float, "calisan_adet": int, "ortalama_yuzde": float|None,
+            "fcu_kapasite_kw": float}
     """
     try:
         chiller_fcu_dosya = os.path.join(BASE_DIR, "configs", "chiller_fcu_ayarlari.json")
@@ -518,9 +527,17 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
             ayarlar = json.load(f)
         birim_kw = float(ayarlar.get("chiller_birim_kw", 0))
         chiller_adedi = int(ayarlar.get("chiller_adedi", 5))
+        fcu_adedi = float(ayarlar.get("fcu_adedi", 0))
+        fcu_birim_kw = float(ayarlar.get("fcu_birim_kw_ortalama", 0))
+        fcu_diversity = float(ayarlar.get("fcu_esanjor_diversity", 1.0))
     except Exception:
         birim_kw = 0
         chiller_adedi = 5
+        fcu_adedi = 0
+        fcu_birim_kw = 0
+        fcu_diversity = 1.0
+
+    fcu_kapasite_kw = fcu_adedi * fcu_birim_kw * fcu_diversity
 
     uretilen_kw = 0.0
     calisan_adet = 0
@@ -544,7 +561,61 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
         "uretilen_kw": round(uretilen_kw, 1),
         "calisan_adet": calisan_adet,
         "ortalama_yuzde": round(ortalama_yuzde, 1) if ortalama_yuzde is not None else None,
+        "fcu_kapasite_kw": round(fcu_kapasite_kw, 1),
     }
+
+
+def talep_hesapla(rows: list) -> float:
+    """
+    AHU'ların soğutma vana açıklığı (%) ve Sistem Ayarları'ndaki tasarım
+    kapasitelerine (ahu_tasarim_kapasiteleri.json) göre talep edilen soğutma
+    kW'ını hesaplar (frontend'deki updateCoolingKw ile aynı mantık).
+    FCU filosu, chiller -> kolektör -> FCU hiyerarşisinde üretilen soğutmayı
+    tüketen taraf olduğu için talebe ayrıca eklenmez/tavan olarak kullanılmaz
+    (çift sayım olur) — fcu_kapasite_kw sadece bilgi amaçlı ayrı tutulur.
+    """
+    try:
+        with open(AHU_TASARIM_KAPASITE_FILE, "r", encoding="utf-8") as f:
+            kapasiteler = json.load(f)
+    except Exception:
+        kapasiteler = {}
+
+    talep_kw = 0.0
+    for r in rows:
+        if (r.get("Type") or "AHU").upper() != "AHU":
+            continue
+        cv = r.get("Cool Valve (%)")
+        if cv is None or cv <= 0:
+            continue
+        qt = (kapasiteler.get(r.get("Location", "")) or {}).get(r.get("Name", ""))
+        if qt is None:
+            continue
+        talep_kw += qt * (cv / 100.0)
+
+    return round(talep_kw, 1)
+
+
+def gecmis_kaydet(uretilen_kw: float, talep_kw: float) -> None:
+    """Üretilen/talep edilen kW'ı zaman damgasıyla geçmiş dosyasına ekler (canlı grafik için)."""
+    try:
+        os.makedirs(os.path.dirname(URETIM_TUKETIM_GECMIS_FILE), exist_ok=True)
+        try:
+            with open(URETIM_TUKETIM_GECMIS_FILE, "r", encoding="utf-8") as f:
+                gecmis = json.load(f)
+        except Exception:
+            gecmis = []
+
+        gecmis.append({
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "uretilen_kw": uretilen_kw,
+            "talep_kw": talep_kw,
+        })
+        gecmis = gecmis[-GECMIS_MAKS_KAYIT:]
+
+        with open(URETIM_TUKETIM_GECMIS_FILE, "w", encoding="utf-8") as f:
+            json.dump(gecmis, f, ensure_ascii=False)
+    except Exception as e:
+        logger.error("Üretim/tüketim geçmişi kaydedilemedi: %s", e)
 
 
 def _ahu_row_olustur(ahu_adi: str, lokasyon: str, veriler: dict,
@@ -991,10 +1062,14 @@ def hvac_analiz_calistir() -> dict | None:
     # API'ye gönder
     sonuc = analiz_gonder(rows, oat=oat, chiller_load_percent=uretim["ortalama_yuzde"])
     if sonuc:
+        talep_kw = talep_hesapla(rows)
         sonuc["uretilen_sogutma_kw"] = uretim["uretilen_kw"]
         sonuc["calisan_chiller_adet"] = uretim["calisan_adet"]
         sonuc["chiller_ortalama_yuk_pct"] = uretim["ortalama_yuzde"]
+        sonuc["fcu_kapasite_kw"] = uretim["fcu_kapasite_kw"]
+        sonuc["talep_sogutma_kw"] = talep_kw
         sonuclari_kaydet(sonuc, veriler=veriler, ahu_sayisi=len(rows), oat=oat)
+        gecmis_kaydet(uretim["uretilen_kw"], talep_kw)
         logger.info("═══ HVAC ANALİZİ TAMAMLANDI (%d AHU) ═══", len(rows))
     return sonuc
 
