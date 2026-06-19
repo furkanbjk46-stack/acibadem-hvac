@@ -1061,11 +1061,7 @@
                         <input type="number" id="oatInput" step="0.1" value="20.0">
                     </div>
                     <div class="form-group">
-                        <label>Kritik Tolerans (±°C)</label>
-                        <input type="number" id="tolCritical" step="0.1" value="1.0">
-                    </div>
-                    <div class="form-group">
-                        <label>Normal Tolerans (±°C)</label>
+                        <label>Tolerans (±°C)</label>
                         <input type="number" id="tolNormal" step="0.1" value="3.0">
                     </div>
                 </div>
@@ -2514,7 +2510,6 @@
                 rows: manualData,
                 engine: document.getElementById('engineSelect').value,
                 oat: document.getElementById('oatInput').value,
-                tol_ahu_critical: document.getElementById('tolCritical').value,
                 tol_ahu_normal: document.getElementById('tolNormal').value
             };
 
@@ -2621,7 +2616,6 @@
             formData.append('csv_file', file);
             formData.append('oat', document.getElementById('oatInput').value);
             formData.append('engine', document.getElementById('engineSelect').value);
-            formData.append('tol_ahu_critical', document.getElementById('tolCritical').value);
             formData.append('tol_ahu_normal', document.getElementById('tolNormal').value);
 
             showLoading(true);
