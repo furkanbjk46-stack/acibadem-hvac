@@ -510,7 +510,14 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
     Ayarları'ndaki birim kapasiteye (chiller_birim_kw) göre gerçek üretilen
     soğutma kW'ını hesaplar. Debi ölçümü olmadığı için bu, su ΔT'sinden değil
     chiller'ın kendi bildirdiği yük yüzdesinden türetilir.
-    Dönen: {"uretilen_kw": float, "calisan_adet": int, "ortalama_yuzde": float|None}
+
+    Sonuç ayrıca Sistem Ayarları'ndaki FCU filosunun (fcu_adedi x
+    fcu_birim_kw_ortalama x fcu_esanjor_diversity) gerçekte ne kadar soğutmayı
+    aynı anda tüketebileceğiyle sınırlandırılır — chiller'lar fiziksel olarak
+    terminal ünitelerin (FCU) absorbe edebileceğinden fazla soğutmayı binaya
+    teslim edemez.
+    Dönen: {"uretilen_kw": float, "calisan_adet": int, "ortalama_yuzde": float|None,
+            "fcu_kapasite_kw": float}
     """
     try:
         chiller_fcu_dosya = os.path.join(BASE_DIR, "configs", "chiller_fcu_ayarlari.json")
@@ -518,9 +525,17 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
             ayarlar = json.load(f)
         birim_kw = float(ayarlar.get("chiller_birim_kw", 0))
         chiller_adedi = int(ayarlar.get("chiller_adedi", 5))
+        fcu_adedi = float(ayarlar.get("fcu_adedi", 0))
+        fcu_birim_kw = float(ayarlar.get("fcu_birim_kw_ortalama", 0))
+        fcu_diversity = float(ayarlar.get("fcu_esanjor_diversity", 1.0))
     except Exception:
         birim_kw = 0
         chiller_adedi = 5
+        fcu_adedi = 0
+        fcu_birim_kw = 0
+        fcu_diversity = 1.0
+
+    fcu_kapasite_kw = fcu_adedi * fcu_birim_kw * fcu_diversity
 
     uretilen_kw = 0.0
     calisan_adet = 0
@@ -539,11 +554,16 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
         yuzdeler.append(yuzde)
         uretilen_kw += birim_kw * (yuzde / 100.0)
 
+    # FCU filosu aynı anda fcu_kapasite_kw'dan fazlasını absorbe edemez
+    if fcu_kapasite_kw > 0:
+        uretilen_kw = min(uretilen_kw, fcu_kapasite_kw)
+
     ortalama_yuzde = sum(yuzdeler) / len(yuzdeler) if yuzdeler else None
     return {
         "uretilen_kw": round(uretilen_kw, 1),
         "calisan_adet": calisan_adet,
         "ortalama_yuzde": round(ortalama_yuzde, 1) if ortalama_yuzde is not None else None,
+        "fcu_kapasite_kw": round(fcu_kapasite_kw, 1),
     }
 
 
@@ -994,6 +1014,7 @@ def hvac_analiz_calistir() -> dict | None:
         sonuc["uretilen_sogutma_kw"] = uretim["uretilen_kw"]
         sonuc["calisan_chiller_adet"] = uretim["calisan_adet"]
         sonuc["chiller_ortalama_yuk_pct"] = uretim["ortalama_yuzde"]
+        sonuc["fcu_kapasite_kw"] = uretim["fcu_kapasite_kw"]
         sonuclari_kaydet(sonuc, veriler=veriler, ahu_sayisi=len(rows), oat=oat)
         logger.info("═══ HVAC ANALİZİ TAMAMLANDI (%d AHU) ═══", len(rows))
     return sonuc
