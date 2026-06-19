@@ -2765,14 +2765,25 @@ async def get_ahu_tasarim_kapasiteleri():
         data = {}
 
     tasarim_hava_dt = 5.0
+    fcu_kapasite_kw = 0.0
     try:
         with open(CHILLER_FCU_AYARLAR_FILE, "r", encoding="utf-8") as f:
             ayarlar = json.load(f)
             tasarim_hava_dt = ayarlar.get("tasarim_hava_dt", 5.0)
+            fcu_kapasite_kw = (
+                float(ayarlar.get("fcu_adedi", 0))
+                * float(ayarlar.get("fcu_birim_kw_ortalama", 0))
+                * float(ayarlar.get("fcu_esanjor_diversity", 1.0))
+            )
     except Exception:
         pass
 
-    return {"success": True, "kapasiteler": data, "tasarim_hava_dt": tasarim_hava_dt}
+    return {
+        "success": True,
+        "kapasiteler": data,
+        "tasarim_hava_dt": tasarim_hava_dt,
+        "fcu_kapasite_kw": round(fcu_kapasite_kw, 1),
+    }
 
 
 @app.get("/api/chiller_fcu_ayarlari")

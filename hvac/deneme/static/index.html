@@ -2734,6 +2734,8 @@
         // Talep edilen / üretilen soğutma kW (AHU bazlı)
         let _ahuKapasiteler = null;
         let _tasarimHavaDt = 5.0;
+        // FCU filosunun (adet x birim kW x diversity) aynı anda tüketebileceği teorik üst sınır
+        let _fcuKapasiteKw = 0;
         // Otomatik analizden gelen, chiller yük yüzdesine dayalı gerçek üretim (varsa AHU tahminine üstündür)
         let _uretilenOverrideKw = null;
         async function _loadAhuKapasiteler() {
@@ -2744,6 +2746,7 @@
                 if (data.success) {
                     _ahuKapasiteler = data.kapasiteler || {};
                     _tasarimHavaDt = data.tasarim_hava_dt || 5.0;
+                    _fcuKapasiteKw = data.fcu_kapasite_kw || 0;
                 } else {
                     _ahuKapasiteler = {};
                 }
@@ -2787,6 +2790,12 @@
             if (!found) {
                 container.style.display = 'none';
                 return;
+            }
+
+            // Talep edilen soğutma, FCU filosunun aynı anda tüketebileceği teorik
+            // kapasiteyi (Sistem Ayarları'ndaki diversity ile) aşamaz
+            if (_fcuKapasiteKw > 0) {
+                talep = Math.min(talep, _fcuKapasiteKw);
             }
 
             document.getElementById('cool_kw_talep').textContent = `${talep.toFixed(0)} kW`;
