@@ -796,6 +796,36 @@ def analiz_detay_csv_kaydet(results: list, zaman_damgasi: str) -> str:
     return dosya_adi
 
 
+_BILDIRIM_SAATI = 13
+BILDIRIM_SON_GUN_FILE = os.path.join(BASE_DIR, "bildirim_son_gun.txt")
+
+
+def _bildirim_gunde_bir_gonder(kritik: int, uyari: int, optimal: int, toplam: int):
+    """
+    HVAC analizi artık her 10 dk'da bir çalıştığı için Supabase bildirimi her
+    çalışmada gönderilmez — günde sadece bir kez (saat _BILDIRIM_SAATI'te)
+    gönderilir, böylece personel için bildirim yığını oluşmaz.
+    """
+    bugun = datetime.now().strftime("%Y-%m-%d")
+    if datetime.now().hour != _BILDIRIM_SAATI:
+        return
+    try:
+        if os.path.exists(BILDIRIM_SON_GUN_FILE):
+            with open(BILDIRIM_SON_GUN_FILE, "r") as f:
+                if f.read().strip() == bugun:
+                    return  # bugün zaten gönderildi
+    except Exception:
+        pass
+
+    _bildirim_gonder(kritik, uyari, optimal, toplam)
+
+    try:
+        with open(BILDIRIM_SON_GUN_FILE, "w") as f:
+            f.write(bugun)
+    except Exception:
+        pass
+
+
 def _bildirim_gonder(kritik: int, uyari: int, optimal: int, toplam: int):
     """
     Analiz tamamlanınca Supabase bildirimler tablosuna bildirim ekle.
@@ -892,8 +922,9 @@ def sonuclari_kaydet(sonuc: dict, veriler: dict, ahu_sayisi: int, oat: float):
     except Exception as e:
         logger.warning("Alarm sayacı güncellenemedi: %s", e)
 
-    # 4) Supabase bildirim
-    _bildirim_gonder(
+    # 4) Supabase bildirim — analiz her 10 dk'da bir çalıştığı için bildirim
+    # yığını oluşmaması adına günde sadece 1 kez (13:00 civarı) gönderilir.
+    _bildirim_gunde_bir_gonder(
         kritik  = kpi.get("crit", 0),
         uyari   = kpi.get("warn", 0),
         optimal = kpi.get("optimal", 0),
