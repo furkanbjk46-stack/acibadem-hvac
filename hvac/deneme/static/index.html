@@ -2548,6 +2548,7 @@
                 }
                 const data = await resp.json();
                 if (data.success && data.recs_table) {
+                    _uretilenOverrideKw = (typeof data.uretilen_sogutma_kw === 'number') ? data.uretilen_sogutma_kw : null;
                     displayResults(data.recs_table);
                     isAutoAnalysis = true;
                     document.getElementById('onayBtn').style.display = 'inline-flex';
@@ -2629,6 +2630,7 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    _uretilenOverrideKw = null;
                     displayResults(result.recs_table);
                     showAlert('Analiz başarıyla tamamlandı!', 'success');
                 } else {
@@ -2655,6 +2657,7 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    _uretilenOverrideKw = null;
                     displayResults(result.recs_table);
                     showAlert('Analiz başarıyla tamamlandı!', 'success');
                 } else {
@@ -2731,6 +2734,8 @@
         // Talep edilen / üretilen soğutma kW (AHU bazlı)
         let _ahuKapasiteler = null;
         let _tasarimHavaDt = 5.0;
+        // Otomatik analizden gelen, chiller yük yüzdesine dayalı gerçek üretim (varsa AHU tahminine üstündür)
+        let _uretilenOverrideKw = null;
         async function _loadAhuKapasiteler() {
             if (_ahuKapasiteler !== null) return;
             try {
@@ -2785,7 +2790,8 @@
             }
 
             document.getElementById('cool_kw_talep').textContent = `${talep.toFixed(0)} kW`;
-            document.getElementById('cool_kw_uretim').textContent = `${uretim.toFixed(0)} kW`;
+            const uretimGosterilen = _uretilenOverrideKw !== null ? _uretilenOverrideKw : uretim;
+            document.getElementById('cool_kw_uretim').textContent = `${uretimGosterilen.toFixed(0)} kW`;
             container.style.display = 'flex';
         }
 

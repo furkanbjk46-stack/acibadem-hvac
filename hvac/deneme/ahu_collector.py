@@ -466,10 +466,17 @@ def ek_ekipman_satirlari_olustur(outlet: float | None, inlet: float | None,
             if abs(c_outlet - c_inlet) < CALISMA_DT_ESIGI:
                 logger.info("CH-%d ΔT≈0 — çalışmıyor, analiz atlandı", n)
                 continue
-            rows.append({
+            row = {
                 "Name": f"CH-{n}", "Location": lokasyon, "Type": "Chiller",
                 "Inlet (°C)": c_inlet, "Outlet (°C)": c_outlet,
-            })
+            }
+            yuzde = _nokta_oku(f"CH-{n} CALISMA YUZDELIK", enerji_verileri)
+            if yuzde is not None:
+                row["Calisma Yuzdelik (%)"] = yuzde
+            ic_set = _nokta_oku(f"CH-{n} IC SET", enerji_verileri)
+            if ic_set is not None:
+                row["Set (°C)"] = ic_set
+            rows.append(row)
 
     if outlet_heat is not None and inlet_heat is not None and abs(outlet_heat - inlet_heat) >= CALISMA_DT_ESIGI:
         rows.append({
@@ -495,6 +502,45 @@ def ek_ekipman_satirlari_olustur(outlet: float | None, inlet: float | None,
             })
 
     return rows
+
+
+def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
+    """
+    Çalışan chiller'ların yük yüzdesine (CH-n CALISMA YUZDELIK) ve Sistem
+    Ayarları'ndaki birim kapasiteye (chiller_birim_kw) göre gerçek üretilen
+    soğutma kW'ını hesaplar. Debi ölçümü olmadığı için bu, su ΔT'sinden değil
+    chiller'ın kendi bildirdiği yük yüzdesinden türetilir.
+    Dönen: {"uretilen_kw": float, "calisan_adet": int, "ortalama_yuzde": float|None}
+    """
+    try:
+        chiller_fcu_dosya = os.path.join(BASE_DIR, "configs", "chiller_fcu_ayarlari.json")
+        with open(chiller_fcu_dosya, "r", encoding="utf-8") as f:
+            ayarlar = json.load(f)
+        birim_kw = float(ayarlar.get("chiller_birim_kw", 0))
+    except Exception:
+        birim_kw = 0
+
+    uretilen_kw = 0.0
+    calisan_adet = 0
+    yuzdeler = []
+
+    for n in (1, 2, 3, 4, 5):
+        durum = _nokta_oku(f"CH-{n} DURUM BILGISI", enerji_verileri)
+        if durum is not None and durum == 0:
+            continue
+        yuzde = _nokta_oku(f"CH-{n} CALISMA YUZDELIK", enerji_verileri)
+        if yuzde is None:
+            continue
+        calisan_adet += 1
+        yuzdeler.append(yuzde)
+        uretilen_kw += birim_kw * (yuzde / 100.0)
+
+    ortalama_yuzde = sum(yuzdeler) / len(yuzdeler) if yuzdeler else None
+    return {
+        "uretilen_kw": round(uretilen_kw, 1),
+        "calisan_adet": calisan_adet,
+        "ortalama_yuzde": round(ortalama_yuzde, 1) if ortalama_yuzde is not None else None,
+    }
 
 
 def _ahu_row_olustur(ahu_adi: str, lokasyon: str, veriler: dict,
@@ -564,16 +610,19 @@ def _oat_cek(lat: float = 41.1, lon: float = 29.0) -> float:
 # ANALİZ API ENTEGRASYONU
 # ================================================================
 
-def analiz_gonder(rows: list, oat: float = 20.0) -> dict | None:
+def analiz_gonder(rows: list, oat: float = 20.0, chiller_load_percent: float | None = None) -> dict | None:
     """
     main_portal.py /api/recommend_json endpoint'ine POST et.
     Başarısız → None.
     """
-    payload = json.dumps({
+    body = {
         "rows":   rows,
         "oat":    str(oat),
         "engine": "v2",
-    }).encode("utf-8")
+    }
+    if chiller_load_percent is not None:
+        body["chiller_load_percent"] = str(chiller_load_percent)
+    payload = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(
         MAIN_PORTAL_URL,
         data=payload,
@@ -928,9 +977,19 @@ def hvac_analiz_calistir() -> dict | None:
         logger.warning("Analiz edilecek AHU yok — BACnet bağlantısını kontrol edin.")
         return None
 
+    # Chiller yük yüzdesinden gerçek üretilen soğutma kW'ını hesapla
+    uretim = chiller_uretim_hesapla(enerji_verileri)
+    logger.info(
+        "Chiller üretimi: %.0f kW (%d çalışan, ortalama yük %s%%)",
+        uretim["uretilen_kw"], uretim["calisan_adet"], uretim["ortalama_yuzde"]
+    )
+
     # API'ye gönder
-    sonuc = analiz_gonder(rows, oat=oat)
+    sonuc = analiz_gonder(rows, oat=oat, chiller_load_percent=uretim["ortalama_yuzde"])
     if sonuc:
+        sonuc["uretilen_sogutma_kw"] = uretim["uretilen_kw"]
+        sonuc["calisan_chiller_adet"] = uretim["calisan_adet"]
+        sonuc["chiller_ortalama_yuk_pct"] = uretim["ortalama_yuzde"]
         sonuclari_kaydet(sonuc, veriler=veriler, ahu_sayisi=len(rows), oat=oat)
         logger.info("═══ HVAC ANALİZİ TAMAMLANDI (%d AHU) ═══", len(rows))
     return sonuc
