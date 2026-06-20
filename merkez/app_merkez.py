@@ -47,10 +47,11 @@ header[data-testid="stHeader"] button    { display: none !important; }
 .block-container { padding: 0px !important; max-width: 100% !important; }
 
 /* ════ Harita Tam Ekran & Panel Z-Index ════ */
-/* Kolon container paneller haritanın üstünde */
+/* Kolon container: haritanın üstünde + 900px boşluğu iptal et */
 [data-testid="stHorizontalBlock"] {
     position: relative !important;
     z-index: 10 !important;
+    margin-top: -900px !important;
 }
 /* Başlık haritanın üstünde */
 .synapse-header-wrap {
@@ -1030,7 +1031,7 @@ if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
 
 # ── 1. Harita — _cv1.html() = srcdoc (same-origin) → window.parent erişimi açık ──
 import streamlit.components.v1 as _cv1
-_cv1.html(harita_html, height=1, scrolling=False)
+_cv1.html(harita_html, height=900, scrolling=False)
 
 # ============================================================
 # ANA LAYOUT: sol panel | boşluk | sağ panel
