@@ -921,7 +921,43 @@ var map = L.map('map', {{
 L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
     maxZoom: 19, subdomains: 'abcd', noWrap: true
 }}).addTo(map);
-window.addEventListener('resize', function() {{ map.invalidateSize(); }});
+window.addEventListener('resize', function() {{ map.invalidateSize(true); }});
+
+// Self-fullscreen: kendi parent container'ını tam ekran yap
+// _cv1.html() srcdoc iframe'de çalışır → window.parent'a erişim açık
+function selfFullscreen() {{
+    try {{
+        var p = window.parent;
+        if (!p || !p.document) return;
+        var iframes = p.document.querySelectorAll('iframe');
+        for (var i = 0; i < iframes.length; i++) {{
+            if (iframes[i].contentWindow === window) {{
+                var cv1 = iframes[i].closest('[data-testid="stCustomComponentV1"]');
+                if (cv1) {{
+                    cv1.style.setProperty('position', 'fixed', 'important');
+                    cv1.style.setProperty('top', '0', 'important');
+                    cv1.style.setProperty('left', '0', 'important');
+                    cv1.style.setProperty('width', '100vw', 'important');
+                    cv1.style.setProperty('height', '100vh', 'important');
+                    cv1.style.setProperty('z-index', '1', 'important');
+                    iframes[i].style.setProperty('width', '100%', 'important');
+                    iframes[i].style.setProperty('height', '100%', 'important');
+                    iframes[i].style.setProperty('border', 'none', 'important');
+                    // Overflow kırıcı — üst elementlerin overflow:hidden'ını engelle
+                    var anc = cv1.parentElement;
+                    while (anc && anc.tagName !== 'BODY') {{
+                        anc.style.setProperty('overflow', 'visible', 'important');
+                        anc = anc.parentElement;
+                    }}
+                }}
+                setTimeout(function() {{ map.invalidateSize(true); }}, 80);
+                break;
+            }}
+        }}
+    }} catch(e) {{}}
+}}
+setTimeout(selfFullscreen, 150);
+setInterval(selfFullscreen, 2500);
 var hospitals = {hjs};
 hospitals.forEach(function(h) {{
     var s  = h.boyut; var c  = h.renk; var hs = s / 2;
@@ -992,51 +1028,9 @@ if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
         min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
         max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
 
-# ── 1. Harita arka planda tam ekran ──
-import base64, streamlit.components.v1 as _cv1
-_b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
-_cv1.iframe(f"data:text/html;base64,{_b64}", height=1, scrolling=False)
-
-# ── 2. JS: Harita iframe'ini tam ekran yap ──
-_cv1.html("""<script>
-(function() {
-    function fixMap() {
-        var doc = window.parent.document;
-        var cv1s = doc.querySelectorAll('[data-testid="stCustomComponentV1"]');
-        if (!cv1s.length) { setTimeout(fixMap, 300); return; }
-        var mapEl = cv1s[0];
-        // setProperty ile !important uygula (cssText+= ile olmaz)
-        mapEl.style.setProperty('position', 'fixed', 'important');
-        mapEl.style.setProperty('top', '0', 'important');
-        mapEl.style.setProperty('left', '0', 'important');
-        mapEl.style.setProperty('width', '100vw', 'important');
-        mapEl.style.setProperty('height', '100vh', 'important');
-        mapEl.style.setProperty('z-index', '1', 'important');
-        mapEl.style.setProperty('pointer-events', 'auto', 'important');
-        // parent overflow varsa kır
-        var p = mapEl.parentElement;
-        while (p && p !== doc.body) {
-            p.style.setProperty('overflow', 'visible', 'important');
-            p.style.setProperty('transform', 'none', 'important');
-            p = p.parentElement;
-        }
-        // iframe boyutu
-        var fr = mapEl.querySelector('iframe');
-        if (fr) {
-            fr.style.setProperty('width', '100%', 'important');
-            fr.style.setProperty('height', '100%', 'important');
-            fr.style.setProperty('border', 'none', 'important');
-            // Leaflet'i yeniden boyutlandır
-            try { fr.contentWindow.dispatchEvent(new Event('resize')); } catch(e){}
-        }
-    }
-    if (!window.parent.__synMapInit) {
-        window.parent.__synMapInit = true;
-        window.parent.setInterval(fixMap, 1000);
-    }
-    fixMap();
-})();
-</script>""", height=0)
+# ── 1. Harita — _cv1.html() = srcdoc (same-origin) → window.parent erişimi açık ──
+import streamlit.components.v1 as _cv1
+_cv1.html(harita_html, height=1, scrolling=False)
 
 # ============================================================
 # ANA LAYOUT: sol panel | boşluk | sağ panel
