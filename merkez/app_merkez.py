@@ -44,41 +44,14 @@ button[kind="header"]                    { display: none !important; }
 header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stSidebar"]      { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
-.block-container { padding: 0px !important; max-width: 100% !important; }
+.block-container { padding: 0.5rem 1.5rem 1rem 1.5rem !important; max-width: 100% !important; }
 
-/* ════ Harita Tam Ekran & Panel Z-Index ════ */
-/* Kolon container: haritanın üstünde + 900px boşluğu iptal et */
-[data-testid="stHorizontalBlock"] {
-    position: relative !important;
-    z-index: 10 !important;
-    margin-top: -900px !important;
-}
-/* Başlık haritanın üstünde */
-.synapse-header-wrap {
-    position: relative !important;
-    z-index: 50 !important;
-}
-
-/* ════ Sol Panel Glassmorphism ════ */
-[data-testid="stVerticalBlock"]:has(#syn-left-panel) {
-    background: rgba(7, 17, 35, 0.62) !important;
-    backdrop-filter: blur(18px) !important;
-    -webkit-backdrop-filter: blur(18px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 14px !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
-    padding: 14px !important;
-}
-
-/* ════ Sağ Panel Glassmorphism ════ */
-[data-testid="stVerticalBlock"]:has(#syn-right-panel) {
-    background: rgba(7, 17, 35, 0.62) !important;
-    backdrop-filter: blur(18px) !important;
-    -webkit-backdrop-filter: blur(18px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 14px !important;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
-    padding: 14px !important;
+/* Harita iframe tam ekran */
+[data-testid="column"]:nth-child(2) iframe {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    width: 100vw !important; height: 100vh !important;
+    z-index: 1 !important; border: none !important;
 }
 
 /* Tüm yazılar */
@@ -716,7 +689,7 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
 st.markdown("""
-<div class="synapse-header-wrap" style="text-align:center; padding:12px 0 8px;">
+<div style="text-align:center; padding:12px 0 8px;">
   <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a3b8;
               letter-spacing:3px; text-transform:uppercase;">
     ACIBADEM SAĞLIK GRUBU
@@ -854,195 +827,14 @@ def hvac_yuzdesi(lok_id):
     return round(val, 1) if pd.notna(val) else None
 
 # ============================================================
-# HARITA VERİSİ — sütunlardan önce hazırla
+# ANA LAYOUT: sol | harita | sağ
 # ============================================================
-harita_js = []
-for lok_id, lok_info in HASTANELER.items():
-    online, fark_dk = online_bilgi(lok_id)
-    kwh = dun_kwh(lok_id)
-    durum  = "Çevrimiçi" if online else ("Kurulmadı" if fark_dk is None else "Çevrimdışı")
-    d_renk = "#10b981" if online else ("#6b7280" if fark_dk is None else "#ef4444")
-    boyut  = max(10, min(22, kwh / 1400)) if kwh > 0 else 9
-    harita_js.append({
-        "isim":  lok_info["isim"], "kisa":  lok_info["kisa"],
-        "lat":   lok_info["lat"],  "lon":   lok_info["lon"],
-        "durum": durum, "kwh":   f"{int(kwh):,}".replace(",", ".") if kwh else "—",
-        "m2":    f"{lok_info['m2']:,}".replace(",", "."),
-        "renk":  d_renk, "boyut": boyut, "online": bool(online),
-    })
-
-hjs = json.dumps(harita_js, ensure_ascii=False)
-
-harita_html = f"""<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-* {{ margin:0; padding:0; box-sizing:border-box; }}
-body, html, #map {{ width:100%; height:100vh; background:#020617; overflow:hidden; }}
-.leaflet-container {{ background:#020617 !important; font-family:'Plus Jakarta Sans',sans-serif; }}
-.leaflet-popup-content-wrapper {{
-    background:rgba(15, 23, 42, 0.85) !important;
-    backdrop-filter: blur(12px) !important;
-    border:1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius:8px !important;
-    box-shadow:0 4px 20px rgba(0,0,0,0.6) !important;
-    padding:0 !important;
-}}
-.leaflet-popup-content {{ margin:0 !important; color:white !important; }}
-.leaflet-popup-tip-container {{ display:none; }}
-.leaflet-popup-close-button {{ color:rgba(56, 189, 248,0.5) !important; font-size:16px !important; top:8px !important; right:10px !important; }}
-.leaflet-control-zoom a {{
-    background:rgba(15, 23, 42, 0.7) !important;
-    color:#38bdf8 !important;
-    border-color:rgba(255, 255, 255, 0.08) !important;
-}}
-.leaflet-control-zoom a:hover {{ background:rgba(15, 23, 42, 0.9) !important; }}
-.leaflet-control-attribution {{ display:none !important; }}
-@keyframes breathe-outer {{
-    0%,100% {{ opacity:0.10; transform:scale(0.92); }}
-    50%      {{ opacity:0.28; transform:scale(1.20); }}
-}}
-@keyframes breathe-inner {{
-    0%,100% {{ opacity:0.22; transform:scale(0.96); }}
-    50%     {{ opacity:0.50; transform:scale(1.10); }}
-}}
-</style>
-</head><body>
-<div id="map"></div>
-<script>
-var map = L.map('map', {{
-    center: [39.0, 35.0],
-    zoom: 5,
-    zoomControl: true,
-    attributionControl: false,
-    preferCanvas: true
-}});
-L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
-    maxZoom: 19, subdomains: 'abcd', noWrap: true
-}}).addTo(map);
-window.addEventListener('resize', function() {{ map.invalidateSize(true); }});
-
-// Self-fullscreen: kendi parent container'ını tam ekran yap
-// _cv1.html() srcdoc iframe'de çalışır → window.parent'a erişim açık
-function selfFullscreen() {{
-    try {{
-        var p = window.parent;
-        if (!p || !p.document) return;
-        var iframes = p.document.querySelectorAll('iframe');
-        for (var i = 0; i < iframes.length; i++) {{
-            if (iframes[i].contentWindow === window) {{
-                var cv1 = iframes[i].closest('[data-testid="stCustomComponentV1"]');
-                if (cv1) {{
-                    cv1.style.setProperty('position', 'fixed', 'important');
-                    cv1.style.setProperty('top', '0', 'important');
-                    cv1.style.setProperty('left', '0', 'important');
-                    cv1.style.setProperty('width', '100vw', 'important');
-                    cv1.style.setProperty('height', '100vh', 'important');
-                    cv1.style.setProperty('z-index', '1', 'important');
-                    iframes[i].style.setProperty('width', '100%', 'important');
-                    iframes[i].style.setProperty('height', '100%', 'important');
-                    iframes[i].style.setProperty('border', 'none', 'important');
-                    // Overflow kırıcı — üst elementlerin overflow:hidden'ını engelle
-                    var anc = cv1.parentElement;
-                    while (anc && anc.tagName !== 'BODY') {{
-                        anc.style.setProperty('overflow', 'visible', 'important');
-                        anc = anc.parentElement;
-                    }}
-                }}
-                setTimeout(function() {{ map.invalidateSize(true); }}, 80);
-                break;
-            }}
-        }}
-    }} catch(e) {{}}
-}}
-setTimeout(selfFullscreen, 150);
-setInterval(selfFullscreen, 2500);
-var hospitals = {hjs};
-hospitals.forEach(function(h) {{
-    var s  = h.boyut; var c  = h.renk; var hs = s / 2;
-    L.marker([h.lat, h.lon], {{
-        icon: L.divIcon({{ className:'',
-            html:'<div style="width:'+(s*3.8)+'px;height:'+(s*3.8)+'px;background:'+c+';border-radius:50%;animation:breathe-outer 3s ease-in-out infinite;"></div>',
-            iconSize:[s*3.8, s*3.8], iconAnchor:[s*1.9, s*1.9] }}),
-        interactive:false, zIndexOffset:-200
-    }}).addTo(map);
-    L.marker([h.lat, h.lon], {{
-        icon: L.divIcon({{ className:'',
-            html:'<div style="width:'+(s*2)+'px;height:'+(s*2)+'px;background:'+c+';border-radius:50%;animation:breathe-inner 3s ease-in-out infinite;"></div>',
-            iconSize:[s*2, s*2], iconAnchor:[s, s] }}),
-        interactive:false, zIndexOffset:-100
-    }}).addTo(map);
-    var dot = L.marker([h.lat, h.lon], {{
-        icon: L.divIcon({{ className:'',
-            html:'<div style="width:'+s+'px;height:'+s+'px;background:'+c+';border-radius:50%;border:2px solid rgba(255,255,255,0.28);box-shadow:0 0 10px '+c+',0 0 3px rgba(0,0,0,0.8);"></div>',
-            iconSize:[s, s], iconAnchor:[hs, hs] }}),
-        zIndexOffset:100
-    }}).addTo(map);
-    L.marker([h.lat, h.lon], {{
-        icon: L.divIcon({{ className:'',
-            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+'</div>',
-            iconSize:[100,16], iconAnchor:[-hs-2, hs-2] }}),
-        interactive:false, zIndexOffset:300
-    }}).addTo(map);
-    var kwh_bar = h.kwh !== '—'
-        ? '<div style="margin-top:8px;height:3px;background:rgba(56, 189, 248,0.15);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;"></div></div>'
-        : '';
-    dot.bindPopup(
-        '<div style="padding:14px 16px;min-width:170px;">' +
-        '<div style="font-family:Orbitron,monospace;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
-        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
-        '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
-        '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
-        '<div style="font-size:12px;color:#a0c8ff;margin-bottom:4px;">⚡ <b style="color:white;font-size:14px;">'+h.kwh+'</b> kWh</div>' +
-        '<div style="font-size:10px;color:rgba(150,200,255,0.55);">📐 '+h.m2+' m²</div>' +
-        kwh_bar + '</div>',
-        {{ maxWidth:220, className:'' }}
-    );
-}});
-</script>
-</body></html>"""
-
-# ── Chiller & Dış Hava hesapları ──
-chiller_vals = {}
-dis_hava_val = fetch_dis_hava()
-_dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
-if dis_hava_val is not None:
-    _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
-min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
-if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
-    son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
-    for _, row in son_veri.iterrows():
-        _rid = row["lokasyon_id"]
-        if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
-            chiller_vals[_rid] = float(row["Chiller_Set_Temp_C"])
-        if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
-            dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
-            _dis_hava_kaynak = "📊 DB"
-    if chiller_vals:
-        min_lok = min(chiller_vals, key=chiller_vals.get)
-        max_lok = max(chiller_vals, key=chiller_vals.get)
-        min_val  = chiller_vals[min_lok];  max_val  = chiller_vals[max_lok]
-        min_renk = HASTANELER.get(min_lok, {}).get("renk", "#38bdf8")
-        max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
-        min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
-        max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
-
-# ── 1. Harita — _cv1.html() = srcdoc (same-origin) → window.parent erişimi açık ──
-import streamlit.components.v1 as _cv1
-_cv1.html(harita_html, height=900, scrolling=False)
-
-# ============================================================
-# ANA LAYOUT: sol panel | boşluk | sağ panel
-# ============================================================
-sol, bosluk, sag = st.columns([1.1, 1.8, 1.1], gap="medium")
+sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 
 # ════════════════════════════════
 # SOL KOLON
 # ════════════════════════════════
 with sol:
-    st.markdown('<div id="syn-left-panel" style="display:none;"></div>', unsafe_allow_html=True)
     # ── Lokasyon Durumu ──
     st.markdown('<div class="sec">📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
 
@@ -1220,10 +1012,187 @@ with sol:
             """, unsafe_allow_html=True)
 
 # ════════════════════════════════
+# MERKEZ KOLON — TÜRKİYE HARİTASI
+# ════════════════════════════════
+with merkez:
+    # ── Leaflet harita verisi ─────────────────────────────
+    harita_js = []
+    for lok_id, lok_info in HASTANELER.items():
+        online, fark_dk = online_bilgi(lok_id)
+        kwh = dun_kwh(lok_id)
+        durum  = "Çevrimiçi" if online else ("Kurulmadı" if fark_dk is None else "Çevrimdışı")
+        d_renk = "#10b981" if online else ("#6b7280" if fark_dk is None else "#ef4444")
+        boyut  = max(10, min(22, kwh / 1400)) if kwh > 0 else 9
+        harita_js.append({
+            "isim":  lok_info["isim"],
+            "kisa":  lok_info["kisa"],
+            "lat":   lok_info["lat"],
+            "lon":   lok_info["lon"],
+            "durum": durum,
+            "kwh":   f"{int(kwh):,}" if kwh else "—",
+            "m2":    f"{lok_info['m2']:,}",
+            "renk":  d_renk,
+            "boyut": boyut,
+            "online": bool(online),
+        })
+
+    hjs = json.dumps(harita_js, ensure_ascii=False)
+
+    harita_html = f"""<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ background:#020617; }}
+#map {{ width:100%; height:100vh; background:#020617; }}
+.leaflet-container {{ background:#020617 !important; font-family:'Plus Jakarta Sans',sans-serif; }}
+.leaflet-popup-content-wrapper {{
+    background:rgba(15, 23, 42, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    border:1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius:8px !important;
+    box-shadow:0 4px 20px rgba(0,0,0,0.6) !important;
+    padding:0 !important;
+}}
+.leaflet-popup-content {{ margin:0 !important; color:white !important; }}
+.leaflet-popup-tip-container {{ display:none; }}
+.leaflet-popup-close-button {{ color:rgba(56, 189, 248,0.5) !important; font-size:16px !important; top:8px !important; right:10px !important; }}
+.leaflet-control-zoom a {{
+    background:rgba(15, 23, 42, 0.7) !important;
+    color:#38bdf8 !important;
+    border-color:rgba(255, 255, 255, 0.08) !important;
+}}
+.leaflet-control-zoom a:hover {{ background:rgba(15, 23, 42, 0.9) !important; }}
+.leaflet-control-attribution {{ display:none !important; }}
+@keyframes breathe-outer {{
+    0%,100% {{ opacity:0.10; transform:scale(0.92); }}
+    50%      {{ opacity:0.28; transform:scale(1.20); }}
+}}
+@keyframes breathe-inner {{
+    0%,100% {{ opacity:0.22; transform:scale(0.96); }}
+    50%     {{ opacity:0.50; transform:scale(1.10); }}
+}}
+</style>
+</head><body>
+<div id="map"></div>
+<script>
+var map = L.map('map', {{
+    center: [39.0, 35.0],
+    zoom: 5,
+    zoomControl: true,
+    attributionControl: false,
+    preferCanvas: true
+}});
+
+// CartoDB Dark Matter — ücretsiz, API key yok
+L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
+    maxZoom: 19, subdomains: 'abcd', noWrap: true
+}}).addTo(map);
+
+var hospitals = {hjs};
+
+hospitals.forEach(function(h) {{
+    var s  = h.boyut;
+    var c  = h.renk;
+    var hs = s / 2;
+
+    // ── Dış glow halkası ──
+    L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="width:'+(s*3.8)+'px;height:'+(s*3.8)+'px;background:'+c+';border-radius:50%;animation:breathe-outer 3s ease-in-out infinite;"></div>',
+            iconSize:[s*3.8, s*3.8], iconAnchor:[s*1.9, s*1.9]
+        }}),
+        interactive:false, zIndexOffset:-200
+    }}).addTo(map);
+
+    // ── İç glow halkası ──
+    L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="width:'+(s*2)+'px;height:'+(s*2)+'px;background:'+c+';border-radius:50%;animation:breathe-inner 3s ease-in-out infinite;"></div>',
+            iconSize:[s*2, s*2], iconAnchor:[s, s]
+        }}),
+        interactive:false, zIndexOffset:-100
+    }}).addTo(map);
+
+    // ── Ana nokta ──
+    var dot = L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="width:'+s+'px;height:'+s+'px;background:'+c+';border-radius:50%;border:2px solid rgba(255,255,255,0.28);box-shadow:0 0 10px '+c+',0 0 3px rgba(0,0,0,0.8);"></div>',
+            iconSize:[s, s], iconAnchor:[hs, hs]
+        }}),
+        zIndexOffset:100
+    }}).addTo(map);
+
+    // ── Etiket ──
+    L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+'</div>',
+            iconSize:[100,16], iconAnchor:[-hs-2, hs-2]
+        }}),
+        interactive:false, zIndexOffset:300
+    }}).addTo(map);
+
+    // ── Popup ──
+    var kwh_bar = h.kwh !== '—'
+        ? '<div style="margin-top:8px;height:3px;background:rgba(56, 189, 248,0.15);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;"></div></div>'
+        : '';
+    dot.bindPopup(
+        '<div style="padding:14px 16px;min-width:170px;">' +
+        '<div style="font-family:Orbitron,monospace;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
+        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
+        '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
+        '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
+        '<div style="font-size:12px;color:#a0c8ff;margin-bottom:4px;">⚡ <b style="color:white;font-size:14px;">'+h.kwh+'</b> kWh</div>' +
+        '<div style="font-size:10px;color:rgba(150,200,255,0.55);">📐 '+h.m2+' m²</div>' +
+        kwh_bar + '</div>',
+        {{ maxWidth:220, className:'' }}
+    );
+}});
+</script>
+</body></html>"""
+
+    st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
+    import base64, streamlit.components.v1 as _cv1
+    _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
+    _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
+
+    # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
+    chiller_vals = {}
+    dis_hava_val = fetch_dis_hava()
+    _dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
+    if dis_hava_val is not None:
+        _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
+    min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
+    if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
+        son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
+        for _, row in son_veri.iterrows():
+            lok_id = row["lokasyon_id"]
+            if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
+                chiller_vals[lok_id] = float(row["Chiller_Set_Temp_C"])
+            if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
+                dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
+                _dis_hava_kaynak = "📊 DB"
+        if chiller_vals:
+            min_lok = min(chiller_vals, key=chiller_vals.get)
+            max_lok = max(chiller_vals, key=chiller_vals.get)
+            min_val = chiller_vals[min_lok]
+            max_val = chiller_vals[max_lok]
+            min_renk = HASTANELER.get(min_lok, {}).get("renk", "#38bdf8")
+            max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
+            min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
+            max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
+
+
+# ════════════════════════════════
 # SAĞ KOLON
 # ════════════════════════════════
 with sag:
-    st.markdown('<div id="syn-right-panel" style="display:none;"></div>', unsafe_allow_html=True)
     # ── Canlı Uyarılar ──
     st.markdown('<div class="sec">🚨 CANLI UYARILAR</div>', unsafe_allow_html=True)
 
