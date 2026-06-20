@@ -46,6 +46,14 @@ header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
 .block-container { padding: 0.5rem 1.5rem 1rem 1.5rem !important; max-width: 100% !important; }
 
+/* Harita iframe tam ekran */
+[data-testid="column"]:nth-child(2) iframe {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    width: 100vw !important; height: 100vh !important;
+    z-index: 1 !important; border: none !important;
+}
+
 /* Tüm yazılar */
 h1,h2,h3,h4,h5,h6 { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
 p, span, div, label { color: #cbd5e1 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
@@ -1038,7 +1046,7 @@ with merkez:
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
 body {{ background:#020617; }}
-#map {{ width:100%; height:608px; background:#020617; }}
+#map {{ width:100%; height:100vh; background:#020617; }}
 .leaflet-container {{ background:#020617 !important; font-family:'Plus Jakarta Sans',sans-serif; }}
 .leaflet-popup-content-wrapper {{
     background:rgba(15, 23, 42, 0.85) !important;
@@ -1080,7 +1088,7 @@ var map = L.map('map', {{
 
 // CartoDB Dark Matter — ücretsiz, API key yok
 L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
-    maxZoom: 19, subdomains: 'abcd'
+    maxZoom: 19, subdomains: 'abcd', noWrap: true
 }}).addTo(map);
 
 var hospitals = {hjs};
@@ -1152,7 +1160,7 @@ hospitals.forEach(function(h) {{
     st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
     import base64, streamlit.components.v1 as _cv1
     _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
-    _cv1.iframe(f"data:text/html;base64,{_b64}", height=615, scrolling=False)
+    _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
