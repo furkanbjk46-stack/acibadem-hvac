@@ -921,6 +921,7 @@ var map = L.map('map', {{
 L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
     maxZoom: 19, subdomains: 'abcd', noWrap: true
 }}).addTo(map);
+window.addEventListener('resize', function() {{ map.invalidateSize(); }});
 var hospitals = {hjs};
 hospitals.forEach(function(h) {{
     var s  = h.boyut; var c  = h.renk; var hs = s / 2;
@@ -994,9 +995,9 @@ if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
 # ── 1. Harita arka planda tam ekran ──
 import base64, streamlit.components.v1 as _cv1
 _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
-_cv1.iframe(f"data:text/html;base64,{_b64}", height=800, scrolling=False)
+_cv1.iframe(f"data:text/html;base64,{_b64}", height=1, scrolling=False)
 
-# ── 2. JS: Harita iframe'ini viewport'a yay ──
+# ── 2. JS: Harita iframe'ini tam ekran yap ──
 _cv1.html("""<script>
 (function() {
     function fixMap() {
@@ -1004,17 +1005,34 @@ _cv1.html("""<script>
         var cv1s = doc.querySelectorAll('[data-testid="stCustomComponentV1"]');
         if (!cv1s.length) { setTimeout(fixMap, 300); return; }
         var mapEl = cv1s[0];
-        mapEl.style.cssText += ';position:fixed!important;top:0!important;left:0!important;width:100vw!important;height:100vh!important;z-index:1!important;';
+        // setProperty ile !important uygula (cssText+= ile olmaz)
+        mapEl.style.setProperty('position', 'fixed', 'important');
+        mapEl.style.setProperty('top', '0', 'important');
+        mapEl.style.setProperty('left', '0', 'important');
+        mapEl.style.setProperty('width', '100vw', 'important');
+        mapEl.style.setProperty('height', '100vh', 'important');
+        mapEl.style.setProperty('z-index', '1', 'important');
+        mapEl.style.setProperty('pointer-events', 'auto', 'important');
+        // parent overflow varsa kır
+        var p = mapEl.parentElement;
+        while (p && p !== doc.body) {
+            p.style.setProperty('overflow', 'visible', 'important');
+            p.style.setProperty('transform', 'none', 'important');
+            p = p.parentElement;
+        }
+        // iframe boyutu
         var fr = mapEl.querySelector('iframe');
         if (fr) {
-            fr.style.width = '100%';
-            fr.style.height = '100%';
-            fr.style.border = 'none';
+            fr.style.setProperty('width', '100%', 'important');
+            fr.style.setProperty('height', '100%', 'important');
+            fr.style.setProperty('border', 'none', 'important');
+            // Leaflet'i yeniden boyutlandır
+            try { fr.contentWindow.dispatchEvent(new Event('resize')); } catch(e){}
         }
     }
     if (!window.parent.__synMapInit) {
         window.parent.__synMapInit = true;
-        window.parent.setInterval(fixMap, 1500);
+        window.parent.setInterval(fixMap, 1000);
     }
     fixMap();
 })();
