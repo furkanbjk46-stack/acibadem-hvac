@@ -26,21 +26,14 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
-/* ── Sayfa zemini ── */
-html, body { background: #05090f !important; }
-
-/* ── Tüm Streamlit container'lar şeffaf ── */
-[data-testid="stAppViewContainer"],
-[data-testid="stAppViewContainer"] > div,
-[data-testid="stAppViewBlockContainer"],
-[data-testid="stMainBlockContainer"],
-[data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stVerticalBlock"],
-.main, .block-container,
-section.main > div.block-container {
-    background: transparent !important;
+html, body, [data-testid="stAppViewContainer"] {
+    background-color: #060b14 !important;
+    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
-
+[data-testid="stAppViewContainer"] {
+    background-color: #060b14 !important;
+    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
+}
 [data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
 [data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
@@ -51,37 +44,7 @@ button[kind="header"]                    { display: none !important; }
 header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stSidebar"]      { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
-.block-container { padding: 0 0 0 0 !important; max-width: 100% !important; }
-[data-testid="stHorizontalBlock"] { gap: 0 !important; }
-
-/* ── Merkez kolon: şeffaf ── */
-[data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) {
-    background: transparent !important;
-    pointer-events: none !important;
-}
-
-
-/* ── Sol cam panel: #syn-left-panel marker ile ── */
-[data-testid="column"]:has(#syn-left-panel) {
-    background: rgba(4,8,20,0.85) !important;
-    backdrop-filter: blur(22px) !important;
-    -webkit-backdrop-filter: blur(22px) !important;
-    border-right: 1px solid rgba(56,189,248,0.15) !important;
-    min-height: 100vh !important;
-    position: relative !important;
-    z-index: 1000 !important;
-}
-
-/* ── Sağ cam panel: #syn-right-panel marker ile ── */
-[data-testid="column"]:has(#syn-right-panel) {
-    background: rgba(4,8,20,0.85) !important;
-    backdrop-filter: blur(22px) !important;
-    -webkit-backdrop-filter: blur(22px) !important;
-    border-left: 1px solid rgba(56,189,248,0.15) !important;
-    min-height: 100vh !important;
-    position: relative !important;
-    z-index: 1000 !important;
-}
+.block-container { padding: 0.5rem 1.5rem 1rem 1.5rem !important; max-width: 100% !important; }
 
 /* Tüm yazılar */
 h1,h2,h3,h4,h5,h6 { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
@@ -864,7 +827,6 @@ sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 # SOL KOLON
 # ════════════════════════════════
 with sol:
-    st.markdown('<div id="syn-left-panel"></div>', unsafe_allow_html=True)
     # ── Lokasyon Durumu ──
     st.markdown('<div class="sec">📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
 
@@ -1075,28 +1037,9 @@ with merkez:
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
-html, body {{ background:#020617; width:100%; height:100%; overflow:hidden; }}
-#map {{ width:100%; height:100vh; background:#020617; }}
+body {{ background:#020617; }}
+#map {{ width:100%; height:608px; background:#020617; }}
 .leaflet-container {{ background:#020617 !important; font-family:'Plus Jakarta Sans',sans-serif; }}
-#vignette {{
-    position:fixed; inset:0; pointer-events:none; z-index:1000;
-    background: radial-gradient(ellipse 95% 85% at 50% 48%,
-        transparent 28%,
-        rgba(5,9,15,0.35) 58%,
-        rgba(5,9,15,0.72) 80%,
-        rgba(5,9,15,0.92) 100%);
-}}
-#atmosphere {{
-    position:fixed; inset:0; pointer-events:none; z-index:999;
-    box-shadow: inset 0 0 140px rgba(5,9,15,0.6),
-                inset 0 0 60px rgba(14,165,233,0.07);
-}}
-#globe-edge {{
-    position:fixed; inset:0; pointer-events:none; z-index:998;
-    background:
-        linear-gradient(to right, rgba(5,9,15,0.55) 0%, transparent 12%, transparent 88%, rgba(5,9,15,0.55) 100%),
-        linear-gradient(to bottom, rgba(5,9,15,0.45) 0%, transparent 10%, transparent 92%, rgba(5,9,15,0.65) 100%);
-}}
 .leaflet-popup-content-wrapper {{
     background:rgba(15, 23, 42, 0.85) !important;
     backdrop-filter: blur(12px) !important;
@@ -1125,20 +1068,14 @@ html, body {{ background:#020617; width:100%; height:100%; overflow:hidden; }}
 }}
 </style>
 </head><body>
-<script>window.name = 'syn-map';</script>
 <div id="map"></div>
-<div id="vignette"></div>
-<div id="atmosphere"></div>
-<div id="globe-edge"></div>
 <script>
 var map = L.map('map', {{
-    center: [38.5, 34.5],
-    zoom: 5.5,
+    center: [39.0, 35.0],
+    zoom: 5,
     zoomControl: true,
     attributionControl: false,
-    preferCanvas: true,
-    zoomSnap: 0.25,
-    zoomDelta: 0.5
+    preferCanvas: true
 }});
 
 // CartoDB Dark Matter — ücretsiz, API key yok
@@ -1212,35 +1149,10 @@ hospitals.forEach(function(h) {{
 </script>
 </body></html>"""
 
-    import streamlit.components.v1 as _cv1
-    _cv1.html(harita_html, height=900, scrolling=False)
-
-    # interval ANA pencerede (window.parent) başlatılır → Streamlit rerender'dan etkilenmez
-    _cv1.html("""<script>
-(function(){
-  var p = window.parent;
-  // Önceki render'dan gelen interval varsa yenisini başlatma
-  if(p._syn_fixer) return;
-  p._syn_fixer = p.setInterval(function(){
-    try{
-      p.document.querySelectorAll('iframe').forEach(function(f){
-        try{
-          if(f.contentWindow && f.contentWindow.name==='syn-map'){
-            f.style.setProperty('position','fixed','important');
-            f.style.setProperty('top','0','important');
-            f.style.setProperty('left','0','important');
-            f.style.setProperty('width','100vw','important');
-            f.style.setProperty('height','100vh','important');
-            f.style.setProperty('z-index','1','important');
-            f.style.setProperty('border','none','important');
-            f.style.setProperty('pointer-events','auto','important');
-          }
-        }catch(e){}
-      });
-    }catch(e){}
-  }, 400);
-})();
-</script>""", height=0)
+    st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
+    import base64, streamlit.components.v1 as _cv1
+    _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
+    _cv1.iframe(f"data:text/html;base64,{_b64}", height=615, scrolling=False)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
@@ -1273,7 +1185,6 @@ hospitals.forEach(function(h) {{
 # SAĞ KOLON
 # ════════════════════════════════
 with sag:
-    st.markdown('<div id="syn-right-panel"></div>', unsafe_allow_html=True)
     # ── Canlı Uyarılar ──
     st.markdown('<div class="sec">🚨 CANLI UYARILAR</div>', unsafe_allow_html=True)
 
