@@ -63,14 +63,6 @@ header[data-testid="stHeader"] button    { display: none !important; }
     pointer-events: none !important;
 }
 
-/* ── Harita iframe: tam ekran (nth-child(2) içindeki tek iframe) ── */
-[data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) iframe {
-    position: fixed !important;
-    top: 0 !important; left: 0 !important;
-    width: 100vw !important; height: 100vh !important;
-    z-index: 0 !important; border: none !important;
-    pointer-events: auto !important;
-}
 
 /* ── Sol cam panel: #syn-left-panel marker ile ── */
 [data-testid="column"]:has(#syn-left-panel) {
@@ -1225,6 +1217,34 @@ hospitals.forEach(function(h) {{
 
     import streamlit.components.v1 as _cv1
     _cv1.html(harita_html, height=1, scrolling=False)
+
+    # Sadece harita iframe'ini tam ekran yap (paneller CSS :has() ile halledildi)
+    _cv1.html("""<script>
+(function(){
+  var p=window.parent;
+  function fix(){
+    try{
+      p.document.querySelectorAll('iframe').forEach(function(f){
+        try{
+          if(f.contentWindow && f.contentWindow.name==='syn-map'){
+            f.style.setProperty('position','fixed','important');
+            f.style.setProperty('top','0','important');
+            f.style.setProperty('left','0','important');
+            f.style.setProperty('width','100vw','important');
+            f.style.setProperty('height','100vh','important');
+            f.style.setProperty('z-index','0','important');
+            f.style.setProperty('border','none','important');
+            f.style.setProperty('pointer-events','auto','important');
+          }
+        }catch(e){}
+      });
+    }catch(e){}
+  }
+  try{ new MutationObserver(fix).observe(p.document.body,{childList:true,subtree:true}); }catch(e){}
+  fix(); setTimeout(fix,200); setTimeout(fix,600); setTimeout(fix,1500);
+  setInterval(fix,2000);
+})();
+</script>""", height=0)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
