@@ -1215,11 +1215,13 @@ hospitals.forEach(function(h) {{
     import streamlit.components.v1 as _cv1
     _cv1.html(harita_html, height=900, scrolling=False)
 
-    # Sadece harita iframe'ini tam ekran yap (paneller CSS :has() ile halledildi)
+    # interval ANA pencerede (window.parent) başlatılır → Streamlit rerender'dan etkilenmez
     _cv1.html("""<script>
 (function(){
-  var p=window.parent;
-  function fix(){
+  var p = window.parent;
+  // Önceki render'dan gelen interval varsa yenisini başlatma
+  if(p._syn_fixer) return;
+  p._syn_fixer = p.setInterval(function(){
     try{
       p.document.querySelectorAll('iframe').forEach(function(f){
         try{
@@ -1236,10 +1238,7 @@ hospitals.forEach(function(h) {{
         }catch(e){}
       });
     }catch(e){}
-  }
-  try{ new MutationObserver(fix).observe(p.document.body,{childList:true,subtree:true}); }catch(e){}
-  fix(); setTimeout(fix,200); setTimeout(fix,600); setTimeout(fix,1500);
-  setInterval(fix,2000);
+  }, 400);
 })();
 </script>""", height=0)
 
