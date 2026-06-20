@@ -1190,7 +1190,6 @@ hospitals.forEach(function(h) {{
 </body></html>"""
 
     import streamlit.components.v1 as _cv1
-    # height=1 → band effect önlemi: iframe doğal pozisyonuna döndüğünde sadece 1px görünür
     _cv1.html(harita_html, height=1, scrolling=False)
 
     # ── JS enjeksiyonu ──
@@ -1198,70 +1197,64 @@ hospitals.forEach(function(h) {{
 (function(){
   var p = window.parent;
 
-  // <style> kalıcı olarak <head>'e eklenir; Streamlit rerender'da silinmez
-  function ensureStyles(){
-    if(p.document.getElementById('syn-st')) return;
-    var s = p.document.createElement('style');
-    s.id = 'syn-st';
-    s.textContent =
-      'iframe[data-syn-map]{' +
-        'position:fixed!important;top:0!important;left:0!important;' +
-        'width:100vw!important;height:100vh!important;' +
-        'z-index:0!important;border:none!important;pointer-events:auto!important;}';
-    p.document.head.appendChild(s);
-  }
+  function sp(el,prop,val){ el.style.setProperty(prop,val,'important'); }
 
   function run(){
     try{
-      ensureStyles();
-
-      // 1) Harita iframe → attribute ekle (iframe elementi rerender'da DEĞİŞMEZ, attribute kalır)
+      // 1) Harita iframe → inline style ile tam ekran (setProperty+important Streamlit'i ezer)
       p.document.querySelectorAll('iframe').forEach(function(f){
         try{
-          if(f.contentWindow && f.contentWindow.name==='syn-map')
-            f.setAttribute('data-syn-map','1');
+          if(f.contentWindow && f.contentWindow.name==='syn-map'){
+            sp(f,'position','fixed');
+            sp(f,'top','0'); sp(f,'left','0');
+            sp(f,'width','100vw'); sp(f,'height','100vh');
+            sp(f,'z-index','0'); sp(f,'border','none');
+            sp(f,'pointer-events','auto');
+          }
         }catch(e){}
       });
 
-      // 2) Columns: inline style (rerender'da column div'leri yenilenir, her seferinde yeniden uygula)
-      var hb = p.document.querySelectorAll('[data-testid="stHorizontalBlock"]');
-      for(var i=0;i<hb.length;i++){
-        var c = hb[i].querySelectorAll(':scope>[data-testid="column"]');
-        if(c.length>=3){
-          var gl = 'rgba(4,8,20,0.85)', bl = 'blur(22px)', ac = 'rgba(56,189,248,0.15)';
-          // Sol
-          c[0].style.background=gl;
-          c[0].style.backdropFilter=bl;
-          c[0].style.webkitBackdropFilter=bl;
-          c[0].style.borderRight='1px solid '+ac;
-          c[0].style.minHeight='100vh';
-          c[0].style.position='relative';
-          c[0].style.zIndex='10';
-          c[0].style.overflow='hidden auto';
-          // Merkez
-          c[1].style.background='transparent';
-          c[1].style.pointerEvents='none';
-          // Sağ
-          c[2].style.background=gl;
-          c[2].style.backdropFilter=bl;
-          c[2].style.webkitBackdropFilter=bl;
-          c[2].style.borderLeft='1px solid '+ac;
-          c[2].style.minHeight='100vh';
-          c[2].style.position='relative';
-          c[2].style.zIndex='10';
-          c[2].style.overflow='hidden auto';
-          break;
-        }
-      }
+      // 2) Doğru stHorizontalBlock'u #syn-left-panel marker'ı ile bul
+      // (birden fazla 3-kolonlu blok olabilir; marker ile kesin adresliyoruz)
+      var marker = p.document.getElementById('syn-left-panel');
+      if(!marker) return;
+      var hblock = marker.closest('[data-testid="stHorizontalBlock"]');
+      if(!hblock) return;
+      var c = hblock.querySelectorAll(':scope>[data-testid="column"]');
+      if(c.length < 3) return;
+
+      var GL='rgba(4,8,20,0.85)', BL='blur(22px)', AC='rgba(56,189,248,0.15)';
+
+      sp(c[0],'background',GL);
+      sp(c[0],'backdrop-filter',BL);
+      sp(c[0],'-webkit-backdrop-filter',BL);
+      sp(c[0],'border-right','1px solid '+AC);
+      sp(c[0],'min-height','100vh');
+      sp(c[0],'position','relative');
+      sp(c[0],'z-index','10');
+
+      sp(c[1],'background','transparent');
+      sp(c[1],'pointer-events','none');
+
+      sp(c[2],'background',GL);
+      sp(c[2],'backdrop-filter',BL);
+      sp(c[2],'-webkit-backdrop-filter',BL);
+      sp(c[2],'border-left','1px solid '+AC);
+      sp(c[2],'min-height','100vh');
+      sp(c[2],'position','relative');
+      sp(c[2],'z-index','10');
+
     }catch(e){}
   }
 
+  // MutationObserver: DOM degistiğinde aninda tetiklenir (rerender gecikmesi sifir)
+  try{
+    new MutationObserver(run).observe(p.document.body,{childList:true,subtree:true});
+  }catch(e){}
+
   run();
-  setTimeout(run,150);
-  setTimeout(run,500);
-  setTimeout(run,1200);
-  // Streamlit 10sn'de bir rerender yapar → 800ms'de bir yakala
-  setInterval(run,800);
+  setTimeout(run,200); setTimeout(run,700); setTimeout(run,1500);
+  setInterval(run,3000);
 })();
 </script>""", height=0)
 
