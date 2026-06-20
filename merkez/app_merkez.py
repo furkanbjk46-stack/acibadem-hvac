@@ -54,10 +54,44 @@ header[data-testid="stHeader"] button    { display: none !important; }
 .block-container { padding: 0 0 0 0 !important; max-width: 100% !important; }
 [data-testid="stHorizontalBlock"] { gap: 0 !important; }
 
-/* ── Merkez kolon (harita): şeffaf ── */
+/* ── Merkez kolon: yüksekliği sıfır, fixed iframe hala görünür ── */
 [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) {
+    height: 0 !important;
+    min-height: 0 !important;
+    overflow: visible !important;
     background: transparent !important;
     pointer-events: none !important;
+}
+
+/* ── Harita iframe: tam ekran (nth-child(2) içindeki tek iframe) ── */
+[data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) iframe {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    width: 100vw !important; height: 100vh !important;
+    z-index: 0 !important; border: none !important;
+    pointer-events: auto !important;
+}
+
+/* ── Sol cam panel: #syn-left-panel marker ile ── */
+[data-testid="column"]:has(#syn-left-panel) {
+    background: rgba(4,8,20,0.85) !important;
+    backdrop-filter: blur(22px) !important;
+    -webkit-backdrop-filter: blur(22px) !important;
+    border-right: 1px solid rgba(56,189,248,0.15) !important;
+    min-height: 100vh !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* ── Sağ cam panel: #syn-right-panel marker ile ── */
+[data-testid="column"]:has(#syn-right-panel) {
+    background: rgba(4,8,20,0.85) !important;
+    backdrop-filter: blur(22px) !important;
+    -webkit-backdrop-filter: blur(22px) !important;
+    border-left: 1px solid rgba(56,189,248,0.15) !important;
+    min-height: 100vh !important;
+    position: relative !important;
+    z-index: 10 !important;
 }
 
 /* Tüm yazılar */
@@ -1191,72 +1225,6 @@ hospitals.forEach(function(h) {{
 
     import streamlit.components.v1 as _cv1
     _cv1.html(harita_html, height=1, scrolling=False)
-
-    # ── JS enjeksiyonu ──
-    _cv1.html("""<script>
-(function(){
-  var p = window.parent;
-
-  function sp(el,prop,val){ el.style.setProperty(prop,val,'important'); }
-
-  function run(){
-    try{
-      // 1) Harita iframe → inline style ile tam ekran (setProperty+important Streamlit'i ezer)
-      p.document.querySelectorAll('iframe').forEach(function(f){
-        try{
-          if(f.contentWindow && f.contentWindow.name==='syn-map'){
-            sp(f,'position','fixed');
-            sp(f,'top','0'); sp(f,'left','0');
-            sp(f,'width','100vw'); sp(f,'height','100vh');
-            sp(f,'z-index','0'); sp(f,'border','none');
-            sp(f,'pointer-events','auto');
-          }
-        }catch(e){}
-      });
-
-      // 2) Doğru stHorizontalBlock'u #syn-left-panel marker'ı ile bul
-      // (birden fazla 3-kolonlu blok olabilir; marker ile kesin adresliyoruz)
-      var marker = p.document.getElementById('syn-left-panel');
-      if(!marker) return;
-      var hblock = marker.closest('[data-testid="stHorizontalBlock"]');
-      if(!hblock) return;
-      var c = hblock.querySelectorAll(':scope>[data-testid="column"]');
-      if(c.length < 3) return;
-
-      var GL='rgba(4,8,20,0.85)', BL='blur(22px)', AC='rgba(56,189,248,0.15)';
-
-      sp(c[0],'background',GL);
-      sp(c[0],'backdrop-filter',BL);
-      sp(c[0],'-webkit-backdrop-filter',BL);
-      sp(c[0],'border-right','1px solid '+AC);
-      sp(c[0],'min-height','100vh');
-      sp(c[0],'position','relative');
-      sp(c[0],'z-index','10');
-
-      sp(c[1],'background','transparent');
-      sp(c[1],'pointer-events','none');
-
-      sp(c[2],'background',GL);
-      sp(c[2],'backdrop-filter',BL);
-      sp(c[2],'-webkit-backdrop-filter',BL);
-      sp(c[2],'border-left','1px solid '+AC);
-      sp(c[2],'min-height','100vh');
-      sp(c[2],'position','relative');
-      sp(c[2],'z-index','10');
-
-    }catch(e){}
-  }
-
-  // MutationObserver: DOM degistiğinde aninda tetiklenir (rerender gecikmesi sifir)
-  try{
-    new MutationObserver(run).observe(p.document.body,{childList:true,subtree:true});
-  }catch(e){}
-
-  run();
-  setTimeout(run,200); setTimeout(run,700); setTimeout(run,1500);
-  setInterval(run,3000);
-})();
-</script>""", height=0)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
