@@ -1190,86 +1190,78 @@ hospitals.forEach(function(h) {{
 </body></html>"""
 
     import streamlit.components.v1 as _cv1
-    _cv1.html(harita_html, height=900, scrolling=False)
+    # height=1 → band effect önlemi: iframe doğal pozisyonuna döndüğünde sadece 1px görünür
+    _cv1.html(harita_html, height=1, scrolling=False)
 
-    # ── JS enjeksiyonu: harita iframe'i tam ekran yap + cam panel stillerini uygula ──
+    # ── JS enjeksiyonu ──
     _cv1.html("""<script>
 (function(){
-  // CSS injection: kalıcı stilleri <style> tag ile yerleştir (JS'den daha güvenilir)
-  function injectGlobalStyles(p){
-    if(p.document.getElementById('syn-global-styles')) return;
+  var p = window.parent;
+
+  // <style> kalıcı olarak <head>'e eklenir; Streamlit rerender'da silinmez
+  function ensureStyles(){
+    if(p.document.getElementById('syn-st')) return;
     var s = p.document.createElement('style');
-    s.id = 'syn-global-styles';
-    s.textContent = [
-      'iframe[data-syn-map]{',
-      '  position:fixed!important;top:0!important;left:0!important;',
-      '  width:100vw!important;height:100vh!important;',
-      '  z-index:0!important;border:none!important;pointer-events:auto!important;',
-      '}',
-      '.syn-map-container{height:0!important;overflow:hidden!important;min-height:0!important;}',
-      '.syn-left-col{',
-      '  background:rgba(4,8,20,0.85)!important;',
-      '  backdrop-filter:blur(22px)!important;-webkit-backdrop-filter:blur(22px)!important;',
-      '  border-right:1px solid rgba(56,189,248,0.15)!important;',
-      '  min-height:100vh!important;position:relative!important;z-index:10!important;',
-      '  overflow:hidden auto!important;',
-      '}',
-      '.syn-right-col{',
-      '  background:rgba(4,8,20,0.85)!important;',
-      '  backdrop-filter:blur(22px)!important;-webkit-backdrop-filter:blur(22px)!important;',
-      '  border-left:1px solid rgba(56,189,248,0.15)!important;',
-      '  min-height:100vh!important;position:relative!important;z-index:10!important;',
-      '  overflow:hidden auto!important;',
-      '}',
-      '.syn-center-col{background:transparent!important;pointer-events:none!important;}'
-    ].join('');
+    s.id = 'syn-st';
+    s.textContent =
+      'iframe[data-syn-map]{' +
+        'position:fixed!important;top:0!important;left:0!important;' +
+        'width:100vw!important;height:100vh!important;' +
+        'z-index:0!important;border:none!important;pointer-events:auto!important;}';
     p.document.head.appendChild(s);
   }
 
-  function syn_apply(){
-    try {
-      var p = window.parent;
-      injectGlobalStyles(p);
+  function run(){
+    try{
+      ensureStyles();
 
-      // 1) Harita iframe'i bul → data-attribute ekle → CSS ile tam ekran olur
+      // 1) Harita iframe → attribute ekle (iframe elementi rerender'da DEĞİŞMEZ, attribute kalır)
       p.document.querySelectorAll('iframe').forEach(function(f){
-        try {
-          if(f.contentWindow && f.contentWindow.name==='syn-map'){
+        try{
+          if(f.contentWindow && f.contentWindow.name==='syn-map')
             f.setAttribute('data-syn-map','1');
-            // Container div'i de gizle (band effect önlemi)
-            var container = f.parentElement;
-            while(container && container !== p.document.body){
-              if(container.getAttribute && container.getAttribute('data-testid')==='stCustomComponentV1'){
-                container.classList.add('syn-map-container');
-                break;
-              }
-              container = container.parentElement;
-            }
-          }
-        } catch(e){}
+        }catch(e){}
       });
 
-      // 2) İlk 3-kolonlu stHorizontalBlock'u bul → class ekle → CSS ile stiller
-      var hblocks = p.document.querySelectorAll('[data-testid="stHorizontalBlock"]');
-      for(var i=0; i<hblocks.length; i++){
-        var cols = hblocks[i].querySelectorAll(':scope > [data-testid="column"]');
-        if(cols.length >= 3){
-          cols[0].classList.add('syn-left-col');
-          cols[1].classList.add('syn-center-col');
-          cols[2].classList.add('syn-right-col');
+      // 2) Columns: inline style (rerender'da column div'leri yenilenir, her seferinde yeniden uygula)
+      var hb = p.document.querySelectorAll('[data-testid="stHorizontalBlock"]');
+      for(var i=0;i<hb.length;i++){
+        var c = hb[i].querySelectorAll(':scope>[data-testid="column"]');
+        if(c.length>=3){
+          var gl = 'rgba(4,8,20,0.85)', bl = 'blur(22px)', ac = 'rgba(56,189,248,0.15)';
+          // Sol
+          c[0].style.background=gl;
+          c[0].style.backdropFilter=bl;
+          c[0].style.webkitBackdropFilter=bl;
+          c[0].style.borderRight='1px solid '+ac;
+          c[0].style.minHeight='100vh';
+          c[0].style.position='relative';
+          c[0].style.zIndex='10';
+          c[0].style.overflow='hidden auto';
+          // Merkez
+          c[1].style.background='transparent';
+          c[1].style.pointerEvents='none';
+          // Sağ
+          c[2].style.background=gl;
+          c[2].style.backdropFilter=bl;
+          c[2].style.webkitBackdropFilter=bl;
+          c[2].style.borderLeft='1px solid '+ac;
+          c[2].style.minHeight='100vh';
+          c[2].style.position='relative';
+          c[2].style.zIndex='10';
+          c[2].style.overflow='hidden auto';
           break;
         }
       }
-    } catch(e){}
+    }catch(e){}
   }
 
-  // İlk çalışma + kısa gecikmeler (DOM hazır olmayabilir)
-  syn_apply();
-  setTimeout(syn_apply, 200);
-  setTimeout(syn_apply, 600);
-  setTimeout(syn_apply, 1500);
-  // Streamlit periyodik rerender'ı için sık interval
-  setInterval(syn_apply, 1200);
+  run();
+  setTimeout(run,150);
+  setTimeout(run,500);
+  setTimeout(run,1200);
+  // Streamlit 10sn'de bir rerender yapar → 800ms'de bir yakala
+  setInterval(run,800);
 })();
 </script>""", height=0)
 
