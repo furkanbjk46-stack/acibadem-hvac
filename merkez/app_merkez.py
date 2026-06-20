@@ -876,7 +876,7 @@ def hvac_yuzdesi(lok_id):
 # ============================================================
 # ANA LAYOUT: sol | harita | sağ
 # ============================================================
-sol, merkez, sag = st.columns([1, 2.8, 1], gap="none")
+sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 
 # ════════════════════════════════
 # SOL KOLON
