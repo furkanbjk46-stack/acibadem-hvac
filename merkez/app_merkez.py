@@ -69,7 +69,7 @@ header[data-testid="stHeader"] button    { display: none !important; }
     border-right: 1px solid rgba(56,189,248,0.15) !important;
     min-height: 100vh !important;
     position: relative !important;
-    z-index: 10 !important;
+    z-index: 1000 !important;
 }
 
 /* ── Sağ cam panel: #syn-right-panel marker ile ── */
@@ -80,7 +80,7 @@ header[data-testid="stHeader"] button    { display: none !important; }
     border-left: 1px solid rgba(56,189,248,0.15) !important;
     min-height: 100vh !important;
     position: relative !important;
-    z-index: 10 !important;
+    z-index: 1000 !important;
 }
 
 /* Tüm yazılar */
@@ -1231,7 +1231,7 @@ hospitals.forEach(function(h) {{
             f.style.setProperty('left','0','important');
             f.style.setProperty('width','100vw','important');
             f.style.setProperty('height','100vh','important');
-            f.style.setProperty('z-index','0','important');
+            f.style.setProperty('z-index','1','important');
             f.style.setProperty('border','none','important');
             f.style.setProperty('pointer-events','auto','important');
           }
