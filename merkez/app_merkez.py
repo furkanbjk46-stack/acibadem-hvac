@@ -54,51 +54,10 @@ header[data-testid="stHeader"] button    { display: none !important; }
 .block-container { padding: 0 0 0 0 !important; max-width: 100% !important; }
 [data-testid="stHorizontalBlock"] { gap: 0 !important; }
 
-/* ── Harita iframe → tam sayfa arka plan ── */
-[data-testid="column"]:has([data-testid="stIframe"]) iframe {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    z-index: 0 !important;
-    border: none !important;
-    pointer-events: auto !important;
-}
-[data-testid="column"]:has([data-testid="stIframe"]) {
+/* ── Merkez kolon (harita): şeffaf ── */
+[data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) {
     background: transparent !important;
     pointer-events: none !important;
-    flex: 1 1 0% !important;
-}
-
-/* ── Sol cam panel ── */
-[data-testid="column"]:has(#syn-left-panel) {
-    background: rgba(4,8,20,0.80) !important;
-    backdrop-filter: blur(22px) !important;
-    -webkit-backdrop-filter: blur(22px) !important;
-    border-right: 1px solid rgba(56,189,248,0.14) !important;
-    min-height: 100vh !important;
-    position: relative !important;
-    z-index: 10 !important;
-    padding: 0 !important;
-}
-[data-testid="column"]:has(#syn-left-panel) [data-testid="stVerticalBlock"] {
-    padding: 10px 12px !important;
-}
-
-/* ── Sağ cam panel ── */
-[data-testid="column"]:has(#syn-right-panel) {
-    background: rgba(4,8,20,0.80) !important;
-    backdrop-filter: blur(22px) !important;
-    -webkit-backdrop-filter: blur(22px) !important;
-    border-left: 1px solid rgba(56,189,248,0.14) !important;
-    min-height: 100vh !important;
-    position: relative !important;
-    z-index: 10 !important;
-    padding: 0 !important;
-}
-[data-testid="column"]:has(#syn-right-panel) [data-testid="stVerticalBlock"] {
-    padding: 10px 12px !important;
 }
 
 /* Tüm yazılar */
@@ -1143,6 +1102,7 @@ html, body {{ background:#020617; width:100%; height:100%; overflow:hidden; }}
 }}
 </style>
 </head><body>
+<script>window.name = 'syn-map';</script>
 <div id="map"></div>
 <div id="vignette"></div>
 <div id="atmosphere"></div>
@@ -1229,9 +1189,69 @@ hospitals.forEach(function(h) {{
 </script>
 </body></html>"""
 
-    import base64, streamlit.components.v1 as _cv1
-    _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
-    _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
+    import streamlit.components.v1 as _cv1
+    _cv1.html(harita_html, height=900, scrolling=False)
+
+    # ── JS enjeksiyonu: harita iframe'i tam ekran yap + cam panel stillerini uygula ──
+    _cv1.html("""<script>
+(function(){
+  function syn_apply(){
+    try {
+      var p = window.parent;
+
+      // 1) Harita iframe'i bul (window.name='syn-map') → tam ekran yap
+      var frames = p.document.querySelectorAll('iframe');
+      frames.forEach(function(f){
+        try {
+          if(f.contentWindow && f.contentWindow.name==='syn-map'){
+            f.style.cssText='position:fixed!important;top:0!important;left:0!important;'+
+              'width:100vw!important;height:100vh!important;z-index:0!important;'+
+              'border:none!important;pointer-events:auto!important;';
+          }
+        } catch(e){}
+      });
+
+      // 2) Sol cam panel
+      var lp = p.document.getElementById('syn-left-panel');
+      if(lp){
+        var lc = lp.closest('[data-testid="column"]');
+        if(lc){
+          lc.style.cssText='background:rgba(4,8,20,0.82)!important;'+
+            'backdrop-filter:blur(22px)!important;-webkit-backdrop-filter:blur(22px)!important;'+
+            'border-right:1px solid rgba(56,189,248,0.15)!important;'+
+            'min-height:100vh!important;position:relative!important;z-index:10!important;';
+        }
+      }
+
+      // 3) Sağ cam panel
+      var rp = p.document.getElementById('syn-right-panel');
+      if(rp){
+        var rc = rp.closest('[data-testid="column"]');
+        if(rc){
+          rc.style.cssText='background:rgba(4,8,20,0.82)!important;'+
+            'backdrop-filter:blur(22px)!important;-webkit-backdrop-filter:blur(22px)!important;'+
+            'border-left:1px solid rgba(56,189,248,0.15)!important;'+
+            'min-height:100vh!important;position:relative!important;z-index:10!important;';
+        }
+      }
+
+      // 4) Merkez kolon: şeffaf, pointer-events:none
+      if(lp){
+        var cols=p.document.querySelectorAll('[data-testid="column"]');
+        cols.forEach(function(c){
+          if(!c.contains(lp) && !c.querySelector('#syn-right-panel') &&
+             c.querySelector('iframe[name="syn-map"],iframe')){
+            c.style.background='transparent';
+            c.style.pointerEvents='none';
+          }
+        });
+      }
+    } catch(e){}
+  }
+  syn_apply();
+  setInterval(syn_apply, 1200);
+})();
+</script>""", height=0)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
