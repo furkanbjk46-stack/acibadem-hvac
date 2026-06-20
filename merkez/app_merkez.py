@@ -54,11 +54,8 @@ header[data-testid="stHeader"] button    { display: none !important; }
 .block-container { padding: 0 0 0 0 !important; max-width: 100% !important; }
 [data-testid="stHorizontalBlock"] { gap: 0 !important; }
 
-/* ── Merkez kolon: yüksekliği sıfır, fixed iframe hala görünür ── */
+/* ── Merkez kolon: şeffaf ── */
 [data-testid="stHorizontalBlock"] > [data-testid="column"]:nth-child(2) {
-    height: 0 !important;
-    min-height: 0 !important;
-    overflow: visible !important;
     background: transparent !important;
     pointer-events: none !important;
 }
@@ -1216,7 +1213,7 @@ hospitals.forEach(function(h) {{
 </body></html>"""
 
     import streamlit.components.v1 as _cv1
-    _cv1.html(harita_html, height=1, scrolling=False)
+    _cv1.html(harita_html, height=900, scrolling=False)
 
     # Sadece harita iframe'ini tam ekran yap (paneller CSS :has() ile halledildi)
     _cv1.html("""<script>
