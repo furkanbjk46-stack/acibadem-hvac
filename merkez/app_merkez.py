@@ -186,24 +186,31 @@ button span[data-testid="stIconMaterial"] {
        letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(56, 189, 248,0.15);
        padding-bottom:5px; margin-bottom:10px; }
 
-/* Sol kolon (Lokasyon Durumu + Global Özet) tek bir cam kart içinde */
+/* Sol kolon (Lokasyon Durumu + Global Özet) tek bir cam kart içinde — gerçek frosted-glass görünümü */
 [data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sol-panel),
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) {
-    background: rgba(15, 23, 42, 0.45) !important;
-    backdrop-filter: blur(14px) !important;
-    -webkit-backdrop-filter: blur(14px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    border-radius: 14px !important;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.0) 35%),
+        rgba(20, 30, 50, 0.22) !important;
+    backdrop-filter: blur(22px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 16px !important;
     padding: 14px !important;
-    box-shadow: 0 8px 28px 0 rgba(0,0,0,0.35) !important;
+    box-shadow:
+        0 8px 32px 0 rgba(0,0,0,0.45),
+        inset 0 1px 0 0 rgba(255,255,255,0.18),
+        inset 0 0 0 1px rgba(255,255,255,0.03) !important;
     height: 100% !important;
     max-height: 100% !important;
     overflow-y: auto !important;
     box-sizing: border-box !important;
 }
-/* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet */
+/* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet — cam üstünde ince cam */
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk {
-    background: rgba(255,255,255,0.02) !important;
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    backdrop-filter: blur(6px) !important;
     box-shadow: none !important;
 }
 
