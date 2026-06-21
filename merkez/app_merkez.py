@@ -1583,8 +1583,7 @@ with sag:
     _dis_hava_kart_var = dis_hava_val is not None or min_val is not None
     if _dis_hava_kart_var:
         _dis_hava_html = (
-            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
-            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;height:100%;'>"
+            f"<div style='height:100%;'>"
             f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
             f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
             f"{_ch_ic}"
@@ -1597,8 +1596,7 @@ with sag:
     # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
     with _oto_sag:
         st.markdown(
-        f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);height:100%;"
-        f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
+        f"<div style='height:100%;'>"
         # ── Satır 1: Başlık ──
         f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
         f"<div>"
@@ -1803,8 +1801,7 @@ with sag:
             )
 
         st.markdown(
-            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
-            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
+            f"<div style='padding:6px 0;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
             f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
             f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
             f"{_ez_satirlar}"
@@ -2113,10 +2110,9 @@ with sag:
 
                 # Kart dış çerçevesi — üst kısım
                 st.markdown(
-                    f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
-                    f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-top:6px;overflow:hidden;'>"
+                    f"<div style='margin-top:6px;overflow:hidden;'>"
                     f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                    f"padding:10px 14px;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
+                    f"padding:6px 0;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
                     f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
                     f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
                     f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>🕐 {_ai_zaman_str}</span>"
