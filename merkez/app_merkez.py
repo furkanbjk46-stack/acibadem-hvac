@@ -29,7 +29,7 @@ try:
         _bg_b64 = _b64mod.b64encode(_f.read()).decode()
     _bg_css = (
         "background-image:"
-        "linear-gradient(180deg, rgba(6,11,20,0.82) 0%, rgba(6,11,20,0.72) 45%, rgba(6,11,20,0.88) 100%),"
+        "linear-gradient(180deg, rgba(6,11,20,0.45) 0%, rgba(6,11,20,0.30) 45%, rgba(6,11,20,0.55) 100%),"
         "url('data:image/jpeg;base64," + _bg_b64 + "') !important;"
         "background-size: cover !important;"
         "background-position: center !important;"
