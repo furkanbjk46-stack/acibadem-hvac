@@ -1275,7 +1275,7 @@ hospitals.forEach(function(h) {{
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+(h.hq?' <span style="color:#fbbf24;">★ GENEL MERKEZ</span>':'')+'</div>',
+            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+(h.hq?' <span style="color:#5eead4;text-shadow:0 0 6px rgba(94,234,212,0.7),0 1px 4px rgba(0,0,0,0.95);">★ SYNAPSE</span>':'')+'</div>',
             iconSize:[220,16], iconAnchor:[-hs-2, hs-2]
         }}),
         interactive:false, zIndexOffset:300
