@@ -377,10 +377,12 @@ with st.sidebar:
     if st.button("🏥 Lokasyonlar", key="nav_lokasyonlar", use_container_width=True):
         st.session_state["vx_sayfa"] = "lokasyonlar"
         st.rerun()
+    if st.button("🚨 Uyarılar", key="nav_uyarilar", use_container_width=True):
+        st.session_state["vx_sayfa"] = "uyarilar"
+        st.rerun()
 
     st.markdown("""
     <div class="vx-nav-item">⚡ Enerji Analizi</div>
-    <div class="vx-nav-item">🚨 Uyarılar</div>
     <div class="vx-section-label">Otomasyon</div>
     <div class="vx-nav-item">🤖 Oto Set</div>
     <div class="vx-nav-item">🧠 AI Asistan</div>
@@ -1157,6 +1159,108 @@ if st.session_state["vx_sayfa"] == "lokasyonlar":
     st.stop()
 
 # ============================================================
+# UYARILAR SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
+# ============================================================
+if st.session_state["vx_sayfa"] == "uyarilar":
+    st.markdown("""
+    <style>
+    .block-container, [data-testid="stMainBlockContainer"] {
+        overflow-y: auto !important; height: 100vh !important; max-height: 100vh !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="sec">🚨 CANLI UYARILAR</div>', unsafe_allow_html=True)
+
+    lok_uyari_map = {lok_id: [] for lok_id in HASTANELER}
+
+    for lok_id, lok_info in HASTANELER.items():
+        ld = lok_dict.get(lok_id, {})
+        ozet = ld.get("bakim_ozet") or {}
+        if isinstance(ozet, str):
+            try: ozet = json.loads(ozet)
+            except: ozet = {}
+        ariza  = ozet.get("toplam_ariza", 0)
+        bakim  = ozet.get("toplam_bakim", 0)
+        isim   = lok_info["kisa"]
+        if ariza > 0:
+            arizali = ", ".join(
+                c.get("ad", str(c)) if isinstance(c, dict) else str(c)
+                for c in ozet.get("arizali_cihazlar", [])[:2]
+            )
+            lok_uyari_map[lok_id].append(("r", f"🔴 {isim}: {ariza} ARIZALI bileşen — {arizali}"))
+        if bakim > 0:
+            lok_uyari_map[lok_id].append(("y", f"🟡 {isim}: {bakim} bileşen bakımda"))
+
+    if not df_all.empty:
+        son_gun = df_all[df_all["Tarih"].dt.strftime("%Y-%m-%d") == dun]
+        for lok_id in aktif_loklar:
+            isim = HASTANELER.get(lok_id, {}).get("kisa", lok_id)
+            lok_son = son_gun[son_gun["lokasyon_id"] == lok_id]
+            if lok_son.empty:
+                lok_uyari_map.setdefault(lok_id, []).append(("r", f"⚠️ {isim}: Bugün veri yok"))
+                continue
+            if "Chiller_Set_Temp_C" in lok_son.columns:
+                cs = lok_son["Chiller_Set_Temp_C"].mean()
+                if pd.notna(cs) and cs > 9:
+                    lok_uyari_map[lok_id].append(("y", f"🌡️ {isim}: Chiller set yüksek ({cs:.1f}°C)"))
+                elif pd.notna(cs) and cs < 6:
+                    lok_uyari_map[lok_id].append(("y", f"❄️ {isim}: Chiller set düşük ({cs:.1f}°C)"))
+            if "Chiller_Load_Percent" in lok_son.columns:
+                cl = lok_son["Chiller_Load_Percent"].mean()
+                if pd.notna(cl) and cl > 90:
+                    lok_uyari_map[lok_id].append(("r", f"🔥 {isim}: Chiller kritik yük (%{cl:.0f})"))
+
+    def lok_ariza_skoru(lok_id):
+        ld = lok_dict.get(lok_id, {})
+        ozet = ld.get("bakim_ozet") or {}
+        if isinstance(ozet, str):
+            try: ozet = json.loads(ozet)
+            except: ozet = {}
+        return ozet.get("toplam_sorun", 0) * 10 + len(lok_uyari_map.get(lok_id, []))
+
+    sirali_loklar = sorted(HASTANELER.keys(), key=lok_ariza_skoru, reverse=True)
+    lok_ile_uyari = [(lid, lok_uyari_map.get(lid, [])) for lid in sirali_loklar if lok_uyari_map.get(lid)]
+
+    if not lok_ile_uyari:
+        st.markdown(
+            "<div style='background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);"
+            "border-radius:8px;padding:8px 12px;font-size:11px;color:#6ee7b7;'>✅ Tüm sistemler normal</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        uyari_html = "<div class='lok-buyuk-grid' style='grid-template-columns:repeat(2, 1fr);'>"
+        for lid, uyarilar in lok_ile_uyari:
+            lok_inf  = HASTANELER.get(lid, {})
+            isim     = lok_inf.get("kisa", lid)
+            has_crit = any(s == "r" for s, _ in uyarilar)
+            kart_bg  = "rgba(239,68,68,0.06)" if has_crit else "rgba(245,158,11,0.06)"
+            kart_br  = "rgba(239,68,68,0.30)" if has_crit else "rgba(245,158,11,0.25)"
+            dot_renk = "#ef4444" if has_crit else "#f59e0b"
+            satirlar = ""
+            for sev, msg in uyarilar:
+                s_renk = "#fca5a5" if sev == "r" else "#fcd34d"
+                s_bg   = "rgba(239,68,68,0.08)" if sev == "r" else "rgba(245,158,11,0.08)"
+                satirlar += (
+                    f"<div style='background:{s_bg};border-radius:5px;padding:4px 8px;"
+                    f"margin-top:4px;font-size:10px;color:{s_renk};'>{msg}</div>"
+                )
+            uyari_html += (
+                f"<details class='nk' style='background:{kart_bg};border:1px solid {kart_br};"
+                f"padding:10px 14px;cursor:pointer;'>"
+                f"<summary style='list-style:none;display:flex;align-items:center;gap:6px;"
+                f"font-size:12px;font-weight:600;color:rgba(200,230,255,0.85);'>"
+                f"<span style='width:8px;height:8px;border-radius:50%;background:{dot_renk};"
+                f"box-shadow:0 0 5px {dot_renk};flex-shrink:0;display:inline-block;'></span>"
+                f"{isim} — {len(uyarilar)} uyarı"
+                f"</summary>"
+                f"<div style='margin-top:6px;'>{satirlar}</div>"
+                f"</details>"
+            )
+        uyari_html += "</div>"
+        st.markdown(uyari_html, unsafe_allow_html=True)
+    st.stop()
+
+# ============================================================
 # ÜST SIRA: Karşılama kartı + renkli KPI kartları (Votrex tarzı)
 # ============================================================
 _toplam_enerji_kwh = 0
@@ -1600,109 +1704,6 @@ if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
 # ════════════════════════════════
 with sag:
     st.markdown('<div id="syn-sag-panel"></div>', unsafe_allow_html=True)
-    # ── Canlı Uyarılar ──
-    st.markdown('<div class="sec">🚨 CANLI UYARILAR</div>', unsafe_allow_html=True)
-
-    # Her lokasyon için uyarı listesi: {lok_id: [(severity, msg), ...]}
-    lok_uyari_map = {lok_id: [] for lok_id in HASTANELER}
-
-    # 1) Bakım kartı arızaları (Supabase lokasyonlar.bakim_ozet)
-    for lok_id, lok_info in HASTANELER.items():
-        ld = lok_dict.get(lok_id, {})
-        ozet = ld.get("bakim_ozet") or {}
-        if isinstance(ozet, str):
-            try: ozet = json.loads(ozet)
-            except: ozet = {}
-        ariza  = ozet.get("toplam_ariza", 0)
-        bakim  = ozet.get("toplam_bakim", 0)
-        isim   = lok_info["kisa"]
-        if ariza > 0:
-            arizali = ", ".join(
-                c.get("ad", str(c)) if isinstance(c, dict) else str(c)
-                for c in ozet.get("arizali_cihazlar", [])[:2]
-            )
-            lok_uyari_map[lok_id].append(("r", f"🔴 {isim}: {ariza} ARIZALI bileşen — {arizali}"))
-        if bakim > 0:
-            lok_uyari_map[lok_id].append(("y", f"🟡 {isim}: {bakim} bileşen bakımda"))
-
-    # 2) Enerji verisi uyarıları
-    if not df_all.empty:
-        son_gun = df_all[df_all["Tarih"].dt.strftime("%Y-%m-%d") == dun]
-        for lok_id in aktif_loklar:
-            isim = HASTANELER.get(lok_id, {}).get("kisa", lok_id)
-            lok_son = son_gun[son_gun["lokasyon_id"] == lok_id]
-            if lok_son.empty:
-                lok_uyari_map.setdefault(lok_id, []).append(("r", f"⚠️ {isim}: Bugün veri yok"))
-                continue
-            if "Chiller_Set_Temp_C" in lok_son.columns:
-                cs = lok_son["Chiller_Set_Temp_C"].mean()
-                if pd.notna(cs) and cs > 9:
-                    lok_uyari_map[lok_id].append(("y", f"🌡️ {isim}: Chiller set yüksek ({cs:.1f}°C)"))
-                elif pd.notna(cs) and cs < 6:
-                    lok_uyari_map[lok_id].append(("y", f"❄️ {isim}: Chiller set düşük ({cs:.1f}°C)"))
-            if "Chiller_Load_Percent" in lok_son.columns:
-                cl = lok_son["Chiller_Load_Percent"].mean()
-                if pd.notna(cl) and cl > 90:
-                    lok_uyari_map[lok_id].append(("r", f"🔥 {isim}: Chiller kritik yük (%{cl:.0f})"))
-
-    # 3) Çevrimdışı uyarıları — sol kolonda kart olarak gösterildiği için burada yok
-
-    # Lokasyonları arıza sayısına göre sırala (en fazla arıza önce)
-    def lok_ariza_skoru(lok_id):
-        ld = lok_dict.get(lok_id, {})
-        ozet = ld.get("bakim_ozet") or {}
-        if isinstance(ozet, str):
-            try: ozet = json.loads(ozet)
-            except: ozet = {}
-        return ozet.get("toplam_sorun", 0) * 10 + len(lok_uyari_map.get(lok_id, []))
-
-    sirali_loklar = sorted(HASTANELER.keys(), key=lok_ariza_skoru, reverse=True)
-
-    # ── Uyarıları lokasyon bazında grupla ve göster ──────
-    lok_ile_uyari = [(lid, lok_uyari_map.get(lid, []))
-                     for lid in sirali_loklar
-                     if lok_uyari_map.get(lid)]
-
-    if not lok_ile_uyari:
-        st.markdown(
-            "<div style='background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);"
-            "border-radius:8px;padding:8px 12px;font-size:11px;color:#6ee7b7;'>✅ Tüm sistemler normal</div>",
-            unsafe_allow_html=True
-        )
-    else:
-        uyari_html = "<div style='max-height:195px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(56, 189, 248,0.3) transparent;'>"
-        for lid, uyarilar in lok_ile_uyari:
-            lok_inf  = HASTANELER.get(lid, {})
-            isim     = lok_inf.get("kisa", lid)
-            has_crit = any(s == "r" for s, _ in uyarilar)
-            kart_bg  = "rgba(239,68,68,0.06)" if has_crit else "rgba(245,158,11,0.06)"
-            kart_br  = "rgba(239,68,68,0.30)" if has_crit else "rgba(245,158,11,0.25)"
-            dot_renk = "#ef4444" if has_crit else "#f59e0b"
-            satirlar = ""
-            for sev, msg in uyarilar:
-                s_renk = "#fca5a5" if sev == "r" else "#fcd34d"
-                s_bg   = "rgba(239,68,68,0.08)" if sev == "r" else "rgba(245,158,11,0.08)"
-                satirlar += (
-                    f"<div style='background:{s_bg};border-radius:5px;padding:4px 8px;"
-                    f"margin-top:4px;font-size:10px;color:{s_renk};'>{msg}</div>"
-                )
-            uyari_html += (
-                f"<details class='nk' style='background:{kart_bg};border:1px solid {kart_br};"
-                f"padding:6px 10px;cursor:pointer;'>"
-                f"<summary style='list-style:none;display:flex;align-items:center;gap:6px;"
-                f"font-size:11px;font-weight:600;color:rgba(200,230,255,0.85);'>"
-                f"<span style='width:7px;height:7px;border-radius:50%;background:{dot_renk};"
-                f"box-shadow:0 0 5px {dot_renk};flex-shrink:0;display:inline-block;'></span>"
-                f"{isim} — {len(uyarilar)} uyarı"
-                f"</summary>"
-                f"<div style='margin-top:4px;'>{satirlar}</div>"
-                f"</details>"
-            )
-        uyari_html += "</div>"
-        st.markdown(uyari_html, unsafe_allow_html=True)
-
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
     # ── OTO SET — Birleşik Kart (toggle + durum + geçmiş) ──
