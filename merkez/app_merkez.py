@@ -137,34 +137,46 @@ button span[data-testid="stIconMaterial"] {
 ::-webkit-scrollbar-track { background: #0f172a; }
 ::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
 
-/* Gemini referans tasarımı — sade glassmorphism (sadece sol panel lokasyon kartları) */
+/* iOS context-menu tarzı cam kart — okunaklı metin + camsı bulanıklık + dalga highlight */
 .nk {
     position: relative;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 20px;
+    background: rgba(15, 23, 42, 0.50);
+    backdrop-filter: blur(11px) saturate(160%);
+    -webkit-backdrop-filter: blur(11px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    border-radius: 14px;
     padding: 8px;
     margin-bottom: 8px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    box-shadow:
+        inset 0 1px 0 0 rgba(255,255,255,0.30),
+        inset 0 -10px 16px -12px rgba(0,0,0,0.35),
+        0 4px 14px rgba(0,0,0,0.30);
     overflow: hidden;
 }
-.nk:hover {
-    background: rgba(255, 255, 255, 0.1) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.4) !important;
-    transform: translateY(-5px) !important;
+/* Camın üzerinden geçen yumuşak dalga ışık yansıması (referans görseldeki gibi) */
+.nk::before {
+    content: "";
+    position: absolute;
+    left: -20%;
+    right: -20%;
+    top: 28%;
+    height: 22%;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.16) 45%, rgba(255,255,255,0) 100%);
+    transform: rotate(-3deg);
+    pointer-events: none;
+    z-index: 0;
 }
-.nk-green { border-color: rgba(16,185,129,0.55) !important; }
-.nk-red   { border-color: rgba(239,68,68,0.55) !important; }
-.nk-gray  { border-color: rgba(180,190,205,0.20) !important; opacity: 0.75; }
+.nk > * { position: relative; z-index: 1; }
+.nk-green { border-color: rgba(16,185,129,0.55) !important; box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.30), 0 0 15px rgba(16,185,129,0.18) !important; }
+.nk-red   { border-color: rgba(239,68,68,0.55) !important;  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.30), 0 0 15px rgba(239,68,68,0.18) !important;  }
+.nk-gray  { border-color: rgba(180,190,205,0.28) !important; opacity: 0.75; }
 .nk {
     display: block !important;
     text-decoration: none !important;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: border-color 0.2s, transform 0.15s;
 }
+.nk:hover { transform: translateY(-2px); border-color: rgba(56, 189, 248,0.6) !important; }
 
 .lok-scroll {
     max-height: 492px;
@@ -197,7 +209,6 @@ button span[data-testid="stIconMaterial"] {
 /* Sol kolon (Lokasyon Durumu + Global Özet) — kart/cam kapsayıcı kaldırıldı, içerik direkt sayfa üzerinde */
 [data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sol-panel),
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) {
-    position: relative !important;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -205,32 +216,7 @@ button span[data-testid="stIconMaterial"] {
     height: 100% !important;
     max-height: 100% !important;
     overflow-y: auto !important;
-    overflow-x: hidden !important;
     box-sizing: border-box !important;
-    isolation: isolate !important;
-}
-/* Gemini referans tasarımı — sol panelin arkasında derinlik veren sıvı cam orbları */
-[data-testid="stVerticalBlock"]:has(#syn-sol-panel)::before,
-[data-testid="stVerticalBlock"]:has(#syn-sol-panel)::after {
-    content: "" !important;
-    position: absolute !important;
-    width: 280px !important;
-    height: 280px !important;
-    border-radius: 50% !important;
-    filter: blur(80px) !important;
-    z-index: -1 !important;
-    opacity: 0.35 !important;
-    pointer-events: none !important;
-}
-[data-testid="stVerticalBlock"]:has(#syn-sol-panel)::before {
-    background: #60a5fa !important;
-    top: -80px !important;
-    left: -80px !important;
-}
-[data-testid="stVerticalBlock"]:has(#syn-sol-panel)::after {
-    background: #d946ef !important;
-    bottom: -80px !important;
-    right: -80px !important;
 }
 /* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet — cam üstünde ince cam */
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk {
