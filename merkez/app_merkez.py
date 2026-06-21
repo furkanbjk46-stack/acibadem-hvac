@@ -1232,6 +1232,41 @@ if (_hq && _maslak) {{
     hatCiz(_hatPts);
 }}
 
+// ── Kırık/zikzak çapraz ağ: Fulya & Taksim ↔ Altunizade & Kadıköy ──
+function zikzakYol(p0, p1, kinkT, kinkOfset) {{
+    var kink = [
+        p0[0] + (p1[0]-p0[0]) * kinkT,
+        p0[1] + (p1[1]-p0[1]) * kinkT
+    ];
+    var dLat = p1[0]-p0[0], dLon = p1[1]-p0[1];
+    var dist = Math.sqrt(dLat*dLat + dLon*dLon) || 0.0001;
+    var nLat = -dLon/dist, nLon = dLat/dist;
+    kink[0] += nLat * kinkOfset;
+    kink[1] += nLon * kinkOfset;
+    return [p0, kink, p1];
+}}
+function kirikHatCiz(pts) {{
+    L.polyline(pts, {{ color: '#ef4444', weight: 5, opacity: 0.12, interactive: false, lineJoin: 'round' }}).addTo(map);
+    L.polyline(pts, {{ color: '#ef4444', weight: 1.4, opacity: 0.75, interactive: false, lineJoin: 'round' }}).addTo(map);
+}}
+
+var _fulya      = hospitals.find(function(h) {{ return h.id === 'fulya'; }});
+var _taksim     = hospitals.find(function(h) {{ return h.id === 'taksim'; }});
+var _altunizade = hospitals.find(function(h) {{ return h.id === 'altunizade'; }});
+var _kadikoy    = hospitals.find(function(h) {{ return h.id === 'kadikoy'; }});
+var _capraz = [
+    [_fulya, _altunizade, 0.55, -0.012],
+    [_fulya, _kadikoy,    0.45,  0.014],
+    [_taksim, _altunizade,0.5,   0.016],
+    [_taksim, _kadikoy,   0.6,  -0.010]
+];
+_capraz.forEach(function(c) {{
+    var a = c[0], b = c[1];
+    if (!a || !b) return;
+    var pts = zikzakYol([a.lat, a.lon], [b.lat, b.lon], c[2], c[3]);
+    kirikHatCiz(pts);
+}});
+
 hospitals.forEach(function(h) {{
     var s  = h.boyut;
     var c  = h.renk;
