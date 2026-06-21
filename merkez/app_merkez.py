@@ -41,7 +41,7 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], [data-tes
     background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
 [data-testid="stMain"] { padding: 0 !important; margin: 0 !important; height: 100vh !important; overflow: hidden !important; }
-[data-testid="stHeader"]                  { background: transparent !important; }
+[data-testid="stHeader"]                  { display: none !important; height: 0 !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
 [data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
 section[data-testid="stSidebarCollapsedControl"] { display: none !important; }
