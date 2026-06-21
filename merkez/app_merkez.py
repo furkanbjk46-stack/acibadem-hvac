@@ -154,15 +154,18 @@ button span[data-testid="stIconMaterial"] {
 
 /* Sadece Maslak — cam (glass) tasarım: okunaklı blur + dalga highlight */
 .nk-glass {
-    background: rgba(15, 23, 42, 0.50) !important;
-    backdrop-filter: blur(11px) saturate(160%) !important;
-    -webkit-backdrop-filter: blur(11px) saturate(160%) !important;
+    background: rgba(8, 14, 26, 0.72) !important;
+    backdrop-filter: blur(14px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(140%) !important;
     border: 1px solid rgba(255, 255, 255, 0.20) !important;
     border-radius: 14px !important;
     box-shadow:
-        inset 0 1px 0 0 rgba(255,255,255,0.30),
-        inset 0 -10px 16px -12px rgba(0,0,0,0.35),
-        0 4px 14px rgba(0,0,0,0.30) !important;
+        inset 0 1px 0 0 rgba(255,255,255,0.25),
+        inset 0 -10px 16px -12px rgba(0,0,0,0.4),
+        0 4px 14px rgba(0,0,0,0.35) !important;
+}
+.nk-glass * {
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 1px rgba(0,0,0,0.6) !important;
 }
 .nk-glass::before {
     content: "";
