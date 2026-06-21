@@ -78,6 +78,7 @@ header[data-testid="stHeader"] button    { display: none !important; }
     padding: 0 !important;
     margin: 0 !important;
     max-width: 100% !important;
+    background-color: rgba(0,0,0,0.30) !important;
     box-sizing: border-box !important;
 }
 [data-testid="stDecoration"] { display: none !important; }
