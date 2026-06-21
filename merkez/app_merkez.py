@@ -126,8 +126,8 @@ button span[data-testid="stIconMaterial"] {
     backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 8px;
-    padding: 14px;
-    margin-bottom: 10px;
+    padding: 8px;
+    margin-bottom: 8px;
     box-shadow: none;
 }
 .nk-green { border-color: rgba(16,185,129,0.45) !important; box-shadow: 0 0 15px rgba(16,185,129,0.08) !important; }
@@ -981,27 +981,27 @@ with sol:
 
         tum_kartlar += (
             f'<a class="{card_cls}" href="?detay={lok_id}" title="{lok_info["kisa"]} detayına git" '
-            f'style="padding:14px;position:relative;">'
+            f'style="padding:8px;position:relative;">'
             + sira_badge +
             f'<span style="position:absolute;top:8px;right:10px;font-size:14px;'
             f'color:rgba({rr},{rg},{rb},0.55);">⟶</span>'
-            f'<div style="display:flex;align-items:center;gap:14px;">'
-            f'<div style="position:relative;width:58px;height:58px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
-            f'<div style="position:absolute;top:-5px;left:-5px;right:-5px;bottom:-5px;border-radius:50%;'
+            f'<div style="display:flex;align-items:center;gap:10px;">'
+            f'<div style="position:relative;width:42px;height:42px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
+            f'<div style="position:absolute;top:-4px;left:-4px;right:-4px;bottom:-4px;border-radius:50%;'
             f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.22) 0%,rgba({rr},{rg},{rb},0.05) 55%,transparent 75%);'
             f'animation:breathe-ring 3s ease-in-out infinite;"></div>'
-            f'<div style="font-size:36px;line-height:1;position:relative;z-index:1;'
+            f'<div style="font-size:26px;line-height:1;position:relative;z-index:1;'
             f'filter:drop-shadow(0 0 8px rgba({rr},{rg},{rb},0.8));">🏥</div>'
-            f'<div style="position:absolute;top:2px;right:2px;z-index:2;width:11px;height:11px;'
+            f'<div style="position:absolute;top:1px;right:1px;z-index:2;width:9px;height:9px;'
             f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020617;'
             f'box-shadow:0 0 5px rgba({dr},{dg},{db},0.9);"></div>'
             f'</div>'
             f'<div style="flex:1;min-width:0;">'
             f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:10px;font-weight:700;'
             f'color:{renk};letter-spacing:1.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);'
-            f'margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{lok_info["kisa"]}</div>'
-            f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:5px;">{durum_lbl}</div>'
-            f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">'
+            f'margin-bottom:0px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{lok_info["kisa"]}</div>'
+            f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:2px;">{durum_lbl}</div>'
+            f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:1px;">'
             f'<span style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:16px;font-weight:900;'
             f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</span>'
             f'<span style="font-size:8px;color:rgba(150,210,255,0.5);">kWh</span>'
