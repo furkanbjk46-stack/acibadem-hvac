@@ -40,7 +40,7 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], [data-tes
     background-color: #060b14 !important;
     background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
-[data-testid="stMain"] { padding: 0 !important; margin: 0 !important; }
+[data-testid="stMain"] { padding: 0 !important; margin: 0 !important; height: 100vh !important; overflow: hidden !important; }
 [data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
 [data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
@@ -51,18 +51,39 @@ button[kind="header"]                    { display: none !important; }
 header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stSidebar"]      { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
-.block-container { padding: 0.5rem 0.75rem 1rem 0.75rem !important; max-width: 100% !important; }
 
-/* Harita iframe — ekran yüksekliğine göre otomatik dolsun */
+/* Sayfa: header + footer kendi boylarını alır, kolon satırı kalan TÜM boşluğu doldurur (taşma/boşluk yok) */
+.block-container {
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    padding: 0.4rem 0.75rem 0.3rem 0.75rem !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+[data-testid="stHorizontalBlock"] {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+}
+[data-testid="stHorizontalBlock"] [data-testid="column"] {
+    height: 100% !important;
+}
+
+/* Harita iframe — kolonun tamamını doldursun */
 [data-testid="column"]:nth-child(3) [data-testid="stIFrame"],
 [data-testid="column"]:nth-child(3) iframe {
     width: 100% !important;
-    height: calc(100vh - 175px) !important;
-    max-height: calc(100vh - 175px) !important;
+    height: 100% !important;
     border: none !important;
 }
 [data-testid="column"]:nth-child(3) [data-testid="element-container"] {
-    height: calc(100vh - 175px) !important;
+    height: 100% !important;
+}
+[data-testid="column"]:nth-child(3) [data-testid="stVerticalBlock"] {
+    height: 100% !important;
 }
 
 /* Tüm yazılar */
@@ -136,8 +157,10 @@ button span[data-testid="stIconMaterial"] {
     border-radius: 14px !important;
     padding: 14px !important;
     box-shadow: 0 8px 28px 0 rgba(0,0,0,0.35) !important;
-    max-height: calc(100vh - 175px) !important;
+    height: 100% !important;
+    max-height: 100% !important;
     overflow-y: auto !important;
+    box-sizing: border-box !important;
 }
 /* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet */
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk {
@@ -155,8 +178,10 @@ button span[data-testid="stIconMaterial"] {
     border-radius: 14px !important;
     padding: 14px !important;
     box-shadow: 0 8px 28px 0 rgba(0,0,0,0.35) !important;
-    max-height: calc(100vh - 175px) !important;
+    height: 100% !important;
+    max-height: 100% !important;
     overflow-y: auto !important;
+    box-sizing: border-box !important;
 }
 
 .alrt-r { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35);
