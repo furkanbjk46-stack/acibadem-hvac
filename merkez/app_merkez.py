@@ -1550,9 +1550,51 @@ with sag:
             f"<span style='color:#f59e0b;'>{_ml_son['tahmin_ort']}°C</span></div>"
         )
 
+    # ── Dış Hava & Chiller Set verilerini önceden hazırla (kart yan yana gösterilecek) ──
+    _ch_ic = ""
+    if dis_hava_val is not None:
+        _ch_ic += (
+            f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:8px;'>"
+            f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:18px;font-weight:900;"
+            f"color:#f59e0b;text-shadow:0 0 12px rgba(245,158,11,0.5);'>"
+            f"🌡️ {dis_hava_val:.1f}°C</span>"
+            f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>Dış Hava İstanbul"
+            f" &nbsp;·&nbsp; {_dis_hava_kaynak}</span>"
+            f"</div>"
+        )
+    _rozet_ic = ""
+    if min_val is not None:
+        _rozet_ic += (
+            f"<div style='background:rgba(56, 189, 248,0.08);border:1px solid rgba(56, 189, 248,0.2);"
+            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+            f"❄️ Min &nbsp;<b style='color:#38bdf8;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{min_val:.1f}°C</b>"
+            f"&nbsp;<span style='color:{min_renk};'>{min_isim}</span></div>"
+        )
+    if max_val is not None and max_isim != min_isim:
+        _rozet_ic += (
+            f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);"
+            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+            f"🔥 Max &nbsp;<b style='color:#ef4444;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{max_val:.1f}°C</b>"
+            f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
+        )
+    _dis_hava_kart_var = dis_hava_val is not None or min_val is not None
+    if _dis_hava_kart_var:
+        _dis_hava_html = (
+            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;height:100%;'>"
+            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
+            f"{_ch_ic}"
+            f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
+            f"</div>"
+        )
+
+    _oto_sag, _dis_hava_sag = st.columns(2, gap="small")
+
     # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
-    st.markdown(
-        f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+    with _oto_sag:
+        st.markdown(
+        f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);height:100%;"
         f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
         # ── Satır 1: Başlık ──
         f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
@@ -1643,48 +1685,12 @@ with sag:
                 unsafe_allow_html=True
             )
 
-    # ── Chiller Set & Dış Hava Kartı ──
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-    # ── Chiller Set & Dış Hava — Birleşik Kart ──
-    _ch_ic = ""
-    if dis_hava_val is not None:
-        _ch_ic += (
-            f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:8px;'>"
-            f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:18px;font-weight:900;"
-            f"color:#f59e0b;text-shadow:0 0 12px rgba(245,158,11,0.5);'>"
-            f"🌡️ {dis_hava_val:.1f}°C</span>"
-            f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>Dış Hava İstanbul"
-            f" &nbsp;·&nbsp; {_dis_hava_kaynak}</span>"
-            f"</div>"
-        )
-    _rozet_ic = ""
-    if min_val is not None:
-        _rozet_ic += (
-            f"<div style='background:rgba(56, 189, 248,0.08);border:1px solid rgba(56, 189, 248,0.2);"
-            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-            f"❄️ Min &nbsp;<b style='color:#38bdf8;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{min_val:.1f}°C</b>"
-            f"&nbsp;<span style='color:{min_renk};'>{min_isim}</span></div>"
-        )
-    if max_val is not None and max_isim != min_isim:
-        _rozet_ic += (
-            f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);"
-            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-            f"🔥 Max &nbsp;<b style='color:#ef4444;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{max_val:.1f}°C</b>"
-            f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
-        )
-    if dis_hava_val is not None or min_val is not None:
-        st.markdown(
-            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
-            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
-            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
-            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
-            f"{_ch_ic}"
-            f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
-            f"</div>",
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown("<div class='alrt-y'>⚠️ Chiller set verisi bulunamadı</div>", unsafe_allow_html=True)
+    # ── Chiller Set & Dış Hava Kartı — ikinci kolon ──
+    with _dis_hava_sag:
+        if _dis_hava_kart_var:
+            st.markdown(_dis_hava_html, unsafe_allow_html=True)
+        else:
+            st.markdown("<div class='alrt-y'>⚠️ Chiller set verisi bulunamadı</div>", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
