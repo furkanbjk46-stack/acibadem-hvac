@@ -166,8 +166,8 @@ button span[data-testid="stIconMaterial"] {
     scrollbar-width: thin;
     scrollbar-color: rgba(56, 189, 248,0.35) rgba(15,23,42,0.6);
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
     align-content: start;
 }
 .lok-scroll .nk { margin-bottom: 0 !important; }
@@ -999,39 +999,27 @@ with sol:
 
         tum_kartlar += (
             f'<a class="{card_cls}" href="?detay={lok_id}" title="{lok_info["kisa"]} detayına git" '
-            f'style="padding:8px;position:relative;">'
+            f'style="padding:8px 4px;position:relative;text-align:center;">'
             + sira_badge +
-            f'<span style="position:absolute;top:8px;right:10px;font-size:14px;'
-            f'color:rgba({rr},{rg},{rb},0.55);">⟶</span>'
-            f'<div style="display:flex;align-items:center;gap:10px;">'
-            f'<div style="position:relative;width:42px;height:42px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
+            f'<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">'
+            f'<div style="position:relative;width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
             f'<div style="position:absolute;top:-4px;left:-4px;right:-4px;bottom:-4px;border-radius:50%;'
             f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.22) 0%,rgba({rr},{rg},{rb},0.05) 55%,transparent 75%);'
             f'animation:breathe-ring 3s ease-in-out infinite;"></div>'
-            f'<div style="font-size:26px;line-height:1;position:relative;z-index:1;'
+            f'<div style="font-size:20px;line-height:1;position:relative;z-index:1;'
             f'filter:drop-shadow(0 0 8px rgba({rr},{rg},{rb},0.8));">🏥</div>'
-            f'<div style="position:absolute;top:1px;right:1px;z-index:2;width:9px;height:9px;'
+            f'<div style="position:absolute;top:0px;right:0px;z-index:2;width:8px;height:8px;'
             f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020617;'
             f'box-shadow:0 0 5px rgba({dr},{dg},{db},0.9);"></div>'
             f'</div>'
-            f'<div style="flex:1;min-width:0;">'
-            f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:10px;font-weight:700;'
-            f'color:{renk};letter-spacing:1.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);'
-            f'margin-bottom:0px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{lok_info["kisa"]}</div>'
-            f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:2px;">{durum_lbl}</div>'
-            f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:1px;">'
-            f'<span style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:16px;font-weight:900;'
-            f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</span>'
-            f'<span style="font-size:8px;color:rgba(150,210,255,0.5);">kWh</span>'
-            f'<span style="margin-left:4px;">{degisim_html}</span>'
-            f'</div>'
-            f'<div style="display:inline-flex;align-items:center;gap:5px;'
-            f'background:rgba(56, 189, 248,0.05);border-radius:5px;padding:3px 8px;'
-            f'border:1px solid rgba(56, 189, 248,0.10);">'
-            f'<span style="font-size:7px;color:rgba(150,210,255,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
-            f'<span style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:11px;color:#38bdf8;font-weight:700;">{verim_str}</span>'
-            f'</div>'
-            f'</div></div></a>'
+            f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:9px;font-weight:700;'
+            f'color:{renk};letter-spacing:0.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);'
+            f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">{lok_info["kisa"]}</div>'
+            f'<div style="font-size:7px;color:{durum_renk};font-weight:600;">{durum_lbl}</div>'
+            f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:13px;font-weight:900;'
+            f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</div>'
+            f'<div style="font-size:7px;color:rgba(150,210,255,0.5);">kWh {degisim_html}</div>'
+            f'</div></a>'
         )
 
     tum_kartlar += '</div>'
