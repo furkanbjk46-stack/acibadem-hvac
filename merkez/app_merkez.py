@@ -160,6 +160,16 @@ button span[data-testid="stIconMaterial"] {
 .nk-red   { border-color: rgba(239,68,68,0.55) !important;  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(239,68,68,0.18) !important;  }
 .nk-gray  { border-color: rgba(180,190,205,0.20) !important; opacity: 0.75; }
 
+/* Maslak kartı — haritanın fonuyla aynı ton (CartoDB Voyager açık tema) */
+.nk-mapbg {
+    background: #e9eef0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+.nk-mapbg * {
+    text-shadow: none !important;
+}
+
 .nk::before {
     content: "";
     position: absolute;
@@ -993,6 +1003,9 @@ with sol:
             card_cls   = "nk nk-red"
             durum_renk = "#ef4444"
             durum_lbl  = "ÇEVRİMDIŞI"
+
+        if lok_id == "maslak":
+            card_cls += " nk-mapbg"
 
 
         kwh_str   = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
