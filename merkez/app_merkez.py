@@ -53,16 +53,20 @@ header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
 
 /* Sayfa: header + footer kendi boylarını alır, kolon satırı kalan TÜM boşluğu doldurur (taşma/boşluk yok) */
-.block-container {
+.block-container, [data-testid="stMainBlockContainer"] {
     display: flex !important;
     flex-direction: column !important;
     height: 100vh !important;
     max-height: 100vh !important;
     overflow: hidden !important;
-    padding: 0.4rem 0.75rem 0.3rem 0.75rem !important;
+    padding: 0 0.75rem 0.2rem 0.75rem !important;
+    margin-top: 0 !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
 }
+[data-testid="stDecoration"] { display: none !important; }
+[data-testid="stAppViewContainer"] > .main,
+[data-testid="stMain"] > div:first-child { margin-top: 0 !important; padding-top: 0 !important; }
 [data-testid="stHorizontalBlock"] {
     flex: 1 1 auto !important;
     min-height: 0 !important;
@@ -776,7 +780,7 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
 st.markdown("""
-<div style="text-align:center; padding:12px 0 8px;">
+<div style="text-align:center; padding:2px 0 6px;">
   <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a3b8;
               letter-spacing:3px; text-transform:uppercase;">
     ACIBADEM SAĞLIK GRUBU
