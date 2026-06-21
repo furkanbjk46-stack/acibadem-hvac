@@ -54,11 +54,15 @@ header[data-testid="stHeader"] button    { display: none !important; }
 .block-container { padding: 0.5rem 0.75rem 1rem 0.75rem !important; max-width: 100% !important; }
 
 /* Harita iframe — ekran yüksekliğine göre otomatik dolsun */
-[data-testid="column"]:nth-child(3) [data-testid="stCustomComponentV1"],
+[data-testid="column"]:nth-child(3) [data-testid="stIFrame"],
 [data-testid="column"]:nth-child(3) iframe {
     width: 100% !important;
     height: calc(100vh - 175px) !important;
+    max-height: calc(100vh - 175px) !important;
     border: none !important;
+}
+[data-testid="column"]:nth-child(3) [data-testid="element-container"] {
+    height: calc(100vh - 175px) !important;
 }
 
 /* Tüm yazılar */
