@@ -1169,13 +1169,7 @@ body {{ background:#020617; }}
     0%,100% {{ opacity:0.22; transform:scale(0.96); }}
     50%     {{ opacity:0.50; transform:scale(1.10); }}
 }}
-@keyframes soma-pulse {{
-    0%,100% {{ opacity:0.65; transform:scale(0.97); }}
-    50%      {{ opacity:1;    transform:scale(1.05); }}
-}}
-.lif-glow-outer  {{ filter: blur(4.5px); }}
-.lif-glow-mid    {{ filter: blur(2px);   }}
-.dendrit-glow    {{ filter: blur(1.2px); }}
+
 </style>
 </head><body>
 <div id="map"></div>
@@ -1185,7 +1179,7 @@ var map = L.map('map', {{
     zoom: 5,
     zoomControl: true,
     attributionControl: false,
-    renderer: L.svg()
+    preferCanvas: true
 }});
 
 // CartoDB Dark Matter — ücretsiz, API key yok
@@ -1198,127 +1192,48 @@ setTimeout(function() {{ map.invalidateSize(true); }}, 300);
 
 var hospitals = {hjs};
 
-// ── Elektrik / şimşek hattı üretimi: keskin, sert açılı zigzag (yıldırım arkı) ──
-function tohumluRastgele(seed) {{
-    var x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-}}
-
-// p0→p1 arasını sert köşeli yıldırım çatlağı gibi böler (yumuşak değil, keskin zigzag)
-function simsekYolu(p0, p1, tohum, sertlik) {{
-    var pts = [p0, p1];
-    var iterasyon = 4;
-    for (var it = 0; it < iterasyon; it++) {{
-        var yeni = [pts[0]];
-        for (var i = 0; i < pts.length - 1; i++) {{
-            var a = pts[i], b = pts[i + 1];
-            var midLat = (a[0] + b[0]) / 2;
-            var midLon = (a[1] + b[1]) / 2;
-            var dLat = b[0] - a[0];
-            var dLon = b[1] - a[1];
-            var dist = Math.sqrt(dLat*dLat + dLon*dLon);
-            if (dist > 0) {{
-                var nLat = -dLon / dist;
-                var nLon =  dLat / dist;
-                var r = tohumluRastgele(tohum * 97.13 + it * 13.7 + i * 31.4) - 0.5;
-                var sapma = dist * sertlik * r / Math.pow(1.35, it);
-                midLat += nLat * sapma;
-                midLon += nLon * sapma;
-            }}
-            yeni.push([midLat, midLon]);
-            yeni.push(b);
-        }}
-        pts = yeni;
+// ── Genel Merkez (Ataşehir) → tüm lokasyonlara organik (kıvrımlı) sinir agi hatlari ──
+function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
+    var midLat = (p0[0] + p1[0]) / 2;
+    var midLon = (p0[1] + p1[1]) / 2;
+    var dLat = p1[0] - p0[0];
+    var dLon = p1[1] - p0[1];
+    var dist = Math.sqrt(dLat*dLat + dLon*dLon);
+    if (dist === 0) return [p0, p1];
+    var nLat = -dLon / dist;
+    var nLon =  dLat / dist;
+    var offset = dist * egimMiktari * egimYonu;
+    var ctrlLat = midLat + nLat * offset;
+    var ctrlLon = midLon + nLon * offset;
+    var pts = [];
+    var steps = 48;
+    for (var i = 0; i <= steps; i++) {{
+        var t = i / steps;
+        var lat = (1-t)*(1-t)*p0[0] + 2*(1-t)*t*ctrlLat + t*t*p1[0];
+        var lon = (1-t)*(1-t)*p0[1] + 2*(1-t)*t*ctrlLon + t*t*p1[1];
+        pts.push([lat, lon]);
     }}
     return pts;
 }}
 
-// Genel merkezden lokasyona giden ana şimşek hattı + 1-2 kısa yan çatal (elektrik arkı dokusu)
-function aksonDemetiCiz(p0, p1, renk, tohum) {{
-    var anaYol = simsekYolu(p0, p1, tohum * 11, 0.045);
-
-    // Dış renkli glow (kalın, soluk)
-    L.polyline(anaYol, {{
-        color: renk, weight: 6, opacity: 0.18, interactive: false, lineCap: 'round', lineJoin: 'round'
-    }}).addTo(map);
-    // Orta renkli hat
-    L.polyline(anaYol, {{
-        color: renk, weight: 2.2, opacity: 0.65, interactive: false, lineCap: 'round', lineJoin: 'round'
-    }}).addTo(map);
-    // Beyaz-sıcak ince çekirdek (gerçek elektrik arkının parlak merkezi)
-    L.polyline(anaYol, {{
-        color: '#ffffff', weight: 0.9, opacity: 0.85, interactive: false, lineCap: 'round', lineJoin: 'round'
-    }}).addTo(map);
-
-    // Yan çatallar — ana hattın 1-2 noktasından kısa şimşek dalları fırlar
-    [0.3, 0.62].forEach(function(t, idx) {{
-        if (tohumluRastgele(tohum * 7 + idx) < 0.35) return;
-        var startIdx = Math.round(t * (anaYol.length - 1));
-        var baslangic = anaYol[startIdx];
-        var aci = tohumluRastgele(tohum * 19 + idx) * Math.PI * 2;
-        var uzunluk = 0.06 + tohumluRastgele(tohum + idx) * 0.05;
-        var ucLat = baslangic[0] + Math.sin(aci) * uzunluk;
-        var ucLon = baslangic[1] + Math.cos(aci) * uzunluk;
-        var catalYol = simsekYolu(baslangic, [ucLat, ucLon], tohum * 23 + idx, 0.12);
-        L.polyline(catalYol, {{
-            color: renk, weight: 3, opacity: 0.12, interactive: false, lineCap: 'round'
-        }}).addTo(map);
-        L.polyline(catalYol, {{
-            color: renk, weight: 1, opacity: 0.45, interactive: false, lineCap: 'round'
-        }}).addTo(map);
-    }});
-
-    return anaYol;
-}}
-
-// Düğümden dışa fırlayan kısa şimşek çatalları (statik dendrit yerine elektrik kıvılcımı)
-function dendritCiz(lat, lon, renk, tohum) {{
-    var sayi = 5;
-    for (var i = 0; i < sayi; i++) {{
-        var aci = (i / sayi) * 2 * Math.PI + tohum * 0.7;
-        var uzunluk = 0.045 + ((tohum + i) % 3) * 0.018;
-        var ucLat = lat + Math.sin(aci) * uzunluk;
-        var ucLon = lon + Math.cos(aci) * uzunluk;
-        var yol = simsekYolu([lat, lon], [ucLat, ucLon], tohum * 13 + i * 3, 0.10);
-
-        L.polyline(yol, {{
-            color: renk, weight: 2.5, opacity: 0.10, interactive: false, lineCap: 'round'
-        }}).addTo(map);
-        L.polyline(yol, {{
-            color: renk, weight: 0.8, opacity: 0.40, interactive: false, lineCap: 'round'
-        }}).addTo(map);
-    }}
-}}
-
-// Hat üzerinde ışıldayan elektrik kıvılcım noktaları
-function nabizNoktalariCiz(pts, renk) {{
-    [0.22, 0.45, 0.68, 0.88].forEach(function(t) {{
-        var idx = Math.round(t * (pts.length - 1));
-        var p = pts[idx];
-        L.marker(p, {{
-            icon: L.divIcon({{
-                className: '',
-                html: '<div style="width:4px;height:4px;background:#fff;border-radius:50%;'
-                    + 'box-shadow:0 0 3px #fff,0 0 8px '+renk+',0 0 14px '+renk+';'
-                    + 'animation:breathe-inner 1.6s ease-in-out infinite;"></div>',
-                iconSize: [4, 4], iconAnchor: [2, 2]
-            }}),
-            interactive: false, zIndexOffset: -50
-        }}).addTo(map);
-    }});
-}}
-
 var hq = hospitals.find(function(h) {{ return h.hq; }});
 if (hq) {{
-    var _tohum = 0;
+    var _egriIdx = 0;
     hospitals.forEach(function(h) {{
         if (h.hq) return;
-        _tohum++;
-        var anaHat = aksonDemetiCiz([hq.lat, hq.lon], [h.lat, h.lon], h.renk, _tohum);
-        nabizNoktalariCiz(anaHat, h.renk);
-        dendritCiz(h.lat, h.lon, h.renk, _tohum);
+        _egriIdx++;
+        var yon = (_egriIdx % 2 === 0) ? 1 : -1;
+        var miktar = 0.18 + (_egriIdx % 3) * 0.07;
+        var egriPts = egriNoktalari([hq.lat, hq.lon], [h.lat, h.lon], yon, miktar);
+        // Dış glow hattı (kalın, soluk)
+        L.polyline(egriPts, {{
+            color: h.renk, weight: 6, opacity: 0.10, interactive: false, smoothFactor: 2
+        }}).addTo(map);
+        // Ana hat — organik, noktalı sinaptik akış
+        L.polyline(egriPts, {{
+            color: h.renk, weight: 1.6, opacity: 0.55, interactive: false, dashArray: '1,7', smoothFactor: 2
+        }}).addTo(map);
     }});
-    dendritCiz(hq.lat, hq.lon, hq.renk, 0);
 }}
 
 hospitals.forEach(function(h) {{
@@ -1326,39 +1241,31 @@ hospitals.forEach(function(h) {{
     var c  = h.renk;
     var hs = s / 2;
 
-    // ── Soma (hücre gövdesi) — fotoğraftaki gibi katmanlı bulanık bloom ──
-    // 1) En dış, çok bulanık renkli hale (doku sızması)
+    // ── Dış glow halkası ──
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="width:'+(s*5)+'px;height:'+(s*5)+'px;border-radius:50%;'
-                +'background:radial-gradient(circle,'+c+'55 0%,'+c+'22 45%,transparent 75%);'
-                +'filter:blur(5px);animation:breathe-outer 3.4s ease-in-out infinite;"></div>',
-            iconSize:[s*5, s*5], iconAnchor:[s*2.5, s*2.5]
+            html:'<div style="width:'+(s*3.8)+'px;height:'+(s*3.8)+'px;background:'+c+';border-radius:50%;animation:breathe-outer 3s ease-in-out infinite;"></div>',
+            iconSize:[s*3.8, s*3.8], iconAnchor:[s*1.9, s*1.9]
         }}),
-        interactive:false, zIndexOffset:-300
+        interactive:false, zIndexOffset:-200
     }}).addTo(map);
 
-    // 2) Orta hale — renk yoğunlaşır
+    // ── İç glow halkası ──
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="width:'+(s*2.8)+'px;height:'+(s*2.8)+'px;border-radius:50%;'
-                +'background:radial-gradient(circle,'+c+'cc 0%,'+c+'66 50%,transparent 80%);'
-                +'filter:blur(2px);animation:breathe-inner 3s ease-in-out infinite;"></div>',
-            iconSize:[s*2.8, s*2.8], iconAnchor:[s*1.4, s*1.4]
+            html:'<div style="width:'+(s*2)+'px;height:'+(s*2)+'px;background:'+c+';border-radius:50%;animation:breathe-inner 3s ease-in-out infinite;"></div>',
+            iconSize:[s*2, s*2], iconAnchor:[s, s]
         }}),
         interactive:false, zIndexOffset:-100
     }}).addTo(map);
 
-    // ── Ana nokta — beyaz-sıcak çekirdek (gerçek nöron soması gibi) ──
+    // ── Ana nokta ──
     var dot = L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="width:'+s+'px;height:'+s+'px;border-radius:50%;'
-                +'background:radial-gradient(circle at 35% 30%,#ffffff 0%,'+c+' 55%,'+c+'cc 100%);'
-                +'border:1px solid rgba(255,255,255,0.5);'
-                +'box-shadow:0 0 6px 2px '+c+',0 0 14px '+c+'80,0 0 2px rgba(255,255,255,0.9);"></div>',
+            html:'<div style="width:'+s+'px;height:'+s+'px;background:'+c+';border-radius:50%;border:2px solid rgba(255,255,255,0.28);box-shadow:0 0 10px '+c+',0 0 3px rgba(0,0,0,0.8);"></div>',
             iconSize:[s, s], iconAnchor:[hs, hs]
         }}),
         zIndexOffset:100
