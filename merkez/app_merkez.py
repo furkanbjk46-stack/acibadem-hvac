@@ -93,20 +93,6 @@ header[data-testid="stHeader"] button    { display: none !important; }
     height: 100% !important;
 }
 
-/* Harita iframe — kolonun tamamını doldursun */
-[data-testid="column"]:nth-child(2) [data-testid="stIFrame"],
-[data-testid="column"]:nth-child(2) iframe {
-    width: 100% !important;
-    height: 100% !important;
-    border: none !important;
-    background: transparent !important;
-}
-[data-testid="column"]:nth-child(2) [data-testid="element-container"] {
-    height: 100% !important;
-}
-[data-testid="column"]:nth-child(2) [data-testid="stVerticalBlock"] {
-    height: 100% !important;
-}
 
 /* Tüm yazılar */
 h1,h2,h3,h4,h5,h6 { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
@@ -178,11 +164,15 @@ button span[data-testid="stIconMaterial"] {
     scrollbar-width: thin;
     scrollbar-color: rgba(56, 189, 248,0.35) rgba(15,23,42,0.6);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 8px;
     align-content: start;
 }
 .lok-scroll .nk { margin-bottom: 0 !important; }
+.lok-pin {
+    display:inline-flex; align-items:center; gap:3px; margin-top:3px;
+    font-size:7px; color:rgba(148,163,184,0.65); letter-spacing:0.5px;
+}
 
 .ozet-grid {
     display: grid;
@@ -359,6 +349,16 @@ HASTANELER = {
     "adana_ortopedia":{"isim": "Acıbadem Adana Ortopedia",  "kisa": "ADANA ORT.",   "lat": 37.0100, "lon": 35.3350, "m2":  5000, "renk": "#e879f9"},
     # ── Muğla / Bodrum ──
     "bodrum":         {"isim": "Acıbadem Bodrum",           "kisa": "BODRUM",       "lat": 37.0344, "lon": 27.4305, "m2":  7000, "renk": "#2dd4bf"},
+}
+
+# Kart üzerindeki mini konum rozeti için şehir eşlemesi (harita kaldırıldığı için)
+LOK_SEHIR = {
+    "maslak": "İstanbul", "altunizade": "İstanbul", "kozyatagi": "İstanbul", "taksim": "İstanbul",
+    "atakent": "İstanbul", "atasehir": "İstanbul", "bakirkoy": "İstanbul", "fulya": "İstanbul",
+    "international": "İstanbul", "kadikoy": "İstanbul", "kartal": "İstanbul",
+    "ankara": "Ankara", "bayindir": "Ankara",
+    "bursa": "Bursa", "kocaeli": "Kocaeli", "eskisehir": "Eskişehir", "izmir": "İzmir",
+    "kayseri": "Kayseri", "adana": "Adana", "adana_ortopedia": "Adana", "bodrum": "Muğla",
 }
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "merkez_config.json")
@@ -974,9 +974,56 @@ def hvac_yuzdesi(lok_id):
     return round(val, 1) if pd.notna(val) else None
 
 # ============================================================
-# ANA LAYOUT: sol (lokasyon) | sağ (dashboard) | harita (en sağ)
+# AI HERO — tam genişlikte canlı AI özeti (en verimli/en dikkat gereken lokasyon)
 # ============================================================
-sol, merkez, sag = st.columns([1.3, 1.4, 1.3], gap="small")
+_hero_html = None
+if not df_all.empty:
+    _hero_metrik = {}
+    for _hlid, _hinfo in HASTANELER.items():
+        _hkwh = dun_kwh(_hlid)
+        if _hkwh and _hkwh > 0:
+            _hero_metrik[_hlid] = {
+                "isim": _hinfo["kisa"], "renk": _hinfo["renk"],
+                "kwh_m2": round(_hkwh / _hinfo.get("m2", 10000), 2)
+            }
+    if _hero_metrik:
+        _hsira  = sorted(_hero_metrik.items(), key=lambda x: x[1]["kwh_m2"])
+        _hiyi   = _hsira[0][1]
+        _hkotu  = _hsira[-1][1]
+        _htoplam = sum(v["kwh_m2"] for v in _hero_metrik.values())
+        _hero_html = (
+            "<div class='ai-hero-banner'>"
+            "<div class='ai-hero-icon'>🧠</div>"
+            "<div class='ai-hero-text'>"
+            "<div class='ai-hero-label'>SYNAPSE AI — CANLI DEĞERLENDİRME</div>"
+            f"<div class='ai-hero-line'><b style='color:#6ee7b7;'>{_hiyi['isim']}</b> en verimli çalışıyor "
+            f"(<b style='color:#38bdf8;'>{_hiyi['kwh_m2']}</b> kWh/m²/gün) · "
+            f"<b style='color:#fca5a5;'>{_hkotu['isim']}</b> dikkat gerektiriyor "
+            f"(<b style='color:#ef4444;'>{_hkotu['kwh_m2']}</b> kWh/m²/gün) · "
+            f"{len(_hero_metrik)} lokasyon canlı izleniyor</div>"
+            "</div></div>"
+        )
+if _hero_html:
+    st.markdown("""
+    <style>
+    .ai-hero-banner {
+        display:flex; align-items:center; gap:14px;
+        background: linear-gradient(90deg, rgba(56,189,248,0.10) 0%, rgba(139,92,246,0.08) 60%, transparent 100%);
+        border: 1px solid rgba(56,189,248,0.25);
+        border-radius: 14px; padding: 12px 18px; margin-bottom: 16px;
+    }
+    .ai-hero-icon { font-size:24px; flex-shrink:0;
+        filter: drop-shadow(0 0 8px rgba(56,189,248,0.6)); }
+    .ai-hero-label { font-size:9px; font-weight:800; letter-spacing:2px; color:#38bdf8; margin-bottom:3px; }
+    .ai-hero-line { font-size:12px; color:rgba(225,235,250,0.92); line-height:1.5; }
+    </style>
+    """ + _hero_html, unsafe_allow_html=True)
+
+# ============================================================
+# ANA LAYOUT: sol (lokasyon grid + global özet, geniş) | sağ (AI/uyarı/kontrol paneli)
+# Harita kaldırıldı — lokasyon kartları artık mini konum rozeti taşıyor
+# ============================================================
+sol, sag = st.columns([2, 1.2], gap="medium")
 
 # ════════════════════════════════
 # SOL KOLON
@@ -1061,6 +1108,7 @@ with sol:
             f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:13px;font-weight:900;'
             f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</div>'
             f'<div style="font-size:7px;color:rgba(150,210,255,0.5);">kWh {degisim_html}</div>'
+            f'<div class="lok-pin">📍 {LOK_SEHIR.get(lok_id, "—")}</div>'
             f'</div></a>'
         )
 
@@ -1153,10 +1201,9 @@ with sol:
         st.markdown(_ozet_kartlar, unsafe_allow_html=True)
 
 # ════════════════════════════════
-# MERKEZ KOLON — TÜRKİYE HARİTASI
+# (Harita kaldırıldı — sadece arka plan veri hesabı korunuyor)
 # ════════════════════════════════
-with merkez:
-    # ── Leaflet harita verisi ─────────────────────────────
+if False:
     harita_js = []
     for lok_id, lok_info in HASTANELER.items():
         online, fark_dk = online_bilgi(lok_id)
@@ -1356,31 +1403,31 @@ hospitals.forEach(function(h) {{
     _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
     _cv1.iframe(f"data:text/html;base64,{_b64}", height=1150, scrolling=False)
 
-    # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
-    chiller_vals = {}
-    dis_hava_val = fetch_dis_hava()
-    _dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
-    if dis_hava_val is not None:
-        _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
-    min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
-    if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
-        son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
-        for _, row in son_veri.iterrows():
-            lok_id = row["lokasyon_id"]
-            if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
-                chiller_vals[lok_id] = float(row["Chiller_Set_Temp_C"])
-            if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
-                dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
-                _dis_hava_kaynak = "📊 DB"
-        if chiller_vals:
-            min_lok = min(chiller_vals, key=chiller_vals.get)
-            max_lok = max(chiller_vals, key=chiller_vals.get)
-            min_val = chiller_vals[min_lok]
-            max_val = chiller_vals[max_lok]
-            min_renk = HASTANELER.get(min_lok, {}).get("renk", "#38bdf8")
-            max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
-            min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
-            max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
+# ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
+chiller_vals = {}
+dis_hava_val = fetch_dis_hava()
+_dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
+if dis_hava_val is not None:
+    _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
+min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
+if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
+    son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
+    for _, row in son_veri.iterrows():
+        lok_id = row["lokasyon_id"]
+        if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
+            chiller_vals[lok_id] = float(row["Chiller_Set_Temp_C"])
+        if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
+            dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
+            _dis_hava_kaynak = "📊 DB"
+    if chiller_vals:
+        min_lok = min(chiller_vals, key=chiller_vals.get)
+        max_lok = max(chiller_vals, key=chiller_vals.get)
+        min_val = chiller_vals[min_lok]
+        max_val = chiller_vals[max_lok]
+        min_renk = HASTANELER.get(min_lok, {}).get("renk", "#38bdf8")
+        max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
+        min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
+        max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
 
 
 # ════════════════════════════════
