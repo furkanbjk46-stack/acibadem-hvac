@@ -162,6 +162,14 @@ button span[data-testid="stIconMaterial"] {
 }
 .nk:hover { transform: translateX(2px); background: #161e2e !important; }
 
+/* AI Hero — Enerji Zekası kartı için öne çıkan gradyan kenarlık */
+.ai-hero {
+    border-left: 4px solid transparent !important;
+    border-image: linear-gradient(180deg, #38bdf8, #a855f7) 1 !important;
+    background: linear-gradient(135deg, rgba(56,189,248,0.07) 0%, #111827 40%) !important;
+    box-shadow: 0 2px 14px rgba(56,189,248,0.15) !important;
+}
+
 .lok-scroll {
     max-height: 492px;
     overflow-y: auto;
@@ -790,6 +798,22 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
 st.markdown("""
+<style>
+@keyframes ai-pulse-dot { 0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(16,185,129,0.6); } 50% { opacity:0.6; box-shadow:0 0 0 5px rgba(16,185,129,0); } }
+@keyframes ai-scanline { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.ai-status-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    background:rgba(16,185,129,0.10); border:1px solid rgba(16,185,129,0.35);
+    border-radius:20px; padding:3px 12px; margin-top:8px;
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:9px; font-weight:700;
+    color:#6ee7b7; letter-spacing:1.5px; text-transform:uppercase;
+}
+.ai-status-dot { width:6px; height:6px; border-radius:50%; background:#10b981; animation: ai-pulse-dot 2s ease-in-out infinite; }
+.ai-scan-wrap { position:relative; height:1px; overflow:hidden; margin-top:10px; background:rgba(56,189,248,0.08); }
+.ai-scan-line { position:absolute; top:0; left:0; width:40%; height:1px;
+    background:linear-gradient(90deg, transparent, #38bdf8, transparent);
+    animation: ai-scanline 3.5s linear infinite; }
+</style>
 <div style="text-align:center; padding:0px 0 6px;">
   <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a3b8;
               letter-spacing:3px; text-transform:uppercase;">
@@ -803,6 +827,8 @@ st.markdown("""
               letter-spacing:2px; margin-top:6px; text-transform:uppercase;">
     Operasyonel Zeka
   </div>
+  <div class="ai-status-pill"><span class="ai-status-dot"></span> AI AKTİF — Sürekli Analiz</div>
+  <div class="ai-scan-wrap"><div class="ai-scan-line"></div></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -1781,10 +1807,20 @@ with sag:
                 f"⚡ {_anormal_n} lokasyon normal dışı: {_anormal_isimler}</div>"
             )
 
+        _ez_baslik = (
+            f"<b style='color:#6ee7b7;'>{_en_iyi[1]['isim']}</b> en verimli "
+            f"(<b style='color:#38bdf8;'>{_en_iyi[1]['kwh_m2']}</b> kWh/m²/gün) — "
+            f"<b style='color:#fca5a5;'>{_en_kotu[1]['isim']}</b> dikkat gerektiriyor "
+            f"(<b style='color:#ef4444;'>{_en_kotu[1]['kwh_m2']}</b> kWh/m²/gün)"
+        )
         st.markdown(
-            f"<div class='nk'>"
-            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
-            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
+            f"<div class='nk ai-hero'>"
+            f"<div style='display:flex;align-items:center;gap:6px;margin-bottom:8px;'>"
+            f"<span class='ai-status-dot' style='background:#38bdf8;'></span>"
+            f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+            f"color:rgba(56, 189, 248,0.85);letter-spacing:2px;'>🧠 AI ENERJİ ZEKASI — CANLI DEĞERLENDİRME</span>"
+            f"</div>"
+            f"<div style='font-size:11px;line-height:1.6;color:rgba(220,235,255,0.9);margin-bottom:10px;'>{_ez_baslik}</div>"
             f"{_ez_satirlar}"
             f"{_anormal_html}"
             f"</div>",
