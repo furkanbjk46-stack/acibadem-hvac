@@ -141,10 +141,10 @@ button span[data-testid="stIconMaterial"] {
 /* Flat dashboard kartı — opak, sol kenar şeritli, her zaman okunaklı (arka plan görseline bağımsız) */
 .nk {
     position: relative;
-    background: #111827;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: linear-gradient(160deg, #141c2e 0%, #0d1320 100%);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     border-left: 4px solid rgba(150,160,175,0.5);
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 10px;
     margin-bottom: 8px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.35);
@@ -194,9 +194,14 @@ button span[data-testid="stIconMaterial"] {
 .lok-scroll::-webkit-scrollbar-thumb { background: rgba(56, 189, 248,0.28); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248,0.55); }
 
-.sec { font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:10px; color:rgba(56, 189, 248,0.7);
-       letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(56, 189, 248,0.15);
-       padding-bottom:5px; margin-bottom:10px; }
+.sec {
+    font-family:'Plus Jakarta Sans',sans-serif; font-size:10px; font-weight:800; color:#e2eaf5;
+    letter-spacing:2.5px; text-transform:uppercase;
+    margin-bottom:12px; padding:8px 12px;
+    background: linear-gradient(90deg, rgba(56,189,248,0.14) 0%, rgba(56,189,248,0.02) 100%);
+    border-left: 3px solid #38bdf8;
+    border-radius: 0 8px 8px 0;
+}
 
 /* Sol kolon (Lokasyon Durumu + Global Özet) — kart/cam kapsayıcı kaldırıldı, içerik direkt sayfa üzerinde */
 [data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sol-panel),
@@ -813,23 +818,38 @@ st.markdown("""
 .ai-scan-line { position:absolute; top:0; left:0; width:40%; height:1px;
     background:linear-gradient(90deg, transparent, #38bdf8, transparent);
     animation: ai-scanline 3.5s linear infinite; }
+.synapse-bar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 18px; gap:16px;
+}
+.synapse-bar .brand-mark {
+    width:36px; height:36px; border-radius:10px; flex-shrink:0;
+    background:linear-gradient(135deg, #38bdf8, #8b5cf6);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; box-shadow:0 0 16px rgba(56,189,248,0.4);
+}
+.synapse-bar .brand-block { display:flex; align-items:center; gap:12px; }
+.synapse-bar .brand-text { text-align:left; }
+.synapse-bar .brand-text .sub { font-size:9px; color:#94a3b8; letter-spacing:2.5px; text-transform:uppercase; }
+.synapse-bar .brand-text .title { font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:22px;
+    font-weight:700; color:#f8fafc; letter-spacing:0.5px; }
+.synapse-bar .right-block { text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
+.synapse-bar .clock { font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#64748b; letter-spacing:1px; }
 </style>
-<div style="text-align:center; padding:0px 0 6px;">
-  <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a3b8;
-              letter-spacing:3px; text-transform:uppercase;">
-    ACIBADEM SAĞLIK GRUBU
+<div class="synapse-bar">
+  <div class="brand-block">
+    <div class="brand-mark">🧠</div>
+    <div class="brand-text">
+      <div class="sub">ACIBADEM SAĞLIK GRUBU</div>
+      <div class="title">SYNAPSE <span style="color:#38bdf8;">//</span> Operasyonel Zeka</div>
+    </div>
   </div>
-  <div style="font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:34px; font-weight:600; color:#f8fafc;
-              letter-spacing:1px; line-height:1.3;">
-    SYNAPSE // Merkezi Veri Bağlantısı
+  <div class="right-block">
+    <div class="ai-status-pill" style="margin-top:0;"><span class="ai-status-dot"></span> AI AKTİF — Sürekli Analiz</div>
+    <div class="clock">""" + now_display.strftime("%d.%m.%Y") + """ &nbsp;·&nbsp; """ + now_display.strftime("%H:%M") + """</div>
   </div>
-  <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#38bdf8;
-              letter-spacing:2px; margin-top:6px; text-transform:uppercase;">
-    Operasyonel Zeka
-  </div>
-  <div class="ai-status-pill"><span class="ai-status-dot"></span> AI AKTİF — Sürekli Analiz</div>
-  <div class="ai-scan-wrap"><div class="ai-scan-line"></div></div>
 </div>
+<div class="ai-scan-wrap"><div class="ai-scan-line"></div></div>
 """, unsafe_allow_html=True)
 
 # ── Lokasyon detay yönlendirmesi (kart ikonu tıklanınca) ──
