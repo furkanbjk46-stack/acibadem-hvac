@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="ACIBADEM-SYNAPSE",
     page_icon="🏥",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 from streamlit_autorefresh import st_autorefresh
@@ -65,8 +65,36 @@ section[data-testid="stSidebarCollapsedControl"] { display: none !important; }
 button[kind="header"]                    { display: none !important; }
 #MainMenu                                { display: none !important; }
 header[data-testid="stHeader"] button    { display: none !important; }
-[data-testid="stSidebar"]      { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
+
+/* ── Votrex tarzı sol navigasyon ── */
+[data-testid="stSidebar"] {
+    background: #0b101b !important;
+    border-right: 1px solid rgba(255,255,255,0.06) !important;
+    width: 230px !important;
+    min-width: 230px !important;
+}
+[data-testid="stSidebar"] > div { padding-top: 14px !important; }
+.vx-logo {
+    display:flex; align-items:center; gap:8px; padding:0 18px 16px 18px;
+    font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:18px; font-weight:800; color:#f8fafc;
+}
+.vx-logo span { color:#38bdf8; }
+.vx-section-label {
+    font-size:9px; font-weight:800; letter-spacing:2px; color:#475569;
+    text-transform:uppercase; padding:14px 18px 6px 18px;
+}
+.vx-nav-item {
+    display:flex; align-items:center; gap:10px; padding:8px 18px;
+    font-size:12.5px; font-weight:600; color:#94a3b8; cursor:pointer;
+    border-left: 2px solid transparent;
+}
+.vx-nav-item:hover { background: rgba(56,189,248,0.06); color:#e2e8f0; }
+.vx-nav-item.active {
+    background: rgba(56,189,248,0.12); color:#38bdf8;
+    border-left: 2px solid #38bdf8;
+}
+.vx-nav-dot { width:5px; height:5px; border-radius:50%; background:#10b981; margin-left:auto; }
 
 /* Sayfa: header + footer kendi boylarını alır, kolon satırı kalan TÜM boşluğu doldurur (taşma/boşluk yok) */
 .block-container, [data-testid="stMainBlockContainer"] {
@@ -316,6 +344,23 @@ button span[data-testid="stIconMaterial"] {
 """
 st.markdown(_css_block.replace("__BG_CSS__", _bg_css), unsafe_allow_html=True)
 
+# ============ SOL NAVİGASYON (Votrex tarzı) ============
+with st.sidebar:
+    st.markdown("""
+    <div class="vx-logo">🧠 <span>SYNAPSE</span></div>
+    <div class="vx-section-label">Genel</div>
+    <div class="vx-nav-item active">📊 Genel Bakış <span class="vx-nav-dot"></span></div>
+    <div class="vx-nav-item">🏥 Lokasyonlar</div>
+    <div class="vx-nav-item">⚡ Enerji Analizi</div>
+    <div class="vx-nav-item">🚨 Uyarılar</div>
+    <div class="vx-section-label">Otomasyon</div>
+    <div class="vx-nav-item">🤖 Oto Set</div>
+    <div class="vx-nav-item">🧠 AI Asistan</div>
+    <div class="vx-nav-item">🔧 Bakım / Arıza</div>
+    <div class="vx-section-label">Sistem</div>
+    <div class="vx-nav-item">⚙️ Ayarlar</div>
+    <div class="vx-nav-item">📜 Kayıtlar</div>
+    """, unsafe_allow_html=True)
 
 # ============ SABİT VERİ ============
 HASTANELER = {
@@ -835,7 +880,32 @@ st.markdown("""
     font-weight:700; color:#f8fafc; letter-spacing:0.5px; }
 .synapse-bar .right-block { text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
 .synapse-bar .clock { font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#64748b; letter-spacing:1px; }
+.vx-topbar {
+    display:flex; align-items:center; gap:14px; padding:8px 18px;
+    border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.vx-breadcrumb { font-size:12px; color:#64748b; font-weight:600; display:flex; align-items:center; gap:6px; }
+.vx-breadcrumb b { color:#e2e8f0; }
+.vx-search {
+    flex:1; max-width:420px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+    border-radius:8px; padding:6px 12px; font-size:11px; color:#64748b; display:flex; align-items:center; gap:8px;
+}
+.vx-topbar-icons { display:flex; align-items:center; gap:14px; margin-left:auto; font-size:14px; color:#64748b; }
+.vx-avatar {
+    display:flex; align-items:center; gap:8px; padding-left:14px; border-left:1px solid rgba(255,255,255,0.08);
+}
+.vx-avatar .circle { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#8b5cf6);
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#fff; }
+.vx-avatar .meta { font-size:11px; line-height:1.3; }
+.vx-avatar .meta .name { color:#e2e8f0; font-weight:700; }
+.vx-avatar .meta .role { color:#64748b; font-size:9px; }
 </style>
+<div class="vx-topbar">
+  <div class="vx-breadcrumb">🏥 <b>SYNAPSE</b> / Genel Bakış</div>
+  <div class="vx-search">🔍 Lokasyon, uyarı veya rapor ara... <span style="margin-left:auto;opacity:0.5;">⌘K</span></div>
+  <div class="vx-topbar-icons">🌐 🔔 ⚙️</div>
+  <div class="vx-avatar"><div class="circle">SA</div><div class="meta"><div class="name">Sistem Admin</div><div class="role">Yönetici</div></div></div>
+</div>
 <div class="synapse-bar">
   <div class="brand-block">
     <div class="brand-mark">🧠</div>
@@ -974,50 +1044,116 @@ def hvac_yuzdesi(lok_id):
     return round(val, 1) if pd.notna(val) else None
 
 # ============================================================
-# AI HERO — tam genişlikte canlı AI özeti (en verimli/en dikkat gereken lokasyon)
+# ÜST SIRA: Karşılama kartı + renkli KPI kartları (Votrex tarzı)
 # ============================================================
-_hero_html = None
+_toplam_enerji_kwh = 0
+_aktif_lok = _cevrimdisi_lok = _kurulmadi_lok = 0
+_hiyi = _hkotu = None
 if not df_all.empty:
     _hero_metrik = {}
     for _hlid, _hinfo in HASTANELER.items():
+        _honline, _hfark = online_bilgi(_hlid)
+        if _hfark is None:
+            _kurulmadi_lok += 1
+        elif _honline:
+            _aktif_lok += 1
+        else:
+            _cevrimdisi_lok += 1
         _hkwh = dun_kwh(_hlid)
         if _hkwh and _hkwh > 0:
-            _hero_metrik[_hlid] = {
-                "isim": _hinfo["kisa"], "renk": _hinfo["renk"],
-                "kwh_m2": round(_hkwh / _hinfo.get("m2", 10000), 2)
-            }
+            _toplam_enerji_kwh += _hkwh
+            _hero_metrik[_hlid] = {"isim": _hinfo["kisa"], "kwh_m2": round(_hkwh / _hinfo.get("m2", 10000), 2)}
     if _hero_metrik:
-        _hsira  = sorted(_hero_metrik.items(), key=lambda x: x[1]["kwh_m2"])
-        _hiyi   = _hsira[0][1]
-        _hkotu  = _hsira[-1][1]
-        _htoplam = sum(v["kwh_m2"] for v in _hero_metrik.values())
-        _hero_html = (
-            "<div class='ai-hero-banner'>"
-            "<div class='ai-hero-icon'>🧠</div>"
-            "<div class='ai-hero-text'>"
-            "<div class='ai-hero-label'>SYNAPSE AI — CANLI DEĞERLENDİRME</div>"
-            f"<div class='ai-hero-line'><b style='color:#6ee7b7;'>{_hiyi['isim']}</b> en verimli çalışıyor "
-            f"(<b style='color:#38bdf8;'>{_hiyi['kwh_m2']}</b> kWh/m²/gün) · "
-            f"<b style='color:#fca5a5;'>{_hkotu['isim']}</b> dikkat gerektiriyor "
-            f"(<b style='color:#ef4444;'>{_hkotu['kwh_m2']}</b> kWh/m²/gün) · "
-            f"{len(_hero_metrik)} lokasyon canlı izleniyor</div>"
-            "</div></div>"
+        _hsira = sorted(_hero_metrik.items(), key=lambda x: x[1]["kwh_m2"])
+        _hiyi, _hkotu = _hsira[0][1], _hsira[-1][1]
+
+_toplam_enerji_str = f"{_toplam_enerji_kwh:,.0f}".replace(",", ".")
+
+st.markdown("""
+<style>
+.vx-kpi-row { display:flex; gap:12px; margin-bottom:16px; align-items:stretch; }
+.vx-welcome {
+    flex:1.6; border-radius:14px; padding:16px 18px;
+    background: linear-gradient(135deg, #111827 0%, #0d1320 100%);
+    border:1px solid rgba(255,255,255,0.07);
+    display:flex; flex-direction:column; justify-content:space-between;
+}
+.vx-welcome .top-row { display:flex; justify-content:space-between; font-size:10px; color:#64748b; }
+.vx-welcome .greet { font-size:18px; font-weight:800; color:#f8fafc; margin:4px 0 2px; }
+.vx-welcome .sub { font-size:11px; color:#94a3b8; }
+.vx-welcome .foot { font-size:10px; color:#10b981; display:flex; align-items:center; gap:5px; margin-top:8px; }
+.vx-kpi { flex:1; border-radius:14px; padding:14px 16px; position:relative; overflow:hidden;
+    display:flex; flex-direction:column; justify-content:space-between; min-width:0; }
+.vx-kpi .dot { position:absolute; top:12px; right:12px; width:7px; height:7px; border-radius:50%; }
+.vx-kpi .ic { font-size:16px; margin-bottom:8px; }
+.vx-kpi .val { font-size:20px; font-weight:800; color:#fff; line-height:1; }
+.vx-kpi .lbl { font-size:9px; color:rgba(255,255,255,0.65); margin-top:3px; letter-spacing:0.5px; }
+.vx-kpi.blue   { background:linear-gradient(135deg,#1d4ed8,#1e3a8a); }
+.vx-kpi.green  { background:linear-gradient(135deg,#059669,#065f46); }
+.vx-kpi.orange { background:linear-gradient(135deg,#d97706,#92400e); }
+.vx-kpi.red    { background:linear-gradient(135deg,#dc2626,#7f1d1d); }
+</style>
+""" + (
+    "<div class='vx-kpi-row'>"
+    "<div class='vx-welcome'>"
+    f"<div class='top-row'><span>{('🌙 İyi Akşamlar' if now_display.hour>=18 or now_display.hour<6 else '☀️ İyi Günler')}</span><span>{now_display.strftime('%A, %d %B %Y')}</span></div>"
+    "<div class='greet'>SYNAPSE AI Aktif</div>"
+    f"<div class='sub'>{(_hiyi['isim']+' en verimli, '+_hkotu['isim']+' dikkat gerektiriyor') if _hiyi else 'Veriler değerlendiriliyor...'}</div>"
+    "<div class='foot'>● Tüm sistemler operasyonel</div>"
+    "</div>"
+    f"<div class='vx-kpi blue'><div class='dot' style='background:#60a5fa;'></div><div class='ic'>⚡</div><div class='val'>{_toplam_enerji_str}</div><div class='lbl'>TOPLAM ENERJİ (kWh)</div></div>"
+    f"<div class='vx-kpi green'><div class='dot' style='background:#34d399;'></div><div class='ic'>🟢</div><div class='val'>{_aktif_lok}</div><div class='lbl'>AKTİF LOKASYON</div></div>"
+    f"<div class='vx-kpi orange'><div class='dot' style='background:#fbbf24;'></div><div class='ic'>⚪</div><div class='val'>{_kurulmadi_lok}</div><div class='lbl'>KURULUM BEKLİYOR</div></div>"
+    f"<div class='vx-kpi red'><div class='dot' style='background:#f87171;'></div><div class='ic'>🔴</div><div class='val'>{_cevrimdisi_lok}</div><div class='lbl'>ÇEVRİMDIŞI</div></div>"
+    "</div>"
+), unsafe_allow_html=True)
+
+# ============================================================
+# ENERJİ ANALİTİĞİ — büyük trend grafiği + Quick Stats (Votrex tarzı)
+# ============================================================
+_grafik, _quick = st.columns([2.3, 1], gap="medium")
+with _grafik:
+    st.markdown('<div class="sec">📈 ENERJİ ANALİTİĞİ — Son 30 Gün</div>', unsafe_allow_html=True)
+    if not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
+        _son30_bas = (now - timedelta(days=30)).strftime("%Y-%m-%d")
+        _df_son30 = df_all[df_all["Tarih"].dt.strftime("%Y-%m-%d") >= _son30_bas]
+        _gunluk = _df_son30.groupby(_df_son30["Tarih"].dt.strftime("%Y-%m-%d"))["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
+        _gunluk.columns = ["tarih", "kwh"]
+        _gunluk = _gunluk.sort_values("tarih")
+        _fig = go.Figure()
+        _fig.add_trace(go.Scatter(
+            x=_gunluk["tarih"], y=_gunluk["kwh"], mode="lines", fill="tozeroy",
+            line=dict(color="#38bdf8", width=2.5),
+            fillcolor="rgba(56,189,248,0.12)", name="Toplam Enerji"
+        ))
+        _fig.update_layout(
+            height=260, margin=dict(l=0, r=0, t=10, b=0),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(showgrid=False, color="#64748b", tickfont=dict(size=9)),
+            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.06)", color="#64748b", tickfont=dict(size=9)),
+            font=dict(family="Plus Jakarta Sans"), showlegend=False,
         )
-if _hero_html:
-    st.markdown("""
-    <style>
-    .ai-hero-banner {
-        display:flex; align-items:center; gap:14px;
-        background: linear-gradient(90deg, rgba(56,189,248,0.10) 0%, rgba(139,92,246,0.08) 60%, transparent 100%);
-        border: 1px solid rgba(56,189,248,0.25);
-        border-radius: 14px; padding: 12px 18px; margin-bottom: 16px;
-    }
-    .ai-hero-icon { font-size:24px; flex-shrink:0;
-        filter: drop-shadow(0 0 8px rgba(56,189,248,0.6)); }
-    .ai-hero-label { font-size:9px; font-weight:800; letter-spacing:2px; color:#38bdf8; margin-bottom:3px; }
-    .ai-hero-line { font-size:12px; color:rgba(225,235,250,0.92); line-height:1.5; }
-    </style>
-    """ + _hero_html, unsafe_allow_html=True)
+        st.plotly_chart(_fig, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.markdown("<div class='alrt-y'>📊 Henüz yeterli veri yok.</div>", unsafe_allow_html=True)
+
+with _quick:
+    st.markdown('<div class="sec">📊 QUICK STATS</div>', unsafe_allow_html=True)
+    _qs_items = [
+        ("🟢", "Aktif Lokasyon", str(_aktif_lok), "#10b981"),
+        ("🔴", "Çevrimdışı", str(_cevrimdisi_lok), "#ef4444"),
+        ("⚡", "En Verimli", _hiyi["isim"] if _hiyi else "—", "#38bdf8"),
+        ("⚠️", "Dikkat Gereken", _hkotu["isim"] if _hkotu else "—", "#f59e0b"),
+    ]
+    _qs_html = "<div class='nk' style='display:flex;flex-direction:column;gap:8px;'>"
+    for _ic, _lbl, _val, _c in _qs_items:
+        _qs_html += (
+            f"<div style='display:flex;align-items:center;justify-content:space-between;'>"
+            f"<span style='font-size:11px;color:rgba(200,215,235,0.8);'>{_ic} {_lbl}</span>"
+            f"<span style='font-size:11px;font-weight:800;color:{_c};'>{_val}</span></div>"
+        )
+    _qs_html += "</div>"
+    st.markdown(_qs_html, unsafe_allow_html=True)
 
 # ============================================================
 # ANA LAYOUT: sol (lokasyon grid + global özet, geniş) | sağ (AI/uyarı/kontrol paneli)
