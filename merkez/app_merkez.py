@@ -1217,22 +1217,24 @@ function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
     return pts;
 }}
 
+// Tüm hatlar tek, canlı camgöbeği tonunda parlar (durum rengi sadece düğüm noktasında kalır)
+var HAT_RENGI = '#22d3ee';
 function hatCiz(pts, renk) {{
     // En dış, en geniş ışık taşması
     L.polyline(pts, {{
-        color: renk, weight: 11, opacity: 0.07, interactive: false, smoothFactor: 2, lineCap: 'round'
+        color: HAT_RENGI, weight: 12, opacity: 0.10, interactive: false, smoothFactor: 2, lineCap: 'round'
     }}).addTo(map);
     // Orta glow
     L.polyline(pts, {{
-        color: renk, weight: 5, opacity: 0.18, interactive: false, smoothFactor: 2, lineCap: 'round'
+        color: HAT_RENGI, weight: 6, opacity: 0.22, interactive: false, smoothFactor: 2, lineCap: 'round'
     }}).addTo(map);
-    // Renkli ana hat — kesintisiz, akıcı
+    // Ana camgöbeği hat
     L.polyline(pts, {{
-        color: renk, weight: 2, opacity: 0.75, interactive: false, smoothFactor: 2, lineCap: 'round'
+        color: HAT_RENGI, weight: 2.4, opacity: 0.85, interactive: false, smoothFactor: 2, lineCap: 'round'
     }}).addTo(map);
-    // Beyaz-parlak ince çekirdek (devre/fiber-optik parlaklığı)
+    // Beyaz-parlak ince çekirdek (fiber-optik parlaklığı)
     L.polyline(pts, {{
-        color: '#e6fbff', weight: 0.8, opacity: 0.9, interactive: false, smoothFactor: 2, lineCap: 'round'
+        color: '#ffffff', weight: 0.9, opacity: 0.95, interactive: false, smoothFactor: 2, lineCap: 'round'
     }}).addTo(map);
 }}
 
