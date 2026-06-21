@@ -1077,6 +1077,11 @@ def hvac_yuzdesi(lok_id):
 if st.session_state["vx_sayfa"] == "lokasyonlar":
     st.markdown("""
     <style>
+    .block-container, [data-testid="stMainBlockContainer"] {
+        overflow-y: auto !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+    }
     .lok-buyuk-grid {
         display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;
         padding: 0 18px 24px 18px;
