@@ -54,7 +54,7 @@ header[data-testid="stHeader"] button    { display: none !important; }
 .block-container { padding: 0.5rem 0.75rem 1rem 0.75rem !important; max-width: 100% !important; }
 
 /* Harita iframe tam ekran */
-[data-testid="column"]:nth-child(2) iframe {
+[data-testid="column"]:nth-child(3) iframe {
     position: fixed !important;
     top: 0 !important; left: 0 !important;
     width: 100vw !important; height: 100vh !important;
@@ -863,9 +863,9 @@ def hvac_yuzdesi(lok_id):
     return round(val, 1) if pd.notna(val) else None
 
 # ============================================================
-# ANA LAYOUT: sol | harita | sağ
+# ANA LAYOUT: sol (lokasyon) | sağ (dashboard) | harita (en sağ)
 # ============================================================
-sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
+sol, sag, merkez = st.columns([1, 1, 2.8], gap="small")
 
 # ════════════════════════════════
 # SOL KOLON
