@@ -137,29 +137,39 @@ button span[data-testid="stIconMaterial"] {
 ::-webkit-scrollbar-track { background: #0f172a; }
 ::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
 
-/* Su damlası cam kart — net/şeffaf cam, buzlu değil */
+/* iOS context-menu tarzı cam kart — okunaklı metin + camsı bulanıklık + dalga highlight */
 .nk {
     position: relative;
-    background:
-        radial-gradient(circle at 22% 18%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.10) 6%, transparent 14%),
-        radial-gradient(circle at 78% 70%, rgba(255,255,255,0.18) 0%, transparent 10%),
-        radial-gradient(circle at 60% 30%, rgba(255,255,255,0.12) 0%, transparent 8%),
-        rgba(15, 23, 42, 0.16);
-    backdrop-filter: blur(1.5px) saturate(120%);
-    -webkit-backdrop-filter: blur(1.5px) saturate(120%);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.50);
+    backdrop-filter: blur(11px) saturate(160%);
+    -webkit-backdrop-filter: blur(11px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.20);
+    border-radius: 14px;
     padding: 8px;
     margin-bottom: 8px;
     box-shadow:
-        inset 0 1px 0 0 rgba(255,255,255,0.25),
-        inset 0 -6px 10px -6px rgba(0,0,0,0.25),
-        0 3px 10px rgba(0,0,0,0.25);
+        inset 0 1px 0 0 rgba(255,255,255,0.30),
+        inset 0 -10px 16px -12px rgba(0,0,0,0.35),
+        0 4px 14px rgba(0,0,0,0.30);
     overflow: hidden;
 }
-.nk-green { border-color: rgba(16,185,129,0.55) !important; box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(16,185,129,0.18) !important; }
-.nk-red   { border-color: rgba(239,68,68,0.55) !important;  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(239,68,68,0.18) !important;  }
-.nk-gray  { border-color: rgba(180,190,205,0.30) !important; opacity: 0.7; }
+/* Camın üzerinden geçen yumuşak dalga ışık yansıması (referans görseldeki gibi) */
+.nk::before {
+    content: "";
+    position: absolute;
+    left: -20%;
+    right: -20%;
+    top: 28%;
+    height: 22%;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.16) 45%, rgba(255,255,255,0) 100%);
+    transform: rotate(-3deg);
+    pointer-events: none;
+    z-index: 0;
+}
+.nk > * { position: relative; z-index: 1; }
+.nk-green { border-color: rgba(16,185,129,0.55) !important; box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.30), 0 0 15px rgba(16,185,129,0.18) !important; }
+.nk-red   { border-color: rgba(239,68,68,0.55) !important;  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.30), 0 0 15px rgba(239,68,68,0.18) !important;  }
+.nk-gray  { border-color: rgba(180,190,205,0.28) !important; opacity: 0.75; }
 .nk {
     display: block !important;
     text-decoration: none !important;
