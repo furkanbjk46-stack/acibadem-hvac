@@ -1193,97 +1193,6 @@ setTimeout(function() {{ map.invalidateSize(true); }}, 300);
 
 var hospitals = {hjs};
 
-// ── Genel Merkez (Ataşehir) → tüm lokasyonlara organik (kıvrımlı) sinir agi hatlari ──
-function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
-    var midLat = (p0[0] + p1[0]) / 2;
-    var midLon = (p0[1] + p1[1]) / 2;
-    var dLat = p1[0] - p0[0];
-    var dLon = p1[1] - p0[1];
-    var dist = Math.sqrt(dLat*dLat + dLon*dLon);
-    if (dist === 0) return [p0, p1];
-    var nLat = -dLon / dist;
-    var nLon =  dLat / dist;
-    var offset = dist * egimMiktari * egimYonu;
-    var ctrlLat = midLat + nLat * offset;
-    var ctrlLon = midLon + nLon * offset;
-    var pts = [];
-    var steps = 48;
-    for (var i = 0; i <= steps; i++) {{
-        var t = i / steps;
-        var lat = (1-t)*(1-t)*p0[0] + 2*(1-t)*t*ctrlLat + t*t*p1[0];
-        var lon = (1-t)*(1-t)*p0[1] + 2*(1-t)*t*ctrlLon + t*t*p1[1];
-        pts.push([lat, lon]);
-    }}
-    return pts;
-}}
-
-// Tüm hatlar tek, canlı camgöbeği tonunda parlar (durum rengi sadece düğüm noktasında kalır)
-var HAT_RENGI = '#22d3ee';
-function hatCiz(pts, renk) {{
-    // En dış, en geniş ışık taşması
-    L.polyline(pts, {{
-        color: HAT_RENGI, weight: 12, opacity: 0.10, interactive: false, smoothFactor: 2, lineCap: 'round'
-    }}).addTo(map);
-    // Orta glow
-    L.polyline(pts, {{
-        color: HAT_RENGI, weight: 6, opacity: 0.22, interactive: false, smoothFactor: 2, lineCap: 'round'
-    }}).addTo(map);
-    // Ana camgöbeği hat
-    L.polyline(pts, {{
-        color: HAT_RENGI, weight: 2.4, opacity: 0.85, interactive: false, smoothFactor: 2, lineCap: 'round'
-    }}).addTo(map);
-    // Beyaz-parlak ince çekirdek (fiber-optik parlaklığı)
-    L.polyline(pts, {{
-        color: '#ffffff', weight: 0.9, opacity: 0.95, interactive: false, smoothFactor: 2, lineCap: 'round'
-    }}).addTo(map);
-}}
-
-function bulLok(id) {{ return hospitals.find(function(h) {{ return h.id === id; }}); }}
-
-var hq = hospitals.find(function(h) {{ return h.hq; }});
-if (hq) {{
-    // ── Özel çatallı dallar: tek gövde HQ'dan çıkıp ikiye ayrılıp iki ayrı lokasyona gider ──
-    var ozelGruplar = [
-        ['izmir',     'bodrum'],
-        ['kayseri',   'adana'],
-        ['eskisehir', 'bayindir'],
-        ['kartal',    'kocaeli']
-    ];
-    var gruplananlar = {{}};
-    var _gIdx = 0;
-    ozelGruplar.forEach(function(grp) {{
-        var a = bulLok(grp[0]), b = bulLok(grp[1]);
-        if (!a || !b) return;
-        gruplananlar[grp[0]] = true;
-        gruplananlar[grp[1]] = true;
-        _gIdx++;
-
-        var orta = [(a.lat + b.lat) / 2, (a.lon + b.lon) / 2];
-        var govdeYon = (_gIdx % 2 === 0) ? 1 : -1;
-
-        // Gövde — HQ'dan çatallanma noktasına
-        var govde = egriNoktalari([hq.lat, hq.lon], orta, govdeYon, 0.10);
-        hatCiz(govde, hq.renk);
-
-        // Çatal 1 → a, Çatal 2 → b (kendi durum rengiyle)
-        var catal1 = egriNoktalari(orta, [a.lat, a.lon], 1, 0.14);
-        var catal2 = egriNoktalari(orta, [b.lat, b.lon], -1, 0.14);
-        hatCiz(catal1, a.renk);
-        hatCiz(catal2, b.renk);
-    }});
-
-    // ── Diğer lokasyonlar: HQ'dan doğrudan tek kıvrımlı hat ──
-    var _egriIdx = 0;
-    hospitals.forEach(function(h) {{
-        if (h.hq || gruplananlar[h.id]) return;
-        _egriIdx++;
-        var yon = (_egriIdx % 2 === 0) ? 1 : -1;
-        var miktar = 0.18 + (_egriIdx % 3) * 0.07;
-        var egriPts = egriNoktalari([hq.lat, hq.lon], [h.lat, h.lon], yon, miktar);
-        hatCiz(egriPts, h.renk);
-    }});
-}}
-
 hospitals.forEach(function(h) {{
     var s  = h.boyut;
     var c  = h.renk;
@@ -1323,8 +1232,8 @@ hospitals.forEach(function(h) {{
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+(h.hq?' <span style="color:#5eead4;text-shadow:0 0 6px rgba(94,234,212,0.7),0 1px 4px rgba(0,0,0,0.95);">★ SYNAPSE</span>':'')+'</div>',
-            iconSize:[220,16], iconAnchor:[-hs-2, hs-2]
+            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+'</div>',
+            iconSize:[100,16], iconAnchor:[-hs-2, hs-2]
         }}),
         interactive:false, zIndexOffset:300
     }}).addTo(map);
