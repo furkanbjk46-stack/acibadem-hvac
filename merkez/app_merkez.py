@@ -1232,6 +1232,12 @@ if (_hq && _maslak) {{
     hatCiz(_hatPts);
 }}
 
+var _fulya = hospitals.find(function(h) {{ return h.id === 'fulya'; }});
+if (_hq && _fulya) {{
+    var _hatPts2 = egriNoktalari([_hq.lat, _hq.lon], [_fulya.lat, _fulya.lon], -1, 0.22);
+    hatCiz(_hatPts2);
+}}
+
 hospitals.forEach(function(h) {{
     var s  = h.boyut;
     var c  = h.renk;
