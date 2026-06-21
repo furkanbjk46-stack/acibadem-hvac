@@ -1087,17 +1087,17 @@ with sol:
                 + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
             ) if _trend_parts else ""
 
-            _ozet_kartlar += f"""
-            <div style="padding:7px 10px; background:rgba(0,20,50,0.6);
-                        border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}</span>
-                <span style="font-size:12px; font-weight:700; color:#38bdf8;
-                             font-family:'Playfair Display','Plus Jakarta Sans',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>
-              </div>
-              {_trend_html}
-            </div>
-            """
+            _ozet_kartlar += (
+                f'<div style="padding:7px 10px;background:rgba(0,20,50,0.6);'
+                f'border-radius:8px;border:1px solid rgba(56, 189, 248,0.1);">'
+                f'<div style="display:flex;justify-content:space-between;align-items:center;">'
+                f'<span style="font-size:11px;color:rgba(150,210,255,0.7);">{_lbl}</span>'
+                f'<span style="font-size:12px;font-weight:700;color:#38bdf8;'
+                f'font-family:\'Playfair Display\',\'Plus Jakarta Sans\',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>'
+                f'</div>'
+                f'{_trend_html}'
+                f'</div>'
+            )
         _ozet_kartlar += '</div>'
         st.markdown(_ozet_kartlar, unsafe_allow_html=True)
 
