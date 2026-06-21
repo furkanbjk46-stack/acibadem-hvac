@@ -231,12 +231,17 @@ button span[data-testid="stIconMaterial"] {
     overflow-y: auto !important;
     box-sizing: border-box !important;
 }
-/* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet — cam üstünde ince cam */
-[data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk {
+/* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet — cam üstünde ince cam (Maslak/nk-mapbg hariç) */
+[data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk:not(.nk-mapbg) {
     background: rgba(255,255,255,0.04) !important;
     border: 1px solid rgba(255,255,255,0.08) !important;
     backdrop-filter: blur(6px) !important;
     box-shadow: none !important;
+}
+[data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk-mapbg {
+    background: #e9eef0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
 }
 
 /* Sağ kolon (Canlı Uyarılar + Oto Set + Dış Hava + Enerji Zekası + Otomatik Analiz) — kart/cam kapsayıcı kaldırıldı */
