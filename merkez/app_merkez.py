@@ -137,26 +137,36 @@ button span[data-testid="stIconMaterial"] {
 ::-webkit-scrollbar-track { background: #0f172a; }
 ::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
 
-/* Neon kart */
+/* Su damlası cam kart — net/şeffaf cam, buzlu değil */
 .nk {
-    background: rgba(15, 23, 42, 0.4);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
+    position: relative;
+    background:
+        radial-gradient(circle at 22% 18%, rgba(255,255,255,0.32) 0%, rgba(255,255,255,0.10) 6%, transparent 14%),
+        radial-gradient(circle at 78% 70%, rgba(255,255,255,0.18) 0%, transparent 10%),
+        radial-gradient(circle at 60% 30%, rgba(255,255,255,0.12) 0%, transparent 8%),
+        rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(1.5px) saturate(120%);
+    -webkit-backdrop-filter: blur(1.5px) saturate(120%);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
     padding: 8px;
     margin-bottom: 8px;
-    box-shadow: none;
+    box-shadow:
+        inset 0 1px 0 0 rgba(255,255,255,0.25),
+        inset 0 -6px 10px -6px rgba(0,0,0,0.25),
+        0 3px 10px rgba(0,0,0,0.25);
+    overflow: hidden;
 }
-.nk-green { border-color: rgba(16,185,129,0.45) !important; box-shadow: 0 0 15px rgba(16,185,129,0.08) !important; }
-.nk-red   { border-color: rgba(239,68,68,0.45) !important;  box-shadow: 0 0 15px rgba(239,68,68,0.08) !important;  }
-.nk-gray  { border-color: rgba(100,120,150,0.3) !important; opacity: 0.6; }
+.nk-green { border-color: rgba(16,185,129,0.55) !important; box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(16,185,129,0.18) !important; }
+.nk-red   { border-color: rgba(239,68,68,0.55) !important;  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(239,68,68,0.18) !important;  }
+.nk-gray  { border-color: rgba(180,190,205,0.30) !important; opacity: 0.7; }
 .nk {
     display: block !important;
     text-decoration: none !important;
     cursor: pointer;
     transition: border-color 0.2s, transform 0.15s;
 }
-.nk:hover { transform: translateY(-2px); border-color: rgba(56, 189, 248,0.5) !important; }
+.nk:hover { transform: translateY(-2px); border-color: rgba(56, 189, 248,0.6) !important; }
 
 .lok-scroll {
     max-height: 492px;
