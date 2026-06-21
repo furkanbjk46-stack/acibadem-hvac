@@ -129,6 +129,13 @@ button span[data-testid="stIconMaterial"] {
 .nk-green { border-color: rgba(16,185,129,0.45) !important; box-shadow: 0 0 15px rgba(16,185,129,0.08) !important; }
 .nk-red   { border-color: rgba(239,68,68,0.45) !important;  box-shadow: 0 0 15px rgba(239,68,68,0.08) !important;  }
 .nk-gray  { border-color: rgba(100,120,150,0.3) !important; opacity: 0.6; }
+.nk {
+    display: block !important;
+    text-decoration: none !important;
+    cursor: pointer;
+    transition: border-color 0.2s, transform 0.15s;
+}
+.nk:hover { transform: translateY(-2px); border-color: rgba(56, 189, 248,0.5) !important; }
 
 .lok-scroll {
     max-height: 492px;
@@ -137,7 +144,12 @@ button span[data-testid="stIconMaterial"] {
     padding-right: 3px;
     scrollbar-width: thin;
     scrollbar-color: rgba(56, 189, 248,0.35) rgba(15,23,42,0.6);
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    align-content: start;
 }
+.lok-scroll .nk { margin-bottom: 0 !important; }
 .lok-scroll::-webkit-scrollbar { width: 4px; }
 .lok-scroll::-webkit-scrollbar-track { background: rgba(15,23,42,0.6); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb { background: rgba(56, 189, 248,0.28); border-radius: 2px; }
@@ -958,12 +970,11 @@ with sol:
         dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
 
         tum_kartlar += (
-            f'<div class="{card_cls}" style="padding:14px;position:relative;">'
+            f'<a class="{card_cls}" href="?detay={lok_id}" title="{lok_info["kisa"]} detayına git" '
+            f'style="padding:14px;position:relative;">'
             + sira_badge +
-            f'<a href="?detay={lok_id}" title="Detaya Git" style="position:absolute;top:8px;right:10px;'
-            f'font-size:14px;color:rgba({rr},{rg},{rb},0.55);text-decoration:none;'
-            f'transition:color 0.2s;" onmouseover="this.style.color=\'rgba({rr},{rg},{rb},1)\'" '
-            f'onmouseout="this.style.color=\'rgba({rr},{rg},{rb},0.55)\'">⟶</a>'
+            f'<span style="position:absolute;top:8px;right:10px;font-size:14px;'
+            f'color:rgba({rr},{rg},{rb},0.55);">⟶</span>'
             f'<div style="display:flex;align-items:center;gap:14px;">'
             f'<div style="position:relative;width:58px;height:58px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
             f'<div style="position:absolute;top:-5px;left:-5px;right:-5px;bottom:-5px;border-radius:50%;'
@@ -992,7 +1003,7 @@ with sol:
             f'<span style="font-size:7px;color:rgba(150,210,255,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
             f'<span style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:11px;color:#38bdf8;font-weight:700;">{verim_str}</span>'
             f'</div>'
-            f'</div></div></div>'
+            f'</div></div></a>'
         )
 
     tum_kartlar += '</div>'
