@@ -94,16 +94,16 @@ header[data-testid="stHeader"] button    { display: none !important; }
 }
 
 /* Harita iframe — kolonun tamamını doldursun */
-[data-testid="column"]:nth-child(3) [data-testid="stIFrame"],
-[data-testid="column"]:nth-child(3) iframe {
+[data-testid="column"]:nth-child(2) [data-testid="stIFrame"],
+[data-testid="column"]:nth-child(2) iframe {
     width: 100% !important;
     height: 100% !important;
     border: none !important;
 }
-[data-testid="column"]:nth-child(3) [data-testid="element-container"] {
+[data-testid="column"]:nth-child(2) [data-testid="element-container"] {
     height: 100% !important;
 }
-[data-testid="column"]:nth-child(3) [data-testid="stVerticalBlock"] {
+[data-testid="column"]:nth-child(2) [data-testid="stVerticalBlock"] {
     height: 100% !important;
 }
 
@@ -957,7 +957,7 @@ def hvac_yuzdesi(lok_id):
 # ============================================================
 # ANA LAYOUT: sol (lokasyon) | sağ (dashboard) | harita (en sağ)
 # ============================================================
-sol, sag, merkez = st.columns([1.3, 1.3, 1.4], gap="small")
+sol, merkez, sag = st.columns([1.3, 1.4, 1.3], gap="small")
 
 # ════════════════════════════════
 # SOL KOLON
