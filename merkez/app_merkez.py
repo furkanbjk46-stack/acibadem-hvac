@@ -1198,6 +1198,52 @@ hospitals.forEach(function(h) {{
     var c  = h.renk;
     var hs = s / 2;
 
+    // ── SYNAPSE (Ataşehir/GM) — CPU çip simgesi, üstte SYNAPSE altta ATAŞEHİR ──
+    if (h.hq) {{
+        var boy = 56;
+        var yarim = boy / 2;
+        var pinler = '';
+        for (var pi = 0; pi < 6; pi++) {{
+            var off = -20 + pi * 8;
+            // Üst ve alt pinler
+            pinler += '<line x1="'+(yarim+off)+'" y1="6" x2="'+(yarim+off)+'" y2="14" stroke="'+c+'" stroke-width="2"/>';
+            pinler += '<line x1="'+(yarim+off)+'" y1="'+(boy-14)+'" x2="'+(yarim+off)+'" y2="'+(boy-6)+'" stroke="'+c+'" stroke-width="2"/>';
+            // Sol ve sağ pinler
+            pinler += '<line x1="6" y1="'+(yarim+off)+'" x2="14" y2="'+(yarim+off)+'" stroke="'+c+'" stroke-width="2"/>';
+            pinler += '<line x1="'+(boy-14)+'" y1="'+(yarim+off)+'" x2="'+(boy-6)+'" y2="'+(yarim+off)+'" stroke="'+c+'" stroke-width="2"/>';
+        }}
+        var cpuSvg = '<svg width="'+boy+'" height="'+boy+'" style="filter:drop-shadow(0 0 8px '+c+');overflow:visible;">'
+            + pinler
+            + '<rect x="14" y="14" width="'+(boy-28)+'" height="'+(boy-28)+'" rx="3" '
+            +   'fill="rgba(6,18,32,0.85)" stroke="'+c+'" stroke-width="2"/>'
+            + '</svg>';
+        var chipHtml = '<div style="display:flex;flex-direction:column;align-items:center;">'
+            + '<div style="position:relative;width:'+boy+'px;height:'+boy+'px;">'
+            +   cpuSvg
+            +   '<div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;'
+            +     'align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:6px;font-weight:700;'
+            +     'color:'+c+';letter-spacing:0.3px;text-shadow:0 0 5px '+c+';pointer-events:none;">SYNAPSE</div>'
+            + '</div>'
+            + '<div style="margin-top:4px;font-family:Orbitron,monospace;font-size:8px;font-weight:700;'
+            +   'color:rgba(180,220,255,0.85);letter-spacing:1.5px;white-space:nowrap;'
+            +   'text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);">ATAŞEHİR</div>'
+            + '</div>';
+        L.marker([h.lat, h.lon], {{
+            icon: L.divIcon({{ className:'', html: chipHtml, iconSize:[120, 90], iconAnchor:[60, 45] }}),
+            zIndexOffset:400
+        }}).addTo(map).bindPopup(
+            '<div style="padding:14px 16px;min-width:170px;">' +
+            '<div style="font-family:Orbitron,monospace;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
+            '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
+            '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
+            '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
+            '<div style="font-size:12px;color:#a0c8ff;margin-bottom:4px;">⚡ <b style="color:white;font-size:14px;">'+h.kwh+'</b> kWh</div>' +
+            '<div style="font-size:10px;color:rgba(150,200,255,0.55);">📐 '+h.m2+' m²</div></div>',
+            {{ maxWidth:220, className:'' }}
+        );
+        return;
+    }}
+
     // ── Dış glow halkası ──
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
