@@ -1169,6 +1169,13 @@ body {{ background:#020617; }}
     0%,100% {{ opacity:0.22; transform:scale(0.96); }}
     50%     {{ opacity:0.50; transform:scale(1.10); }}
 }}
+@keyframes soma-pulse {{
+    0%,100% {{ opacity:0.65; transform:scale(0.97); }}
+    50%      {{ opacity:1;    transform:scale(1.05); }}
+}}
+.lif-glow-outer  {{ filter: blur(4.5px); }}
+.lif-glow-mid    {{ filter: blur(2px);   }}
+.dendrit-glow    {{ filter: blur(1.2px); }}
 </style>
 </head><body>
 <div id="map"></div>
@@ -1178,7 +1185,7 @@ var map = L.map('map', {{
     zoom: 5,
     zoomControl: true,
     attributionControl: false,
-    preferCanvas: true
+    renderer: L.svg()
 }});
 
 // CartoDB Dark Matter — ücretsiz, API key yok
@@ -1191,84 +1198,111 @@ setTimeout(function() {{ map.invalidateSize(true); }}, 300);
 
 var hospitals = {hjs};
 
-// ── Genel Merkez (Ataşehir) → tüm lokasyonlara organik (kıvrımlı) sinir agi hatlari ──
-function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
-    var midLat = (p0[0] + p1[0]) / 2;
-    var midLon = (p0[1] + p1[1]) / 2;
-    var dLat = p1[0] - p0[0];
-    var dLon = p1[1] - p0[1];
-    var dist = Math.sqrt(dLat*dLat + dLon*dLon);
-    if (dist === 0) return [p0, p1];
-    var nLat = -dLon / dist;
-    var nLon =  dLat / dist;
-    var offset = dist * egimMiktari * egimYonu;
-    var ctrlLat = midLat + nLat * offset;
-    var ctrlLon = midLon + nLon * offset;
-    var pts = [];
-    var steps = 48;
-    for (var i = 0; i <= steps; i++) {{
-        var t = i / steps;
-        var lat = (1-t)*(1-t)*p0[0] + 2*(1-t)*t*ctrlLat + t*t*p1[0];
-        var lon = (1-t)*(1-t)*p0[1] + 2*(1-t)*t*ctrlLon + t*t*p1[1];
-        pts.push([lat, lon]);
+// ── Gerçek doku üretimi: fraktal "midpoint displacement" ile organik, düzensiz sinir lifi yolu ──
+function tohumluRastgele(seed) {{
+    var x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+}}
+
+// p0→p1 arasını dogal, pürüzlü/kıvrımlı bir sinir lifi gibi böler (düz bezier degil, fraktal sapma)
+function organikYol(p0, p1, tohum, egilim) {{
+    var pts = [p0, p1];
+    var iterasyon = 5;
+    for (var it = 0; it < iterasyon; it++) {{
+        var yeni = [pts[0]];
+        for (var i = 0; i < pts.length - 1; i++) {{
+            var a = pts[i], b = pts[i + 1];
+            var midLat = (a[0] + b[0]) / 2;
+            var midLon = (a[1] + b[1]) / 2;
+            var dLat = b[0] - a[0];
+            var dLon = b[1] - a[1];
+            var dist = Math.sqrt(dLat*dLat + dLon*dLon);
+            if (dist > 0) {{
+                var nLat = -dLon / dist;
+                var nLon =  dLat / dist;
+                var r = tohumluRastgele(tohum * 97.13 + it * 13.7 + i * 31.4) - 0.5;
+                var sapma = dist * egilim * r / Math.pow(1.6, it);
+                midLat += nLat * sapma;
+                midLon += nLon * sapma;
+            }}
+            yeni.push([midLat, midLon]);
+            yeni.push(b);
+        }}
+        pts = yeni;
     }}
     return pts;
 }}
 
-// Akson lifi demeti — tek değil 3 ince kıvrımlı lif, dokusu sinir hücresi gibi
+// Akson lifi demeti — 3 pürüzlü/organik lif birlikte, dış bulanık halo + parlak iç hat (gerçek sinir lifi dokusu)
 function aksonDemetiCiz(p0, p1, renk, tohum) {{
-    var lifSayisi = 3;
-    for (var k = 0; k < lifSayisi; k++) {{
-        var yon = (k % 2 === 0) ? 1 : -1;
-        var miktar = 0.10 + ((tohum + k * 7) % 5) * 0.045;
-        var pts = egriNoktalari(p0, p1, yon, miktar);
-        var agirlik = (k === 0) ? 1.4 : 0.7;
-        var saydamlik = (k === 0) ? 0.5 : 0.22;
-        L.polyline(pts, {{
-            color: renk, weight: agirlik, opacity: saydamlik, interactive: false,
-            smoothFactor: 2, dashArray: (k === 0) ? null : '1,9'
+    var anaYol = null;
+    for (var k = 0; k < 3; k++) {{
+        var yol = organikYol(p0, p1, tohum * 11 + k * 5, 0.16);
+        if (k === 0) anaYol = yol;
+        // Dış bulanık glow (gerçek doku bulanıklığı)
+        L.polyline(yol, {{
+            color: renk, weight: 7, opacity: 0.16, interactive: false,
+            className: 'lif-glow-outer', lineCap: 'round'
+        }}).addTo(map);
+        // Orta katman — yumuşak parlama
+        L.polyline(yol, {{
+            color: renk, weight: 3, opacity: 0.28, interactive: false,
+            className: 'lif-glow-mid', lineCap: 'round'
+        }}).addTo(map);
+        // Parlak ince çekirdek hat
+        L.polyline(yol, {{
+            color: renk, weight: (k === 0) ? 1.3 : 0.7,
+            opacity: (k === 0) ? 0.75 : 0.32, interactive: false, lineCap: 'round'
         }}).addTo(map);
     }}
-    return egriNoktalari(p0, p1, 1, 0.10 + (tohum % 5) * 0.045);
+    return anaYol;
 }}
 
-// Dendrit — düğümden dışa açılan kısa kıvrımlı uzantılar (nöron dokusu)
+// Dendrit — düğümden dışa açılan pürüzlü/organik uzantılar, bazılarında çatallanma (gerçek nöron dokusu)
 function dendritCiz(lat, lon, renk, tohum) {{
-    var sayi = 5;
+    var sayi = 6;
     for (var i = 0; i < sayi; i++) {{
         var aci = (i / sayi) * 2 * Math.PI + tohum * 0.7;
-        var uzunluk = 0.045 + ((tohum + i) % 3) * 0.02;
+        var uzunluk = 0.05 + ((tohum + i) % 3) * 0.022;
         var ucLat = lat + Math.sin(aci) * uzunluk;
         var ucLon = lon + Math.cos(aci) * uzunluk;
-        var ctrlLat = lat + Math.sin(aci + 0.5) * uzunluk * 0.55;
-        var ctrlLon = lon + Math.cos(aci + 0.5) * uzunluk * 0.55;
-        var pts = [];
-        var steps = 14;
-        for (var s = 0; s <= steps; s++) {{
-            var t = s / steps;
-            pts.push([
-                (1-t)*(1-t)*lat + 2*(1-t)*t*ctrlLat + t*t*ucLat,
-                (1-t)*(1-t)*lon + 2*(1-t)*t*ctrlLon + t*t*ucLon
-            ]);
-        }}
-        L.polyline(pts, {{
-            color: renk, weight: 1, opacity: 0.30, interactive: false, smoothFactor: 2
+        var yol = organikYol([lat, lon], [ucLat, ucLon], tohum * 13 + i * 3, 0.35);
+
+        L.polyline(yol, {{
+            color: renk, weight: 3, opacity: 0.12, interactive: false,
+            className: 'dendrit-glow', lineCap: 'round'
         }}).addTo(map);
+        L.polyline(yol, {{
+            color: renk, weight: 0.9, opacity: 0.40, interactive: false, lineCap: 'round'
+        }}).addTo(map);
+
+        // Çatallanma — dendritin yarısından küçük bir ikinci dal büyür (gerçek nöron dallanması)
+        if (tohumluRastgele(tohum * 5 + i) > 0.45) {{
+            var orta = yol[Math.round(yol.length * 0.5)];
+            var aci2 = aci + (tohumluRastgele(tohum + i) - 0.5) * 2.2;
+            var uzunluk2 = uzunluk * 0.5;
+            var ucLat2 = orta[0] + Math.sin(aci2) * uzunluk2;
+            var ucLon2 = orta[1] + Math.cos(aci2) * uzunluk2;
+            var yol2 = organikYol(orta, [ucLat2, ucLon2], tohum * 17 + i, 0.4);
+            L.polyline(yol2, {{
+                color: renk, weight: 0.7, opacity: 0.30, interactive: false, lineCap: 'round'
+            }}).addTo(map);
+        }}
     }}
 }}
 
 // Sinaptik nabız noktaları — akson hattı üzerinde ışıldayan duraklar
 function nabizNoktalariCiz(pts, renk) {{
-    [0.28, 0.52, 0.76].forEach(function(t) {{
+    [0.22, 0.45, 0.68, 0.88].forEach(function(t) {{
         var idx = Math.round(t * (pts.length - 1));
         var p = pts[idx];
         L.marker(p, {{
             icon: L.divIcon({{
                 className: '',
-                html: '<div style="width:6px;height:6px;background:'+renk+';border-radius:50%;'
-                    + 'box-shadow:0 0 6px '+renk+',0 0 2px rgba(255,255,255,0.6);'
+                html: '<div style="width:5px;height:5px;background:#fff;border-radius:50%;'
+                    + 'box-shadow:0 0 3px #fff,0 0 9px '+renk+',0 0 16px '+renk+';'
                     + 'animation:breathe-inner 2.4s ease-in-out infinite;"></div>',
-                iconSize: [6, 6], iconAnchor: [3, 3]
+                iconSize: [5, 5], iconAnchor: [2.5, 2.5]
             }}),
             interactive: false, zIndexOffset: -50
         }}).addTo(map);
@@ -1293,31 +1327,39 @@ hospitals.forEach(function(h) {{
     var c  = h.renk;
     var hs = s / 2;
 
-    // ── Dış glow halkası ──
+    // ── Soma (hücre gövdesi) — fotoğraftaki gibi katmanlı bulanık bloom ──
+    // 1) En dış, çok bulanık renkli hale (doku sızması)
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="width:'+(s*3.8)+'px;height:'+(s*3.8)+'px;background:'+c+';border-radius:50%;animation:breathe-outer 3s ease-in-out infinite;"></div>',
-            iconSize:[s*3.8, s*3.8], iconAnchor:[s*1.9, s*1.9]
+            html:'<div style="width:'+(s*5)+'px;height:'+(s*5)+'px;border-radius:50%;'
+                +'background:radial-gradient(circle,'+c+'55 0%,'+c+'22 45%,transparent 75%);'
+                +'filter:blur(5px);animation:breathe-outer 3.4s ease-in-out infinite;"></div>',
+            iconSize:[s*5, s*5], iconAnchor:[s*2.5, s*2.5]
         }}),
-        interactive:false, zIndexOffset:-200
+        interactive:false, zIndexOffset:-300
     }}).addTo(map);
 
-    // ── İç glow halkası ──
+    // 2) Orta hale — renk yoğunlaşır
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="width:'+(s*2)+'px;height:'+(s*2)+'px;background:'+c+';border-radius:50%;animation:breathe-inner 3s ease-in-out infinite;"></div>',
-            iconSize:[s*2, s*2], iconAnchor:[s, s]
+            html:'<div style="width:'+(s*2.8)+'px;height:'+(s*2.8)+'px;border-radius:50%;'
+                +'background:radial-gradient(circle,'+c+'cc 0%,'+c+'66 50%,transparent 80%);'
+                +'filter:blur(2px);animation:breathe-inner 3s ease-in-out infinite;"></div>',
+            iconSize:[s*2.8, s*2.8], iconAnchor:[s*1.4, s*1.4]
         }}),
         interactive:false, zIndexOffset:-100
     }}).addTo(map);
 
-    // ── Ana nokta ──
+    // ── Ana nokta — beyaz-sıcak çekirdek (gerçek nöron soması gibi) ──
     var dot = L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="width:'+s+'px;height:'+s+'px;background:'+c+';border-radius:50%;border:2px solid rgba(255,255,255,0.28);box-shadow:0 0 10px '+c+',0 0 3px rgba(0,0,0,0.8);"></div>',
+            html:'<div style="width:'+s+'px;height:'+s+'px;border-radius:50%;'
+                +'background:radial-gradient(circle at 35% 30%,#ffffff 0%,'+c+' 55%,'+c+'cc 100%);'
+                +'border:1px solid rgba(255,255,255,0.5);'
+                +'box-shadow:0 0 6px 2px '+c+',0 0 14px '+c+'80,0 0 2px rgba(255,255,255,0.9);"></div>',
             iconSize:[s, s], iconAnchor:[hs, hs]
         }}),
         zIndexOffset:100
