@@ -115,6 +115,23 @@ button span[data-testid="stIconMaterial"] {
        letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(56, 189, 248,0.15);
        padding-bottom:5px; margin-bottom:10px; }
 
+/* Sol kolon (Lokasyon Durumu + Global Özet) tek bir cam kart içinde */
+[data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sol-panel),
+[data-testid="stVerticalBlock"]:has(#syn-sol-panel) {
+    background: rgba(15, 23, 42, 0.45) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 14px !important;
+    padding: 14px !important;
+    box-shadow: 0 8px 28px 0 rgba(0,0,0,0.35) !important;
+}
+/* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet */
+[data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk {
+    background: rgba(255,255,255,0.02) !important;
+    box-shadow: none !important;
+}
+
 .alrt-r { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35);
            border-radius:8px; padding:7px 10px; margin:3px 0; font-size:11px; color:#fca5a5 !important; }
 .alrt-y { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35);
@@ -835,6 +852,7 @@ sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 # SOL KOLON
 # ════════════════════════════════
 with sol:
+    st.markdown('<div id="syn-sol-panel"></div>', unsafe_allow_html=True)
     # ── Lokasyon Durumu ──
     st.markdown('<div class="sec">📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
 
