@@ -1118,6 +1118,7 @@ with merkez:
         d_renk = "#10b981" if online else ("#6b7280" if fark_dk is None else "#ef4444")
         boyut  = max(10, min(22, kwh / 1400)) if kwh > 0 else 9
         harita_js.append({
+            "id":    lok_id,
             "isim":  lok_info["isim"],
             "kisa":  lok_info["kisa"],
             "lat":   lok_info["lat"],
@@ -1216,50 +1217,60 @@ function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
     return pts;
 }}
 
-// İki nokta arası düz çizgide ara nokta bul
-function araNokta(p0, p1, t) {{
-    return [p0[0] + (p1[0]-p0[0])*t, p0[1] + (p1[1]-p0[1])*t];
+function hatCiz(pts, renk) {{
+    // Dış glow hattı (kalın, soluk)
+    L.polyline(pts, {{
+        color: renk, weight: 6, opacity: 0.10, interactive: false, smoothFactor: 2
+    }}).addTo(map);
+    // Ana hat — organik, noktalı sinaptik akış
+    L.polyline(pts, {{
+        color: renk, weight: 1.6, opacity: 0.55, interactive: false, dashArray: '1,7', smoothFactor: 2
+    }}).addTo(map);
 }}
+
+function bulLok(id) {{ return hospitals.find(function(h) {{ return h.id === id; }}); }}
 
 var hq = hospitals.find(function(h) {{ return h.hq; }});
 if (hq) {{
+    // ── Özel çatallı dallar: tek gövde HQ'dan çıkıp ikiye ayrılıp iki ayrı lokasyona gider ──
+    var ozelGruplar = [
+        ['izmir',     'bodrum'],
+        ['kayseri',   'adana'],
+        ['eskisehir', 'bayindir'],
+        ['kartal',    'kocaeli']
+    ];
+    var gruplananlar = {{}};
+    var _gIdx = 0;
+    ozelGruplar.forEach(function(grp) {{
+        var a = bulLok(grp[0]), b = bulLok(grp[1]);
+        if (!a || !b) return;
+        gruplananlar[grp[0]] = true;
+        gruplananlar[grp[1]] = true;
+        _gIdx++;
+
+        var orta = [(a.lat + b.lat) / 2, (a.lon + b.lon) / 2];
+        var govdeYon = (_gIdx % 2 === 0) ? 1 : -1;
+
+        // Gövde — HQ'dan çatallanma noktasına
+        var govde = egriNoktalari([hq.lat, hq.lon], orta, govdeYon, 0.10);
+        hatCiz(govde, hq.renk);
+
+        // Çatal 1 → a, Çatal 2 → b (kendi durum rengiyle)
+        var catal1 = egriNoktalari(orta, [a.lat, a.lon], 1, 0.14);
+        var catal2 = egriNoktalari(orta, [b.lat, b.lon], -1, 0.14);
+        hatCiz(catal1, a.renk);
+        hatCiz(catal2, b.renk);
+    }});
+
+    // ── Diğer lokasyonlar: HQ'dan doğrudan tek kıvrımlı hat ──
     var _egriIdx = 0;
     hospitals.forEach(function(h) {{
-        if (h.hq) return;
+        if (h.hq || gruplananlar[h.id]) return;
         _egriIdx++;
         var yon = (_egriIdx % 2 === 0) ? 1 : -1;
         var miktar = 0.18 + (_egriIdx % 3) * 0.07;
         var egriPts = egriNoktalari([hq.lat, hq.lon], [h.lat, h.lon], yon, miktar);
-
-        // Dal — gövdeden hedefe %72'ye kadar tek hat, sonrası dendrit gibi 2 ince çatala ayrılır
-        var govdeKesim = Math.round(egriPts.length * 0.72);
-        var govde = egriPts.slice(0, govdeKesim + 1);
-        var catalBaslangic = egriPts[govdeKesim];
-        var hedef = egriPts[egriPts.length - 1];
-
-        // Dış glow hattı (kalın, soluk) — sadece gövde
-        L.polyline(govde, {{
-            color: h.renk, weight: 6, opacity: 0.10, interactive: false, smoothFactor: 2
-        }}).addTo(map);
-        // Gövde ana hat
-        L.polyline(govde, {{
-            color: h.renk, weight: 1.8, opacity: 0.55, interactive: false, smoothFactor: 2
-        }}).addTo(map);
-
-        // ── Uçtaki çatallanma — dendrit ucu gibi 2 ince dal hedefe yakın noktalarda birleşir ──
-        [-1, 1].forEach(function(catalYon, ci) {{
-            var araT = 0.45 + ci * 0.1;
-            var ara = araNokta(catalBaslangic, hedef, araT);
-            var dLat = hedef[0]-catalBaslangic[0], dLon = hedef[1]-catalBaslangic[1];
-            var dist = Math.sqrt(dLat*dLat+dLon*dLon) || 0.0001;
-            var nLat = -dLon/dist, nLon = dLat/dist;
-            var sapma = dist * 0.16 * catalYon;
-            var araSapilmis = [ara[0] + nLat*sapma, ara[1] + nLon*sapma];
-            var catalPts = [catalBaslangic, araSapilmis, hedef];
-            L.polyline(catalPts, {{
-                color: h.renk, weight: 1, opacity: 0.45, interactive: false, smoothFactor: 3, lineCap: 'round'
-            }}).addTo(map);
-        }});
+        hatCiz(egriPts, h.renk);
     }});
 }}
 
