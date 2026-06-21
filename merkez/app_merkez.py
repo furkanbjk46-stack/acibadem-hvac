@@ -797,7 +797,7 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
 st.markdown("""
-<div style="text-align:center; padding:2px 0 6px;">
+<div style="text-align:center; padding:100px 0 6px;">
   <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a3b8;
               letter-spacing:3px; text-transform:uppercase;">
     ACIBADEM SAĞLIK GRUBU
