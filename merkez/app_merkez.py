@@ -188,7 +188,7 @@ button span[data-testid="stIconMaterial"] {
 /* Sol kolon (Lokasyon Durumu + Global Özet) tek bir cam kart içinde */
 [data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sol-panel),
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) {
-    background: rgba(15, 23, 42, 0.45) !important;
+    background: rgba(15, 23, 42, 0.25) !important;
     backdrop-filter: blur(14px) !important;
     -webkit-backdrop-filter: blur(14px) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
@@ -209,7 +209,7 @@ button span[data-testid="stIconMaterial"] {
 /* Sağ kolon (Canlı Uyarılar + Oto Set + Dış Hava + Enerji Zekası + Otomatik Analiz) tek cam kart */
 [data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sag-panel),
 [data-testid="stVerticalBlock"]:has(#syn-sag-panel) {
-    background: rgba(15, 23, 42, 0.45) !important;
+    background: rgba(15, 23, 42, 0.25) !important;
     backdrop-filter: blur(14px) !important;
     -webkit-backdrop-filter: blur(14px) !important;
     border: 1px solid rgba(255, 255, 255, 0.06) !important;
