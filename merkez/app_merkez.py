@@ -1268,7 +1268,7 @@ hospitals.forEach(function(h) {{
             +   'text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);">ATAŞEHİR</div>'
             + '</div>';
         L.marker([h.lat, h.lon], {{
-            icon: L.divIcon({{ className:'', html: chipHtml, iconSize:[120, 90], iconAnchor:[60, 45] }}),
+            icon: L.divIcon({{ className:'', html: chipHtml, iconSize:[120, 90], iconAnchor:[60, 6] }}),
             zIndexOffset:400
         }}).addTo(map).bindPopup(
             '<div style="padding:14px 16px;min-width:170px;">' +
