@@ -1118,7 +1118,7 @@ with sol:
             ) if _trend_parts else ""
 
             _ozet_kartlar += (
-                f'<div style="padding:4px 0;border-bottom:1px solid rgba(56, 189, 248,0.08);">'
+                f'<div class="nk" style="margin-bottom:0;">'
                 f'<div style="display:flex;justify-content:space-between;align-items:center;">'
                 f'<span style="font-size:11px;color:rgba(150,210,255,0.7);">{_lbl}</span>'
                 f'<span style="font-size:12px;font-weight:700;color:#38bdf8;'
