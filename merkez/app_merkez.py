@@ -26,14 +26,21 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
-html, body, [data-testid="stAppViewContainer"] {
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100% !important;
+}
+html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], [data-testid="stMain"] {
     background-color: #060b14 !important;
     background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
+    min-height: 100vh !important;
 }
 [data-testid="stAppViewContainer"] {
     background-color: #060b14 !important;
     background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
+[data-testid="stMain"] { padding: 0 !important; margin: 0 !important; }
 [data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
 [data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
@@ -44,7 +51,7 @@ button[kind="header"]                    { display: none !important; }
 header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stSidebar"]      { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
-.block-container { padding: 0.5rem 1.5rem 1rem 1.5rem !important; max-width: 100% !important; }
+.block-container { padding: 0.5rem 0.75rem 1rem 0.75rem !important; max-width: 100% !important; }
 
 /* Harita iframe tam ekran */
 [data-testid="column"]:nth-child(2) iframe {
