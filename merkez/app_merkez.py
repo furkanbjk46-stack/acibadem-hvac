@@ -186,21 +186,13 @@ button span[data-testid="stIconMaterial"] {
        letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(56, 189, 248,0.15);
        padding-bottom:5px; margin-bottom:10px; }
 
-/* Sol kolon (Lokasyon Durumu + Global Özet) tek bir cam kart içinde — gerçek frosted-glass görünümü */
+/* Sol kolon (Lokasyon Durumu + Global Özet) — kart/cam kapsayıcı kaldırıldı, içerik direkt sayfa üzerinde */
 [data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sol-panel),
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) {
-    background:
-        linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.0) 35%),
-        rgba(20, 30, 50, 0.22) !important;
-    backdrop-filter: blur(22px) saturate(140%) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    border-radius: 16px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
     padding: 14px !important;
-    box-shadow:
-        0 8px 32px 0 rgba(0,0,0,0.45),
-        inset 0 1px 0 0 rgba(255,255,255,0.18),
-        inset 0 0 0 1px rgba(255,255,255,0.03) !important;
     height: 100% !important;
     max-height: 100% !important;
     overflow-y: auto !important;
