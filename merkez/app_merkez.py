@@ -174,8 +174,8 @@ button span[data-testid="stIconMaterial"] {
 
 .ozet-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px 16px;
 }
 .lok-scroll::-webkit-scrollbar { width: 4px; }
 .lok-scroll::-webkit-scrollbar-track { background: rgba(15,23,42,0.6); border-radius: 2px; }
@@ -1098,8 +1098,7 @@ with sol:
             ) if _trend_parts else ""
 
             _ozet_kartlar += (
-                f'<div style="padding:7px 10px;background:rgba(0,20,50,0.6);'
-                f'border-radius:8px;border:1px solid rgba(56, 189, 248,0.1);">'
+                f'<div style="padding:4px 0;border-bottom:1px solid rgba(56, 189, 248,0.08);">'
                 f'<div style="display:flex;justify-content:space-between;align-items:center;">'
                 f'<span style="font-size:11px;color:rgba(150,210,255,0.7);">{_lbl}</span>'
                 f'<span style="font-size:12px;font-weight:700;color:#38bdf8;'
