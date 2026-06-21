@@ -1289,36 +1289,6 @@ hospitals.forEach(function(h) {{
     var c  = h.renk;
     var hs = s / 2;
 
-    // ── SYNAPSE (Ataşehir/GM) — nöron hücre gövdesi simgesi, dışa dallanan dendritlerle ──
-    if (h.hq) {{
-        var boy = 130;
-        var yarim = boy / 2;
-        var dallar = '';
-        for (var di = 0; di < 9; di++) {{
-            var aci = (di / 9) * Math.PI * 2 + 0.2;
-            var uzunluk = 34 + (di % 3) * 9;
-            var ucX = yarim + Math.cos(aci) * uzunluk;
-            var ucY = yarim + Math.sin(aci) * uzunluk;
-            var govX = yarim + Math.cos(aci) * (uzunluk * 0.45);
-            var govY = yarim + Math.sin(aci) * (uzunluk * 0.45);
-            // Ana dal
-            dallar += '<path d="M'+yarim+','+yarim+' Q'+govX+','+govY+' '+ucX+','+ucY+'" stroke="'+c+'" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.85"/>';
-            // Uçtaki çatallanma (2 ince dal)
-            var aci2a = aci - 0.35, aci2b = aci + 0.35;
-            var uz2 = uzunluk * 0.4;
-            dallar += '<path d="M'+ucX+','+ucY+' L'+(ucX+Math.cos(aci2a)*uz2)+','+(ucY+Math.sin(aci2a)*uz2)+'" stroke="'+c+'" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.6"/>';
-            dallar += '<path d="M'+ucX+','+ucY+' L'+(ucX+Math.cos(aci2b)*uz2)+','+(ucY+Math.sin(aci2b)*uz2)+'" stroke="'+c+'" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.6"/>';
-        }}
-        var svgHtml = '<svg width="'+boy+'" height="'+boy+'" style="filter:drop-shadow(0 0 6px '+c+');overflow:visible;">'
-            + dallar
-            + '<ellipse cx="'+yarim+'" cy="'+yarim+'" rx="13" ry="10" fill="rgba(15,23,42,0.4)" stroke="'+c+'" stroke-width="2"/>'
-            + '</svg>';
-        L.marker([h.lat, h.lon], {{
-            icon: L.divIcon({{ className:'', html: svgHtml, iconSize:[boy, boy], iconAnchor:[yarim, yarim] }}),
-            interactive:false, zIndexOffset:-150
-        }}).addTo(map);
-    }}
-
     // ── Dış glow halkası ──
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
