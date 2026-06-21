@@ -75,7 +75,7 @@ header[data-testid="stHeader"] button    { display: none !important; }
     height: 100vh !important;
     max-height: 100vh !important;
     overflow: hidden !important;
-    padding: 0 0 0.2rem 0 !important;
+    padding: 0 100px 0.2rem 100px !important;
     margin-top: 0 !important;
     max-width: 100% !important;
     box-sizing: border-box !important;
