@@ -53,12 +53,12 @@ header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
 .block-container { padding: 0.5rem 0.75rem 1rem 0.75rem !important; max-width: 100% !important; }
 
-/* Harita iframe tam ekran */
+/* Harita iframe — ekran yüksekliğine göre otomatik dolsun */
+[data-testid="column"]:nth-child(3) [data-testid="stCustomComponentV1"],
 [data-testid="column"]:nth-child(3) iframe {
-    position: fixed !important;
-    top: 0 !important; left: 0 !important;
-    width: 100vw !important; height: 100vh !important;
-    z-index: 1 !important; border: none !important;
+    width: 100% !important;
+    height: calc(100vh - 175px) !important;
+    border: none !important;
 }
 
 /* Tüm yazılar */
@@ -1127,6 +1127,9 @@ var map = L.map('map', {{
 L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
     maxZoom: 19, subdomains: 'abcd', noWrap: true
 }}).addTo(map);
+
+window.addEventListener('resize', function() {{ map.invalidateSize(true); }});
+setTimeout(function() {{ map.invalidateSize(true); }}, 300);
 
 var hospitals = {hjs};
 
