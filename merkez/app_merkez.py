@@ -137,24 +137,34 @@ button span[data-testid="stIconMaterial"] {
 ::-webkit-scrollbar-track { background: #0f172a; }
 ::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
 
-/* iOS context-menu tarzı cam kart — okunaklı metin + camsı bulanıklık + dalga highlight */
+/* Sade lokasyon kartı (varsayılan) */
 .nk {
     position: relative;
-    background: rgba(15, 23, 42, 0.50);
-    backdrop-filter: blur(11px) saturate(160%);
-    -webkit-backdrop-filter: blur(11px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.20);
-    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
     padding: 8px;
     margin-bottom: 8px;
+    box-shadow: none;
+    overflow: hidden;
+}
+.nk-green { border-color: rgba(16,185,129,0.45) !important; box-shadow: 0 0 15px rgba(16,185,129,0.08) !important; }
+.nk-red   { border-color: rgba(239,68,68,0.45) !important;  box-shadow: 0 0 15px rgba(239,68,68,0.08) !important;  }
+.nk-gray  { border-color: rgba(100,120,150,0.3) !important; opacity: 0.6; }
+
+/* Sadece Maslak — cam (glass) tasarım: okunaklı blur + dalga highlight */
+.nk-glass {
+    background: rgba(15, 23, 42, 0.50) !important;
+    backdrop-filter: blur(11px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(11px) saturate(160%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.20) !important;
+    border-radius: 14px !important;
     box-shadow:
         inset 0 1px 0 0 rgba(255,255,255,0.30),
         inset 0 -10px 16px -12px rgba(0,0,0,0.35),
-        0 4px 14px rgba(0,0,0,0.30);
-    overflow: hidden;
+        0 4px 14px rgba(0,0,0,0.30) !important;
 }
-/* Camın üzerinden geçen yumuşak dalga ışık yansıması (referans görseldeki gibi) */
-.nk::before {
+.nk-glass::before {
     content: "";
     position: absolute;
     left: -20%;
@@ -166,10 +176,7 @@ button span[data-testid="stIconMaterial"] {
     pointer-events: none;
     z-index: 0;
 }
-.nk > * { position: relative; z-index: 1; }
-.nk-green { border-color: rgba(16,185,129,0.55) !important; box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.30), 0 0 15px rgba(16,185,129,0.18) !important; }
-.nk-red   { border-color: rgba(239,68,68,0.55) !important;  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.30), 0 0 15px rgba(239,68,68,0.18) !important;  }
-.nk-gray  { border-color: rgba(180,190,205,0.28) !important; opacity: 0.75; }
+.nk-glass > * { position: relative; z-index: 1; }
 .nk {
     display: block !important;
     text-decoration: none !important;
@@ -990,6 +997,9 @@ with sol:
             card_cls   = "nk nk-red"
             durum_renk = "#ef4444"
             durum_lbl  = "ÇEVRİMDIŞI"
+
+        if lok_id == "maslak":
+            card_cls += " nk-glass"
 
         kwh_str   = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
         m2_lok    = lok_info.get("m2", 10000)
