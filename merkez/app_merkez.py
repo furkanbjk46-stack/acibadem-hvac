@@ -1198,16 +1198,16 @@ setTimeout(function() {{ map.invalidateSize(true); }}, 300);
 
 var hospitals = {hjs};
 
-// ── Gerçek doku üretimi: fraktal "midpoint displacement" ile organik, düzensiz sinir lifi yolu ──
+// ── Elektrik / şimşek hattı üretimi: keskin, sert açılı zigzag (yıldırım arkı) ──
 function tohumluRastgele(seed) {{
     var x = Math.sin(seed) * 10000;
     return x - Math.floor(x);
 }}
 
-// p0→p1 arasını dogal, pürüzlü/kıvrımlı bir sinir lifi gibi böler (düz bezier degil, fraktal sapma)
-function organikYol(p0, p1, tohum, egilim) {{
+// p0→p1 arasını sert köşeli yıldırım çatlağı gibi böler (yumuşak değil, keskin zigzag)
+function simsekYolu(p0, p1, tohum, sertlik) {{
     var pts = [p0, p1];
-    var iterasyon = 5;
+    var iterasyon = 4;
     for (var it = 0; it < iterasyon; it++) {{
         var yeni = [pts[0]];
         for (var i = 0; i < pts.length - 1; i++) {{
@@ -1221,7 +1221,7 @@ function organikYol(p0, p1, tohum, egilim) {{
                 var nLat = -dLon / dist;
                 var nLon =  dLat / dist;
                 var r = tohumluRastgele(tohum * 97.13 + it * 13.7 + i * 31.4) - 0.5;
-                var sapma = dist * egilim * r / Math.pow(1.6, it);
+                var sapma = dist * sertlik * r / Math.pow(1.35, it);
                 midLat += nLat * sapma;
                 midLon += nLon * sapma;
             }}
@@ -1233,65 +1233,64 @@ function organikYol(p0, p1, tohum, egilim) {{
     return pts;
 }}
 
-// Akson lifi demeti — 3 pürüzlü/organik lif birlikte, dış bulanık halo + parlak iç hat (gerçek sinir lifi dokusu)
+// Genel merkezden lokasyona giden ana şimşek hattı + 1-2 kısa yan çatal (elektrik arkı dokusu)
 function aksonDemetiCiz(p0, p1, renk, tohum) {{
-    var anaYol = null;
-    for (var k = 0; k < 3; k++) {{
-        var yol = organikYol(p0, p1, tohum * 11 + k * 5, 0.16);
-        if (k === 0) anaYol = yol;
-        // Dış bulanık glow (gerçek doku bulanıklığı)
-        L.polyline(yol, {{
-            color: renk, weight: 7, opacity: 0.16, interactive: false,
-            className: 'lif-glow-outer', lineCap: 'round'
+    var anaYol = simsekYolu(p0, p1, tohum * 11, 0.045);
+
+    // Dış renkli glow (kalın, soluk)
+    L.polyline(anaYol, {{
+        color: renk, weight: 6, opacity: 0.18, interactive: false, lineCap: 'round', lineJoin: 'round'
+    }}).addTo(map);
+    // Orta renkli hat
+    L.polyline(anaYol, {{
+        color: renk, weight: 2.2, opacity: 0.65, interactive: false, lineCap: 'round', lineJoin: 'round'
+    }}).addTo(map);
+    // Beyaz-sıcak ince çekirdek (gerçek elektrik arkının parlak merkezi)
+    L.polyline(anaYol, {{
+        color: '#ffffff', weight: 0.9, opacity: 0.85, interactive: false, lineCap: 'round', lineJoin: 'round'
+    }}).addTo(map);
+
+    // Yan çatallar — ana hattın 1-2 noktasından kısa şimşek dalları fırlar
+    [0.3, 0.62].forEach(function(t, idx) {{
+        if (tohumluRastgele(tohum * 7 + idx) < 0.35) return;
+        var startIdx = Math.round(t * (anaYol.length - 1));
+        var baslangic = anaYol[startIdx];
+        var aci = tohumluRastgele(tohum * 19 + idx) * Math.PI * 2;
+        var uzunluk = 0.06 + tohumluRastgele(tohum + idx) * 0.05;
+        var ucLat = baslangic[0] + Math.sin(aci) * uzunluk;
+        var ucLon = baslangic[1] + Math.cos(aci) * uzunluk;
+        var catalYol = simsekYolu(baslangic, [ucLat, ucLon], tohum * 23 + idx, 0.12);
+        L.polyline(catalYol, {{
+            color: renk, weight: 3, opacity: 0.12, interactive: false, lineCap: 'round'
         }}).addTo(map);
-        // Orta katman — yumuşak parlama
-        L.polyline(yol, {{
-            color: renk, weight: 3, opacity: 0.28, interactive: false,
-            className: 'lif-glow-mid', lineCap: 'round'
+        L.polyline(catalYol, {{
+            color: renk, weight: 1, opacity: 0.45, interactive: false, lineCap: 'round'
         }}).addTo(map);
-        // Parlak ince çekirdek hat
-        L.polyline(yol, {{
-            color: renk, weight: (k === 0) ? 1.3 : 0.7,
-            opacity: (k === 0) ? 0.75 : 0.32, interactive: false, lineCap: 'round'
-        }}).addTo(map);
-    }}
+    }});
+
     return anaYol;
 }}
 
-// Dendrit — düğümden dışa açılan pürüzlü/organik uzantılar, bazılarında çatallanma (gerçek nöron dokusu)
+// Düğümden dışa fırlayan kısa şimşek çatalları (statik dendrit yerine elektrik kıvılcımı)
 function dendritCiz(lat, lon, renk, tohum) {{
-    var sayi = 6;
+    var sayi = 5;
     for (var i = 0; i < sayi; i++) {{
         var aci = (i / sayi) * 2 * Math.PI + tohum * 0.7;
-        var uzunluk = 0.05 + ((tohum + i) % 3) * 0.022;
+        var uzunluk = 0.045 + ((tohum + i) % 3) * 0.018;
         var ucLat = lat + Math.sin(aci) * uzunluk;
         var ucLon = lon + Math.cos(aci) * uzunluk;
-        var yol = organikYol([lat, lon], [ucLat, ucLon], tohum * 13 + i * 3, 0.35);
+        var yol = simsekYolu([lat, lon], [ucLat, ucLon], tohum * 13 + i * 3, 0.10);
 
         L.polyline(yol, {{
-            color: renk, weight: 3, opacity: 0.12, interactive: false,
-            className: 'dendrit-glow', lineCap: 'round'
+            color: renk, weight: 2.5, opacity: 0.10, interactive: false, lineCap: 'round'
         }}).addTo(map);
         L.polyline(yol, {{
-            color: renk, weight: 0.9, opacity: 0.40, interactive: false, lineCap: 'round'
+            color: renk, weight: 0.8, opacity: 0.40, interactive: false, lineCap: 'round'
         }}).addTo(map);
-
-        // Çatallanma — dendritin yarısından küçük bir ikinci dal büyür (gerçek nöron dallanması)
-        if (tohumluRastgele(tohum * 5 + i) > 0.45) {{
-            var orta = yol[Math.round(yol.length * 0.5)];
-            var aci2 = aci + (tohumluRastgele(tohum + i) - 0.5) * 2.2;
-            var uzunluk2 = uzunluk * 0.5;
-            var ucLat2 = orta[0] + Math.sin(aci2) * uzunluk2;
-            var ucLon2 = orta[1] + Math.cos(aci2) * uzunluk2;
-            var yol2 = organikYol(orta, [ucLat2, ucLon2], tohum * 17 + i, 0.4);
-            L.polyline(yol2, {{
-                color: renk, weight: 0.7, opacity: 0.30, interactive: false, lineCap: 'round'
-            }}).addTo(map);
-        }}
     }}
 }}
 
-// Sinaptik nabız noktaları — akson hattı üzerinde ışıldayan duraklar
+// Hat üzerinde ışıldayan elektrik kıvılcım noktaları
 function nabizNoktalariCiz(pts, renk) {{
     [0.22, 0.45, 0.68, 0.88].forEach(function(t) {{
         var idx = Math.round(t * (pts.length - 1));
@@ -1299,10 +1298,10 @@ function nabizNoktalariCiz(pts, renk) {{
         L.marker(p, {{
             icon: L.divIcon({{
                 className: '',
-                html: '<div style="width:5px;height:5px;background:#fff;border-radius:50%;'
-                    + 'box-shadow:0 0 3px #fff,0 0 9px '+renk+',0 0 16px '+renk+';'
-                    + 'animation:breathe-inner 2.4s ease-in-out infinite;"></div>',
-                iconSize: [5, 5], iconAnchor: [2.5, 2.5]
+                html: '<div style="width:4px;height:4px;background:#fff;border-radius:50%;'
+                    + 'box-shadow:0 0 3px #fff,0 0 8px '+renk+',0 0 14px '+renk+';'
+                    + 'animation:breathe-inner 1.6s ease-in-out infinite;"></div>',
+                iconSize: [4, 4], iconAnchor: [2, 2]
             }}),
             interactive: false, zIndexOffset: -50
         }}).addTo(map);
