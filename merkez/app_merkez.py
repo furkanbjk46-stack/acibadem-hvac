@@ -1166,9 +1166,9 @@ with merkez:
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ background:#e8e8e8; }}
-#map {{ width:100%; height:100vh; background:#e8e8e8; }}
-.leaflet-container {{ background:#e8e8e8 !important; font-family:'Plus Jakarta Sans',sans-serif; }}
+body {{ background:#e9eef0; }}
+#map {{ width:100%; height:100vh; background:#e9eef0; }}
+.leaflet-container {{ background:#e9eef0 !important; font-family:'Plus Jakarta Sans',sans-serif; }}
 .leaflet-popup-content-wrapper {{
     background:rgba(15, 23, 42, 0.85) !important;
     backdrop-filter: blur(12px) !important;
@@ -1208,8 +1208,8 @@ var map = L.map('map', {{
     preferCanvas: true
 }});
 
-// CartoDB Positron — açık gri/beyaz, ücretsiz, API key yok
-L.tileLayer('https://{{s}}.basemaps.cartocdn.com/light_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
+// CartoDB Voyager — açık mavi su, krem kara, gri yollar (referans görseldeki gibi), ücretsiz, API key yok
+L.tileLayer('https://{{s}}.basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}{{r}}.png', {{
     maxZoom: 19, subdomains: 'abcd', noWrap: true
 }}).addTo(map);
 
