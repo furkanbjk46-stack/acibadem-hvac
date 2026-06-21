@@ -21,8 +21,25 @@ st.set_page_config(
 from streamlit_autorefresh import st_autorefresh
 st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
+# ============ Arka plan görseli (beyin/nöron ağı) ============
+import base64 as _b64mod
+_bg_path = os.path.join(os.path.dirname(__file__), "images.jpg")
+try:
+    with open(_bg_path, "rb") as _f:
+        _bg_b64 = _b64mod.b64encode(_f.read()).decode()
+    _bg_css = (
+        "background-image:"
+        "linear-gradient(180deg, rgba(6,11,20,0.82) 0%, rgba(6,11,20,0.72) 45%, rgba(6,11,20,0.88) 100%),"
+        "url('data:image/jpeg;base64," + _bg_b64 + "') !important;"
+        "background-size: cover !important;"
+        "background-position: center !important;"
+        "background-attachment: fixed !important;"
+    )
+except FileNotFoundError:
+    _bg_css = "background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;"
+
 # ============ CSS ============
-st.markdown("""
+_css_block = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
@@ -33,12 +50,12 @@ html, body {
 }
 html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], [data-testid="stMain"] {
     background-color: #060b14 !important;
-    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
+    __BG_CSS__
     min-height: 100vh !important;
 }
 [data-testid="stAppViewContainer"] {
     background-color: #060b14 !important;
-    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
+    __BG_CSS__
 }
 [data-testid="stMain"] { padding: 0 !important; margin: 0 !important; height: 100vh !important; overflow: hidden !important; }
 [data-testid="stHeader"]                  { display: none !important; height: 0 !important; }
@@ -301,7 +318,8 @@ button span[data-testid="stIconMaterial"] {
 }
 .btn-goto button:hover { background: rgba(14, 165, 233, 0.25) !important; color: #ffffff !important; }
 </style>
-""", unsafe_allow_html=True)
+"""
+st.markdown(_css_block.replace("__BG_CSS__", _bg_css), unsafe_allow_html=True)
 
 
 # ============ SABİT VERİ ============
