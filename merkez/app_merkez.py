@@ -1216,6 +1216,11 @@ function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
     return pts;
 }}
 
+// İki nokta arası düz çizgide ara nokta bul
+function araNokta(p0, p1, t) {{
+    return [p0[0] + (p1[0]-p0[0])*t, p0[1] + (p1[1]-p0[1])*t];
+}}
+
 var hq = hospitals.find(function(h) {{ return h.hq; }});
 if (hq) {{
     var _egriIdx = 0;
@@ -1225,14 +1230,36 @@ if (hq) {{
         var yon = (_egriIdx % 2 === 0) ? 1 : -1;
         var miktar = 0.18 + (_egriIdx % 3) * 0.07;
         var egriPts = egriNoktalari([hq.lat, hq.lon], [h.lat, h.lon], yon, miktar);
-        // Dış glow hattı (kalın, soluk)
-        L.polyline(egriPts, {{
+
+        // Dal — gövdeden hedefe %72'ye kadar tek hat, sonrası dendrit gibi 2 ince çatala ayrılır
+        var govdeKesim = Math.round(egriPts.length * 0.72);
+        var govde = egriPts.slice(0, govdeKesim + 1);
+        var catalBaslangic = egriPts[govdeKesim];
+        var hedef = egriPts[egriPts.length - 1];
+
+        // Dış glow hattı (kalın, soluk) — sadece gövde
+        L.polyline(govde, {{
             color: h.renk, weight: 6, opacity: 0.10, interactive: false, smoothFactor: 2
         }}).addTo(map);
-        // Ana hat — organik, noktalı sinaptik akış
-        L.polyline(egriPts, {{
-            color: h.renk, weight: 1.6, opacity: 0.55, interactive: false, dashArray: '1,7', smoothFactor: 2
+        // Gövde ana hat
+        L.polyline(govde, {{
+            color: h.renk, weight: 1.8, opacity: 0.55, interactive: false, smoothFactor: 2
         }}).addTo(map);
+
+        // ── Uçtaki çatallanma — dendrit ucu gibi 2 ince dal hedefe yakın noktalarda birleşir ──
+        [-1, 1].forEach(function(catalYon, ci) {{
+            var araT = 0.45 + ci * 0.1;
+            var ara = araNokta(catalBaslangic, hedef, araT);
+            var dLat = hedef[0]-catalBaslangic[0], dLon = hedef[1]-catalBaslangic[1];
+            var dist = Math.sqrt(dLat*dLat+dLon*dLon) || 0.0001;
+            var nLat = -dLon/dist, nLon = dLat/dist;
+            var sapma = dist * 0.16 * catalYon;
+            var araSapilmis = [ara[0] + nLat*sapma, ara[1] + nLon*sapma];
+            var catalPts = [catalBaslangic, araSapilmis, hedef];
+            L.polyline(catalPts, {{
+                color: h.renk, weight: 1, opacity: 0.45, interactive: false, smoothFactor: 3, lineCap: 'round'
+            }}).addTo(map);
+        }});
     }});
 }}
 
@@ -1240,6 +1267,36 @@ hospitals.forEach(function(h) {{
     var s  = h.boyut;
     var c  = h.renk;
     var hs = s / 2;
+
+    // ── SYNAPSE (Ataşehir/GM) — nöron hücre gövdesi simgesi, dışa dallanan dendritlerle ──
+    if (h.hq) {{
+        var boy = 130;
+        var yarim = boy / 2;
+        var dallar = '';
+        for (var di = 0; di < 9; di++) {{
+            var aci = (di / 9) * Math.PI * 2 + 0.2;
+            var uzunluk = 34 + (di % 3) * 9;
+            var ucX = yarim + Math.cos(aci) * uzunluk;
+            var ucY = yarim + Math.sin(aci) * uzunluk;
+            var govX = yarim + Math.cos(aci) * (uzunluk * 0.45);
+            var govY = yarim + Math.sin(aci) * (uzunluk * 0.45);
+            // Ana dal
+            dallar += '<path d="M'+yarim+','+yarim+' Q'+govX+','+govY+' '+ucX+','+ucY+'" stroke="'+c+'" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.85"/>';
+            // Uçtaki çatallanma (2 ince dal)
+            var aci2a = aci - 0.35, aci2b = aci + 0.35;
+            var uz2 = uzunluk * 0.4;
+            dallar += '<path d="M'+ucX+','+ucY+' L'+(ucX+Math.cos(aci2a)*uz2)+','+(ucY+Math.sin(aci2a)*uz2)+'" stroke="'+c+'" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.6"/>';
+            dallar += '<path d="M'+ucX+','+ucY+' L'+(ucX+Math.cos(aci2b)*uz2)+','+(ucY+Math.sin(aci2b)*uz2)+'" stroke="'+c+'" stroke-width="1" fill="none" stroke-linecap="round" opacity="0.6"/>';
+        }}
+        var svgHtml = '<svg width="'+boy+'" height="'+boy+'" style="filter:drop-shadow(0 0 6px '+c+');overflow:visible;">'
+            + dallar
+            + '<ellipse cx="'+yarim+'" cy="'+yarim+'" rx="13" ry="10" fill="rgba(15,23,42,0.4)" stroke="'+c+'" stroke-width="2"/>'
+            + '</svg>';
+        L.marker([h.lat, h.lon], {{
+            icon: L.divIcon({{ className:'', html: svgHtml, iconSize:[boy, boy], iconAnchor:[yarim, yarim] }}),
+            interactive:false, zIndexOffset:-150
+        }}).addTo(map);
+    }}
 
     // ── Dış glow halkası ──
     L.marker([h.lat, h.lon], {{
