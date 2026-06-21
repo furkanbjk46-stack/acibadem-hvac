@@ -186,25 +186,38 @@ button span[data-testid="stIconMaterial"] {
        letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(56, 189, 248,0.15);
        padding-bottom:5px; margin-bottom:10px; }
 
-/* Sol kolon (Lokasyon Durumu + Global Özet) tek bir cam kart içinde — gerçek frosted-glass görünümü */
+/* Sol kolon (Lokasyon Durumu + Global Özet) — Apple "Liquid Glass" tasarımı (iOS 18/26 stili) */
 [data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sol-panel),
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) {
-    background:
-        linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.0) 35%),
-        rgba(20, 30, 50, 0.22) !important;
-    backdrop-filter: blur(22px) saturate(140%) !important;
-    -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-    border-radius: 16px !important;
+    position: relative !important;
+    background: rgba(255, 255, 255, 0.10) !important;
+    backdrop-filter: blur(4px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(4px) saturate(190%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    border-radius: 26px !important;
     padding: 14px !important;
     box-shadow:
         0 8px 32px 0 rgba(0,0,0,0.45),
-        inset 0 1px 0 0 rgba(255,255,255,0.18),
-        inset 0 0 0 1px rgba(255,255,255,0.03) !important;
+        inset 0 4px 20px 0 rgba(255,255,255,0.18) !important;
     height: 100% !important;
     max-height: 100% !important;
     overflow-y: auto !important;
     box-sizing: border-box !important;
+}
+/* Liquid Glass parlama (specular highlight) — camın üst-sol kenarında ışık yansıması */
+[data-testid="stVerticalBlock"]:has(#syn-sol-panel)::before {
+    content: "" !important;
+    position: absolute !important;
+    inset: 0 !important;
+    border-radius: 26px !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    background: rgba(255,255,255,0.05) !important;
+    box-shadow:
+        inset -10px -8px 0px -11px rgba(255,255,255,0.95),
+        inset 0px -9px 0px -8px rgba(255,255,255,0.55) !important;
+    opacity: 0.5 !important;
+    filter: blur(2px) brightness(1.2) !important;
 }
 /* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet — cam üstünde ince cam */
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk {
