@@ -380,9 +380,11 @@ with st.sidebar:
     if st.button("🚨 Uyarılar", key="nav_uyarilar", use_container_width=True):
         st.session_state["vx_sayfa"] = "uyarilar"
         st.rerun()
+    if st.button("⚡ Enerji Analizi", key="nav_enerji", use_container_width=True):
+        st.session_state["vx_sayfa"] = "enerji_analizi"
+        st.rerun()
 
     st.markdown("""
-    <div class="vx-nav-item">⚡ Enerji Analizi</div>
     <div class="vx-section-label">Otomasyon</div>
     <div class="vx-nav-item">🤖 Oto Set</div>
     <div class="vx-nav-item">🧠 AI Asistan</div>
@@ -1261,6 +1263,557 @@ if st.session_state["vx_sayfa"] == "uyarilar":
     st.stop()
 
 # ============================================================
+# ENERJİ ANALİZİ SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
+# ============================================================
+if st.session_state["vx_sayfa"] == "enerji_analizi":
+    st.markdown("""
+    <style>
+    .block-container, [data-testid="stMainBlockContainer"] {
+        overflow-y: auto !important; height: 100vh !important; max-height: 100vh !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="sec">⚡ ENERJİ ANALİZİ</div>', unsafe_allow_html=True)
+    # ── Global Özet (Aylık + Trend) ──
+    _ay_tr = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
+              "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
+    _bu_yil = now.year
+    _bu_ay  = now.month
+    st.markdown(f'<div class="sec">⚡ GLOBAL ÖZET — {_ay_tr[_bu_ay-1].upper()} {_bu_yil}</div>', unsafe_allow_html=True)
+    if not df_all.empty:
+        # Dönem filtreleri
+        _bu_ay_bas   = pd.Timestamp(year=_bu_yil,   month=_bu_ay, day=1)
+        _gec_ay_yil  = _bu_yil - 1 if _bu_ay == 1 else _bu_yil
+        _gec_ay_no   = 12 if _bu_ay == 1 else _bu_ay - 1
+        _gec_ay_bas  = pd.Timestamp(year=_gec_ay_yil, month=_gec_ay_no, day=1)
+        _gec_ay_son  = _bu_ay_bas - pd.Timedelta(days=1)
+        _bu_yil_bas  = pd.Timestamp(year=_bu_yil,   month=1, day=1)
+        _gec_yil_bas = pd.Timestamp(year=_bu_yil-1, month=1, day=1)
+        _gec_yil_son = _bu_yil_bas - pd.Timedelta(days=1)
+
+        _df_bu_ay   = df_all[df_all["Tarih"] >= _bu_ay_bas]
+        _df_gec_ay  = df_all[(df_all["Tarih"] >= _gec_ay_bas) & (df_all["Tarih"] <= _gec_ay_son)]
+        _df_bu_yil  = df_all[df_all["Tarih"] >= _bu_yil_bas]
+        _df_gec_yil = df_all[(df_all["Tarih"] >= _gec_yil_bas) & (df_all["Tarih"] <= _gec_yil_son)]
+
+        def tr(sayi, ondalik=0):
+            fmt = f"{sayi:,.{ondalik}f}"
+            if ondalik > 0:
+                parts = fmt.split(".")
+                return parts[0].replace(",", ".") + "," + parts[1]
+            return fmt.replace(",", ".")
+
+        def _cs(df, col):
+            return df[col].sum() if col in df.columns else 0
+
+        def _pct_html(bu, gec):
+            if not gec or gec == 0: return ""
+            p = (bu - gec) / gec * 100
+            renk = "#10b981" if p <= 0 else "#ef4444"
+            yon  = "▼" if p <= 0 else "▲"
+            return f'<b style="color:{renk};font-size:10px;"> {yon}{abs(p):.1f}%</b>'
+
+        _gec_ay_label = _ay_tr[_gec_ay_no - 1]
+
+        _metrikler = [
+            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh"),
+            ("🔥 Doğalgaz",      None,                         "m³"),
+            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh"),
+            ("💧 Su",             "Su_Tuketimi_m3",             "m³"),
+            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh"),
+        ]
+
+        _ozet_kartlar = '<div class="ozet-grid">'
+        for _lbl, _col, _birim in _metrikler:
+            if _col is None:  # Doğalgaz: kazan + kojen toplamı
+                _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
+                _ga   = _cs(_df_gec_ay,  "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay,  "Kojen_Dogalgaz_m3")
+                _by   = _cs(_df_bu_yil,  "Kazan_Dogalgaz_m3") + _cs(_df_bu_yil,  "Kojen_Dogalgaz_m3")
+                _gy   = _cs(_df_gec_yil, "Kazan_Dogalgaz_m3") + _cs(_df_gec_yil, "Kojen_Dogalgaz_m3")
+            else:
+                _bu = _cs(_df_bu_ay,   _col)
+                _ga = _cs(_df_gec_ay,  _col)
+                _by = _cs(_df_bu_yil,  _col)
+                _gy = _cs(_df_gec_yil, _col)
+
+            _trend_parts = []
+            if _ga > 0: _trend_parts.append(f"{_gec_ay_label}: {tr(_ga)} {_birim}")
+            if _by > 0: _trend_parts.append(f"{_bu_yil} YTD: {tr(_by)} {_birim}")
+            if _gy > 0: _trend_parts.append(f"{_bu_yil-1}: {tr(_gy)} {_birim}")
+            _trend_html = (
+                f'<div style="font-size:9px;color:rgba(120,170,220,0.5);margin-top:2px;">'
+                + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
+            ) if _trend_parts else ""
+
+            _ozet_kartlar += (
+                f'<div class="nk" style="margin-bottom:0;">'
+                f'<div style="display:flex;justify-content:space-between;align-items:center;">'
+                f'<span style="font-size:11px;color:rgba(150,210,255,0.7);">{_lbl}</span>'
+                f'<span style="font-size:12px;font-weight:700;color:#38bdf8;'
+                f'font-family:\'Playfair Display\',\'Plus Jakarta Sans\',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>'
+                f'</div>'
+                f'{_trend_html}'
+                f'</div>'
+            )
+        _ozet_kartlar += '</div>'
+        st.markdown(_ozet_kartlar, unsafe_allow_html=True)
+    # ════════════════════════════════
+    # 🤖 ENERJİ ZEKASI — AI Modülü
+    # ════════════════════════════════
+
+    # ── Son 30 günlük metrikleri hesapla ──
+    _ai_metriks = {}
+    _toplam_kwh_genel = 0
+
+    def _col_sum(df, col):
+        return float(df[col].sum()) if col in df.columns else 0.0
+    def _col_mean(df, col):
+        return df[col].dropna().mean() if col in df.columns else float("nan")
+
+    if not df_all.empty:
+        _son30 = df_all[df_all["Tarih"] >= (pd.Timestamp.now() - pd.Timedelta(days=30))]
+        for _lok_id, _info in HASTANELER.items():
+            _lok_df = _son30[_son30["lokasyon_id"] == _lok_id]
+            if _lok_df.empty:
+                continue
+            _m2_val  = _info.get("m2", 10000)
+            _gun_say = max(1, _lok_df["Tarih"].dt.date.nunique())
+
+            # ── Elektrik ──
+            _kwh      = _col_sum(_lok_df, "Toplam_Hastane_Tuketim_kWh")
+            _chkwh    = _col_sum(_lok_df, "Chiller_Tuketim_kWh")
+            _mcc_kwh  = _col_sum(_lok_df, "MCC_Tuketim_kWh")
+            _kojen    = _col_sum(_lok_df, "Kojen_Uretim_kWh")
+            _sebeke   = _col_sum(_lok_df, "Sebeke_Tuketim_kWh")
+
+            # ── Doğalgaz & Su ──
+            _gaz_m3   = _col_sum(_lok_df, "Dogalgaz_Tuketim_m3")
+            _su_m3    = _col_sum(_lok_df, "Su_Tuketim_m3")
+
+            # ── Chiller anlık ──
+            _cs_raw   = _col_mean(_lok_df, "Chiller_Set_Temp_C")
+            _cl_raw   = _col_mean(_lok_df, "Chiller_Load_Percent")
+
+            if _kwh <= 0:
+                continue
+
+            # ── Türetilmiş verimlilik metrikleri ──
+            _kwh_m2_gun  = round(_kwh / _gun_say / _m2_val, 2)       # kWh/m²/gün
+            _kojen_verim = round(_kojen / _gaz_m3, 2) if _gaz_m3 > 0 else None   # kWh/m³
+            _gaz_verim   = round(_kwh   / _gaz_m3, 2) if _gaz_m3 > 0 else None   # kWh/m³ toplam
+            _sebeke_bag  = round(_sebeke / (_sebeke + _kojen) * 100, 1) if (_sebeke + _kojen) > 0 else None  # %
+            _chiller_pay = round(_chkwh / _kwh * 100, 1) if _kwh > 0 else None   # % soğutma payı
+
+            _ai_metriks[_lok_id] = {
+                "isim":        _info["kisa"],
+                "kwh_m2":      _kwh_m2_gun,
+                "toplam_kwh":  round(_kwh),
+                "chiller_set": round(_cs_raw, 1) if not np.isnan(_cs_raw) else None,
+                "chiller_yuk": round(_cl_raw, 1) if not np.isnan(_cl_raw) else None,
+                "chiller_pay": _chiller_pay,
+                "kojen_kwh":   round(_kojen) if _kojen > 0 else None,
+                "kojen_verim": _kojen_verim,
+                "sebeke_bag":  _sebeke_bag,
+                "gaz_m3":      round(_gaz_m3) if _gaz_m3 > 0 else None,
+                "gaz_verim":   _gaz_verim,
+                "su_m3":       round(_su_m3) if _su_m3 > 0 else None,
+                "gun_say":     _gun_say,
+                "anormal":     False,
+                "ort_kwh_m2":  0.0,
+            }
+        _toplam_kwh_genel = sum(v["toplam_kwh"] for v in _ai_metriks.values())
+
+    # ── Aykırı değer tespiti (1.5 std) ──
+    if len(_ai_metriks) >= 3:
+        _yogunluklar = [v["kwh_m2"] for v in _ai_metriks.values()]
+        _ort_y = float(np.mean(_yogunluklar))
+        _std_y = float(np.std(_yogunluklar))
+        for _m in _ai_metriks.values():
+            _m["anormal"]    = bool(abs(_m["kwh_m2"] - _ort_y) > 1.5 * _std_y)
+            _m["ort_kwh_m2"] = round(_ort_y, 1)
+
+    # ── Sıralama & özet metrikler ──
+    if _ai_metriks:
+        _sirali     = sorted(_ai_metriks.items(), key=lambda x: x[1]["kwh_m2"])
+        _en_iyi     = _sirali[0]
+        _en_kotu    = _sirali[-1]
+        _anormal_n  = sum(1 for v in _ai_metriks.values() if v["anormal"])
+
+        # ── Enerji Zekası Kartı ──
+        _ez_satirlar = ""
+        for _lid, _mv in _sirali:
+            _ez_renk = "#ef4444" if _mv["anormal"] else "#38bdf8"
+            _flag    = " ⚠️" if _mv["anormal"] else ""
+            _ez_satirlar += (
+                f"<div style='display:flex;justify-content:space-between;align-items:center;"
+                f"padding:5px 0;border-bottom:1px solid rgba(56, 189, 248,0.06);'>"
+                f"<span style='font-size:10px;font-weight:600;color:rgba(200,230,255,0.8);'>"
+                f"{_mv['isim']}{_flag}</span>"
+                f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:10px;color:{_ez_renk};'>"
+                f"{_mv['kwh_m2']} kWh/m²/gün</span>"
+                f"</div>"
+            )
+
+        _anormal_html = ""
+        if _anormal_n > 0:
+            _anormal_isimler = ", ".join(v["isim"] for v in _ai_metriks.values() if v["anormal"])
+            _anormal_html = (
+                f"<div style='font-size:9px;color:#f59e0b;margin-top:6px;'>"
+                f"⚡ {_anormal_n} lokasyon normal dışı: {_anormal_isimler}</div>"
+            )
+
+        _ez_baslik = (
+            f"<b style='color:#6ee7b7;'>{_en_iyi[1]['isim']}</b> en verimli "
+            f"(<b style='color:#38bdf8;'>{_en_iyi[1]['kwh_m2']}</b> kWh/m²/gün) — "
+            f"<b style='color:#fca5a5;'>{_en_kotu[1]['isim']}</b> dikkat gerektiriyor "
+            f"(<b style='color:#ef4444;'>{_en_kotu[1]['kwh_m2']}</b> kWh/m²/gün)"
+        )
+        st.markdown(
+            f"<div class='nk ai-hero'>"
+            f"<div style='display:flex;align-items:center;gap:6px;margin-bottom:8px;'>"
+            f"<span class='ai-status-dot' style='background:#38bdf8;'></span>"
+            f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+            f"color:rgba(56, 189, 248,0.85);letter-spacing:2px;'>🧠 AI ENERJİ ZEKASI — CANLI DEĞERLENDİRME</span>"
+            f"</div>"
+            f"<div style='font-size:11px;line-height:1.6;color:rgba(220,235,255,0.9);margin-bottom:10px;'>{_ez_baslik}</div>"
+            f"{_ez_satirlar}"
+            f"{_anormal_html}"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+        # ── AI yetki kontrolü ──
+        _api_key = ""
+        try:
+            _api_key = st.secrets.get("anthropic", {}).get("api_key", "")
+        except Exception:
+            pass
+
+        if not _api_key:
+            st.markdown(
+                "<div class='alrt-y' style='margin-top:6px;font-size:10px;'>"
+                "🔑 AI aktif değil.<br>Streamlit Secrets'a "
+                "<code>anthropic.api_key</code> ekleyin.</div>",
+                unsafe_allow_html=True)
+        else:
+            _su_an  = datetime.now()
+            _bugun  = _su_an.date()
+
+            # ── Supabase'den bugünün analizini oku ──
+            def _sb_analiz_oku(tarih):
+                """Supabase ai_analizler tablosundan ilgili günün analizini çek."""
+                try:
+                    from supabase import create_client as _cc
+                    _c = _cc(url, key)
+                    _r = _c.table("ai_analizler").select("metin,created_at") \
+                           .eq("tarih", str(tarih)).limit(1).execute()
+                    if _r.data:
+                        return _r.data[0]["metin"], _r.data[0]["created_at"]
+                except Exception:
+                    pass
+                return None, None
+
+            def _sb_analiz_yaz(tarih, metin, lok_n):
+                """Analiz metnini Supabase ai_analizler tablosuna kaydet (upsert)."""
+                try:
+                    from supabase import create_client as _cc
+                    _c = _cc(url, key)
+                    _c.table("ai_analizler").upsert({
+                        "tarih":      str(tarih),
+                        "metin":      metin,
+                        "lok_sayisi": lok_n,
+                    }, on_conflict="tarih").execute()
+                except Exception:
+                    pass
+
+            # Saat 09:00'dan önce dünün analizini göster, sonra bugününkü
+            _analiz_tarihi = _bugun if _su_an.hour >= 9 else (_bugun - pd.Timedelta(days=1).to_pytimedelta().__class__(days=1))
+            _analiz_tarihi = _bugun if _su_an.hour >= 9 else (_su_an - pd.Timedelta(days=1)).date()
+
+            _sb_metin, _sb_zaman = _sb_analiz_oku(_analiz_tarihi)
+
+            _yenile_btn = False  # varsayılan
+
+            # Çalıştırma koşulu: DB'de bugün yoksa VEYA yenile butonuna basıldıysa
+            _calistir = (_sb_metin is None) or _yenile_btn
+
+            if not _calistir:
+                _ai_metin  = _sb_metin
+                _ai_zaman_str = pd.Timestamp(_sb_zaman).strftime("%d.%m %H:%M") if _sb_zaman else ""
+            else:
+                _dun_dt  = pd.Timestamp(_bugun) - pd.Timedelta(days=1)
+                _dun_str = _dun_dt.strftime("%d.%m.%Y")
+                _lok_n   = len(_ai_metriks)   # aktif lokasyon sayısı
+
+                # ════════════════════════════════════════════════════
+                # Lokasyon sayısına göre adaptif blok + prompt yapısı
+                #
+                #  KATMANlar:
+                #  TIER 1 — 1-3 lok  : Her lokasyon tam detay
+                #  TIER 2 — 4-7 lok  : Özet tablo + top-3 anormal detay
+                #  TIER 3 — 8+  lok  : Grup istatistik + sadece kritikler
+                # ════════════════════════════════════════════════════
+
+                def _dun_verisi(lid):
+                    """Bir lokasyon için dünün ham satırını döndür."""
+                    return df_all[
+                        (df_all["lokasyon_id"] == lid) &
+                        (df_all["Tarih"].dt.date == _dun_dt.date())
+                    ]
+
+                def _dun_blok_tam(lid, mv):
+                    """TIER 1 — tam detay bloğu."""
+                    _ddf = _dun_verisi(lid)
+                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
+                    b = f"【{mv['isim']}】{' ⚠️ANORMAL' if mv['anormal'] else ''}\n"
+                    if not _ddf.empty:
+                        dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
+                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
+                        dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
+                        dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
+                        dsu  = _col_sum(_ddf, "Su_Tuketim_m3")
+                        dcs  = _col_mean(_ddf, "Chiller_Set_Temp_C")
+                        dcl  = _col_mean(_ddf, "Chiller_Load_Percent")
+                        b += f"  ▶ Dün ({_dun_str}):\n"
+                        if dkwh > 0:
+                            b += f"    Elektrik : {dkwh:,.0f} kWh  ({round(dkwh/_m2v,2)} kWh/m²/gün)\n"
+                        if dkoj > 0:
+                            b += f"    Kojen    : {dkoj:,.0f} kWh"
+                            if dgaz > 0: b += f"  |  Verim: {round(dkoj/dgaz,2)} kWh/m³ (≥3.5)"
+                            b += "\n"
+                        if (dseb + dkoj) > 0:
+                            b += f"    Şebeke bağ.: %{round(dseb/(dseb+dkoj)*100,1)}  (<%30 ideal)\n"
+                        if dgaz > 0:
+                            b += f"    Doğalgaz : {dgaz:,.0f} m³"
+                            if dkwh > 0: b += f"  |  Genel verim: {round(dkwh/dgaz,2)} kWh/m³"
+                            b += "\n"
+                        if dsu  > 0: b += f"    Su       : {dsu:,.0f} m³\n"
+                        if not np.isnan(dcs):
+                            b += f"    Chiller  : {round(dcs,1)}°C"
+                            if not np.isnan(dcl): b += f"  |  Yük %{round(dcl,0):.0f}"
+                            b += "\n"
+                    else:
+                        b += f"  ▶ Dün: veri yok\n"
+                    b += f"  ▷ 30g ort: {mv['kwh_m2']} kWh/m²/gün"
+                    if mv["kojen_verim"]: b += f"  |  Kojen: {mv['kojen_verim']} kWh/m³"
+                    if mv["sebeke_bag"]:  b += f"  |  Şebeke: %{mv['sebeke_bag']}"
+                    return b + "\n"
+
+                def _dun_blok_ozet(lid, mv):
+                    """TIER 2 — tek satır özet."""
+                    _ddf = _dun_verisi(lid)
+                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
+                    flag = " ⚠️" if mv["anormal"] else ""
+                    if not _ddf.empty:
+                        dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
+                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
+                        dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
+                        dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
+                        kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"
+                        sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
+                        yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
+                        return (f"  {mv['isim']}{flag}: {yo} kWh/m²/gün  |  "
+                                f"Kojen verim {kv}  |  Şebeke {sb}  |  30g ort {mv['kwh_m2']}\n")
+                    else:
+                        return f"  {mv['isim']}{flag}: veri yok  |  30g ort {mv['kwh_m2']} kWh/m²/gün\n"
+
+                def _dun_blok_mini(lid, mv):
+                    """TIER 3 — minimal, sadece anahtar değerler."""
+                    _ddf = _dun_verisi(lid)
+                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
+                    flag = "⚠️" if mv["anormal"] else "✓"
+                    if not _ddf.empty:
+                        dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
+                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
+                        dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
+                        dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
+                        kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"
+                        sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
+                        yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
+                        return f"  [{flag}] {mv['isim']}: {yo} kWh/m²  Koj:{kv}  Şeb:{sb}\n"
+                    else:
+                        return f"  [?] {mv['isim']}: veri yok\n"
+
+                # ── Referans satırı (tüm tier'larda ortak) ──
+                _ref = (
+                    "Referans: Yoğunluk 0.5–1.5 kWh/m²/gün | "
+                    "Kojen ≥3.5 kWh/m³ | Şebeke <%30 | Gaz verimi ≥5.0 kWh/m³\n\n"
+                )
+
+                # ════════════════ TIER 1: 1-3 lokasyon ════════════════
+                if _lok_n <= 3:
+                    _lok_bloklari = [_dun_blok_tam(lid, mv) for lid, mv in _sirali]
+                    _max_tok = 500
+                    _yonerge = (
+                        "Türkçe, mühendis dilinde:\n"
+                        "1. Dünün enerji dengesi — kojen/şebeke/gaz üçgeni\n"
+                        "2. En kritik anomali ve kök nedeni\n"
+                        "3. Bugün yapılacak 1 somut aksiyon\n"
+                        "Maksimum 180 kelime."
+                    )
+
+                # ════════════════ TIER 2: 4-7 lokasyon ════════════════
+                elif _lok_n <= 7:
+                    # Tüm lokasyonlar özet tablo
+                    _ozet_satirlar = [_dun_blok_ozet(lid, mv) for lid, mv in _sirali]
+                    # Anormal olanlar için tam detay (max 3)
+                    _anormal_lids  = [(lid, mv) for lid, mv in _sirali if mv["anormal"]][:3]
+                    _detay_satirlar= [_dun_blok_tam(lid, mv) for lid, mv in _anormal_lids]
+                    _lok_bloklari  = (
+                        ["ÖZET TABLO (tüm lokasyonlar):\n"] + _ozet_satirlar +
+                        (["\nANORMAL LOKASYONLAR — detay:\n"] + _detay_satirlar if _detay_satirlar else [])
+                    )
+                    _max_tok = 650
+                    _yonerge = (
+                        "Türkçe, mühendis dilinde:\n"
+                        "1. Grup geneli enerji dengesi (1-2 cümle)\n"
+                        "2. Anormal lokasyonların kök nedeni (her biri 1-2 cümle)\n"
+                        "3. Bugün öncelikli yapılacak 2 aksiyon (lokasyon adıyla)\n"
+                        "Maksimum 220 kelime."
+                    )
+
+                # ════════════════ TIER 3: 8+ lokasyon ════════════════
+                else:
+                    # Grup istatistikleri
+                    _tum_yo    = [mv["kwh_m2"] for _, mv in _sirali]
+                    _grp_ort   = round(float(np.mean(_tum_yo)), 2)
+                    _grp_std   = round(float(np.std(_tum_yo)), 2)
+                    _grp_min   = _sirali[0][1]["isim"]
+                    _grp_max   = _sirali[-1][1]["isim"]
+                    _anormal_n2= sum(1 for _, mv in _sirali if mv["anormal"])
+                    _kojen_vrs = [mv["kojen_verim"] for _, mv in _sirali if mv["kojen_verim"]]
+                    _seb_vrs   = [mv["sebeke_bag"]  for _, mv in _sirali if mv["sebeke_bag"]]
+                    _grp_blok  = (
+                        f"GRUP İSTATİSTİKLERİ ({_lok_n} lokasyon):\n"
+                        f"  Yoğunluk: ort {_grp_ort}  std {_grp_std}  "
+                        f"  en iyi {_grp_min}  en yüksek {_grp_max}\n"
+                        f"  Anormal lokasyon: {_anormal_n2}/{_lok_n}\n"
+                    )
+                    if _kojen_vrs:
+                        _grp_blok += f"  Kojen verim ort: {round(float(np.mean(_kojen_vrs)),2)} kWh/m³\n"
+                    if _seb_vrs:
+                        _grp_blok += f"  Şebeke bağ. ort: %{round(float(np.mean(_seb_vrs)),1)}\n"
+
+                    # Tüm lokasyonlar mini satır
+                    _mini_satirlar = [_dun_blok_mini(lid, mv) for lid, mv in _sirali]
+                    # Sadece top-3 kritik (en yüksek yoğunluk + anormal) tam detay
+                    _kritik = [(lid, mv) for lid, mv in _sirali if mv["anormal"]]
+                    _kritik += [(lid, mv) for lid, mv in reversed(_sirali)
+                                if not mv["anormal"] and (lid, mv) not in _kritik]
+                    _kritik = _kritik[:3]
+                    _detay_satirlar = [_dun_blok_tam(lid, mv) for lid, mv in _kritik]
+                    _lok_bloklari = (
+                        [_grp_blok, "\nTÜM LOKASYONLAR (mini):\n"] + _mini_satirlar +
+                        ["\nKRİTİK LOKASYONLAR — detay:\n"] + _detay_satirlar
+                    )
+                    _max_tok = 800
+                    _yonerge = (
+                        "Türkçe, mühendis dilinde, yönetici özeti formatında:\n"
+                        "1. Grup geneli durum: kaç lokasyon normal/anormal, genel trend\n"
+                        "2. En kritik 3 lokasyon: kısa kök neden (1 cümle/lokasyon)\n"
+                        "3. Sistem geneli 1 stratejik aksiyon + 2 acil lokasyon aksiyonu\n"
+                        "Maksimum 250 kelime."
+                    )
+
+                _ort_str = f"{list(_ai_metriks.values())[0].get('ort_kwh_m2','?')}"
+                _prompt = (
+                    f"Sen Acıbadem Sağlık Grubu enerji yönetimi uzmanısın. "
+                    f"Her sabah dünün verilerini analiz edip günlük rapor hazırlıyorsun.\n"
+                    f"Analiz: {_dun_str}  |  Aktif lokasyon: {_lok_n}  |  "
+                    f"30g toplam elektrik: {_toplam_kwh_genel:,} kWh\n"
+                    + _ref
+                    + "".join(_lok_bloklari)
+                    + "\n" + _yonerge
+                    + "\n\nÖNEMLİ FORMAT KURALLARI:\n"
+                    "- Kesinlikle başlık, rapor adı veya hastane adı yazma\n"
+                    "- ## veya # gibi markdown başlık kullanma\n"
+                    "- ** kalın ** kullanma, düz metin yaz\n"
+                    "- Doğrudan madde madde analize başla (1. ... 2. ... 3. ...)\n"
+                    "- --- ayraç kullanma"
+                )
+
+                with st.spinner(f"🤖 {_lok_n} lokasyon analiz ediliyor…"):
+                    try:
+                        import anthropic as _anthro
+                        _cli = _anthro.Anthropic(api_key=_api_key)
+                        _resp = _cli.messages.create(
+                            model="claude-haiku-4-5",
+                            max_tokens=_max_tok,
+                            messages=[{"role": "user", "content": _prompt}]
+                        )
+                        _ai_metin = _resp.content[0].text.strip()
+                        # Supabase'e kaydet — günde 1 kez garantisi
+                        _sb_analiz_yaz(_analiz_tarihi, _ai_metin, _lok_n)
+                        _ai_zaman_str = _su_an.strftime("%d.%m %H:%M")
+                    except Exception as _ae:
+                        _ai_metin = f"⚠️ Hata: {str(_ae)[:120]}"
+                        _ai_zaman_str = ""
+
+            # ── AI çıktısını göster ──
+            if _ai_metin:
+                import re as _re
+                _ai_temiz = _ai_metin
+                _ai_temiz = _re.sub(r"#{1,3}\s*", "", _ai_temiz)
+                _ai_temiz = _re.sub(r"\*\*(.+?)\*\*", r"\1", _ai_temiz)
+                _ai_temiz = _re.sub(r"\*(.+?)\*",   r"\1", _ai_temiz)
+                _ai_temiz = _re.sub(r"^---+$", "", _ai_temiz, flags=_re.MULTILINE)
+                _ai_temiz = _ai_temiz.strip()
+
+                # Kart başlığı — sol başlık sağ buton
+                st.markdown("""<style>
+                div[data-testid="stButton"] > button[kind="secondary"] {
+                    background: rgba(56, 189, 248,0.06) !important;
+                    border: 1px solid rgba(56, 189, 248,0.2) !important;
+                    color: rgba(56, 189, 248,0.7) !important;
+                    font-size: 9px !important;
+                    padding: 2px 10px !important;
+                    border-radius: 6px !important;
+                    font-family: 'Inter', sans-serif !important;
+                    letter-spacing: 0.5px !important;
+                    height: 26px !important;
+                    line-height: 1 !important;
+                }
+                div[data-testid="stButton"] > button[kind="secondary"]:hover {
+                    background: rgba(56, 189, 248,0.12) !important;
+                    border-color: rgba(56, 189, 248,0.4) !important;
+                    color: #38bdf8 !important;
+                }
+                </style>""", unsafe_allow_html=True)
+
+                # Kart dış çerçevesi — üst kısım
+                st.markdown(
+                    f"<div class='nk' style='margin-top:6px;'>"
+                    f"<div style='display:flex;justify-content:space-between;align-items:center;"
+                    f"padding-bottom:6px;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
+                    f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+                    f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
+                    f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>🕐 {_ai_zaman_str}</span>"
+                    f"</div>"
+                    f"<div style='padding:12px 14px;font-size:11px;color:rgba(200,230,255,0.85);"
+                    f"line-height:1.7;max-height:220px;overflow-y:auto;"
+                    f"scrollbar-width:thin;scrollbar-color:rgba(56, 189, 248,0.3) transparent;'>"
+                    + _ai_temiz.replace("\n", "<br>") +
+                    f"</div>"
+                    f"<div style='padding:6px 14px 10px;border-top:1px solid rgba(56, 189, 248,0.08);'></div>"
+                    f"</div>",
+                    unsafe_allow_html=True)
+
+                # Buton kartın altındaki boşluğa yerleşiyor — negatif margin ile karta yapışır
+                st.markdown("<div style='margin-top:-32px;padding:0 14px 10px;'>", unsafe_allow_html=True)
+                if st.button("🔄 Yeniden Analiz Et", key="btn_ai_yenile", use_container_width=True):
+                    _sb_metin = None
+                    st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
+
+    else:
+        st.markdown(
+            "<div class='alrt-y'>📊 Henüz yeterli veri yok.</div>",
+            unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+    st.stop()
+
+# ============================================================
 # ÜST SIRA: Karşılama kartı + renkli KPI kartları (Votrex tarzı)
 # ============================================================
 _toplam_enerji_kwh = 0
@@ -1385,89 +1938,6 @@ with sol:
     st.markdown('<div id="syn-sol-panel"></div>', unsafe_allow_html=True)
 
 
-    # ── Global Özet (Aylık + Trend) ──
-    _ay_tr = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
-              "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
-    _bu_yil = now.year
-    _bu_ay  = now.month
-    st.markdown(f'<div class="sec">⚡ GLOBAL ÖZET — {_ay_tr[_bu_ay-1].upper()} {_bu_yil}</div>', unsafe_allow_html=True)
-    if not df_all.empty:
-        # Dönem filtreleri
-        _bu_ay_bas   = pd.Timestamp(year=_bu_yil,   month=_bu_ay, day=1)
-        _gec_ay_yil  = _bu_yil - 1 if _bu_ay == 1 else _bu_yil
-        _gec_ay_no   = 12 if _bu_ay == 1 else _bu_ay - 1
-        _gec_ay_bas  = pd.Timestamp(year=_gec_ay_yil, month=_gec_ay_no, day=1)
-        _gec_ay_son  = _bu_ay_bas - pd.Timedelta(days=1)
-        _bu_yil_bas  = pd.Timestamp(year=_bu_yil,   month=1, day=1)
-        _gec_yil_bas = pd.Timestamp(year=_bu_yil-1, month=1, day=1)
-        _gec_yil_son = _bu_yil_bas - pd.Timedelta(days=1)
-
-        _df_bu_ay   = df_all[df_all["Tarih"] >= _bu_ay_bas]
-        _df_gec_ay  = df_all[(df_all["Tarih"] >= _gec_ay_bas) & (df_all["Tarih"] <= _gec_ay_son)]
-        _df_bu_yil  = df_all[df_all["Tarih"] >= _bu_yil_bas]
-        _df_gec_yil = df_all[(df_all["Tarih"] >= _gec_yil_bas) & (df_all["Tarih"] <= _gec_yil_son)]
-
-        def tr(sayi, ondalik=0):
-            fmt = f"{sayi:,.{ondalik}f}"
-            if ondalik > 0:
-                parts = fmt.split(".")
-                return parts[0].replace(",", ".") + "," + parts[1]
-            return fmt.replace(",", ".")
-
-        def _cs(df, col):
-            return df[col].sum() if col in df.columns else 0
-
-        def _pct_html(bu, gec):
-            if not gec or gec == 0: return ""
-            p = (bu - gec) / gec * 100
-            renk = "#10b981" if p <= 0 else "#ef4444"
-            yon  = "▼" if p <= 0 else "▲"
-            return f'<b style="color:{renk};font-size:10px;"> {yon}{abs(p):.1f}%</b>'
-
-        _gec_ay_label = _ay_tr[_gec_ay_no - 1]
-
-        _metrikler = [
-            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh"),
-            ("🔥 Doğalgaz",      None,                         "m³"),
-            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh"),
-            ("💧 Su",             "Su_Tuketimi_m3",             "m³"),
-            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh"),
-        ]
-
-        _ozet_kartlar = '<div class="ozet-grid">'
-        for _lbl, _col, _birim in _metrikler:
-            if _col is None:  # Doğalgaz: kazan + kojen toplamı
-                _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
-                _ga   = _cs(_df_gec_ay,  "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay,  "Kojen_Dogalgaz_m3")
-                _by   = _cs(_df_bu_yil,  "Kazan_Dogalgaz_m3") + _cs(_df_bu_yil,  "Kojen_Dogalgaz_m3")
-                _gy   = _cs(_df_gec_yil, "Kazan_Dogalgaz_m3") + _cs(_df_gec_yil, "Kojen_Dogalgaz_m3")
-            else:
-                _bu = _cs(_df_bu_ay,   _col)
-                _ga = _cs(_df_gec_ay,  _col)
-                _by = _cs(_df_bu_yil,  _col)
-                _gy = _cs(_df_gec_yil, _col)
-
-            _trend_parts = []
-            if _ga > 0: _trend_parts.append(f"{_gec_ay_label}: {tr(_ga)} {_birim}")
-            if _by > 0: _trend_parts.append(f"{_bu_yil} YTD: {tr(_by)} {_birim}")
-            if _gy > 0: _trend_parts.append(f"{_bu_yil-1}: {tr(_gy)} {_birim}")
-            _trend_html = (
-                f'<div style="font-size:9px;color:rgba(120,170,220,0.5);margin-top:2px;">'
-                + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
-            ) if _trend_parts else ""
-
-            _ozet_kartlar += (
-                f'<div class="nk" style="margin-bottom:0;">'
-                f'<div style="display:flex;justify-content:space-between;align-items:center;">'
-                f'<span style="font-size:11px;color:rgba(150,210,255,0.7);">{_lbl}</span>'
-                f'<span style="font-size:12px;font-weight:700;color:#38bdf8;'
-                f'font-family:\'Playfair Display\',\'Plus Jakarta Sans\',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>'
-                f'</div>'
-                f'{_trend_html}'
-                f'</div>'
-            )
-        _ozet_kartlar += '</div>'
-        st.markdown(_ozet_kartlar, unsafe_allow_html=True)
 
 # ════════════════════════════════
 # (Harita kaldırıldı — sadece arka plan veri hesabı korunuyor)
@@ -1935,460 +2405,6 @@ with sag:
 
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
-    # ════════════════════════════════
-    # 🤖 ENERJİ ZEKASI — AI Modülü
-    # ════════════════════════════════
-
-    # ── Son 30 günlük metrikleri hesapla ──
-    _ai_metriks = {}
-    _toplam_kwh_genel = 0
-
-    def _col_sum(df, col):
-        return float(df[col].sum()) if col in df.columns else 0.0
-    def _col_mean(df, col):
-        return df[col].dropna().mean() if col in df.columns else float("nan")
-
-    if not df_all.empty:
-        _son30 = df_all[df_all["Tarih"] >= (pd.Timestamp.now() - pd.Timedelta(days=30))]
-        for _lok_id, _info in HASTANELER.items():
-            _lok_df = _son30[_son30["lokasyon_id"] == _lok_id]
-            if _lok_df.empty:
-                continue
-            _m2_val  = _info.get("m2", 10000)
-            _gun_say = max(1, _lok_df["Tarih"].dt.date.nunique())
-
-            # ── Elektrik ──
-            _kwh      = _col_sum(_lok_df, "Toplam_Hastane_Tuketim_kWh")
-            _chkwh    = _col_sum(_lok_df, "Chiller_Tuketim_kWh")
-            _mcc_kwh  = _col_sum(_lok_df, "MCC_Tuketim_kWh")
-            _kojen    = _col_sum(_lok_df, "Kojen_Uretim_kWh")
-            _sebeke   = _col_sum(_lok_df, "Sebeke_Tuketim_kWh")
-
-            # ── Doğalgaz & Su ──
-            _gaz_m3   = _col_sum(_lok_df, "Dogalgaz_Tuketim_m3")
-            _su_m3    = _col_sum(_lok_df, "Su_Tuketim_m3")
-
-            # ── Chiller anlık ──
-            _cs_raw   = _col_mean(_lok_df, "Chiller_Set_Temp_C")
-            _cl_raw   = _col_mean(_lok_df, "Chiller_Load_Percent")
-
-            if _kwh <= 0:
-                continue
-
-            # ── Türetilmiş verimlilik metrikleri ──
-            _kwh_m2_gun  = round(_kwh / _gun_say / _m2_val, 2)       # kWh/m²/gün
-            _kojen_verim = round(_kojen / _gaz_m3, 2) if _gaz_m3 > 0 else None   # kWh/m³
-            _gaz_verim   = round(_kwh   / _gaz_m3, 2) if _gaz_m3 > 0 else None   # kWh/m³ toplam
-            _sebeke_bag  = round(_sebeke / (_sebeke + _kojen) * 100, 1) if (_sebeke + _kojen) > 0 else None  # %
-            _chiller_pay = round(_chkwh / _kwh * 100, 1) if _kwh > 0 else None   # % soğutma payı
-
-            _ai_metriks[_lok_id] = {
-                "isim":        _info["kisa"],
-                "kwh_m2":      _kwh_m2_gun,
-                "toplam_kwh":  round(_kwh),
-                "chiller_set": round(_cs_raw, 1) if not np.isnan(_cs_raw) else None,
-                "chiller_yuk": round(_cl_raw, 1) if not np.isnan(_cl_raw) else None,
-                "chiller_pay": _chiller_pay,
-                "kojen_kwh":   round(_kojen) if _kojen > 0 else None,
-                "kojen_verim": _kojen_verim,
-                "sebeke_bag":  _sebeke_bag,
-                "gaz_m3":      round(_gaz_m3) if _gaz_m3 > 0 else None,
-                "gaz_verim":   _gaz_verim,
-                "su_m3":       round(_su_m3) if _su_m3 > 0 else None,
-                "gun_say":     _gun_say,
-                "anormal":     False,
-                "ort_kwh_m2":  0.0,
-            }
-        _toplam_kwh_genel = sum(v["toplam_kwh"] for v in _ai_metriks.values())
-
-    # ── Aykırı değer tespiti (1.5 std) ──
-    if len(_ai_metriks) >= 3:
-        _yogunluklar = [v["kwh_m2"] for v in _ai_metriks.values()]
-        _ort_y = float(np.mean(_yogunluklar))
-        _std_y = float(np.std(_yogunluklar))
-        for _m in _ai_metriks.values():
-            _m["anormal"]    = bool(abs(_m["kwh_m2"] - _ort_y) > 1.5 * _std_y)
-            _m["ort_kwh_m2"] = round(_ort_y, 1)
-
-    # ── Sıralama & özet metrikler ──
-    if _ai_metriks:
-        _sirali     = sorted(_ai_metriks.items(), key=lambda x: x[1]["kwh_m2"])
-        _en_iyi     = _sirali[0]
-        _en_kotu    = _sirali[-1]
-        _anormal_n  = sum(1 for v in _ai_metriks.values() if v["anormal"])
-
-        # ── Enerji Zekası Kartı ──
-        _ez_satirlar = ""
-        for _lid, _mv in _sirali:
-            _ez_renk = "#ef4444" if _mv["anormal"] else "#38bdf8"
-            _flag    = " ⚠️" if _mv["anormal"] else ""
-            _ez_satirlar += (
-                f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                f"padding:5px 0;border-bottom:1px solid rgba(56, 189, 248,0.06);'>"
-                f"<span style='font-size:10px;font-weight:600;color:rgba(200,230,255,0.8);'>"
-                f"{_mv['isim']}{_flag}</span>"
-                f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:10px;color:{_ez_renk};'>"
-                f"{_mv['kwh_m2']} kWh/m²/gün</span>"
-                f"</div>"
-            )
-
-        _anormal_html = ""
-        if _anormal_n > 0:
-            _anormal_isimler = ", ".join(v["isim"] for v in _ai_metriks.values() if v["anormal"])
-            _anormal_html = (
-                f"<div style='font-size:9px;color:#f59e0b;margin-top:6px;'>"
-                f"⚡ {_anormal_n} lokasyon normal dışı: {_anormal_isimler}</div>"
-            )
-
-        _ez_baslik = (
-            f"<b style='color:#6ee7b7;'>{_en_iyi[1]['isim']}</b> en verimli "
-            f"(<b style='color:#38bdf8;'>{_en_iyi[1]['kwh_m2']}</b> kWh/m²/gün) — "
-            f"<b style='color:#fca5a5;'>{_en_kotu[1]['isim']}</b> dikkat gerektiriyor "
-            f"(<b style='color:#ef4444;'>{_en_kotu[1]['kwh_m2']}</b> kWh/m²/gün)"
-        )
-        st.markdown(
-            f"<div class='nk ai-hero'>"
-            f"<div style='display:flex;align-items:center;gap:6px;margin-bottom:8px;'>"
-            f"<span class='ai-status-dot' style='background:#38bdf8;'></span>"
-            f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
-            f"color:rgba(56, 189, 248,0.85);letter-spacing:2px;'>🧠 AI ENERJİ ZEKASI — CANLI DEĞERLENDİRME</span>"
-            f"</div>"
-            f"<div style='font-size:11px;line-height:1.6;color:rgba(220,235,255,0.9);margin-bottom:10px;'>{_ez_baslik}</div>"
-            f"{_ez_satirlar}"
-            f"{_anormal_html}"
-            f"</div>",
-            unsafe_allow_html=True
-        )
-
-        # ── AI yetki kontrolü ──
-        _api_key = ""
-        try:
-            _api_key = st.secrets.get("anthropic", {}).get("api_key", "")
-        except Exception:
-            pass
-
-        if not _api_key:
-            st.markdown(
-                "<div class='alrt-y' style='margin-top:6px;font-size:10px;'>"
-                "🔑 AI aktif değil.<br>Streamlit Secrets'a "
-                "<code>anthropic.api_key</code> ekleyin.</div>",
-                unsafe_allow_html=True)
-        else:
-            _su_an  = datetime.now()
-            _bugun  = _su_an.date()
-
-            # ── Supabase'den bugünün analizini oku ──
-            def _sb_analiz_oku(tarih):
-                """Supabase ai_analizler tablosundan ilgili günün analizini çek."""
-                try:
-                    from supabase import create_client as _cc
-                    _c = _cc(url, key)
-                    _r = _c.table("ai_analizler").select("metin,created_at") \
-                           .eq("tarih", str(tarih)).limit(1).execute()
-                    if _r.data:
-                        return _r.data[0]["metin"], _r.data[0]["created_at"]
-                except Exception:
-                    pass
-                return None, None
-
-            def _sb_analiz_yaz(tarih, metin, lok_n):
-                """Analiz metnini Supabase ai_analizler tablosuna kaydet (upsert)."""
-                try:
-                    from supabase import create_client as _cc
-                    _c = _cc(url, key)
-                    _c.table("ai_analizler").upsert({
-                        "tarih":      str(tarih),
-                        "metin":      metin,
-                        "lok_sayisi": lok_n,
-                    }, on_conflict="tarih").execute()
-                except Exception:
-                    pass
-
-            # Saat 09:00'dan önce dünün analizini göster, sonra bugününkü
-            _analiz_tarihi = _bugun if _su_an.hour >= 9 else (_bugun - pd.Timedelta(days=1).to_pytimedelta().__class__(days=1))
-            _analiz_tarihi = _bugun if _su_an.hour >= 9 else (_su_an - pd.Timedelta(days=1)).date()
-
-            _sb_metin, _sb_zaman = _sb_analiz_oku(_analiz_tarihi)
-
-            _yenile_btn = False  # varsayılan
-
-            # Çalıştırma koşulu: DB'de bugün yoksa VEYA yenile butonuna basıldıysa
-            _calistir = (_sb_metin is None) or _yenile_btn
-
-            if not _calistir:
-                _ai_metin  = _sb_metin
-                _ai_zaman_str = pd.Timestamp(_sb_zaman).strftime("%d.%m %H:%M") if _sb_zaman else ""
-            else:
-                _dun_dt  = pd.Timestamp(_bugun) - pd.Timedelta(days=1)
-                _dun_str = _dun_dt.strftime("%d.%m.%Y")
-                _lok_n   = len(_ai_metriks)   # aktif lokasyon sayısı
-
-                # ════════════════════════════════════════════════════
-                # Lokasyon sayısına göre adaptif blok + prompt yapısı
-                #
-                #  KATMANlar:
-                #  TIER 1 — 1-3 lok  : Her lokasyon tam detay
-                #  TIER 2 — 4-7 lok  : Özet tablo + top-3 anormal detay
-                #  TIER 3 — 8+  lok  : Grup istatistik + sadece kritikler
-                # ════════════════════════════════════════════════════
-
-                def _dun_verisi(lid):
-                    """Bir lokasyon için dünün ham satırını döndür."""
-                    return df_all[
-                        (df_all["lokasyon_id"] == lid) &
-                        (df_all["Tarih"].dt.date == _dun_dt.date())
-                    ]
-
-                def _dun_blok_tam(lid, mv):
-                    """TIER 1 — tam detay bloğu."""
-                    _ddf = _dun_verisi(lid)
-                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
-                    b = f"【{mv['isim']}】{' ⚠️ANORMAL' if mv['anormal'] else ''}\n"
-                    if not _ddf.empty:
-                        dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
-                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
-                        dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
-                        dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
-                        dsu  = _col_sum(_ddf, "Su_Tuketim_m3")
-                        dcs  = _col_mean(_ddf, "Chiller_Set_Temp_C")
-                        dcl  = _col_mean(_ddf, "Chiller_Load_Percent")
-                        b += f"  ▶ Dün ({_dun_str}):\n"
-                        if dkwh > 0:
-                            b += f"    Elektrik : {dkwh:,.0f} kWh  ({round(dkwh/_m2v,2)} kWh/m²/gün)\n"
-                        if dkoj > 0:
-                            b += f"    Kojen    : {dkoj:,.0f} kWh"
-                            if dgaz > 0: b += f"  |  Verim: {round(dkoj/dgaz,2)} kWh/m³ (≥3.5)"
-                            b += "\n"
-                        if (dseb + dkoj) > 0:
-                            b += f"    Şebeke bağ.: %{round(dseb/(dseb+dkoj)*100,1)}  (<%30 ideal)\n"
-                        if dgaz > 0:
-                            b += f"    Doğalgaz : {dgaz:,.0f} m³"
-                            if dkwh > 0: b += f"  |  Genel verim: {round(dkwh/dgaz,2)} kWh/m³"
-                            b += "\n"
-                        if dsu  > 0: b += f"    Su       : {dsu:,.0f} m³\n"
-                        if not np.isnan(dcs):
-                            b += f"    Chiller  : {round(dcs,1)}°C"
-                            if not np.isnan(dcl): b += f"  |  Yük %{round(dcl,0):.0f}"
-                            b += "\n"
-                    else:
-                        b += f"  ▶ Dün: veri yok\n"
-                    b += f"  ▷ 30g ort: {mv['kwh_m2']} kWh/m²/gün"
-                    if mv["kojen_verim"]: b += f"  |  Kojen: {mv['kojen_verim']} kWh/m³"
-                    if mv["sebeke_bag"]:  b += f"  |  Şebeke: %{mv['sebeke_bag']}"
-                    return b + "\n"
-
-                def _dun_blok_ozet(lid, mv):
-                    """TIER 2 — tek satır özet."""
-                    _ddf = _dun_verisi(lid)
-                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
-                    flag = " ⚠️" if mv["anormal"] else ""
-                    if not _ddf.empty:
-                        dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
-                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
-                        dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
-                        dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
-                        kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"
-                        sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
-                        yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
-                        return (f"  {mv['isim']}{flag}: {yo} kWh/m²/gün  |  "
-                                f"Kojen verim {kv}  |  Şebeke {sb}  |  30g ort {mv['kwh_m2']}\n")
-                    else:
-                        return f"  {mv['isim']}{flag}: veri yok  |  30g ort {mv['kwh_m2']} kWh/m²/gün\n"
-
-                def _dun_blok_mini(lid, mv):
-                    """TIER 3 — minimal, sadece anahtar değerler."""
-                    _ddf = _dun_verisi(lid)
-                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
-                    flag = "⚠️" if mv["anormal"] else "✓"
-                    if not _ddf.empty:
-                        dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
-                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
-                        dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
-                        dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
-                        kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"
-                        sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
-                        yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
-                        return f"  [{flag}] {mv['isim']}: {yo} kWh/m²  Koj:{kv}  Şeb:{sb}\n"
-                    else:
-                        return f"  [?] {mv['isim']}: veri yok\n"
-
-                # ── Referans satırı (tüm tier'larda ortak) ──
-                _ref = (
-                    "Referans: Yoğunluk 0.5–1.5 kWh/m²/gün | "
-                    "Kojen ≥3.5 kWh/m³ | Şebeke <%30 | Gaz verimi ≥5.0 kWh/m³\n\n"
-                )
-
-                # ════════════════ TIER 1: 1-3 lokasyon ════════════════
-                if _lok_n <= 3:
-                    _lok_bloklari = [_dun_blok_tam(lid, mv) for lid, mv in _sirali]
-                    _max_tok = 500
-                    _yonerge = (
-                        "Türkçe, mühendis dilinde:\n"
-                        "1. Dünün enerji dengesi — kojen/şebeke/gaz üçgeni\n"
-                        "2. En kritik anomali ve kök nedeni\n"
-                        "3. Bugün yapılacak 1 somut aksiyon\n"
-                        "Maksimum 180 kelime."
-                    )
-
-                # ════════════════ TIER 2: 4-7 lokasyon ════════════════
-                elif _lok_n <= 7:
-                    # Tüm lokasyonlar özet tablo
-                    _ozet_satirlar = [_dun_blok_ozet(lid, mv) for lid, mv in _sirali]
-                    # Anormal olanlar için tam detay (max 3)
-                    _anormal_lids  = [(lid, mv) for lid, mv in _sirali if mv["anormal"]][:3]
-                    _detay_satirlar= [_dun_blok_tam(lid, mv) for lid, mv in _anormal_lids]
-                    _lok_bloklari  = (
-                        ["ÖZET TABLO (tüm lokasyonlar):\n"] + _ozet_satirlar +
-                        (["\nANORMAL LOKASYONLAR — detay:\n"] + _detay_satirlar if _detay_satirlar else [])
-                    )
-                    _max_tok = 650
-                    _yonerge = (
-                        "Türkçe, mühendis dilinde:\n"
-                        "1. Grup geneli enerji dengesi (1-2 cümle)\n"
-                        "2. Anormal lokasyonların kök nedeni (her biri 1-2 cümle)\n"
-                        "3. Bugün öncelikli yapılacak 2 aksiyon (lokasyon adıyla)\n"
-                        "Maksimum 220 kelime."
-                    )
-
-                # ════════════════ TIER 3: 8+ lokasyon ════════════════
-                else:
-                    # Grup istatistikleri
-                    _tum_yo    = [mv["kwh_m2"] for _, mv in _sirali]
-                    _grp_ort   = round(float(np.mean(_tum_yo)), 2)
-                    _grp_std   = round(float(np.std(_tum_yo)), 2)
-                    _grp_min   = _sirali[0][1]["isim"]
-                    _grp_max   = _sirali[-1][1]["isim"]
-                    _anormal_n2= sum(1 for _, mv in _sirali if mv["anormal"])
-                    _kojen_vrs = [mv["kojen_verim"] for _, mv in _sirali if mv["kojen_verim"]]
-                    _seb_vrs   = [mv["sebeke_bag"]  for _, mv in _sirali if mv["sebeke_bag"]]
-                    _grp_blok  = (
-                        f"GRUP İSTATİSTİKLERİ ({_lok_n} lokasyon):\n"
-                        f"  Yoğunluk: ort {_grp_ort}  std {_grp_std}  "
-                        f"  en iyi {_grp_min}  en yüksek {_grp_max}\n"
-                        f"  Anormal lokasyon: {_anormal_n2}/{_lok_n}\n"
-                    )
-                    if _kojen_vrs:
-                        _grp_blok += f"  Kojen verim ort: {round(float(np.mean(_kojen_vrs)),2)} kWh/m³\n"
-                    if _seb_vrs:
-                        _grp_blok += f"  Şebeke bağ. ort: %{round(float(np.mean(_seb_vrs)),1)}\n"
-
-                    # Tüm lokasyonlar mini satır
-                    _mini_satirlar = [_dun_blok_mini(lid, mv) for lid, mv in _sirali]
-                    # Sadece top-3 kritik (en yüksek yoğunluk + anormal) tam detay
-                    _kritik = [(lid, mv) for lid, mv in _sirali if mv["anormal"]]
-                    _kritik += [(lid, mv) for lid, mv in reversed(_sirali)
-                                if not mv["anormal"] and (lid, mv) not in _kritik]
-                    _kritik = _kritik[:3]
-                    _detay_satirlar = [_dun_blok_tam(lid, mv) for lid, mv in _kritik]
-                    _lok_bloklari = (
-                        [_grp_blok, "\nTÜM LOKASYONLAR (mini):\n"] + _mini_satirlar +
-                        ["\nKRİTİK LOKASYONLAR — detay:\n"] + _detay_satirlar
-                    )
-                    _max_tok = 800
-                    _yonerge = (
-                        "Türkçe, mühendis dilinde, yönetici özeti formatında:\n"
-                        "1. Grup geneli durum: kaç lokasyon normal/anormal, genel trend\n"
-                        "2. En kritik 3 lokasyon: kısa kök neden (1 cümle/lokasyon)\n"
-                        "3. Sistem geneli 1 stratejik aksiyon + 2 acil lokasyon aksiyonu\n"
-                        "Maksimum 250 kelime."
-                    )
-
-                _ort_str = f"{list(_ai_metriks.values())[0].get('ort_kwh_m2','?')}"
-                _prompt = (
-                    f"Sen Acıbadem Sağlık Grubu enerji yönetimi uzmanısın. "
-                    f"Her sabah dünün verilerini analiz edip günlük rapor hazırlıyorsun.\n"
-                    f"Analiz: {_dun_str}  |  Aktif lokasyon: {_lok_n}  |  "
-                    f"30g toplam elektrik: {_toplam_kwh_genel:,} kWh\n"
-                    + _ref
-                    + "".join(_lok_bloklari)
-                    + "\n" + _yonerge
-                    + "\n\nÖNEMLİ FORMAT KURALLARI:\n"
-                    "- Kesinlikle başlık, rapor adı veya hastane adı yazma\n"
-                    "- ## veya # gibi markdown başlık kullanma\n"
-                    "- ** kalın ** kullanma, düz metin yaz\n"
-                    "- Doğrudan madde madde analize başla (1. ... 2. ... 3. ...)\n"
-                    "- --- ayraç kullanma"
-                )
-
-                with st.spinner(f"🤖 {_lok_n} lokasyon analiz ediliyor…"):
-                    try:
-                        import anthropic as _anthro
-                        _cli = _anthro.Anthropic(api_key=_api_key)
-                        _resp = _cli.messages.create(
-                            model="claude-haiku-4-5",
-                            max_tokens=_max_tok,
-                            messages=[{"role": "user", "content": _prompt}]
-                        )
-                        _ai_metin = _resp.content[0].text.strip()
-                        # Supabase'e kaydet — günde 1 kez garantisi
-                        _sb_analiz_yaz(_analiz_tarihi, _ai_metin, _lok_n)
-                        _ai_zaman_str = _su_an.strftime("%d.%m %H:%M")
-                    except Exception as _ae:
-                        _ai_metin = f"⚠️ Hata: {str(_ae)[:120]}"
-                        _ai_zaman_str = ""
-
-            # ── AI çıktısını göster ──
-            if _ai_metin:
-                import re as _re
-                _ai_temiz = _ai_metin
-                _ai_temiz = _re.sub(r"#{1,3}\s*", "", _ai_temiz)
-                _ai_temiz = _re.sub(r"\*\*(.+?)\*\*", r"\1", _ai_temiz)
-                _ai_temiz = _re.sub(r"\*(.+?)\*",   r"\1", _ai_temiz)
-                _ai_temiz = _re.sub(r"^---+$", "", _ai_temiz, flags=_re.MULTILINE)
-                _ai_temiz = _ai_temiz.strip()
-
-                # Kart başlığı — sol başlık sağ buton
-                st.markdown("""<style>
-                div[data-testid="stButton"] > button[kind="secondary"] {
-                    background: rgba(56, 189, 248,0.06) !important;
-                    border: 1px solid rgba(56, 189, 248,0.2) !important;
-                    color: rgba(56, 189, 248,0.7) !important;
-                    font-size: 9px !important;
-                    padding: 2px 10px !important;
-                    border-radius: 6px !important;
-                    font-family: 'Inter', sans-serif !important;
-                    letter-spacing: 0.5px !important;
-                    height: 26px !important;
-                    line-height: 1 !important;
-                }
-                div[data-testid="stButton"] > button[kind="secondary"]:hover {
-                    background: rgba(56, 189, 248,0.12) !important;
-                    border-color: rgba(56, 189, 248,0.4) !important;
-                    color: #38bdf8 !important;
-                }
-                </style>""", unsafe_allow_html=True)
-
-                # Kart dış çerçevesi — üst kısım
-                st.markdown(
-                    f"<div class='nk' style='margin-top:6px;'>"
-                    f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                    f"padding-bottom:6px;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
-                    f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
-                    f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
-                    f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>🕐 {_ai_zaman_str}</span>"
-                    f"</div>"
-                    f"<div style='padding:12px 14px;font-size:11px;color:rgba(200,230,255,0.85);"
-                    f"line-height:1.7;max-height:220px;overflow-y:auto;"
-                    f"scrollbar-width:thin;scrollbar-color:rgba(56, 189, 248,0.3) transparent;'>"
-                    + _ai_temiz.replace("\n", "<br>") +
-                    f"</div>"
-                    f"<div style='padding:6px 14px 10px;border-top:1px solid rgba(56, 189, 248,0.08);'></div>"
-                    f"</div>",
-                    unsafe_allow_html=True)
-
-                # Buton kartın altındaki boşluğa yerleşiyor — negatif margin ile karta yapışır
-                st.markdown("<div style='margin-top:-32px;padding:0 14px 10px;'>", unsafe_allow_html=True)
-                if st.button("🔄 Yeniden Analiz Et", key="btn_ai_yenile", use_container_width=True):
-                    _sb_metin = None
-                    st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
-
-    else:
-        st.markdown(
-            "<div class='alrt-y'>📊 Henüz yeterli veri yok.</div>",
-            unsafe_allow_html=True)
-
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
 
 # ============ FOOTER ============
