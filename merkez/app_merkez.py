@@ -161,14 +161,14 @@ button span[data-testid="stIconMaterial"] {
 .nk-red   { border-color: rgba(239,68,68,0.55) !important;  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(239,68,68,0.18) !important;  }
 .nk-gray  { border-color: rgba(180,190,205,0.20) !important; opacity: 0.75; }
 
-/* Maslak kartı — haritanın fonuyla aynı ton (CartoDB Voyager açık tema) */
+/* Maslak kartı — haritadaki gibi saydam: arka plan görseli hafifçe sızar */
 .nk-mapbg {
-    background: #e9eef0 !important;
+    background: rgba(233, 238, 240, 0.28) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
 .nk-mapbg * {
-    text-shadow: none !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
 }
 
 .nk::before {
@@ -240,7 +240,7 @@ button span[data-testid="stIconMaterial"] {
     box-shadow: none !important;
 }
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk-mapbg {
-    background: #e9eef0 !important;
+    background: rgba(233, 238, 240, 0.28) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
 }
