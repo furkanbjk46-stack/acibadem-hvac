@@ -1193,51 +1193,6 @@ setTimeout(function() {{ map.invalidateSize(true); }}, 300);
 
 var hospitals = {hjs};
 
-// ── SYNAPSE (Ataşehir) → Maslak: kıvrımlı sinir ağı hattı ──
-function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
-    var midLat = (p0[0] + p1[0]) / 2;
-    var midLon = (p0[1] + p1[1]) / 2;
-    var dLat = p1[0] - p0[0];
-    var dLon = p1[1] - p0[1];
-    var dist = Math.sqrt(dLat*dLat + dLon*dLon);
-    if (dist === 0) return [p0, p1];
-    var nLat = -dLon / dist;
-    var nLon =  dLat / dist;
-    var offset = dist * egimMiktari * egimYonu;
-    var ctrlLat = midLat + nLat * offset;
-    var ctrlLon = midLon + nLon * offset;
-    var pts = [];
-    var steps = 48;
-    for (var i = 0; i <= steps; i++) {{
-        var t = i / steps;
-        var lat = (1-t)*(1-t)*p0[0] + 2*(1-t)*t*ctrlLat + t*t*p1[0];
-        var lon = (1-t)*(1-t)*p0[1] + 2*(1-t)*t*ctrlLon + t*t*p1[1];
-        pts.push([lat, lon]);
-    }}
-    return pts;
-}}
-
-var HAT_RENGI = '#22d3ee';
-function hatCiz(pts) {{
-    L.polyline(pts, {{ color: HAT_RENGI, weight: 12, opacity: 0.10, interactive: false, smoothFactor: 2, lineCap: 'round' }}).addTo(map);
-    L.polyline(pts, {{ color: HAT_RENGI, weight: 6,  opacity: 0.22, interactive: false, smoothFactor: 2, lineCap: 'round' }}).addTo(map);
-    L.polyline(pts, {{ color: HAT_RENGI, weight: 2.4,opacity: 0.85, interactive: false, smoothFactor: 2, lineCap: 'round' }}).addTo(map);
-    L.polyline(pts, {{ color: '#ffffff', weight: 0.9,opacity: 0.95, interactive: false, smoothFactor: 2, lineCap: 'round' }}).addTo(map);
-}}
-
-var _hq = hospitals.find(function(h) {{ return h.hq; }});
-var _maslak = hospitals.find(function(h) {{ return h.id === 'maslak'; }});
-if (_hq && _maslak) {{
-    var _hatPts = egriNoktalari([_hq.lat, _hq.lon], [_maslak.lat, _maslak.lon], 1, 0.22);
-    hatCiz(_hatPts);
-}}
-
-var _fulya = hospitals.find(function(h) {{ return h.id === 'fulya'; }});
-if (_hq && _fulya) {{
-    var _hatPts2 = egriNoktalari([_hq.lat, _hq.lon], [_fulya.lat, _fulya.lon], -1, 0.22);
-    hatCiz(_hatPts2);
-}}
-
 hospitals.forEach(function(h) {{
     var s  = h.boyut;
     var c  = h.renk;
