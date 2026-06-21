@@ -1452,8 +1452,8 @@ with sag:
                     f"margin-top:4px;font-size:10px;color:{s_renk};'>{msg}</div>"
                 )
             uyari_html += (
-                f"<details style='background:{kart_bg};border:1px solid {kart_br};"
-                f"border-radius:8px;padding:6px 10px;margin-bottom:5px;cursor:pointer;'>"
+                f"<details class='nk' style='background:{kart_bg};border:1px solid {kart_br};"
+                f"padding:6px 10px;cursor:pointer;'>"
                 f"<summary style='list-style:none;display:flex;align-items:center;gap:6px;"
                 f"font-size:11px;font-weight:600;color:rgba(200,230,255,0.85);'>"
                 f"<span style='width:7px;height:7px;border-radius:50%;background:{dot_renk};"
@@ -1587,7 +1587,7 @@ with sag:
     _dis_hava_kart_var = dis_hava_val is not None or min_val is not None
     if _dis_hava_kart_var:
         _dis_hava_html = (
-            f"<div style='height:100%;'>"
+            f"<div class='nk' style='height:100%;'>"
             f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
             f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
             f"{_ch_ic}"
@@ -1600,7 +1600,7 @@ with sag:
     # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
     with _oto_sag:
         st.markdown(
-        f"<div style='height:100%;'>"
+        f"<div class='nk' style='height:100%;'>"
         # ── Satır 1: Başlık ──
         f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
         f"<div>"
@@ -1805,7 +1805,7 @@ with sag:
             )
 
         st.markdown(
-            f"<div style='padding:6px 0;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
+            f"<div class='nk'>"
             f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
             f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
             f"{_ez_satirlar}"
@@ -2114,9 +2114,9 @@ with sag:
 
                 # Kart dış çerçevesi — üst kısım
                 st.markdown(
-                    f"<div style='margin-top:6px;overflow:hidden;'>"
+                    f"<div class='nk' style='margin-top:6px;'>"
                     f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                    f"padding:6px 0;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
+                    f"padding-bottom:6px;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
                     f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
                     f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
                     f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>🕐 {_ai_zaman_str}</span>"
