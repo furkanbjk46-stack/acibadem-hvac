@@ -1128,6 +1128,7 @@ with merkez:
             "renk":  d_renk,
             "boyut": boyut,
             "online": bool(online),
+            "hq":    (lok_id == "atasehir"),
         })
 
     hjs = json.dumps(harita_js, ensure_ascii=False)
@@ -1190,6 +1191,23 @@ setTimeout(function() {{ map.invalidateSize(true); }}, 300);
 
 var hospitals = {hjs};
 
+// ── Genel Merkez (Ataşehir) → tüm lokasyonlara sinir agi hatlari ──
+var hq = hospitals.find(function(h) {{ return h.hq; }});
+if (hq) {{
+    hospitals.forEach(function(h) {{
+        if (h.hq) return;
+        var latlngs = [[hq.lat, hq.lon], [h.lat, h.lon]];
+        // Dış glow hattı (kalın, soluk)
+        L.polyline(latlngs, {{
+            color: h.renk, weight: 6, opacity: 0.12, interactive: false
+        }}).addTo(map);
+        // Ana hat
+        L.polyline(latlngs, {{
+            color: h.renk, weight: 1.6, opacity: 0.55, interactive: false, dashArray: '1,6'
+        }}).addTo(map);
+    }});
+}}
+
 hospitals.forEach(function(h) {{
     var s  = h.boyut;
     var c  = h.renk;
@@ -1229,8 +1247,8 @@ hospitals.forEach(function(h) {{
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+'</div>',
-            iconSize:[100,16], iconAnchor:[-hs-2, hs-2]
+            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+(h.hq?' <span style="color:#fbbf24;">★ GENEL MERKEZ</span>':'')+'</div>',
+            iconSize:[220,16], iconAnchor:[-hs-2, hs-2]
         }}),
         interactive:false, zIndexOffset:300
     }}).addTo(map);
