@@ -99,6 +99,7 @@ header[data-testid="stHeader"] button    { display: none !important; }
     width: 100% !important;
     height: 100% !important;
     border: none !important;
+    background: transparent !important;
 }
 [data-testid="column"]:nth-child(2) [data-testid="element-container"] {
     height: 100% !important;
@@ -1184,9 +1185,10 @@ with merkez:
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
-body {{ background:#e9eef0; }}
-#map {{ width:100%; height:100vh; background:#e9eef0; }}
-.leaflet-container {{ background:#e9eef0 !important; font-family:'Plus Jakarta Sans',sans-serif; }}
+html, body {{ background:transparent; }}
+#map {{ width:100%; height:100vh; background:transparent; }}
+.leaflet-container {{ background:transparent !important; font-family:'Plus Jakarta Sans',sans-serif; }}
+.leaflet-tile-pane {{ opacity: 0.82; }}
 .leaflet-popup-content-wrapper {{
     background:rgba(15, 23, 42, 0.85) !important;
     backdrop-filter: blur(12px) !important;
