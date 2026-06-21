@@ -1218,13 +1218,21 @@ function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
 }}
 
 function hatCiz(pts, renk) {{
-    // Dış glow hattı (kalın, soluk)
+    // En dış, en geniş ışık taşması
     L.polyline(pts, {{
-        color: renk, weight: 6, opacity: 0.10, interactive: false, smoothFactor: 2
+        color: renk, weight: 11, opacity: 0.07, interactive: false, smoothFactor: 2, lineCap: 'round'
     }}).addTo(map);
-    // Ana hat — organik, noktalı sinaptik akış
+    // Orta glow
     L.polyline(pts, {{
-        color: renk, weight: 1.6, opacity: 0.55, interactive: false, dashArray: '1,7', smoothFactor: 2
+        color: renk, weight: 5, opacity: 0.18, interactive: false, smoothFactor: 2, lineCap: 'round'
+    }}).addTo(map);
+    // Renkli ana hat — kesintisiz, akıcı
+    L.polyline(pts, {{
+        color: renk, weight: 2, opacity: 0.75, interactive: false, smoothFactor: 2, lineCap: 'round'
+    }}).addTo(map);
+    // Beyaz-parlak ince çekirdek (devre/fiber-optik parlaklığı)
+    L.polyline(pts, {{
+        color: '#e6fbff', weight: 0.8, opacity: 0.9, interactive: false, smoothFactor: 2, lineCap: 'round'
     }}).addTo(map);
 }}
 
