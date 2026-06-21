@@ -1072,6 +1072,86 @@ def hvac_yuzdesi(lok_id):
     return round(val, 1) if pd.notna(val) else None
 
 # ============================================================
+# LOKASYONLAR SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
+# ============================================================
+if st.session_state["vx_sayfa"] == "lokasyonlar":
+    st.markdown("""
+    <style>
+    .lok-buyuk-grid {
+        display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;
+        padding: 0 18px 24px 18px;
+    }
+    .lok-buyuk-grid .nk {
+        padding: 20px 16px !important; border-radius: 16px !important;
+        transition: transform 0.18s ease, background-color 0.18s ease !important;
+    }
+    .lok-buyuk-grid .nk:hover { transform: translateY(-6px) !important; background:#161e2e !important; }
+    .lok-buyuk-grid .lok-ikon { font-size:38px !important; }
+    .lok-buyuk-grid .lok-isim { font-size:14px !important; }
+    .lok-buyuk-grid .lok-kwh { font-size:22px !important; }
+    </style>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="sec">🏥 LOKASYONLAR</div>', unsafe_allow_html=True)
+
+    lok_sira = sorted(HASTANELER.items(), key=lambda x: (dun_kwh(x[0]) or 0), reverse=True)
+    _lok_html = '<div class="lok-buyuk-grid">'
+    for i, (lok_id, lok_info) in enumerate(lok_sira):
+        online, fark_dk = online_bilgi(lok_id)
+        kwh  = dun_kwh(lok_id)
+        renk = lok_info["renk"]
+        if fark_dk is None:
+            card_cls, durum_renk, durum_lbl = "nk nk-gray", "#6b7280", "KURULMADI"
+        elif online:
+            card_cls, durum_renk, durum_lbl = "nk nk-green", "#10b981", "ÇEVRİMİÇİ"
+        else:
+            card_cls, durum_renk, durum_lbl = "nk nk-red", "#ef4444", "ÇEVRİMDIŞI"
+        if lok_id == "maslak":
+            card_cls += " nk-mapbg"
+
+        kwh_str = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
+        onceki_kwh = onceki_gun_kwh(lok_id)
+        if kwh and onceki_kwh and onceki_kwh > 0:
+            _d = (kwh - onceki_kwh) / onceki_kwh * 100
+            if _d > 2:
+                degisim_html = f'<span style="font-size:11px;color:#ef4444;font-weight:700;">▲ {_d:.1f}%</span>'
+            elif _d < -2:
+                degisim_html = f'<span style="font-size:11px;color:#10b981;font-weight:700;">▼ {abs(_d):.1f}%</span>'
+            else:
+                degisim_html = f'<span style="font-size:11px;color:#6b7280;">≈ {_d:+.1f}%</span>'
+        else:
+            degisim_html = ""
+
+        rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
+        dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
+
+        _lok_html += (
+            f'<a class="{card_cls}" href="?detay={lok_id}" title="{lok_info["kisa"]} detayına git" '
+            f'style="position:relative;text-align:center;">'
+            f'<div style="display:flex;flex-direction:column;align-items:center;gap:6px;">'
+            f'<div style="position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;">'
+            f'<div style="position:absolute;top:-6px;left:-6px;right:-6px;bottom:-6px;border-radius:50%;'
+            f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.25) 0%,rgba({rr},{rg},{rb},0.05) 55%,transparent 75%);'
+            f'animation:breathe-ring 3s ease-in-out infinite;"></div>'
+            f'<div class="lok-ikon" style="line-height:1;position:relative;z-index:1;'
+            f'filter:drop-shadow(0 0 10px rgba({rr},{rg},{rb},0.8));">🏥</div>'
+            f'<div style="position:absolute;top:0;right:0;z-index:2;width:12px;height:12px;'
+            f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020617;'
+            f'box-shadow:0 0 6px rgba({dr},{dg},{db},0.9);"></div>'
+            f'</div>'
+            f'<div class="lok-isim" style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-weight:700;'
+            f'color:{renk};letter-spacing:0.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);">{lok_info["kisa"]}</div>'
+            f'<div style="font-size:10px;color:{durum_renk};font-weight:600;">{durum_lbl}</div>'
+            f'<div class="lok-kwh" style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-weight:900;'
+            f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</div>'
+            f'<div style="font-size:10px;color:rgba(150,210,255,0.5);">kWh {degisim_html}</div>'
+            f'<div class="lok-pin">📍 {LOK_SEHIR.get(lok_id, "—")}</div>'
+            f'</div></a>'
+        )
+    _lok_html += '</div>'
+    st.markdown(_lok_html, unsafe_allow_html=True)
+    st.stop()
+
+# ============================================================
 # ÜST SIRA: Karşılama kartı + renkli KPI kartları (Votrex tarzı)
 # ============================================================
 _toplam_enerji_kwh = 0
@@ -1195,92 +1275,6 @@ sol, sag = st.columns([2, 1.2], gap="medium")
 with sol:
     st.markdown('<div id="syn-sol-panel"></div>', unsafe_allow_html=True)
 
-    if st.session_state["vx_sayfa"] == "lokasyonlar":
-      # ── Lokasyon Durumu ──
-      st.markdown('<div class="sec">📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
-
-      # Tümünü tüketime göre sırala (veri olanlar önce, olmayanlar sona)
-      lok_sira = sorted(
-        HASTANELER.items(),
-        key=lambda x: (dun_kwh(x[0]) or 0),
-        reverse=True
-      )
-
-      # Tüm kartları tek HTML bloğu olarak oluştur → scrollable div içine sar
-      tum_kartlar = '<div class="lok-scroll">'
-
-      for i, (lok_id, lok_info) in enumerate(lok_sira):
-          online, fark_dk = online_bilgi(lok_id)
-          kwh      = dun_kwh(lok_id)
-          renk     = lok_info["renk"]
-          if fark_dk is None:
-              card_cls   = "nk nk-gray"
-              durum_renk = "#6b7280"
-              durum_lbl  = "KURULMADI"
-          elif online:
-              card_cls   = "nk nk-green"
-              durum_renk = "#10b981"
-              durum_lbl  = "ÇEVRİMİÇİ"
-          else:
-              card_cls   = "nk nk-red"
-              durum_renk = "#ef4444"
-              durum_lbl  = "ÇEVRİMDIŞI"
-
-          if lok_id == "maslak":
-              card_cls += " nk-mapbg"
-
-
-          kwh_str   = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
-          m2_lok    = lok_info.get("m2", 10000)
-          verim_str = f"{kwh/m2_lok:.2f}".replace(".", ",") if kwh else "—"
-          sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;color:rgba(150,210,255,0.35);font-weight:700;">#{i+1}</span>' if i < 4 else ""
-
-          # % değişim hesapla (dün vs önceki gün)
-          onceki_kwh = onceki_gun_kwh(lok_id)
-          if kwh and onceki_kwh and onceki_kwh > 0:
-              degisim_pct = (kwh - onceki_kwh) / onceki_kwh * 100
-              if degisim_pct > 2:
-                  degisim_html = f'<span style="font-size:9px;color:#ef4444;font-weight:700;">▲ {degisim_pct:.1f}%</span>'
-              elif degisim_pct < -2:
-                  degisim_html = f'<span style="font-size:9px;color:#10b981;font-weight:700;">▼ {abs(degisim_pct):.1f}%</span>'
-              else:
-                  degisim_html = f'<span style="font-size:9px;color:#6b7280;">≈ {degisim_pct:+.1f}%</span>'
-          else:
-              degisim_html = ""
-
-
-          rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
-          dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
-
-          tum_kartlar += (
-              f'<a class="{card_cls}" href="?detay={lok_id}" title="{lok_info["kisa"]} detayına git" '
-              f'style="padding:8px 4px;position:relative;text-align:center;">'
-              + sira_badge +
-              f'<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">'
-              f'<div style="position:relative;width:34px;height:34px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
-              f'<div style="position:absolute;top:-4px;left:-4px;right:-4px;bottom:-4px;border-radius:50%;'
-              f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.22) 0%,rgba({rr},{rg},{rb},0.05) 55%,transparent 75%);'
-              f'animation:breathe-ring 3s ease-in-out infinite;"></div>'
-              f'<div style="font-size:20px;line-height:1;position:relative;z-index:1;'
-              f'filter:drop-shadow(0 0 8px rgba({rr},{rg},{rb},0.8));">🏥</div>'
-              f'<div style="position:absolute;top:0px;right:0px;z-index:2;width:8px;height:8px;'
-              f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020617;'
-              f'box-shadow:0 0 5px rgba({dr},{dg},{db},0.9);"></div>'
-              f'</div>'
-              f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:9px;font-weight:700;'
-              f'color:{renk};letter-spacing:0.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);'
-              f'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">{lok_info["kisa"]}</div>'
-              f'<div style="font-size:7px;color:{durum_renk};font-weight:600;">{durum_lbl}</div>'
-              f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:13px;font-weight:900;'
-              f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</div>'
-              f'<div style="font-size:7px;color:rgba(150,210,255,0.5);">kWh {degisim_html}</div>'
-              f'<div class="lok-pin">📍 {LOK_SEHIR.get(lok_id, "—")}</div>'
-              f'</div></a>'
-          )
-
-      tum_kartlar += '</div>'
-      st.markdown(tum_kartlar, unsafe_allow_html=True)
-      st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
     # ── Global Özet (Aylık + Trend) ──
     _ay_tr = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
