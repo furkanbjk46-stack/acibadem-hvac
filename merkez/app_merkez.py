@@ -136,6 +136,8 @@ button span[data-testid="stIconMaterial"] {
     border-radius: 14px !important;
     padding: 14px !important;
     box-shadow: 0 8px 28px 0 rgba(0,0,0,0.35) !important;
+    max-height: calc(100vh - 175px) !important;
+    overflow-y: auto !important;
 }
 /* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet */
 [data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk {
@@ -153,6 +155,8 @@ button span[data-testid="stIconMaterial"] {
     border-radius: 14px !important;
     padding: 14px !important;
     box-shadow: 0 8px 28px 0 rgba(0,0,0,0.35) !important;
+    max-height: calc(100vh - 175px) !important;
+    overflow-y: auto !important;
 }
 
 .alrt-r { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35);
