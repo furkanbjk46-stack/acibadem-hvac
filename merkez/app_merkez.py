@@ -150,6 +150,12 @@ button span[data-testid="stIconMaterial"] {
     align-content: start;
 }
 .lok-scroll .nk { margin-bottom: 0 !important; }
+
+.ozet-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
 .lok-scroll::-webkit-scrollbar { width: 4px; }
 .lok-scroll::-webkit-scrollbar-track { background: rgba(15,23,42,0.6); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb { background: rgba(56, 189, 248,0.28); border-radius: 2px; }
@@ -1059,6 +1065,7 @@ with sol:
             ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh"),
         ]
 
+        _ozet_kartlar = '<div class="ozet-grid">'
         for _lbl, _col, _birim in _metrikler:
             if _col is None:  # Doğalgaz: kazan + kojen toplamı
                 _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
@@ -1080,8 +1087,8 @@ with sol:
                 + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
             ) if _trend_parts else ""
 
-            st.markdown(f"""
-            <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
+            _ozet_kartlar += f"""
+            <div style="padding:7px 10px; background:rgba(0,20,50,0.6);
                         border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);">
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}</span>
@@ -1090,7 +1097,9 @@ with sol:
               </div>
               {_trend_html}
             </div>
-            """, unsafe_allow_html=True)
+            """
+        _ozet_kartlar += '</div>'
+        st.markdown(_ozet_kartlar, unsafe_allow_html=True)
 
 # ════════════════════════════════
 # MERKEZ KOLON — TÜRKİYE HARİTASI
