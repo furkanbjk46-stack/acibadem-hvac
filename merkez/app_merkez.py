@@ -1215,24 +1215,77 @@ function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
     return pts;
 }}
 
-var hq = hospitals.find(function(h) {{ return h.hq; }});
-if (hq) {{
-    var _egriIdx = 0;
-    hospitals.forEach(function(h) {{
-        if (h.hq) return;
-        _egriIdx++;
-        var yon = (_egriIdx % 2 === 0) ? 1 : -1;
-        var miktar = 0.18 + (_egriIdx % 3) * 0.07;
-        var egriPts = egriNoktalari([hq.lat, hq.lon], [h.lat, h.lon], yon, miktar);
-        // Dış glow hattı (kalın, soluk)
-        L.polyline(egriPts, {{
-            color: h.renk, weight: 6, opacity: 0.10, interactive: false, smoothFactor: 2
+// Akson lifi demeti — tek değil 3 ince kıvrımlı lif, dokusu sinir hücresi gibi
+function aksonDemetiCiz(p0, p1, renk, tohum) {{
+    var lifSayisi = 3;
+    for (var k = 0; k < lifSayisi; k++) {{
+        var yon = (k % 2 === 0) ? 1 : -1;
+        var miktar = 0.10 + ((tohum + k * 7) % 5) * 0.045;
+        var pts = egriNoktalari(p0, p1, yon, miktar);
+        var agirlik = (k === 0) ? 1.4 : 0.7;
+        var saydamlik = (k === 0) ? 0.5 : 0.22;
+        L.polyline(pts, {{
+            color: renk, weight: agirlik, opacity: saydamlik, interactive: false,
+            smoothFactor: 2, dashArray: (k === 0) ? null : '1,9'
         }}).addTo(map);
-        // Ana hat — organik, noktalı sinaptik akış
-        L.polyline(egriPts, {{
-            color: h.renk, weight: 1.6, opacity: 0.55, interactive: false, dashArray: '1,7', smoothFactor: 2
+    }}
+    return egriNoktalari(p0, p1, 1, 0.10 + (tohum % 5) * 0.045);
+}}
+
+// Dendrit — düğümden dışa açılan kısa kıvrımlı uzantılar (nöron dokusu)
+function dendritCiz(lat, lon, renk, tohum) {{
+    var sayi = 5;
+    for (var i = 0; i < sayi; i++) {{
+        var aci = (i / sayi) * 2 * Math.PI + tohum * 0.7;
+        var uzunluk = 0.045 + ((tohum + i) % 3) * 0.02;
+        var ucLat = lat + Math.sin(aci) * uzunluk;
+        var ucLon = lon + Math.cos(aci) * uzunluk;
+        var ctrlLat = lat + Math.sin(aci + 0.5) * uzunluk * 0.55;
+        var ctrlLon = lon + Math.cos(aci + 0.5) * uzunluk * 0.55;
+        var pts = [];
+        var steps = 14;
+        for (var s = 0; s <= steps; s++) {{
+            var t = s / steps;
+            pts.push([
+                (1-t)*(1-t)*lat + 2*(1-t)*t*ctrlLat + t*t*ucLat,
+                (1-t)*(1-t)*lon + 2*(1-t)*t*ctrlLon + t*t*ucLon
+            ]);
+        }}
+        L.polyline(pts, {{
+            color: renk, weight: 1, opacity: 0.30, interactive: false, smoothFactor: 2
+        }}).addTo(map);
+    }}
+}}
+
+// Sinaptik nabız noktaları — akson hattı üzerinde ışıldayan duraklar
+function nabizNoktalariCiz(pts, renk) {{
+    [0.28, 0.52, 0.76].forEach(function(t) {{
+        var idx = Math.round(t * (pts.length - 1));
+        var p = pts[idx];
+        L.marker(p, {{
+            icon: L.divIcon({{
+                className: '',
+                html: '<div style="width:6px;height:6px;background:'+renk+';border-radius:50%;'
+                    + 'box-shadow:0 0 6px '+renk+',0 0 2px rgba(255,255,255,0.6);'
+                    + 'animation:breathe-inner 2.4s ease-in-out infinite;"></div>',
+                iconSize: [6, 6], iconAnchor: [3, 3]
+            }}),
+            interactive: false, zIndexOffset: -50
         }}).addTo(map);
     }});
+}}
+
+var hq = hospitals.find(function(h) {{ return h.hq; }});
+if (hq) {{
+    var _tohum = 0;
+    hospitals.forEach(function(h) {{
+        if (h.hq) return;
+        _tohum++;
+        var anaHat = aksonDemetiCiz([hq.lat, hq.lon], [h.lat, h.lon], h.renk, _tohum);
+        nabizNoktalariCiz(anaHat, h.renk);
+        dendritCiz(h.lat, h.lon, h.renk, _tohum);
+    }});
+    dendritCiz(hq.lat, hq.lon, hq.renk, 0);
 }}
 
 hospitals.forEach(function(h) {{
