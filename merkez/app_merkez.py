@@ -1232,7 +1232,7 @@ if (_hq && _maslak) {{
     hatCiz(_hatPts);
 }}
 
-// ── Kırık/zikzak çapraz ağ: Fulya & Taksim ↔ Altunizade & Kadıköy ──
+// ── Kırık/zikzak hat: tek bir kink noktasından geçen 2 parçalı hat ──
 function zikzakYol(p0, p1, kinkT, kinkOfset) {{
     var kink = [
         p0[0] + (p1[0]-p0[0]) * kinkT,
@@ -1245,27 +1245,24 @@ function zikzakYol(p0, p1, kinkT, kinkOfset) {{
     kink[1] += nLon * kinkOfset;
     return [p0, kink, p1];
 }}
-function kirikHatCiz(pts) {{
-    L.polyline(pts, {{ color: '#ef4444', weight: 5, opacity: 0.12, interactive: false, lineJoin: 'round' }}).addTo(map);
-    L.polyline(pts, {{ color: '#ef4444', weight: 1.4, opacity: 0.75, interactive: false, lineJoin: 'round' }}).addTo(map);
-}}
 
+// Fulya, Taksim, Altunizade, Kadıköy — hepsi ortak bir kavşak noktasında buluşur (resimdeki gibi)
 var _fulya      = hospitals.find(function(h) {{ return h.id === 'fulya'; }});
 var _taksim     = hospitals.find(function(h) {{ return h.id === 'taksim'; }});
 var _altunizade = hospitals.find(function(h) {{ return h.id === 'altunizade'; }});
 var _kadikoy    = hospitals.find(function(h) {{ return h.id === 'kadikoy'; }});
-var _capraz = [
-    [_fulya, _altunizade, 0.55, -0.012],
-    [_fulya, _kadikoy,    0.45,  0.014],
-    [_taksim, _altunizade,0.5,   0.016],
-    [_taksim, _kadikoy,   0.6,  -0.010]
-];
-_capraz.forEach(function(c) {{
-    var a = c[0], b = c[1];
-    if (!a || !b) return;
-    var pts = zikzakYol([a.lat, a.lon], [b.lat, b.lon], c[2], c[3]);
-    kirikHatCiz(pts);
-}});
+if (_hq && _altunizade) {{
+    var _kavsak = [
+        _altunizade.lat + 0.65 * (_hq.lat - _altunizade.lat),
+        _altunizade.lon + 0.65 * (_hq.lon - _altunizade.lon)
+    ];
+    [[_fulya, 0.5, -0.01], [_taksim, 0.5, 0.012], [_altunizade, 0.5, 0.008], [_kadikoy, 0.5, -0.008]].forEach(function(c) {{
+        var a = c[0];
+        if (!a) return;
+        var pts = zikzakYol([a.lat, a.lon], _kavsak, c[1], c[2]);
+        hatCiz(pts);
+    }});
+}}
 
 hospitals.forEach(function(h) {{
     var s  = h.boyut;
