@@ -206,16 +206,13 @@ button span[data-testid="stIconMaterial"] {
     box-shadow: none !important;
 }
 
-/* Sağ kolon (Canlı Uyarılar + Oto Set + Dış Hava + Enerji Zekası + Otomatik Analiz) tek cam kart */
+/* Sağ kolon (Canlı Uyarılar + Oto Set + Dış Hava + Enerji Zekası + Otomatik Analiz) — kart/cam kapsayıcı kaldırıldı */
 [data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sag-panel),
 [data-testid="stVerticalBlock"]:has(#syn-sag-panel) {
-    background: rgba(15, 23, 42, 0.45) !important;
-    backdrop-filter: blur(14px) !important;
-    -webkit-backdrop-filter: blur(14px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    border-radius: 14px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
     padding: 14px !important;
-    box-shadow: 0 8px 28px 0 rgba(0,0,0,0.35) !important;
     height: 100% !important;
     max-height: 100% !important;
     overflow-y: auto !important;
