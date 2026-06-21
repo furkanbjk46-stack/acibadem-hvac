@@ -1191,19 +1191,46 @@ setTimeout(function() {{ map.invalidateSize(true); }}, 300);
 
 var hospitals = {hjs};
 
-// ── Genel Merkez (Ataşehir) → tüm lokasyonlara sinir agi hatlari ──
+// ── Genel Merkez (Ataşehir) → tüm lokasyonlara organik (kıvrımlı) sinir agi hatlari ──
+function egriNoktalari(p0, p1, egimYonu, egimMiktari) {{
+    var midLat = (p0[0] + p1[0]) / 2;
+    var midLon = (p0[1] + p1[1]) / 2;
+    var dLat = p1[0] - p0[0];
+    var dLon = p1[1] - p0[1];
+    var dist = Math.sqrt(dLat*dLat + dLon*dLon);
+    if (dist === 0) return [p0, p1];
+    var nLat = -dLon / dist;
+    var nLon =  dLat / dist;
+    var offset = dist * egimMiktari * egimYonu;
+    var ctrlLat = midLat + nLat * offset;
+    var ctrlLon = midLon + nLon * offset;
+    var pts = [];
+    var steps = 48;
+    for (var i = 0; i <= steps; i++) {{
+        var t = i / steps;
+        var lat = (1-t)*(1-t)*p0[0] + 2*(1-t)*t*ctrlLat + t*t*p1[0];
+        var lon = (1-t)*(1-t)*p0[1] + 2*(1-t)*t*ctrlLon + t*t*p1[1];
+        pts.push([lat, lon]);
+    }}
+    return pts;
+}}
+
 var hq = hospitals.find(function(h) {{ return h.hq; }});
 if (hq) {{
+    var _egriIdx = 0;
     hospitals.forEach(function(h) {{
         if (h.hq) return;
-        var latlngs = [[hq.lat, hq.lon], [h.lat, h.lon]];
+        _egriIdx++;
+        var yon = (_egriIdx % 2 === 0) ? 1 : -1;
+        var miktar = 0.18 + (_egriIdx % 3) * 0.07;
+        var egriPts = egriNoktalari([hq.lat, hq.lon], [h.lat, h.lon], yon, miktar);
         // Dış glow hattı (kalın, soluk)
-        L.polyline(latlngs, {{
-            color: h.renk, weight: 6, opacity: 0.12, interactive: false
+        L.polyline(egriPts, {{
+            color: h.renk, weight: 6, opacity: 0.10, interactive: false, smoothFactor: 2
         }}).addTo(map);
-        // Ana hat
-        L.polyline(latlngs, {{
-            color: h.renk, weight: 1.6, opacity: 0.55, interactive: false, dashArray: '1,6'
+        // Ana hat — organik, noktalı sinaptik akış
+        L.polyline(egriPts, {{
+            color: h.renk, weight: 1.6, opacity: 0.55, interactive: false, dashArray: '1,7', smoothFactor: 2
         }}).addTo(map);
     }});
 }}
