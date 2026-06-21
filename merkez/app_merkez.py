@@ -138,38 +138,31 @@ button span[data-testid="stIconMaterial"] {
 ::-webkit-scrollbar-track { background: #0f172a; }
 ::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
 
-/* Tüm lokasyon kartları — cam tasarım: okunaklı blur + dalga highlight */
+/* Tüm lokasyon kartları — haritadaki gibi saydam: arka plan görseli hafifçe sızar */
 .nk {
     position: relative;
-    background: rgba(8, 14, 26, 0.72);
-    backdrop-filter: blur(14px) saturate(140%);
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    background: rgba(233, 238, 240, 0.28);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     border: 1px solid rgba(255, 255, 255, 0.20);
     border-radius: 14px;
     padding: 8px;
     margin-bottom: 8px;
     box-shadow:
         inset 0 1px 0 0 rgba(255,255,255,0.25),
-        inset 0 -10px 16px -12px rgba(0,0,0,0.4),
-        0 4px 14px rgba(0,0,0,0.35);
+        inset 0 -10px 16px -12px rgba(0,0,0,0.12),
+        0 4px 14px rgba(0,0,0,0.10);
     overflow: hidden;
 }
 .nk * {
-    text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 1px rgba(0,0,0,0.6) !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
 }
 .nk-green { border-color: rgba(16,185,129,0.55) !important; box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(16,185,129,0.18) !important; }
 .nk-red   { border-color: rgba(239,68,68,0.55) !important;  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(239,68,68,0.18) !important;  }
 .nk-gray  { border-color: rgba(180,190,205,0.20) !important; opacity: 0.75; }
 
-/* Maslak kartı — haritadaki gibi saydam: arka plan görseli hafifçe sızar */
-.nk-mapbg {
-    background: rgba(233, 238, 240, 0.28) !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
-.nk-mapbg * {
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
-}
+/* Maslak kartı için ayrıca eklenmiş özel sınıf — artık tüm kartlar zaten aynı tasarımda */
+.nk-mapbg {}
 
 .nk::before {
     content: "";
@@ -232,14 +225,7 @@ button span[data-testid="stIconMaterial"] {
     overflow-y: auto !important;
     box-sizing: border-box !important;
 }
-/* Tek kart içinde tekrar eden iç kutu görünümünü hafiflet — cam üstünde ince cam (Maslak/nk-mapbg hariç) */
-[data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk:not(.nk-mapbg) {
-    background: rgba(255,255,255,0.04) !important;
-    border: 1px solid rgba(255,255,255,0.08) !important;
-    backdrop-filter: blur(6px) !important;
-    box-shadow: none !important;
-}
-[data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk-mapbg {
+[data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk {
     background: rgba(233, 238, 240, 0.28) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
