@@ -179,8 +179,8 @@ button span[data-testid="stIconMaterial"] {
     border-radius: 14px !important;
     padding: 14px !important;
     box-shadow: 0 8px 28px 0 rgba(0,0,0,0.35) !important;
-    height: 90% !important;
-    max-height: 90% !important;
+    height: 100% !important;
+    max-height: 100% !important;
     overflow-y: auto !important;
     box-sizing: border-box !important;
 }
@@ -200,8 +200,8 @@ button span[data-testid="stIconMaterial"] {
     border-radius: 14px !important;
     padding: 14px !important;
     box-shadow: 0 8px 28px 0 rgba(0,0,0,0.35) !important;
-    height: 90% !important;
-    max-height: 90% !important;
+    height: 100% !important;
+    max-height: 100% !important;
     overflow-y: auto !important;
     box-sizing: border-box !important;
 }
