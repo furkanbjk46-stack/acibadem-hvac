@@ -138,52 +138,29 @@ button span[data-testid="stIconMaterial"] {
 ::-webkit-scrollbar-track { background: #0f172a; }
 ::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
 
-/* Tüm lokasyon kartları — haritadaki gibi saydam: arka plan görseli hafifçe sızar */
+/* Flat dashboard kartı — opak, sol kenar şeritli, her zaman okunaklı (arka plan görseline bağımsız) */
 .nk {
     position: relative;
-    background: rgba(233, 238, 240, 0.28);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border: 1px solid rgba(255, 255, 255, 0.20);
-    border-radius: 14px;
-    padding: 8px;
+    background: #111827;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left: 4px solid rgba(150,160,175,0.5);
+    border-radius: 10px;
+    padding: 10px;
     margin-bottom: 8px;
-    box-shadow:
-        inset 0 1px 0 0 rgba(255,255,255,0.25),
-        inset 0 -10px 16px -12px rgba(0,0,0,0.12),
-        0 4px 14px rgba(0,0,0,0.10);
-    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.35);
 }
-.nk * {
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
-}
-.nk-green { border-color: rgba(16,185,129,0.55) !important; box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(16,185,129,0.18) !important; }
-.nk-red   { border-color: rgba(239,68,68,0.55) !important;  box-shadow: inset 0 1px 0 0 rgba(255,255,255,0.25), 0 0 15px rgba(239,68,68,0.18) !important;  }
-.nk-gray  { border-color: rgba(180,190,205,0.20) !important; opacity: 0.75; }
-
-/* Maslak kartı için ayrıca eklenmiş özel sınıf — artık tüm kartlar zaten aynı tasarımda */
+.nk-green { border-left-color: #10b981 !important; }
+.nk-red   { border-left-color: #ef4444 !important; }
+.nk-gray  { border-left-color: rgba(150,160,175,0.35) !important; opacity: 0.7; }
 .nk-mapbg {}
 
-.nk::before {
-    content: "";
-    position: absolute;
-    left: -20%;
-    right: -20%;
-    top: 28%;
-    height: 22%;
-    background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.16) 45%, rgba(255,255,255,0) 100%);
-    transform: rotate(-3deg);
-    pointer-events: none;
-    z-index: 0;
-}
-.nk > * { position: relative; z-index: 1; }
 .nk {
     display: block !important;
     text-decoration: none !important;
     cursor: pointer;
-    transition: border-color 0.2s, transform 0.15s;
+    transition: background-color 0.2s, transform 0.15s;
 }
-.nk:hover { transform: translateY(-2px); border-color: rgba(56, 189, 248,0.6) !important; }
+.nk:hover { transform: translateX(2px); background: #161e2e !important; }
 
 .lok-scroll {
     max-height: 492px;
@@ -225,12 +202,6 @@ button span[data-testid="stIconMaterial"] {
     overflow-y: auto !important;
     box-sizing: border-box !important;
 }
-[data-testid="stVerticalBlock"]:has(#syn-sol-panel) .nk {
-    background: rgba(233, 238, 240, 0.28) !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-}
-
 /* Sağ kolon (Canlı Uyarılar + Oto Set + Dış Hava + Enerji Zekası + Otomatik Analiz) — kart/cam kapsayıcı kaldırıldı */
 [data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sag-panel),
 [data-testid="stVerticalBlock"]:has(#syn-sag-panel) {
