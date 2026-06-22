@@ -126,6 +126,12 @@ header[data-testid="stHeader"] button    { display: none !important; }
     color: #38bdf8 !important;
     font-weight: 700 !important;
 }
+[data-testid="stSidebar"] button:disabled {
+    color: #64748b !important;
+    opacity: 1 !important;
+    cursor: default !important;
+}
+[data-testid="stSidebar"] button p { text-align: left !important; white-space: nowrap !important; }
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0 !important; }
 .vx-nav-dot { width:5px; height:5px; border-radius:50%; background:#10b981; margin-left:auto; }
 .vx-help-card {
@@ -391,10 +397,12 @@ st.markdown(_css_block.replace("__BG_CSS__", _bg_css), unsafe_allow_html=True)
 if "vx_sayfa" not in st.session_state:
     st.session_state["vx_sayfa"] = "genel"
 
-def _vx_nav_btn(label, icon, sayfa_key, nav_key):
-    _aktif = st.session_state["vx_sayfa"] == sayfa_key
-    _lbl = f"{icon}  {label}" + ("    🔵" if _aktif else "")
-    if st.button(_lbl, key=nav_key, use_container_width=True, type=("primary" if _aktif else "secondary")):
+def _vx_nav_btn(label, icon, sayfa_key=None, nav_key=None):
+    _aktif = sayfa_key is not None and st.session_state["vx_sayfa"] == sayfa_key
+    _lbl = f"{icon}  {label}"
+    _tip = "primary" if _aktif else "secondary"
+    _disabled = sayfa_key is None
+    if st.button(_lbl, key=nav_key, use_container_width=True, type=_tip, disabled=_disabled):
         st.session_state["vx_sayfa"] = sayfa_key
         st.rerun()
 
@@ -408,20 +416,13 @@ with st.sidebar:
     _vx_nav_btn("Enerji Analizi", "⚡", "enerji_analizi", "nav_enerji")
 
     st.markdown('<div class="vx-section-label">Otomasyon</div>', unsafe_allow_html=True)
-    _vx_nav_btn("Otomasyon Senaryoları", "🤖", "oto_set", "nav_oto_set")
+    _vx_nav_btn("Otomasyon", "🤖", "oto_set", "nav_oto_set")
     _vx_nav_btn("AI Asistan", "🧠", "ai_asistan", "nav_ai_asistan")
-    st.markdown('<div class="vx-nav-item">🔧 &nbsp;Bakım / Arıza</div>', unsafe_allow_html=True)
+    _vx_nav_btn("Bakım / Arıza", "🔧", nav_key="nav_bakim")
 
     st.markdown('<div class="vx-section-label">Sistem</div>', unsafe_allow_html=True)
     _vx_nav_btn("Ayarlar", "⚙️", "ayarlar", "nav_ayarlar")
-    st.markdown('<div class="vx-nav-item">📜 &nbsp;Kayıtlar</div>', unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="vx-help-card">
-        <span class="vx-help-ic">❓</span>
-        <span>Help &amp; Support</span>
-    </div>
-    """, unsafe_allow_html=True)
+    _vx_nav_btn("Kayıtlar", "📜", nav_key="nav_kayitlar")
 
 # ============ SABİT VERİ ============
 HASTANELER = {
