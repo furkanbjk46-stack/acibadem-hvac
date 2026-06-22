@@ -73,8 +73,16 @@ header[data-testid="stHeader"] button    { display: none !important; }
     border-right: 1px solid rgba(255,255,255,0.06) !important;
     width: 230px !important;
     min-width: 230px !important;
+    position: relative !important;
+    z-index: 999 !important;
+    overflow: visible !important;
 }
 [data-testid="stSidebar"] > div { padding-top: 14px !important; }
+[data-testid="stAppViewContainer"] { overflow-x: hidden !important; }
+[data-testid="stMain"], .block-container, [data-testid="stMainBlockContainer"] {
+    position: relative !important;
+    z-index: 1 !important;
+}
 .vx-logo {
     display:flex; align-items:center; gap:8px; padding:0 18px 16px 18px;
     font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:18px; font-weight:800; color:#f8fafc;
