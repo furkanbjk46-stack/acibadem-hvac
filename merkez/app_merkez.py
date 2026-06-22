@@ -132,6 +132,19 @@ header[data-testid="stHeader"] button    { display: none !important; }
     cursor: default !important;
 }
 [data-testid="stSidebar"] button p { text-align: left !important; white-space: nowrap !important; }
+[data-testid="stSidebar"] [data-testid="stButton"] { background: transparent !important; box-shadow: none !important; border: none !important; }
+[data-testid="stSidebar"] button,
+[data-testid="stSidebar"] button:focus,
+[data-testid="stSidebar"] button:focus-visible,
+[data-testid="stSidebar"] button:active {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+[data-testid="stSidebar"] button[kind="primary"]:focus,
+[data-testid="stSidebar"] button[kind="primary"]:active {
+    background: rgba(56,189,248,0.10) !important;
+}
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0 !important; }
 .vx-nav-dot { width:5px; height:5px; border-radius:50%; background:#10b981; margin-left:auto; }
 .vx-help-card {
