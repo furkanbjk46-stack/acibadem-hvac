@@ -385,7 +385,7 @@ with st.sidebar:
         st.rerun()
 
     st.markdown('<div class="vx-section-label">Otomasyon</div>', unsafe_allow_html=True)
-    if st.button("🤖 Oto Set", key="nav_oto_set", use_container_width=True):
+    if st.button("🤖 Otomasyon Senaryoları", key="nav_oto_set", use_container_width=True):
         st.session_state["vx_sayfa"] = "oto_set"
         st.rerun()
 
@@ -1276,7 +1276,7 @@ if st.session_state["vx_sayfa"] == "oto_set":
     }
     </style>
     """, unsafe_allow_html=True)
-    st.markdown('<div class="sec">🤖 OTO SET</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec">🤖 OTOMASYON SENARYOLARI</div>', unsafe_allow_html=True)
     # ── OTO SET — Birleşik Kart (toggle + durum + geçmiş) ──
     st.markdown("""<style>
     .switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;}
