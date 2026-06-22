@@ -2114,229 +2114,228 @@ if st.session_state["vx_sayfa"] == "ayarlar":
     </style>
     """, unsafe_allow_html=True)
     # ============ AYARLAR ============
-    with st.expander("⚙️  Ayarlar", expanded=False):
-        st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
 
-        ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder", "🎛️ Uzaktan Kontrol"])
+    ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder", "🎛️ Uzaktan Kontrol"])
 
-        # ── Bağlantı ──
-        with ayar_tab1:
-            st.markdown("**Supabase Bağlantısı**")
-            mevcut_url = config.get("supabase_url", "")
-            mevcut_key = config.get("supabase_key", "")
-            yeni_url = st.text_input("Supabase URL", value=mevcut_url, key="ayar_url")
-            yeni_key = st.text_input("Supabase Anon Key", value=mevcut_key, key="ayar_key", type="password")
-            if st.button("💾 Bağlantıyı Kaydet", key="btn_baglanti"):
-                import json as _json
-                os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
-                cfg_yeni = config.copy()
-                cfg_yeni["supabase_url"] = yeni_url.strip()
-                cfg_yeni["supabase_key"] = yeni_key.strip()
-                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                    _json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
-                st.success("✅ Bağlantı bilgileri kaydedildi. Sayfayı yenileyin.")
+    # ── Bağlantı ──
+    with ayar_tab1:
+        st.markdown("**Supabase Bağlantısı**")
+        mevcut_url = config.get("supabase_url", "")
+        mevcut_key = config.get("supabase_key", "")
+        yeni_url = st.text_input("Supabase URL", value=mevcut_url, key="ayar_url")
+        yeni_key = st.text_input("Supabase Anon Key", value=mevcut_key, key="ayar_key", type="password")
+        if st.button("💾 Bağlantıyı Kaydet", key="btn_baglanti"):
+            import json as _json
+            os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+            cfg_yeni = config.copy()
+            cfg_yeni["supabase_url"] = yeni_url.strip()
+            cfg_yeni["supabase_key"] = yeni_key.strip()
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                _json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
+            st.success("✅ Bağlantı bilgileri kaydedildi. Sayfayı yenileyin.")
 
-        # ── Güncellemeler ──
-        with ayar_tab2:
-            st.markdown("**Son Güncellemeler**")
-            gunc = fetch_guncellemeler(url, key)
-            durum_renk_map = {"tamamlandi": "#10b981", "bekliyor": "#f59e0b", "iptal": "#6b7280", "hata": "#ef4444"}
-            durum_icon_map = {"tamamlandi": "✅", "bekliyor": "⏳", "iptal": "❌", "hata": "🚨"}
-            if not gunc:
-                st.info("Henüz güncelleme kaydı yok.")
-            for r in gunc:
-                dr = durum_renk_map.get(r["durum"], "#aaa")
-                di = durum_icon_map.get(r["durum"], "?")
-                tarih = r["created_at"][:16].replace("T", " ")
+    # ── Güncellemeler ──
+    with ayar_tab2:
+        st.markdown("**Son Güncellemeler**")
+        gunc = fetch_guncellemeler(url, key)
+        durum_renk_map = {"tamamlandi": "#10b981", "bekliyor": "#f59e0b", "iptal": "#6b7280", "hata": "#ef4444"}
+        durum_icon_map = {"tamamlandi": "✅", "bekliyor": "⏳", "iptal": "❌", "hata": "🚨"}
+        if not gunc:
+            st.info("Henüz güncelleme kaydı yok.")
+        for r in gunc:
+            dr = durum_renk_map.get(r["durum"], "#aaa")
+            di = durum_icon_map.get(r["durum"], "?")
+            tarih = r["created_at"][:16].replace("T", " ")
+            st.markdown(f"""
+            <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
+                        border-radius:8px; border-left:3px solid {dr};">
+              <div style="font-size:12px; color:#e0f2fe; font-weight:600;">{di} {r['versiyon']}
+                <span style="color:rgba(150,210,255,0.5); font-size:11px;">→ {r['hedef']}</span>
+              </div>
+              <div style="font-size:10px; color:{dr};">{r['durum'].upper()} &nbsp;·&nbsp;
+                <span style="color:rgba(150,210,255,0.35);">{tarih}</span>
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ── Hastaneler ──
+    with ayar_tab3:
+        st.markdown("**Kayıtlı Lokasyonlar**")
+        if not lokasyonlar:
+            st.info("Lokasyon verisi bulunamadı.")
+        else:
+            for lok in lokasyonlar:
+                ping = str(lok.get("ping_zamani") or "—")[:16].replace("T", " ")
+                isim = lok.get("isim") or lok.get("lokasyon_id", "?")
                 st.markdown(f"""
-                <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
-                            border-radius:8px; border-left:3px solid {dr};">
-                  <div style="font-size:12px; color:#e0f2fe; font-weight:600;">{di} {r['versiyon']}
-                    <span style="color:rgba(150,210,255,0.5); font-size:11px;">→ {r['hedef']}</span>
-                  </div>
-                  <div style="font-size:10px; color:{dr};">{r['durum'].upper()} &nbsp;·&nbsp;
-                    <span style="color:rgba(150,210,255,0.35);">{tarih}</span>
-                  </div>
+                <div style="padding:8px 12px; margin:4px 0; background:rgba(0,20,50,0.6);
+                            border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);
+                            display:flex; justify-content:space-between; align-items:center;">
+                  <span style="font-size:12px; color:#e0f2fe; font-weight:600;">🏥 {isim}</span>
+                  <span style="font-size:10px; color:rgba(150,210,255,0.45);">Son ping: {ping}</span>
                 </div>
                 """, unsafe_allow_html=True)
 
-        # ── Hastaneler ──
-        with ayar_tab3:
-            st.markdown("**Kayıtlı Lokasyonlar**")
-            if not lokasyonlar:
-                st.info("Lokasyon verisi bulunamadı.")
-            else:
-                for lok in lokasyonlar:
-                    ping = str(lok.get("ping_zamani") or "—")[:16].replace("T", " ")
-                    isim = lok.get("isim") or lok.get("lokasyon_id", "?")
-                    st.markdown(f"""
-                    <div style="padding:8px 12px; margin:4px 0; background:rgba(0,20,50,0.6);
-                                border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);
-                                display:flex; justify-content:space-between; align-items:center;">
-                      <span style="font-size:12px; color:#e0f2fe; font-weight:600;">🏥 {isim}</span>
-                      <span style="font-size:10px; color:rgba(150,210,255,0.45);">Son ping: {ping}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-        # ── Alan (m²) ──
-        with ayar_tab4:
-            st.markdown("**Lokasyon Alan Bilgileri (m²)**")
-            st.caption("Yıllık güncellemeler için buradan değiştirebilirsiniz. Kaydetmek için butona basın.")
-            yeni_m2 = {}
-            for lok_id, lok_info in HASTANELER.items():
-                mevcut_m2 = lok_info.get("m2", 10000)
-                yeni_m2[lok_id] = st.number_input(
-                    f"🏥 {lok_info['isim']}",
-                    min_value=100,
-                    max_value=500000,
-                    value=mevcut_m2,
-                    step=100,
-                    key=f"m2_{lok_id}",
-                    help=f"Mevcut: {mevcut_m2:,} m²"
-                )
-            if st.button("💾 m² Değerlerini Kaydet", key="btn_m2"):
-                try:
-                    save_m2_supabase(url, key, yeni_m2)
-                    fetch_m2_supabase.clear()
-                    st.success("✅ m² değerleri kaydedildi. Sayfayı yenileyin.")
-                except Exception as ex:
-                    cfg_yeni = config.copy()
-                    cfg_yeni["m2_degerler"] = {k: int(v) for k, v in yeni_m2.items()}
-                    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
-                    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                        json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
-                    st.warning(f"⚠️ Supabase'e yazılamadı, local kaydedildi: {ex}")
-
-        # ── Mesaj Gönder ──
-        with ayar_tab5:
-            st.markdown("**Lokasyona Mesaj Gönder**")
-            st.caption("Seçilen lokasyonun ekranında bildirim olarak görünür. Personel okundu diyene kadar kalır.")
-
-            _lok_secenekler = {"Tüm Lokasyonlar": "all"}
-            for _lid, _linf in HASTANELER.items():
-                _lok_secenekler[_linf["isim"]] = _lid
-
-            _msg_hedef   = st.selectbox("Lokasyon", list(_lok_secenekler.keys()), key="msg_hedef")
-            _msg_oncelik = st.radio("Öncelik", ["bilgi", "uyari", "acil"],
-                                    format_func=lambda x: {"bilgi": "🔵 Bilgi", "uyari": "🟡 Uyarı", "acil": "🔴 Acil"}[x],
-                                    horizontal=True, key="msg_oncelik")
-            _msg_metin   = st.text_area("Mesaj", placeholder="Merhaba, bugün saat 14:00'de bakım yapılacaktır...",
-                                        height=100, key="msg_metin")
-
-            if st.button("📤 Gönder", key="btn_msg_gonder", use_container_width=True):
-                if not _msg_metin.strip():
-                    st.warning("⚠️ Mesaj boş olamaz.")
-                else:
-                    try:
-                        from supabase import create_client as _cc
-                        _c = _cc(url, key)
-                        _c.table("bildirimler").insert({
-                            "lokasyon":  _lok_secenekler[_msg_hedef],
-                            "mesaj":     _msg_metin.strip(),
-                            "gonderen":  "GM Merkez",
-                            "oncelik":   _msg_oncelik,
-                            "okundu":    False,
-                        }).execute()
-                        st.success(f"✅ Mesaj gönderildi → {_msg_hedef}")
-                    except Exception as _me:
-                        st.error(f"❌ Gönderilemedi: {_me}")
-
-        # ── Uzaktan Kontrol ──
-        with ayar_tab6:
-            st.markdown("**🎛️ Uzaktan BACnet Set Kontrolü**")
-            st.caption("Lokasyon BACnet noktasına değer gönder. Lokasyon PC 1 dakika içinde uygular.")
-
-            _uc_col1, _uc_col2 = st.columns(2)
-
-            with _uc_col1:
-                # Lokasyon seçimi (sadece aktif lokasyonlar)
-                _uc_lok_sec = {_linf["isim"]: _lid for _lid, _linf in HASTANELER.items()}
-                _uc_lok_isim = st.selectbox("Lokasyon", list(_uc_lok_sec.keys()), key="uc_lok")
-                _uc_lok_id   = _uc_lok_sec[_uc_lok_isim]
-
-            with _uc_col2:
-                # Bu lokasyonun nokta listesini Supabase'den çek
-                try:
-                    from supabase import create_client as _ucc
-                    _ucc_client = _ucc(url, key)
-                    _uc_noktalar_raw = (
-                        _ucc_client.table("lokasyon_noktalar")
-                        .select("nokta_adi,aciklama")
-                        .eq("lokasyon", _uc_lok_id)
-                        .execute()
-                        .data
-                    )
-                    _uc_nokta_map = {
-                        (n.get("aciklama") or n["nokta_adi"]): n["nokta_adi"]
-                        for n in _uc_noktalar_raw
-                    }
-                except Exception:
-                    _uc_nokta_map = {}
-
-                if _uc_nokta_map:
-                    _uc_nokta_label = st.selectbox("Nokta", list(_uc_nokta_map.keys()), key="uc_nokta")
-                    _uc_nokta_adi   = _uc_nokta_map[_uc_nokta_label]
-                else:
-                    st.warning(f"⚠️ {_uc_lok_isim} için tanımlı nokta yok.")
-                    _uc_nokta_adi = None
-
-            _uc_deger = st.number_input(
-                "Hedef Değer (°C)",
-                min_value=0.0, max_value=99.0, value=7.0, step=0.5,
-                key="uc_deger"
+    # ── Alan (m²) ──
+    with ayar_tab4:
+        st.markdown("**Lokasyon Alan Bilgileri (m²)**")
+        st.caption("Yıllık güncellemeler için buradan değiştirebilirsiniz. Kaydetmek için butona basın.")
+        yeni_m2 = {}
+        for lok_id, lok_info in HASTANELER.items():
+            mevcut_m2 = lok_info.get("m2", 10000)
+            yeni_m2[lok_id] = st.number_input(
+                f"🏥 {lok_info['isim']}",
+                min_value=100,
+                max_value=500000,
+                value=mevcut_m2,
+                step=100,
+                key=f"m2_{lok_id}",
+                help=f"Mevcut: {mevcut_m2:,} m²"
             )
-
-            # Son komutlar tablosu
+        if st.button("💾 m² Değerlerini Kaydet", key="btn_m2"):
             try:
-                _uc_son_komutlar = (
-                    _ucc_client.table("komutlar")
-                    .select("nokta_adi,hedef_deger,durum,hata_mesaji,created_at,executed_at")
+                save_m2_supabase(url, key, yeni_m2)
+                fetch_m2_supabase.clear()
+                st.success("✅ m² değerleri kaydedildi. Sayfayı yenileyin.")
+            except Exception as ex:
+                cfg_yeni = config.copy()
+                cfg_yeni["m2_degerler"] = {k: int(v) for k, v in yeni_m2.items()}
+                os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                    json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
+                st.warning(f"⚠️ Supabase'e yazılamadı, local kaydedildi: {ex}")
+
+    # ── Mesaj Gönder ──
+    with ayar_tab5:
+        st.markdown("**Lokasyona Mesaj Gönder**")
+        st.caption("Seçilen lokasyonun ekranında bildirim olarak görünür. Personel okundu diyene kadar kalır.")
+
+        _lok_secenekler = {"Tüm Lokasyonlar": "all"}
+        for _lid, _linf in HASTANELER.items():
+            _lok_secenekler[_linf["isim"]] = _lid
+
+        _msg_hedef   = st.selectbox("Lokasyon", list(_lok_secenekler.keys()), key="msg_hedef")
+        _msg_oncelik = st.radio("Öncelik", ["bilgi", "uyari", "acil"],
+                                format_func=lambda x: {"bilgi": "🔵 Bilgi", "uyari": "🟡 Uyarı", "acil": "🔴 Acil"}[x],
+                                horizontal=True, key="msg_oncelik")
+        _msg_metin   = st.text_area("Mesaj", placeholder="Merhaba, bugün saat 14:00'de bakım yapılacaktır...",
+                                    height=100, key="msg_metin")
+
+        if st.button("📤 Gönder", key="btn_msg_gonder", use_container_width=True):
+            if not _msg_metin.strip():
+                st.warning("⚠️ Mesaj boş olamaz.")
+            else:
+                try:
+                    from supabase import create_client as _cc
+                    _c = _cc(url, key)
+                    _c.table("bildirimler").insert({
+                        "lokasyon":  _lok_secenekler[_msg_hedef],
+                        "mesaj":     _msg_metin.strip(),
+                        "gonderen":  "GM Merkez",
+                        "oncelik":   _msg_oncelik,
+                        "okundu":    False,
+                    }).execute()
+                    st.success(f"✅ Mesaj gönderildi → {_msg_hedef}")
+                except Exception as _me:
+                    st.error(f"❌ Gönderilemedi: {_me}")
+
+    # ── Uzaktan Kontrol ──
+    with ayar_tab6:
+        st.markdown("**🎛️ Uzaktan BACnet Set Kontrolü**")
+        st.caption("Lokasyon BACnet noktasına değer gönder. Lokasyon PC 1 dakika içinde uygular.")
+
+        _uc_col1, _uc_col2 = st.columns(2)
+
+        with _uc_col1:
+            # Lokasyon seçimi (sadece aktif lokasyonlar)
+            _uc_lok_sec = {_linf["isim"]: _lid for _lid, _linf in HASTANELER.items()}
+            _uc_lok_isim = st.selectbox("Lokasyon", list(_uc_lok_sec.keys()), key="uc_lok")
+            _uc_lok_id   = _uc_lok_sec[_uc_lok_isim]
+
+        with _uc_col2:
+            # Bu lokasyonun nokta listesini Supabase'den çek
+            try:
+                from supabase import create_client as _ucc
+                _ucc_client = _ucc(url, key)
+                _uc_noktalar_raw = (
+                    _ucc_client.table("lokasyon_noktalar")
+                    .select("nokta_adi,aciklama")
                     .eq("lokasyon", _uc_lok_id)
-                    .order("created_at", desc=True)
-                    .limit(30)
                     .execute()
                     .data
                 )
+                _uc_nokta_map = {
+                    (n.get("aciklama") or n["nokta_adi"]): n["nokta_adi"]
+                    for n in _uc_noktalar_raw
+                }
             except Exception:
-                _uc_son_komutlar = []
+                _uc_nokta_map = {}
 
-            _uc_g_col1, _uc_g_col2 = st.columns([1, 2])
-            with _uc_g_col1:
-                if st.button("📡 Komutu Gönder", key="btn_uc_gonder",
-                             use_container_width=True,
-                             disabled=(not _uc_nokta_adi)):
-                    try:
-                        from supabase import create_client as _ucc2
-                        _ucc2(url, key).table("komutlar").insert({
-                            "lokasyon":    _uc_lok_id,
-                            "nokta_adi":   _uc_nokta_adi,
-                            "hedef_deger": float(_uc_deger),
-                            "durum":       "bekliyor",
-                        }).execute()
-                        st.success(f"✅ Komut gönderildi → {_uc_nokta_label} = {_uc_deger}°C")
-                        st.rerun()
-                    except Exception as _uce:
-                        st.error(f"❌ Gönderilemedi: {_uce}")
+            if _uc_nokta_map:
+                _uc_nokta_label = st.selectbox("Nokta", list(_uc_nokta_map.keys()), key="uc_nokta")
+                _uc_nokta_adi   = _uc_nokta_map[_uc_nokta_label]
+            else:
+                st.warning(f"⚠️ {_uc_lok_isim} için tanımlı nokta yok.")
+                _uc_nokta_adi = None
 
-            with _uc_g_col2:
-                st.caption("Son komutlar:")
-                if _uc_son_komutlar:
-                    _durum_renk = {
-                        "bekliyor":    "🟡",
-                        "tamamlandi":  "✅",
-                        "hata":        "❌",
-                    }
-                    for _k in _uc_son_komutlar:
-                        _zaman = (_k.get("created_at", "")[:16].replace("T", " "))
-                        _icon  = _durum_renk.get(_k["durum"], "⏳")
-                        _hata  = f" — {_k['hata_mesaji']}" if _k.get("hata_mesaji") else ""
-                        st.markdown(
-                            f"{_icon} `{_k['nokta_adi']}` → **{_k['hedef_deger']}°C** "
-                            f"<span style='color:rgba(255,255,255,0.5);font-size:11px;'>{_zaman}{_hata}</span>",
-                            unsafe_allow_html=True
-                        )
-                else:
-                    st.caption("Henüz komut gönderilmedi.")
+        _uc_deger = st.number_input(
+            "Hedef Değer (°C)",
+            min_value=0.0, max_value=99.0, value=7.0, step=0.5,
+            key="uc_deger"
+        )
+
+        # Son komutlar tablosu
+        try:
+            _uc_son_komutlar = (
+                _ucc_client.table("komutlar")
+                .select("nokta_adi,hedef_deger,durum,hata_mesaji,created_at,executed_at")
+                .eq("lokasyon", _uc_lok_id)
+                .order("created_at", desc=True)
+                .limit(30)
+                .execute()
+                .data
+            )
+        except Exception:
+            _uc_son_komutlar = []
+
+        _uc_g_col1, _uc_g_col2 = st.columns([1, 2])
+        with _uc_g_col1:
+            if st.button("📡 Komutu Gönder", key="btn_uc_gonder",
+                         use_container_width=True,
+                         disabled=(not _uc_nokta_adi)):
+                try:
+                    from supabase import create_client as _ucc2
+                    _ucc2(url, key).table("komutlar").insert({
+                        "lokasyon":    _uc_lok_id,
+                        "nokta_adi":   _uc_nokta_adi,
+                        "hedef_deger": float(_uc_deger),
+                        "durum":       "bekliyor",
+                    }).execute()
+                    st.success(f"✅ Komut gönderildi → {_uc_nokta_label} = {_uc_deger}°C")
+                    st.rerun()
+                except Exception as _uce:
+                    st.error(f"❌ Gönderilemedi: {_uce}")
+
+        with _uc_g_col2:
+            st.caption("Son komutlar:")
+            if _uc_son_komutlar:
+                _durum_renk = {
+                    "bekliyor":    "🟡",
+                    "tamamlandi":  "✅",
+                    "hata":        "❌",
+                }
+                for _k in _uc_son_komutlar:
+                    _zaman = (_k.get("created_at", "")[:16].replace("T", " "))
+                    _icon  = _durum_renk.get(_k["durum"], "⏳")
+                    _hata  = f" — {_k['hata_mesaji']}" if _k.get("hata_mesaji") else ""
+                    st.markdown(
+                        f"{_icon} `{_k['nokta_adi']}` → **{_k['hedef_deger']}°C** "
+                        f"<span style='color:rgba(255,255,255,0.5);font-size:11px;'>{_zaman}{_hata}</span>",
+                        unsafe_allow_html=True
+                    )
+            else:
+                st.caption("Henüz komut gönderilmedi.")
     st.stop()
 
 # ============================================================
