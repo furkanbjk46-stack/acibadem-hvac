@@ -103,59 +103,40 @@ header[data-testid="stHeader"] button    { display: none !important; }
     background: rgba(56,189,248,0.12); color:#38bdf8;
     border-left: 2px solid #38bdf8;
 }
-/* Sidebar'daki gerçek nav butonları (Genel Bakış / Lokasyonlar) nav-item gibi görünsün */
-[data-testid="stSidebar"] button {
+/* Sidebar nav — tamamen düz liste, kutu/çerçeve yok (referans: düz satır listesi) */
+[data-testid="stSidebar"] [data-testid="stButton"],
+[data-testid="stSidebar"] [data-testid="stButton"] *,
+[data-testid="stSidebar"] button,
+[data-testid="stSidebar"] button * {
     background: transparent !important;
-    border: none !important;
-    border-left: 2px solid transparent !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+[data-testid="stSidebar"] button {
     border-radius: 0 !important;
     color: #94a3b8 !important;
-    font-size: 12.5px !important;
-    font-weight: 600 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
     text-align: left !important;
     justify-content: flex-start !important;
-    padding: 8px 18px !important;
-    box-shadow: none !important;
+    padding: 9px 18px !important;
 }
-[data-testid="stSidebar"] button:hover {
-    background: rgba(56,189,248,0.06) !important;
+[data-testid="stSidebar"] button p { text-align: left !important; white-space: nowrap !important; }
+[data-testid="stSidebar"] button:hover,
+[data-testid="stSidebar"] button:hover * {
     color: #e2e8f0 !important;
 }
-[data-testid="stSidebar"] button[kind="primary"] {
-    background: rgba(56,189,248,0.10) !important;
+[data-testid="stSidebar"] button[kind="primary"],
+[data-testid="stSidebar"] button[kind="primary"] * {
     color: #38bdf8 !important;
     font-weight: 700 !important;
 }
-[data-testid="stSidebar"] button:disabled {
+[data-testid="stSidebar"] button:disabled,
+[data-testid="stSidebar"] button:disabled * {
     color: #64748b !important;
-    opacity: 1 !important;
     cursor: default !important;
-}
-[data-testid="stSidebar"] button p { text-align: left !important; white-space: nowrap !important; }
-[data-testid="stSidebar"] [data-testid="stButton"],
-[data-testid="stSidebar"] [data-testid="stButton"] * {
-    background: transparent !important;
-    background-color: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-    border-color: transparent !important;
-}
-[data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"],
-[data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"] * {
-    background: rgba(56,189,248,0.10) !important;
-    background-color: rgba(56,189,248,0.10) !important;
-}
-[data-testid="stSidebar"] button,
-[data-testid="stSidebar"] button:focus,
-[data-testid="stSidebar"] button:focus-visible,
-[data-testid="stSidebar"] button:active {
-    outline: none !important;
-    box-shadow: none !important;
-    border: none !important;
-}
-[data-testid="stSidebar"] button[kind="primary"]:focus,
-[data-testid="stSidebar"] button[kind="primary"]:active {
-    background: rgba(56,189,248,0.10) !important;
 }
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0 !important; }
 .vx-nav-dot { width:5px; height:5px; border-radius:50%; background:#10b981; margin-left:auto; }
