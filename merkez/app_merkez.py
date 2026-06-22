@@ -388,9 +388,11 @@ with st.sidebar:
     if st.button("🤖 Otomasyon Senaryoları", key="nav_oto_set", use_container_width=True):
         st.session_state["vx_sayfa"] = "oto_set"
         st.rerun()
+    if st.button("🧠 AI Asistan", key="nav_ai_asistan", use_container_width=True):
+        st.session_state["vx_sayfa"] = "ai_asistan"
+        st.rerun()
 
     st.markdown("""
-    <div class="vx-nav-item">🧠 AI Asistan</div>
     <div class="vx-nav-item">🔧 Bakım / Arıza</div>
     <div class="vx-section-label">Sistem</div>
     <div class="vx-nav-item">⚙️ Ayarlar</div>
@@ -1628,6 +1630,20 @@ if st.session_state["vx_sayfa"] == "enerji_analizi":
             )
         _ozet_kartlar += '</div>'
         st.markdown(_ozet_kartlar, unsafe_allow_html=True)
+    st.stop()
+
+# ============================================================
+# AI ASİSTAN SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
+# ============================================================
+if st.session_state["vx_sayfa"] == "ai_asistan":
+    st.markdown("""
+    <style>
+    .block-container, [data-testid="stMainBlockContainer"] {
+        overflow-y: auto !important; height: 100vh !important; max-height: 100vh !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="sec">🧠 AI ASİSTAN</div>', unsafe_allow_html=True)
     # ════════════════════════════════
     # 🤖 ENERJİ ZEKASI — AI Modülü
     # ════════════════════════════════
