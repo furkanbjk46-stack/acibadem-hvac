@@ -1078,6 +1078,32 @@ def hvac_yuzdesi(lok_id):
     val = d["Chiller_Load_Percent"].mean()
     return round(val, 1) if pd.notna(val) else None
 
+# ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
+chiller_vals = {}
+dis_hava_val = fetch_dis_hava()
+_dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
+if dis_hava_val is not None:
+    _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
+min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
+if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
+    son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
+    for _, row in son_veri.iterrows():
+        lok_id = row["lokasyon_id"]
+        if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
+            chiller_vals[lok_id] = float(row["Chiller_Set_Temp_C"])
+        if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
+            dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
+            _dis_hava_kaynak = "📊 DB"
+    if chiller_vals:
+        min_lok = min(chiller_vals, key=chiller_vals.get)
+        max_lok = max(chiller_vals, key=chiller_vals.get)
+        min_val = chiller_vals[min_lok]
+        max_val = chiller_vals[max_lok]
+        min_renk = HASTANELER.get(min_lok, {}).get("renk", "#38bdf8")
+        max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
+        min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
+        max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
+
 # ============================================================
 # LOKASYONLAR SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
 # ============================================================
@@ -2387,31 +2413,6 @@ hospitals.forEach(function(h) {{
     _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
     _cv1.iframe(f"data:text/html;base64,{_b64}", height=1150, scrolling=False)
 
-# ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
-chiller_vals = {}
-dis_hava_val = fetch_dis_hava()
-_dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
-if dis_hava_val is not None:
-    _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
-min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
-if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
-    son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
-    for _, row in son_veri.iterrows():
-        lok_id = row["lokasyon_id"]
-        if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
-            chiller_vals[lok_id] = float(row["Chiller_Set_Temp_C"])
-        if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
-            dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
-            _dis_hava_kaynak = "📊 DB"
-    if chiller_vals:
-        min_lok = min(chiller_vals, key=chiller_vals.get)
-        max_lok = max(chiller_vals, key=chiller_vals.get)
-        min_val = chiller_vals[min_lok]
-        max_val = chiller_vals[max_lok]
-        min_renk = HASTANELER.get(min_lok, {}).get("renk", "#38bdf8")
-        max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
-        min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
-        max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
 
 
 # ════════════════════════════════
