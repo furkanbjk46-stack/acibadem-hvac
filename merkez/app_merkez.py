@@ -132,7 +132,19 @@ header[data-testid="stHeader"] button    { display: none !important; }
     cursor: default !important;
 }
 [data-testid="stSidebar"] button p { text-align: left !important; white-space: nowrap !important; }
-[data-testid="stSidebar"] [data-testid="stButton"] { background: transparent !important; box-shadow: none !important; border: none !important; }
+[data-testid="stSidebar"] [data-testid="stButton"],
+[data-testid="stSidebar"] [data-testid="stButton"] * {
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-color: transparent !important;
+}
+[data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"],
+[data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"] * {
+    background: rgba(56,189,248,0.10) !important;
+    background-color: rgba(56,189,248,0.10) !important;
+}
 [data-testid="stSidebar"] button,
 [data-testid="stSidebar"] button:focus,
 [data-testid="stSidebar"] button:focus-visible,
