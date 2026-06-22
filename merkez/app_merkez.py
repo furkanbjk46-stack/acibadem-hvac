@@ -938,6 +938,17 @@ st.markdown("""
 .vx-avatar .meta { font-size:11px; line-height:1.3; }
 .vx-avatar .meta .name { color:#e2e8f0; font-weight:700; }
 .vx-avatar .meta .role { color:#64748b; font-size:9px; }
+.vx-kpi-row { display:flex; gap:12px; margin-bottom:16px; align-items:stretch; }
+.vx-kpi { flex:1; border-radius:14px; padding:14px 16px; position:relative; overflow:hidden;
+    display:flex; flex-direction:column; justify-content:space-between; min-width:0; }
+.vx-kpi .dot { position:absolute; top:12px; right:12px; width:7px; height:7px; border-radius:50%; }
+.vx-kpi .ic { font-size:16px; margin-bottom:8px; }
+.vx-kpi .val { font-size:20px; font-weight:800; color:#fff; line-height:1; }
+.vx-kpi .lbl { font-size:9px; color:rgba(255,255,255,0.65); margin-top:3px; letter-spacing:0.5px; }
+.vx-kpi.blue   { background:linear-gradient(135deg,#1d4ed8,#1e3a8a); }
+.vx-kpi.green  { background:linear-gradient(135deg,#059669,#065f46); }
+.vx-kpi.orange { background:linear-gradient(135deg,#d97706,#92400e); }
+.vx-kpi.red    { background:linear-gradient(135deg,#dc2626,#7f1d1d); }
 </style>
 <div class="vx-topbar">
   <div class="vx-breadcrumb">🏥 <b>SYNAPSE</b> / Genel Bakış</div>
@@ -1124,16 +1135,48 @@ if st.session_state["vx_sayfa"] == "lokasyonlar":
         padding: 0 18px 24px 18px;
     }
     .lok-buyuk-grid .nk {
-        padding: 20px 16px !important; border-radius: 16px !important;
+        padding: 0 !important; border-radius: 14px !important; overflow:hidden;
         transition: transform 0.18s ease, background-color 0.18s ease !important;
+        text-align:left !important;
     }
-    .lok-buyuk-grid .nk:hover { transform: translateY(-6px) !important; background:#161e2e !important; }
-    .lok-buyuk-grid .lok-ikon { font-size:38px !important; }
-    .lok-buyuk-grid .lok-isim { font-size:14px !important; }
-    .lok-buyuk-grid .lok-kwh { font-size:22px !important; }
+    .lok-buyuk-grid .nk:hover { transform: translateY(-4px) !important; background:#161e2e !important; }
+    .lok-card-body { padding: 16px 16px 14px 16px; }
+    .lok-status-pill {
+        position:absolute; top:12px; right:12px; font-size:9px; font-weight:700;
+        padding:3px 9px; border-radius:20px; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;
+    }
+    .lok-status-pill .dot { width:5px; height:5px; border-radius:50%; }
+    .lok-card-foot {
+        display:flex; align-items:center; justify-content:space-between;
+        padding:8px 14px; border-top:1px solid rgba(255,255,255,0.06);
+        background:rgba(255,255,255,0.02);
+    }
+    .lok-card-foot .ic { font-size:13px; opacity:0.6; cursor:pointer; }
+    .lok-tag {
+        display:inline-block; font-size:9px; padding:2px 8px; border-radius:5px;
+        background:rgba(56,189,248,0.10); color:rgba(180,220,255,0.85); margin-right:4px;
+    }
     </style>
     """, unsafe_allow_html=True)
     st.markdown('<div class="sec">🏥 LOKASYONLAR</div>', unsafe_allow_html=True)
+
+    # ── Üst durum şeridi: Toplam / Çevrimiçi / Çevrimdışı / Kurulmadı ──
+    _lt_toplam = len(HASTANELER)
+    _lt_online = _lt_offline = _lt_kurulmadi = 0
+    for _lid in HASTANELER:
+        _lon, _lfark = online_bilgi(_lid)
+        if _lfark is None: _lt_kurulmadi += 1
+        elif _lon: _lt_online += 1
+        else: _lt_offline += 1
+    st.markdown(
+        "<div class='vx-kpi-row'>"
+        f"<div class='vx-kpi blue'><div class='dot' style='background:#60a5fa;'></div><div class='ic'>🏥</div><div class='val'>{_lt_toplam}</div><div class='lbl'>TOPLAM LOKASYON</div></div>"
+        f"<div class='vx-kpi green'><div class='dot' style='background:#34d399;'></div><div class='ic'>🟢</div><div class='val'>{_lt_online}</div><div class='lbl'>ÇEVRİMİÇİ</div></div>"
+        f"<div class='vx-kpi red'><div class='dot' style='background:#f87171;'></div><div class='ic'>🔴</div><div class='val'>{_lt_offline}</div><div class='lbl'>ÇEVRİMDIŞI</div></div>"
+        f"<div class='vx-kpi orange'><div class='dot' style='background:#fbbf24;'></div><div class='ic'>⚪</div><div class='val'>{_lt_kurulmadi}</div><div class='lbl'>KURULMADI</div></div>"
+        "</div>",
+        unsafe_allow_html=True
+    )
 
     lok_sira = sorted(HASTANELER.items(), key=lambda x: (dun_kwh(x[0]) or 0), reverse=True)
     _lok_html = '<div class="lok-buyuk-grid">'
@@ -1151,43 +1194,35 @@ if st.session_state["vx_sayfa"] == "lokasyonlar":
             card_cls += " nk-mapbg"
 
         kwh_str = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
-        onceki_kwh = onceki_gun_kwh(lok_id)
-        if kwh and onceki_kwh and onceki_kwh > 0:
-            _d = (kwh - onceki_kwh) / onceki_kwh * 100
-            if _d > 2:
-                degisim_html = f'<span style="font-size:11px;color:#ef4444;font-weight:700;">▲ {_d:.1f}%</span>'
-            elif _d < -2:
-                degisim_html = f'<span style="font-size:11px;color:#10b981;font-weight:700;">▼ {abs(_d):.1f}%</span>'
-            else:
-                degisim_html = f'<span style="font-size:11px;color:#6b7280;">≈ {_d:+.1f}%</span>'
-        else:
-            degisim_html = ""
+        verim_str = f"{kwh/lok_info.get('m2', 10000):.2f}".replace(".", ",") if kwh else "—"
 
         rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
         dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
 
         _lok_html += (
-            f'<a class="{card_cls}" href="?detay={lok_id}" title="{lok_info["kisa"]} detayına git" '
-            f'style="position:relative;text-align:center;">'
-            f'<div style="display:flex;flex-direction:column;align-items:center;gap:6px;">'
-            f'<div style="position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;">'
-            f'<div style="position:absolute;top:-6px;left:-6px;right:-6px;bottom:-6px;border-radius:50%;'
-            f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.25) 0%,rgba({rr},{rg},{rb},0.05) 55%,transparent 75%);'
+            f'<div class="{card_cls}" style="position:relative;">'
+            f'<span class="lok-status-pill" style="background:rgba({dr},{dg},{db},0.12);color:{durum_renk};">'
+            f'<span class="dot" style="background:{durum_renk};"></span>{durum_lbl}</span>'
+            f'<div class="lok-card-body">'
+            f'<div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">'
+            f'<div style="position:absolute;top:-5px;left:-5px;right:-5px;bottom:-5px;border-radius:50%;'
+            f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.22) 0%,rgba({rr},{rg},{rb},0.05) 55%,transparent 75%);'
             f'animation:breathe-ring 3s ease-in-out infinite;"></div>'
-            f'<div class="lok-ikon" style="line-height:1;position:relative;z-index:1;'
-            f'filter:drop-shadow(0 0 10px rgba({rr},{rg},{rb},0.8));">🏥</div>'
-            f'<div style="position:absolute;top:0;right:0;z-index:2;width:12px;height:12px;'
-            f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020617;'
-            f'box-shadow:0 0 6px rgba({dr},{dg},{db},0.9);"></div>'
+            f'<div style="font-size:26px;line-height:1;position:relative;z-index:1;'
+            f'filter:drop-shadow(0 0 8px rgba({rr},{rg},{rb},0.8));">🏥</div>'
             f'</div>'
-            f'<div class="lok-isim" style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-weight:700;'
-            f'color:{renk};letter-spacing:0.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);">{lok_info["kisa"]}</div>'
-            f'<div style="font-size:10px;color:{durum_renk};font-weight:600;">{durum_lbl}</div>'
-            f'<div class="lok-kwh" style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-weight:900;'
-            f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</div>'
-            f'<div style="font-size:10px;color:rgba(150,210,255,0.5);">kWh {degisim_html}</div>'
-            f'<div class="lok-pin">📍 {LOK_SEHIR.get(lok_id, "—")}</div>'
-            f'</div></a>'
+            f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:15px;font-weight:700;'
+            f'color:#f8fafc;letter-spacing:0.3px;margin-bottom:2px;">{lok_info["kisa"]}</div>'
+            f'<div style="font-size:11px;color:rgba(150,210,255,0.55);margin-bottom:2px;">📍 {LOK_SEHIR.get(lok_id, "—")}</div>'
+            f'<div style="font-size:11px;color:rgba(150,210,255,0.4);margin-bottom:10px;">⚡ {kwh_str} kWh &nbsp;·&nbsp; {verim_str} kWh/m²</div>'
+            f'<span class="lok-tag">{lok_info.get("m2", 10000):,} m²</span>'
+            f'</div>'
+            f'<div class="lok-card-foot">'
+            f'<a href="?detay={lok_id}" title="Detayı görüntüle" style="text-decoration:none;" class="ic">👁️</a>'
+            f'<span class="ic">✏️</span>'
+            f'<span class="ic">⋮</span>'
+            f'</div>'
+            f'</div>'
         )
     _lok_html += '</div>'
     st.markdown(_lok_html, unsafe_allow_html=True)
