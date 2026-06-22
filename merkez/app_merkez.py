@@ -112,8 +112,23 @@ header[data-testid="stHeader"] button    { display: none !important; }
     background: rgba(56,189,248,0.06) !important;
     color: #e2e8f0 !important;
 }
+[data-testid="stSidebar"] button[kind="primary"] {
+    background: rgba(56,189,248,0.10) !important;
+    color: #38bdf8 !important;
+    font-weight: 700 !important;
+}
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0 !important; }
 .vx-nav-dot { width:5px; height:5px; border-radius:50%; background:#10b981; margin-left:auto; }
+.vx-help-card {
+    margin: 18px 14px 10px 14px; padding: 14px;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; display:flex; align-items:center; gap:10px;
+    font-size: 12px; font-weight: 700; color: #cbd5e1;
+}
+.vx-help-ic {
+    width:28px; height:28px; border-radius:50%; background:rgba(56,189,248,0.10);
+    display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0;
+}
 
 /* Sayfa: header + footer kendi boylarını alır, kolon satırı kalan TÜM boşluğu doldurur (taşma/boşluk yok) */
 .block-container, [data-testid="stMainBlockContainer"] {
@@ -367,39 +382,37 @@ st.markdown(_css_block.replace("__BG_CSS__", _bg_css), unsafe_allow_html=True)
 if "vx_sayfa" not in st.session_state:
     st.session_state["vx_sayfa"] = "genel"
 
+def _vx_nav_btn(label, icon, sayfa_key, nav_key):
+    _aktif = st.session_state["vx_sayfa"] == sayfa_key
+    _lbl = f"{icon}  {label}" + ("    🔵" if _aktif else "")
+    if st.button(_lbl, key=nav_key, use_container_width=True, type=("primary" if _aktif else "secondary")):
+        st.session_state["vx_sayfa"] = sayfa_key
+        st.rerun()
+
 with st.sidebar:
     st.markdown('<div class="vx-logo">🧠 <span>SYNAPSE</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="vx-section-label">Genel</div>', unsafe_allow_html=True)
 
-    if st.button("📊 Genel Bakış", key="nav_genel", use_container_width=True):
-        st.session_state["vx_sayfa"] = "genel"
-        st.rerun()
-    if st.button("🏥 Lokasyonlar", key="nav_lokasyonlar", use_container_width=True):
-        st.session_state["vx_sayfa"] = "lokasyonlar"
-        st.rerun()
-    if st.button("🚨 Uyarılar", key="nav_uyarilar", use_container_width=True):
-        st.session_state["vx_sayfa"] = "uyarilar"
-        st.rerun()
-    if st.button("⚡ Enerji Analizi", key="nav_enerji", use_container_width=True):
-        st.session_state["vx_sayfa"] = "enerji_analizi"
-        st.rerun()
+    _vx_nav_btn("Genel Bakış", "📊", "genel", "nav_genel")
+    _vx_nav_btn("Lokasyonlar", "🏥", "lokasyonlar", "nav_lokasyonlar")
+    _vx_nav_btn("Uyarılar", "🚨", "uyarilar", "nav_uyarilar")
+    _vx_nav_btn("Enerji Analizi", "⚡", "enerji_analizi", "nav_enerji")
 
     st.markdown('<div class="vx-section-label">Otomasyon</div>', unsafe_allow_html=True)
-    if st.button("🤖 Otomasyon Senaryoları", key="nav_oto_set", use_container_width=True):
-        st.session_state["vx_sayfa"] = "oto_set"
-        st.rerun()
-    if st.button("🧠 AI Asistan", key="nav_ai_asistan", use_container_width=True):
-        st.session_state["vx_sayfa"] = "ai_asistan"
-        st.rerun()
+    _vx_nav_btn("Otomasyon Senaryoları", "🤖", "oto_set", "nav_oto_set")
+    _vx_nav_btn("AI Asistan", "🧠", "ai_asistan", "nav_ai_asistan")
+    st.markdown('<div class="vx-nav-item">🔧 &nbsp;Bakım / Arıza</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="vx-section-label">Sistem</div>', unsafe_allow_html=True)
+    _vx_nav_btn("Ayarlar", "⚙️", "ayarlar", "nav_ayarlar")
+    st.markdown('<div class="vx-nav-item">📜 &nbsp;Kayıtlar</div>', unsafe_allow_html=True)
 
     st.markdown("""
-    <div class="vx-nav-item">🔧 Bakım / Arıza</div>
-    <div class="vx-section-label">Sistem</div>
+    <div class="vx-help-card">
+        <span class="vx-help-ic">❓</span>
+        <span>Help &amp; Support</span>
+    </div>
     """, unsafe_allow_html=True)
-    if st.button("⚙️ Ayarlar", key="nav_ayarlar", use_container_width=True):
-        st.session_state["vx_sayfa"] = "ayarlar"
-        st.rerun()
-    st.markdown('<div class="vx-nav-item">📜 Kayıtlar</div>', unsafe_allow_html=True)
 
 # ============ SABİT VERİ ============
 HASTANELER = {
