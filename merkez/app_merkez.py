@@ -78,6 +78,7 @@ header[data-testid="stHeader"] button    { display: none !important; }
     overflow: visible !important;
 }
 [data-testid="stSidebar"] > div { padding-top: 14px !important; }
+[data-testid="stSidebarNav"] { display: none !important; height: 0 !important; }
 [data-testid="stAppViewContainer"] { overflow-x: hidden !important; }
 [data-testid="stMain"], .block-container, [data-testid="stMainBlockContainer"] {
     position: relative !important;
