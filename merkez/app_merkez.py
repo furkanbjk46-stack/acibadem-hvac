@@ -716,13 +716,38 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Lokasyon detay yönlendirmesi (kart ikonu tıklanınca) ──
+# ── Lokasyon detay yönlendirmesi (kart ikonu tıklanınca) — aynı sayfada, animasyonlu ──
 if "detay" in st.query_params:
     _lok = st.query_params["detay"]
     if _lok in HASTANELER:
         st.session_state["detay_lokasyon"] = _lok
         st.query_params.clear()
-        st.switch_page("pages/lokasyon_detay.py")
+        st.rerun()
+
+if st.session_state.get("detay_lokasyon"):
+    st.markdown("""
+    <style>
+    @keyframes detayGirisAnim {
+        from { opacity: 0; transform: translateY(16px) scale(0.99); }
+        to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .detay-gecis-katmani { animation: detayGirisAnim 0.4s ease-out; }
+    </style>
+    <div class="detay-gecis-katmani">
+    """, unsafe_allow_html=True)
+
+    _detay_dosya = os.path.join(os.path.dirname(__file__), "pages", "lokasyon_detay.py")
+    with open(_detay_dosya, "r", encoding="utf-8") as _f:
+        _detay_kaynak = _f.read()
+    # app_merkez zaten kendi set_page_config'ini çağırdı — detay sayfasınınkini atla
+    import re as _detay_re
+    _detay_kaynak = _detay_re.sub(
+        r"st\.set_page_config\(.*?\)\n", "", _detay_kaynak, count=1, flags=_detay_re.DOTALL
+    )
+    exec(compile(_detay_kaynak, _detay_dosya, "exec"), globals())
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
 
 # ── Rapor yönlendirmesi ──
 if "rapor" in st.query_params:
