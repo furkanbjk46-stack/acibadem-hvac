@@ -15,49 +15,26 @@ st.set_page_config(
     page_title="ACIBADEM-SYNAPSE",
     page_icon="🏥",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 from streamlit_autorefresh import st_autorefresh
 st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
-# ============ Arka plan görseli (beyin/nöron ağı) ============
-import base64 as _b64mod
-_bg_path = os.path.join(os.path.dirname(__file__), "images.jpg")
-try:
-    with open(_bg_path, "rb") as _f:
-        _bg_b64 = _b64mod.b64encode(_f.read()).decode()
-    _bg_css = (
-        "background-image:"
-        "url('data:image/jpeg;base64," + _bg_b64 + "') !important;"
-        "background-size: cover !important;"
-        "background-position: center !important;"
-        "background-attachment: fixed !important;"
-    )
-except FileNotFoundError:
-    _bg_css = "background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;"
-
 # ============ CSS ============
-_css_block = """
+st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
-html, body {
-    margin: 0 !important;
-    padding: 0 !important;
-    height: 100% !important;
-}
-html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"], [data-testid="stMain"] {
+html, body, [data-testid="stAppViewContainer"] {
     background-color: #060b14 !important;
-    __BG_CSS__
-    min-height: 100vh !important;
+    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
 [data-testid="stAppViewContainer"] {
     background-color: #060b14 !important;
-    __BG_CSS__
+    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
 }
-[data-testid="stMain"] { padding: 0 !important; margin: 0 !important; height: 100vh !important; overflow: hidden !important; }
-[data-testid="stHeader"]                  { display: none !important; height: 0 !important; }
+[data-testid="stHeader"]                  { background: transparent !important; }
 [data-testid="collapsedControl"]          { display: none !important; visibility: hidden !important; }
 [data-testid="stSidebarCollapsedControl"] { display: none !important; visibility: hidden !important; }
 section[data-testid="stSidebarCollapsedControl"] { display: none !important; }
@@ -65,117 +42,17 @@ section[data-testid="stSidebarCollapsedControl"] { display: none !important; }
 button[kind="header"]                    { display: none !important; }
 #MainMenu                                { display: none !important; }
 header[data-testid="stHeader"] button    { display: none !important; }
+[data-testid="stSidebar"]      { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
+.block-container { padding: 0.5rem 1.5rem 1rem 1.5rem !important; max-width: 100% !important; }
 
-/* ── Votrex tarzı sol navigasyon ── */
-[data-testid="stSidebar"] {
-    background: #0b101b !important;
-    border-right: 1px solid rgba(255,255,255,0.06) !important;
-    width: 230px !important;
-    min-width: 230px !important;
-    position: relative !important;
-    z-index: 999 !important;
-    overflow: visible !important;
+/* Harita iframe tam ekran */
+[data-testid="column"]:nth-child(2) iframe {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    width: 100vw !important; height: 100vh !important;
+    z-index: 1 !important; border: none !important;
 }
-[data-testid="stSidebar"] > div { padding-top: 14px !important; }
-[data-testid="stSidebarNav"] { display: none !important; height: 0 !important; }
-[data-testid="stAppViewContainer"] { overflow-x: hidden !important; }
-[data-testid="stMain"], .block-container, [data-testid="stMainBlockContainer"] {
-    position: relative !important;
-    z-index: 1 !important;
-}
-.vx-logo {
-    display:flex; align-items:center; gap:8px; padding:0 18px 16px 18px;
-    font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:18px; font-weight:800; color:#f8fafc;
-}
-.vx-logo span { color:#38bdf8; }
-.vx-section-label {
-    font-size:9px; font-weight:800; letter-spacing:2px; color:#475569;
-    text-transform:uppercase; padding:14px 18px 6px 18px;
-}
-.vx-nav-item {
-    display:flex; align-items:center; gap:10px; padding:8px 18px;
-    font-size:12.5px; font-weight:600; color:#94a3b8; cursor:pointer;
-    border-left: 2px solid transparent;
-}
-.vx-nav-item:hover { background: rgba(56,189,248,0.06); color:#e2e8f0; }
-.vx-nav-item.active {
-    background: rgba(56,189,248,0.12); color:#38bdf8;
-    border-left: 2px solid #38bdf8;
-}
-/* Sidebar nav — tamamen düz liste, kutu/çerçeve yok (referans: düz satır listesi) */
-[data-testid="stSidebar"] [data-testid="stButton"],
-[data-testid="stSidebar"] [data-testid="stButton"] *,
-[data-testid="stSidebar"] button,
-[data-testid="stSidebar"] button * {
-    background: transparent !important;
-    background-color: transparent !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-[data-testid="stSidebar"] button {
-    border-radius: 0 !important;
-    color: #94a3b8 !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    text-align: left !important;
-    justify-content: flex-start !important;
-    padding: 9px 18px !important;
-}
-[data-testid="stSidebar"] button p { text-align: left !important; white-space: nowrap !important; }
-[data-testid="stSidebar"] button:hover,
-[data-testid="stSidebar"] button:hover * {
-    color: #e2e8f0 !important;
-}
-[data-testid="stSidebar"] button[kind="primary"],
-[data-testid="stSidebar"] button[kind="primary"] * {
-    color: #38bdf8 !important;
-    font-weight: 700 !important;
-}
-[data-testid="stSidebar"] button:disabled,
-[data-testid="stSidebar"] button:disabled * {
-    color: #64748b !important;
-    cursor: default !important;
-}
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0 !important; }
-.vx-nav-dot { width:5px; height:5px; border-radius:50%; background:#10b981; margin-left:auto; }
-.vx-help-card {
-    margin: 18px 14px 10px 14px; padding: 14px;
-    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px; display:flex; align-items:center; gap:10px;
-    font-size: 12px; font-weight: 700; color: #cbd5e1;
-}
-.vx-help-ic {
-    width:28px; height:28px; border-radius:50%; background:rgba(56,189,248,0.10);
-    display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0;
-}
-
-/* Sayfa: header + footer kendi boylarını alır, kolon satırı kalan TÜM boşluğu doldurur (taşma/boşluk yok) */
-.block-container, [data-testid="stMainBlockContainer"] {
-    display: flex !important;
-    flex-direction: column !important;
-    height: 100vh !important;
-    max-height: 100vh !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    max-width: 100% !important;
-    background-color: rgba(0,0,0,0.30) !important;
-    box-sizing: border-box !important;
-}
-[data-testid="stDecoration"] { display: none !important; }
-[data-testid="stAppViewContainer"] > .main,
-[data-testid="stMain"] > div:first-child { margin-top: 0 !important; padding-top: 0 !important; }
-[data-testid="stHorizontalBlock"] {
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-}
-[data-testid="stHorizontalBlock"] [data-testid="column"] {
-    height: 100% !important;
-}
-
 
 /* Tüm yazılar */
 h1,h2,h3,h4,h5,h6 { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
@@ -207,37 +84,19 @@ button span[data-testid="stIconMaterial"] {
 ::-webkit-scrollbar-track { background: #0f172a; }
 ::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
 
-/* Flat dashboard kartı — opak, sol kenar şeritli, her zaman okunaklı (arka plan görseline bağımsız) */
+/* Neon kart */
 .nk {
-    position: relative;
-    background: linear-gradient(160deg, #141c2e 0%, #0d1320 100%);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-left: 4px solid rgba(150,160,175,0.5);
-    border-radius: 12px;
-    padding: 10px;
-    margin-bottom: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.35);
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: none;
 }
-.nk-green { border-left-color: #10b981 !important; }
-.nk-red   { border-left-color: #ef4444 !important; }
-.nk-gray  { border-left-color: rgba(150,160,175,0.35) !important; opacity: 0.7; }
-.nk-mapbg {}
-
-.nk {
-    display: block !important;
-    text-decoration: none !important;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.15s;
-}
-.nk:hover { transform: translateX(2px); background: #161e2e !important; }
-
-/* AI Hero — Enerji Zekası kartı için öne çıkan gradyan kenarlık */
-.ai-hero {
-    border-left: 4px solid transparent !important;
-    border-image: linear-gradient(180deg, #38bdf8, #a855f7) 1 !important;
-    background: linear-gradient(135deg, rgba(56,189,248,0.07) 0%, #111827 40%) !important;
-    box-shadow: 0 2px 14px rgba(56,189,248,0.15) !important;
-}
+.nk-green { border-color: rgba(16,185,129,0.45) !important; box-shadow: 0 0 15px rgba(16,185,129,0.08) !important; }
+.nk-red   { border-color: rgba(239,68,68,0.45) !important;  box-shadow: 0 0 15px rgba(239,68,68,0.08) !important;  }
+.nk-gray  { border-color: rgba(100,120,150,0.3) !important; opacity: 0.6; }
 
 .lok-scroll {
     max-height: 492px;
@@ -246,60 +105,15 @@ button span[data-testid="stIconMaterial"] {
     padding-right: 3px;
     scrollbar-width: thin;
     scrollbar-color: rgba(56, 189, 248,0.35) rgba(15,23,42,0.6);
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    align-content: start;
-}
-.lok-scroll .nk { margin-bottom: 0 !important; }
-.lok-pin {
-    display:inline-flex; align-items:center; gap:3px; margin-top:3px;
-    font-size:7px; color:rgba(148,163,184,0.65); letter-spacing:0.5px;
-}
-
-.ozet-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px 16px;
 }
 .lok-scroll::-webkit-scrollbar { width: 4px; }
 .lok-scroll::-webkit-scrollbar-track { background: rgba(15,23,42,0.6); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb { background: rgba(56, 189, 248,0.28); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(56, 189, 248,0.55); }
 
-.sec {
-    font-family:'Plus Jakarta Sans',sans-serif; font-size:10px; font-weight:800; color:#e2eaf5;
-    letter-spacing:2.5px; text-transform:uppercase;
-    margin-bottom:12px; padding:8px 12px;
-    background: linear-gradient(90deg, rgba(56,189,248,0.14) 0%, rgba(56,189,248,0.02) 100%);
-    border-left: 3px solid #38bdf8;
-    border-radius: 0 8px 8px 0;
-}
-
-/* Sol kolon (Lokasyon Durumu + Global Özet) — kart/cam kapsayıcı kaldırıldı, içerik direkt sayfa üzerinde */
-[data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sol-panel),
-[data-testid="stVerticalBlock"]:has(#syn-sol-panel) {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 14px !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow-y: auto !important;
-    box-sizing: border-box !important;
-}
-/* Sağ kolon (Canlı Uyarılar + Oto Set + Dış Hava + Enerji Zekası + Otomatik Analiz) — kart/cam kapsayıcı kaldırıldı */
-[data-testid="stVerticalBlock"]:has(> [data-testid="stVerticalBlockBorderWrapper"] #syn-sag-panel),
-[data-testid="stVerticalBlock"]:has(#syn-sag-panel) {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 14px !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow-y: auto !important;
-    box-sizing: border-box !important;
-}
+.sec { font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:10px; color:rgba(56, 189, 248,0.7);
+       letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(56, 189, 248,0.15);
+       padding-bottom:5px; margin-bottom:10px; }
 
 .alrt-r { background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.35);
            border-radius:8px; padding:7px 10px; margin:3px 0; font-size:11px; color:#fca5a5 !important; }
@@ -396,39 +210,8 @@ button span[data-testid="stIconMaterial"] {
 }
 .btn-goto button:hover { background: rgba(14, 165, 233, 0.25) !important; color: #ffffff !important; }
 </style>
-"""
-st.markdown(_css_block.replace("__BG_CSS__", _bg_css), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# ============ SOL NAVİGASYON (Votrex tarzı) ============
-if "vx_sayfa" not in st.session_state:
-    st.session_state["vx_sayfa"] = "genel"
-
-def _vx_nav_btn(label, icon, sayfa_key=None, nav_key=None):
-    _aktif = sayfa_key is not None and st.session_state["vx_sayfa"] == sayfa_key
-    _lbl = f"{icon}  {label}"
-    _tip = "primary" if _aktif else "secondary"
-    _disabled = sayfa_key is None
-    if st.button(_lbl, key=nav_key, use_container_width=True, type=_tip, disabled=_disabled):
-        st.session_state["vx_sayfa"] = sayfa_key
-        st.rerun()
-
-with st.sidebar:
-    st.markdown('<div class="vx-logo">🧠 <span>SYNAPSE</span></div>', unsafe_allow_html=True)
-    st.markdown('<div class="vx-section-label">Genel</div>', unsafe_allow_html=True)
-
-    _vx_nav_btn("Genel Bakış", "📊", "genel", "nav_genel")
-    _vx_nav_btn("Lokasyonlar", "🏥", "lokasyonlar", "nav_lokasyonlar")
-    _vx_nav_btn("Uyarılar", "🚨", "uyarilar", "nav_uyarilar")
-    _vx_nav_btn("Enerji Analizi", "⚡", "enerji_analizi", "nav_enerji")
-
-    st.markdown('<div class="vx-section-label">Otomasyon</div>', unsafe_allow_html=True)
-    _vx_nav_btn("Otomasyon", "🤖", "oto_set", "nav_oto_set")
-    _vx_nav_btn("AI Asistan", "🧠", "ai_asistan", "nav_ai_asistan")
-    _vx_nav_btn("Bakım / Arıza", "🔧", nav_key="nav_bakim")
-
-    st.markdown('<div class="vx-section-label">Sistem</div>', unsafe_allow_html=True)
-    _vx_nav_btn("Ayarlar", "⚙️", "ayarlar", "nav_ayarlar")
-    _vx_nav_btn("Kayıtlar", "📜", nav_key="nav_kayitlar")
 
 # ============ SABİT VERİ ============
 HASTANELER = {
@@ -462,16 +245,6 @@ HASTANELER = {
     "adana_ortopedia":{"isim": "Acıbadem Adana Ortopedia",  "kisa": "ADANA ORT.",   "lat": 37.0100, "lon": 35.3350, "m2":  5000, "renk": "#e879f9"},
     # ── Muğla / Bodrum ──
     "bodrum":         {"isim": "Acıbadem Bodrum",           "kisa": "BODRUM",       "lat": 37.0344, "lon": 27.4305, "m2":  7000, "renk": "#2dd4bf"},
-}
-
-# Kart üzerindeki mini konum rozeti için şehir eşlemesi (harita kaldırıldığı için)
-LOK_SEHIR = {
-    "maslak": "İstanbul", "altunizade": "İstanbul", "kozyatagi": "İstanbul", "taksim": "İstanbul",
-    "atakent": "İstanbul", "atasehir": "İstanbul", "bakirkoy": "İstanbul", "fulya": "İstanbul",
-    "international": "İstanbul", "kadikoy": "İstanbul", "kartal": "İstanbul",
-    "ankara": "Ankara", "bayindir": "Ankara",
-    "bursa": "Bursa", "kocaeli": "Kocaeli", "eskisehir": "Eskişehir", "izmir": "İzmir",
-    "kayseri": "Kayseri", "adana": "Adana", "adana_ortopedia": "Adana", "bodrum": "Muğla",
 }
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "merkez_config.json")
@@ -916,89 +689,20 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
 st.markdown("""
-<style>
-@keyframes ai-pulse-dot { 0%,100% { opacity:1; box-shadow:0 0 0 0 rgba(16,185,129,0.6); } 50% { opacity:0.6; box-shadow:0 0 0 5px rgba(16,185,129,0); } }
-@keyframes ai-scanline { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
-.ai-status-pill {
-    display:inline-flex; align-items:center; gap:6px;
-    background:rgba(16,185,129,0.10); border:1px solid rgba(16,185,129,0.35);
-    border-radius:20px; padding:3px 12px; margin-top:8px;
-    font-family:'Plus Jakarta Sans',sans-serif; font-size:9px; font-weight:700;
-    color:#6ee7b7; letter-spacing:1.5px; text-transform:uppercase;
-}
-.ai-status-dot { width:6px; height:6px; border-radius:50%; background:#10b981; animation: ai-pulse-dot 2s ease-in-out infinite; }
-.ai-scan-wrap { position:relative; height:1px; overflow:hidden; margin-top:10px; background:rgba(56,189,248,0.08); }
-.ai-scan-line { position:absolute; top:0; left:0; width:40%; height:1px;
-    background:linear-gradient(90deg, transparent, #38bdf8, transparent);
-    animation: ai-scanline 3.5s linear infinite; }
-.synapse-bar {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:10px 18px; gap:16px;
-}
-.synapse-bar .brand-mark {
-    width:36px; height:36px; border-radius:10px; flex-shrink:0;
-    background:linear-gradient(135deg, #38bdf8, #8b5cf6);
-    display:flex; align-items:center; justify-content:center;
-    font-size:18px; box-shadow:0 0 16px rgba(56,189,248,0.4);
-}
-.synapse-bar .brand-block { display:flex; align-items:center; gap:12px; }
-.synapse-bar .brand-text { text-align:left; }
-.synapse-bar .brand-text .sub { font-size:9px; color:#94a3b8; letter-spacing:2.5px; text-transform:uppercase; }
-.synapse-bar .brand-text .title { font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:22px;
-    font-weight:700; color:#f8fafc; letter-spacing:0.5px; }
-.synapse-bar .right-block { text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
-.synapse-bar .clock { font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#64748b; letter-spacing:1px; }
-.vx-topbar {
-    display:flex; align-items:center; gap:14px; padding:8px 18px;
-    border-bottom:1px solid rgba(255,255,255,0.06);
-}
-.vx-breadcrumb { font-size:12px; color:#64748b; font-weight:600; display:flex; align-items:center; gap:6px; }
-.vx-breadcrumb b { color:#e2e8f0; }
-.vx-search {
-    flex:1; max-width:420px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-    border-radius:8px; padding:6px 12px; font-size:11px; color:#64748b; display:flex; align-items:center; gap:8px;
-}
-.vx-topbar-icons { display:flex; align-items:center; gap:14px; margin-left:auto; font-size:14px; color:#64748b; }
-.vx-avatar {
-    display:flex; align-items:center; gap:8px; padding-left:14px; border-left:1px solid rgba(255,255,255,0.08);
-}
-.vx-avatar .circle { width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#38bdf8,#8b5cf6);
-    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#fff; }
-.vx-avatar .meta { font-size:11px; line-height:1.3; }
-.vx-avatar .meta .name { color:#e2e8f0; font-weight:700; }
-.vx-avatar .meta .role { color:#64748b; font-size:9px; }
-.vx-kpi-row { display:flex; gap:12px; margin-bottom:16px; align-items:stretch; }
-.vx-kpi { flex:1; border-radius:14px; padding:14px 16px; position:relative; overflow:hidden;
-    display:flex; flex-direction:column; justify-content:space-between; min-width:0; }
-.vx-kpi .dot { position:absolute; top:12px; right:12px; width:7px; height:7px; border-radius:50%; }
-.vx-kpi .ic { font-size:16px; margin-bottom:8px; }
-.vx-kpi .val { font-size:20px; font-weight:800; color:#fff; line-height:1; }
-.vx-kpi .lbl { font-size:9px; color:rgba(255,255,255,0.65); margin-top:3px; letter-spacing:0.5px; }
-.vx-kpi.blue   { background:linear-gradient(135deg,#1d4ed8,#1e3a8a); }
-.vx-kpi.green  { background:linear-gradient(135deg,#059669,#065f46); }
-.vx-kpi.orange { background:linear-gradient(135deg,#d97706,#92400e); }
-.vx-kpi.red    { background:linear-gradient(135deg,#dc2626,#7f1d1d); }
-</style>
-<div class="vx-topbar">
-  <div class="vx-breadcrumb">🏥 <b>SYNAPSE</b> / Genel Bakış</div>
-  <div class="vx-search">🔍 Lokasyon, uyarı veya rapor ara... <span style="margin-left:auto;opacity:0.5;">⌘K</span></div>
-  <div class="vx-topbar-icons">🌐 🔔 ⚙️</div>
-  <div class="vx-avatar"><div class="circle">SA</div><div class="meta"><div class="name">Sistem Admin</div><div class="role">Yönetici</div></div></div>
-</div>
-<div class="synapse-bar">
-  <div class="brand-block">
-    <div class="brand-mark">🧠</div>
-    <div class="brand-text">
-      <div class="sub">ACIBADEM SAĞLIK GRUBU</div>
-      <div class="title">SYNAPSE <span style="color:#38bdf8;">//</span> Operasyonel Zeka</div>
-    </div>
+<div style="text-align:center; padding:12px 0 8px;">
+  <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#94a3b8;
+              letter-spacing:3px; text-transform:uppercase;">
+    ACIBADEM SAĞLIK GRUBU
   </div>
-  <div class="right-block">
-    <div class="ai-status-pill" style="margin-top:0;"><span class="ai-status-dot"></span> AI AKTİF — Sürekli Analiz</div>
-    <div class="clock">""" + now_display.strftime("%d.%m.%Y") + """ &nbsp;·&nbsp; """ + now_display.strftime("%H:%M") + """</div>
+  <div style="font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:34px; font-weight:600; color:#f8fafc;
+              letter-spacing:1px; line-height:1.3;">
+    SYNAPSE // Merkezi Veri Bağlantısı
+  </div>
+  <div style="font-family:'Plus Jakarta Sans',sans-serif; font-size:11px; color:#38bdf8;
+              letter-spacing:2px; margin-top:6px; text-transform:uppercase;">
+    Operasyonel Zeka
   </div>
 </div>
-<div class="ai-scan-wrap"><div class="ai-scan-line"></div></div>
 """, unsafe_allow_html=True)
 
 # ── Lokasyon detay yönlendirmesi (kart ikonu tıklanınca) ──
@@ -1122,156 +826,380 @@ def hvac_yuzdesi(lok_id):
     val = d["Chiller_Load_Percent"].mean()
     return round(val, 1) if pd.notna(val) else None
 
-# ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
-chiller_vals = {}
-dis_hava_val = fetch_dis_hava()
-_dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
-if dis_hava_val is not None:
-    _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
-min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
-if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
-    son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
-    for _, row in son_veri.iterrows():
-        lok_id = row["lokasyon_id"]
-        if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
-            chiller_vals[lok_id] = float(row["Chiller_Set_Temp_C"])
-        if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
-            dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
-            _dis_hava_kaynak = "📊 DB"
-    if chiller_vals:
-        min_lok = min(chiller_vals, key=chiller_vals.get)
-        max_lok = max(chiller_vals, key=chiller_vals.get)
-        min_val = chiller_vals[min_lok]
-        max_val = chiller_vals[max_lok]
-        min_renk = HASTANELER.get(min_lok, {}).get("renk", "#38bdf8")
-        max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
-        min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
-        max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
-
 # ============================================================
-# LOKASYONLAR SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
+# ANA LAYOUT: sol | harita | sağ
 # ============================================================
-if st.session_state["vx_sayfa"] == "lokasyonlar":
-    st.markdown("""
-    <style>
-    .block-container, [data-testid="stMainBlockContainer"] {
-        overflow-y: auto !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
-    }
-    .lok-buyuk-grid {
-        display:grid; grid-template-columns:repeat(4, 1fr); gap:16px;
-        padding: 0 18px 24px 18px;
-    }
-    .lok-buyuk-grid .nk {
-        padding: 0 !important; border-radius: 14px !important; overflow:hidden;
-        transition: transform 0.18s ease, background-color 0.18s ease !important;
-        text-align:left !important;
-    }
-    .lok-buyuk-grid .nk:hover { transform: translateY(-4px) !important; background:#161e2e !important; }
-    .lok-card-body { padding: 16px 16px 14px 16px; }
-    .lok-status-pill {
-        position:absolute; top:12px; right:12px; font-size:9px; font-weight:700;
-        padding:3px 9px; border-radius:20px; letter-spacing:0.5px; display:flex; align-items:center; gap:4px;
-    }
-    .lok-status-pill .dot { width:5px; height:5px; border-radius:50%; }
-    .lok-card-foot {
-        display:flex; align-items:center; justify-content:space-between;
-        padding:8px 14px; border-top:1px solid rgba(255,255,255,0.06);
-        background:rgba(255,255,255,0.02);
-    }
-    .lok-card-foot .ic { font-size:13px; opacity:0.6; cursor:pointer; }
-    .lok-tag {
-        display:inline-block; font-size:9px; padding:2px 8px; border-radius:5px;
-        background:rgba(56,189,248,0.10); color:rgba(180,220,255,0.85); margin-right:4px;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    st.markdown('<div class="sec">🏥 LOKASYONLAR</div>', unsafe_allow_html=True)
+sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 
-    # ── Üst durum şeridi: Toplam / Çevrimiçi / Çevrimdışı / Kurulmadı ──
-    _lt_toplam = len(HASTANELER)
-    _lt_online = _lt_offline = _lt_kurulmadi = 0
-    for _lid in HASTANELER:
-        _lon, _lfark = online_bilgi(_lid)
-        if _lfark is None: _lt_kurulmadi += 1
-        elif _lon: _lt_online += 1
-        else: _lt_offline += 1
-    st.markdown(
-        "<div class='vx-kpi-row'>"
-        f"<div class='vx-kpi blue'><div class='dot' style='background:#60a5fa;'></div><div class='ic'>🏥</div><div class='val'>{_lt_toplam}</div><div class='lbl'>TOPLAM LOKASYON</div></div>"
-        f"<div class='vx-kpi green'><div class='dot' style='background:#34d399;'></div><div class='ic'>🟢</div><div class='val'>{_lt_online}</div><div class='lbl'>ÇEVRİMİÇİ</div></div>"
-        f"<div class='vx-kpi red'><div class='dot' style='background:#f87171;'></div><div class='ic'>🔴</div><div class='val'>{_lt_offline}</div><div class='lbl'>ÇEVRİMDIŞI</div></div>"
-        f"<div class='vx-kpi orange'><div class='dot' style='background:#fbbf24;'></div><div class='ic'>⚪</div><div class='val'>{_lt_kurulmadi}</div><div class='lbl'>KURULMADI</div></div>"
-        "</div>",
-        unsafe_allow_html=True
+# ════════════════════════════════
+# SOL KOLON
+# ════════════════════════════════
+with sol:
+    # ── Lokasyon Durumu ──
+    st.markdown('<div class="sec">📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
+
+    # Tümünü tüketime göre sırala (veri olanlar önce, olmayanlar sona)
+    lok_sira = sorted(
+        HASTANELER.items(),
+        key=lambda x: (dun_kwh(x[0]) or 0),
+        reverse=True
     )
 
-    lok_sira = sorted(HASTANELER.items(), key=lambda x: (dun_kwh(x[0]) or 0), reverse=True)
-    _lok_html = '<div class="lok-buyuk-grid">'
+    # Tüm kartları tek HTML bloğu olarak oluştur → scrollable div içine sar
+    tum_kartlar = '<div class="lok-scroll">'
+
     for i, (lok_id, lok_info) in enumerate(lok_sira):
         online, fark_dk = online_bilgi(lok_id)
-        kwh  = dun_kwh(lok_id)
-        renk = lok_info["renk"]
+        kwh      = dun_kwh(lok_id)
+        renk     = lok_info["renk"]
         if fark_dk is None:
-            card_cls, durum_renk, durum_lbl = "nk nk-gray", "#6b7280", "KURULMADI"
+            card_cls   = "nk nk-gray"
+            durum_renk = "#6b7280"
+            durum_lbl  = "KURULMADI"
         elif online:
-            card_cls, durum_renk, durum_lbl = "nk nk-green", "#10b981", "ÇEVRİMİÇİ"
+            card_cls   = "nk nk-green"
+            durum_renk = "#10b981"
+            durum_lbl  = "ÇEVRİMİÇİ"
         else:
-            card_cls, durum_renk, durum_lbl = "nk nk-red", "#ef4444", "ÇEVRİMDIŞI"
-        if lok_id == "maslak":
-            card_cls += " nk-mapbg"
+            card_cls   = "nk nk-red"
+            durum_renk = "#ef4444"
+            durum_lbl  = "ÇEVRİMDIŞI"
 
-        kwh_str = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
-        verim_str = f"{kwh/lok_info.get('m2', 10000):.2f}".replace(".", ",") if kwh else "—"
+        kwh_str   = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
+        m2_lok    = lok_info.get("m2", 10000)
+        verim_str = f"{kwh/m2_lok:.2f}".replace(".", ",") if kwh else "—"
+        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;color:rgba(150,210,255,0.35);font-weight:700;">#{i+1}</span>' if i < 4 else ""
+
+        # % değişim hesapla (dün vs önceki gün)
+        onceki_kwh = onceki_gun_kwh(lok_id)
+        if kwh and onceki_kwh and onceki_kwh > 0:
+            degisim_pct = (kwh - onceki_kwh) / onceki_kwh * 100
+            if degisim_pct > 2:
+                degisim_html = f'<span style="font-size:9px;color:#ef4444;font-weight:700;">▲ {degisim_pct:.1f}%</span>'
+            elif degisim_pct < -2:
+                degisim_html = f'<span style="font-size:9px;color:#10b981;font-weight:700;">▼ {abs(degisim_pct):.1f}%</span>'
+            else:
+                degisim_html = f'<span style="font-size:9px;color:#6b7280;">≈ {degisim_pct:+.1f}%</span>'
+        else:
+            degisim_html = ""
+
 
         rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
         dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
 
-        _lok_html += (
-            f'<div class="{card_cls}" style="position:relative;">'
-            f'<span class="lok-status-pill" style="background:rgba({dr},{dg},{db},0.12);color:{durum_renk};">'
-            f'<span class="dot" style="background:{durum_renk};"></span>{durum_lbl}</span>'
-            f'<div class="lok-card-body">'
-            f'<div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;">'
+        tum_kartlar += (
+            f'<div class="{card_cls}" style="padding:14px;position:relative;">'
+            + sira_badge +
+            f'<a href="?detay={lok_id}" title="Detaya Git" style="position:absolute;top:8px;right:10px;'
+            f'font-size:14px;color:rgba({rr},{rg},{rb},0.55);text-decoration:none;'
+            f'transition:color 0.2s;" onmouseover="this.style.color=\'rgba({rr},{rg},{rb},1)\'" '
+            f'onmouseout="this.style.color=\'rgba({rr},{rg},{rb},0.55)\'">⟶</a>'
+            f'<div style="display:flex;align-items:center;gap:14px;">'
+            f'<div style="position:relative;width:58px;height:58px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
             f'<div style="position:absolute;top:-5px;left:-5px;right:-5px;bottom:-5px;border-radius:50%;'
             f'background:radial-gradient(circle,rgba({rr},{rg},{rb},0.22) 0%,rgba({rr},{rg},{rb},0.05) 55%,transparent 75%);'
             f'animation:breathe-ring 3s ease-in-out infinite;"></div>'
-            f'<div style="font-size:26px;line-height:1;position:relative;z-index:1;'
+            f'<div style="font-size:36px;line-height:1;position:relative;z-index:1;'
             f'filter:drop-shadow(0 0 8px rgba({rr},{rg},{rb},0.8));">🏥</div>'
+            f'<div style="position:absolute;top:2px;right:2px;z-index:2;width:11px;height:11px;'
+            f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #020617;'
+            f'box-shadow:0 0 5px rgba({dr},{dg},{db},0.9);"></div>'
             f'</div>'
-            f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:15px;font-weight:700;'
-            f'color:#f8fafc;letter-spacing:0.3px;margin-bottom:2px;">{lok_info["kisa"]}</div>'
-            f'<div style="font-size:11px;color:rgba(150,210,255,0.55);margin-bottom:2px;">📍 {LOK_SEHIR.get(lok_id, "—")}</div>'
-            f'<div style="font-size:11px;color:rgba(150,210,255,0.4);margin-bottom:10px;">⚡ {kwh_str} kWh &nbsp;·&nbsp; {verim_str} kWh/m²</div>'
-            f'<span class="lok-tag">{lok_info.get("m2", 10000):,} m²</span>'
+            f'<div style="flex:1;min-width:0;">'
+            f'<div style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:10px;font-weight:700;'
+            f'color:{renk};letter-spacing:1.5px;text-shadow:0 0 7px rgba({rr},{rg},{rb},0.6);'
+            f'margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{lok_info["kisa"]}</div>'
+            f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:5px;">{durum_lbl}</div>'
+            f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">'
+            f'<span style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:16px;font-weight:900;'
+            f'color:{renk};text-shadow:0 0 10px rgba({rr},{rg},{rb},0.65);line-height:1;">{kwh_str}</span>'
+            f'<span style="font-size:8px;color:rgba(150,210,255,0.5);">kWh</span>'
+            f'<span style="margin-left:4px;">{degisim_html}</span>'
             f'</div>'
-            f'<div class="lok-card-foot">'
-            f'<a href="?detay={lok_id}" title="Detayı görüntüle" style="text-decoration:none;" class="ic">👁️</a>'
-            f'<span class="ic">✏️</span>'
-            f'<span class="ic">⋮</span>'
+            f'<div style="display:inline-flex;align-items:center;gap:5px;'
+            f'background:rgba(56, 189, 248,0.05);border-radius:5px;padding:3px 8px;'
+            f'border:1px solid rgba(56, 189, 248,0.10);">'
+            f'<span style="font-size:7px;color:rgba(150,210,255,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
+            f'<span style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:11px;color:#38bdf8;font-weight:700;">{verim_str}</span>'
             f'</div>'
-            f'</div>'
+            f'</div></div></div>'
         )
-    _lok_html += '</div>'
-    st.markdown(_lok_html, unsafe_allow_html=True)
-    st.stop()
 
-# ============================================================
-# UYARILAR SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
-# ============================================================
-if st.session_state["vx_sayfa"] == "uyarilar":
-    st.markdown("""
-    <style>
-    .block-container, [data-testid="stMainBlockContainer"] {
-        overflow-y: auto !important; height: 100vh !important; max-height: 100vh !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    tum_kartlar += '</div>'
+    st.markdown(tum_kartlar, unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+
+    # ── Global Özet (Aylık + Trend) ──
+    _ay_tr = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
+              "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
+    _bu_yil = now.year
+    _bu_ay  = now.month
+    st.markdown(f'<div class="sec">⚡ GLOBAL ÖZET — {_ay_tr[_bu_ay-1].upper()} {_bu_yil}</div>', unsafe_allow_html=True)
+    if not df_all.empty:
+        # Dönem filtreleri
+        _bu_ay_bas   = pd.Timestamp(year=_bu_yil,   month=_bu_ay, day=1)
+        _gec_ay_yil  = _bu_yil - 1 if _bu_ay == 1 else _bu_yil
+        _gec_ay_no   = 12 if _bu_ay == 1 else _bu_ay - 1
+        _gec_ay_bas  = pd.Timestamp(year=_gec_ay_yil, month=_gec_ay_no, day=1)
+        _gec_ay_son  = _bu_ay_bas - pd.Timedelta(days=1)
+        _bu_yil_bas  = pd.Timestamp(year=_bu_yil,   month=1, day=1)
+        _gec_yil_bas = pd.Timestamp(year=_bu_yil-1, month=1, day=1)
+        _gec_yil_son = _bu_yil_bas - pd.Timedelta(days=1)
+
+        _df_bu_ay   = df_all[df_all["Tarih"] >= _bu_ay_bas]
+        _df_gec_ay  = df_all[(df_all["Tarih"] >= _gec_ay_bas) & (df_all["Tarih"] <= _gec_ay_son)]
+        _df_bu_yil  = df_all[df_all["Tarih"] >= _bu_yil_bas]
+        _df_gec_yil = df_all[(df_all["Tarih"] >= _gec_yil_bas) & (df_all["Tarih"] <= _gec_yil_son)]
+
+        def tr(sayi, ondalik=0):
+            fmt = f"{sayi:,.{ondalik}f}"
+            if ondalik > 0:
+                parts = fmt.split(".")
+                return parts[0].replace(",", ".") + "," + parts[1]
+            return fmt.replace(",", ".")
+
+        def _cs(df, col):
+            return df[col].sum() if col in df.columns else 0
+
+        def _pct_html(bu, gec):
+            if not gec or gec == 0: return ""
+            p = (bu - gec) / gec * 100
+            renk = "#10b981" if p <= 0 else "#ef4444"
+            yon  = "▼" if p <= 0 else "▲"
+            return f'<b style="color:{renk};font-size:10px;"> {yon}{abs(p):.1f}%</b>'
+
+        _gec_ay_label = _ay_tr[_gec_ay_no - 1]
+
+        _metrikler = [
+            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh"),
+            ("🔥 Doğalgaz",      None,                         "m³"),
+            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh"),
+            ("💧 Su",             "Su_Tuketimi_m3",             "m³"),
+            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh"),
+        ]
+
+        for _lbl, _col, _birim in _metrikler:
+            if _col is None:  # Doğalgaz: kazan + kojen toplamı
+                _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
+                _ga   = _cs(_df_gec_ay,  "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay,  "Kojen_Dogalgaz_m3")
+                _by   = _cs(_df_bu_yil,  "Kazan_Dogalgaz_m3") + _cs(_df_bu_yil,  "Kojen_Dogalgaz_m3")
+                _gy   = _cs(_df_gec_yil, "Kazan_Dogalgaz_m3") + _cs(_df_gec_yil, "Kojen_Dogalgaz_m3")
+            else:
+                _bu = _cs(_df_bu_ay,   _col)
+                _ga = _cs(_df_gec_ay,  _col)
+                _by = _cs(_df_bu_yil,  _col)
+                _gy = _cs(_df_gec_yil, _col)
+
+            _trend_parts = []
+            if _ga > 0: _trend_parts.append(f"{_gec_ay_label}: {tr(_ga)} {_birim}")
+            if _by > 0: _trend_parts.append(f"{_bu_yil} YTD: {tr(_by)} {_birim}")
+            if _gy > 0: _trend_parts.append(f"{_bu_yil-1}: {tr(_gy)} {_birim}")
+            _trend_html = (
+                f'<div style="font-size:9px;color:rgba(120,170,220,0.5);margin-top:2px;">'
+                + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
+            ) if _trend_parts else ""
+
+            st.markdown(f"""
+            <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
+                        border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}</span>
+                <span style="font-size:12px; font-weight:700; color:#38bdf8;
+                             font-family:'Playfair Display','Plus Jakarta Sans',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>
+              </div>
+              {_trend_html}
+            </div>
+            """, unsafe_allow_html=True)
+
+# ════════════════════════════════
+# MERKEZ KOLON — TÜRKİYE HARİTASI
+# ════════════════════════════════
+with merkez:
+    # ── Leaflet harita verisi ─────────────────────────────
+    harita_js = []
+    for lok_id, lok_info in HASTANELER.items():
+        online, fark_dk = online_bilgi(lok_id)
+        kwh = dun_kwh(lok_id)
+        durum  = "Çevrimiçi" if online else ("Kurulmadı" if fark_dk is None else "Çevrimdışı")
+        d_renk = "#10b981" if online else ("#6b7280" if fark_dk is None else "#ef4444")
+        boyut  = max(10, min(22, kwh / 1400)) if kwh > 0 else 9
+        harita_js.append({
+            "isim":  lok_info["isim"],
+            "kisa":  lok_info["kisa"],
+            "lat":   lok_info["lat"],
+            "lon":   lok_info["lon"],
+            "durum": durum,
+            "kwh":   f"{int(kwh):,}" if kwh else "—",
+            "m2":    f"{lok_info['m2']:,}",
+            "renk":  d_renk,
+            "boyut": boyut,
+            "online": bool(online),
+        })
+
+    hjs = json.dumps(harita_js, ensure_ascii=False)
+
+    harita_html = f"""<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{ background:#020617; }}
+#map {{ width:100%; height:100vh; background:#020617; }}
+.leaflet-container {{ background:#020617 !important; font-family:'Plus Jakarta Sans',sans-serif; }}
+.leaflet-popup-content-wrapper {{
+    background:rgba(15, 23, 42, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    border:1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius:8px !important;
+    box-shadow:0 4px 20px rgba(0,0,0,0.6) !important;
+    padding:0 !important;
+}}
+.leaflet-popup-content {{ margin:0 !important; color:white !important; }}
+.leaflet-popup-tip-container {{ display:none; }}
+.leaflet-popup-close-button {{ color:rgba(56, 189, 248,0.5) !important; font-size:16px !important; top:8px !important; right:10px !important; }}
+.leaflet-control-zoom a {{
+    background:rgba(15, 23, 42, 0.7) !important;
+    color:#38bdf8 !important;
+    border-color:rgba(255, 255, 255, 0.08) !important;
+}}
+.leaflet-control-zoom a:hover {{ background:rgba(15, 23, 42, 0.9) !important; }}
+.leaflet-control-attribution {{ display:none !important; }}
+@keyframes breathe-outer {{
+    0%,100% {{ opacity:0.10; transform:scale(0.92); }}
+    50%      {{ opacity:0.28; transform:scale(1.20); }}
+}}
+@keyframes breathe-inner {{
+    0%,100% {{ opacity:0.22; transform:scale(0.96); }}
+    50%     {{ opacity:0.50; transform:scale(1.10); }}
+}}
+</style>
+</head><body>
+<div id="map"></div>
+<script>
+var map = L.map('map', {{
+    center: [39.0, 35.0],
+    zoom: 5,
+    zoomControl: true,
+    attributionControl: false,
+    preferCanvas: true
+}});
+
+// CartoDB Dark Matter — ücretsiz, API key yok
+L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
+    maxZoom: 19, subdomains: 'abcd', noWrap: true
+}}).addTo(map);
+
+var hospitals = {hjs};
+
+hospitals.forEach(function(h) {{
+    var s  = h.boyut;
+    var c  = h.renk;
+    var hs = s / 2;
+
+    // ── Dış glow halkası ──
+    L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="width:'+(s*3.8)+'px;height:'+(s*3.8)+'px;background:'+c+';border-radius:50%;animation:breathe-outer 3s ease-in-out infinite;"></div>',
+            iconSize:[s*3.8, s*3.8], iconAnchor:[s*1.9, s*1.9]
+        }}),
+        interactive:false, zIndexOffset:-200
+    }}).addTo(map);
+
+    // ── İç glow halkası ──
+    L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="width:'+(s*2)+'px;height:'+(s*2)+'px;background:'+c+';border-radius:50%;animation:breathe-inner 3s ease-in-out infinite;"></div>',
+            iconSize:[s*2, s*2], iconAnchor:[s, s]
+        }}),
+        interactive:false, zIndexOffset:-100
+    }}).addTo(map);
+
+    // ── Ana nokta ──
+    var dot = L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="width:'+s+'px;height:'+s+'px;background:'+c+';border-radius:50%;border:2px solid rgba(255,255,255,0.28);box-shadow:0 0 10px '+c+',0 0 3px rgba(0,0,0,0.8);"></div>',
+            iconSize:[s, s], iconAnchor:[hs, hs]
+        }}),
+        zIndexOffset:100
+    }}).addTo(map);
+
+    // ── Etiket ──
+    L.marker([h.lat, h.lon], {{
+        icon: L.divIcon({{
+            className:'',
+            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+'</div>',
+            iconSize:[100,16], iconAnchor:[-hs-2, hs-2]
+        }}),
+        interactive:false, zIndexOffset:300
+    }}).addTo(map);
+
+    // ── Popup ──
+    var kwh_bar = h.kwh !== '—'
+        ? '<div style="margin-top:8px;height:3px;background:rgba(56, 189, 248,0.15);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;"></div></div>'
+        : '';
+    dot.bindPopup(
+        '<div style="padding:14px 16px;min-width:170px;">' +
+        '<div style="font-family:Orbitron,monospace;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
+        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
+        '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
+        '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
+        '<div style="font-size:12px;color:#a0c8ff;margin-bottom:4px;">⚡ <b style="color:white;font-size:14px;">'+h.kwh+'</b> kWh</div>' +
+        '<div style="font-size:10px;color:rgba(150,200,255,0.55);">📐 '+h.m2+' m²</div>' +
+        kwh_bar + '</div>',
+        {{ maxWidth:220, className:'' }}
+    );
+}});
+</script>
+</body></html>"""
+
+    st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
+    import base64, streamlit.components.v1 as _cv1
+    _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
+    _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
+
+    # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
+    chiller_vals = {}
+    dis_hava_val = fetch_dis_hava()
+    _dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
+    if dis_hava_val is not None:
+        _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
+    min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
+    if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
+        son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
+        for _, row in son_veri.iterrows():
+            lok_id = row["lokasyon_id"]
+            if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
+                chiller_vals[lok_id] = float(row["Chiller_Set_Temp_C"])
+            if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
+                dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
+                _dis_hava_kaynak = "📊 DB"
+        if chiller_vals:
+            min_lok = min(chiller_vals, key=chiller_vals.get)
+            max_lok = max(chiller_vals, key=chiller_vals.get)
+            min_val = chiller_vals[min_lok]
+            max_val = chiller_vals[max_lok]
+            min_renk = HASTANELER.get(min_lok, {}).get("renk", "#38bdf8")
+            max_renk = HASTANELER.get(max_lok, {}).get("renk", "#f59e0b")
+            min_isim = HASTANELER.get(min_lok, {}).get("kisa", min_lok)
+            max_isim = HASTANELER.get(max_lok, {}).get("kisa", max_lok)
+
+
+# ════════════════════════════════
+# SAĞ KOLON
+# ════════════════════════════════
+with sag:
+    # ── Canlı Uyarılar ──
     st.markdown('<div class="sec">🚨 CANLI UYARILAR</div>', unsafe_allow_html=True)
 
+    # Her lokasyon için uyarı listesi: {lok_id: [(severity, msg), ...]}
     lok_uyari_map = {lok_id: [] for lok_id in HASTANELER}
 
+    # 1) Bakım kartı arızaları (Supabase lokasyonlar.bakim_ozet)
     for lok_id, lok_info in HASTANELER.items():
         ld = lok_dict.get(lok_id, {})
         ozet = ld.get("bakim_ozet") or {}
@@ -1290,6 +1218,7 @@ if st.session_state["vx_sayfa"] == "uyarilar":
         if bakim > 0:
             lok_uyari_map[lok_id].append(("y", f"🟡 {isim}: {bakim} bileşen bakımda"))
 
+    # 2) Enerji verisi uyarıları
     if not df_all.empty:
         son_gun = df_all[df_all["Tarih"].dt.strftime("%Y-%m-%d") == dun]
         for lok_id in aktif_loklar:
@@ -1309,6 +1238,9 @@ if st.session_state["vx_sayfa"] == "uyarilar":
                 if pd.notna(cl) and cl > 90:
                     lok_uyari_map[lok_id].append(("r", f"🔥 {isim}: Chiller kritik yük (%{cl:.0f})"))
 
+    # 3) Çevrimdışı uyarıları — sol kolonda kart olarak gösterildiği için burada yok
+
+    # Lokasyonları arıza sayısına göre sırala (en fazla arıza önce)
     def lok_ariza_skoru(lok_id):
         ld = lok_dict.get(lok_id, {})
         ozet = ld.get("bakim_ozet") or {}
@@ -1318,7 +1250,11 @@ if st.session_state["vx_sayfa"] == "uyarilar":
         return ozet.get("toplam_sorun", 0) * 10 + len(lok_uyari_map.get(lok_id, []))
 
     sirali_loklar = sorted(HASTANELER.keys(), key=lok_ariza_skoru, reverse=True)
-    lok_ile_uyari = [(lid, lok_uyari_map.get(lid, [])) for lid in sirali_loklar if lok_uyari_map.get(lid)]
+
+    # ── Uyarıları lokasyon bazında grupla ve göster ──────
+    lok_ile_uyari = [(lid, lok_uyari_map.get(lid, []))
+                     for lid in sirali_loklar
+                     if lok_uyari_map.get(lid)]
 
     if not lok_ile_uyari:
         st.markdown(
@@ -1327,7 +1263,7 @@ if st.session_state["vx_sayfa"] == "uyarilar":
             unsafe_allow_html=True
         )
     else:
-        uyari_html = "<div class='lok-buyuk-grid' style='grid-template-columns:repeat(2, 1fr);'>"
+        uyari_html = "<div style='max-height:195px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:rgba(56, 189, 248,0.3) transparent;'>"
         for lid, uyarilar in lok_ile_uyari:
             lok_inf  = HASTANELER.get(lid, {})
             isim     = lok_inf.get("kisa", lid)
@@ -1344,33 +1280,24 @@ if st.session_state["vx_sayfa"] == "uyarilar":
                     f"margin-top:4px;font-size:10px;color:{s_renk};'>{msg}</div>"
                 )
             uyari_html += (
-                f"<details class='nk' style='background:{kart_bg};border:1px solid {kart_br};"
-                f"padding:10px 14px;cursor:pointer;'>"
+                f"<details style='background:{kart_bg};border:1px solid {kart_br};"
+                f"border-radius:8px;padding:6px 10px;margin-bottom:5px;cursor:pointer;'>"
                 f"<summary style='list-style:none;display:flex;align-items:center;gap:6px;"
-                f"font-size:12px;font-weight:600;color:rgba(200,230,255,0.85);'>"
-                f"<span style='width:8px;height:8px;border-radius:50%;background:{dot_renk};"
+                f"font-size:11px;font-weight:600;color:rgba(200,230,255,0.85);'>"
+                f"<span style='width:7px;height:7px;border-radius:50%;background:{dot_renk};"
                 f"box-shadow:0 0 5px {dot_renk};flex-shrink:0;display:inline-block;'></span>"
                 f"{isim} — {len(uyarilar)} uyarı"
                 f"</summary>"
-                f"<div style='margin-top:6px;'>{satirlar}</div>"
+                f"<div style='margin-top:4px;'>{satirlar}</div>"
                 f"</details>"
             )
         uyari_html += "</div>"
         st.markdown(uyari_html, unsafe_allow_html=True)
-    st.stop()
 
-# ============================================================
-# OTO SET SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
-# ============================================================
-if st.session_state["vx_sayfa"] == "oto_set":
-    st.markdown("""
-    <style>
-    .block-container, [data-testid="stMainBlockContainer"] {
-        overflow-y: auto !important; height: 100vh !important; max-height: 100vh !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    st.markdown('<div class="sec">🤖 OTOMASYON SENARYOLARI</div>', unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+
     # ── OTO SET — Birleşik Kart (toggle + durum + geçmiş) ──
     st.markdown("""<style>
     .switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;}
@@ -1458,50 +1385,10 @@ if st.session_state["vx_sayfa"] == "oto_set":
             f"<span style='color:#f59e0b;'>{_ml_son['tahmin_ort']}°C</span></div>"
         )
 
-    # ── Dış Hava & Chiller Set verilerini önceden hazırla (kart yan yana gösterilecek) ──
-    _ch_ic = ""
-    if dis_hava_val is not None:
-        _ch_ic += (
-            f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:8px;'>"
-            f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:18px;font-weight:900;"
-            f"color:#f59e0b;text-shadow:0 0 12px rgba(245,158,11,0.5);'>"
-            f"🌡️ {dis_hava_val:.1f}°C</span>"
-            f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>Dış Hava İstanbul"
-            f" &nbsp;·&nbsp; {_dis_hava_kaynak}</span>"
-            f"</div>"
-        )
-    _rozet_ic = ""
-    if min_val is not None:
-        _rozet_ic += (
-            f"<div style='background:rgba(56, 189, 248,0.08);border:1px solid rgba(56, 189, 248,0.2);"
-            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-            f"❄️ Min &nbsp;<b style='color:#38bdf8;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{min_val:.1f}°C</b>"
-            f"&nbsp;<span style='color:{min_renk};'>{min_isim}</span></div>"
-        )
-    if max_val is not None and max_isim != min_isim:
-        _rozet_ic += (
-            f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);"
-            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
-            f"🔥 Max &nbsp;<b style='color:#ef4444;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{max_val:.1f}°C</b>"
-            f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
-        )
-    _dis_hava_kart_var = dis_hava_val is not None or min_val is not None
-    if _dis_hava_kart_var:
-        _dis_hava_html = (
-            f"<div class='nk' style='height:100%;'>"
-            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
-            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
-            f"{_ch_ic}"
-            f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
-            f"</div>"
-        )
-
-    _oto_sag, _dis_hava_sag = st.columns(2, gap="small")
-
     # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
-    with _oto_sag:
-        st.markdown(
-        f"<div class='nk' style='height:100%;'>"
+    st.markdown(
+        f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+        f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
         # ── Satır 1: Başlık ──
         f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
         f"<div>"
@@ -1591,125 +1478,51 @@ if st.session_state["vx_sayfa"] == "oto_set":
                 unsafe_allow_html=True
             )
 
-    # ── Chiller Set & Dış Hava Kartı — ikinci kolon ──
-    with _dis_hava_sag:
-        if _dis_hava_kart_var:
-            st.markdown(_dis_hava_html, unsafe_allow_html=True)
-        else:
-            st.markdown("<div class='alrt-y'>⚠️ Chiller set verisi bulunamadı</div>", unsafe_allow_html=True)
+    # ── Chiller Set & Dış Hava Kartı ──
+    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+    # ── Chiller Set & Dış Hava — Birleşik Kart ──
+    _ch_ic = ""
+    if dis_hava_val is not None:
+        _ch_ic += (
+            f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:8px;'>"
+            f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:18px;font-weight:900;"
+            f"color:#f59e0b;text-shadow:0 0 12px rgba(245,158,11,0.5);'>"
+            f"🌡️ {dis_hava_val:.1f}°C</span>"
+            f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>Dış Hava İstanbul"
+            f" &nbsp;·&nbsp; {_dis_hava_kaynak}</span>"
+            f"</div>"
+        )
+    _rozet_ic = ""
+    if min_val is not None:
+        _rozet_ic += (
+            f"<div style='background:rgba(56, 189, 248,0.08);border:1px solid rgba(56, 189, 248,0.2);"
+            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+            f"❄️ Min &nbsp;<b style='color:#38bdf8;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{min_val:.1f}°C</b>"
+            f"&nbsp;<span style='color:{min_renk};'>{min_isim}</span></div>"
+        )
+    if max_val is not None and max_isim != min_isim:
+        _rozet_ic += (
+            f"<div style='background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);"
+            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(200,230,255,0.8);'>"
+            f"🔥 Max &nbsp;<b style='color:#ef4444;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{max_val:.1f}°C</b>"
+            f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
+        )
+    if dis_hava_val is not None or min_val is not None:
+        st.markdown(
+            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
+            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
+            f"{_ch_ic}"
+            f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown("<div class='alrt-y'>⚠️ Chiller set verisi bulunamadı</div>", unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-    st.stop()
 
-# ============================================================
-# ENERJİ ANALİZİ SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
-# ============================================================
-if st.session_state["vx_sayfa"] == "enerji_analizi":
-    st.markdown("""
-    <style>
-    .block-container, [data-testid="stMainBlockContainer"] {
-        overflow-y: auto !important; height: 100vh !important; max-height: 100vh !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    st.markdown('<div class="sec">⚡ ENERJİ ANALİZİ</div>', unsafe_allow_html=True)
-    # ── Global Özet (Aylık + Trend) ──
-    _ay_tr = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
-              "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
-    _bu_yil = now.year
-    _bu_ay  = now.month
-    st.markdown(f'<div class="sec">⚡ GLOBAL ÖZET — {_ay_tr[_bu_ay-1].upper()} {_bu_yil}</div>', unsafe_allow_html=True)
-    if not df_all.empty:
-        # Dönem filtreleri
-        _bu_ay_bas   = pd.Timestamp(year=_bu_yil,   month=_bu_ay, day=1)
-        _gec_ay_yil  = _bu_yil - 1 if _bu_ay == 1 else _bu_yil
-        _gec_ay_no   = 12 if _bu_ay == 1 else _bu_ay - 1
-        _gec_ay_bas  = pd.Timestamp(year=_gec_ay_yil, month=_gec_ay_no, day=1)
-        _gec_ay_son  = _bu_ay_bas - pd.Timedelta(days=1)
-        _bu_yil_bas  = pd.Timestamp(year=_bu_yil,   month=1, day=1)
-        _gec_yil_bas = pd.Timestamp(year=_bu_yil-1, month=1, day=1)
-        _gec_yil_son = _bu_yil_bas - pd.Timedelta(days=1)
-
-        _df_bu_ay   = df_all[df_all["Tarih"] >= _bu_ay_bas]
-        _df_gec_ay  = df_all[(df_all["Tarih"] >= _gec_ay_bas) & (df_all["Tarih"] <= _gec_ay_son)]
-        _df_bu_yil  = df_all[df_all["Tarih"] >= _bu_yil_bas]
-        _df_gec_yil = df_all[(df_all["Tarih"] >= _gec_yil_bas) & (df_all["Tarih"] <= _gec_yil_son)]
-
-        def tr(sayi, ondalik=0):
-            fmt = f"{sayi:,.{ondalik}f}"
-            if ondalik > 0:
-                parts = fmt.split(".")
-                return parts[0].replace(",", ".") + "," + parts[1]
-            return fmt.replace(",", ".")
-
-        def _cs(df, col):
-            return df[col].sum() if col in df.columns else 0
-
-        def _pct_html(bu, gec):
-            if not gec or gec == 0: return ""
-            p = (bu - gec) / gec * 100
-            renk = "#10b981" if p <= 0 else "#ef4444"
-            yon  = "▼" if p <= 0 else "▲"
-            return f'<b style="color:{renk};font-size:10px;"> {yon}{abs(p):.1f}%</b>'
-
-        _gec_ay_label = _ay_tr[_gec_ay_no - 1]
-
-        _metrikler = [
-            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh"),
-            ("🔥 Doğalgaz",      None,                         "m³"),
-            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh"),
-            ("💧 Su",             "Su_Tuketimi_m3",             "m³"),
-            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh"),
-        ]
-
-        _ozet_kartlar = '<div class="ozet-grid">'
-        for _lbl, _col, _birim in _metrikler:
-            if _col is None:  # Doğalgaz: kazan + kojen toplamı
-                _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
-                _ga   = _cs(_df_gec_ay,  "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay,  "Kojen_Dogalgaz_m3")
-                _by   = _cs(_df_bu_yil,  "Kazan_Dogalgaz_m3") + _cs(_df_bu_yil,  "Kojen_Dogalgaz_m3")
-                _gy   = _cs(_df_gec_yil, "Kazan_Dogalgaz_m3") + _cs(_df_gec_yil, "Kojen_Dogalgaz_m3")
-            else:
-                _bu = _cs(_df_bu_ay,   _col)
-                _ga = _cs(_df_gec_ay,  _col)
-                _by = _cs(_df_bu_yil,  _col)
-                _gy = _cs(_df_gec_yil, _col)
-
-            _trend_parts = []
-            if _ga > 0: _trend_parts.append(f"{_gec_ay_label}: {tr(_ga)} {_birim}")
-            if _by > 0: _trend_parts.append(f"{_bu_yil} YTD: {tr(_by)} {_birim}")
-            if _gy > 0: _trend_parts.append(f"{_bu_yil-1}: {tr(_gy)} {_birim}")
-            _trend_html = (
-                f'<div style="font-size:9px;color:rgba(120,170,220,0.5);margin-top:2px;">'
-                + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
-            ) if _trend_parts else ""
-
-            _ozet_kartlar += (
-                f'<div class="nk" style="margin-bottom:0;">'
-                f'<div style="display:flex;justify-content:space-between;align-items:center;">'
-                f'<span style="font-size:11px;color:rgba(150,210,255,0.7);">{_lbl}</span>'
-                f'<span style="font-size:12px;font-weight:700;color:#38bdf8;'
-                f'font-family:\'Playfair Display\',\'Plus Jakarta Sans\',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>'
-                f'</div>'
-                f'{_trend_html}'
-                f'</div>'
-            )
-        _ozet_kartlar += '</div>'
-        st.markdown(_ozet_kartlar, unsafe_allow_html=True)
-    st.stop()
-
-# ============================================================
-# AI ASİSTAN SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
-# ============================================================
-if st.session_state["vx_sayfa"] == "ai_asistan":
-    st.markdown("""
-    <style>
-    .block-container, [data-testid="stMainBlockContainer"] {
-        overflow-y: auto !important; height: 100vh !important; max-height: 100vh !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    st.markdown('<div class="sec">🧠 AI ASİSTAN</div>', unsafe_allow_html=True)
     # ════════════════════════════════
     # 🤖 ENERJİ ZEKASI — AI Modülü
     # ════════════════════════════════
@@ -1815,20 +1628,11 @@ if st.session_state["vx_sayfa"] == "ai_asistan":
                 f"⚡ {_anormal_n} lokasyon normal dışı: {_anormal_isimler}</div>"
             )
 
-        _ez_baslik = (
-            f"<b style='color:#6ee7b7;'>{_en_iyi[1]['isim']}</b> en verimli "
-            f"(<b style='color:#38bdf8;'>{_en_iyi[1]['kwh_m2']}</b> kWh/m²/gün) — "
-            f"<b style='color:#fca5a5;'>{_en_kotu[1]['isim']}</b> dikkat gerektiriyor "
-            f"(<b style='color:#ef4444;'>{_en_kotu[1]['kwh_m2']}</b> kWh/m²/gün)"
-        )
         st.markdown(
-            f"<div class='nk ai-hero'>"
-            f"<div style='display:flex;align-items:center;gap:6px;margin-bottom:8px;'>"
-            f"<span class='ai-status-dot' style='background:#38bdf8;'></span>"
-            f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
-            f"color:rgba(56, 189, 248,0.85);letter-spacing:2px;'>🧠 AI ENERJİ ZEKASI — CANLI DEĞERLENDİRME</span>"
-            f"</div>"
-            f"<div style='font-size:11px;line-height:1.6;color:rgba(220,235,255,0.9);margin-bottom:10px;'>{_ez_baslik}</div>"
+            f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+            f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
+            f"<div style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
+            f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
             f"{_ez_satirlar}"
             f"{_anormal_html}"
             f"</div>",
@@ -2135,9 +1939,10 @@ if st.session_state["vx_sayfa"] == "ai_asistan":
 
                 # Kart dış çerçevesi — üst kısım
                 st.markdown(
-                    f"<div class='nk' style='margin-top:6px;'>"
+                    f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
+                    f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;margin-top:6px;overflow:hidden;'>"
                     f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                    f"padding-bottom:6px;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
+                    f"padding:10px 14px;border-bottom:1px solid rgba(56, 189, 248,0.08);'>"
                     f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:8px;font-weight:700;"
                     f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
                     f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>🕐 {_ai_zaman_str}</span>"
@@ -2164,20 +1969,19 @@ if st.session_state["vx_sayfa"] == "ai_asistan":
             unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-    st.stop()
 
-# ============================================================
-# AYARLAR SAYFASI — sadece bu sayfada gösterilir, başka hiçbir şey yok
-# ============================================================
-if st.session_state["vx_sayfa"] == "ayarlar":
-    st.markdown("""
-    <style>
-    .block-container, [data-testid="stMainBlockContainer"] {
-        overflow-y: auto !important; height: 100vh !important; max-height: 100vh !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    # ============ AYARLAR ============
+
+# ============ FOOTER ============
+st.markdown(f"""
+<div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(56, 189, 248,0.08); margin-top:10px;">
+  <span style="font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:9px; color:rgba(56, 189, 248,0.25); letter-spacing:2px;">
+    ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; {now_display.strftime('%d.%m.%Y %H:%M')}
+  </span>
+</div>
+""", unsafe_allow_html=True)
+
+# ============ AYARLAR ============
+with st.expander("⚙️  Ayarlar", expanded=False):
     st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
 
     ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder", "🎛️ Uzaktan Kontrol"])
@@ -2400,355 +2204,3 @@ if st.session_state["vx_sayfa"] == "ayarlar":
                     )
             else:
                 st.caption("Henüz komut gönderilmedi.")
-    st.stop()
-
-# ============================================================
-# ÜST SIRA: Karşılama kartı + renkli KPI kartları (Votrex tarzı)
-# ============================================================
-_toplam_enerji_kwh = 0
-_aktif_lok = _cevrimdisi_lok = _kurulmadi_lok = 0
-_hiyi = _hkotu = None
-if not df_all.empty:
-    _hero_metrik = {}
-    for _hlid, _hinfo in HASTANELER.items():
-        _honline, _hfark = online_bilgi(_hlid)
-        if _hfark is None:
-            _kurulmadi_lok += 1
-        elif _honline:
-            _aktif_lok += 1
-        else:
-            _cevrimdisi_lok += 1
-        _hkwh = dun_kwh(_hlid)
-        if _hkwh and _hkwh > 0:
-            _toplam_enerji_kwh += _hkwh
-            _hero_metrik[_hlid] = {"isim": _hinfo["kisa"], "kwh_m2": round(_hkwh / _hinfo.get("m2", 10000), 2)}
-    if _hero_metrik:
-        _hsira = sorted(_hero_metrik.items(), key=lambda x: x[1]["kwh_m2"])
-        _hiyi, _hkotu = _hsira[0][1], _hsira[-1][1]
-
-_toplam_enerji_str = f"{_toplam_enerji_kwh:,.0f}".replace(",", ".")
-
-st.markdown("""
-<style>
-.vx-kpi-row { display:flex; gap:12px; margin-bottom:16px; align-items:stretch; }
-.vx-welcome {
-    flex:1.6; border-radius:14px; padding:16px 18px;
-    background: linear-gradient(135deg, #111827 0%, #0d1320 100%);
-    border:1px solid rgba(255,255,255,0.07);
-    display:flex; flex-direction:column; justify-content:space-between;
-}
-.vx-welcome .top-row { display:flex; justify-content:space-between; font-size:10px; color:#64748b; }
-.vx-welcome .greet { font-size:18px; font-weight:800; color:#f8fafc; margin:4px 0 2px; }
-.vx-welcome .sub { font-size:11px; color:#94a3b8; }
-.vx-welcome .foot { font-size:10px; color:#10b981; display:flex; align-items:center; gap:5px; margin-top:8px; }
-.vx-kpi { flex:1; border-radius:14px; padding:14px 16px; position:relative; overflow:hidden;
-    display:flex; flex-direction:column; justify-content:space-between; min-width:0; }
-.vx-kpi .dot { position:absolute; top:12px; right:12px; width:7px; height:7px; border-radius:50%; }
-.vx-kpi .ic { font-size:16px; margin-bottom:8px; }
-.vx-kpi .val { font-size:20px; font-weight:800; color:#fff; line-height:1; }
-.vx-kpi .lbl { font-size:9px; color:rgba(255,255,255,0.65); margin-top:3px; letter-spacing:0.5px; }
-.vx-kpi.blue   { background:linear-gradient(135deg,#1d4ed8,#1e3a8a); }
-.vx-kpi.green  { background:linear-gradient(135deg,#059669,#065f46); }
-.vx-kpi.orange { background:linear-gradient(135deg,#d97706,#92400e); }
-.vx-kpi.red    { background:linear-gradient(135deg,#dc2626,#7f1d1d); }
-</style>
-""" + (
-    "<div class='vx-kpi-row'>"
-    "<div class='vx-welcome'>"
-    f"<div class='top-row'><span>{('🌙 İyi Akşamlar' if now_display.hour>=18 or now_display.hour<6 else '☀️ İyi Günler')}</span><span>{now_display.strftime('%A, %d %B %Y')}</span></div>"
-    "<div class='greet'>SYNAPSE AI Aktif</div>"
-    f"<div class='sub'>{(_hiyi['isim']+' en verimli, '+_hkotu['isim']+' dikkat gerektiriyor') if _hiyi else 'Veriler değerlendiriliyor...'}</div>"
-    "<div class='foot'>● Tüm sistemler operasyonel</div>"
-    "</div>"
-    f"<div class='vx-kpi blue'><div class='dot' style='background:#60a5fa;'></div><div class='ic'>⚡</div><div class='val'>{_toplam_enerji_str}</div><div class='lbl'>TOPLAM ENERJİ (kWh)</div></div>"
-    f"<div class='vx-kpi green'><div class='dot' style='background:#34d399;'></div><div class='ic'>🟢</div><div class='val'>{_aktif_lok}</div><div class='lbl'>AKTİF LOKASYON</div></div>"
-    f"<div class='vx-kpi orange'><div class='dot' style='background:#fbbf24;'></div><div class='ic'>⚪</div><div class='val'>{_kurulmadi_lok}</div><div class='lbl'>KURULUM BEKLİYOR</div></div>"
-    f"<div class='vx-kpi red'><div class='dot' style='background:#f87171;'></div><div class='ic'>🔴</div><div class='val'>{_cevrimdisi_lok}</div><div class='lbl'>ÇEVRİMDIŞI</div></div>"
-    "</div>"
-), unsafe_allow_html=True)
-
-# ============================================================
-# ENERJİ ANALİTİĞİ — büyük trend grafiği + Quick Stats (Votrex tarzı)
-# ============================================================
-_grafik, _quick = st.columns([2.3, 1], gap="medium")
-with _grafik:
-    st.markdown('<div class="sec">📈 ENERJİ ANALİTİĞİ — Son 30 Gün</div>', unsafe_allow_html=True)
-    if not df_all.empty and "Toplam_Hastane_Tuketim_kWh" in df_all.columns:
-        _son30_bas = (now - timedelta(days=30)).strftime("%Y-%m-%d")
-        _df_son30 = df_all[df_all["Tarih"].dt.strftime("%Y-%m-%d") >= _son30_bas]
-        _gunluk = _df_son30.groupby(_df_son30["Tarih"].dt.strftime("%Y-%m-%d"))["Toplam_Hastane_Tuketim_kWh"].sum().reset_index()
-        _gunluk.columns = ["tarih", "kwh"]
-        _gunluk = _gunluk.sort_values("tarih")
-        _fig = go.Figure()
-        _fig.add_trace(go.Scatter(
-            x=_gunluk["tarih"], y=_gunluk["kwh"], mode="lines", fill="tozeroy",
-            line=dict(color="#38bdf8", width=2.5),
-            fillcolor="rgba(56,189,248,0.12)", name="Toplam Enerji"
-        ))
-        _fig.update_layout(
-            height=260, margin=dict(l=0, r=0, t=10, b=0),
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(showgrid=False, color="#64748b", tickfont=dict(size=9)),
-            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.06)", color="#64748b", tickfont=dict(size=9)),
-            font=dict(family="Plus Jakarta Sans"), showlegend=False,
-        )
-        st.plotly_chart(_fig, use_container_width=True, config={"displayModeBar": False})
-    else:
-        st.markdown("<div class='alrt-y'>📊 Henüz yeterli veri yok.</div>", unsafe_allow_html=True)
-
-with _quick:
-    st.markdown('<div class="sec">📊 QUICK STATS</div>', unsafe_allow_html=True)
-    _qs_items = [
-        ("🟢", "Aktif Lokasyon", str(_aktif_lok), "#10b981"),
-        ("🔴", "Çevrimdışı", str(_cevrimdisi_lok), "#ef4444"),
-        ("⚡", "En Verimli", _hiyi["isim"] if _hiyi else "—", "#38bdf8"),
-        ("⚠️", "Dikkat Gereken", _hkotu["isim"] if _hkotu else "—", "#f59e0b"),
-    ]
-    _qs_html = "<div class='nk' style='display:flex;flex-direction:column;gap:8px;'>"
-    for _ic, _lbl, _val, _c in _qs_items:
-        _qs_html += (
-            f"<div style='display:flex;align-items:center;justify-content:space-between;'>"
-            f"<span style='font-size:11px;color:rgba(200,215,235,0.8);'>{_ic} {_lbl}</span>"
-            f"<span style='font-size:11px;font-weight:800;color:{_c};'>{_val}</span></div>"
-        )
-    _qs_html += "</div>"
-    st.markdown(_qs_html, unsafe_allow_html=True)
-
-# ============================================================
-# ANA LAYOUT: sol (lokasyon grid + global özet, geniş) | sağ (AI/uyarı/kontrol paneli)
-# Harita kaldırıldı — lokasyon kartları artık mini konum rozeti taşıyor
-# ============================================================
-sol, sag = st.columns([2, 1.2], gap="medium")
-
-# ════════════════════════════════
-# SOL KOLON
-# ════════════════════════════════
-with sol:
-    st.markdown('<div id="syn-sol-panel"></div>', unsafe_allow_html=True)
-
-
-
-# ════════════════════════════════
-# (Harita kaldırıldı — sadece arka plan veri hesabı korunuyor)
-# ════════════════════════════════
-if False:
-    harita_js = []
-    for lok_id, lok_info in HASTANELER.items():
-        online, fark_dk = online_bilgi(lok_id)
-        kwh = dun_kwh(lok_id)
-        durum  = "Çevrimiçi" if online else ("Kurulmadı" if fark_dk is None else "Çevrimdışı")
-        d_renk = "#10b981" if online else ("#6b7280" if fark_dk is None else "#ef4444")
-        boyut  = max(10, min(22, kwh / 1400)) if kwh > 0 else 9
-        harita_js.append({
-            "id":    lok_id,
-            "isim":  lok_info["isim"],
-            "kisa":  lok_info["kisa"],
-            "lat":   lok_info["lat"],
-            "lon":   lok_info["lon"],
-            "durum": durum,
-            "kwh":   f"{int(kwh):,}" if kwh else "—",
-            "m2":    f"{lok_info['m2']:,}",
-            "renk":  d_renk,
-            "boyut": boyut,
-            "online": bool(online),
-            "hq":    (lok_id == "atasehir"),
-        })
-
-    hjs = json.dumps(harita_js, ensure_ascii=False)
-
-    harita_html = f"""<!DOCTYPE html>
-<html><head>
-<meta charset="utf-8">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-* {{ margin:0; padding:0; box-sizing:border-box; }}
-html, body {{ background:transparent; }}
-#map {{ width:100%; height:100vh; background:transparent; }}
-.leaflet-container {{ background:transparent !important; font-family:'Plus Jakarta Sans',sans-serif; }}
-.leaflet-tile-pane {{ opacity: 0.82; }}
-.leaflet-popup-content-wrapper {{
-    background:rgba(15, 23, 42, 0.85) !important;
-    backdrop-filter: blur(12px) !important;
-    border:1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius:8px !important;
-    box-shadow:0 4px 20px rgba(0,0,0,0.6) !important;
-    padding:0 !important;
-}}
-.leaflet-popup-content {{ margin:0 !important; color:white !important; }}
-.leaflet-popup-tip-container {{ display:none; }}
-.leaflet-popup-close-button {{ color:rgba(56, 189, 248,0.5) !important; font-size:16px !important; top:8px !important; right:10px !important; }}
-.leaflet-control-zoom a {{
-    background:rgba(15, 23, 42, 0.7) !important;
-    color:#38bdf8 !important;
-    border-color:rgba(255, 255, 255, 0.08) !important;
-}}
-.leaflet-control-zoom a:hover {{ background:rgba(15, 23, 42, 0.9) !important; }}
-.leaflet-control-attribution {{ display:none !important; }}
-@keyframes breathe-outer {{
-    0%,100% {{ opacity:0.10; transform:scale(0.92); }}
-    50%      {{ opacity:0.28; transform:scale(1.20); }}
-}}
-@keyframes breathe-inner {{
-    0%,100% {{ opacity:0.22; transform:scale(0.96); }}
-    50%     {{ opacity:0.50; transform:scale(1.10); }}
-}}
-
-</style>
-</head><body>
-<div id="map"></div>
-<script>
-var map = L.map('map', {{
-    center: [39.0, 35.0],
-    zoom: 5,
-    zoomControl: true,
-    attributionControl: false,
-    preferCanvas: true
-}});
-
-// CartoDB Voyager — açık mavi su, krem kara, gri yollar (referans görseldeki gibi), ücretsiz, API key yok
-L.tileLayer('https://{{s}}.basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}{{r}}.png', {{
-    maxZoom: 19, subdomains: 'abcd', noWrap: true
-}}).addTo(map);
-
-window.addEventListener('resize', function() {{ map.invalidateSize(true); }});
-setTimeout(function() {{ map.invalidateSize(true); }}, 300);
-
-var hospitals = {hjs};
-
-hospitals.forEach(function(h) {{
-    var s  = h.boyut;
-    var c  = h.renk;
-    var hs = s / 2;
-
-    // ── SYNAPSE (Ataşehir/GM) — CPU çip simgesi, üstte SYNAPSE altta ATAŞEHİR ──
-    if (h.hq) {{
-        var boy = 56;
-        var yarim = boy / 2;
-        var pinler = '';
-        for (var pi = 0; pi < 6; pi++) {{
-            var off = -20 + pi * 8;
-            // Üst ve alt pinler
-            pinler += '<line x1="'+(yarim+off)+'" y1="6" x2="'+(yarim+off)+'" y2="14" stroke="'+c+'" stroke-width="2"/>';
-            pinler += '<line x1="'+(yarim+off)+'" y1="'+(boy-14)+'" x2="'+(yarim+off)+'" y2="'+(boy-6)+'" stroke="'+c+'" stroke-width="2"/>';
-            // Sol ve sağ pinler
-            pinler += '<line x1="6" y1="'+(yarim+off)+'" x2="14" y2="'+(yarim+off)+'" stroke="'+c+'" stroke-width="2"/>';
-            pinler += '<line x1="'+(boy-14)+'" y1="'+(yarim+off)+'" x2="'+(boy-6)+'" y2="'+(yarim+off)+'" stroke="'+c+'" stroke-width="2"/>';
-        }}
-        var cpuSvg = '<svg width="'+boy+'" height="'+boy+'" style="filter:drop-shadow(0 0 8px '+c+');overflow:visible;">'
-            + pinler
-            + '<rect x="14" y="14" width="'+(boy-28)+'" height="'+(boy-28)+'" rx="3" '
-            +   'fill="rgba(6,18,32,0.85)" stroke="'+c+'" stroke-width="2"/>'
-            + '</svg>';
-        var chipHtml = '<div style="display:flex;flex-direction:column;align-items:center;">'
-            + '<div style="position:relative;width:'+boy+'px;height:'+boy+'px;">'
-            +   cpuSvg
-            +   '<div style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;'
-            +     'align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:6px;font-weight:700;'
-            +     'color:'+c+';letter-spacing:0.3px;text-shadow:0 0 5px '+c+';pointer-events:none;">SYNAPSE</div>'
-            + '</div>'
-            + '<div style="margin-top:4px;font-family:Orbitron,monospace;font-size:8px;font-weight:700;'
-            +   'color:rgba(180,220,255,0.85);letter-spacing:1.5px;white-space:nowrap;'
-            +   'text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);">ATAŞEHİR</div>'
-            + '</div>';
-        L.marker([h.lat, h.lon], {{
-            icon: L.divIcon({{ className:'', html: chipHtml, iconSize:[120, 90], iconAnchor:[60, 6] }}),
-            zIndexOffset:400
-        }}).addTo(map).bindPopup(
-            '<div style="padding:14px 16px;min-width:170px;">' +
-            '<div style="font-family:Orbitron,monospace;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
-            '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
-            '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
-            '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
-            '<div style="font-size:12px;color:#a0c8ff;margin-bottom:4px;">⚡ <b style="color:white;font-size:14px;">'+h.kwh+'</b> kWh</div>' +
-            '<div style="font-size:10px;color:rgba(150,200,255,0.55);">📐 '+h.m2+' m²</div></div>',
-            {{ maxWidth:220, className:'' }}
-        );
-        return;
-    }}
-
-    // ── Dış glow halkası ──
-    L.marker([h.lat, h.lon], {{
-        icon: L.divIcon({{
-            className:'',
-            html:'<div style="width:'+(s*3.8)+'px;height:'+(s*3.8)+'px;background:'+c+';border-radius:50%;animation:breathe-outer 3s ease-in-out infinite;"></div>',
-            iconSize:[s*3.8, s*3.8], iconAnchor:[s*1.9, s*1.9]
-        }}),
-        interactive:false, zIndexOffset:-200
-    }}).addTo(map);
-
-    // ── İç glow halkası ──
-    L.marker([h.lat, h.lon], {{
-        icon: L.divIcon({{
-            className:'',
-            html:'<div style="width:'+(s*2)+'px;height:'+(s*2)+'px;background:'+c+';border-radius:50%;animation:breathe-inner 3s ease-in-out infinite;"></div>',
-            iconSize:[s*2, s*2], iconAnchor:[s, s]
-        }}),
-        interactive:false, zIndexOffset:-100
-    }}).addTo(map);
-
-    // ── Ana nokta ──
-    var dot = L.marker([h.lat, h.lon], {{
-        icon: L.divIcon({{
-            className:'',
-            html:'<div style="width:'+s+'px;height:'+s+'px;background:'+c+';border-radius:50%;border:2px solid rgba(255,255,255,0.28);box-shadow:0 0 10px '+c+',0 0 3px rgba(0,0,0,0.8);"></div>',
-            iconSize:[s, s], iconAnchor:[hs, hs]
-        }}),
-        zIndexOffset:100
-    }}).addTo(map);
-
-    // ── Etiket ──
-    L.marker([h.lat, h.lon], {{
-        icon: L.divIcon({{
-            className:'',
-            html:'<div style="color:rgba(180,220,255,0.80);font-size:8px;font-family:Orbitron,monospace;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 4px rgba(0,0,0,0.95),0 0 8px rgba(0,0,0,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+'</div>',
-            iconSize:[100,16], iconAnchor:[-hs-2, hs-2]
-        }}),
-        interactive:false, zIndexOffset:300
-    }}).addTo(map);
-
-    // ── Popup ──
-    var kwh_bar = h.kwh !== '—'
-        ? '<div style="margin-top:8px;height:3px;background:rgba(56, 189, 248,0.15);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;"></div></div>'
-        : '';
-    dot.bindPopup(
-        '<div style="padding:14px 16px;min-width:170px;">' +
-        '<div style="font-family:Orbitron,monospace;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
-        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
-        '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
-        '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
-        '<div style="font-size:12px;color:#a0c8ff;margin-bottom:4px;">⚡ <b style="color:white;font-size:14px;">'+h.kwh+'</b> kWh</div>' +
-        '<div style="font-size:10px;color:rgba(150,200,255,0.55);">📐 '+h.m2+' m²</div>' +
-        kwh_bar + '</div>',
-        {{ maxWidth:220, className:'' }}
-    );
-}});
-</script>
-</body></html>"""
-
-    st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
-    import base64, streamlit.components.v1 as _cv1
-    _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
-    _cv1.iframe(f"data:text/html;base64,{_b64}", height=1150, scrolling=False)
-
-
-
-# ════════════════════════════════
-# SAĞ KOLON
-# ════════════════════════════════
-with sag:
-    st.markdown('<div id="syn-sag-panel"></div>', unsafe_allow_html=True)
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-
-
-
-
-# ============ FOOTER ============
-st.markdown(f"""
-<div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(56, 189, 248,0.08); margin-top:10px;">
-  <span style="font-family:'Playfair Display','Plus Jakarta Sans',serif; font-size:9px; color:rgba(56, 189, 248,0.25); letter-spacing:2px;">
-    ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; {now_display.strftime('%d.%m.%Y %H:%M')}
-  </span>
-</div>
-""", unsafe_allow_html=True)
-
