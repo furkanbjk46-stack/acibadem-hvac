@@ -924,7 +924,7 @@ with sol:
         dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
 
         tum_kartlar += (
-            f'<a class="{card_cls}" href="?detay={lok_id}" title="{lok_info["kisa"]} detayına git" '
+            f'<a class="{card_cls}" href="?detay={lok_id}" target="_self" title="{lok_info["kisa"]} detayına git" '
             f'style="padding:14px;position:relative;">'
             + sira_badge +
             f'<div style="display:flex;align-items:center;gap:14px;">'
