@@ -255,6 +255,7 @@ lok_id = st.session_state.get("detay_lokasyon", None)
 if not lok_id or lok_id not in HASTANELER:
     st.error("Lokasyon seçilmedi. Ana sayfaya dönün.")
     if st.button("⬅ Ana Sayfaya Dön"):
+        st.session_state.pop("detay_lokasyon", None)
         st.switch_page("app_merkez.py")
     st.stop()
 
@@ -397,6 +398,7 @@ _m2_goster = f"{m2:,.0f}".replace(",", ".")
 col_geri, col_baslik = st.columns([1, 9])
 with col_geri:
     if st.button("⬅ Geri"):
+        st.session_state.pop("detay_lokasyon", None)
         st.switch_page("app_merkez.py")
 with col_baslik:
     st.markdown(
