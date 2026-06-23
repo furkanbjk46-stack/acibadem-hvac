@@ -54,9 +54,9 @@ header[data-testid="stHeader"] button    { display: none !important; }
     z-index: 1 !important; border: none !important;
 }
 
-/* Tüm yazılar */
-h1,h2,h3,h4,h5,h6 { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
-p, span, div, label { color: #cbd5e1 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+/* Tüm yazılar — lokasyon detay sayfası (.detay-gecis-katmani içinde inline exec ile çalışıyor) kendi renklerini korusun */
+h1:not(.detay-gecis-katmani *),h2:not(.detay-gecis-katmani *),h3:not(.detay-gecis-katmani *),h4:not(.detay-gecis-katmani *),h5:not(.detay-gecis-katmani *),h6:not(.detay-gecis-katmani *) { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
+p:not(.detay-gecis-katmani *), span:not(.detay-gecis-katmani *), div:not(.detay-gecis-katmani *), label:not(.detay-gecis-katmani *) { color: #cbd5e1 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
 
 /* Streamlit Material ikon istisnası — _arrow_right gibi ikonların bozulmaması için */
 span[data-testid="stIconMaterial"],
