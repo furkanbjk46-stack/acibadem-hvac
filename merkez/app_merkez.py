@@ -54,9 +54,9 @@ header[data-testid="stHeader"] button    { display: none !important; }
     z-index: 1 !important; border: none !important;
 }
 
-/* Tüm yazılar — lokasyon detay sayfası (.detay-gecis-katmani içinde inline exec ile çalışıyor) kendi renklerini korusun */
-h1:not(.detay-gecis-katmani *),h2:not(.detay-gecis-katmani *),h3:not(.detay-gecis-katmani *),h4:not(.detay-gecis-katmani *),h5:not(.detay-gecis-katmani *),h6:not(.detay-gecis-katmani *) { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
-p:not(.detay-gecis-katmani *), span:not(.detay-gecis-katmani *), div:not(.detay-gecis-katmani *), label:not(.detay-gecis-katmani *) { color: #cbd5e1 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+/* Tüm yazılar — lokasyon detay sayfası (st.container(key="detay_gecis_katmani") içinde inline exec ile çalışıyor) kendi renklerini korusun */
+h1:not(.st-key-detay_gecis_katmani *),h2:not(.st-key-detay_gecis_katmani *),h3:not(.st-key-detay_gecis_katmani *),h4:not(.st-key-detay_gecis_katmani *),h5:not(.st-key-detay_gecis_katmani *),h6:not(.st-key-detay_gecis_katmani *) { color: #f8fafc !important; font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important; font-weight: 400 !important; }
+p:not(.st-key-detay_gecis_katmani *), span:not(.st-key-detay_gecis_katmani *), div:not(.st-key-detay_gecis_katmani *), label:not(.st-key-detay_gecis_katmani *) { color: #cbd5e1 !important; font-family: 'Plus Jakarta Sans', sans-serif !important; }
 
 /* Streamlit Material ikon istisnası — _arrow_right gibi ikonların bozulmaması için */
 span[data-testid="stIconMaterial"],
@@ -731,22 +731,21 @@ if st.session_state.get("detay_lokasyon"):
         from { opacity: 0; transform: translateY(16px) scale(0.99); }
         to   { opacity: 1; transform: translateY(0) scale(1); }
     }
-    .detay-gecis-katmani { animation: detayGirisAnim 0.4s ease-out; }
+    .st-key-detay_gecis_katmani { animation: detayGirisAnim 0.4s ease-out; }
     </style>
-    <div class="detay-gecis-katmani">
     """, unsafe_allow_html=True)
 
-    _detay_dosya = os.path.join(os.path.dirname(__file__), "pages", "lokasyon_detay.py")
-    with open(_detay_dosya, "r", encoding="utf-8") as _f:
-        _detay_kaynak = _f.read()
-    # app_merkez zaten kendi set_page_config'ini çağırdı — detay sayfasınınkini atla
-    import re as _detay_re
-    _detay_kaynak = _detay_re.sub(
-        r"st\.set_page_config\(.*?\)\n", "", _detay_kaynak, count=1, flags=_detay_re.DOTALL
-    )
-    exec(compile(_detay_kaynak, _detay_dosya, "exec"), globals())
+    with st.container(key="detay_gecis_katmani"):
+        _detay_dosya = os.path.join(os.path.dirname(__file__), "pages", "lokasyon_detay.py")
+        with open(_detay_dosya, "r", encoding="utf-8") as _f:
+            _detay_kaynak = _f.read()
+        # app_merkez zaten kendi set_page_config'ini çağırdı — detay sayfasınınkini atla
+        import re as _detay_re
+        _detay_kaynak = _detay_re.sub(
+            r"st\.set_page_config\(.*?\)\n", "", _detay_kaynak, count=1, flags=_detay_re.DOTALL
+        )
+        exec(compile(_detay_kaynak, _detay_dosya, "exec"), globals())
 
-    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 # ── Rapor yönlendirmesi ──
