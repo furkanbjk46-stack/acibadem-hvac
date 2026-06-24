@@ -22,6 +22,9 @@ SAYAC_DIR = os.path.dirname(os.path.abspath(__file__))  # monthly_report
 # Ay icinde kac gunden fazla tekrar eden kurallar "muhtemel ariza" sayilsin
 TEKRAR_ESIK = 5
 
+# Sayaca sadece bu skorun UZERINDEKI alarmlar girsin (normal/hafif uyarilar sayilmasin)
+SKOR_ESIK = 7.0
+
 
 def _gunluk_csv_oku(csv_path: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path)
@@ -33,7 +36,9 @@ def _gunluk_csv_oku(csv_path: str) -> pd.DataFrame:
 
 
 def gunluk_alarm_listesi(csv_path: str) -> set:
-    """OPTIMAL olmayan (Mahal, Ekipman, Kural) uclulerini dondurur."""
+    """OPTIMAL olmayan VE skoru SKOR_ESIK'in uzerinde olan (Mahal, Ekipman, Kural) uclulerini dondurur.
+    Normal/hafif (dusuk skorlu) uyarilar sayaca girmez, sadece gercek saha arizasi adayi
+    olabilecek yuksek skorlu alarmlar takip edilir."""
     df = _gunluk_csv_oku(csv_path)
     alarmlar = set()
     for _, row in df.iterrows():
@@ -41,7 +46,11 @@ def gunluk_alarm_listesi(csv_path: str) -> set:
         kural = str(row.get("Kural", "")).strip()
         ekipman = str(row.get("Ekipman", "")).strip()
         mahal = str(row.get("Mahal", "")).strip()
-        if durum and durum != "OPTIMAL" and durum != "nan":
+        try:
+            skor = float(row.get("Skor", row.get("Score", 0)) or 0)
+        except (TypeError, ValueError):
+            skor = 0.0
+        if durum and durum != "OPTIMAL" and durum != "nan" and skor > SKOR_ESIK:
             # Kural bos olabilir, o zaman Durum kodu kural gibi davranir
             kural_key = kural if (kural and kural != "nan") else durum
             alarmlar.add((mahal, ekipman, kural_key))
