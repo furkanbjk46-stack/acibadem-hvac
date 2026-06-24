@@ -105,6 +105,14 @@ ENERGY_SCHEMA = [
     "Chiller_Tuketim_kWh", "MCC_Tuketim_kWh", "VRF_Split_Tuketim_kWh",
     "Dis_Hava_Sicakligi_C", "Chiller_Load_Percent",
     "Toplam_Hastane_Tuketim_kWh", "Toplam_Sogutma_Tuketim_kWh", "Diger_Yuk_kWh",
+    # --- Soğutma kırılımı (Chiller bazında) ---
+    "Chiller1_kWh", "Chiller2_kWh", "Chiller3_kWh", "Chiller4_kWh", "Chiller5_kWh",
+    # --- MCC kırılımı (analizör bazında) ---
+    "MCC1_kWh", "MCC2_kWh", "MCC3_kWh", "MCC4_kWh", "MCC6_kWh", "MCC7_kWh",
+    "Kule1_kWh", "Kule2_kWh", "Kule3_kWh",
+    "MCC_2BK_D01_kWh", "MCC_2BK_D02_kWh",
+    "MCC_4BK_E01_kWh", "MCC_4BK_E02_kWh", "MCC_4BK_F01_kWh",
+    "MCC_CK_D01_kWh", "MCC_CK_E01_kWh", "MCC_CK_F01_kWh",
 ]
 
 # ================================================================
@@ -384,6 +392,30 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "Toplam_Hastane_Tuketim_kWh": sebeke_kwh if sebeke_kwh != "" else total_kwh,  # Sebeke+Kojen (Kojen=0 simdilik)
         "Toplam_Sogutma_Tuketim_kWh": chiller_kwh,  # CH analizörleri = soğutma
         "Diger_Yuk_kWh":              diger_kwh,    # Toplam - MCC - Soğutma
+        # --- Soğutma kırılımı (Chiller bazında) ---
+        "Chiller1_kWh":               daily_kwh.get("CHILLER-1", "") if daily_kwh else "",
+        "Chiller2_kWh":               daily_kwh.get("CHILLER-2", "") if daily_kwh else "",
+        "Chiller3_kWh":               daily_kwh.get("CHILLER-3", "") if daily_kwh else "",
+        "Chiller4_kWh":               daily_kwh.get("CHILLER-4", "") if daily_kwh else "",
+        "Chiller5_kWh":               daily_kwh.get("CHILLER-5", "") if daily_kwh else "",
+        # --- MCC kırılımı (analizör bazında) ---
+        "MCC1_kWh":                   daily_kwh.get("MCC-1", "") if daily_kwh else "",
+        "MCC2_kWh":                   daily_kwh.get("MCC-2", "") if daily_kwh else "",
+        "MCC3_kWh":                   daily_kwh.get("MCC-3", "") if daily_kwh else "",
+        "MCC4_kWh":                   daily_kwh.get("MCC-4", "") if daily_kwh else "",
+        "MCC6_kWh":                   daily_kwh.get("MCC-6", "") if daily_kwh else "",
+        "MCC7_kWh":                   daily_kwh.get("MCC-7", "") if daily_kwh else "",
+        "Kule1_kWh":                  daily_kwh.get("KULE-1", "") if daily_kwh else "",
+        "Kule2_kWh":                  daily_kwh.get("KULE-2", "") if daily_kwh else "",
+        "Kule3_kWh":                  daily_kwh.get("KULE-3", "") if daily_kwh else "",
+        "MCC_2BK_D01_kWh":            daily_kwh.get("2BK-MCC-D01", "") if daily_kwh else "",
+        "MCC_2BK_D02_kWh":            daily_kwh.get("2BK-MCC-D02", "") if daily_kwh else "",
+        "MCC_4BK_E01_kWh":            daily_kwh.get("4BK-MCC-E01", "") if daily_kwh else "",
+        "MCC_4BK_E02_kWh":            daily_kwh.get("4BK-MCC-E02", "") if daily_kwh else "",
+        "MCC_4BK_F01_kWh":            daily_kwh.get("4BK-MCC-F01", "") if daily_kwh else "",
+        "MCC_CK_D01_kWh":             daily_kwh.get("CK-MCC-D01", "") if daily_kwh else "",
+        "MCC_CK_E01_kWh":             daily_kwh.get("CK-MCC-E01", "") if daily_kwh else "",
+        "MCC_CK_F01_kWh":             daily_kwh.get("CK-MCC-F01", "") if daily_kwh else "",
     }
     return row
 
