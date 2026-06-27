@@ -566,7 +566,8 @@ def main():
         print("ATLANDI: ahu_nokta_konfig.json — AHU Noktalari sayfasi bos")
 
     if sat_limitleri:
-        sat_yolu = os.path.join(cikti_dir, "ahu_sat_limitleri.json")
+        os.makedirs(os.path.join(cikti_dir, "configs"), exist_ok=True)
+        sat_yolu = os.path.join(cikti_dir, "configs", "ahu_sat_limitleri.json")
         with open(sat_yolu, "w", encoding="utf-8") as f:
             json.dump(sat_limitleri, f, ensure_ascii=False, indent=2)
         print(f"OLUSTURULDU: {sat_yolu}")
@@ -574,7 +575,8 @@ def main():
         print("ATLANDI: ahu_sat_limitleri.json — AHU SAT ve Kapasite sayfasi bos (opsiyonel)")
 
     if tasarim_kapasiteleri:
-        kap_yolu = os.path.join(cikti_dir, "ahu_tasarim_kapasiteleri.json")
+        os.makedirs(os.path.join(cikti_dir, "configs"), exist_ok=True)
+        kap_yolu = os.path.join(cikti_dir, "configs", "ahu_tasarim_kapasiteleri.json")
         with open(kap_yolu, "w", encoding="utf-8") as f:
             json.dump(tasarim_kapasiteleri, f, ensure_ascii=False, indent=2)
         print(f"OLUSTURULDU: {kap_yolu}")
