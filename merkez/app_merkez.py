@@ -402,9 +402,9 @@ _CH_MODLAR   = ["koc_soguk", "serin", "ilimli", "sicak"]
 _CH_SET      = {"koc_soguk": 8.0, "serin": 7.5, "ilimli": 7.0, "sicak": 6.5}
 _CH_H        = 2.0
 
-# Kollektor / FCU / AHU: tek eşik 20°C, ±2°C histerezis
-_DIG_ESIK = 20.0
-_DIG_H    = 2.0
+# Kollektor / FCU / AHU: tek eşik 23°C, ±3°C histerezis
+_DIG_ESIK = 23.0
+_DIG_H    = 3.0
 _DIG_SET  = {
     "sogutma": {
         "GUNDUZ_KOLLEKTOR_SET":    8.0,
