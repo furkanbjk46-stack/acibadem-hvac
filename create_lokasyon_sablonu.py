@@ -142,6 +142,15 @@ satir(ws1, 48, 'FCU Birim Kapasite (kW)',     'Tek bir FCU biriminin ortalama kW
 satir(ws1, 49, 'FCU Esanjor Diversity',       'Eszamanlilik faktoru (0-1 arasi)',                 '0.55', zorunlu=False)
 satir(ws1, 50, 'Tasarim Hava DT (C)',         'AHU/FCU tasarim hava sicaklik farki',              '5',    zorunlu=False)
 
+ws1.row_dimensions[51].height = 8
+ws1.row_dimensions[52].height = 22
+ws1.merge_cells('A52:D52')
+alan_baslik(ws1, 'A52', '  7. LiSANS BiLGiSi (Lokasyon ID ile KARISTIRMAYIN — farkli kavramlar)')
+
+satir(ws1, 53, 'Makine ID',  'Lokasyon PC sinin anakart UUID si — PC de "wmic csproduct get uuid" '
+                              'komutuyla alinir. Bu, Lokasyon ID DEGiLDiR, ayri bir kavramdir.',
+      'DF9ABA0D-A7A8-C416-A430-00D861BD5794', zorunlu=False)
+
 # ════════════════════════════════════════════════
 # SAYFA 2 — MODBUS ANALIZORLER
 # ════════════════════════════════════════════════

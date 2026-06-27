@@ -16,6 +16,7 @@
 #                            semasi buradan gelir; Hat Sayisi alanina gore otomatik uretilir)
 #   - configs/hedefli_okuma_sablonu_2.xlsx  (BACnet Noktalar sayfasindan, Sistem Rolu haric)
 #   - Kurulum zip paketi  (lokasyonlar/<id>.zip)
+#   - Supabase 'lisanslar' tablosuna kayit  (Makine ID alani doldurulduysa)
 #
 # KAPSAM DISI (henuz otomatik degil, manuel yapilmali):
 #   - Supabase 'lokasyonlar' tablosuna kayit
@@ -470,6 +471,40 @@ def supabase_config_uret(lokasyon_id: str) -> dict:
     }
 
 
+def lisans_kaydi_yayinla(lokasyon_id: str, makine_id: str, makine_adi: str) -> dict:
+    """Supabase 'lisanslar' tablosuna aktif lisans kaydi ekler/gunceller (upsert,
+    makine_id+lokasyon_id ikilisi uzerinden). service_role_key gerekir."""
+    import urllib.request
+
+    secret_path = os.path.join(BASE_DIR, "hvac", "deneme", "supabase_secret.json")
+    merkez_config_path = os.path.join(BASE_DIR, "merkez", "configs", "merkez_config.json")
+    with open(secret_path, "r", encoding="utf-8") as f:
+        service_key = json.load(f)["service_role_key"]
+    with open(merkez_config_path, "r", encoding="utf-8") as f:
+        supabase_url = json.load(f)["supabase_url"]
+
+    payload = json.dumps({
+        "lokasyon_id": lokasyon_id,
+        "makine_id": makine_id,
+        "makine_adi": makine_adi,
+        "aktif": True,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        supabase_url + "/rest/v1/lisanslar?on_conflict=makine_id,lokasyon_id",
+        data=payload,
+        headers={
+            "apikey": service_key,
+            "Authorization": "Bearer " + service_key,
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates,return=representation",
+        },
+        method="POST",
+    )
+    resp = urllib.request.urlopen(req)
+    return json.loads(resp.read().decode())[0]
+
+
 def main():
     if len(sys.argv) < 2:
         print("Kullanim: python lokasyon_kurulum_otomasyon.py <doldurulmus_sablon.xlsx>")
@@ -556,6 +591,16 @@ def main():
     with open(config_yolu, "w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
     print(f"OLUSTURULDU: {config_yolu}")
+
+    makine_id = profil.get("Makine ID", "").strip()
+    if makine_id:
+        try:
+            lisans_kaydi_yayinla(lokasyon_id, makine_id, f"{lokasyon_adi} PC")
+            print(f"SUPABASE: lisanslar tablosuna kayit eklendi/guncellendi (makine_id={makine_id})")
+        except Exception as e:
+            print(f"UYARI: lisans kaydi olusturulamadi: {e}")
+    else:
+        print("ATLANDI: lisanslar tablosu kaydi — Makine ID alani bos")
 
     if ahu_konfig:
         ahu_yolu = os.path.join(cikti_dir, "ahu_nokta_konfig.json")
