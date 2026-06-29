@@ -75,8 +75,7 @@ CONFIG = {
     "SCORE_CRITICAL_THRESHOLD": 7.0,
     
     # Approach analizi
-    "APPROACH_WARNING_THRESHOLD": 2.5,
-    "APPROACH_MAX": 10.0,  # 7.0'dan 10.0'a yükseltildi - false positive azaltmak için
+    "APPROACH_MAX": 10.0,  # COOL_EFF_LOW tetik eşiği (Supply-Inlet approach). 7.0'dan 10.0'a yükseltildi - false positive azaltmak için
     
     # Low ΔT sendromu eşikleri
     "LOW_DT_THRESHOLD": 3.0,
@@ -89,7 +88,6 @@ CONFIG = {
     "SAT_TOLERANS": 1.0,  # SAT min/max eşiklerinde ±1°C tolerans (örn. 15.1°C alarm vermesin)
 
     # Isıtma teşhis eşikleri
-    "HEAT_EFF_LOW_THRESHOLD": 20.0,
     "HEAT_SAT_LOW_THRESHOLD": 27.0,
     
     # OAT bias (soğuk havada hedef ΔT düşer, sıcak havada artar — AHU için)
@@ -282,7 +280,7 @@ load_settings_from_file()
 INSTRUCTION_GUIDE = {
     "NOT_COOLING": {
         "severity": "CRITICAL",
-        "score": 8.0,
+        "score": 9.0,
         "title": "Üfleme Soğutmuyor",
         "description": "Üfleme sıcaklığı (SAT) oda sıcaklığından yüksek. Sistem soğutma yapamıyor.",
         "steps": [
@@ -305,7 +303,7 @@ INSTRUCTION_GUIDE = {
     },
     "NOT_HEATING": {
         "severity": "CRITICAL",
-        "score": 8.0,
+        "score": 9.0,
         "title": "Üfleme Isıtmıyor",
         "description": "Üfleme sıcaklığı (SAT) oda sıcaklığından düşük. Sistem ısıtma yapamıyor.",
         "steps": [
@@ -370,7 +368,7 @@ INSTRUCTION_GUIDE = {
         "severity": "CRITICAL",
         "score": 8.0,
         "title": "Düşük Debi / Pompa Basıncı",
-        "description": "Su tarafı ΔT yüksek (≥25°C) ama üfleme sıcaklığı düşük (<28°C). Su yeterince akmıyor.",
+        "description": "Su tarafı ΔT yüksek (≥15°C) ama üfleme sıcaklığı düşük (<27°C). Su yeterince akmıyor.",
         "steps": [
             "Pompa çalışıyor mu? Akım değerini kontrol edin",
             "Pompa basınç göstergelerini okuyun (giriş/çıkış)",
@@ -388,8 +386,8 @@ INSTRUCTION_GUIDE = {
         ]
     },
     "HEAT_EFF_LOW": {
-        "severity": "WARNING",
-        "score": 6.0,
+        "severity": "CRITICAL",
+        "score": 7.0,
         "title": "Isıtma Etkisi Düşük",
         "description": "Isıtma vanası çok açık (≥90%) ama üfleme havası soğuk (<28°C).",
         "steps": [
@@ -412,10 +410,10 @@ INSTRUCTION_GUIDE = {
         "setpoint_chain": "Kazan (70-80°C) → Kolektör (50-60°C) → AHU SAT (30-35°C) → Oda (20-22°C)"
     },
     "COOL_EFF_LOW": {
-        "severity": "WARNING",
-        "score": 6.0,
+        "severity": "CRITICAL",
+        "score": 7.0,
         "title": "Soğutma Etkisi Düşük",
-        "description": "Soğutma vanası çok açık (≥90%) ama üfleme havası sıcak (approach >7°C).",
+        "description": "Soğutma vanası çok açık (≥90%) ama üfleme havası sıcak (approach >10°C).",
         "steps": [
             "AHU SAT setpoint'i düşürün (örn. 12-14°C)",
             "Kolektör/Transfer gidiş setpoint'i düşürün",
@@ -498,7 +496,7 @@ INSTRUCTION_GUIDE = {
     },
     "AIR_DT_LOW_COOL": {
         "severity": "WARNING",
-        "score": 4.0,
+        "score": 5.0,
         "title": "Hava ΔT Düşük (Soğutma)",
         "description": "Soğutma vanası yüksek ama hava ΔT <3.0°C. Hava yeterince soğumuyor.",
         "steps": [
@@ -711,7 +709,7 @@ INSTRUCTION_GUIDE = {
         ]
     },
     "SEASONAL_CHILLER_TRANSITION": {
-        "severity": "WARNING",
+        "severity": "CRITICAL",
         "score": 8.0,
         "title": "Mevsimsel Chiller Geçiş Uyarısı",
         "description": "Dış hava 10°C altında iken Chiller yüksek kapasitede ve düşük verimle zorlanarak çalışıyor. Free-Cooling fırsatı değerlendirilemiyor.",
@@ -1575,11 +1573,12 @@ class HVACAnalyzer:
             "SAT_LOW":                   5.0,
             "SAT_WARNING":               5.0,  # Eksikti — eklendi
             "AMBIGUOUS":                 5.0,  # Eksikti — eklendi
-            "BAND_HIGH":                 4.0,
-            "BAND_LOW":                  4.0,
+            "AIR_DT_LOW_COOL":           5.0,  # Eksikti — rule_boosts'ta yoktu (E1)
+            "HIGH_DT":                   5.0,  # INSTRUCTION_GUIDE ile hizalandi (3.0 idi)
+            "LOW_DT":                    4.0,  # INSTRUCTION_GUIDE ile hizalandi (3.0 idi)
+            "BAND_HIGH":                 3.0,  # INSTRUCTION_GUIDE/dokuman ile hizalandi (4.0 idi)
+            "BAND_LOW":                  3.0,  # INSTRUCTION_GUIDE/dokuman ile hizalandi (4.0 idi)
             "COMFORT_OVERRIDE":          4.0,
-            "HIGH_DT":                   3.0,
-            "LOW_DT":                    3.0,
         }
         if special_rule in rule_boosts:
             score = max(score, rule_boosts[special_rule])
@@ -1934,15 +1933,19 @@ class HVACAnalyzer:
             result.action = special["action"]
             result.reason = special["reason"]
             result.rule = special["rule"]
-            result.severity = "CRITICAL" if "KRİTİK" in special["action"] else "WARNING"
-            result.score = max(result.score, 8.0)
-        
+            # Severity ve skor TEK KAYNAKTAN (INSTRUCTION_GUIDE) gelir — eski kırılgan
+            # "KRİTİK metinde var mı" kontrolü ve blanket 8.0 kaldırıldı.
+            # Böylece LOW_FLOW=CRITICAL, AIR_DT_LOW_COOL=WARNING gibi tutarsızlıklar giderildi.
+            _ig = INSTRUCTION_GUIDE.get(special["rule"], {})
+            result.severity = _ig.get("severity", "WARNING")
+            result.score = max(result.score, _ig.get("score", 8.0))
+
         # Calculate final score — mevcut skorla max al; özel kural veya SAT skoru korunur (P1-1)
         result.score = max(result.score, self.calculate_score(
             profile, delta_t, target_dt, result.departure,
             result.sat_status, result.rule
         ))
-        
+
         # Calculate recommended SAT (effective_mode geçiriliyor)
         result.recommended_sat = self.calculate_recommended_sat(
             profile, result.sat_status, result.approach_supply, result.rule,
