@@ -26,9 +26,10 @@ def get_makine_id() -> str:
 
 
 # ── Supabase config ───────────────────────────────────
+CONFIG_PATH = Path(__file__).parent / "supabase_config.json"
+
 def _load_config() -> dict:
-    cfg_path = Path(__file__).parent / "supabase_config.json"
-    with open(cfg_path, "r", encoding="utf-8") as f:
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -43,6 +44,18 @@ def lisans_kontrol() -> dict:
     }
     """
     makine_id = get_makine_id()
+
+    # supabase_config.json yoksa: GELISTIRME ORTAMI — lisans kontrolu atlanir.
+    # (Lokasyon PC'lerinde bu dosya her zaman vardir; sadece dev/repo'da yoktur.)
+    if not CONFIG_PATH.exists():
+        return {
+            "gecerli": True,
+            "makine_id": makine_id,
+            "lokasyon_id": "",
+            "makine_adi": "Gelistirme Ortami (config yok)",
+            "hata": None,
+        }
+
     try:
         cfg = _load_config()
         url = cfg["supabase_url"]
