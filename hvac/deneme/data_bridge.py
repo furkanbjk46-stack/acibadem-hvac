@@ -273,7 +273,13 @@ def write_to_energy_csv(row_dict):
             # Yeni satırı ekle
             new_row_df = pd.DataFrame([{k: row_dict.get(k, None) for k in ENERGY_SCHEMA}])
             df = pd.concat([df[ENERGY_SCHEMA], new_row_df], ignore_index=True)
-            df.to_csv(ENERGY_CSV, index=False)
+            # Atomik yazım: gecici dosya + os.replace (eszamanli erisimde bozulma olmasin)
+            import tempfile
+            _dizin = os.path.dirname(os.path.abspath(ENERGY_CSV)) or "."
+            _fd, _gecici = tempfile.mkstemp(suffix=".tmp", prefix="energy_", dir=_dizin)
+            os.close(_fd)
+            df.to_csv(_gecici, index=False)
+            os.replace(_gecici, ENERGY_CSV)
         except Exception as e:
             logger.error("energy_data.csv guncelleme hatasi: %s", e)
     else:

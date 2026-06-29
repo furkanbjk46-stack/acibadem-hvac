@@ -1498,16 +1498,33 @@ def load_data() -> pd.DataFrame:
     try:
         out = df.copy()
         out["Tarih"] = out["Tarih"].astype(str)
-        out.to_csv(DATA_FILE, index=False)
+        _atomik_csv_yaz(out, DATA_FILE)
     except Exception:
         pass
     return df
 
 
+def _atomik_csv_yaz(df: pd.DataFrame, hedef: str) -> None:
+    """CSV'yi önce geçici dosyaya yazıp os.replace ile atomik taşır.
+    Eşzamanlı erişimde (data_bridge / cloud_sync) yarım/bozuk dosya oluşmasını önler."""
+    import os as _os, tempfile as _tf
+    _dizin = _os.path.dirname(_os.path.abspath(hedef)) or "."
+    _fd, _gecici = _tf.mkstemp(suffix=".tmp", prefix="energy_", dir=_dizin)
+    _os.close(_fd)
+    try:
+        df.to_csv(_gecici, index=False)
+        _os.replace(_gecici, hedef)  # atomik (aynı dosya sistemi)
+    except Exception:
+        if _os.path.exists(_gecici):
+            try: _os.remove(_gecici)
+            except OSError: pass
+        raise
+
+
 def persist_df(df: pd.DataFrame) -> None:
     out = df.copy()
     out["Tarih"] = out["Tarih"].astype(str)
-    out.to_csv(DATA_FILE, index=False)
+    _atomik_csv_yaz(out, DATA_FILE)
     load_data.clear()
 
     # --- FAZ 7: KAYIT ANINDA BULUTA TETIKLE (INSTANT SYNC) ---

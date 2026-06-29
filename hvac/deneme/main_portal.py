@@ -1254,16 +1254,16 @@ class HVACAnalyzer:
         # Get target SAT ranges from config
         sat_cool_min = self.config.get("SAT_COOLING_MIN", 15.0)
         sat_cool_max = self.config.get("SAT_COOLING_MAX", 18.0)
-        sat_heat_min = self.config.get("SAT_HEATING_MIN", 28.0)
-        sat_heat_max = self.config.get("SAT_HEATING_MAX", 31.0)
+        sat_heat_min = self.config.get("SAT_HEATING_MIN", 27.0)
+        sat_heat_max = self.config.get("SAT_HEATING_MAX", 30.0)
 
         # Cooling mode recommendations
         if not is_heating:
-            # SAT too high - recommend target of 16°C (middle of 15-18)
+            # SAT too high - recommend target = soğutma bandı orta noktası (15-18 → 16.5°C)
             if rule == "NOT_COOLING" or sat_status == "NOT_COOLING":
-                return (sat_cool_min + sat_cool_max) / 2  # 16.5°C
+                return (sat_cool_min + sat_cool_max) / 2  # orta nokta (15+18)/2 = 16.5°C
             elif rule == "SAT_LOW" or "SAT Düşük" in str(sat_status):
-                # SAT too low - recommend 16°C
+                # SAT too low - recommend bant orta noktası (16.5°C)
                 return (sat_cool_min + sat_cool_max) / 2
             elif rule == "COOL_EFF_LOW":
                 return current_sat - 2.0 if current_sat > sat_cool_max else None
@@ -1490,9 +1490,9 @@ class HVACAnalyzer:
                     return result
 
             # HEATING: valve high but supply air still cold
-            if (is_heating and profile.valves.heating is not None and 
+            if (is_heating and profile.valves.heating is not None and
                 profile.valves.heating >= self.config.get("HIGH_VALVE_THRESHOLD", 90)):
-                heat_min = 28.0
+                heat_min = self.config.get("SAT_HEATING_MIN", 27.0)
                 if supply_air is not None and supply_air < heat_min:
                     result.update({
                         "action": "KRİTİK: Isıtma Etkisi Düşük (Üfleme Soğuk)",
@@ -1567,8 +1567,8 @@ class HVACAnalyzer:
             "NOT_HEATING":               9.0,
             "LOW_FLOW_DETECTED":         8.0,
             "INSUFFICIENT_CAPACITY":     6.0,
-            "HEAT_EFF_LOW":              6.0,
-            "COOL_EFF_LOW":              6.0,
+            "HEAT_EFF_LOW":              7.0,  # doküman: CRITICAL — 6.0 WARNING yapıyordu, düzeltildi
+            "COOL_EFF_LOW":              7.0,  # doküman: CRITICAL — 6.0 WARNING yapıyordu, düzeltildi
             "CHILLER_LOW_DT":            6.0,
             "LOW_DT_SYNDROME":           5.0,
             "SAT_HIGH":                  5.0,
@@ -1852,8 +1852,8 @@ class HVACAnalyzer:
         elif sat is not None:
             if is_heating:
                 # Isıtma: SAT 28-35°C aralığında olmalı
-                sat_min = self.config.get("SAT_HEATING_MIN", 28.0)
-                sat_max = self.config.get("SAT_HEATING_MAX", 35.0)
+                sat_min = self.config.get("SAT_HEATING_MIN", 27.0)
+                sat_max = self.config.get("SAT_HEATING_MAX", 30.0)
 
                 # AHU'ya özel max üfleme (heating) değeri varsa, o santralin
                 # kapasite tavanı olarak sat_min'i bununla değiştir.

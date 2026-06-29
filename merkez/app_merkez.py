@@ -4,7 +4,7 @@
 # v: 2026-05-27
 
 from __future__ import annotations
-import os, json
+import os, json, logging
 import numpy as np
 import streamlit as st
 import pandas as pd
@@ -227,7 +227,7 @@ button span[data-testid="stIconMaterial"] {
 # ============ SABİT VERİ ============
 HASTANELER = {
     # ── İstanbul ──
-    "maslak":       {"isim": "Acıbadem Maslak",        "kisa": "MASLAK",        "lat": 41.1273, "lon": 29.0246, "m2": 15000, "renk": "#38bdf8"},
+    "maslak":       {"isim": "Acıbadem Maslak",        "kisa": "MASLAK",        "lat": 41.1273, "lon": 29.0246, "m2": 15000, "renk": "#00d4ff"},
     "altunizade":   {"isim": "Acıbadem Altunizade",    "kisa": "ALTUNİZADE",    "lat": 41.0189, "lon": 29.0458, "m2": 10000, "renk": "#f59e0b"},
     "kozyatagi":    {"isim": "Acıbadem Kozyatağı",     "kisa": "KOZYATAĞİ",    "lat": 40.9766, "lon": 29.0928, "m2": 12000, "renk": "#10b981"},
     "taksim":       {"isim": "Acıbadem Taksim",        "kisa": "TAKSİM",        "lat": 41.0417, "lon": 28.9827, "m2":  8000, "renk": "#a855f7"},
@@ -296,7 +296,7 @@ def fetch_dis_hava() -> float | None:
     except Exception:
         pass
 
-    # 3) Fallback: wttr.in (Cloudflare CDN üzerinde, çok güvenilir)
+    # 2) Fallback: wttr.in (Cloudflare CDN üzerinde, çok güvenilir)
     try:
         with _ur2.urlopen("https://wttr.in/Istanbul?format=j1", timeout=8) as r:
             return float(_json.loads(r.read())["current_condition"][0]["temp_C"])
@@ -632,7 +632,6 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             _ur2.urlopen(_lr, timeout=6)
 
     except Exception as _oe:
-        import logging
         logging.getLogger(__name__).warning(f"oto_set_kontrol hata: {_oe}")
 
 
@@ -1584,9 +1583,9 @@ with sag:
             _kojen    = _col_sum(_lok_df, "Kojen_Uretim_kWh")
             _sebeke   = _col_sum(_lok_df, "Sebeke_Tuketim_kWh")
 
-            # ── Doğalgaz & Su ──
-            _gaz_m3   = _col_sum(_lok_df, "Dogalgaz_Tuketim_m3")
-            _su_m3    = _col_sum(_lok_df, "Su_Tuketim_m3")
+            # ── Doğalgaz & Su ── (gerçek şema: Kazan+Kojen doğalgaz, Su_Tuketimi_m3)
+            _gaz_m3   = _col_sum(_lok_df, "Kazan_Dogalgaz_m3") + _col_sum(_lok_df, "Kojen_Dogalgaz_m3")
+            _su_m3    = _col_sum(_lok_df, "Su_Tuketimi_m3")
 
             # ── Chiller anlık ──
             _cs_raw   = _col_mean(_lok_df, "Chiller_Set_Temp_C")
@@ -1716,7 +1715,6 @@ with sag:
                     pass
 
             # Saat 09:00'dan önce dünün analizini göster, sonra bugününkü
-            _analiz_tarihi = _bugun if _su_an.hour >= 9 else (_bugun - pd.Timedelta(days=1).to_pytimedelta().__class__(days=1))
             _analiz_tarihi = _bugun if _su_an.hour >= 9 else (_su_an - pd.Timedelta(days=1)).date()
 
             _sb_metin, _sb_zaman = _sb_analiz_oku(_analiz_tarihi)
@@ -1757,10 +1755,10 @@ with sag:
                     b = f"【{mv['isim']}】{' ⚠️ANORMAL' if mv['anormal'] else ''}\n"
                     if not _ddf.empty:
                         dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
-                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
+                        dgaz = _col_sum(_ddf, "Kazan_Dogalgaz_m3") + _col_sum(_ddf, "Kojen_Dogalgaz_m3")
                         dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
                         dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
-                        dsu  = _col_sum(_ddf, "Su_Tuketim_m3")
+                        dsu  = _col_sum(_ddf, "Su_Tuketimi_m3")
                         dcs  = _col_mean(_ddf, "Chiller_Set_Temp_C")
                         dcl  = _col_mean(_ddf, "Chiller_Load_Percent")
                         b += f"  ▶ Dün ({_dun_str}):\n"
@@ -1795,7 +1793,7 @@ with sag:
                     flag = " ⚠️" if mv["anormal"] else ""
                     if not _ddf.empty:
                         dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
-                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
+                        dgaz = _col_sum(_ddf, "Kazan_Dogalgaz_m3") + _col_sum(_ddf, "Kojen_Dogalgaz_m3")
                         dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
                         dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
                         kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"
@@ -1813,7 +1811,7 @@ with sag:
                     flag = "⚠️" if mv["anormal"] else "✓"
                     if not _ddf.empty:
                         dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
-                        dgaz = _col_sum(_ddf, "Dogalgaz_Tuketim_m3")
+                        dgaz = _col_sum(_ddf, "Kazan_Dogalgaz_m3") + _col_sum(_ddf, "Kojen_Dogalgaz_m3")
                         dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
                         dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
                         kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"

@@ -86,7 +86,7 @@ HASTANELER = {
     "kartal":        {"isim": "Acibadem Kartal",         "kisa": "KARTAL",      "m2": 11000, "renk": "#ef4444"},
     # ── Ankara ──
     "ankara":          {"isim": "Acibadem Ankara",           "kisa": "ANKARA",      "m2": 16000, "renk": "#fb7185"},
-    "bayindir":        {"isim": "Acibadem Bayindir",          "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
+    "bayindir":        {"isim": "Acibadem Bayindir Sogutozu", "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
     # ── Bursa ──
     "bursa":           {"isim": "Acibadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#fbbf24"},
     # ── Kocaeli ──

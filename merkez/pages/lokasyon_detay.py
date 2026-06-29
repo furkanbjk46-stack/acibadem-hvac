@@ -209,7 +209,7 @@ HASTANELER = {
     "kartal":        {"isim": "Acıbadem Kartal",         "kisa": "KARTAL",       "m2": 11000, "renk": "#ef4444"},
     # ── Ankara ──
     "ankara":          {"isim": "Acıbadem Ankara",           "kisa": "ANKARA",      "m2": 16000, "renk": "#fb7185"},
-    "bayindir":        {"isim": "Acıbadem Bayındır",          "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
+    "bayindir":        {"isim": "Acıbadem Bayındır Söğütözü", "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
     # ── Bursa ──
     "bursa":           {"isim": "Acıbadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#fbbf24"},
     # ── Kocaeli ──

@@ -128,6 +128,17 @@ def sync_energy_data(client, lokasyon_id: str):
                 break
             offset += 1000
 
+        # GÜVENLIK KORUMASI: Yerel CSV bozuk/kısmi (örn. crash sonrası truncate)
+        # olduğunda, eldeki satır sayısı buluttaki kayıt sayısının yarısından azsa
+        # senkronizasyonu İPTAL et — yoksa eski geçmiş silinip kalıcı veri kaybı olur.
+        if eski_idler and len(clean_records) < len(eski_idler) * 0.5:
+            logger.error(
+                "⛔ SYNC IPTAL (%s): yerel %d satır, bulutta %d kayıt — kısmi/bozuk CSV "
+                "şüphesi, veri kaybını önlemek için silme yapılmadı.",
+                lokasyon_id, len(clean_records), len(eski_idler)
+            )
+            return 0
+
         batch_size = 500
         total = 0
         for i in range(0, len(clean_records), batch_size):
