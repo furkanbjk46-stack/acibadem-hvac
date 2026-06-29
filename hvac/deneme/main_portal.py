@@ -1431,9 +1431,13 @@ class HVACAnalyzer:
 
 
         # 3a. Heating diagnostics - SAT kontrolü (LOW_FLOW_DETECTED, skor 8)
-        # AHU coil kontrolünden (HEAT_EFF_LOW, skor 7) ÖNCE çalışır — yüksek skorlu
-        # kural düşük skorlu kural tarafından ezilmesin.
-        if is_heating and eq_type != EquipmentType.CHILLER and delta_t is not None:
+        # AHU HARİÇ: AHU'nun bireysel su sensörü yoktur (kolektör suyu tüm AHU'lara
+        # aynı gelir) ve AHU'da delta_t = HAVA ΔT'sidir → "su tarafı debi sorunu" AHU
+        # bazında ölçülemez. AHU'da "vana açık ama üfleme soğuk" durumu zaten
+        # HEAT_EFF_LOW (CRITICAL) ile yakalanır. LOW_FLOW yalnızca gerçek su Inlet/Outlet
+        # ΔT'si olan ekipmanlarda (FCU coil / Kazan / Kolektör) çalışır.
+        if (is_heating and eq_type not in (EquipmentType.CHILLER, EquipmentType.AHU)
+                and delta_t is not None):
             if (delta_t >= self.config["TARGET_DT_HEAT"] and
                 profile.temperatures.sat is not None and
                 profile.temperatures.sat < self.config["HEAT_SAT_LOW_THRESHOLD"]):
