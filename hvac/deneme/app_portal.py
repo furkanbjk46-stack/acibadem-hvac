@@ -3025,6 +3025,7 @@ if page_param in ["dashboard", "karsilastirma", "grafik", "grafikler"]:
 
 # TAB isimleri
 TAB_NAMES = [
+    "🔌 Enerji Diyagramı",
     "1) Veri Girişi & Excel İçe Aktarım",
     "2) Dashboard & Karşılaştırma",
     "3) PDF Rapor",
@@ -3033,7 +3034,216 @@ TAB_NAMES = [
     "6) 🔮 Tahmin & Trend",
 ]
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(TAB_NAMES)
+tab_diyagram, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(TAB_NAMES)
+
+# ══════════════════════════════════════════════════════════════════
+# ENERJİ DİYAGRAMI — lokasyona özgü enerji topolojisi (şimdilik Maslak)
+# Toplam değerler recalc() ile aynı mantık:
+#   Toplam Şebeke      = TRDP1+TRDP2+TRDP3+TRDP4 (TRDP-2/4 yoksa alt sayaç toplamı)
+#   Hastane Genel Top. = Şebeke + Kojen Üretim
+#   Çip %'leri Hastane Genel Toplam üzerinden hesaplanır.
+# ══════════════════════════════════════════════════════════════════
+ENERJI_TOPOLOJI = {
+    "maslak": {
+        "genel":   [("TRDP-1", "TRDP1_kWh"), ("TRDP-3", "TRDP3_kWh")],
+        "mekanik": [("TRDP-2", "TRDP2_kWh"), ("TRDP-4", "TRDP4_kWh")],
+        "kumeler": [
+            ("MCC PANOLARI (SIEMENS)", "▣", [
+                ("2BK-D01", "MCC_2BK_D01_kWh"), ("2BK-D02", "MCC_2BK_D02_kWh"),
+                ("4BK-E01", "MCC_4BK_E01_kWh"), ("4BK-E02", "MCC_4BK_E02_kWh"),
+                ("4BK-F01", "MCC_4BK_F01_kWh"),
+                ("CK-D01", "MCC_CK_D01_kWh"), ("CK-E01", "MCC_CK_E01_kWh"), ("CK-F01", "MCC_CK_F01_kWh"),
+            ]),
+            ("MCC PANOLARI (JANITZA)", "▣", [
+                ("MCC-1", "MCC1_kWh"), ("MCC-2", "MCC2_kWh"), ("MCC-3", "MCC3_kWh"),
+                ("MCC-4", "MCC4_kWh"), ("MCC-6", "MCC6_kWh"), ("MCC-7", "MCC7_kWh"),
+            ]),
+            ("SOĞUTMA KULELERİ", "❄", [
+                ("KULE-01", "Kule1_kWh"), ("KULE-02", "Kule2_kWh"), ("KULE-03", "Kule3_kWh"),
+            ]),
+            ("CHILLERLAR", "🧊", [
+                ("CH-1", "Chiller1_kWh"), ("CH-2", "Chiller2_kWh"), ("CH-3", "Chiller3_kWh"),
+                ("CH-4", "Chiller4_kWh"), ("CH-5", "Chiller5_kWh"),
+            ]),
+        ],
+    },
+}
+
+
+def _ed_num(v) -> str:
+    """Türkçe binlik ayraç (1.234)."""
+    try:
+        return f"{float(v):,.0f}".replace(",", ".")
+    except (TypeError, ValueError):
+        return "—"
+
+
+def _ed_val(row, col):
+    """Satırdan sütun değerini al; yoksa/NaN ise None."""
+    if row is None or col not in row.index:
+        return None
+    v = row.get(col)
+    try:
+        if v is None or pd.isna(v):
+            return None
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _ed_chip(ad, deger, hastane_genel):
+    """Tek sayaç çipi: ad + günlük kWh + Hastane Genel Toplam'a oran (%)."""
+    if deger is None:
+        renk, val_txt, pct_txt = "#64748b", "veri yok", ""
+    elif deger <= 0:
+        renk, val_txt, pct_txt = "#64748b", "0", "%0"
+    else:
+        renk = "#7dd3fc"
+        val_txt = _ed_num(deger)
+        pct = (deger / hastane_genel * 100) if hastane_genel and hastane_genel > 0 else 0
+        pct_txt = f"%{pct:.1f}".replace(".", ",")
+    return (
+        f"<div style='flex:1 1 84px;min-width:84px;background:rgba(15,23,42,0.85);"
+        f"border:1px solid rgba(56,189,248,0.2);border-radius:8px;padding:7px 4px;text-align:center;'>"
+        f"<div style='font-size:9px;color:rgba(200,230,255,0.65);margin-bottom:2px;'>{ad}</div>"
+        f"<div style='font-family:\"Playfair Display\",sans-serif;font-size:14px;font-weight:800;color:{renk};line-height:1.1;'>{val_txt}</div>"
+        f"<div style='font-size:8px;color:#fbbf24;margin-top:1px;'>{pct_txt}</div>"
+        f"</div>"
+    )
+
+
+def _enerji_diyagrami_render(df_kaynak, lok_id):
+    topo = ENERJI_TOPOLOJI.get(lok_id)
+    if topo is None:
+        st.info("Bu lokasyon için enerji diyagramı henüz tanımlı değil. (Topoloji lokasyona özgüdür.)")
+        return
+    if df_kaynak is None or df_kaynak.empty:
+        st.warning("Enerji verisi bulunamadı.")
+        return
+
+    # Tarih sütununu güvenle datetime'a çevir (load_data string bırakabiliyor)
+    df_kaynak = df_kaynak.copy()
+    df_kaynak["Tarih"] = pd.to_datetime(df_kaynak["Tarih"], errors="coerce")
+    df_kaynak = df_kaynak.dropna(subset=["Tarih"])
+
+    _tarihler = sorted(df_kaynak["Tarih"].dropna().dt.date.unique())
+    if not _tarihler:
+        st.warning("Geçerli tarihli veri yok.")
+        return
+
+    # Selectbox — sadece veri olan günler (date_input min==max RangeError'ından kaçınır)
+    _sec = st.selectbox(
+        "📅 Gün", options=_tarihler, index=len(_tarihler) - 1,
+        format_func=lambda d: d.strftime("%d.%m.%Y"), key="ed_tarih",
+    )
+    _gun_df = df_kaynak[df_kaynak["Tarih"].dt.date == _sec]
+    if _gun_df.empty:
+        st.warning(f"{_sec} için veri yok.")
+        return
+    row = _gun_df.iloc[-1]
+
+    # ── Toplamlar ──
+    bina_genel = sum((_ed_val(row, c) or 0) for _, c in topo["genel"])
+    trdp2 = _ed_val(row, "TRDP2_kWh") or 0
+    trdp4 = _ed_val(row, "TRDP4_kWh") or 0
+    mekanik_alt = sum(
+        (_ed_val(row, c) or 0)
+        for _, _ik, chips in topo["kumeler"] for _, c in chips
+    )
+    # TRDP-2/4 doluysa ölçülen değer, boşsa alt sayaç toplamı
+    bina_mekanik = (trdp2 + trdp4) if (trdp2 > 0 and trdp4 > 0) else mekanik_alt
+    sebeke = bina_genel + bina_mekanik
+    kojen = _ed_val(row, "Kojen_Uretim_kWh") or 0
+    hastane_genel = sebeke + kojen
+
+    def _pct(x):
+        return f"%{(x / hastane_genel * 100):.1f}".replace(".", ",") if hastane_genel > 0 else "—"
+
+    _dis_hava = _ed_val(row, "Dis_Hava_Sicakligi_C")
+    _hava_html = (
+        f"<span style='background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.4);"
+        f"border-radius:13px;padding:4px 12px;font-size:11px;color:#fcd34d;font-weight:600;'>"
+        f"🌡 {_dis_hava:.1f}°C</span>" if _dis_hava is not None else ""
+    )
+
+    # ── Üst başlık + kök ──
+    html = (
+        "<div style='background:linear-gradient(180deg,#0f1c30 0%,#060b14 100%);"
+        "border:1px solid #1e3a5f;border-radius:16px;padding:18px 20px;'>"
+        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;'>"
+        "<div><div style='font-size:9px;color:#38bdf8;letter-spacing:3px;'>⚡ ENERJİ DİYAGRAMI</div>"
+        f"<div style='font-size:18px;font-weight:700;color:#f8fafc;letter-spacing:1px;'>{lok_id.upper()}</div></div>"
+        "<div style='display:flex;gap:8px;align-items:center;'>"
+        "<span style='background:rgba(16,185,129,0.12);border:1px solid #10b981;border-radius:13px;"
+        "padding:4px 12px;font-size:11px;color:#6ee7b7;font-weight:600;'>🟢 ŞEBEKE NORMAL</span>"
+        f"{_hava_html}</div></div>"
+        # Kök: Hastane Genel Toplam
+        "<div style='display:flex;justify-content:center;margin-bottom:6px;'>"
+        "<div style='background:rgba(56,189,248,0.12);border:1.2px solid #38bdf8;border-radius:12px;"
+        "padding:10px 26px;text-align:center;min-width:240px;'>"
+        "<div style='font-size:9px;color:rgba(150,210,255,0.7);letter-spacing:1.5px;'>HASTANE GENEL TOPLAM · %100</div>"
+        f"<div style='font-family:\"Playfair Display\",sans-serif;font-size:21px;font-weight:800;color:#38bdf8;'>"
+        f"{_ed_num(hastane_genel)} <span style='font-size:10px;color:rgba(150,210,255,0.6);'>kWh/gün</span></div>"
+        "</div></div>"
+        # Şebeke + Kojen satırı
+        "<div style='display:flex;gap:10px;justify-content:center;margin-bottom:14px;'>"
+        "<div style='background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.4);border-radius:10px;"
+        "padding:7px 16px;text-align:center;'>"
+        f"<div style='font-size:9px;color:rgba(150,210,255,0.7);'>ŞEBEKE (TRDP 1·2·3·4) · {_pct(sebeke)}</div>"
+        f"<div style='font-size:14px;font-weight:700;color:#7dd3fc;'>{_ed_num(sebeke)} kWh</div></div>"
+        "<div style='background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.4);border-radius:10px;"
+        "padding:7px 16px;text-align:center;'>"
+        f"<div style='font-size:9px;color:rgba(110,231,183,0.8);'>KOJEN ÜRETİM · {_pct(kojen)}</div>"
+        f"<div style='font-size:14px;font-weight:700;color:#6ee7b7;'>{_ed_num(kojen)} kWh</div></div>"
+        "</div>"
+        # İki dal: Bina Genel | Bina Mekanik
+        "<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px;'>"
+    )
+    # Bina Genel kutusu + TRDP-1/3 çipleri
+    _genel_chips = "".join(_ed_chip(ad, _ed_val(row, c), hastane_genel) for ad, c in topo["genel"])
+    html += (
+        "<div style='background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.3);border-radius:10px;padding:10px;'>"
+        f"<div style='font-size:9px;color:rgba(150,210,255,0.7);letter-spacing:1px;margin-bottom:8px;'>"
+        f"BİNA GENEL TÜKETİM · {_pct(bina_genel)} · {_ed_num(bina_genel)} kWh</div>"
+        f"<div style='display:flex;gap:6px;'>{_genel_chips}</div></div>"
+    )
+    # Bina Mekanik kutusu (alt küme panelleri içeride)
+    _mek_kaynak = "ölçülen TRDP-2/4" if (trdp2 > 0 and trdp4 > 0) else "alt sayaç toplamı"
+    html += (
+        "<div style='background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.35);border-radius:10px;padding:10px;'>"
+        f"<div style='font-size:9px;color:rgba(252,211,77,0.85);letter-spacing:1px;margin-bottom:8px;'>"
+        f"BİNA MEKANİK TÜKETİM · {_pct(bina_mekanik)} · {_ed_num(bina_mekanik)} kWh "
+        f"<span style='color:rgba(150,210,255,0.4);'>({_mek_kaynak})</span></div>"
+    )
+    # Çift TRDP çipleri (mekanik)
+    _mek_trdp = "".join(_ed_chip(ad, _ed_val(row, c), hastane_genel) for ad, c in topo["mekanik"])
+    html += f"<div style='display:flex;gap:6px;'>{_mek_trdp}</div></div></div>"
+
+    # ── Küme panelleri (2 sütun grid) ──
+    html += "<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;'>"
+    for kume_ad, ikon, chips in topo["kumeler"]:
+        _grup_toplam = sum((_ed_val(row, c) or 0) for _, c in chips)
+        _chips_html = "".join(_ed_chip(ad, _ed_val(row, c), hastane_genel) for ad, c in chips)
+        html += (
+            "<div style='background:rgba(15,23,42,0.45);border:1px solid rgba(56,189,248,0.18);border-radius:10px;padding:10px;'>"
+            f"<div style='font-size:9px;color:#38bdf8;letter-spacing:1px;margin-bottom:8px;'>"
+            f"{ikon} {kume_ad} · {_pct(_grup_toplam)}</div>"
+            f"<div style='display:flex;flex-wrap:wrap;gap:6px;'>{_chips_html}</div></div>"
+        )
+    html += "</div>"
+
+    html += (
+        "<div style='font-size:8.5px;color:rgba(150,210,255,0.4);margin-top:12px;'>"
+        "Mavi = günlük kWh · Sarı = Hastane Genel Toplam'a oran · Gri = 0/veri yok · "
+        "Birim: kWh/gün · TRDP-2/4 manuel girilir, otomatik okumaya geçince aynı alanlar otomatik dolar."
+        "</div></div>"
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+with tab_diyagram:
+    _ed_lok = _loc_mgr.get_active_location_id() if "_loc_mgr" in dir() else "maslak"
+    _enerji_diyagrami_render(df, _ed_lok)
 
 # ---------------- TAB 1 ----------------
 with tab1:
