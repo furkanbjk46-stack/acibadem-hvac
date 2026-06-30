@@ -3061,7 +3061,7 @@ ENERJI_TOPOLOJI = {
             ("SOĞUTMA KULELERİ", "❄", [
                 ("KULE-01", "Kule1_kWh"), ("KULE-02", "Kule2_kWh"), ("KULE-03", "Kule3_kWh"),
             ]),
-            ("CHILLERLAR", "🧊", [
+            ("CHILLER", "🧊", [
                 ("CH-1", "Chiller1_kWh"), ("CH-2", "Chiller2_kWh"), ("CH-3", "Chiller3_kWh"),
                 ("CH-4", "Chiller4_kWh"), ("CH-5", "Chiller5_kWh"),
             ]),
@@ -3091,24 +3091,27 @@ def _ed_val(row, col):
         return None
 
 
-def _ed_chip(ad, deger, hastane_genel):
-    """Tek sayaç çipi: ad + günlük kWh + Hastane Genel Toplam'a oran (%)."""
+def _ed_chip(ad, deger, hastane_genel, genislik=None):
+    """Tek sayaç çipi: ad + günlük kWh + Hastane Genel Toplam'a oran (%).
+    Renkler ID-scoped CSS sınıflarıyla verilir (global 'div{color:!important}' kuralını yener).
+    genislik verilirse (flex kapsayıcılarda) çipe sabit genişlik uygular."""
     if deger is None:
-        renk, val_txt, pct_txt = "#64748b", "veri yok", ""
+        vcls, val_txt, pct_txt = "v0", "veri yok", ""
     elif deger <= 0:
-        renk, val_txt, pct_txt = "#64748b", "0", "%0"
+        vcls, val_txt, pct_txt = "v0", "0", "%0"
     else:
-        renk = "#7dd3fc"
+        vcls = "v"
         val_txt = _ed_num(deger)
         pct = (deger / hastane_genel * 100) if hastane_genel and hastane_genel > 0 else 0
         pct_txt = f"%{pct:.1f}".replace(".", ",")
+    _w = f"width:{genislik};" if genislik else ""
     return (
-        f"<div style='background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.2);"
-        f"border-radius:8px;padding:8px 4px 6px;text-align:center;'>"
-        f"<div style='font-size:9px;color:rgba(200,230,255,0.6);margin-bottom:3px;"
+        f"<div style='{_w}background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.25);"
+        f"border-radius:8px;padding:9px 4px 7px;text-align:center;'>"
+        f"<div class='nm' style='font-size:11px;font-weight:700;margin-bottom:4px;letter-spacing:0.3px;"
         f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{ad}</div>"
-        f"<div style='font-family:\"Playfair Display\",sans-serif;font-size:15px;font-weight:800;color:{renk};line-height:1.05;'>{val_txt}</div>"
-        f"<div style='font-size:8px;color:#fbbf24;margin-top:2px;height:9px;'>{pct_txt}</div>"
+        f"<div class='{vcls}' style='font-family:\"Playfair Display\",sans-serif;font-size:17px;line-height:1.05;'>{val_txt}</div>"
+        f"<div class='pc' style='font-size:11px;margin-top:3px;height:12px;'>{pct_txt}</div>"
         f"</div>"
     )
 
@@ -3186,78 +3189,156 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         f"🌡 {_dis_hava:.1f}°C</span>" if _dis_hava is not None else ""
     )
 
-    # ── Başlık ──
-    html = (
-        "<div style='background:linear-gradient(180deg,#0f1c30 0%,#060b14 100%);"
-        "border:1px solid #1e3a5f;border-radius:16px;padding:18px 22px;'>"
-        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;'>"
-        "<div><div style='font-size:9px;color:#38bdf8;letter-spacing:3px;'>⚡ ENERJİ DİYAGRAMI</div>"
-        f"<div style='font-size:18px;font-weight:700;color:#f8fafc;letter-spacing:1px;'>{lok_id.upper()}</div></div>"
-        "<div style='display:flex;gap:8px;align-items:center;'>"
-        "<span style='background:rgba(16,185,129,0.12);border:1px solid #10b981;border-radius:13px;"
-        "padding:4px 12px;font-size:11px;color:#6ee7b7;font-weight:600;'>🟢 ŞEBEKE NORMAL</span>"
-        f"{_hava_html}</div></div>"
-        # ── Kök: Hastane Genel Toplam (içinde Şebeke + Kojen alt-istatistikleri) ──
-        "<div style='display:flex;justify-content:center;'>"
-        "<div style='background:rgba(56,189,248,0.10);border:1.2px solid #38bdf8;border-radius:14px;"
-        "padding:12px 28px 14px;text-align:center;min-width:340px;'>"
-        "<div style='font-size:9px;color:rgba(150,210,255,0.7);letter-spacing:1.5px;'>HASTANE GENEL TOPLAM · %100</div>"
-        f"<div style='font-family:\"Playfair Display\",sans-serif;font-size:24px;font-weight:800;color:#38bdf8;line-height:1.2;'>"
-        f"{_ed_num(hastane_genel)} <span style='font-size:10px;color:rgba(150,210,255,0.6);'>kWh/gün</span></div>"
-        "<div style='display:flex;gap:10px;justify-content:center;margin-top:8px;'>"
-        f"<span style='background:rgba(56,189,248,0.10);border-radius:8px;padding:3px 10px;font-size:10px;color:#7dd3fc;'>"
-        f"Şebeke (TRDP1-4): <b>{_ed_num(sebeke)}</b> · {_pct(sebeke)}</span>"
-        f"<span style='background:rgba(16,185,129,0.10);border-radius:8px;padding:3px 10px;font-size:10px;color:#6ee7b7;'>"
-        f"Kojen Üretim: <b>{_ed_num(kojen)}</b> · {_pct(kojen)}</span>"
-        "</div></div></div>"
-        # ── Bağlantı çizgisi: kök → iki dal ──
-        + _ed_split_connector()
-        # ── İki dal: Bina Genel | Bina Mekanik (merkezler %25 / %75, bağlantıyla hizalı) ──
-        + "<div style='display:grid;grid-template-columns:1fr 1fr;gap:14px;'>"
+    # ── Glassmorphism stil bloğu: global 'p,span,div{color:!important}' kuralını ID-scoped sınıflar yener ──
+    _style = (
+        "<style>"
+        "#ed-root{position:relative;overflow:hidden;border-radius:20px;background:#020617;"
+        "padding:22px;border:1px solid rgba(255,255,255,0.06);}"
+        "#ed-root .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:0.30;z-index:0;}"
+        "#ed-root .b1{width:420px;height:420px;background:#0ea5e9;top:-14%;left:4%;}"
+        "#ed-root .b2{width:360px;height:360px;background:#10b981;bottom:-12%;right:6%;}"
+        "#ed-root .b3{width:300px;height:300px;background:#6366f1;top:38%;left:44%;}"
+        "#ed-root .layer{position:relative;z-index:1;}"
+        "#ed-root .gcard{background:rgba(15,23,42,0.45);backdrop-filter:blur(18px);"
+        "-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);"
+        "border-top:1px solid rgba(255,255,255,0.15);border-radius:18px;"
+        "box-shadow:0 20px 40px rgba(0,0,0,0.35);padding:20px;}"
+        "#ed-root .hbrand{color:#fff!important;font-weight:700;letter-spacing:4px;font-size:14px;}"
+        "#ed-root .hsub{color:#94a3b8!important;font-weight:400;letter-spacing:2px;}"
+        "#ed-root .badge{color:#34d399!important;background:rgba(16,185,129,0.15);"
+        "border:1px solid rgba(16,185,129,0.3);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;}"
+        "#ed-root .hmut{color:#cbd5e1!important;font-size:12px;}"
+        "#ed-root .chead{color:#94a3b8!important;font-size:11px;font-weight:600;letter-spacing:2px;}"
+        "#ed-root .mainv{color:#fff!important;font-weight:300;font-size:46px;line-height:1;letter-spacing:-1px;}"
+        "#ed-root .mainv .u{color:#64748b!important;font-size:15px;font-weight:400;}"
+        "#ed-root .bdlbl{color:#94a3b8!important;font-size:11px;}"
+        "#ed-root .vblue{color:#38bdf8!important;}"
+        "#ed-root .vemr{color:#34d399!important;}"
+        "#ed-root .sectitle{color:#fff!important;font-size:18px;font-weight:400;}"
+        "#ed-root .secval{color:#fff!important;font-size:22px;font-weight:300;}"
+        "#ed-root .secval .u{color:#64748b!important;font-size:13px;}"
+        "#ed-root .pcblue{color:#38bdf8!important;font-weight:600;}"
+        "#ed-root .pcamber{color:#fbbf24!important;font-weight:600;}"
+        "#ed-root .trdplbl{color:#94a3b8!important;font-size:12px;font-weight:600;}"
+        "#ed-root .trdpval{color:#fff!important;font-size:19px;font-weight:600;}"
+        "#ed-root .ptitle{color:#cbd5e1!important;font-size:12px;font-weight:600;letter-spacing:1px;}"
+        "#ed-root .bar{display:inline-block;width:4px;height:12px;border-radius:2px;"
+        "vertical-align:middle;margin-right:8px;}"
+        "#ed-root .bblue{background:#38bdf8;}#ed-root .bamber{background:#fbbf24;}"
+        "#ed-root .cid{color:#64748b!important;font-size:11px;font-weight:600;}"
+        "#ed-root .cval{color:#fff!important;font-size:15px;font-weight:500;}"
+        "#ed-root .cval .u{color:#64748b!important;font-size:9px;}"
+        "#ed-root .cpct{color:#fbbf24!important;font-weight:600;}"
+        "#ed-root .cempty{opacity:0.55;}"
+        "#ed-root .cempty .cval{color:#64748b!important;font-style:italic;font-size:11px;font-weight:400;}"
+        "</style>"
     )
-    # Bina Genel kutusu + TRDP-1/3 çipleri
-    _genel_chips = "".join(_ed_chip(ad, _ed_val(row, c), hastane_genel) for ad, c in topo["genel"])
-    html += (
-        "<div style='background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.3);border-radius:12px;padding:12px;'>"
-        f"<div style='font-size:9.5px;color:rgba(150,210,255,0.75);letter-spacing:1px;margin-bottom:10px;text-align:center;'>"
-        f"🏢 BİNA GENEL TÜKETİM · {_pct(bina_genel)} · {_ed_num(bina_genel)} kWh</div>"
-        f"<div style='{_ED_CHIP_GRID}'>{_genel_chips}</div></div>"
-    )
-    # Bina Mekanik kutusu + TRDP-2/4 çipleri
+
+    # ── Cam-kart yardımcıları (row / hastane_genel / _pct kapsamından okur) ──
+    def _cell(ad, col):
+        d = _ed_val(row, col)
+        if d is None:
+            return ("<div class='cempty' style='background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);"
+                    f"border-radius:10px;padding:11px;'><div class='cid'>{ad}</div>"
+                    "<div class='cval'>veri yok</div></div>")
+        pct_txt = "%0" if d <= 0 else f"%{(d/hastane_genel*100):.1f}".replace(".", ",") if hastane_genel > 0 else "—"
+        return ("<div style='background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);"
+                f"border-radius:10px;padding:11px;'><div class='cid'>{ad}</div>"
+                f"<div class='cval'>{_ed_num(d)} <span class='u'>kWh</span></div>"
+                f"<div class='cpct' style='font-size:11px;margin-top:2px;'>{pct_txt}</div></div>")
+
+    def _trdp(ad, col, accent):
+        pccls = "pcblue" if accent == "blue" else "pcamber"
+        d = _ed_val(row, col)
+        if d is None:
+            val_txt, pct_txt = "veri yok", ""
+        elif d <= 0:
+            val_txt, pct_txt = "0", "%0"
+        else:
+            val_txt = _ed_num(d)
+            pct_txt = f"%{(d/hastane_genel*100):.1f}".replace(".", ",") if hastane_genel > 0 else "—"
+        return ("<div style='flex:1;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);"
+                "border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;'>"
+                f"<div><div class='trdplbl'>{ad}</div>"
+                f"<div class='{pccls}' style='font-size:11px;margin-top:4px;'>{pct_txt}</div></div>"
+                f"<div class='trdpval'>{val_txt}</div></div>")
+
+    def _panel(kume, barcls):
+        if not kume:
+            return ""
+        ad, _ikon, chips = kume
+        grup = sum((_ed_val(row, c) or 0) for _, c in chips)
+        cells = "".join(_cell(a, c) for a, c in chips)
+        return ("<div class='gcard' style='margin-top:18px;'>"
+                f"<div class='ptitle'><span class='bar {barcls}'></span>{ad} — "
+                f"<span class='cpct'>{_pct(grup)}</span></div>"
+                "<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));"
+                f"gap:10px;margin-top:14px;'>{cells}</div></div>")
+
+    def _section(title, total, accent, trdp_list, note=""):
+        pccls = "pcblue" if accent == "blue" else "pcamber"
+        cards = "".join(_trdp(a, c, accent) for a, c in trdp_list)
+        return ("<div class='gcard'>"
+                "<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px;'>"
+                f"<div class='sectitle'>{title}{note}</div>"
+                "<div style='text-align:right;'>"
+                f"<div class='secval'>{_ed_num(total)} <span class='u'>kWh</span></div>"
+                f"<div class='{pccls}' style='font-size:12px;'>{_pct(total)}</div></div></div>"
+                f"<div style='display:flex;gap:14px;'>{cards}</div></div>")
+    # ── Küme eşlemesi (sol sütun: Siemens MCC + Kuleler · sağ sütun: Janitza MCC + Chiller) ──
     _mek_kaynak = "ölçülen TRDP-2/4" if (trdp2 > 0 and trdp4 > 0) else "alt sayaç toplamı"
-    _mek_trdp = "".join(_ed_chip(ad, _ed_val(row, c), hastane_genel) for ad, c in topo["mekanik"])
-    html += (
-        "<div style='background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.35);border-radius:12px;padding:12px;'>"
-        f"<div style='font-size:9.5px;color:rgba(252,211,77,0.85);letter-spacing:1px;margin-bottom:10px;text-align:center;'>"
-        f"⚙️ BİNA MEKANİK TÜKETİM · {_pct(bina_mekanik)} · {_ed_num(bina_mekanik)} kWh "
-        f"<span style='color:rgba(150,210,255,0.4);'>({_mek_kaynak})</span></div>"
-        f"<div style='{_ED_CHIP_GRID}'>{_mek_trdp}</div></div></div>"
-    )
+    _km = {k[0]: k for k in topo["kumeler"]}
+    _siemens = _km.get("MCC PANOLARI (SIEMENS)")
+    _janitza = _km.get("MCC PANOLARI (JANITZA)")
+    _kule = _km.get("SOĞUTMA KULELERİ")
+    _chiller = _km.get("CHILLER")
+    _date_txt = _sec.strftime("%d.%m.%Y")
+    _hava_txt = f" · 🌡 {_dis_hava:.1f}°C" if _dis_hava is not None else ""
 
-    # ── Mekanik alt sayaçlar başlığı ──
-    html += (
-        "<div style='text-align:center;margin:16px 0 10px;'>"
-        "<span style='font-size:9px;color:rgba(150,210,255,0.55);letter-spacing:2px;"
-        "border-top:1px solid rgba(56,189,248,0.15);padding-top:8px;'>"
-        "▼ MEKANİK ALT SAYAÇLAR (BİNA MEKANİK YÜKLERİ)</span></div>"
-    )
-    # ── Küme panelleri (2 sütun grid) ──
-    html += "<div style='display:grid;grid-template-columns:1fr 1fr;gap:14px;'>"
-    for kume_ad, ikon, chips in topo["kumeler"]:
-        _grup_toplam = sum((_ed_val(row, c) or 0) for _, c in chips)
-        _chips_html = "".join(_ed_chip(ad, _ed_val(row, c), hastane_genel) for ad, c in chips)
-        html += (
-            "<div style='background:rgba(15,23,42,0.45);border:1px solid rgba(56,189,248,0.18);border-radius:12px;padding:12px;'>"
-            f"<div style='font-size:9.5px;color:#38bdf8;letter-spacing:1px;margin-bottom:10px;'>"
-            f"{ikon} {kume_ad} · {_pct(_grup_toplam)}</div>"
-            f"<div style='{_ED_CHIP_GRID}'>{_chips_html}</div></div>"
+    html = _style + (
+        "<div id='ed-root'>"
+        "<div class='blob b1'></div><div class='blob b2'></div><div class='blob b3'></div>"
+        "<div class='layer'>"
+        # ── Üst bar ──
+        "<div style='margin-bottom:22px;'>"
+        "<div class='hbrand'>SYNERGY <span class='hsub'>| ENERJİ DİYAGRAMI</span></div>"
+        "</div>"
+        # ── 1. Seviye: Hastane Genel Toplam çekirdeği ──
+        "<div style='display:flex;justify-content:center;margin-bottom:22px;'>"
+        "<div class='gcard' style='width:460px;text-align:center;'>"
+        "<div class='chead'>HASTANE GENEL TOPLAM · GÜNLÜK</div>"
+        f"<div class='mainv' style='margin:12px 0 18px;'>{_ed_num(hastane_genel)} <span class='u'>kWh</span></div>"
+        "<div style='display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.06);padding-top:16px;'>"
+        "<div style='text-align:left;'><div class='bdlbl'>Şebeke (TRDP 1-4)</div>"
+        f"<div class='vblue' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(sebeke)} "
+        f"<span style='font-size:11px;'>{_pct(sebeke)}</span></div></div>"
+        "<div style='text-align:right;'><div class='bdlbl'>Kojen Üretim</div>"
+        f"<div class='vemr' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(kojen)} "
+        f"<span style='font-size:11px;'>{_pct(kojen)}</span></div></div>"
+        "</div></div></div>"
+        # ── 2. Seviye: iki sütun ──
+        "<div style='display:flex;gap:22px;align-items:flex-start;'>"
+        # Sol sütun
+        "<div style='flex:1;'>"
+        + _section("🏢 Bina Genel Tüketim", bina_genel, "blue", topo["genel"])
+        + _panel(_siemens, "bblue")
+        + _panel(_kule, "bblue")
+        + "</div>"
+        # Sağ sütun
+        "<div style='flex:1;'>"
+        + _section(
+            "⚙️ Bina Mekanik Tüketim", bina_mekanik, "amber", topo["mekanik"],
+            note=f" <span class='hsub' style='font-size:11px;letter-spacing:0;'>({_mek_kaynak})</span>",
         )
-    html += "</div>"
-
-    html += (
-        "<div style='font-size:8.5px;color:rgba(150,210,255,0.4);margin-top:14px;border-top:1px solid rgba(56,189,248,0.1);padding-top:8px;'>"
-        "Mavi = günlük kWh · Sarı = Hastane Genel Toplam'a oran · Gri = 0/veri yok · "
+        + _panel(_janitza, "bamber")
+        + _panel(_chiller, "bamber")
+        + "</div>"
+        "</div>"
+        # ── Açıklama ──
+        "<div class='hsub' style='font-size:9px;margin-top:18px;letter-spacing:0;'>"
+        "Mavi = Şebeke · Yeşil = Kojen · Sarı = Hastane Genel Toplam'a oran · "
         "Birim: kWh/gün · TRDP-2/4 manuel girilir, otomatik okumaya geçince aynı alanlar otomatik dolar."
+        "</div>"
         "</div></div>"
     )
     st.markdown(html, unsafe_allow_html=True)
