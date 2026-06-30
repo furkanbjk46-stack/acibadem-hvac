@@ -3103,12 +3103,32 @@ def _ed_chip(ad, deger, hastane_genel):
         pct = (deger / hastane_genel * 100) if hastane_genel and hastane_genel > 0 else 0
         pct_txt = f"%{pct:.1f}".replace(".", ",")
     return (
-        f"<div style='flex:1 1 84px;min-width:84px;background:rgba(15,23,42,0.85);"
-        f"border:1px solid rgba(56,189,248,0.2);border-radius:8px;padding:7px 4px;text-align:center;'>"
-        f"<div style='font-size:9px;color:rgba(200,230,255,0.65);margin-bottom:2px;'>{ad}</div>"
-        f"<div style='font-family:\"Playfair Display\",sans-serif;font-size:14px;font-weight:800;color:{renk};line-height:1.1;'>{val_txt}</div>"
-        f"<div style='font-size:8px;color:#fbbf24;margin-top:1px;'>{pct_txt}</div>"
+        f"<div style='background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.2);"
+        f"border-radius:8px;padding:8px 4px 6px;text-align:center;'>"
+        f"<div style='font-size:9px;color:rgba(200,230,255,0.6);margin-bottom:3px;"
+        f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{ad}</div>"
+        f"<div style='font-family:\"Playfair Display\",sans-serif;font-size:15px;font-weight:800;color:{renk};line-height:1.05;'>{val_txt}</div>"
+        f"<div style='font-size:8px;color:#fbbf24;margin-top:2px;height:9px;'>{pct_txt}</div>"
         f"</div>"
+    )
+
+
+# Sabit-genişlik uniform çip ızgarası (esneyip iç içe geçmez)
+_ED_CHIP_GRID = "display:grid;grid-template-columns:repeat(auto-fill,100px);gap:8px;justify-content:center;"
+# Ağaç bağlantı çizgisi rengi
+_ED_LINE = "rgba(56,189,248,0.35)"
+
+
+def _ed_split_connector():
+    """Kök → iki dal (¬ʇ¬) bağlantı çizgisi. Dallar 2 sütunlu grid (merkezler %25 / %75)."""
+    c = _ED_LINE
+    return (
+        "<div style='position:relative;height:20px;'>"
+        f"<div style='position:absolute;left:50%;top:0;width:2px;height:10px;background:{c};transform:translateX(-1px);'></div>"
+        f"<div style='position:absolute;left:25%;right:25%;top:10px;height:2px;background:{c};'></div>"
+        f"<div style='position:absolute;left:25%;top:10px;width:2px;height:10px;background:{c};'></div>"
+        f"<div style='position:absolute;left:75%;top:10px;width:2px;height:10px;background:{c};'></div>"
+        "</div>"
     )
 
 
@@ -3166,74 +3186,76 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         f"🌡 {_dis_hava:.1f}°C</span>" if _dis_hava is not None else ""
     )
 
-    # ── Üst başlık + kök ──
+    # ── Başlık ──
     html = (
         "<div style='background:linear-gradient(180deg,#0f1c30 0%,#060b14 100%);"
-        "border:1px solid #1e3a5f;border-radius:16px;padding:18px 20px;'>"
-        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;'>"
+        "border:1px solid #1e3a5f;border-radius:16px;padding:18px 22px;'>"
+        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;'>"
         "<div><div style='font-size:9px;color:#38bdf8;letter-spacing:3px;'>⚡ ENERJİ DİYAGRAMI</div>"
         f"<div style='font-size:18px;font-weight:700;color:#f8fafc;letter-spacing:1px;'>{lok_id.upper()}</div></div>"
         "<div style='display:flex;gap:8px;align-items:center;'>"
         "<span style='background:rgba(16,185,129,0.12);border:1px solid #10b981;border-radius:13px;"
         "padding:4px 12px;font-size:11px;color:#6ee7b7;font-weight:600;'>🟢 ŞEBEKE NORMAL</span>"
         f"{_hava_html}</div></div>"
-        # Kök: Hastane Genel Toplam
-        "<div style='display:flex;justify-content:center;margin-bottom:6px;'>"
-        "<div style='background:rgba(56,189,248,0.12);border:1.2px solid #38bdf8;border-radius:12px;"
-        "padding:10px 26px;text-align:center;min-width:240px;'>"
+        # ── Kök: Hastane Genel Toplam (içinde Şebeke + Kojen alt-istatistikleri) ──
+        "<div style='display:flex;justify-content:center;'>"
+        "<div style='background:rgba(56,189,248,0.10);border:1.2px solid #38bdf8;border-radius:14px;"
+        "padding:12px 28px 14px;text-align:center;min-width:340px;'>"
         "<div style='font-size:9px;color:rgba(150,210,255,0.7);letter-spacing:1.5px;'>HASTANE GENEL TOPLAM · %100</div>"
-        f"<div style='font-family:\"Playfair Display\",sans-serif;font-size:21px;font-weight:800;color:#38bdf8;'>"
+        f"<div style='font-family:\"Playfair Display\",sans-serif;font-size:24px;font-weight:800;color:#38bdf8;line-height:1.2;'>"
         f"{_ed_num(hastane_genel)} <span style='font-size:10px;color:rgba(150,210,255,0.6);'>kWh/gün</span></div>"
-        "</div></div>"
-        # Şebeke + Kojen satırı
-        "<div style='display:flex;gap:10px;justify-content:center;margin-bottom:14px;'>"
-        "<div style='background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.4);border-radius:10px;"
-        "padding:7px 16px;text-align:center;'>"
-        f"<div style='font-size:9px;color:rgba(150,210,255,0.7);'>ŞEBEKE (TRDP 1·2·3·4) · {_pct(sebeke)}</div>"
-        f"<div style='font-size:14px;font-weight:700;color:#7dd3fc;'>{_ed_num(sebeke)} kWh</div></div>"
-        "<div style='background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.4);border-radius:10px;"
-        "padding:7px 16px;text-align:center;'>"
-        f"<div style='font-size:9px;color:rgba(110,231,183,0.8);'>KOJEN ÜRETİM · {_pct(kojen)}</div>"
-        f"<div style='font-size:14px;font-weight:700;color:#6ee7b7;'>{_ed_num(kojen)} kWh</div></div>"
-        "</div>"
-        # İki dal: Bina Genel | Bina Mekanik
-        "<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px;'>"
+        "<div style='display:flex;gap:10px;justify-content:center;margin-top:8px;'>"
+        f"<span style='background:rgba(56,189,248,0.10);border-radius:8px;padding:3px 10px;font-size:10px;color:#7dd3fc;'>"
+        f"Şebeke (TRDP1-4): <b>{_ed_num(sebeke)}</b> · {_pct(sebeke)}</span>"
+        f"<span style='background:rgba(16,185,129,0.10);border-radius:8px;padding:3px 10px;font-size:10px;color:#6ee7b7;'>"
+        f"Kojen Üretim: <b>{_ed_num(kojen)}</b> · {_pct(kojen)}</span>"
+        "</div></div></div>"
+        # ── Bağlantı çizgisi: kök → iki dal ──
+        + _ed_split_connector()
+        # ── İki dal: Bina Genel | Bina Mekanik (merkezler %25 / %75, bağlantıyla hizalı) ──
+        + "<div style='display:grid;grid-template-columns:1fr 1fr;gap:14px;'>"
     )
     # Bina Genel kutusu + TRDP-1/3 çipleri
     _genel_chips = "".join(_ed_chip(ad, _ed_val(row, c), hastane_genel) for ad, c in topo["genel"])
     html += (
-        "<div style='background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.3);border-radius:10px;padding:10px;'>"
-        f"<div style='font-size:9px;color:rgba(150,210,255,0.7);letter-spacing:1px;margin-bottom:8px;'>"
-        f"BİNA GENEL TÜKETİM · {_pct(bina_genel)} · {_ed_num(bina_genel)} kWh</div>"
-        f"<div style='display:flex;gap:6px;'>{_genel_chips}</div></div>"
+        "<div style='background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.3);border-radius:12px;padding:12px;'>"
+        f"<div style='font-size:9.5px;color:rgba(150,210,255,0.75);letter-spacing:1px;margin-bottom:10px;text-align:center;'>"
+        f"🏢 BİNA GENEL TÜKETİM · {_pct(bina_genel)} · {_ed_num(bina_genel)} kWh</div>"
+        f"<div style='{_ED_CHIP_GRID}'>{_genel_chips}</div></div>"
     )
-    # Bina Mekanik kutusu (alt küme panelleri içeride)
+    # Bina Mekanik kutusu + TRDP-2/4 çipleri
     _mek_kaynak = "ölçülen TRDP-2/4" if (trdp2 > 0 and trdp4 > 0) else "alt sayaç toplamı"
-    html += (
-        "<div style='background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.35);border-radius:10px;padding:10px;'>"
-        f"<div style='font-size:9px;color:rgba(252,211,77,0.85);letter-spacing:1px;margin-bottom:8px;'>"
-        f"BİNA MEKANİK TÜKETİM · {_pct(bina_mekanik)} · {_ed_num(bina_mekanik)} kWh "
-        f"<span style='color:rgba(150,210,255,0.4);'>({_mek_kaynak})</span></div>"
-    )
-    # Çift TRDP çipleri (mekanik)
     _mek_trdp = "".join(_ed_chip(ad, _ed_val(row, c), hastane_genel) for ad, c in topo["mekanik"])
-    html += f"<div style='display:flex;gap:6px;'>{_mek_trdp}</div></div></div>"
+    html += (
+        "<div style='background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.35);border-radius:12px;padding:12px;'>"
+        f"<div style='font-size:9.5px;color:rgba(252,211,77,0.85);letter-spacing:1px;margin-bottom:10px;text-align:center;'>"
+        f"⚙️ BİNA MEKANİK TÜKETİM · {_pct(bina_mekanik)} · {_ed_num(bina_mekanik)} kWh "
+        f"<span style='color:rgba(150,210,255,0.4);'>({_mek_kaynak})</span></div>"
+        f"<div style='{_ED_CHIP_GRID}'>{_mek_trdp}</div></div></div>"
+    )
 
+    # ── Mekanik alt sayaçlar başlığı ──
+    html += (
+        "<div style='text-align:center;margin:16px 0 10px;'>"
+        "<span style='font-size:9px;color:rgba(150,210,255,0.55);letter-spacing:2px;"
+        "border-top:1px solid rgba(56,189,248,0.15);padding-top:8px;'>"
+        "▼ MEKANİK ALT SAYAÇLAR (BİNA MEKANİK YÜKLERİ)</span></div>"
+    )
     # ── Küme panelleri (2 sütun grid) ──
-    html += "<div style='display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;'>"
+    html += "<div style='display:grid;grid-template-columns:1fr 1fr;gap:14px;'>"
     for kume_ad, ikon, chips in topo["kumeler"]:
         _grup_toplam = sum((_ed_val(row, c) or 0) for _, c in chips)
         _chips_html = "".join(_ed_chip(ad, _ed_val(row, c), hastane_genel) for ad, c in chips)
         html += (
-            "<div style='background:rgba(15,23,42,0.45);border:1px solid rgba(56,189,248,0.18);border-radius:10px;padding:10px;'>"
-            f"<div style='font-size:9px;color:#38bdf8;letter-spacing:1px;margin-bottom:8px;'>"
+            "<div style='background:rgba(15,23,42,0.45);border:1px solid rgba(56,189,248,0.18);border-radius:12px;padding:12px;'>"
+            f"<div style='font-size:9.5px;color:#38bdf8;letter-spacing:1px;margin-bottom:10px;'>"
             f"{ikon} {kume_ad} · {_pct(_grup_toplam)}</div>"
-            f"<div style='display:flex;flex-wrap:wrap;gap:6px;'>{_chips_html}</div></div>"
+            f"<div style='{_ED_CHIP_GRID}'>{_chips_html}</div></div>"
         )
     html += "</div>"
 
     html += (
-        "<div style='font-size:8.5px;color:rgba(150,210,255,0.4);margin-top:12px;'>"
+        "<div style='font-size:8.5px;color:rgba(150,210,255,0.4);margin-top:14px;border-top:1px solid rgba(56,189,248,0.1);padding-top:8px;'>"
         "Mavi = günlük kWh · Sarı = Hastane Genel Toplam'a oran · Gri = 0/veri yok · "
         "Birim: kWh/gün · TRDP-2/4 manuel girilir, otomatik okumaya geçince aynı alanlar otomatik dolar."
         "</div></div>"
