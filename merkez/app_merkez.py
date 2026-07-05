@@ -982,6 +982,13 @@ with sol:
         _df_bu_yil  = df_all[df_all["Tarih"] >= _bu_yil_bas]
         _df_gec_yil = df_all[(df_all["Tarih"] >= _gec_yil_bas) & (df_all["Tarih"] <= _gec_yil_son)]
 
+        # SYN-1 fix: % kıyası geçen ayın AYNI GÜN ARALIĞI ile yapılır — kısmi ay tam ayla
+        # kıyaslanınca ayın başında %80'lere varan sahte "düşüş" görünüyordu.
+        # (Trend satırındaki "Geçen ay: X" değeri tam ay olarak kalır, sadece % kıyası kırpılır.)
+        _bu_ay_son_gun = int(_df_bu_ay["Tarih"].max().day) if not _df_bu_ay.empty else now.day
+        _gec_ay_kiyas_son = min(_gec_ay_bas + pd.Timedelta(days=_bu_ay_son_gun - 1), _gec_ay_son)
+        _df_gec_ay_kiyas = df_all[(df_all["Tarih"] >= _gec_ay_bas) & (df_all["Tarih"] <= _gec_ay_kiyas_son)]
+
         def tr(sayi, ondalik=0):
             fmt = f"{sayi:,.{ondalik}f}"
             if ondalik > 0:
@@ -1013,11 +1020,13 @@ with sol:
             if _col is None:  # Doğalgaz: kazan + kojen toplamı
                 _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
                 _ga   = _cs(_df_gec_ay,  "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay,  "Kojen_Dogalgaz_m3")
+                _gk   = _cs(_df_gec_ay_kiyas, "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay_kiyas, "Kojen_Dogalgaz_m3")
                 _by   = _cs(_df_bu_yil,  "Kazan_Dogalgaz_m3") + _cs(_df_bu_yil,  "Kojen_Dogalgaz_m3")
                 _gy   = _cs(_df_gec_yil, "Kazan_Dogalgaz_m3") + _cs(_df_gec_yil, "Kojen_Dogalgaz_m3")
             else:
                 _bu = _cs(_df_bu_ay,   _col)
                 _ga = _cs(_df_gec_ay,  _col)
+                _gk = _cs(_df_gec_ay_kiyas, _col)
                 _by = _cs(_df_bu_yil,  _col)
                 _gy = _cs(_df_gec_yil, _col)
 
@@ -1036,7 +1045,7 @@ with sol:
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}</span>
                 <span style="font-size:12px; font-weight:700; color:#38bdf8;
-                             font-family:'Playfair Display','Plus Jakarta Sans',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _ga)}</span>
+                             font-family:'Playfair Display','Plus Jakarta Sans',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _gk)}</span>
               </div>
               {_trend_html}
             </div>

@@ -832,17 +832,19 @@ with tab1:
                     barmode="group",
                     legend=dict(orientation="h", y=1.1, font=dict(size=10)),
                 )
-                # Toplam fark özeti
-                bu_top  = bu_gun.sum()
-                gec_top = gec_gun.sum()
+                # Toplam fark özeti — SYN-5 fix: geçen ay AYNI GÜN ARALIĞINA kırpılır
+                # (kısmi ay tam ayla kıyaslanınca ayın başında sahte "az tüketim" görünüyordu)
+                bu_top = bu_gun.sum()
+                gec_kiyas = gec_gun[gec_gun.index <= bu_gun.index.max()] if not bu_gun.empty else gec_gun
+                gec_top = gec_kiyas.sum()
                 if gec_top > 0:
                     fark_pct = (bu_top - gec_top) / gec_top * 100
                     fark_renk = "#ef4444" if fark_pct > 0 else "#10b981"
                     fark_yon  = "▲" if fark_pct > 0 else "▼"
                     st.markdown(
                         f"<div style='text-align:center;font-size:11px;color:{fark_renk};margin-bottom:4px;'>"
-                        f"{fark_yon} Bu ay şimdiye kadar geçen aya göre <b>{abs(fark_pct):.1f}%</b> "
-                        f"{'fazla' if fark_pct>0 else 'az'} tüketim</div>",
+                        f"{fark_yon} Bu ay şimdiye kadar, geçen ayın aynı dönemine (ilk {int(bu_gun.index.max())} gün) göre "
+                        f"<b>{abs(fark_pct):.1f}%</b> {'fazla' if fark_pct>0 else 'az'} tüketim</div>",
                         unsafe_allow_html=True
                     )
                 st.plotly_chart(fig_ay, use_container_width=True, config={"displayModeBar": False})
