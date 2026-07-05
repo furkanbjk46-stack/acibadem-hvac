@@ -1523,10 +1523,10 @@ class HVACAnalyzer:
                 })
                 return result
         
-        # 5. Low ΔT syndrome
-        if (profile.valves.cooling is not None and 
-            profile.valves.cooling >= self.config["HIGH_VALVE_THRESHOLD"] and
-            delta_t is not None and 
+        # 5. Low ΔT syndrome — ilgili vana (ısıtma VEYA soğutma) yüksekken ΔT düşük (MZ-2 fix:
+        # önceden sadece soğutma vanasına bakılıyordu, ısıtma tarafı yakalanmıyordu)
+        if (max(cool_v, heat_v) >= self.config["HIGH_VALVE_THRESHOLD"] and
+            delta_t is not None and
             delta_t <= self.config["LOW_DT_THRESHOLD"]):
             result.update({
                 "action": "Investigate Low-ΔT Syndrome",
@@ -1955,7 +1955,13 @@ class HVACAnalyzer:
             profile, result.sat_status, result.approach_supply, result.rule,
             effective_mode=effective_mode
         )
-            
+
+        # Severity haritalaması (MZ-1 fix): SAT/özel-kural dalları severity atamadıysa
+        # skor+status'tan türet. FCU yolundaki map_severity muadili — AHU'da eksikti;
+        # LOW_DT/HIGH_DT (skor 4-6) ve MISSING_DATA satırları OPTIMAL görünüyordu.
+        if result.severity == "OPTIMAL" and result.rule not in ("NORMAL", "IN_BAND", "STANDBY"):
+            result.severity = self.map_severity(result.status, result.score)
+
         return result
 
     def analyze_fcu_performance(self, profile: EquipmentProfile, effective_mode: str,
@@ -2048,8 +2054,9 @@ class HVACAnalyzer:
                 result.reason = special_conditions["reason"]
                 result.rule = special_conditions["rule"]
 
-        else:
-             # Standard Recommendations
+        elif not result.rule:
+            # Standard Recommendations — yalnızca daha önce kural atanmadıysa (MZ-6 fix:
+            # önceden INSUFFICIENT_CAPACITY / NOT_COOLING gibi kuralları IN_BAND/BAND_* eziyordu)
             if result.status == "LOW":
                 result.action = "ΔT Hedef Altında - Akış Azalt"
                 result.reason = f"ΔT ({delta_t:.1f}°C) < Hedef ({target_dt:.1f}°C)"

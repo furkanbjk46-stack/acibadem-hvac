@@ -505,12 +505,16 @@ class ConsumptionForecastEngine:
             return {}
         years = sorted(self.df["Yil"].unique())
         full_years = [y for y in years if len(self.df[self.df["Yil"] == y]) >= 300]
-        if year not in years or len(full_years) < 2:
+        # MR-1 fix: karşılaştırılan yıl da TAM yıl olmalı — kısmi yıl (devam eden yıl)
+        # tam yılla karşılaştırılınca sahte "%50 tasarruf" çıkıyordu. Önceki yıl da
+        # full_years içinde year'dan hemen önceki yıl olarak seçilir (eskiden yanlış
+        # indeksle 2 yıl öncesine gidebiliyordu).
+        if year not in full_years or len(full_years) < 2:
             return {}
-        idx = full_years.index(year) if year in full_years else -1
-        prev_year = full_years[idx - 1] if idx > 0 else full_years[-2]
-        if prev_year == year:
+        idx = full_years.index(year)
+        if idx == 0:
             return {}
+        prev_year = full_years[idx - 1]
 
         curr = self.df[self.df["Yil"] == year]
         prev = self.df[self.df["Yil"] == prev_year]

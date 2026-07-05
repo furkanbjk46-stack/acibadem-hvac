@@ -1584,7 +1584,8 @@ with sag:
             _sebeke   = _col_sum(_lok_df, "Sebeke_Tuketim_kWh")
 
             # ── Doğalgaz & Su ── (gerçek şema: Kazan+Kojen doğalgaz, Su_Tuketimi_m3)
-            _gaz_m3   = _col_sum(_lok_df, "Kazan_Dogalgaz_m3") + _col_sum(_lok_df, "Kojen_Dogalgaz_m3")
+            _kojen_gaz_m3 = _col_sum(_lok_df, "Kojen_Dogalgaz_m3")
+            _gaz_m3   = _col_sum(_lok_df, "Kazan_Dogalgaz_m3") + _kojen_gaz_m3
             _su_m3    = _col_sum(_lok_df, "Su_Tuketimi_m3")
 
             # ── Chiller anlık ──
@@ -1596,7 +1597,9 @@ with sag:
 
             # ── Türetilmiş verimlilik metrikleri ──
             _kwh_m2_gun  = round(_kwh / _gun_say / _m2_val, 2)       # kWh/m²/gün
-            _kojen_verim = round(_kojen / _gaz_m3, 2) if _gaz_m3 > 0 else None   # kWh/m³
+            # Kojen verimi = kojen kWh / SADECE kojen gazı (SY-1 fix: önceden kazan gazı da
+            # paydadaydı → kışın kojen verimi yapay düşük görünüyordu)
+            _kojen_verim = round(_kojen / _kojen_gaz_m3, 2) if _kojen_gaz_m3 > 0 else None   # kWh/m³
             _gaz_verim   = round(_kwh   / _gaz_m3, 2) if _gaz_m3 > 0 else None   # kWh/m³ toplam
             _sebeke_bag  = round(_sebeke / (_sebeke + _kojen) * 100, 1) if (_sebeke + _kojen) > 0 else None  # %
             _chiller_pay = round(_chkwh / _kwh * 100, 1) if _kwh > 0 else None   # % soğutma payı
@@ -1755,7 +1758,8 @@ with sag:
                     b = f"【{mv['isim']}】{' ⚠️ANORMAL' if mv['anormal'] else ''}\n"
                     if not _ddf.empty:
                         dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
-                        dgaz = _col_sum(_ddf, "Kazan_Dogalgaz_m3") + _col_sum(_ddf, "Kojen_Dogalgaz_m3")
+                        dkojgaz = _col_sum(_ddf, "Kojen_Dogalgaz_m3")
+                        dgaz = _col_sum(_ddf, "Kazan_Dogalgaz_m3") + dkojgaz
                         dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
                         dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
                         dsu  = _col_sum(_ddf, "Su_Tuketimi_m3")
@@ -1766,7 +1770,7 @@ with sag:
                             b += f"    Elektrik : {dkwh:,.0f} kWh  ({round(dkwh/_m2v,2)} kWh/m²/gün)\n"
                         if dkoj > 0:
                             b += f"    Kojen    : {dkoj:,.0f} kWh"
-                            if dgaz > 0: b += f"  |  Verim: {round(dkoj/dgaz,2)} kWh/m³ (≥3.5)"
+                            if dkojgaz > 0: b += f"  |  Verim: {round(dkoj/dkojgaz,2)} kWh/m³ (≥3.5)"
                             b += "\n"
                         if (dseb + dkoj) > 0:
                             b += f"    Şebeke bağ.: %{round(dseb/(dseb+dkoj)*100,1)}  (<%30 ideal)\n"
@@ -1793,10 +1797,10 @@ with sag:
                     flag = " ⚠️" if mv["anormal"] else ""
                     if not _ddf.empty:
                         dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
-                        dgaz = _col_sum(_ddf, "Kazan_Dogalgaz_m3") + _col_sum(_ddf, "Kojen_Dogalgaz_m3")
+                        dkojgaz = _col_sum(_ddf, "Kojen_Dogalgaz_m3")
                         dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
                         dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
-                        kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"
+                        kv   = round(dkoj/dkojgaz,2) if dkojgaz>0 and dkoj>0 else "-"
                         sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
                         yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
                         return (f"  {mv['isim']}{flag}: {yo} kWh/m²/gün  |  "
@@ -1811,10 +1815,10 @@ with sag:
                     flag = "⚠️" if mv["anormal"] else "✓"
                     if not _ddf.empty:
                         dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
-                        dgaz = _col_sum(_ddf, "Kazan_Dogalgaz_m3") + _col_sum(_ddf, "Kojen_Dogalgaz_m3")
+                        dkojgaz = _col_sum(_ddf, "Kojen_Dogalgaz_m3")
                         dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
                         dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
-                        kv   = round(dkoj/dgaz,2) if dgaz>0 and dkoj>0 else "-"
+                        kv   = round(dkoj/dkojgaz,2) if dkojgaz>0 and dkoj>0 else "-"
                         sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
                         yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
                         return f"  [{flag}] {mv['isim']}: {yo} kWh/m²  Koj:{kv}  Şeb:{sb}\n"
