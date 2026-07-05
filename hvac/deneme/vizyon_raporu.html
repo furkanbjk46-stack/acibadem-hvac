@@ -337,9 +337,9 @@
     <h1>Synapse (SYN)</h1>
     <div class="subtitle">Gelecek Vizyon Belgesi</div>
     <div class="meta">
-      <span>📅 Son Güncelleme: 20 Mayıs 2026</span>
+      <span>📅 Son Güncelleme: 5 Temmuz 2026</span>
       <span>🚀 Proje Başlangıcı: 5 Ağustos 2025</span>
-      <span>⏱️ Toplam Süre: ~9.5 ay (kavramdan üretime)</span>
+      <span>⏱️ Toplam Süre: ~11 ay (kavramdan üretime)</span>
     </div>
   </div>
 
@@ -950,6 +950,19 @@ gantt
         <li>Chiller/FCU kapasite ayarları için ayarlar paneline yeni bölüm eklendi</li>
         <li>configs/ klasör standardizasyonu: ahu_tasarim_kapasiteleri.json, chiller_fcu_ayarlari.json, ahu_nokta_konfig.json, hedefli_okuma_sablonu_2.xlsx</li>
         <li>data_collector.py dual-path fallback (configs/ → kök dizin) ile lokasyon uyumluluğu</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 Haziran-Temmuz 2026 — Enerji Diyagramı, Denetim ve Kalite Yamaları (v5.4–v5.8)</h4>
+      <ul>
+        <li>Enerji Diyagramı sekmesi (Synergy/Maslak): Desigo enerji topolojisi glassmorphism temayla portala taşındı — Hastane Genel = Şebeke (TRDP1-4) + Kojen, MCC Siemens/Janitza + Kule + Chiller kırılımı, %'ler otomatik</li>
+        <li>AHU aylık alarm takibi: skor &gt;7 filtresi + tekrar sayaçları + PDF rapor</li>
+        <li>Yeni lokasyon kurulum şablonu (Excel) + otomasyon scripti: AHU noktaları, SAT/kapasite, Makine ID/lisans alanları</li>
+        <li>Kapsamlı sistem denetimi: 25.000+ satır statik inceleme + 50+ çalıştırmalı sentetik test</li>
+        <li>v5.7: 5 hesap/etiket hatası düzeltildi (AHU severity, LOW_DT_SYNDROME ısıtma vanası, INSUFFICIENT_CAPACITY ezilmesi, kojen verim paydası, kısmi yıl tasarruf hesabı)</li>
+        <li>v5.8: config düzeltmesi (TARGET_DT_HEAT 25→15 — LOW_FLOW tekrar erişilebilir), kojen toplam düzeltmesi, data_bridge kaçırılan gün telafisi, 0.0°C ortalama düzeltmesi</li>
+        <li>Lisans sistemi dev-ortam istisnası (config yoksa geliştirme PC'sinde çalışır)</li>
       </ul>
     </div>
   </div>

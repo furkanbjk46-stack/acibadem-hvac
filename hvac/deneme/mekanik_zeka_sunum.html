@@ -246,7 +246,7 @@
                     <tr>
                         <td>🌀 <strong>AHU</strong></td>
                         <td>Klima Santrali</td>
-                        <td>5.0°C</td>
+                        <td>10.0°C (hava ΔT)</td>
                         <td>±3.0°C</td>
                         <td>Üfleme/Emiş hava, SAT, Vana %</td>
                     </tr>
@@ -267,7 +267,7 @@
                     <tr>
                         <td>🔗 <strong>Kolektör</strong></td>
                         <td>Ana Dağıtım</td>
-                        <td>3.0°C</td>
+                        <td>10.0°C</td>
                         <td>±1.0°C</td>
                         <td>Ana gidiş/dönüş su</td>
                     </tr>
@@ -347,7 +347,7 @@
                         <td>❄️ Soğutma</td>
                         <td>15°C – 18°C</td>
                         <td>16.5°C</td>
-                        <td>SAT &gt; 18°C → <span class="badge badge-warning">NOT_COOLING</span></td>
+                        <td>SAT &gt; 18°C → <span class="badge badge-critical">NOT_COOLING</span></td>
                     </tr>
                     <tr>
                         <td>🔥 Isıtma</td>
@@ -404,7 +404,7 @@
                 <div class="severity-card" style="background:linear-gradient(135deg, var(--orange), var(--orange-dark));">
                     <div class="emoji">🟡</div>
                     <div class="title">WARNING</div>
-                    <div class="desc">Skor 3.0–6.9<br>Planlı bakım</div>
+                    <div class="desc">Skor 5.0–6.9<br>Planlı bakım</div>
                 </div>
                 <div class="severity-card" style="background:linear-gradient(135deg, var(--green), var(--green-dark));">
                     <div class="emoji">🟢</div>
@@ -446,14 +446,14 @@
                     </tr>
                     <tr>
                         <td><strong>NOT_COOLING</strong></td>
-                        <td>8.0</td>
+                        <td>9.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
                         <td>AHU + FCU</td>
                         <td>SAT yüksek, soğutma yapamıyor</td>
                     </tr>
                     <tr>
                         <td><strong>NOT_HEATING</strong></td>
-                        <td>8.0</td>
+                        <td>9.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
                         <td>AHU + FCU</td>
                         <td>SAT düşük, ısıtma yapamıyor</td>
@@ -462,12 +462,12 @@
                         <td><strong>LOW_FLOW_DETECTED</strong></td>
                         <td>8.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>
-                        <td>AHU + FCU (CHILLER hariç)</td>
-                        <td>Su akışı düşük → pompa/filtre sorunu</td>
+                        <td>FCU / Kazan / Kolektör (AHU + CHILLER hariç)</td>
+                        <td>Su ΔT iyi ama üfleme soğuk → debi/pompa sorunu (AHU'da HEAT_EFF_LOW ile yakalanır)</td>
                     </tr>
                     <tr>
                         <td><strong>INSUFFICIENT_CAPACITY</strong></td>
-                        <td>7.0</td>
+                        <td>6.0</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
                         <td>Sadece FCU</td>
                         <td>Kapasite yetersiz, konfor sağlanamıyor (oda-set sapması &gt;2°C ve vana &gt;%80)</td>
@@ -498,7 +498,7 @@
                         <td>5.0</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
                         <td>AHU + FCU</td>
-                        <td>Vana ≥90% ama ΔT ≤ 3°C</td>
+                        <td>İlgili vana (ısıtma veya soğutma) ≥90% ama ΔT ≤ 3°C</td>
                     </tr>
                     <tr>
                         <td><strong>SAT_WARNING / SAT_HIGH / SAT_LOW</strong></td>
@@ -549,7 +549,10 @@
                 <li><strong>Sadece FCU'da çalışanlar:</strong> INSUFFICIENT_CAPACITY (oda-set sapması + vana
                     açıklığı kombinasyonu), BAND_LOW/BAND_HIGH/IN_BAND, SAT analizi (FCU yolu, farklı eşikler)</li>
                 <li><strong>Her ikisinde de çalışanlar (ortak):</strong> SIMUL_HEAT_COOL, COMFORT_OVERRIDE,
-                    LOW_FLOW_DETECTED, LOW_DT_SYNDROME</li>
+                    LOW_DT_SYNDROME</li>
+                <li><strong>AHU hariç su devrelerinde çalışanlar:</strong> LOW_FLOW_DETECTED (FCU coil /
+                    Kazan / Kolektör — AHU'nun bireysel su sensörü olmadığı için AHU'da devre dışı;
+                    aynı senaryo AHU'da HEAT_EFF_LOW ile yakalanır)</li>
                 <li><strong>Sadece CHILLER'da çalışanlar:</strong> CHILLER_BYPASS, CHILLER_LOW_DT</li>
             </ul>
             <p><strong>Çakışma önceliklendirmesi:</strong> Aynı cihazda birden fazla kuralın koşulu aynı anda
