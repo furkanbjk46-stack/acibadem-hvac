@@ -851,45 +851,9 @@ with tab1:
             else:
                 st.info("Ay karşılaştırma verisi bulunamadı.")
 
-        # ── Doğalgaz Verimliliği ──
-        elif grafik_tip == "dogalgaz_verim":
-            has_kojen = "Kojen_Uretim_kWh" in secili_df.columns and "Kojen_Dogalgaz_m3" in secili_df.columns
-            has_kazan = "Kazan_Dogalgaz_m3" in secili_df.columns and "Toplam_Hastane_Tuketim_kWh" in secili_df.columns
-            if (has_kojen or has_kazan) and not secili_df.empty:
-                st.caption(tarih_aralik_str)
-                fig_dv = go.Figure()
-                if has_kojen:
-                    kj_g = secili_df.groupby(secili_df["Tarih"].dt.date)[["Kojen_Uretim_kWh","Kojen_Dogalgaz_m3"]].sum().reset_index()
-                    kj_g["verim"] = kj_g.apply(
-                        lambda r: r["Kojen_Uretim_kWh"]/r["Kojen_Dogalgaz_m3"] if r["Kojen_Dogalgaz_m3"]>0 else None, axis=1
-                    )
-                    fig_dv.add_trace(go.Scatter(
-                        x=kj_g["Tarih"], y=kj_g["verim"],
-                        name="Kojen (kWh/m³)", line=dict(color="#10b981", width=2),
-                        hovertemplate="<b>%{x}</b><br>%{y:.2f} kWh/m³<extra></extra>",
-                    ))
-                if has_kazan:
-                    kz_g = secili_df.groupby(secili_df["Tarih"].dt.date)[["Toplam_Hastane_Tuketim_kWh","Kazan_Dogalgaz_m3"]].sum().reset_index()
-                    kz_g["verim"] = kz_g.apply(
-                        lambda r: r["Toplam_Hastane_Tuketim_kWh"]/r["Kazan_Dogalgaz_m3"] if r["Kazan_Dogalgaz_m3"]>0 else None, axis=1
-                    )
-                    fig_dv.add_trace(go.Scatter(
-                        x=kz_g["Tarih"], y=kz_g["verim"],
-                        name="Kazan (kWh/m³)", line=dict(color="#ef4444", width=2, dash="dot"),
-                        hovertemplate="<b>%{x}</b><br>%{y:.2f} kWh/m³<extra></extra>",
-                    ))
-                fig_dv.update_layout(
-                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
-                    margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
-                               title=dict(text="kWh / m³ gaz", font=dict(size=10))),
-                    legend=dict(orientation="h", y=1.1, font=dict(size=10)),
-                )
-                st.plotly_chart(fig_dv, use_container_width=True, config={"displayModeBar": False})
-            else:
-                st.info("Doğalgaz verimlilik verisi bulunamadı.")
+        # (SYN-4: ölü 'dogalgaz_verim' grafik dalı kaldırıldı — grafik_secenekler'de hiç
+        #  listelenmiyordu; içindeki "Kazan verimi" hesabı da elektrik/kazan-gazı gibi
+        #  kavramsal olarak yanlış bir orandı.)
 
         # ── KPI Özet Scorecard (seçilen tarih aralığı) ──
         elif grafik_tip == "kpi_ozet":
@@ -1332,6 +1296,7 @@ with tab2:
                        title=dict(text="kWh/m²", font=dict(size=10))),
         )
         st.plotly_chart(fig_v, use_container_width=True, config={"displayModeBar": False})
+        st.caption("Not: Devam eden ayın çubuğu kısmi veriyi gösterir (ay tamamlanınca kesinleşir).")
 
 # ════════ TAB 3: VERİ TABLOSU ════════
 with tab3:

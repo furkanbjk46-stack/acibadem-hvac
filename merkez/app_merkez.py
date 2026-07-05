@@ -463,7 +463,7 @@ def _ch_modu_hesapla(ort: float, mevcut: str) -> str:
 
 
 def _dig_modu_hesapla(ort: float, mevcut: str) -> str:
-    """Kollektor/FCU/AHU ikili mod — ±2°C histerezis."""
+    """Kollektor/FCU/AHU ikili mod — ±3°C histerezis (_DIG_H)."""
     if mevcut == "sogutma":
         return "isitma" if ort < _DIG_ESIK - _DIG_H else "sogutma"
     if mevcut == "isitma":
@@ -802,17 +802,25 @@ def dun_kwh(lok_id):
     return 0
 
 def onceki_gun_kwh(lok_id):
-    """Dünden bir önceki günün kWh değeri (% değişim için)."""
+    """Kartta gösterilen günün bir önceki VERİLİ gününün kWh değeri (% değişim için).
+    SYN-3 fix: dun_kwh dün yoksa son mevcut güne düşer — burada da aynı referans gün
+    bulunup ondan önceki son verili gün alınır; eskiden sabit (bugün-2) kullanılıyordu
+    ve yanlış gün çifti kıyaslanabiliyordu."""
     if df_all.empty or lok_id not in aktif_loklar:
         return 0
     lok_df = df_all[df_all["lokasyon_id"] == lok_id]
-    if lok_df.empty:
+    if lok_df.empty or "Toplam_Hastane_Tuketim_kWh" not in lok_df.columns:
         return 0
-    onceki = (now - timedelta(days=2)).strftime("%Y-%m-%d")
-    d = lok_df[lok_df["Tarih"].dt.strftime("%Y-%m-%d") == onceki]
-    if not d.empty and "Toplam_Hastane_Tuketim_kWh" in d.columns:
-        return d["Toplam_Hastane_Tuketim_kWh"].sum()
-    return 0
+    # dun_kwh ile aynı referans günü belirle (dün varsa dün, yoksa son verili gün)
+    gunler = sorted(lok_df["Tarih"].dropna().dt.strftime("%Y-%m-%d").unique())
+    if not gunler:
+        return 0
+    ref = dun if dun in gunler else gunler[-1]
+    oncekiler = [g for g in gunler if g < ref]
+    if not oncekiler:
+        return 0
+    d = lok_df[lok_df["Tarih"].dt.strftime("%Y-%m-%d") == oncekiler[-1]]
+    return d["Toplam_Hastane_Tuketim_kWh"].sum()
 
 def sparkline_svg(values, renk, w=75, h=28):
     """Verilen değerlerden mini SVG sparkline üret."""
@@ -950,7 +958,7 @@ with sol:
             f'<div style="display:inline-flex;align-items:center;gap:5px;'
             f'background:rgba(56, 189, 248,0.05);border-radius:5px;padding:3px 8px;'
             f'border:1px solid rgba(56, 189, 248,0.10);">'
-            f'<span style="font-size:7px;color:rgba(150,210,255,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²</span>'
+            f'<span style="font-size:7px;color:rgba(150,210,255,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²/gün</span>'
             f'<span style="font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:11px;color:#38bdf8;font-weight:700;">{verim_str}</span>'
             f'</div>'
             f'</div></div></a>'
@@ -999,24 +1007,26 @@ with sol:
         def _cs(df, col):
             return df[col].sum() if col in df.columns else 0
 
-        def _pct_html(bu, gec):
+        def _pct_html(bu, gec, artis_iyi=False):
+            """SYN-2 fix: tüketimde düşüş yeşil; üretim metriklerinde (artis_iyi=True) artış yeşil."""
             if not gec or gec == 0: return ""
             p = (bu - gec) / gec * 100
-            renk = "#10b981" if p <= 0 else "#ef4444"
+            iyi  = (p >= 0) if artis_iyi else (p <= 0)
+            renk = "#10b981" if iyi else "#ef4444"
             yon  = "▼" if p <= 0 else "▲"
             return f'<b style="color:{renk};font-size:10px;"> {yon}{abs(p):.1f}%</b>'
 
         _gec_ay_label = _ay_tr[_gec_ay_no - 1]
 
         _metrikler = [
-            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh"),
-            ("🔥 Doğalgaz",      None,                         "m³"),
-            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh"),
-            ("💧 Su",             "Su_Tuketimi_m3",             "m³"),
-            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh"),
+            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh", False),
+            ("🔥 Doğalgaz",      None,                         "m³",  False),
+            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh", False),
+            ("💧 Su",             "Su_Tuketimi_m3",             "m³",  False),
+            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh", True),  # üretimde artış iyidir
         ]
 
-        for _lbl, _col, _birim in _metrikler:
+        for _lbl, _col, _birim, _artis_iyi in _metrikler:
             if _col is None:  # Doğalgaz: kazan + kojen toplamı
                 _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
                 _ga   = _cs(_df_gec_ay,  "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay,  "Kojen_Dogalgaz_m3")
@@ -1045,7 +1055,7 @@ with sol:
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}</span>
                 <span style="font-size:12px; font-weight:700; color:#38bdf8;
-                             font-family:'Playfair Display','Plus Jakarta Sans',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _gk)}</span>
+                             font-family:'Playfair Display','Plus Jakarta Sans',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _gk, _artis_iyi)}</span>
               </div>
               {_trend_html}
             </div>
@@ -1265,7 +1275,7 @@ with sag:
             isim = HASTANELER.get(lok_id, {}).get("kisa", lok_id)
             lok_son = son_gun[son_gun["lokasyon_id"] == lok_id]
             if lok_son.empty:
-                lok_uyari_map.setdefault(lok_id, []).append(("r", f"⚠️ {isim}: Bugün veri yok"))
+                lok_uyari_map.setdefault(lok_id, []).append(("r", f"⚠️ {isim}: Dün için veri yok"))
                 continue
             if "Chiller_Set_Temp_C" in lok_son.columns:
                 cs = lok_son["Chiller_Set_Temp_C"].mean()
