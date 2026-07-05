@@ -145,7 +145,7 @@ def build():
          "SAT (°C) sahasi (ufleme sicakligi); sogutma modunda bu bandin disina cikarsa SAT_LOW/SAT_HIGH"],
         ["SAT_HEATING_MIN / MAX", "27.0°C / 30.0°C", "SAT (°C), isitma modunda"],
         ["SAT_COOLING/HEATING_THRESHOLD", "±1.0°C", "SAT (°C) vs Set (°C) karsilastirmasi (set'ten sapma toleransi)"],
-        ["HEAT_SAT_LOW_THRESHOLD", "27.0°C",
+        ["HEAT_SAT_LOW_THRESHOLD", "28.0°C",
          "SAT (°C) - LOW_FLOW_DETECTED tetikleyicisi: ΔT (Inlet/Outlet, su) hedefi karsiliyor AMA SAT bu degerin altindaysa "
          "-> su isiniyor ama havaya aktarilamiyor (debi/pompa supheli)"],
     ]
@@ -196,7 +196,7 @@ def build():
     pdf.ln(4)
     pdf.section_title("6) Skorlama Parametreleri")
     rows6 = [
-        ["SCORE_DEPARTURE_WEIGHT", "1.5", "(delta_t - target_delta_t) farki x 1.5 -> skora eklenir"],
+        ["SCORE_DEPARTURE_WEIGHT", "2.0", "(delta_t - target_delta_t) farki x 2.0 (kod sabiti, ust sinir +6.0) -> skora eklenir"],
         ["SCORE_LOW_DT_BONUS", "+4.0", "LOW_DT_SYNDROME tetiklendiginde ek puan"],
         ["SCORE_COMFORT_PENALTY", "+2.0", "COMFORT_OVERRIDE tetiklendiginde ek puan (Room vs Set sapmasi)"],
         ["SCORE_CRITICAL_THRESHOLD", "7.0", "Toplam skor >=7.0 -> genel kategori CRITICAL"],

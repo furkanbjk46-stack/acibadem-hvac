@@ -274,18 +274,19 @@ class UnifiedDataMerger:
         total_water = safe_sum("water_consumption")
         total_chiller = safe_sum("chiller_consumption")
         
-        # Ortalamalar
-        chiller_sets = [d["energy"].get("chiller_set_temp") for d in daily_data if d["energy"].get("chiller_set_temp")]
-        outdoor_temps = [d["energy"].get("outdoor_temp") for d in daily_data if d["energy"].get("outdoor_temp")]
+        # Ortalamalar — MR-2 fix: `if get(...)` 0.0 degerini de eliyordu (falsy);
+        # donma gunlerinde 0.0°C dis hava ortalamadan dusuyordu. `is not None` kullanilir.
+        chiller_sets = [d["energy"].get("chiller_set_temp") for d in daily_data if d["energy"].get("chiller_set_temp") is not None]
+        outdoor_temps = [d["energy"].get("outdoor_temp") for d in daily_data if d["energy"].get("outdoor_temp") is not None]
         
         avg_chiller_set = _safe_mean(chiller_sets) if chiller_sets else None
         avg_outdoor_temp = _safe_mean(outdoor_temps) if outdoor_temps else None
         
         # Yeni: MAS santral sıcaklıkları ortalaması
-        mas1_cooling_temps = [d["energy"].get("mas1_cooling_temp") for d in daily_data if d["energy"].get("mas1_cooling_temp")]
-        mas2_cooling_temps = [d["energy"].get("mas2_cooling_temp") for d in daily_data if d["energy"].get("mas2_cooling_temp")]
-        mas1_heating_temps = [d["energy"].get("mas1_heating_temp") for d in daily_data if d["energy"].get("mas1_heating_temp")]
-        mas2_heating_temps = [d["energy"].get("mas2_heating_temp") for d in daily_data if d["energy"].get("mas2_heating_temp")]
+        mas1_cooling_temps = [d["energy"].get("mas1_cooling_temp") for d in daily_data if d["energy"].get("mas1_cooling_temp") is not None]
+        mas2_cooling_temps = [d["energy"].get("mas2_cooling_temp") for d in daily_data if d["energy"].get("mas2_cooling_temp") is not None]
+        mas1_heating_temps = [d["energy"].get("mas1_heating_temp") for d in daily_data if d["energy"].get("mas1_heating_temp") is not None]
+        mas2_heating_temps = [d["energy"].get("mas2_heating_temp") for d in daily_data if d["energy"].get("mas2_heating_temp") is not None]
         
         avg_mas1_cooling = _safe_mean(mas1_cooling_temps) if mas1_cooling_temps else None
         avg_mas2_cooling = _safe_mean(mas2_cooling_temps) if mas2_cooling_temps else None

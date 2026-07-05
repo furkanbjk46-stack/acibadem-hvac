@@ -20,7 +20,7 @@ df2 = pd.DataFrame([
     ["SAT_COOLING_MIN / MAX", "15.0°C / 18.0°C", "SAT (°C) sahası (üfleme sıcaklığı); soğutma modunda bu bandın dışına çıkarsa SAT_LOW/SAT_HIGH"],
     ["SAT_HEATING_MIN / MAX", "27.0°C / 30.0°C", "SAT (°C), ısıtma modunda"],
     ["SAT_COOLING/HEATING_THRESHOLD", "±1.0°C", "SAT (°C) vs Set (°C) karşılaştırması (set'ten sapma toleransı)"],
-    ["HEAT_SAT_LOW_THRESHOLD", "27.0°C", "SAT (°C) - LOW_FLOW_DETECTED tetikleyicisi: ΔT (Inlet/Outlet, su) hedefi karşılıyor AMA SAT bu değerin altındaysa -> su ısınıyor ama havaya aktarılamıyor (debi/pompa şüpheli)"],
+    ["HEAT_SAT_LOW_THRESHOLD", "28.0°C", "SAT (°C) - LOW_FLOW_DETECTED tetikleyicisi: ΔT (Inlet/Outlet, su) hedefi karşılıyor AMA SAT bu değerin altındaysa -> su ısınıyor ama havaya aktarılamıyor (debi/pompa şüpheli). Çalışan config (hvac_settings.json) değeri"],
 ], columns=["Parametre", "Değer", "Referans Aldığı Veri"])
 
 df3 = pd.DataFrame([
@@ -28,7 +28,7 @@ df3 = pd.DataFrame([
     ["VALVE_SIMUL_THRESHOLD", "%5", "Heat Valve (%) VE Cool Valve (%) aynı anda >=5 ise SIMUL_HEAT_COOL (eşzamanlı ısıtma+soğutma)"],
     ["APPROACH_MAX", "10.0°C", "Cool Valve (%) >=%90 ve approach (Supply hava - Inlet su) > 10°C ise COOL_EFF_LOW"],
     ["COMFORT_DEPARTURE", "3.0°C", "Room (°C) vs Set (°C) -> |Room - Set| > 3.0 ise COMFORT_OVERRIDE"],
-    ["LOW_DT_THRESHOLD", "3.0°C", "Hesaplanan delta_t (Inlet/Outlet veya Plant) <=3.0°C iken vana >=%90 ise LOW_DT_SYNDROME"],
+    ["LOW_DT_THRESHOLD", "3.0°C", "Hesaplanan delta_t (Inlet/Outlet veya Plant) <=3.0°C iken ilgili vana (ısıtma VEYA soğutma) >=%90 ise LOW_DT_SYNDROME"],
 ], columns=["Parametre", "Değer", "Referans Aldığı Veri"])
 
 df4 = pd.DataFrame([
@@ -41,7 +41,7 @@ df5 = pd.DataFrame([
 ], columns=["Parametre", "Değer", "Referans Aldığı Veri"])
 
 df6 = pd.DataFrame([
-    ["SCORE_DEPARTURE_WEIGHT", "1.5", "(delta_t - target_delta_t) farkı x 1.5 -> skora eklenir"],
+    ["SCORE_DEPARTURE_WEIGHT", "2.0", "(delta_t - target_delta_t) farkı x 2.0 (kod sabiti, üst sınır +6.0) -> skora eklenir"],
     ["SCORE_LOW_DT_BONUS", "+4.0", "LOW_DT_SYNDROME tetiklendiğinde ek puan"],
     ["SCORE_COMFORT_PENALTY", "+2.0", "COMFORT_OVERRIDE tetiklendiğinde ek puan (Room vs Set sapması)"],
     ["SCORE_CRITICAL_THRESHOLD", "7.0", "Toplam skor >=7.0 -> genel kategori CRITICAL"],

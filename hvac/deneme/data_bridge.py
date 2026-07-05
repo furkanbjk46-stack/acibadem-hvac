@@ -3,14 +3,17 @@
 # verilerini otomatik olarak energy_data.csv formatina donusturur.
 #
 # CALISMA MANTIĞI:
-#   Her sabah 08:30'da sayac okumasi yapilir.
-#   Gunluk tuketim = bugun 08:30 okumasi - dun 08:30 okumasi
+#   Her sabah 07:10'da (SNAPSHOT_HOUR/MINUTE) sayac okumasi yapilir.
+#   Gunluk tuketim = bugun 07:10 okumasi - dun 07:10 okumasi
 #   Hesaplanan tuketim DUN'un tarihi ile energy_data.csv'ye yazilir.
 #
-#   Ornek: 4 Mayis 08:30'da calisinca ->
-#     - 4 Mayis 08:30 okumasi kaydedilir (yarinki hesap icin)
-#     - 3 Mayis 08:30 - 4 Mayis 08:30 farki = 3 Mayis'in tuketimi
+#   Ornek: 4 Mayis 07:10'da calisinca ->
+#     - 4 Mayis 07:10 okumasi kaydedilir (yarinki hesap icin)
+#     - 3 Mayis 07:10 - 4 Mayis 07:10 farki = 3 Mayis'in tuketimi
 #     - energy_data.csv'ye "2026-05-03" satirini yazar
+#
+#   Telafi: PC 07:10'da kapaliysa, acilista dun'un satiri eksikse snapshot
+#   hemen calistirilir (gun kaybi olmaz).
 
 import csv
 import json
@@ -497,6 +500,20 @@ def bridge_loop():
             logger.warning("Modbus CSV bos veya okunamadi — ref olusturulamadi.")
 
     last_run_date = None
+
+    # E-3 fix: Kacirilan gun telafisi — acilista saat 07:10'u gecmisse ve dun'un
+    # satiri energy_data.csv'de yoksa snapshot'i hemen calistir (PC o saatte
+    # kapali kaldiginda gun tamamen atlaniyordu).
+    _now = datetime.now()
+    _dun_str = (date.today() - timedelta(days=1)).isoformat()
+    if ((_now.hour, _now.minute) >= (SNAPSHOT_HOUR, SNAPSHOT_MINUTE)
+            and not date_exists_in_csv(_dun_str)):
+        logger.info("Kacirilan gun telafisi: %s icin snapshot calistiriliyor...", _dun_str)
+        try:
+            run_daily_snapshot()
+            last_run_date = date.today()
+        except Exception as e:
+            logger.error("Telafi snapshot hatasi: %s", e)
 
     while True:
         now = datetime.now()

@@ -1473,7 +1473,9 @@ def recalc(df: pd.DataFrame) -> pd.DataFrame:
     sebeke = df["Sebeke_Tuketim_kWh"].fillna(0)
     kojen  = df["Kojen_Uretim_kWh"].fillna(0)
     mcc_sogutma = df["MCC_Tuketim_kWh"].fillna(0) + df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
-    df["Toplam_Hastane_Tuketim_kWh"] = sebeke.where(sebeke > 0, mcc_sogutma) + kojen.where(sebeke > 0, 0)
+    # E-1 fix: Kojen her durumda toplama dahil (eskiden şebeke boşken kojen>0 olsa bile
+    # toplam dışı kalıyordu → toplam hastane eksik görünüyordu)
+    df["Toplam_Hastane_Tuketim_kWh"] = sebeke.where(sebeke > 0, mcc_sogutma) + kojen
     # Diğer = Toplam - MCC - Soğutma
     other = (
         df["Toplam_Hastane_Tuketim_kWh"].fillna(0)
@@ -2681,8 +2683,8 @@ def generate_pdf_report(start: date, end_exclusive: date, df_period: pd.DataFram
                 pdf.set_font(font, '', 9)
                 pdf.set_text_color(*DANGER)
                 error_msg = str(e)[:180]
-                if "kaleido" in error_msg.lower() or "orca" in error_msg.lower():
-                    pdf.multi_cell(0, 5, T("Grafik gorsele cevrilemedi. 'kaleido' paketi gerekli: pip install -U kaleido"))
+                if "matplotlib" in error_msg.lower():
+                    pdf.multi_cell(0, 5, T("Grafik gorsele cevrilemedi. 'matplotlib' paketi gerekli: pip install -U matplotlib"))
                 else:
                     pdf.multi_cell(0, 5, T(f"Grafik gorsele cevrilemedi: {error_msg}"))
                 pdf.set_text_color(40, 40, 40)
@@ -2747,7 +2749,7 @@ def generate_pdf_report(start: date, end_exclusive: date, df_period: pd.DataFram
         error_pdf.set_font("Helvetica", "", 11)
         error_pdf.multi_cell(0, 6, f"Rapor olusturulurken hata meydana geldi:\n\n{str(e)}")
         error_pdf.ln(5)
-        error_pdf.multi_cell(0, 6, "Kontrol edin:\n- Kaleido paketi yuklu mu (pip install -U kaleido)\n- Veri gecerli mi\n- Yeterli disk alani var mi")
+        error_pdf.multi_cell(0, 6, "Kontrol edin:\n- Matplotlib paketi yuklu mu (pip install -U matplotlib)\n- Veri gecerli mi\n- Yeterli disk alani var mi")
 
         raw = error_pdf.output(dest="S")
         if isinstance(raw, (bytes, bytearray)):
@@ -4109,7 +4111,7 @@ with tab3:
     if df.empty:
         st.warning("PDF rapor için veri gerekli.")
     else:
-        st.caption("Grafikleri PDF’e gömmek için gerekirse: pip install -U kaleido")
+        st.caption("Grafikler PDF içinde matplotlib ile render edilir.")
         mode = st.radio("Rapor dönemi", ["Ay/Yıl (YoY dahil)", "Özel Tarih Aralığı"], horizontal=True, key="pdf_mode_radio")
 
         years = sorted({d.year for d in df["Tarih"].tolist()})
