@@ -17,6 +17,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <!-- QR kod üretimi (saha bakım kartı etiketleri) — lokal gömülü, internet gerektirmez -->
+    <script src="/static/qrcode_generator.js"></script>
     <!-- Türkçe karakter destekli DejaVu fontu (base64 gömülü, /static/fonts_dejavu_b64.js) -->
     <script src="/static/fonts_dejavu_b64.js"></script>
     <style>
@@ -1643,6 +1645,29 @@
                             style="padding:10px 16px; font-size:13px; background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.4); white-space:nowrap;">
                             <i class="fas fa-file-pdf"></i> PDF Raporu Al
                         </button>
+                        <button class="btn btn-secondary" onclick="toggleQrLabelPanel()"
+                            style="padding:10px 16px; font-size:13px; background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); white-space:nowrap;">
+                            <i class="fas fa-qrcode"></i> QR Etiketleri
+                        </button>
+                    </div>
+                    <!-- QR Etiket Paneli (saha etiketleri) -->
+                    <div id="qrLabelPanel" style="display:none; margin-bottom:12px; padding:14px; background: rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.35); border-radius:10px;">
+                        <div style="font-size:13px; color:rgba(255,255,255,0.85); margin-bottom:10px;">
+                            <i class="fas fa-info-circle"></i> Her santral için QR etiketi üretilir. Telefon QR'ı okutunca
+                            bu portalda ilgili cihazın <b>dijital bakım kartı doğrudan açılır</b>.
+                            Telefonun bu PC ile <b>aynı ağda</b> olması gerekir.
+                        </div>
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                            <div style="flex:1; min-width:220px;">
+                                <label style="font-size:11px; color:rgba(255,255,255,0.6);">Portal adresi (QR içine yazılır)</label>
+                                <input type="text" id="qrBaseUrl" placeholder="http://192.168.1.50:8005"
+                                    onchange="localStorage.setItem('qrBaseUrl', this.value.trim())"
+                                    style="width:100%; padding:8px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:white; font-size:13px; margin-top:4px;">
+                            </div>
+                            <button class="btn btn-primary" onclick="exportQrLabelsPDF()" style="padding:9px 16px; font-size:13px; white-space:nowrap;">
+                                <i class="fas fa-print"></i> Etiket PDF'i Üret
+                            </button>
+                        </div>
                     </div>
                     <div id="maintenanceCardsList"></div>
                     <div id="maintenanceEmpty" style="text-align: center; padding: 30px; color: rgba(255,255,255,0.5);">
@@ -2312,6 +2337,16 @@
             initUretimTuketimChart();
             loadUretimTuketimGecmis();
             setInterval(loadUretimTuketimGecmis, 60000); // canlı: her 1 dk
+        });
+
+        // QR derin bağlantısı: /bakim/AHU-6 → ?bakim=AHU-6 → bakım kartı doğrudan açılır.
+        // Ayrı listener: diğer init'lerden biri (ör. CDN yüklenemeyen grafik) hata verse de çalışır.
+        document.addEventListener('DOMContentLoaded', () => {
+            const qp = new URLSearchParams(location.search);
+            if (qp.has('bakim')) {
+                pendingMaintFocus = (qp.get('bakim') || '').trim();
+                openMaintenanceModal();
+            }
         });
 
         // ─── Üretilen / Talep Edilen Soğutma kW - canlı çizgi grafik ───
@@ -3556,6 +3591,7 @@
                     const lastUp = data.data.last_updated;
                     document.getElementById('maintenanceLastUpdate').textContent =
                         lastUp ? 'Son: ' + new Date(lastUp).toLocaleString('tr-TR') : 'Son güncelleme: -';
+                    applyPendingMaintFocus();
                 }
             } catch (e) {
                 console.error('Bakım kartları yüklenirken hata:', e);
@@ -3912,6 +3948,120 @@
             } catch (e) {
                 console.error('Bakım kartları kaydedilirken hata:', e);
                 showAlert('Kaydetme hatası', 'error');
+            }
+        }
+
+        // ================ QR SAHA ETİKETLERİ ================
+        // /bakim/AHU-6 → ?bakim=AHU-6 ile gelinir; kart listesi yüklenince odaklanılır.
+        let pendingMaintFocus = null;
+
+        function applyPendingMaintFocus() {
+            if (pendingMaintFocus === null) return;
+            const target = pendingMaintFocus;
+            pendingMaintFocus = null;
+            if (!target) return; // cihazsız /bakim: modal açık kalması yeterli
+            const searchEl = document.getElementById('maintenanceSearch');
+            searchEl.value = target;
+            filterMaintenanceCards();
+            const cards = document.querySelectorAll('#maintenanceCardsList > div');
+            let match = null;
+            cards.forEach(c => {
+                const nm = (c.querySelector('h4')?.textContent || '').trim().toLowerCase();
+                if (!match && nm === target.toLowerCase()) match = c;
+            });
+            if (!match) cards.forEach(c => { if (!match && c.style.display !== 'none') match = c; });
+            if (match) {
+                match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                match.style.boxShadow = '0 0 0 3px #8b5cf6, 0 0 24px rgba(139,92,246,0.7)';
+                setTimeout(() => { match.style.boxShadow = ''; }, 5000);
+            } else {
+                showAlert('"' + target + '" için kayıtlı bakım kartı bulunamadı. Yukarıdan ekleyebilirsiniz.', 'warning');
+                const nameEl = document.getElementById('maint_equipment_name');
+                if (nameEl) nameEl.value = target;
+            }
+        }
+
+        async function toggleQrLabelPanel() {
+            const panel = document.getElementById('qrLabelPanel');
+            const show = panel.style.display === 'none' || !panel.style.display;
+            panel.style.display = show ? 'block' : 'none';
+            if (!show) return;
+            const input = document.getElementById('qrBaseUrl');
+            if (input.value.trim()) return;
+            const saved = localStorage.getItem('qrBaseUrl');
+            if (saved) { input.value = saved; return; }
+            try {
+                const r = await fetch('/api/network-info');
+                const d = await r.json();
+                if (d.base_url) input.value = d.base_url;
+            } catch (e) { /* offline: kullanıcı elle girer */ }
+        }
+
+        async function exportQrLabelsPDF() {
+            try {
+                const names = Object.keys((maintenanceData && maintenanceData.cards) || {});
+                if (!names.length) { showAlert('Önce en az bir bakım kartı ekleyin', 'warning'); return; }
+                if (typeof qrcode === 'undefined') {
+                    showAlert('QR kütüphanesi yüklenemedi (/static/qrcode_generator.js eksik)', 'error'); return;
+                }
+                let base = (document.getElementById('qrBaseUrl').value || '').trim().replace(/\/+$/, '');
+                if (!base) { showAlert('Portal adresini girin (ör: http://192.168.1.50:8005)', 'warning'); return; }
+                if (!/^https?:\/\//i.test(base)) base = 'http://' + base;
+                localStorage.setItem('qrBaseUrl', base);
+
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const hasTr = await ensureTurkishPdfFont(pdf);
+                const fontName = hasTr ? 'DejaVu' : 'helvetica';
+
+                // A4: 2 sütun x 4 satır kesim çizgili etiket (90 x 62 mm)
+                const cols = 2, rows = 4, labelW = 90, labelH = 62;
+                const marginX = (210 - cols * labelW) / 2;
+                const marginY = (297 - rows * labelH) / 2;
+                names.sort((a, b) => a.localeCompare(b, 'tr'));
+
+                names.forEach((name, i) => {
+                    const idx = i % (cols * rows);
+                    if (i > 0 && idx === 0) pdf.addPage();
+                    const x = marginX + (idx % cols) * labelW;
+                    const y = marginY + Math.floor(idx / cols) * labelH;
+
+                    // Kesim çerçevesi
+                    pdf.setDrawColor(170);
+                    pdf.setLineDashPattern([1.5, 1.5], 0);
+                    pdf.rect(x + 2, y + 2, labelW - 4, labelH - 4);
+                    pdf.setLineDashPattern([], 0);
+
+                    // QR (vektörel: modüller tek tek çizilir, baskıda net çıkar)
+                    const url = base + '/bakim/' + encodeURIComponent(name);
+                    const qr = qrcode(0, 'M');
+                    qr.addData(url);
+                    qr.make();
+                    const n = qr.getModuleCount();
+                    const qrSize = 38, cell = qrSize / n;
+                    const qx = x + 7, qy = y + (labelH - qrSize) / 2;
+                    pdf.setFillColor(0, 0, 0);
+                    for (let r = 0; r < n; r++)
+                        for (let c = 0; c < n; c++)
+                            if (qr.isDark(r, c)) pdf.rect(qx + c * cell, qy + r * cell, cell, cell, 'F');
+
+                    // Etiket metinleri
+                    const tx = qx + qrSize + 5;
+                    const maxW = x + labelW - tx - 5;
+                    pdf.setFont(fontName, 'bold'); pdf.setFontSize(15); pdf.setTextColor(1, 45, 117);
+                    pdf.text(pdf.splitTextToSize(String(name), maxW), tx, y + 22);
+                    pdf.setFont(fontName, 'normal'); pdf.setFontSize(9); pdf.setTextColor(60, 60, 60);
+                    pdf.text('Dijital Bakım Kartı', tx, y + 31);
+                    pdf.setFontSize(7); pdf.setTextColor(120, 120, 120);
+                    pdf.text('QR okutun → bakım kartı açılır', tx, y + 37);
+                    pdf.text(pdf.splitTextToSize(url, maxW), tx, y + 43);
+                });
+
+                pdf.save('qr_bakim_etiketleri_' + new Date().toISOString().slice(0, 10) + '.pdf');
+                showAlert(names.length + ' adet QR etiketi PDF olarak indirildi', 'success');
+            } catch (e) {
+                console.error('QR etiket PDF hatası:', e);
+                showAlert('QR etiket PDF üretilemedi: ' + e.message, 'error');
             }
         }
 

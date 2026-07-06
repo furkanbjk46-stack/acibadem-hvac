@@ -2252,6 +2252,38 @@ async def portal_home():
 async def home_redirect():
     return RedirectResponse(url="/", status_code=302)
 
+# ---- QR Dijital Bakım Kartı derin bağlantısı ----
+# Saha etiketlerindeki QR kodlar bu adresi taşır: http://<pc-ip>:8005/bakim/AHU-6
+# Telefon okutunca HVAC arayüzü doğrudan o cihazın bakım kartı açık şekilde gelir.
+@app.get("/bakim", include_in_schema=False)
+@app.get("/bakim/{cihaz}", include_in_schema=False)
+async def bakim_qr_link(cihaz: str = ""):
+    from urllib.parse import quote
+    _bootstrap_static_assets()
+    return RedirectResponse(
+        url="/static/index.html?bakim=" + quote(cihaz, safe=""),
+        status_code=302,
+    )
+
+@app.get("/api/network-info")
+async def network_info(request: Request):
+    """QR etiketlerine yazılacak taban adres için PC'nin yerel ağ IP'sini tespit et."""
+    import socket
+    ip = None
+    try:
+        # UDP connect paket göndermez; sadece hangi arayüzden çıkılacağı öğrenilir
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        try:
+            ip = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            ip = "127.0.0.1"
+    port = request.url.port or 8005
+    return {"ip": ip, "port": port, "base_url": f"http://{ip}:{port}"}
+
 @app.get("/hvac", include_in_schema=False)
 async def hvac_entry():
     """HVAC arayüzünü portal çerçevesinde aç."""
