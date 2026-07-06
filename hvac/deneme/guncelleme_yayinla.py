@@ -34,6 +34,7 @@ IZIN_VERILEN_DOSYALAR = {
     "rules/temperature_cascade.py",
     "static/index.html",
     "static/portal.html",
+    "static/qrcode_generator.js",
     "GUNCELLE.bat",
 }
 
