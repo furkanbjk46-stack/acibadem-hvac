@@ -2244,8 +2244,15 @@ def validate_equipment_data(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
 # ================ API ENDPOINTS ================
 
 @app.get("/", include_in_schema=False)
-async def portal_home():
-    """Ana giriş ekranı (HVAC / Enerji)."""
+async def portal_home(request: Request):
+    """Ana giriş ekranı (HVAC / Enerji). ?bakim= parametresi QR derin bağlantısıdır."""
+    if "bakim" in request.query_params:
+        from urllib.parse import urlencode
+        _bootstrap_static_assets()
+        return RedirectResponse(
+            url="/static/index.html?" + urlencode(dict(request.query_params)),
+            status_code=302,
+        )
     return HTMLResponse(_load_or_create_portal_html())
 
 @app.get("/home", include_in_schema=False)
@@ -2283,6 +2290,26 @@ async def network_info(request: Request):
             ip = "127.0.0.1"
     port = request.url.port or 8005
     return {"ip": ip, "port": port, "base_url": f"http://{ip}:{port}"}
+
+@app.get("/api/qr-config")
+async def qr_config():
+    """QR etiketleri için lokasyon kimliği ve merkez portal adresi.
+
+    supabase_config.json her lokasyon PC'sinde bulunur (repoda yoktur):
+    lokasyon_id zorunlu, merkez_url opsiyoneldir (QR'ların hedefi —
+    ör. https://acibadem-synapse.streamlit.app).
+    """
+    cfg_path = os.path.join(os.path.dirname(__file__), "supabase_config.json")
+    lokasyon_id, merkez_url = "", ""
+    try:
+        if os.path.exists(cfg_path):
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            lokasyon_id = str(cfg.get("lokasyon_id", "") or "")
+            merkez_url = str(cfg.get("merkez_url", "") or "").rstrip("/")
+    except Exception:
+        pass
+    return {"lokasyon_id": lokasyon_id, "merkez_url": merkez_url}
 
 @app.get("/hvac", include_in_schema=False)
 async def hvac_entry():
@@ -2953,12 +2980,24 @@ async def save_maintenance(request: Request):
                         detail=f"Geçersiz durum: {card[comp]} (İzin verilenler: {MAINTENANCE_STATUSES})"
                     )
         
+        # Kart bazında değişiklik damgası (_updated_at, UTC) — cloud_sync'in
+        # çift yönlü senkronunda son-yazan-kazanır kıyası için gereklidir.
+        eski_cards = load_maintenance_cards().get("cards", {}) or {}
+        simdi_utc = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        for eq_name, card in cards.items():
+            eski = {k: v for k, v in (eski_cards.get(eq_name) or {}).items() if k != "_updated_at"}
+            yeni = {k: v for k, v in card.items() if k != "_updated_at"}
+            if yeni != eski:
+                card["_updated_at"] = simdi_utc
+            else:
+                card["_updated_at"] = (eski_cards.get(eq_name) or {}).get("_updated_at", simdi_utc)
+
         data = {
             "last_updated": datetime.datetime.now().isoformat(),
             "updated_by": body.get("updated_by", "Operatör"),
             "cards": cards
         }
-        
+
         success = save_maintenance_cards(data)
         if success:
             return {"success": True, "message": f"{len(cards)} cihazın bakım kartı kaydedildi"}

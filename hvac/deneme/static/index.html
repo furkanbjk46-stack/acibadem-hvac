@@ -1654,13 +1654,13 @@
                     <div id="qrLabelPanel" style="display:none; margin-bottom:12px; padding:14px; background: rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.35); border-radius:10px;">
                         <div style="font-size:13px; color:rgba(255,255,255,0.85); margin-bottom:10px;">
                             <i class="fas fa-info-circle"></i> Her santral için QR etiketi üretilir. Telefon QR'ı okutunca
-                            bu portalda ilgili cihazın <b>dijital bakım kartı doğrudan açılır</b>.
-                            Telefonun bu PC ile <b>aynı ağda</b> olması gerekir.
+                            <b>merkez portalda cihazın dijital bakım kartı doğrudan açılır</b> — internet olan her yerden
+                            çalışır, aynı ağ gerekmez. Sahadan yapılan değişiklikler birkaç dakika içinde bu portala yansır.
                         </div>
                         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
                             <div style="flex:1; min-width:220px;">
-                                <label style="font-size:11px; color:rgba(255,255,255,0.6);">Portal adresi (QR içine yazılır)</label>
-                                <input type="text" id="qrBaseUrl" placeholder="http://192.168.1.50:8005"
+                                <label style="font-size:11px; color:rgba(255,255,255,0.6);">Merkez portal adresi (QR içine yazılır)</label>
+                                <input type="text" id="qrBaseUrl" placeholder="https://acibadem-synapse.streamlit.app"
                                     onchange="localStorage.setItem('qrBaseUrl', this.value.trim())"
                                     style="width:100%; padding:8px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:white; font-size:13px; margin-top:4px;">
                             </div>
@@ -3981,15 +3981,27 @@
             }
         }
 
+        let qrLokasyonId = ''; // /api/qr-config'ten gelir; QR'lara &lok= olarak eklenir
+
         async function toggleQrLabelPanel() {
             const panel = document.getElementById('qrLabelPanel');
             const show = panel.style.display === 'none' || !panel.style.display;
             panel.style.display = show ? 'block' : 'none';
             if (!show) return;
             const input = document.getElementById('qrBaseUrl');
+            // Lokasyon kimliği + merkez adresi (supabase_config.json'dan)
+            let merkezUrl = '';
+            try {
+                const r = await fetch('/api/qr-config');
+                const d = await r.json();
+                qrLokasyonId = d.lokasyon_id || '';
+                merkezUrl = d.merkez_url || '';
+            } catch (e) { /* config yoksa elle girilir */ }
             if (input.value.trim()) return;
+            // Öncelik: kullanıcının kaydettiği adres > config'teki merkez adresi > yerel IP
             const saved = localStorage.getItem('qrBaseUrl');
             if (saved) { input.value = saved; return; }
+            if (merkezUrl) { input.value = merkezUrl; return; }
             try {
                 const r = await fetch('/api/network-info');
                 const d = await r.json();
@@ -4033,7 +4045,10 @@
                     pdf.setLineDashPattern([], 0);
 
                     // QR (vektörel: modüller tek tek çizilir, baskıda net çıkar)
-                    const url = base + '/bakim/' + encodeURIComponent(name);
+                    // Format hem merkez (Streamlit) hem yerel portalda çalışır:
+                    // <adres>/?bakim=<cihaz>&lok=<lokasyon>
+                    const url = base + '/?bakim=' + encodeURIComponent(name) +
+                        (qrLokasyonId ? '&lok=' + encodeURIComponent(qrLokasyonId) : '');
                     const qr = qrcode(0, 'M');
                     qr.addData(url);
                     qr.make();

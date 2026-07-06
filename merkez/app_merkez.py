@@ -19,7 +19,8 @@ st.set_page_config(
 )
 
 from streamlit_autorefresh import st_autorefresh
-st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
+if "bakim" not in st.query_params:  # QR bakım sayfasında form yenilenmesin
+    st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
 # ============ CSS ============
 st.markdown("""
@@ -687,6 +688,161 @@ if not m2_config:
 for lok_id in HASTANELER:
     if lok_id in m2_config:
         HASTANELER[lok_id]["m2"] = int(m2_config[lok_id])
+
+# ═══════════ QR SAHA BAKIM KARTI (telefon) — ?bakim=<cihaz>&lok=<lokasyon> ═══════════
+# Sahadaki QR etiketleri buraya yönlenir. Kartlar Supabase `bakim_kartlari` tablosunda
+# tutulur; lokasyon PC'si cloud_sync ile 2 dakikada bir çift yönlü senkronize eder.
+BAKIM_BILESENLER = [
+    "heating_valve_body", "heating_valve_signal",
+    "cooling_valve_body", "cooling_valve_signal",
+    "supply_sensor", "return_sensor",
+]
+BAKIM_BILESEN_ETIKET = {
+    "heating_valve_body":   "Isıtma Vanası Gövde",
+    "heating_valve_signal": "Isıtma Vanası 0-10V",
+    "cooling_valve_body":   "Soğutma Vanası Gövde",
+    "cooling_valve_signal": "Soğutma Vanası 0-10V",
+    "supply_sensor":        "Üfleme Sensör",
+    "return_sensor":        "Emiş Sensör",
+}
+BAKIM_DURUMLAR = ["OK", "FAULTY", "MAINTENANCE", "N/A"]
+BAKIM_DURUM_ETIKET = {
+    "OK": "✅ Sağlam", "FAULTY": "❌ Arızalı",
+    "MAINTENANCE": "🔧 Bakımda", "N/A": "⚪ Yok",
+}
+
+def _qr_bakim_sayfasi():
+    from datetime import timezone as _qtz
+
+    cihaz = (st.query_params.get("bakim") or "").strip()
+    lok   = (st.query_params.get("lok") or "").strip().lower()
+
+    # Mobil dostu kompakt başlık
+    st.markdown(f"""
+    <div style="text-align:center; padding:8px 0 4px;">
+      <div style="font-size:10px; color:#94a3b8; letter-spacing:2px;">ACIBADEM SYNAPSE — SAHA</div>
+      <div style="font-family:'Playfair Display',serif; font-size:26px; font-weight:600; color:#f8fafc;">
+        🔧 Dijital Bakım Kartı
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if not bagli:
+        st.error("Supabase bağlantısı yok — sistem yöneticisine bildirin.")
+        return
+
+    # ── Saha PIN koruması (secrets'ta [saha] pin tanımlıysa) ──
+    saha_pin = ""
+    try:
+        saha_pin = str(st.secrets.get("saha", {}).get("pin", "") or "")
+    except Exception:
+        pass
+    if not saha_pin:
+        saha_pin = str(config.get("saha_pin", "") or "")
+    if saha_pin and not st.session_state.get("saha_pin_ok"):
+        girilen = st.text_input("Saha PIN", type="password", placeholder="PIN girin")
+        if st.button("Giriş", use_container_width=True):
+            if girilen == saha_pin:
+                st.session_state["saha_pin_ok"] = True
+                st.rerun()
+            else:
+                st.error("PIN hatalı")
+        return
+
+    from supabase import create_client as _qcc
+    try:
+        _qc = _qcc(url, key)
+    except Exception as e:
+        st.error(f"Bağlantı hatası: {e}")
+        return
+
+    # ── Lokasyon seçimi (QR'da lok yoksa) ──
+    if lok not in HASTANELER:
+        lok = st.selectbox(
+            "Lokasyon", list(HASTANELER.keys()),
+            format_func=lambda k: HASTANELER[k]["isim"],
+        )
+
+    st.markdown(
+        f"<div style='text-align:center; font-size:12px; color:#38bdf8; letter-spacing:1px; "
+        f"margin-bottom:8px;'>{HASTANELER[lok]['isim'].upper()}</div>",
+        unsafe_allow_html=True,
+    )
+
+    # ── Lokasyonun kayıtlı kartlarını çek ──
+    try:
+        r = _qc.table("bakim_kartlari").select("cihaz,kart,updated_at,updated_by") \
+            .eq("lokasyon_id", lok).order("cihaz").range(0, 999).execute()
+        satirlar = {x["cihaz"]: x for x in (r.data or [])}
+    except Exception as e:
+        st.error(f"Bakım kartları okunamadı: {e}")
+        st.caption("`bakim_kartlari` tablosu oluşturulmamış olabilir (merkez/bakim_kartlari_tablo.sql).")
+        return
+
+    if not satirlar:
+        st.warning(
+            f"**{HASTANELER[lok]['isim']}** için henüz senkronize edilmiş bakım kartı yok. "
+            "Kartlar lokasyon portalında tanımlanır ve PC internete bağlanınca buraya gelir."
+        )
+        return
+
+    # ── Cihaz seçimi (QR'da cihaz yoksa veya kayıtlı değilse liste göster) ──
+    if cihaz not in satirlar:
+        if cihaz:
+            st.warning(f"**{cihaz}** bu lokasyonda kayıtlı değil — listeden seçin.")
+        cihaz = st.selectbox("Santral / Cihaz", sorted(satirlar.keys()))
+
+    satir = satirlar[cihaz]
+    kart = dict(satir.get("kart") or {})
+
+    st.markdown(
+        f"<div style='text-align:center; background:rgba(56,189,248,0.1); "
+        f"border:1px solid rgba(56,189,248,0.35); border-radius:12px; padding:10px; "
+        f"font-size:22px; font-weight:700; color:#f8fafc; margin-bottom:6px;'>{cihaz}</div>",
+        unsafe_allow_html=True,
+    )
+    son_g = str(satir.get("updated_at") or "")[:16].replace("T", " ")
+    st.caption(f"Son güncelleme: {son_g} UTC — {satir.get('updated_by') or '-'}")
+
+    # ── Bileşen durumları formu ──
+    with st.form(key=f"qr_bakim_form_{lok}_{cihaz}"):
+        yeni_kart = {}
+        for comp in BAKIM_BILESENLER:
+            mevcut = kart.get(comp, "OK")
+            idx = BAKIM_DURUMLAR.index(mevcut) if mevcut in BAKIM_DURUMLAR else 0
+            yeni_kart[comp] = st.selectbox(
+                BAKIM_BILESEN_ETIKET[comp], BAKIM_DURUMLAR, index=idx,
+                format_func=lambda s: BAKIM_DURUM_ETIKET.get(s, s),
+                key=f"qrb_{lok}_{cihaz}_{comp}",
+            )
+        yeni_kart["notes"] = st.text_input(
+            "📝 Not", value=str(kart.get("notes", "") or ""),
+            placeholder="Opsiyonel not...", key=f"qrb_{lok}_{cihaz}_notes",
+        )
+        kaydet = st.form_submit_button("💾 Kaydet", use_container_width=True)
+
+    if kaydet:
+        try:
+            simdi = datetime.now(_qtz.utc).isoformat()
+            _qc.table("bakim_kartlari").upsert({
+                "lokasyon_id": lok,
+                "cihaz": cihaz,
+                "kart": yeni_kart,
+                "updated_at": simdi,
+                "updated_by": "saha-qr",
+            }, on_conflict="lokasyon_id,cihaz").execute()
+            st.success("✅ Kaydedildi — lokasyon portalına birkaç dakika içinde yansır.")
+        except Exception as e:
+            st.error(f"Kaydedilemedi: {e}")
+
+    # Durum özeti rozetleri
+    sorunlu = [BAKIM_BILESEN_ETIKET[c] for c in BAKIM_BILESENLER if kart.get(c) in ("FAULTY", "MAINTENANCE")]
+    if sorunlu:
+        st.caption("Kayıtlı sorunlar: " + ", ".join(sorunlu))
+
+if "bakim" in st.query_params:
+    _qr_bakim_sayfasi()
+    st.stop()
 
 now = datetime.now()  # timezone-naive — pandas karsilastirmalari icin
 try:

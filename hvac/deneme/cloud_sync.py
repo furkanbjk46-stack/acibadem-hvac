@@ -13,7 +13,7 @@ import os
 import time
 import threading
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [SYNC] %(message)s')
 logger = logging.getLogger(__name__)
@@ -354,6 +354,96 @@ def get_bakim_ozet() -> dict:
         return {}
 
 
+def _ts_parse(s) -> datetime:
+    """ISO zaman damgasını timezone-aware datetime'a çevir (bozuksa epoch 0)."""
+    try:
+        dt = datetime.fromisoformat(str(s or "").replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        return datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+def sync_bakim_kartlari(client, lokasyon_id: str):
+    """Bakım kartlarını Supabase `bakim_kartlari` tablosuyla ÇİFT YÖNLÜ senkronize et.
+
+    - Kart bazında son-yazan-kazanır (yerel `_updated_at` vs bulut `updated_at`).
+    - Cihaz listesinin sahibi YEREL portaldır: yerelde olmayan cihazın bulut
+      satırı silinir (sahadan QR ile sadece MEVCUT kartlar düzenlenir).
+    - Sahadan (merkez portal QR sayfası) yapılan değişiklikler yerel
+      maintenance_cards.json dosyasına indirilir → analiz motoru anında görür.
+    """
+    mc_file = os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
+    try:
+        data = {"last_updated": None, "updated_by": None, "cards": {}}
+        if os.path.exists(mc_file):
+            with open(mc_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        cards = data.get("cards", {}) or {}
+
+        r = client.table("bakim_kartlari") \
+            .select("cihaz,kart,updated_at") \
+            .eq("lokasyon_id", lokasyon_id) \
+            .range(0, 999).execute()
+        bulut = {x["cihaz"]: x for x in (r.data or [])}
+
+        yerel_degisti = False
+        simdi = datetime.now(timezone.utc).isoformat()
+
+        # 1) Yerel → Bulut (yeni veya yerelde daha güncel kartlar)
+        for cihaz, kart in cards.items():
+            if not isinstance(kart, dict):
+                continue
+            yerel_ts = _ts_parse(kart.get("_updated_at"))
+            bulut_satir = bulut.get(cihaz)
+            bulut_ts = _ts_parse(bulut_satir["updated_at"]) if bulut_satir else None
+            if bulut_satir is None or yerel_ts > bulut_ts:
+                gonder_ts = kart.get("_updated_at") or simdi
+                if not kart.get("_updated_at"):
+                    kart["_updated_at"] = gonder_ts
+                    yerel_degisti = True
+                client.table("bakim_kartlari").upsert({
+                    "lokasyon_id": lokasyon_id,
+                    "cihaz": cihaz,
+                    "kart": {k: v for k, v in kart.items() if k != "_updated_at"},
+                    "updated_at": gonder_ts,
+                    "updated_by": "lokasyon",
+                }, on_conflict="lokasyon_id,cihaz").execute()
+                logger.info(f"🔧 Bakım kartı buluta gönderildi: {cihaz}")
+
+        # 2) Bulut → Yerel (sahadan QR ile güncellenen kartlar)
+        for cihaz, satir in bulut.items():
+            if cihaz not in cards:
+                continue  # aşağıda silinecek
+            yerel_ts = _ts_parse(cards[cihaz].get("_updated_at") if isinstance(cards[cihaz], dict) else None)
+            bulut_ts = _ts_parse(satir.get("updated_at"))
+            if bulut_ts > yerel_ts:
+                yeni = dict(satir.get("kart") or {})
+                yeni["_updated_at"] = satir.get("updated_at")
+                cards[cihaz] = yeni
+                yerel_degisti = True
+                logger.info(f"🔧 Bakım kartı sahadan indirildi: {cihaz}")
+
+        # 3) Yerelde silinen cihazların bulut satırlarını temizle
+        #    (GÜVENLİK: yerel dosya boşsa dokunma — dosya kaybı/yeni kurulum olabilir)
+        silinecek = [c for c in bulut if c not in cards]
+        if silinecek and cards:
+            client.table("bakim_kartlari").delete() \
+                .eq("lokasyon_id", lokasyon_id).in_("cihaz", silinecek).execute()
+            logger.info(f"🗑️ Bulut bakım kartı silindi (yerelde yok): {', '.join(silinecek)}")
+
+        if yerel_degisti:
+            data["cards"] = cards
+            data["last_updated"] = datetime.now().isoformat()
+            data["updated_by"] = "saha-qr"
+            with open(mc_file, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+
+    except Exception as e:
+        logger.warning(f"Bakım kartı senkronizasyon hatası: {e}")
+
+
 def send_heartbeat(client, lokasyon_id: str):
     """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
     try:
@@ -521,10 +611,11 @@ def start_background_sync():
                     # Her turda: BACnet komut polling (≈1 dk aralık)
                     if _bacnet_writer_ok and _sb_url and _sb_key:
                         _komutlari_isle(_sb_url, _sb_key, lokasyon_id)
-                    # Her 2 turda bir: heartbeat + güncelleme kontrolü
+                    # Her 2 turda bir: heartbeat + güncelleme kontrolü + bakım kartı sync
                     if _tick % 2 == 0:
                         send_heartbeat(client, lokasyon_id)
                         check_and_apply_update(client, lokasyon_id)
+                        sync_bakim_kartlari(client, lokasyon_id)
                     # HVAC analizi: her _HVAC_PERIYOT_DK dakikada bir
                     # son çalışma zamanı DOSYAYA yazılır — program restart'ta tekrar tetiklenmez
                     if _ahu_ok:
