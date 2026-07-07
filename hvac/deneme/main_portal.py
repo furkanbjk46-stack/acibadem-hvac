@@ -282,7 +282,7 @@ INSTRUCTION_GUIDE = {
         "severity": "CRITICAL",
         "score": 9.0,
         "title": "Üfleme Soğutmuyor",
-        "description": "Üfleme sıcaklığı (SAT) oda sıcaklığından yüksek. Sistem soğutma yapamıyor.",
+        "description": "Soğutma modunda üfleme sıcaklığı (SAT) hedefin belirgin üstünde. AHU tetiği: SAT > 18°C + tolerans ve ilgili vana ≥%70 açık. FCU tetiği: SAT oda/dönüş sıcaklığından yüksek. Sistem soğutma yapamıyor.",
         "steps": [
             "Üfleme sıcaklığını kontrol edin - oda sıcaklığından düşük olmalı",
             "Soğutma vanası açık mı kontrol edin",
@@ -305,7 +305,7 @@ INSTRUCTION_GUIDE = {
         "severity": "CRITICAL",
         "score": 9.0,
         "title": "Üfleme Isıtmıyor",
-        "description": "Üfleme sıcaklığı (SAT) oda sıcaklığından düşük. Sistem ısıtma yapamıyor.",
+        "description": "Isıtma modunda üfleme sıcaklığı (SAT) hedefin belirgin altında. AHU tetiği: SAT < 28°C − tolerans ve ilgili vana ≥%70 açık. FCU tetiği: SAT oda/dönüş sıcaklığından düşük. Sistem ısıtma yapamıyor.",
         "steps": [
             "Üfleme sıcaklığını kontrol edin - oda sıcaklığından yüksek olmalı",
             "Isıtma vanası açık mı kontrol edin",
@@ -368,7 +368,7 @@ INSTRUCTION_GUIDE = {
         "severity": "CRITICAL",
         "score": 8.0,
         "title": "Düşük Debi / Pompa Basıncı",
-        "description": "Su tarafı ΔT yüksek (≥15°C) ama üfleme sıcaklığı düşük (<27°C). Su yeterince akmıyor.",
+        "description": "Su tarafı ΔT yüksek (≥15°C) ama üfleme sıcaklığı düşük (<28°C). Su ısınıyor ama havaya aktarılamıyor — su yeterince akmıyor. (AHU hariç: FCU coil / Kazan / Kolektör)",
         "steps": [
             "Pompa çalışıyor mu? Akım değerini kontrol edin",
             "Pompa basınç göstergelerini okuyun (giriş/çıkış)",
@@ -566,7 +566,7 @@ INSTRUCTION_GUIDE = {
     },
     "MISSING_DATA": {
         "severity": "CRITICAL",
-        "score": 0.0,
+        "score": 5.0,  # kod satıra 5.0 verir (sıralamada dibe düşmesin) — rehber eşitlendi
         "title": "Veri Eksik",
         "description": "ΔT hesaplanamadı. Gerekli sensör verileri eksik veya hatalı.",
         "steps": [
@@ -599,8 +599,9 @@ INSTRUCTION_GUIDE = {
         "severity": "WARNING",
         "score": 5.0,
         "title": "Yüksek ΔT",
-        "description": "Su tarafı ΔT hedefin üstünde. Debi artırılmalı.",
+        "description": "ΔT hedefin üstünde. Bu kural AHU'da çalışır ve AHU'da ΔT = HAVA ΔT'sidir (Return − SAT): hava akışı düşük olabilir.",
         "steps": [
+            "AHU'da önce HAVA tarafını kontrol edin: fan devri, hava filtreleri, damper konumları",
             "Pompa VFD'si varsa devri artırın",
             "Balans vanasını daha fazla açın",
             "Filtre tıkanıklığını kontrol edin",
@@ -618,8 +619,9 @@ INSTRUCTION_GUIDE = {
         "severity": "WARNING",
         "score": 4.0,
         "title": "Düşük ΔT",
-        "description": "Su tarafı ΔT hedefin altında. Debi azaltılmalı veya yük yetersiz.",
+        "description": "ΔT hedefin altında. Bu kural AHU'da çalışır ve AHU'da ΔT = HAVA ΔT'sidir (Return − SAT): coil ısı aktaramıyor veya yük düşük olabilir.",
         "steps": [
+            "AHU'da önce HAVA tarafını kontrol edin: coil kirliliği, SAT/Return sensör doğruluğu, düşük yük",
             "Pompa VFD'si varsa devri azaltın",
             "Balans vanasını kısmen kapatın",
             "Bypass vanası açık mı kontrol edin",
@@ -671,7 +673,7 @@ INSTRUCTION_GUIDE = {
         "severity": "WARNING",
         "score": 5.0,
         "title": "SAT Düşük (Donma Riski)",
-        "description": "Üfleme sıcaklığı (SAT) 15°C altına düştü. Aşırı soğutma yapılıyor, coil donma riski var.",
+        "description": "Üfleme sıcaklığı (SAT) 14°C altına düştü (15°C alt sınır − 1°C tolerans). Aşırı soğutma yapılıyor, coil donma riski var.",
         "steps": [
             "⚠️ ACİL: Soğutma vanasını kısın veya kapatın — donma riski",
             "Chiller set sıcaklığını yükseltin (6-7°C altına düşmesin)",
@@ -692,7 +694,7 @@ INSTRUCTION_GUIDE = {
         "severity": "WARNING",
         "score": 6.0,
         "title": "Yetersiz Kapasite",
-        "description": "Vana tam açık ama konfor sağlanamıyor. Kapasite yetersiz.",
+        "description": "Vana >%80 açık ama konfor sağlanamıyor (oda-set sapması >2°C). Kapasite yetersiz.",
         "steps": [
             "Eşanjör/coil kapasitesini kontrol edin",
             "Su debisini artırın",
@@ -717,7 +719,7 @@ INSTRUCTION_GUIDE = {
             "AHU'larda %100 taze hava moduna geçerek Free-Cooling yapın",
             "Taze hava damperlerini tam açın — soğuk dış hava doğal soğutma sağlar",
             "Chiller yükü düşmüyorsa ana kollektör setpoint'ini düşürün",
-            "Eğer tek Chiller hala %90 üzerinde zorlanıyorsa 2. Chiller'i devreye alın",
+            "Eğer tek Chiller hala %80 üzerinde zorlanıyorsa 2. Chiller'i devreye alın",
             "Free-Cooling sonrası Chiller yükünü tekrar izleyin",
             "Chiller COP değerini takip edin — düşük COP enerji israfına işaret eder"
         ],
