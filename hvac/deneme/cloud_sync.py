@@ -224,60 +224,75 @@ def sync_hvac_summary(client, lokasyon_id: str):
 
 
 def check_and_apply_update(client, lokasyon_id: str):
-    """Supabase'de bekleyen güncelleme varsa uygula"""
+    """Supabase'de bekleyen güncellemeleri KRONOLOJIK sırayla TÜMÜNÜ uygula.
+
+    Eski davranış (limit(1) + en yeni kayıt) birden fazla bekleyen kayıt
+    biriktiğinde yalnız sonuncusunu uygulayıp diğerlerini sonsuza dek
+    'bekliyor' bırakıyordu — aradaki yamaların içeriği kayboluyordu.
+    Artık tüm bekleyenler eskiden yeniye uygulanır (aynı dosya birden fazla
+    kayıtta varsa son yazılan — en yeni — kazanır), restart bayrağı en sonda
+    bir kez yazılır.
+    """
     try:
         r = client.table("guncellemeler") \
             .select("*") \
             .eq("durum", "bekliyor") \
             .in_("hedef", [lokasyon_id, "all"]) \
-            .order("created_at", desc=True) \
-            .limit(1) \
+            .order("created_at", desc=False) \
             .execute()
 
         if not r.data:
             return
 
-        kayit = r.data[0]
-        kayit_id = kayit["id"]
-        versiyon = kayit.get("versiyon", "?")
-        dosyalar = kayit.get("dosyalar", {})
-
-        logger.info(f"🔄 Güncelleme bulundu: v{versiyon} ({len(dosyalar)} dosya) — uygulanıyor...")
-
         base_dir = os.path.dirname(__file__)
-        uygulanan = 0
-        hatalar = []
+        tum_dosyalar = set()   # restart kararı için (tüm kayıtların birleşimi)
+        son_versiyon = "?"
 
-        for dosya_yolu, icerik in dosyalar.items():
-            try:
-                tam_yol = os.path.join(base_dir, dosya_yolu)
-                # Boş içerik = dosyayı sil
-                if icerik == "":
-                    if os.path.exists(tam_yol):
-                        os.remove(tam_yol)
-                        logger.info(f"  🗑️ {dosya_yolu} silindi")
+        logger.info(f"🔄 {len(r.data)} bekleyen güncelleme bulundu — kronolojik sırayla uygulanıyor...")
+
+        for kayit in r.data:
+            kayit_id = kayit["id"]
+            versiyon = kayit.get("versiyon", "?")
+            dosyalar = kayit.get("dosyalar", {})
+            son_versiyon = versiyon
+
+            logger.info(f"🔄 v{versiyon} uygulanıyor ({len(dosyalar)} dosya)...")
+
+            uygulanan = 0
+            hatalar = []
+
+            for dosya_yolu, icerik in dosyalar.items():
+                try:
+                    tam_yol = os.path.join(base_dir, dosya_yolu)
+                    # Boş içerik = dosyayı sil
+                    if icerik == "":
+                        if os.path.exists(tam_yol):
+                            os.remove(tam_yol)
+                            logger.info(f"  🗑️ {dosya_yolu} silindi")
+                        uygulanan += 1
+                        tum_dosyalar.add(dosya_yolu)
+                        continue
+                    os.makedirs(os.path.dirname(tam_yol), exist_ok=True)
+                    with open(tam_yol, "w", encoding="utf-8") as f:
+                        f.write(icerik)
                     uygulanan += 1
-                    continue
-                os.makedirs(os.path.dirname(tam_yol), exist_ok=True)
-                with open(tam_yol, "w", encoding="utf-8") as f:
-                    f.write(icerik)
-                uygulanan += 1
-                logger.info(f"  ✅ {dosya_yolu}")
-            except Exception as e:
-                hatalar.append(dosya_yolu)
-                logger.error(f"  ❌ {dosya_yolu}: {e}")
+                    tum_dosyalar.add(dosya_yolu)
+                    logger.info(f"  ✅ {dosya_yolu}")
+                except Exception as e:
+                    hatalar.append(dosya_yolu)
+                    logger.error(f"  ❌ {dosya_yolu}: {e}")
 
-        # Durumu güncelle (sadece mevcut kolon, ek kolon gerekmez)
-        yeni_durum = "tamamlandi" if not hatalar else "hata"
-        client.table("guncellemeler").update({
-            "durum": yeni_durum,
-        }).eq("id", kayit_id).execute()
+            # Durumu güncelle (sadece mevcut kolon, ek kolon gerekmez)
+            yeni_durum = "tamamlandi" if not hatalar else "hata"
+            client.table("guncellemeler").update({
+                "durum": yeni_durum,
+            }).eq("id", kayit_id).execute()
 
-        logger.info(f"✅ Güncelleme tamamlandı: v{versiyon} — {uygulanan} dosya uygulandı")
+            logger.info(f"✅ v{versiyon} tamamlandı — {uygulanan} dosya uygulandı")
 
-        # Kritik dosya değiştiyse tam yeniden başlatma gerekir
+        # Kritik dosya değiştiyse tam yeniden başlatma gerekir (tek sefer, en sonda)
         KRITIK_DOSYALAR = {"cloud_sync.py", "portal_watchdog.py"}
-        tam_restart = bool(set(dosyalar.keys()) & KRITIK_DOSYALAR)
+        tam_restart = bool(tum_dosyalar & KRITIK_DOSYALAR)
 
         if tam_restart:
             flag_path = os.path.join(os.path.dirname(__file__), "_full_restart.flag")
@@ -287,7 +302,7 @@ def check_and_apply_update(client, lokasyon_id: str):
             logger.info("🔄 Yeniden başlatma sinyali gönderildi (_restart.flag)")
 
         with open(flag_path, "w") as f:
-            f.write(f"v{versiyon} - {datetime.now().isoformat()}")
+            f.write(f"v{son_versiyon} - {datetime.now().isoformat()}")
 
     except Exception as e:
         logger.error(f"Güncelleme kontrol hatası: {e}")
