@@ -1558,7 +1558,8 @@ class HVACAnalyzer:
             score *= 1.2
 
         # SAT issues (VALVE_LOW hariç - vana düşükken SAT sorunu normal)
-        if sat_status not in ["OPTIMAL", "NO DATA", "VALVE_LOW", "VALVE LOW", "STANDBY"]:
+        if sat_status not in ["OPTIMAL", "NO DATA", "VALVE_LOW", "VALVE LOW", "STANDBY",
+                              "SENSOR_FAULT", "MAINTENANCE"]:
             score += 2.0
 
         # Kural bazlı minimum skor — kural atanmışsa en az bu kadar olmalı
@@ -1766,8 +1767,32 @@ class HVACAnalyzer:
             maintenance_notes.append("Isıtma vanası 0-10V arızalı - Vana pozisyonu güvenilmez")
         if maint.get("cooling_valve_signal") == "FAULTY":
             maintenance_notes.append("Soğutma vanası 0-10V arızalı - Vana pozisyonu güvenilmez")
-        
+
         result.maintenance_notes = maintenance_notes
+
+        # --- MZ-9: BAKIM KARTI ANALİZE ENTEGRE ---
+        # a) Herhangi bir bileşen MAINTENANCE ise cihaz "BAKIMDA" — bakım süren cihazda
+        #    üretilen alarmlar gürültüdür; analiz atlanır (STANDBY ile aynı model).
+        _MAINT_KEYS = ("supply_sensor", "return_sensor", "heating_valve_body",
+                       "cooling_valve_body", "heating_valve_signal", "cooling_valve_signal")
+        _bakimda = [k for k in _MAINT_KEYS if maint.get(k) == "MAINTENANCE"]
+        if _bakimda:
+            result.status = "MAINTENANCE"
+            result.action = "Bakımda"
+            result.reason = f"Cihaz bakımda ({len(_bakimda)} bileşen). Bakım bitene kadar analiz yapılmıyor."
+            result.rule = "MAINTENANCE"
+            result.severity = "OPTIMAL"
+            result.sat_status = "MAINTENANCE"
+            result.score = 0.0
+            return result
+
+        # b) FAULTY vana SİNYALİ (0-10V) → pozisyon verisi güvenilmez; o vananın değeri
+        #    yok sayılır. Böylece SIMUL_HEAT_COOL / NOT_COOLING / NOT_HEATING gibi vana
+        #    koşullu kurallar sahte tetiklenmez (not zaten satıra düşüyor).
+        if maint.get("heating_valve_signal") == "FAULTY":
+            profile.valves.heating = None
+        if maint.get("cooling_valve_signal") == "FAULTY":
+            profile.valves.cooling = None
 
         # --- 0. STANDBY CHECK ---
         standby = self._analyze_base(profile, result, oat, effective_mode=effective_mode)
@@ -1783,7 +1808,10 @@ class HVACAnalyzer:
         target_dt = result.target_delta_t
 
         # P2 Fix: AHU departure — delta_t yoksa SAT vs setpoint mutlak farkını kullan
-        if result.departure is None and sat is not None and set_temp is not None:
+        # (MZ-9: SAT/Return sensörü arızalıysa departure güvenilmez — skoru şişirmesin)
+        if skip_sat or skip_return:
+            result.departure = None
+        elif result.departure is None and sat is not None and set_temp is not None:
             result.departure = abs(sat - set_temp)
 
         # Calculate approach
@@ -1795,7 +1823,15 @@ class HVACAnalyzer:
         is_heating = "HEAT" in effective_mode
         
         # Default Logic (similar to base but customized)
-        if delta_t is None:
+        if skip_sat or skip_return:
+            # MZ-9: hava ΔT, SAT/Return sensörlerinden türetilir — arızalı sensörle
+            # bant kararı (LOW_DT/HIGH_DT) güvenilmez. Bastır, düşük öncelikli uyarı bırak.
+            result.status = "SENSOR_FAULT"
+            result.band = "N/A"
+            result.action = "Sensör Arızalı - ΔT Bant Kontrolü Atlandı"
+            result.reason = "Bakım kartında arızalı işaretli sensör var; hava ΔT bant analizi güvenilmez."
+            result.score = 3.0
+        elif delta_t is None:
             result.status = "MISSING_DATA"
             result.band = "N/A"
             result.action = "Veri Eksik"
@@ -1849,7 +1885,11 @@ class HVACAnalyzer:
         #   HIGH_VALVE_THRESHOLD (70%) → KRİTİK NOT_COOLING/NOT_HEATING tanısı için gereken minimum açıklık
         #   40-69% arası: SAT sorunuysa UYARI (SAT_WARNING), KRİTİK değil
         HIGH_VALVE_FOR_CRITICAL = 70.0
-        if relevant_valve < VALVE_THRESHOLD:
+        if skip_sat:
+            # MZ-9: Üfleme sensörü FAULTY — SAT verisi güvenilmez, SAT tabanlı
+            # alarmlar (NOT_COOLING/NOT_HEATING/SAT_*) üretilmez, not satırda kalır.
+            result.sat_status = "SENSOR_FAULT"
+        elif relevant_valve < VALVE_THRESHOLD:
             result.sat_status = "VALVE_LOW"
             # SAT kontrolü yapılmadan devam et
         elif sat is not None:
@@ -1932,6 +1972,14 @@ class HVACAnalyzer:
 
         # --- 3. SPECIAL CONDITIONS ---
         special = self.check_special_conditions(profile, delta_t, effective_mode=effective_mode)
+        # MZ-9: Arızalı sensöre dayanan özel kurallar bastırılır —
+        # SAT tabanlılar (HEAT/COOL_EFF_LOW) üfleme sensörü arızalıysa,
+        # hava ΔT tabanlı (AIR_DT_LOW_COOL) emiş VEYA üfleme sensörü arızalıysa güvenilmez.
+        if special["rule"]:
+            if skip_sat and special["rule"] in ("HEAT_EFF_LOW", "COOL_EFF_LOW", "AIR_DT_LOW_COOL", "LOW_FLOW_DETECTED"):
+                special = {"action": "", "reason": "", "rule": ""}
+            elif skip_return and special["rule"] == "AIR_DT_LOW_COOL":
+                special = {"action": "", "reason": "", "rule": ""}
         # NOT_COOLING / NOT_HEATING kritik kural — özel durum tarafından ezilmez
         if special["rule"] and result.rule not in ("NOT_COOLING", "NOT_HEATING"):
             result.action = special["action"]
