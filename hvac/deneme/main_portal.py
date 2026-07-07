@@ -57,7 +57,7 @@ CONFIG = {
 
     # Toleranslar
     "TOLERANCE_CRITICAL": 2.0,
-    "TOLERANCE_NORMAL": 4.0,
+    "TOLERANCE_NORMAL": 3.0,  # standart bant toleransı ±3°C (doküman ile eşit — G-2)
     
     # SAT analiz eşikleri
     "SAT_COOLING_THRESHOLD": 1.0,
@@ -368,7 +368,7 @@ INSTRUCTION_GUIDE = {
         "severity": "CRITICAL",
         "score": 8.0,
         "title": "Düşük Debi / Pompa Basıncı",
-        "description": "Su tarafı ΔT yüksek (≥15°C) ama üfleme sıcaklığı düşük (<28°C). Su ısınıyor ama havaya aktarılamıyor — su yeterince akmıyor. (AHU hariç: FCU coil / Kazan / Kolektör)",
+        "description": "Isıtma modunda su tarafı ΔT yüksek (≥15°C) ama üfleme sıcaklığı düşük (<28°C). Su ısınıyor ama havaya aktarılamıyor — su yeterince akmıyor. (AHU hariç: FCU coil / Kazan / Kolektör)",
         "steps": [
             "Pompa çalışıyor mu? Akım değerini kontrol edin",
             "Pompa basınç göstergelerini okuyun (giriş/çıkış)",
@@ -457,7 +457,7 @@ INSTRUCTION_GUIDE = {
         "severity": "WARNING",
         "score": 5.0,
         "title": "Düşük ΔT Sendromu",
-        "description": "Vana çok açık (≥90%) ama ΔT düşük (≤3.0°C). Coil'den geçen su ısınmıyor/soğumuyor.",
+        "description": "İlgili vana çok açık (≥90%) ama ΔT düşük (≤3.0°C). Coil ısı aktaramıyor. (Not: AHU'da ΔT hava ΔT'sidir — SAT/Return; diğer tiplerde su ΔT'si.)",
         "steps": [
             "Coil kirliliğini kontrol edin - temizlik gerekebilir",
             "Bypass vanası kısmen açık olabilir",
@@ -498,7 +498,7 @@ INSTRUCTION_GUIDE = {
         "severity": "WARNING",
         "score": 5.0,
         "title": "Hava ΔT Düşük (Soğutma)",
-        "description": "Soğutma vanası yüksek ama hava ΔT <3.0°C. Hava yeterince soğumuyor.",
+        "description": "Soğutma vanası çok açık (≥%90) ama hava ΔT <3.0°C. Hava yeterince soğumuyor.",
         "steps": [
             "AHU SAT setpoint'i ve sensörlerini kontrol edin",
             "Return ve supply hava sensörlerini kalibre edin",
@@ -639,7 +639,7 @@ INSTRUCTION_GUIDE = {
         "severity": "WARNING",
         "score": 5.0,
         "title": "SAT Uyarısı",
-        "description": "Üfleme sıcaklığı ideal aralığın dışında.",
+        "description": "Üfleme sıcaklığı ideal aralığın dışında. AHU'da tipik bağlam: vana orta seviyede (%40-69) iken SAT bant dışı — vana artmaya devam ederse kritikleşir (NOT_COOLING/NOT_HEATING öncesi erken uyarı).",
         "steps": [
             "SAT setpoint'ini kontrol edin",
             "Vana açıklığını kontrol edin",
@@ -677,7 +677,7 @@ INSTRUCTION_GUIDE = {
         "steps": [
             "⚠️ ACİL: Soğutma vanasını kısın veya kapatın — donma riski",
             "Chiller set sıcaklığını yükseltin (6-7°C altına düşmesin)",
-            "SAT setpoint'ini 15°C üzerine (soğutma) / 27°C üzerine (ısıtma) çıkaracak şekilde artırın",
+            "SAT setpoint'ini 15°C üzerine çıkaracak şekilde artırın",
             "Coil donma koruma sensörünü kontrol edin — aktif mi?",
             "Coil'de buz oluşumu var mı gözle kontrol edin",
             "Oda sıcaklığını kontrol edin — aşırı soğumuş olabilir"
@@ -731,6 +731,60 @@ INSTRUCTION_GUIDE = {
             "Mevsimsel geçiş programının devreye girmemesi"
         ],
         "setpoint_chain": "Dış Hava (<10°C) → AHU %100 Taze Hava (Free-Cooling) → Kollektör Setpoint Düşür → 2. Chiller Devreye Al"
+    },
+    "STANDBY": {
+        "severity": "OPTIMAL",
+        "score": 0.0,
+        "title": "Bekleme Modu",
+        "description": "Ekipman kapalı (OFF) veya AUTO modda talep beklerken vanalar kapalı. Analiz yapılmıyor — bu bir arıza değildir.",
+        "steps": [
+            "Müdahale gerekmez — ekipman talep gelince otomatik devreye girer",
+            "Uzun süre STANDBY'da kalması beklenmiyorsa BMS'de mod ve program kontrolü yapın",
+            "Konfor şikayeti varsa ekipmanın kapalı kalma nedenini araştırın"
+        ],
+        "causes": []
+    },
+    "MAINTENANCE": {
+        "severity": "OPTIMAL",
+        "score": 0.0,
+        "title": "Bakımda",
+        "description": "Dijital bakım kartında en az bir bileşen MAINTENANCE olarak işaretli. Bakım süresince analiz ve alarmlar durdurulur (gürültü önlenir).",
+        "steps": [
+            "Bakım tamamlanınca bakım kartında bileşeni OK olarak güncelleyin — analiz otomatik devam eder",
+            "Bakım uzadıysa kartı ve saha durumunu kontrol edin",
+            "Kart QR etiketiyle sahadan da güncellenebilir"
+        ],
+        "causes": []
+    },
+    "AMBIGUOUS": {
+        "severity": "WARNING",
+        "score": 5.0,
+        "title": "Mod Belirsiz",
+        "description": "AUTO modda hem ısıtma hem soğutma vanası yüksek açık (her ikisi ≥%15) — çalışma modu güvenle belirlenemiyor.",
+        "steps": [
+            "BMS'de ekipmanın mod programını kontrol edin (yaz/kış geçişi)",
+            "Vana pozisyonlarını sahada doğrulayın — aktüatör sıkışması olabilir",
+            "Eşzamanlı ısıtma+soğutma sürüyorsa SIMUL_HEAT_COOL talimatını uygulayın"
+        ],
+        "causes": [
+            "Mod geçiş programı hatası",
+            "Vana aktüatörü sıkışması",
+            "Sensör/sinyal hatası"
+        ]
+    },
+    "SENSOR_FAULT": {
+        "severity": "WARNING",
+        "score": 3.0,
+        "title": "Sensör Arızalı - Analiz Kısıtlı",
+        "description": "Bakım kartında üfleme/emiş sensörü FAULTY işaretli. Bu sensöre dayanan alarmlar güvenilmez olacağı için bastırıldı; satırda bakım notu görünür.",
+        "steps": [
+            "Arızalı sensörü değiştirin veya kalibre edin",
+            "Onarım sonrası bakım kartında bileşeni OK yapın — analiz tam kapsamda devam eder",
+            "Sensör arızası süresince cihazı sahada gözle takip edin"
+        ],
+        "causes": [
+            "Sensör arızası (bakım kartında kayıtlı)"
+        ]
     }
 }
 

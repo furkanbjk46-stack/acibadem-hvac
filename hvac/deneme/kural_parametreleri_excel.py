@@ -12,13 +12,13 @@ df1 = pd.DataFrame([
     ["TARGET_DT_HEAT_EXCHANGER", "8.0°C", "Eşanjör hedef ΔT", "Inlet/Outlet (birincil/ikincil devre su sıcaklıkları)"],
     ["TARGET_DT_HEAT", "15.0°C", "Isıtma devresi (chiller hariç, AHU/FCU dışı tipler) hedef ΔT", "Inlet/Outlet su sıcaklıkları, ısıtma modunda ΔT = Inlet - Outlet"],
     ["(AHU/FCU ısıtma)", "10.0°C", "AHU/FCU coil ısıtma modunda hedef ΔT (özel durum)", "Inlet/Outlet, Mode = Heating"],
-    ["TOLERANCE_CRITICAL", "±1.0°C", "ΔT, hedeften bu kadar saparsa kritik tolerans dışı sayılır", "Hesaplanan delta_t vs target_delta_t farkı"],
+    ["TOLERANCE_CRITICAL", "±2.0°C (kodda su an KULLANILMIYOR)", "Parametre analiz fonksiyonlarina tasinir ama hicbir kuralda kullanilmaz; bant kararlari TOLERANCE_NORMAL ile verilir", "Hesaplanan delta_t vs target_delta_t farkı"],
     ["TOLERANCE_NORMAL", "±3.0°C", "Normal tolerans bandı (BAND_LOW/BAND_HIGH/IN_BAND eşiği - FCU)", "Hesaplanan delta_t vs target_delta_t farkı"],
 ], columns=["Parametre", "Değer", "Açıklama", "Referans Aldığı Veri"])
 
 df2 = pd.DataFrame([
     ["SAT_COOLING_MIN / MAX", "15.0°C / 18.0°C", "SAT (°C) sahası (üfleme sıcaklığı); soğutma modunda bu bandın dışına çıkarsa SAT_LOW/SAT_HIGH"],
-    ["SAT_HEATING_MIN / MAX", "27.0°C / 30.0°C", "SAT (°C), ısıtma modunda"],
+    ["SAT_HEATING_MIN / MAX", "28.0°C / 31.0°C", "SAT (°C), ısıtma modunda"],
     ["SAT_COOLING/HEATING_THRESHOLD", "±1.0°C", "SAT (°C) vs Set (°C) karşılaştırması (set'ten sapma toleransı)"],
     ["HEAT_SAT_LOW_THRESHOLD", "28.0°C", "SAT (°C) - LOW_FLOW_DETECTED tetikleyicisi: ΔT (Inlet/Outlet, su) hedefi karşılıyor AMA SAT bu değerin altındaysa -> su ısınıyor ama havaya aktarılamıyor (debi/pompa şüpheli). Çalışan config (hvac_settings.json) değeri"],
 ], columns=["Parametre", "Değer", "Referans Aldığı Veri"])
@@ -52,9 +52,9 @@ df7 = pd.DataFrame([
     ["CHILLER_BYPASS", "9.0", "CRITICAL", "Sadece CHILLER", "Plant/Inlet-Outlet ΔT < 1.0°C"],
     ["NOT_COOLING", "9.0", "CRITICAL", "AHU + FCU", "SAT (°C), Mode=Cooling, SAT > Set+tol, vana >=%70"],
     ["NOT_HEATING", "9.0", "CRITICAL", "AHU + FCU", "SAT (°C), Mode=Heating, SAT < Set-tol, vana >=%70"],
-    ["LOW_FLOW_DETECTED", "8.0", "CRITICAL", "AHU + FCU (Chiller hariç)", "Inlet/Outlet ΔT >= 15°C VE SAT < 27°C"],
+    ["LOW_FLOW_DETECTED", "8.0", "CRITICAL", "AHU + FCU (Chiller hariç)", "Inlet/Outlet ΔT >= 15°C VE SAT < 28°C (isitma modu; AHU haric)"],
     ["INSUFFICIENT_CAPACITY", "6.0", "WARNING", "Sadece FCU", "Room (°C) vs Set (°C) sapması + ilgili Valve (%) (>2°C sapma, vana >%80)"],
-    ["HEAT_EFF_LOW", "7.0", "CRITICAL", "Sadece AHU", "Heat Valve >=%90 + üfleme (SAT) < SAT_HEATING_MIN (27°C)"],
+    ["HEAT_EFF_LOW", "7.0", "CRITICAL", "Sadece AHU", "Heat Valve >=%90 + üfleme (SAT) < SAT_HEATING_MIN (28°C)"],
     ["COOL_EFF_LOW", "7.0", "CRITICAL", "Sadece AHU", "Cool Valve >=%90 + Approach (Supply-Inlet) > APPROACH_MAX (10°C)"],
     ["CHILLER_LOW_DT", "6.0", "WARNING", "Sadece CHILLER", "Plant/Inlet-Outlet ΔT < 3.0°C"],
     ["AIR_DT_LOW_COOL", "5.0", "WARNING", "Sadece AHU", "Cool Valve >=%90 ama hava ΔT < 3.0°C"],
