@@ -1963,14 +1963,26 @@ class HVACAnalyzer:
                 sat_tol = self.config.get("SAT_TOLERANS", 1.0)
 
                 if sat < sat_min - sat_tol:
-                    if relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
-                        # Vana yüksek açık ama SAT düşük → gerçek sorun
+                    # Return şartı: hava gerçekten ısınmıyor mu, yoksa ısıtıyor ama
+                    # hedefe çıkamıyor mu? Emiş verisi varsa ve üfleme emişten en az
+                    # 2°C sıcaksa santral fiilen ISITIYOR demektir → KRİTİK değil UYARI.
+                    _isitiyor = (not skip_return and ret is not None and sat > ret + 2.0)
+                    if relevant_valve >= HIGH_VALVE_FOR_CRITICAL and not _isitiyor:
+                        # Vana yüksek açık ve hava ısınmıyor → gerçek sorun
                         result.sat_status = "NOT_HEATING"
                         result.action = "KRİTİK: Isıtmıyor"
-                        result.reason = f"Üfleme ({sat:.1f}°C) < {sat_min}°C, vana %{relevant_valve:.0f} açık. Vana veya kazan kontrolü gerekli."
+                        result.reason = f"Üfleme ({sat:.1f}°C) < {sat_min}°C, vana %{relevant_valve:.0f} açık" + (f" ve üfleme emişten ({ret:.1f}°C) sıcak değil — hava ısınmıyor." if ret is not None else ".") + " Vana veya kazan kontrolü gerekli."
                         result.severity = "CRITICAL"
                         result.score = 9.0
                         result.rule = "NOT_HEATING"
+                    elif relevant_valve >= HIGH_VALVE_FOR_CRITICAL and _isitiyor:
+                        # Isıtıyor (SAT emişten >2°C sıcak) ama hedef SAT'a çıkamıyor → UYARI
+                        result.sat_status = "WARNING"
+                        result.action = "UYARI: SAT Hedefin Altında (Isıtıyor)"
+                        result.reason = f"Üfleme ({sat:.1f}°C) < {sat_min}°C ama emişten ({ret:.1f}°C) sıcak — santral ısıtıyor, hedefe çıkamıyor. Kapasite/set/SAT limiti kontrol edin."
+                        result.severity = "WARNING"
+                        result.score = max(result.score, 5.0)
+                        result.rule = "SAT_WARNING"
                     else:
                         # Vana orta seviyede (%40-69) — SAT düşük ama henüz kritik değil
                         result.sat_status = "WARNING"
@@ -2001,14 +2013,26 @@ class HVACAnalyzer:
                 sat_tol = self.config.get("SAT_TOLERANS", 1.0)
 
                 if sat > sat_max + sat_tol:
-                    if relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
-                        # Vana yüksek açık ama SAT yüksek → gerçek soğutma sorunu
+                    # Return şartı: hava gerçekten soğumuyor mu, yoksa soğutuyor ama
+                    # hedefe inemiyor mu? Emiş verisi varsa ve üfleme emişten en az
+                    # 2°C soğuksa santral fiilen SOĞUTUYOR demektir → KRİTİK değil UYARI.
+                    _sogutuyor = (not skip_return and ret is not None and sat < ret - 2.0)
+                    if relevant_valve >= HIGH_VALVE_FOR_CRITICAL and not _sogutuyor:
+                        # Vana yüksek açık ve hava soğumuyor → gerçek soğutma sorunu
                         result.sat_status = "NOT_COOLING"
                         result.action = "KRİTİK: Soğutmuyor"
-                        result.reason = f"Üfleme ({sat:.1f}°C) > {sat_max}°C, vana %{relevant_valve:.0f} açık. Vana veya chiller kontrolü gerekli."
+                        result.reason = f"Üfleme ({sat:.1f}°C) > {sat_max}°C, vana %{relevant_valve:.0f} açık" + (f" ve üfleme emişten ({ret:.1f}°C) soğuk değil — hava soğumuyor." if ret is not None else ".") + " Vana veya chiller kontrolü gerekli."
                         result.severity = "CRITICAL"
                         result.score = 9.0
                         result.rule = "NOT_COOLING"
+                    elif relevant_valve >= HIGH_VALVE_FOR_CRITICAL and _sogutuyor:
+                        # Soğutuyor (SAT emişten >2°C soğuk) ama hedef SAT'a inemiyor → UYARI
+                        result.sat_status = "WARNING"
+                        result.action = "UYARI: SAT Hedefin Üstünde (Soğutuyor)"
+                        result.reason = f"Üfleme ({sat:.1f}°C) > {sat_max}°C ama emişten ({ret:.1f}°C) soğuk — santral soğutuyor, hedefe inemiyor. Kapasite/set/SAT limiti kontrol edin."
+                        result.severity = "WARNING"
+                        result.score = max(result.score, 5.0)
+                        result.rule = "SAT_WARNING"
                     else:
                         # Vana orta seviyede (%40-69) — SAT hedef dışında ama henüz kritik değil
                         result.sat_status = "WARNING"
