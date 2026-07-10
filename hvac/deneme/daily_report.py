@@ -446,7 +446,21 @@ class DailyReportGenerator:
         
         # 6. GENEL DEĞERLENDİRME
         self._add_evaluation(pdf, report_row, compare_row, hvac_day, building_area)
-        
+
+        # 7. AYLIK BAKIM NOTU (işaret girilmediyse ayın 25'inden itibaren)
+        try:
+            from bakim_durum import rapor_notu
+            _bakim_not = rapor_notu()
+            if _bakim_not:
+                pdf.ln(3)
+                pdf.set_fill_color(254, 226, 226)
+                pdf.set_text_color(220, 38, 38)
+                pdf.set_font(pdf.font, 'B', 10)
+                pdf.multi_cell(0, 8, _sanitize("⚠ " + _bakim_not), fill=True)
+                pdf.set_text_color(40, 40, 40)
+        except Exception:
+            pass
+
         # Kaydet
         filename = f"gunluk_rapor_{target_date.strftime('%Y%m%d')}.pdf"
         filepath = os.path.join(REPORTS_DIR, filename)

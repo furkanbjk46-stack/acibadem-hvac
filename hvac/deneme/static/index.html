@@ -1611,6 +1611,29 @@
                 </div>
             </div>
             <div class="instruction-modal-body" style="max-height: 65vh; overflow-y: auto;">
+                <!-- Aylık Bakım İşareti -->
+                <div class="instruction-section" id="monthlyMaintPanel"
+                    style="border:1px solid rgba(16,185,129,0.35); border-radius:10px; padding:14px; margin-bottom:14px;">
+                    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
+                        <div style="min-width:260px;">
+                            <div style="font-size:14px; font-weight:700; color:#fff;">
+                                <i class="fas fa-calendar-check"></i> Aylık Santral Bakımı
+                            </div>
+                            <div id="monthlyMaintStatus" style="font-size:12px; margin-top:4px; color:rgba(255,255,255,0.7);">
+                                Yükleniyor...
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="monthlyMaintBtn" onclick="markMonthlyMaintenance()"
+                            style="padding:10px 18px; font-size:13px; white-space:nowrap;">
+                            <i class="fas fa-check"></i> Bu Ayın Bakımı Yapıldı
+                        </button>
+                    </div>
+                    <div id="monthlyMaintWarn" style="display:none; margin-top:10px; padding:8px 12px; border-radius:8px;
+                        background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; font-size:12px;">
+                        ⚠ Bu ayın santral bakımı henüz işaretlenmedi — ayın 25'inden itibaren Synapse ve Enerji
+                        portalına uyarı düşer, raporlara "bakım yapılmamıştır" notu eklenir.
+                    </div>
+                </div>
                 <!-- Yeni Cihaz Ekleme -->
                 <div class="instruction-section">
                     <h3><i class="fas fa-plus-circle"></i> Santral Ekle / Güncelle</h3>
@@ -4082,8 +4105,51 @@
 
         function openMaintenanceModal() {
             loadMaintenanceCards();
+            loadMonthlyMaintenance();
             document.getElementById('maintenanceModal').style.display = 'flex';
             document.body.style.overflow = 'hidden';
+        }
+
+        // ── Aylık Bakım İşareti ──
+        let monthlyMaintDone = false;
+        async function loadMonthlyMaintenance() {
+            try {
+                const resp = await fetch('/api/monthly-maintenance');
+                const d = await resp.json();
+                if (!d.success) return;
+                monthlyMaintDone = d.bu_ay.yapildi;
+                const st = document.getElementById('monthlyMaintStatus');
+                const btn = document.getElementById('monthlyMaintBtn');
+                const warn = document.getElementById('monthlyMaintWarn');
+                const panel = document.getElementById('monthlyMaintPanel');
+                if (monthlyMaintDone) {
+                    st.innerHTML = `✅ <b style="color:#6ee7b7;">${d.bu_ay.ay} bakımı YAPILDI</b> — ${d.bu_ay.tarih} (${d.bu_ay.isaretleyen})`;
+                    btn.innerHTML = '<i class="fas fa-undo"></i> İşareti Geri Al';
+                    btn.style.background = 'rgba(107,114,128,0.3)';
+                    warn.style.display = 'none';
+                    panel.style.borderColor = 'rgba(16,185,129,0.5)';
+                } else {
+                    st.innerHTML = `⏳ <b style="color:#fcd34d;">${d.bu_ay.ay} bakımı henüz işaretlenmedi</b> (uyarı eşiği: ayın ${d.uyari_gunu}'i)`;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Bu Ayın Bakımı Yapıldı';
+                    btn.style.background = '';
+                    warn.style.display = d.uyari ? 'block' : 'none';
+                    panel.style.borderColor = d.uyari ? 'rgba(239,68,68,0.5)' : 'rgba(245,158,11,0.4)';
+                }
+            } catch (e) { console.error('Aylık bakım durumu alınamadı:', e); }
+        }
+
+        async function markMonthlyMaintenance() {
+            const yeni = !monthlyMaintDone;
+            if (!yeni && !confirm('Bu ayın bakım işaretini geri almak istediğinize emin misiniz?')) return;
+            try {
+                const resp = await fetch('/api/monthly-maintenance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ yapildi: yeni, isaretleyen: 'Operatör' })
+                });
+                const d = await resp.json();
+                if (d.success) loadMonthlyMaintenance();
+            } catch (e) { alert('Kaydedilemedi: ' + e); }
         }
 
         function closeMaintenanceModal() {

@@ -3147,6 +3147,72 @@ async def get_equipment_maintenance(equipment_name: str):
         "has_issues": any(card.get(c) in ["FAULTY", "MAINTENANCE"] for c in MAINTENANCE_COMPONENTS)
     }
 
+# ================ AYLIK BAKIM TAKVİMİ ================
+# Lokasyon geneli tek işaret: her ay "santral bakımları yapıldı" olarak işaretlenir.
+# Ayın BAKIM_UYARI_GUNU gününden itibaren işaret yoksa Synergy/Synapse'de uyarı
+# üretilir ve tüm raporlara "bu ay santral bakımları yapılmamıştır" notu düşülür.
+BAKIM_TAKVIMI_FILE = os.path.join(os.path.dirname(__file__), "configs", "bakim_takvimi.json")
+BAKIM_UYARI_GUNU = 25
+
+def _bakim_takvimi_oku() -> dict:
+    try:
+        with open(BAKIM_TAKVIMI_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def _bakim_takvimi_yaz(data: dict) -> bool:
+    try:
+        os.makedirs(os.path.dirname(BAKIM_TAKVIMI_FILE), exist_ok=True)
+        with open(BAKIM_TAKVIMI_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        logging.error(f"Bakım takvimi yazılamadı: {e}")
+        return False
+
+# Okuma mantığı ortak modülde (bakim_durum.py) — raporlar/portal aynı kaynağı kullanır
+from bakim_durum import (
+    ay_durumu as bakim_ay_durumu,
+    uyari_gerekli as bakim_uyari_gerekli,
+    rapor_notu as bakim_rapor_notu,
+)
+
+@app.get("/api/monthly-maintenance")
+async def get_monthly_maintenance():
+    """Bu ayın bakım işareti + son 12 ayın geçmişi."""
+    takvim = _bakim_takvimi_oku()
+    gecmis = dict(sorted(takvim.items(), reverse=True)[:12])
+    return {
+        "success": True,
+        "bu_ay": bakim_ay_durumu(),
+        "uyari": bakim_uyari_gerekli(),
+        "uyari_gunu": BAKIM_UYARI_GUNU,
+        "gecmis": gecmis,
+    }
+
+@app.post("/api/monthly-maintenance")
+async def set_monthly_maintenance(request: Request):
+    """Bu ayın bakımını yapıldı/geri al olarak işaretle."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    yapildi = bool(body.get("yapildi", True))
+    ay = body.get("ay") or datetime.datetime.now().strftime("%Y-%m")
+    takvim = _bakim_takvimi_oku()
+    if yapildi:
+        takvim[ay] = {
+            "yapildi": True,
+            "tarih": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "isaretleyen": body.get("isaretleyen", "Operatör"),
+        }
+    else:
+        takvim.pop(ay, None)
+    if not _bakim_takvimi_yaz(takvim):
+        raise HTTPException(status_code=500, detail="Bakım takvimi kaydedilemedi")
+    return {"success": True, "bu_ay": bakim_ay_durumu(ay)}
+
 # ================ GÜNLÜK RAPOR ================
 
 import threading
@@ -3353,6 +3419,13 @@ def _generate_monthly_report():
         _write_report_notification("monthly", filepath)
     except Exception as e:
         logging.error(f"Aylık rapor hatası: {e}")
+    # Aylık BAKIM raporu — aynı zamanlayıcıda, önceki ayın bakım durumu
+    try:
+        import bakim_raporu
+        bk_path = bakim_raporu.generate()
+        logging.info(f"Aylık bakım raporu oluşturuldu: {bk_path}")
+    except Exception as e:
+        logging.error(f"Aylık bakım raporu hatası: {e}")
 
 def _schedule_monthly_report(from_settings_change=False):
     """Config'ten okunan gün ve saatte aylık rapor üretimi zamanlayıcısı.
@@ -3611,6 +3684,17 @@ async def generate_monthly_report(year: int = None, month: int = None):
         filepath = gen.generate(year, month)
         filename = os.path.basename(filepath)
         return {"success": True, "filename": filename, "message": "Aylık rapor başarıyla oluşturuldu."}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/bakim-raporu/generate")
+async def generate_bakim_raporu(year: int = None, month: int = None):
+    """Manuel aylık bakım raporu tetikleme (varsayılan: önceki ay)."""
+    try:
+        import bakim_raporu
+        filepath = bakim_raporu.generate(year, month)
+        return {"success": True, "filename": os.path.basename(filepath),
+                "message": "Aylık bakım raporu oluşturuldu."}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

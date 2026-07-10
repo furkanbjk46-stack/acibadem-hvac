@@ -2730,6 +2730,19 @@ def generate_pdf_report(start: date, end_exclusive: date, df_period: pd.DataFram
         pdf.set_y(footer_y + 2)
         pdf.cell(0, 8, T(f"Bu rapor HVAC Enerji Yonetim Sistemi tarafindan {_dt_now.now().strftime('%d.%m.%Y %H:%M')} tarihinde otomatik olusturulmustur."), 0, 0, 'C')
 
+        # Aylık bakım notu (işaret girilmediyse)
+        try:
+            from bakim_durum import rapor_notu as _bk_not
+            _bn = _bk_not()
+            if _bn:
+                pdf.set_y(footer_y - 10)
+                pdf.set_fill_color(254, 226, 226)
+                pdf.set_text_color(220, 38, 38)
+                pdf.set_font(font, 'B', 9)
+                pdf.multi_cell(0, 7, T("! " + _bn), fill=True)
+        except Exception:
+            pass
+
         raw = pdf.output(dest="S")
         if isinstance(raw, (bytes, bytearray)):
             return bytes(raw)
@@ -2762,6 +2775,18 @@ def generate_pdf_report(start: date, end_exclusive: date, df_period: pd.DataFram
 # UI
 # =============================
 st.title("⚡ Enerji ve Verimlilik")
+
+# ── Aylık bakım uyarısı (ayın 25'inden itibaren işaret yoksa) ──
+try:
+    from bakim_durum import uyari_gerekli as _bakim_uyari
+    if _bakim_uyari():
+        st.error(
+            "🔧 **Bu ay santral bakımları yapılmamıştır** — aylık bakım işareti girilmedi. "
+            "HVAC portalı → Bakım Kartları → \"Bu Ayın Bakımı Yapıldı\" ile işaretleyin. "
+            "İşaretlenmezse tüm raporlara bakım notu düşer ve Synapse'de alarm görünür."
+        )
+except Exception:
+    pass
 
 # Sağ üst: Günlük + Aylık Rapor butonları
 # Otomatik rapor bildirimlerini kontrol et

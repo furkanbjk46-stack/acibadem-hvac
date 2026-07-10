@@ -416,7 +416,21 @@ class MonthlyReportGenerator:
         
         # 6. GENEL DEĞERLENDİRME
         self._add_evaluation(pdf, current, previous, hvac_month, building_area, year, month)
-        
+
+        # 7. AYLIK BAKIM NOTU (raporun kapsadığı ay işaretlenmediyse)
+        try:
+            from bakim_durum import rapor_notu
+            _bakim_not = rapor_notu(ay=f"{year:04d}-{month:02d}")
+            if _bakim_not:
+                pdf.ln(3)
+                pdf.set_fill_color(254, 226, 226)
+                pdf.set_text_color(220, 38, 38)
+                pdf.set_font(pdf.font, 'B', 10)
+                pdf.multi_cell(0, 8, _sanitize("⚠ " + _bakim_not), fill=True)
+                pdf.set_text_color(40, 40, 40)
+        except Exception:
+            pass
+
         # Kaydet
         ay_adi = AYLAR.get(month, str(month))
         filename = f"aylik_rapor_{year}_{month:02d}_{ay_adi}.pdf"

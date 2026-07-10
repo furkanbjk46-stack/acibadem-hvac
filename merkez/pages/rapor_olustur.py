@@ -751,7 +751,7 @@ class HastaneRaporPDF:
     # ── Ana üretici ─────────────────────────────────────
 
     def build(self, period_df: pd.DataFrame, m2: int,
-              bar_img, donut_img) -> bytes:
+              bar_img, donut_img, bakim_notu: str = "") -> bytes:
         p = self.pdf
         p.add_page()
         self._draw_header()
@@ -804,6 +804,15 @@ class HastaneRaporPDF:
         if donut_img:
             self.section_title("ENERJI KIRILIMLARI", PURPLE)
             self.add_chart(donut_img, w=190, h=48)
+
+        # ── Aylik bakim notu (lokasyon isaret girmediyse) ──
+        if bakim_notu:
+            p.ln(3)
+            p.set_fill_color(254, 226, 226)
+            p.set_text_color(220, 38, 38)
+            p.set_font(self.font, "B", 10)
+            p.multi_cell(0, 8, "! " + bakim_notu, fill=True)
+            p.set_text_color(40, 40, 40)
 
         # ── Footer ────────────────────────────────────
         self._draw_footer()
@@ -858,9 +867,24 @@ def generate_pdf(df, period_df, lok_info, lok_id, period_type, period_str, m2):
                 "PDF metin/KPI verileriyle olusturuldu."
             )
 
+        # Aylık bakım işareti kontrolü (lokasyon heartbeat'inden — bakim_ozet.aylik_bakim)
+        bakim_notu = ""
+        try:
+            from supabase import create_client as _cc
+            _r = _cc(url, key).table("lokasyonlar").select("bakim_ozet") \
+                .eq("lokasyon_id", lok_id).limit(1).execute()
+            _oz = (_r.data[0].get("bakim_ozet") or {}) if _r.data else {}
+            if isinstance(_oz, str):
+                _oz = json.loads(_oz)
+            _ab = _oz.get("aylik_bakim") or {}
+            if _ab.get("uyari"):
+                bakim_notu = f"UYARI: {_ab.get('ay', 'Bu ay')} ayinda santral bakimlari yapilmamistir (aylik bakim isareti girilmedi)."
+        except Exception:
+            pass
+
         with st.spinner("PDF olusturuluyor..."):
             rapor     = HastaneRaporPDF(lok_info, period_type, period_str)
-            pdf_bytes = rapor.build(period_df, m2, bar_img, donut_img)
+            pdf_bytes = rapor.build(period_df, m2, bar_img, donut_img, bakim_notu=bakim_notu)
 
         dosya = f"rapor_{lok_id}_{period_type.lower()}_{son_tarih.strftime('%Y%m%d')}.pdf"
         return pdf_bytes, dosya, grafik_uyari if grafik_uyari else None

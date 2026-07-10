@@ -1423,6 +1423,12 @@ with sag:
             lok_uyari_map[lok_id].append(("r", f"🔴 {isim}: {ariza} ARIZALI bileşen — {arizali}"))
         if bakim > 0:
             lok_uyari_map[lok_id].append(("y", f"🟡 {isim}: {bakim} bileşen bakımda"))
+        # Aylık bakım işareti uyarısı (ayın 25'inden itibaren, lokasyon heartbeat'inden gelir)
+        aylik = ozet.get("aylik_bakim") or {}
+        if aylik.get("uyari"):
+            lok_uyari_map[lok_id].append(
+                ("r", f"🔧 {isim}: {aylik.get('ay','Bu ay')} santral bakımları YAPILMADI (işaret girilmedi)")
+            )
 
     # 2) Enerji verisi uyarıları
     if not df_all.empty:

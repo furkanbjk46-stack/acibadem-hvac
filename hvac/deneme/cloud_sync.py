@@ -355,6 +355,12 @@ def get_bakim_ozet() -> dict:
                     "bilesenler": bakim_listesi,
                     "not":       not_metni,
                 })
+        # Aylık bakım işareti durumu (Synapse canlı uyarıları bunu okur)
+        try:
+            from bakim_durum import heartbeat_alani
+            aylik_bakim = heartbeat_alani()
+        except Exception:
+            aylik_bakim = {}
         return {
             "toplam_ariza": toplam_ariza,
             "toplam_bakim": toplam_bakim,
@@ -363,6 +369,7 @@ def get_bakim_ozet() -> dict:
             "arizali_cihazlar": arizali_cihazlar,
             "bakimda_cihazlar": bakimda_cihazlar,
             "son_guncelleme": data.get("last_updated", ""),
+            "aylik_bakim": aylik_bakim,
         }
     except Exception as e:
         logger.warning(f"Bakım kartı okuma hatası: {e}")
