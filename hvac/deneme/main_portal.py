@@ -2264,6 +2264,25 @@ class HVACAnalyzer:
             result.score = 5.0  # Sıralamada dibe düşmemesi için minimum skor
         else:
             check_tolerance = tol_norm
+            # TALEP KAPISI: her iki vana da fiilen KAPALIYSA (<%0.5) santral iklimlendirme
+            # talebi görmüyordur. Fan dönse bile (start=1, basınç var) hava ΔT'si aktif
+            # soğutma/ısıtma değil; sirkülasyon/fan ısısıdır — üflemenin emişten hafif
+            # sıcak olması BEKLENEN durumdur. Bu durumda TERS_DT/LOW_DT/HIGH_DT üretmek
+            # YANLIŞ pozitiftir (vana %0 iken sahte KRİTİK). Boşta çalışma → STANDBY.
+            _c_valve = profile.valves.cooling if profile.valves.cooling is not None else 0
+            _h_valve = profile.valves.heating if profile.valves.heating is not None else 0
+            if _c_valve < 0.5 and _h_valve < 0.5:
+                result.status = "STANDBY"
+                result.action = "Bekleme (fan açık, talep yok)"
+                result.reason = (f"Her iki vana kapalı (soğutma %{_c_valve:.0f}, ısıtma %{_h_valve:.0f}); "
+                                 f"fan dönüyor ama iklimlendirme talebi yok. Hava ΔT ({delta_t:+.1f}°C) "
+                                 f"tanısal değil (sirkülasyon/fan ısısı).")
+                result.rule = "STANDBY"
+                result.atlama_nedeni = result.atlama_nedeni or "BEKLEME (fan açık, vana kapalı)"
+                result.severity = "OPTIMAL"
+                result.sat_status = "STANDBY"
+                result.score = 0.0
+                return result
             # S5/TERS_DT: soğutmada negatif hava ΔT = üfleme emişten SICAK — santral
             # havayı ısıtıyor. Isıtma vanası kaçağı / sensör yer değişikliği / mod karışıklığı.
             if (not is_heating) and delta_t < -1.0:
