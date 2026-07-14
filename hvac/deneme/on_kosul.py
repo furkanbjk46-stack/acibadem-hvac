@@ -280,11 +280,7 @@ def _ham_karar(start, basinc, basinc_nokta_var, ufleme_ok, donus_ok, cfg) -> dic
             return r
 
     # ── BASINÇ kapısı (START veya lokal-çalışan) ──
-    if basinc_nokta_var:
-        if basinc is None:
-            r["karar"] = "SKIP_VERI_YOK"   # okuma başarısız — iletişim, arıza DEĞİL
-            r["notlar"].append("Basınç okuması alınamadı (BACnet)")
-            return r
+    if basinc_nokta_var and basinc is not None:
         b = float(basinc)
         if b <= 0.0 or b > p_max:
             r["karar"] = "SKIP_BASINC_SENSOR_ARIZA"
@@ -295,6 +291,17 @@ def _ham_karar(start, basinc, basinc_nokta_var, ufleme_ok, donus_ok, cfg) -> dic
             r["karar"] = "SKIP_FAN"        # analiz atlanır ama alarm üretilir
             r["bulgu"] = "FAN_BASMIYOR"
             return r
+        r["basinc_dogrulandi"] = True      # basınç okundu ve geçerli → 3/3
+    elif basinc_nokta_var and basinc is None:
+        # Nokta tanımlı ama okuma gelmedi. Fan çalıştığı KOMUTLANMIŞSA basınç
+        # doğrulanamaması veri sorunudur (SKIP_VERI_YOK). Aksi halde (start bilinmiyor
+        # / STOP-lokal) analizi BLOKLAMAYIZ — hava/SAT + sensör aralık analizi sürer,
+        # onay 2/3 olarak raporlanır (eskiden tüm santral SKIP_VERI_YOK'a düşüyordu).
+        if calisiyor_komutu:
+            r["karar"] = "SKIP_VERI_YOK"   # okuma başarısız — iletişim, arıza DEĞİL
+            r["notlar"].append("Basınç okuması alınamadı (BACnet) — fan komutu AÇIK")
+            return r
+        r["notlar"].append("basınç okunamadı — 2/3 onay")
     else:
         r["notlar"].append("basınç doğrulaması yok (2/3 onay)")
 
@@ -331,8 +338,15 @@ def kapi_degerlendir(lokasyon: str, ahu_adi: str,
     u_izle = _sensor_izle(kayit, "supply", ufleme, cfg) if ufleme_var else None
     d_izle = _sensor_izle(kayit, "return", donus, cfg) if donus_var else None
 
-    ufleme_ok = (u_izle["gecerli"] and not u_izle["karantina"]) if ufleme_var else True
-    donus_ok = (d_izle["gecerli"] and not d_izle["karantina"]) if donus_var else True
+    # null okuma (deger None) sensör ARIZASI değildir — 'veri gelmedi'dir; aralık
+    # kapısında atlanır (eksik/gelmeyen emiş VERI_EKSIK kuralının konusudur, sensör
+    # arızası değil). SADECE değer VAR ama aralık dışıysa (örn. 0.04°C / 80°C) arıza sayılır.
+    ufleme_ok = True
+    if ufleme_var and ufleme is not None:
+        ufleme_ok = u_izle["gecerli"] and not u_izle["karantina"]
+    donus_ok = True
+    if donus_var and donus is not None:
+        donus_ok = d_izle["gecerli"] and not d_izle["karantina"]
 
     ham = _ham_karar(start, basinc, basinc_nokta_var, ufleme_ok, donus_ok, cfg)
 
@@ -384,13 +398,17 @@ def kapi_degerlendir(lokasyon: str, ahu_adi: str,
 
     _durum_yaz(durum)
 
-    # Onay sayısı (rapor için)
+    # Onay sayısı (rapor için): toplam kapı = basınç noktası varsa 3, yoksa 2.
+    # Basınç noktası var ama okuma gelmediyse (doğrulanmadı) o kapı düşülür → 2/3.
     kapilar = 3 if basinc_nokta_var else 2
+    _dogrulanan = kapilar
+    if basinc_nokta_var and not ham.get("basinc_dogrulandi"):
+        _dogrulanan = kapilar - 1
     return {
         "karar": karar,
         "bulgu": ham["bulgu"] if karar == ham["karar"] else None,
         "notlar": ham["notlar"],
-        "onay": f"{kapilar}/{kapilar}" if karar == "ANALIZ" else "-",
+        "onay": f"{_dogrulanan}/{kapilar}" if karar == "ANALIZ" else "-",
         "skip_gun": skip_gun,
         "eskalasyon": skip_gun >= cfg["SKIP_ESKALASYON_GUN"],
     }

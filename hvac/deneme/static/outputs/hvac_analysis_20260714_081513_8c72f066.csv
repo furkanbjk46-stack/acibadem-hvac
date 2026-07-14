@@ -1,0 +1,9 @@
+﻿Asset,Type,Name,Status,Severity,Su ΔT (°C),Hava ΔT (°C),Target ΔT (°C),ΔT Dev (°C),Band,SAT Status,Recommended SAT (°C),Score,Action,Reason,Rule,DT Source,Approach_Supply (°C),Approach_Return (°C),Plant Supply (°C),Plant Return (°C),OAT (°C),Tekrar (Bu Ay)
+AHU:Ahu-19,AHU,Ahu-19,MISSING_DATA,WARNING,,,6.47,+12.26,N/A,WARNING,16.5,9.2,UYARI: SAT Düşük,Üfleme (9.7°C) < 15°C. Aşırı soğutma/donma riski.,SAT_LOW,,+2.68,,7.06,9.24,24.7,
+AHU:Ahu-5,AHU,Ahu-5,LOW,WARNING,3.70,3.70,8.00,-4.30,,WARNING,20.8,9.2,UYARI: SAT Hedefin Üstünde (Soğutuyor),"Üfleme (22.8°C) > 18.0°C ama emişten (26.5°C) soğuk — santral soğutuyor, hedefe inemiyor. Kapasite/set/SAT limiti kontrol edin.",SAT_WARNING,Supply/Return (Air),+15.74,+17.26,7.06,9.24,24.7,
+AHU:Ahu-16,AHU,Ahu-16,MISSING_DATA,CRITICAL,,,6.47,+7.20,N/A,OPTIMAL,15.0,7.2,Veri Eksik,,MISSING_DATA,,+7.74,,7.06,9.24,24.7,
+Collector:Sogutma Kollektoru,Collector,Sogutma Kollektoru,LOW,WARNING,2.18,,10.00,-7.82,±1.0,NO DATA,,6.0,ΔT Hedef Altında - Akış Azalt,ΔT (2.2°C) < Hedef (10.0°C),BAND_LOW,Inlet/Outlet (Water),,,7.06,9.24,24.7,
+AHU:Ahu-21,AHU,Ahu-21,ANALIZ_DISI,WARNING,,,,,,SENSOR_FAULT,,3.0,ANALİZ DIŞI — Sensör Arızası,Sensör aralık/basınç onayı geçilemedi; dijital bakım kartına otomatik işaret düşüldü.,SKIP_SENSOR_ARIZA,,,,7.06,9.24,24.7,
+AHU:Ahu-12,AHU,Ahu-12,ANALIZ_DISI,WARNING,,,,,,SENSOR_FAULT,,3.0,ANALİZ DIŞI — Sensör Arızası,Sensör aralık/basınç onayı geçilemedi; dijital bakım kartına otomatik işaret düşüldü.,SKIP_BASINC_SENSOR_ARIZA,,,,7.06,9.24,24.7,
+AHU:Ahu-8,AHU,Ahu-8,IN_BAND,OPTIMAL,7.03,7.03,8.00,-0.97,±1.0,OPTIMAL,,1.9,Normal,,NORMAL,Supply/Return (Air),+11.09,+15.94,7.06,9.24,24.7,
+AHU:Ahu-13,AHU,Ahu-13,STANDBY,OPTIMAL,-0.05,-0.05,8.00,-8.05,,STANDBY,,0.0,Bekleme Modu,"Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor.",STANDBY,Supply/Return (Air),,,7.06,9.24,24.7,

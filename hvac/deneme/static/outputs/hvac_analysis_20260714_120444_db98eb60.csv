@@ -1,0 +1,5 @@
+﻿Asset,Type,Name,Status,Severity,Su ΔT (°C),Hava ΔT (°C),Target ΔT (°C),ΔT Dev (°C),Band,SAT Status,Recommended SAT (°C),Score,Action,Reason,Rule,DT Source,Approach_Supply (°C),Approach_Return (°C),Plant Supply (°C),Plant Return (°C),OAT (°C),Tekrar (Bu Ay)
+Chiller:CH-BYPASS,Chiller,CH-BYPASS,IN_BAND,CRITICAL,0.10,,3.00,-2.90,±3.0,NO DATA,,9.0,KRİTİK: Chiller Bypass / Arıza,ΔT çok düşük (0.1°C). Bypass açık veya kompresör yük almıyor.,CHILLER_BYPASS,Inlet/Outlet (Water),,,,,24.7,
+Chiller:CH-4,Chiller,CH-4,IN_BAND,OPTIMAL,4.76,,3.00,+1.76,±3.0,NO DATA,,3.5,Normal,Hedef band içinde,IN_BAND,Inlet/Outlet (Water),,,,,24.7,
+Chiller:CH-1,Chiller,CH-1,IN_BAND,OPTIMAL,3.80,,3.00,+0.80,±3.0,NO DATA,,1.6,Normal,Hedef band içinde,IN_BAND,Inlet/Outlet (Water),,,,,24.7,
+Chiller:CH-3,Chiller,CH-3,IN_BAND,OPTIMAL,3.40,,3.00,+0.40,±3.0,NO DATA,,0.8,Normal,Hedef band içinde,IN_BAND,Inlet/Outlet (Water),,,,,24.7,

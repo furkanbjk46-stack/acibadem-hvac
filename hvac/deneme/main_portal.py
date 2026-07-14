@@ -1320,7 +1320,15 @@ class HVACAnalyzer:
         if inlet is not None and outlet is not None:
             # Cooling coil: water warms across coil -> outlet > inlet
             # Heating coil: water cools across coil -> inlet > outlet
-            if self.utils.is_heating_mode(profile.mode):
+            _eq_dt = self.classify_equipment_type(profile.type)
+            if _eq_dt == EquipmentType.CHILLER:
+                # CHILLER ÜRETİM tarafıdır — coil'in TERSİ. Evaporatöre dönüş suyu SICAK
+                # girer (inlet), soğutulup SOĞUK çıkar (outlet) → faydalı soğutma ΔT'si
+                # = inlet - outlet (POZİTİF = soğutuyor). Eskiden coil formülü (outlet-inlet)
+                # uygulanıp ΔT negatif çıkıyor, sağlıklı chiller sahte CHILLER_BYPASS (-4)
+                # olarak KRİTİK işaretleniyordu.
+                delta_t = inlet - outlet
+            elif self.utils.is_heating_mode(profile.mode):
                 delta_t = inlet - outlet
             else:
                 delta_t = outlet - inlet
@@ -2026,9 +2034,13 @@ class HVACAnalyzer:
         # değeri verir, bu yüzden AHU performansı için ana metrik hava ΔT'si
         # (SAT-Return) olmalı. Su ΔT'si sadece Chiller/Kazan/Kolektör gibi
         # merkezi ekipman satırlarında kullanılır.
-        if eq_type == EquipmentType.AHU and air_dt is not None:
+        # S1 SAĞLAMLAŞTIRMA: AHU metriği DAİMA hava ΔT'sidir. Emiş yoksa hava ΔT
+        # hesaplanamaz → ΔT boş kalır (MISSING_DATA / VERI_EKSIK yolu). ESKİDEN emiş
+        # yokken enjekte edilen kolektör suyuna düşülüp sahte su-tarafı TERS_DT/
+        # LOW_DT_SYNDROME üretiliyordu; artık su ΔT'sine ASLA düşülmez.
+        if eq_type == EquipmentType.AHU:
             delta_t = air_dt
-            dt_source = "Supply/Return (Air)"
+            dt_source = "Supply/Return (Air)" if air_dt is not None else ""
 
         result.delta_t = delta_t
         result.dt_source = dt_source
@@ -2058,6 +2070,7 @@ class HVACAnalyzer:
             result.action = "Kapalı"
             result.reason = "Ekipman kapalı (OFF). Analiz yapılmıyor."
             result.rule = "STANDBY"
+            result.atlama_nedeni = result.atlama_nedeni or "KAPALI (OFF)"
             result.severity = "OPTIMAL"
             result.sat_status = "STANDBY"
             result.score = 0.0
@@ -2071,6 +2084,7 @@ class HVACAnalyzer:
             result.action = "Bekleme Modu"
             result.reason = "Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor."
             result.rule = "STANDBY"
+            result.atlama_nedeni = result.atlama_nedeni or "BEKLEME (AUTO, vana kapalı)"
             result.severity = "OPTIMAL"
             result.sat_status = "STANDBY"
             result.score = 0.0
@@ -2119,6 +2133,7 @@ class HVACAnalyzer:
             result.action = "Bakımda"
             result.reason = f"Cihaz bakımda ({len(_bakimda)} bileşen). Bakım bitene kadar analiz yapılmıyor."
             result.rule = "MAINTENANCE"
+            result.atlama_nedeni = f"BAKIMDA ({len(_bakimda)} bileşen)"
             result.severity = "OPTIMAL"
             result.sat_status = "MAINTENANCE"
             result.score = 0.0
@@ -2133,13 +2148,19 @@ class HVACAnalyzer:
             profile.valves.cooling = None
 
         # --- SAĞLAMLAŞTIRMA F2: ÖN KOŞUL KAPISI (Start → Basınç → Sensör aralık) ---
-        # Start/Stop verisi gelen santrallerde analiz öncesi 3 kapılı onay zinciri çalışır.
-        # Veri yoksa (FCU'lar, nokta eklenmemiş santraller) eski davranış aynen sürer.
+        # Kapı; santral start/basınç TELEMETRİSİ gönderiyorsa VEYA nokta envanterinde
+        # start/basınç noktası TANIMLIYSA çalışır. Böylece değer bu döngüde gelmese bile
+        # (null okuma) sensör aralık kontrolü + Onay sütunu işler — 'sensör analizi
+        # yapmıyor / Onay boş' regresyonu giderilir. Nokta hiç tanımlı olmayan santraller
+        # (eski FCU'lar) eski davranışta kalır.
         _kapi_bulgu = None
-        if getattr(profile, "start_stop", None) is not None or getattr(profile, "pressure_pa", None) is not None:
+        _n = _nokta_var(profile.location, profile.name)
+        _kapi_aktif = (getattr(profile, "start_stop", None) is not None
+                       or getattr(profile, "pressure_pa", None) is not None
+                       or _n.get("start") or _n.get("basinc"))
+        if _kapi_aktif:
             try:
                 from on_kosul import kapi_degerlendir
-                _n = _nokta_var(profile.location, profile.name)
                 _kapi = kapi_degerlendir(
                     profile.location, profile.name,
                     start=profile.start_stop,
@@ -2242,6 +2263,7 @@ class HVACAnalyzer:
             result.band = "N/A"
             result.action = "Sensör Arızalı - ΔT Bant Kontrolü Atlandı"
             result.reason = "Bakım kartında arızalı işaretli sensör var; hava ΔT bant analizi güvenilmez."
+            result.rule = "SENSOR_FAULT"   # Kural sütunu boş kalmasın (özel kural sonra ezebilir)
             result.score = 3.0
         elif delta_t is None:
             result.status = "MISSING_DATA"
@@ -2251,6 +2273,25 @@ class HVACAnalyzer:
             result.score = 5.0  # Sıralamada dibe düşmemesi için minimum skor
         else:
             check_tolerance = tol_norm
+            # TALEP KAPISI: her iki vana da fiilen KAPALIYSA (<%0.5) santral iklimlendirme
+            # talebi görmüyordur. Fan dönse bile (start=1, basınç var) hava ΔT'si aktif
+            # soğutma/ısıtma değil; sirkülasyon/fan ısısıdır — üflemenin emişten hafif
+            # sıcak olması BEKLENEN durumdur. Bu durumda TERS_DT/LOW_DT/HIGH_DT üretmek
+            # YANLIŞ pozitiftir (vana %0 iken sahte KRİTİK). Boşta çalışma → STANDBY.
+            _c_valve = profile.valves.cooling if profile.valves.cooling is not None else 0
+            _h_valve = profile.valves.heating if profile.valves.heating is not None else 0
+            if _c_valve < 0.5 and _h_valve < 0.5:
+                result.status = "STANDBY"
+                result.action = "Bekleme (fan açık, talep yok)"
+                result.reason = (f"Her iki vana kapalı (soğutma %{_c_valve:.0f}, ısıtma %{_h_valve:.0f}); "
+                                 f"fan dönüyor ama iklimlendirme talebi yok. Hava ΔT ({delta_t:+.1f}°C) "
+                                 f"tanısal değil (sirkülasyon/fan ısısı).")
+                result.rule = "STANDBY"
+                result.atlama_nedeni = result.atlama_nedeni or "BEKLEME (fan açık, vana kapalı)"
+                result.severity = "OPTIMAL"
+                result.sat_status = "STANDBY"
+                result.score = 0.0
+                return result
             # S5/TERS_DT: soğutmada negatif hava ΔT = üfleme emişten SICAK — santral
             # havayı ısıtıyor. Isıtma vanası kaçağı / sensör yer değişikliği / mod karışıklığı.
             if (not is_heating) and delta_t < -1.0:
@@ -2709,31 +2750,38 @@ def validate_equipment_data(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
                 errors.append(f"{equipment_name}: '{field}' alanı zorunludur")
         
         # Validate temperature ranges (-10°C to +100°C)
+        # SAĞLAMLAŞTIRMA: aralık dışı okuma (örn. 409.2°C) ARIZALI SENSÖR sinyalidir —
+        # tüm partiyi (55 santral) reddetmek yerine o alanı GEÇERSIZ sayıp None yaparız.
+        # Böylece diğer santraller analiz edilir; bozuk okuyan santral ilgili satırda
+        # "veri eksik / sensör arızası" olarak yüzeye çıkar. Batch ASLA bu yüzden çökmez.
         for field in temp_fields:
             value = row.get(field)
             if value is not None and value != "":
                 try:
                     temp = float(value)
                     if temp < -10 or temp > 100:
-                        errors.append(
-                            f"{equipment_name}: '{field}' değeri geçersiz ({temp}°C). "
-                            f"Geçerli aralık: -10°C ile +100°C arası"
+                        warnings.append(
+                            f"{equipment_name}: '{field}' aralık dışı ({temp}°C) — "
+                            f"arızalı sensör, okuma geçersiz sayıldı (-10°C..+100°C)."
                         )
+                        row[field] = None   # geçersiz okuma → eksik veri gibi ele alınır
                 except (ValueError, TypeError):
                     # Skip non-numeric values (they might be intentionally empty)
                     pass
-        
-        # Validate valve percentages (0-100%)
+
+        # Validate valve percentages (0-100%) — aynı ilke: aralık dışı vana okuması
+        # partiyi çökertmez, geçersiz sayılır (vana pozisyonu bilinmiyor kabul edilir).
         for field in valve_fields:
             value = row.get(field)
             if value is not None and value != "":
                 try:
                     valve = float(value)
                     if valve < 0 or valve > 100:
-                        errors.append(
-                            f"{equipment_name}: '{field}' değeri geçersiz ({valve}%). "
-                            f"Geçerli aralık: 0% ile 100% arası"
+                        warnings.append(
+                            f"{equipment_name}: '{field}' aralık dışı ({valve}%) — "
+                            f"okuma geçersiz sayıldı (0%..100%)."
                         )
+                        row[field] = None
                 except (ValueError, TypeError):
                     pass
         
@@ -4394,6 +4442,9 @@ async def recommend_json(payload: Dict[str, Any]):
 
         return JSONResponse(result)
 
+    except HTTPException:
+        # Doğrulama (400) vb. HTTP hataları olduğu gibi geçer — 500'e maskelenmez.
+        raise
     except Exception as e:
         logger.error(f"Recommend JSON error: {e}")
         raise HTTPException(status_code=500, detail=f"Analiz hatası: {str(e)}")
@@ -4488,9 +4539,12 @@ async def analyze_data(rows: List[Dict[str, Any]],
     # Kolektör sıcaklıklarını AUTO mode ekipmanlara ata
     logger.debug("=== KOLEKTÖR ATAMA BAŞLADI ===")
     for profile in profiles:
-        # Sadece AHU ve FCU için
+        # SADECE FCU için — AHU'da kolektör suyu enjeksiyonu YASAK (S1): kolektör su
+        # ΔT'si tüm AHU'lara aynı gelir, bu da sahte su-tarafı TERS_DT / LOW_DT_SYNDROME
+        # üretir (MAS-1'de emiş sensörü olmayan santraller birebir aynı ΔT vakası).
+        # AHU metriği daima hava ΔT'sidir (SAT-Return); emiş yoksa ΔT boş kalır.
         eq_type = analyzer.classify_equipment_type(profile.type)
-        if eq_type not in [EquipmentType.AHU, EquipmentType.FCU]:
+        if eq_type != EquipmentType.FCU:
             continue
 
         logger.debug(f"Ekipman: {profile.name} ({eq_type})")
