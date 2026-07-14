@@ -379,22 +379,27 @@ def kapi_degerlendir(lokasyon: str, ahu_adi: str,
             pass
 
     # ── Bakım kartı otomasyonu (karar debounce'tan geçtiyse) ──
+    # KANONİK kart anahtarı: 'LOKASYON AD' (büyük harf). Aynı ad birden çok lokasyonda
+    # olabildiği için (Ahu-6 hem MAS-1 hem MAS-2) sistem işaretini lokasyonla niteleriz —
+    # aksi halde ad-yalnız ('Ahu-6') ayrı/mükerrer kart oluşuyordu. main_portal.kart_key
+    # ile BİREBİR aynı format olmalı (operatörün 'MAS-1 AHU-6' kartıyla eşleşsin).
+    _kart_key = (f"{(lokasyon or '').strip()} {(ahu_adi or '').strip()}".strip()).upper()
     if karar == ham["karar"]:
         for alan, neden in ham["isaretler"]:
-            sistem_isaret_koy(ahu_adi, alan, neden, cfg)
+            sistem_isaret_koy(_kart_key, alan, neden, cfg)
     # Takılı sensör + kalıcı aralık-dışı işaretleri (kapı kararından bağımsız — G13:
     # STOP'taki santralde bile 0.04°C okuyan sensör arızalıdır)
     for sensor_adi, izle, alan in (("supply", u_izle, "supply_sensor"),
                                    ("return", d_izle, "return_sensor")):
         if izle and izle["takili"]:
-            sistem_isaret_koy(ahu_adi, alan,
+            sistem_isaret_koy(_kart_key, alan,
                               f"TAKILI SENSÖR şüphesi: {cfg['TAKILI_OKUMA']} okumadır değişmiyor", cfg)
         if izle and izle.get("kalici_gecersiz"):
-            sistem_isaret_koy(ahu_adi, alan,
+            sistem_isaret_koy(_kart_key, alan,
                               "Aralık dışı okuma (2 ardışık) — geçerli: "
                               f"{cfg['SENSOR_VALID_MIN_C']:.0f}-{cfg['SENSOR_VALID_MAX_C']:.0f}°C", cfg)
         if izle and izle["duzeldi"]:
-            sistem_isaret_kaldir(ahu_adi, alan)
+            sistem_isaret_kaldir(_kart_key, alan)
 
     _durum_yaz(durum)
 

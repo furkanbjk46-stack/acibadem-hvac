@@ -25,7 +25,7 @@ _tmp = tempfile.mkdtemp(prefix="golden_")
 ok.DURUM_FILE = os.path.join(_tmp, "durum.json")
 ok.CARDS_FILE = os.path.join(_tmp, "cards.json")
 ok.AUDIT_FILE = os.path.join(_tmp, "audit.jsonl")
-mp.get_maintenance_card = lambda n: {}
+mp.get_maintenance_card = lambda n, loc=None: {}
 
 az = mp.HVACAnalyzer()
 
@@ -70,7 +70,7 @@ def test_G2_arizali_emis_analiz_yok_kart_isareti():
     for _ in range(2):  # debounce
         r = _analiz(_prof(name="G2", start=1.0, pa=300.0, sat=20.0, ret=0.17, setp=20.0, cv=80))
     assert r.rule == "SKIP_SENSOR_ARIZA", f"G2: SKIP bekleniyordu ({r.rule})"
-    assert _kart("G2").get("return_sensor") == "FAULTY", "G2: return_sensor FAULTY işareti yok"
+    assert _kart("MAS-1 G2").get("return_sensor") == "FAULTY", "G2: return_sensor FAULTY işareti yok"
 
 
 def test_G3_comfort_coil_kritigini_maskeleyemez():
@@ -129,7 +129,7 @@ def test_G9_basinc_sensor_arizasi():
     for _ in range(2):
         r = _analiz(_prof(name="G9", start=1.0, pa=0.0, sat=17.0, ret=24.0, setp=22.0, cv=80))
     assert r.rule == "SKIP_BASINC_SENSOR_ARIZA", f"G9: ({r.rule})"
-    assert _kart("G9").get("pressure_sensor") == "FAULTY", "G9: pressure_sensor işareti yok"
+    assert _kart("MAS-1 G9").get("pressure_sensor") == "FAULTY", "G9: pressure_sensor işareti yok"
 
 
 def test_G10_elle_susturma_24s_sonra_geri_gelir():
@@ -176,14 +176,14 @@ def test_G13_stop_santralde_arizali_ufleme_isareti():
         r = _analiz(_prof(name="G13", start=0.0, pa=2.0, sat=0.04, ret=22.0, setp=22.0, cv=0))
     assert r.rule == "SKIP_STOP", f"G13: ({r.rule})"
     assert r.delta_t is None, f"G13: ΔT boş olmalı ({r.delta_t})"
-    assert _kart("G13").get("supply_sensor") == "FAULTY", "G13: supply_sensor işareti yok"
+    assert _kart("MAS-1 G13").get("supply_sensor") == "FAULTY", "G13: supply_sensor işareti yok"
 
 
 def test_G14_takili_sensor():
     """G14: üfleme 12 okuma boyunca sabit 21.34 → TAKILI SENSÖR işareti."""
     for _ in range(12):
         _analiz(_prof(name="G14", start=1.0, pa=300.0, sat=21.34, ret=24.0, setp=22.0, cv=60))
-    kart = _kart("G14")
+    kart = _kart("MAS-1 G14")
     assert kart.get("supply_sensor") == "FAULTY", "G14: takılı sensör işareti yok"
     assert "TAKILI" in (kart.get("supply_sensor_meta") or {}).get("auto_reason", ""), "G14: neden TAKILI değil"
 
