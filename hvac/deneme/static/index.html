@@ -1222,6 +1222,9 @@
 
                                 <th>Yaklaşım Gidiş</th>
                                 <th>Yaklaşım Dönüş</th>
+                                <th>ΔT Kaynağı</th>
+                                <th>Onay</th>
+                                <th>Atlama Nedeni</th>
                                 <th>Kural</th>
                                 <th>Talimat</th>
                                 <th>Tekrar (Bu Ay)</th>
@@ -1229,7 +1232,7 @@
                         </thead>
                         <tbody id="resultsBody">
                             <tr>
-                                <td colspan="15" class="empty-state">
+                                <td colspan="19" class="empty-state">
                                     <i class="fas fa-inbox"></i>
                                     <div>Henüz analiz yapılmadı. Veri yükleyin veya örnek veri seçin.</div>
                                 </td>
@@ -2818,7 +2821,7 @@
             tbody.innerHTML = '';
 
             if (currentResults.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="16" class="empty-state"><i class="fas fa-inbox"></i><div>Sonuç bulunamadı</div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="19" class="empty-state"><i class="fas fa-inbox"></i><div>Sonuç bulunamadı</div></td></tr>';
                 updateKPIs(0, 0, 0, 0);
                 updateChart([]);
                 return;
@@ -2858,6 +2861,9 @@
 
                     <td>${row['Approach_Supply (°C)'] || ''}</td>
                     <td>${row['Approach_Return (°C)'] || ''}</td>
+                    <td><small>${row['DT Source'] || ''}</small></td>
+                    <td>${row['Onay'] || ''}</td>
+                    <td>${(row['Atlama Nedeni'] && row['Atlama Nedeni'].includes('ESKALASYON')) ? '<span style="color:#ef4444;font-weight:700;">'+row['Atlama Nedeni']+'</span>' : (row['Atlama Nedeni'] || '')}</td>
                     <td><small>${row.Rule || ''}</small></td>
                     <td><button class="instruction-btn" onclick="showInstructions('${row.Rule || ''}')" >ℹ️ Talimat</button></td>
                     <td>${row['Tekrar (Bu Ay)'] || ''}</td>
@@ -3232,6 +3238,7 @@
                 'Cool Valve (%)', 'Heat Valve (%)',
                 'SAT (°C)', 'Return Temp (°C)',
                 'Approach Supply (°C)', 'Approach Return (°C)',
+                'ΔT Kaynağı', 'Onay', 'Atlama Nedeni',
                 'Rule'
             ];
 
@@ -3261,6 +3268,9 @@
                 'Return Temp (°C)':      getVal(row, ['Return (°C)', 'Return Temp', 'return_temp', 'RAT']),
                 'Approach Supply (°C)':  getVal(row, ['Approach_Supply (°C)', 'Approach Supply (°C)']),
                 'Approach Return (°C)':  getVal(row, ['Approach_Return (°C)', 'Approach Return (°C)']),
+                'ΔT Kaynağı':            getVal(row, ['DT Source']),
+                'Onay':                  getVal(row, ['Onay']),
+                'Atlama Nedeni':         getVal(row, ['Atlama Nedeni']),
                 'Rule':                  getVal(row, ['Rule', 'rule'])
             }));
 
@@ -3274,7 +3284,7 @@
                 { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
                 { wch: 18 }, { wch: 8 },  { wch: 10 }, { wch: 12 },
                 { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
-                { wch: 16 }, { wch: 20 }
+                { wch: 16 }, { wch: 14 }, { wch: 8 }, { wch: 20 }, { wch: 20 }
             ];
 
             XLSX.utils.book_append_sheet(wb, ws, 'HVAC Analiz');
@@ -3701,7 +3711,7 @@
             try {
                 const cards = (maintenanceData && maintenanceData.cards) || {};
                 const filter = document.getElementById('maintPdfFilter').value;
-                const components = ['heating_valve_body', 'heating_valve_signal', 'cooling_valve_body', 'cooling_valve_signal', 'supply_sensor', 'return_sensor'];
+                const components = ['heating_valve_body', 'heating_valve_signal', 'cooling_valve_body', 'cooling_valve_signal', 'supply_sensor', 'return_sensor', 'pressure_sensor'];
                 const totalComp = components.length;
 
                 // Her santral için özet satır oluştur: arızalı/bakımdaki bileşen sayısı + durum
@@ -3915,6 +3925,7 @@
                 cooling_valve_signal: 'OK',
                 supply_sensor: 'OK',
                 return_sensor: 'OK',
+                pressure_sensor: 'OK',
                 notes: ''
             };
             nameInput.value = '';
@@ -3933,7 +3944,7 @@
             // Local state'den yeniden render
             renderMaintenanceCards(
                 maintenanceData,
-                ['heating_valve_body', 'heating_valve_signal', 'cooling_valve_body', 'cooling_valve_signal', 'supply_sensor', 'return_sensor'],
+                ['heating_valve_body', 'heating_valve_signal', 'cooling_valve_body', 'cooling_valve_signal', 'supply_sensor', 'return_sensor', 'pressure_sensor'],
                 ['OK', 'FAULTY', 'MAINTENANCE', 'N/A'],
                 {
                     heating_valve_body: 'Isıtma Vanası Gövde',
@@ -3941,7 +3952,8 @@
                     cooling_valve_body: 'Soğutma Vanası Gövde',
                     cooling_valve_signal: 'Soğutma Vanası 0-10V',
                     supply_sensor: 'Üfleme Sensör',
-                    return_sensor: 'Emiş Sensör'
+                    return_sensor: 'Emiş Sensör',
+                    pressure_sensor: 'Basınç Sensörü'
                 }
             );
         }
