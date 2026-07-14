@@ -2026,9 +2026,13 @@ class HVACAnalyzer:
         # değeri verir, bu yüzden AHU performansı için ana metrik hava ΔT'si
         # (SAT-Return) olmalı. Su ΔT'si sadece Chiller/Kazan/Kolektör gibi
         # merkezi ekipman satırlarında kullanılır.
-        if eq_type == EquipmentType.AHU and air_dt is not None:
+        # S1 SAĞLAMLAŞTIRMA: AHU metriği DAİMA hava ΔT'sidir. Emiş yoksa hava ΔT
+        # hesaplanamaz → ΔT boş kalır (MISSING_DATA / VERI_EKSIK yolu). ESKİDEN emiş
+        # yokken enjekte edilen kolektör suyuna düşülüp sahte su-tarafı TERS_DT/
+        # LOW_DT_SYNDROME üretiliyordu; artık su ΔT'sine ASLA düşülmez.
+        if eq_type == EquipmentType.AHU:
             delta_t = air_dt
-            dt_source = "Supply/Return (Air)"
+            dt_source = "Supply/Return (Air)" if air_dt is not None else ""
 
         result.delta_t = delta_t
         result.dt_source = dt_source
@@ -2058,6 +2062,7 @@ class HVACAnalyzer:
             result.action = "Kapalı"
             result.reason = "Ekipman kapalı (OFF). Analiz yapılmıyor."
             result.rule = "STANDBY"
+            result.atlama_nedeni = result.atlama_nedeni or "KAPALI (OFF)"
             result.severity = "OPTIMAL"
             result.sat_status = "STANDBY"
             result.score = 0.0
@@ -2071,6 +2076,7 @@ class HVACAnalyzer:
             result.action = "Bekleme Modu"
             result.reason = "Sistem AUTO modda, vanalar kapalı. Ekipman talep bekliyor."
             result.rule = "STANDBY"
+            result.atlama_nedeni = result.atlama_nedeni or "BEKLEME (AUTO, vana kapalı)"
             result.severity = "OPTIMAL"
             result.sat_status = "STANDBY"
             result.score = 0.0
@@ -2119,6 +2125,7 @@ class HVACAnalyzer:
             result.action = "Bakımda"
             result.reason = f"Cihaz bakımda ({len(_bakimda)} bileşen). Bakım bitene kadar analiz yapılmıyor."
             result.rule = "MAINTENANCE"
+            result.atlama_nedeni = f"BAKIMDA ({len(_bakimda)} bileşen)"
             result.severity = "OPTIMAL"
             result.sat_status = "MAINTENANCE"
             result.score = 0.0
@@ -2133,13 +2140,19 @@ class HVACAnalyzer:
             profile.valves.cooling = None
 
         # --- SAĞLAMLAŞTIRMA F2: ÖN KOŞUL KAPISI (Start → Basınç → Sensör aralık) ---
-        # Start/Stop verisi gelen santrallerde analiz öncesi 3 kapılı onay zinciri çalışır.
-        # Veri yoksa (FCU'lar, nokta eklenmemiş santraller) eski davranış aynen sürer.
+        # Kapı; santral start/basınç TELEMETRİSİ gönderiyorsa VEYA nokta envanterinde
+        # start/basınç noktası TANIMLIYSA çalışır. Böylece değer bu döngüde gelmese bile
+        # (null okuma) sensör aralık kontrolü + Onay sütunu işler — 'sensör analizi
+        # yapmıyor / Onay boş' regresyonu giderilir. Nokta hiç tanımlı olmayan santraller
+        # (eski FCU'lar) eski davranışta kalır.
         _kapi_bulgu = None
-        if getattr(profile, "start_stop", None) is not None or getattr(profile, "pressure_pa", None) is not None:
+        _n = _nokta_var(profile.location, profile.name)
+        _kapi_aktif = (getattr(profile, "start_stop", None) is not None
+                       or getattr(profile, "pressure_pa", None) is not None
+                       or _n.get("start") or _n.get("basinc"))
+        if _kapi_aktif:
             try:
                 from on_kosul import kapi_degerlendir
-                _n = _nokta_var(profile.location, profile.name)
                 _kapi = kapi_degerlendir(
                     profile.location, profile.name,
                     start=profile.start_stop,
@@ -4488,9 +4501,12 @@ async def analyze_data(rows: List[Dict[str, Any]],
     # Kolektör sıcaklıklarını AUTO mode ekipmanlara ata
     logger.debug("=== KOLEKTÖR ATAMA BAŞLADI ===")
     for profile in profiles:
-        # Sadece AHU ve FCU için
+        # SADECE FCU için — AHU'da kolektör suyu enjeksiyonu YASAK (S1): kolektör su
+        # ΔT'si tüm AHU'lara aynı gelir, bu da sahte su-tarafı TERS_DT / LOW_DT_SYNDROME
+        # üretir (MAS-1'de emiş sensörü olmayan santraller birebir aynı ΔT vakası).
+        # AHU metriği daima hava ΔT'sidir (SAT-Return); emiş yoksa ΔT boş kalır.
         eq_type = analyzer.classify_equipment_type(profile.type)
-        if eq_type not in [EquipmentType.AHU, EquipmentType.FCU]:
+        if eq_type != EquipmentType.FCU:
             continue
 
         logger.debug(f"Ekipman: {profile.name} ({eq_type})")
