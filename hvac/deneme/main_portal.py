@@ -2255,6 +2255,7 @@ class HVACAnalyzer:
             result.band = "N/A"
             result.action = "Sensör Arızalı - ΔT Bant Kontrolü Atlandı"
             result.reason = "Bakım kartında arızalı işaretli sensör var; hava ΔT bant analizi güvenilmez."
+            result.rule = "SENSOR_FAULT"   # Kural sütunu boş kalmasın (özel kural sonra ezebilir)
             result.score = 3.0
         elif delta_t is None:
             result.status = "MISSING_DATA"
