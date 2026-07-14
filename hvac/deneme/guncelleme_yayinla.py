@@ -214,4 +214,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        print("\n❌ Beklenmeyen bir hata oluştu:")
+        print(traceback.format_exc())
+        input("\nÇıkmak için Enter'a basın...")

@@ -1,2752 +1,3862 @@
 [
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 22
-  },
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 19
-  },
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 14
-  },
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 12
-  },
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 2,
-    "obj_inst": 31
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 30
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 23
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 19
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 17
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 2,
-    "obj_inst": 46
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 0,
-    "obj_inst": 16
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 0,
-    "obj_inst": 11
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 1,
-    "obj_inst": 16
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 1,
-    "obj_inst": 14
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 2,
-    "obj_inst": 166
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 0,
-    "obj_inst": 53
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 0,
-    "obj_inst": 47
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 1,
-    "obj_inst": 40
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 1,
-    "obj_inst": 38
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 2,
-    "obj_inst": 442
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 0,
-    "obj_inst": 20
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 0,
-    "obj_inst": 17
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 1,
-    "obj_inst": 21
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 1,
-    "obj_inst": 19
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0106",
-    "obj_type": 2,
-    "obj_inst": 184
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 172
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 169
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 124
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 122
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 2,
-    "obj_inst": 1287
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 60
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 56
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 20
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 23
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 2,
-    "obj_inst": 327
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 186
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 183
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 134
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 132
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 2,
-    "obj_inst": 1323
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 190
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 187
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 139
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 137
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 2,
-    "obj_inst": 1341
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 197
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 191
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 144
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 142
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 2,
-    "obj_inst": 1360
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 152
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 143
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 109
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 107
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 2,
-    "obj_inst": 1248
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 167
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 158
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 119
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 117
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x0108",
-    "obj_type": 2,
-    "obj_inst": 1268
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 72
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 70
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 24
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 27
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 2,
-    "obj_inst": 407
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 84
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 82
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 29
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 32
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 2,
-    "obj_inst": 488
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 96
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 94
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 34
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 1,
-    "obj_inst": 37
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.12",
-    "dnet": 10,
-    "mac_hex": "0x0101",
-    "obj_type": 2,
-    "obj_inst": 569
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 67
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 65
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 28
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 31
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 2,
-    "obj_inst": 254
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 81
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 79
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 33
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 37
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 2,
-    "obj_inst": 337
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 103
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 101
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 48
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 52
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 2,
-    "obj_inst": 510
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 86
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 82
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 41
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 39
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 2,
-    "obj_inst": 426
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 0,
-    "obj_inst": 43
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 0,
-    "obj_inst": 44
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 1,
-    "obj_inst": 34
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 1,
-    "obj_inst": 32
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 2,
-    "obj_inst": 428
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 0,
-    "obj_inst": 58
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 0,
-    "obj_inst": 54
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 1,
-    "obj_inst": 44
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 1,
-    "obj_inst": 42
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x0105",
-    "obj_type": 2,
-    "obj_inst": 460
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x011B",
-    "obj_type": 0,
-    "obj_inst": 35
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x011B",
-    "obj_type": 0,
-    "obj_inst": 27
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x011B",
-    "obj_type": 1,
-    "obj_inst": 40
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x011B",
-    "obj_type": 1,
-    "obj_inst": 38
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.2",
-    "dnet": 2,
-    "mac_hex": "0x011B",
-    "obj_type": 2,
-    "obj_inst": 84
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 0,
-    "obj_inst": 94
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.8",
-    "dnet": 16,
-    "mac_hex": "0x0101",
-    "obj_type": 0,
-    "obj_inst": 34
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 45
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 1,
-    "obj_inst": 43
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-1",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.3",
-    "dnet": 1,
-    "mac_hex": "0x010D",
-    "obj_type": 2,
-    "obj_inst": 446
-  },
-  {
-    "ahu_adi": "Ahu-1",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 0,
-    "obj_inst": 10
-  },
-  {
-    "ahu_adi": "Ahu-1",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 0,
-    "obj_inst": 8
-  },
-  {
-    "ahu_adi": "Ahu-1",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 1,
-    "obj_inst": 1
-  },
-  {
-    "ahu_adi": "Ahu-1",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 1,
-    "obj_inst": 5
-  },
-  {
-    "ahu_adi": "Ahu-1",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 2,
-    "obj_inst": 3
-  },
-  {
-    "ahu_adi": "Ahu-2",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 10
-  },
-  {
-    "ahu_adi": "Ahu-2",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 8
-  },
-  {
-    "ahu_adi": "Ahu-2",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 1
-  },
-  {
-    "ahu_adi": "Ahu-2",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 5
-  },
-  {
-    "ahu_adi": "Ahu-2",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 3
-  },
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 0,
-    "obj_inst": 94
-  },
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 0,
-    "obj_inst": 92
-  },
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 1,
-    "obj_inst": 55
-  },
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 1,
-    "obj_inst": 59
-  },
-  {
-    "ahu_adi": "Ahu-3",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 2,
-    "obj_inst": 650
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 20
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 18
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 7
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 11
-  },
-  {
-    "ahu_adi": "Ahu-4",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 75
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 29
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 27
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 12
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 16
-  },
-  {
-    "ahu_adi": "Ahu-5",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 146
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 0,
-    "obj_inst": 19
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 0,
-    "obj_inst": 17
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 1,
-    "obj_inst": 7
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 1,
-    "obj_inst": 11
-  },
-  {
-    "ahu_adi": "Ahu-6",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 2,
-    "obj_inst": 75
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 39
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 37
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 18
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 22
-  },
-  {
-    "ahu_adi": "Ahu-7",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 218
-  },
-  {
-    "ahu_adi": "Ahu-8",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 48
-  },
-  {
-    "ahu_adi": "Ahu-8",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 46
-  },
-  {
-    "ahu_adi": "Ahu-8",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 24
-  },
-  {
-    "ahu_adi": "Ahu-8",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 28
-  },
-  {
-    "ahu_adi": "Ahu-8",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 290
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 0,
-    "obj_inst": 67
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 0,
-    "obj_inst": 65
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 1,
-    "obj_inst": 36
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 1,
-    "obj_inst": 40
-  },
-  {
-    "ahu_adi": "Ahu-9",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 2,
-    "obj_inst": 434
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 76
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 74
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 40
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 44
-  },
-  {
-    "ahu_adi": "Ahu-10",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 436
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 0,
-    "obj_inst": 76
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 0,
-    "obj_inst": 74
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 1,
-    "obj_inst": 42
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 1,
-    "obj_inst": 46
-  },
-  {
-    "ahu_adi": "Ahu-11",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 2,
-    "obj_inst": 506
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 0,
-    "obj_inst": 28
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 0,
-    "obj_inst": 26
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 1,
-    "obj_inst": 13
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 1,
-    "obj_inst": 17
-  },
-  {
-    "ahu_adi": "Ahu-12",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0120",
-    "obj_type": 2,
-    "obj_inst": 147
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 0,
-    "obj_inst": 85
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 0,
-    "obj_inst": 83
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 1,
-    "obj_inst": 48
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 1,
-    "obj_inst": 52
-  },
-  {
-    "ahu_adi": "Ahu-13",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0103",
-    "obj_type": 2,
-    "obj_inst": 578
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 0,
-    "obj_inst": 9
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 0,
-    "obj_inst": 7
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 1,
-    "obj_inst": 1
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 1,
-    "obj_inst": 5
-  },
-  {
-    "ahu_adi": "Ahu-14",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 2,
-    "obj_inst": 3
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 0,
-    "obj_inst": 18
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 0,
-    "obj_inst": 16
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 1,
-    "obj_inst": 7
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 1,
-    "obj_inst": 11
-  },
-  {
-    "ahu_adi": "Ahu-15",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 2,
-    "obj_inst": 75
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 7
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 5
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 1
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 4
-  },
-  {
-    "ahu_adi": "Ahu-16",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 2
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 14
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 12
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 6
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 9
-  },
-  {
-    "ahu_adi": "Ahu-17",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 285
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 21
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 19
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 11
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 14
-  },
-  {
-    "ahu_adi": "Ahu-18",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 286
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 28
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 0,
-    "obj_inst": 26
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 16
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 1,
-    "obj_inst": 19
-  },
-  {
-    "ahu_adi": "Ahu-19",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011C",
-    "obj_type": 2,
-    "obj_inst": 287
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 10
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 8
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 1
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 5
-  },
-  {
-    "ahu_adi": "Ahu-20",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 2,
-    "obj_inst": 3
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 19
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 17
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 6
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 10
-  },
-  {
-    "ahu_adi": "Ahu-21",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 2,
-    "obj_inst": 75
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 60
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 58
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 26
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 24
-  },
-  {
-    "ahu_adi": "Ahu-22",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 2,
-    "obj_inst": 293
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 49
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 47
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 21
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 24
-  },
-  {
-    "ahu_adi": "Ahu-23",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 2,
-    "obj_inst": 222
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 0,
-    "obj_inst": 27
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 0,
-    "obj_inst": 25
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 1,
-    "obj_inst": 13
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 1,
-    "obj_inst": 17
-  },
-  {
-    "ahu_adi": "Ahu-24",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 2,
-    "obj_inst": 147
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 0,
-    "obj_inst": 36
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 0,
-    "obj_inst": 34
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 1,
-    "obj_inst": 19
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 1,
-    "obj_inst": 23
-  },
-  {
-    "ahu_adi": "Ahu-26",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x011D",
-    "obj_type": 2,
-    "obj_inst": 219
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 28
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 0,
-    "obj_inst": 26
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 11
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 1,
-    "obj_inst": 15
-  },
-  {
-    "ahu_adi": "Ahu-27",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x011F",
-    "obj_type": 2,
-    "obj_inst": 147
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0121",
-    "obj_type": 0,
-    "obj_inst": 11
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0121",
-    "obj_type": 0,
-    "obj_inst": 9
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0121",
-    "obj_type": 1,
-    "obj_inst": 4
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0121",
-    "obj_type": 1,
-    "obj_inst": 7
-  },
-  {
-    "ahu_adi": "Ahu-28",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.4",
-    "dnet": 4,
-    "mac_hex": "0x0121",
-    "obj_type": 2,
-    "obj_inst": 2
-  },
-  {
-    "ahu_adi": "Ahu-29",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0104",
-    "obj_type": 0,
-    "obj_inst": 131
-  },
-  {
-    "ahu_adi": "Ahu-29",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0104",
-    "obj_type": 0,
-    "obj_inst": 129
-  },
-  {
-    "ahu_adi": "Ahu-29",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0104",
-    "obj_type": 1,
-    "obj_inst": 74
-  },
-  {
-    "ahu_adi": "Ahu-29",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0104",
-    "obj_type": 1,
-    "obj_inst": 78
-  },
-  {
-    "ahu_adi": "Ahu-29",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.6",
-    "dnet": 6,
-    "mac_hex": "0x0104",
-    "obj_type": 2,
-    "obj_inst": 867
-  },
-  {
-    "ahu_adi": "Ahu-30",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0121",
-    "obj_type": 0,
-    "obj_inst": 43
-  },
-  {
-    "ahu_adi": "Ahu-30",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0121",
-    "obj_type": 0,
-    "obj_inst": 41
-  },
-  {
-    "ahu_adi": "Ahu-30",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0121",
-    "obj_type": 1,
-    "obj_inst": 27
-  },
-  {
-    "ahu_adi": "Ahu-30",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0121",
-    "obj_type": 1,
-    "obj_inst": 31
-  },
-  {
-    "ahu_adi": "Ahu-30",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0121",
-    "obj_type": 2,
-    "obj_inst": 4
-  },
-  {
-    "ahu_adi": "Ahu-31",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 6,
-    "mac_hex": "0x0102",
-    "obj_type": 0,
-    "obj_inst": 75
-  },
-  {
-    "ahu_adi": "Ahu-31",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 6,
-    "mac_hex": "0x0102",
-    "obj_type": 0,
-    "obj_inst": 73
-  },
-  {
-    "ahu_adi": "Ahu-31",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 6,
-    "mac_hex": "0x0102",
-    "obj_type": 1,
-    "obj_inst": 37
-  },
-  {
-    "ahu_adi": "Ahu-31",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 6,
-    "mac_hex": "0x0102",
-    "obj_type": 1,
-    "obj_inst": 41
-  },
-  {
-    "ahu_adi": "Ahu-31",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 6,
-    "mac_hex": "0x0102",
-    "obj_type": 0,
-    "obj_inst": 76
-  },
-  {
-    "ahu_adi": "Ahu-33",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 91
-  },
-  {
-    "ahu_adi": "Ahu-33",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 89
-  },
-  {
-    "ahu_adi": "Ahu-33",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 44
-  },
-  {
-    "ahu_adi": "Ahu-33",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 48
-  },
-  {
-    "ahu_adi": "Ahu-33",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 2,
-    "obj_inst": 506
-  },
-  {
-    "ahu_adi": "Ahu-34",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "SAT (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 102
-  },
-  {
-    "ahu_adi": "Ahu-34",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Return (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 0,
-    "obj_inst": 100
-  },
-  {
-    "ahu_adi": "Ahu-34",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Cool Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 50
-  },
-  {
-    "ahu_adi": "Ahu-34",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Heat Valve (%)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 1,
-    "obj_inst": 54
-  },
-  {
-    "ahu_adi": "Ahu-34",
-    "lokasyon": "MAS-2",
-    "nokta_tipi": "Set (°C)",
-    "gateway_ip": "192.168.0.5",
-    "dnet": 5,
-    "mac_hex": "0x0108",
-    "obj_type": 2,
-    "obj_inst": 578
-  }
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 22
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 19
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 14
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 12
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 2,
+  "obj_inst": 31
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 30
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 23
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 19
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 17
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 2,
+  "obj_inst": 46
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 0,
+  "obj_inst": 16
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 0,
+  "obj_inst": 11
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 1,
+  "obj_inst": 16
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 1,
+  "obj_inst": 14
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 2,
+  "obj_inst": 166
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 0,
+  "obj_inst": 53
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 0,
+  "obj_inst": 47
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 1,
+  "obj_inst": 40
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 1,
+  "obj_inst": 38
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 2,
+  "obj_inst": 442
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 0,
+  "obj_inst": 20
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 0,
+  "obj_inst": 17
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 1,
+  "obj_inst": 21
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 1,
+  "obj_inst": 19
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 2,
+  "obj_inst": 184
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 172
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 169
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 124
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 122
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 2,
+  "obj_inst": 1287
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 60
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 56
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 20
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 23
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 2,
+  "obj_inst": 327
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 186
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 183
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 134
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 132
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 2,
+  "obj_inst": 1323
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 190
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 187
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 139
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 137
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 2,
+  "obj_inst": 1341
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 197
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 191
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 144
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 142
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 2,
+  "obj_inst": 1360
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 152
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 143
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 109
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 107
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 2,
+  "obj_inst": 1248
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 167
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 158
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 119
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 117
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 2,
+  "obj_inst": 1268
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 72
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 70
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 24
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 27
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 2,
+  "obj_inst": 47
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 84
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 82
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 29
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 32
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 2,
+  "obj_inst": 488
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 96
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 94
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 34
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 1,
+  "obj_inst": 37
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 2,
+  "obj_inst": 569
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 67
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 65
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 28
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 31
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 2,
+  "obj_inst": 254
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 81
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 79
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 33
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 37
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 2,
+  "obj_inst": 337
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 103
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 101
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 48
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 52
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 2,
+  "obj_inst": 510
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 86
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 82
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 41
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 39
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 2,
+  "obj_inst": 426
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 204
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 192
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 149
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 147
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 2,
+  "obj_inst": 1379
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 0,
+  "obj_inst": 43
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 0,
+  "obj_inst": 44
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 1,
+  "obj_inst": 34
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 1,
+  "obj_inst": 32
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 2,
+  "obj_inst": 428
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 0,
+  "obj_inst": 58
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 0,
+  "obj_inst": 54
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 1,
+  "obj_inst": 44
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 1,
+  "obj_inst": 42
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 2,
+  "obj_inst": 460
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x011B",
+  "obj_type": 0,
+  "obj_inst": 35
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x011B",
+  "obj_type": 0,
+  "obj_inst": 27
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x011B",
+  "obj_type": 1,
+  "obj_inst": 40
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x011B",
+  "obj_type": 1,
+  "obj_inst": 38
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x011B",
+  "obj_type": 2,
+  "obj_inst": 84
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 94
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 34
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 45
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 1,
+  "obj_inst": 43
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 2,
+  "obj_inst": 446
+ },
+ {
+  "ahu_adi": "Ahu-1",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 0,
+  "obj_inst": 10
+ },
+ {
+  "ahu_adi": "Ahu-1",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 0,
+  "obj_inst": 8
+ },
+ {
+  "ahu_adi": "Ahu-1",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 1,
+  "obj_inst": 1
+ },
+ {
+  "ahu_adi": "Ahu-1",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 1,
+  "obj_inst": 5
+ },
+ {
+  "ahu_adi": "Ahu-1",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 2,
+  "obj_inst": 3
+ },
+ {
+  "ahu_adi": "Ahu-2",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 10
+ },
+ {
+  "ahu_adi": "Ahu-2",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 8
+ },
+ {
+  "ahu_adi": "Ahu-2",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 1
+ },
+ {
+  "ahu_adi": "Ahu-2",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 5
+ },
+ {
+  "ahu_adi": "Ahu-2",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 3
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 94
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 92
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 1,
+  "obj_inst": 55
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 1,
+  "obj_inst": 59
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 2,
+  "obj_inst": 650
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 20
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 18
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 7
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 11
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 75
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 29
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 27
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 12
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 16
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 146
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 0,
+  "obj_inst": 19
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 0,
+  "obj_inst": 17
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 1,
+  "obj_inst": 7
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 1,
+  "obj_inst": 11
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 2,
+  "obj_inst": 75
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 39
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 37
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 18
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 22
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 218
+ },
+ {
+  "ahu_adi": "Ahu-8",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 48
+ },
+ {
+  "ahu_adi": "Ahu-8",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 46
+ },
+ {
+  "ahu_adi": "Ahu-8",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 24
+ },
+ {
+  "ahu_adi": "Ahu-8",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 28
+ },
+ {
+  "ahu_adi": "Ahu-8",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 290
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 67
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 65
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 1,
+  "obj_inst": 36
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 1,
+  "obj_inst": 40
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 2,
+  "obj_inst": 434
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 76
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 74
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 40
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 44
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 436
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 76
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 74
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 1,
+  "obj_inst": 42
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 1,
+  "obj_inst": 46
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 2,
+  "obj_inst": 506
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 0,
+  "obj_inst": 28
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 0,
+  "obj_inst": 26
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 1,
+  "obj_inst": 13
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 1,
+  "obj_inst": 17
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 2,
+  "obj_inst": 147
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 85
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 83
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 1,
+  "obj_inst": 48
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 1,
+  "obj_inst": 52
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 2,
+  "obj_inst": 578
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 9
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 7
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 1,
+  "obj_inst": 1
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 1,
+  "obj_inst": 5
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 2,
+  "obj_inst": 3
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 18
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 16
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 1,
+  "obj_inst": 7
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 1,
+  "obj_inst": 11
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 2,
+  "obj_inst": 75
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 7
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 5
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 1
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 4
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 2
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 14
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 12
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 6
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 9
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 285
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 21
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 19
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 11
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 14
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 286
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 28
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 26
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 16
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 1,
+  "obj_inst": 19
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 2,
+  "obj_inst": 287
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 10
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 8
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 1
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 5
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 2,
+  "obj_inst": 3
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 19
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 17
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 6
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 10
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 2,
+  "obj_inst": 75
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 60
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 58
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 26
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 24
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 2,
+  "obj_inst": 293
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 49
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 47
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 21
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 24
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 2,
+  "obj_inst": 222
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 27
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 25
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 1,
+  "obj_inst": 13
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 1,
+  "obj_inst": 17
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 2,
+  "obj_inst": 147
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 36
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 34
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 1,
+  "obj_inst": 19
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 1,
+  "obj_inst": 23
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 2,
+  "obj_inst": 219
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 28
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 26
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 11
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 1,
+  "obj_inst": 15
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 2,
+  "obj_inst": 147
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0121",
+  "obj_type": 0,
+  "obj_inst": 11
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0121",
+  "obj_type": 0,
+  "obj_inst": 9
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0121",
+  "obj_type": 1,
+  "obj_inst": 4
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0121",
+  "obj_type": 1,
+  "obj_inst": 7
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0121",
+  "obj_type": 2,
+  "obj_inst": 2
+ },
+ {
+  "ahu_adi": "Ahu-29",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0104",
+  "obj_type": 0,
+  "obj_inst": 131
+ },
+ {
+  "ahu_adi": "Ahu-29",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0104",
+  "obj_type": 0,
+  "obj_inst": 129
+ },
+ {
+  "ahu_adi": "Ahu-29",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0104",
+  "obj_type": 1,
+  "obj_inst": 74
+ },
+ {
+  "ahu_adi": "Ahu-29",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0104",
+  "obj_type": 1,
+  "obj_inst": 78
+ },
+ {
+  "ahu_adi": "Ahu-29",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0104",
+  "obj_type": 2,
+  "obj_inst": 867
+ },
+ {
+  "ahu_adi": "Ahu-30",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0121",
+  "obj_type": 0,
+  "obj_inst": 43
+ },
+ {
+  "ahu_adi": "Ahu-30",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0121",
+  "obj_type": 0,
+  "obj_inst": 41
+ },
+ {
+  "ahu_adi": "Ahu-30",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0121",
+  "obj_type": 1,
+  "obj_inst": 27
+ },
+ {
+  "ahu_adi": "Ahu-30",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0121",
+  "obj_type": 1,
+  "obj_inst": 31
+ },
+ {
+  "ahu_adi": "Ahu-30",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0121",
+  "obj_type": 2,
+  "obj_inst": 4
+ },
+ {
+  "ahu_adi": "Ahu-31",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 6,
+  "mac_hex": "0x0102",
+  "obj_type": 0,
+  "obj_inst": 75
+ },
+ {
+  "ahu_adi": "Ahu-31",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 6,
+  "mac_hex": "0x0102",
+  "obj_type": 0,
+  "obj_inst": 73
+ },
+ {
+  "ahu_adi": "Ahu-31",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 6,
+  "mac_hex": "0x0102",
+  "obj_type": 1,
+  "obj_inst": 37
+ },
+ {
+  "ahu_adi": "Ahu-31",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 6,
+  "mac_hex": "0x0102",
+  "obj_type": 1,
+  "obj_inst": 41
+ },
+ {
+  "ahu_adi": "Ahu-31",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 6,
+  "mac_hex": "0x0102",
+  "obj_type": 0,
+  "obj_inst": 76
+ },
+ {
+  "ahu_adi": "Ahu-33",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 91
+ },
+ {
+  "ahu_adi": "Ahu-33",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 89
+ },
+ {
+  "ahu_adi": "Ahu-33",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 44
+ },
+ {
+  "ahu_adi": "Ahu-33",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 48
+ },
+ {
+  "ahu_adi": "Ahu-33",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 2,
+  "obj_inst": 506
+ },
+ {
+  "ahu_adi": "Ahu-34",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "SAT (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 102
+ },
+ {
+  "ahu_adi": "Ahu-34",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Return (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 100
+ },
+ {
+  "ahu_adi": "Ahu-34",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Cool Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 50
+ },
+ {
+  "ahu_adi": "Ahu-34",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Heat Valve (%)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 1,
+  "obj_inst": 54
+ },
+ {
+  "ahu_adi": "Ahu-34",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Set (°C)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 2,
+  "obj_inst": 578
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 4,
+  "obj_inst": 18
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 16,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 28
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 4,
+  "obj_inst": 7
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 0,
+  "obj_inst": 14
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 4,
+  "obj_inst": 26
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 0,
+  "obj_inst": 51
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0106",
+  "obj_type": 4,
+  "obj_inst": 10
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 4,
+  "obj_inst": 71
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 216
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 4,
+  "obj_inst": 5
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 53
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 4,
+  "obj_inst": 75
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 4,
+  "obj_inst": 77
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 4,
+  "obj_inst": 79
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 195
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 4,
+  "obj_inst": 66
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 149
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 4,
+  "obj_inst": 69
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 164
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 4,
+  "obj_inst": 6
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 65
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 4,
+  "obj_inst": 7
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 77
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 4,
+  "obj_inst": 8
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.12",
+  "dnet": 10,
+  "mac_hex": "0x0101",
+  "obj_type": 0,
+  "obj_inst": 89
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 4,
+  "obj_inst": 15
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 61
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 4,
+  "obj_inst": 18
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 74
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 4,
+  "obj_inst": 25
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 97
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 4,
+  "obj_inst": 21
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 84
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 4,
+  "obj_inst": 81
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.3",
+  "dnet": 1,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 202
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 4,
+  "obj_inst": 23
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 0,
+  "obj_inst": 41
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x0105",
+  "obj_type": 4,
+  "obj_inst": 28
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x011B",
+  "obj_type": 4,
+  "obj_inst": 6
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.2",
+  "dnet": 2,
+  "mac_hex": "0x011B",
+  "obj_type": 0,
+  "obj_inst": 31
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 4,
+  "obj_inst": 23
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-1",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.8",
+  "dnet": 1,
+  "mac_hex": "0x010D",
+  "obj_type": 0,
+  "obj_inst": 92
+ },
+ {
+  "ahu_adi": "Ahu-1",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 4,
+  "obj_inst": 2
+ },
+ {
+  "ahu_adi": "Ahu-1",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 0,
+  "obj_inst": 3
+ },
+ {
+  "ahu_adi": "Ahu-2",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 2
+ },
+ {
+  "ahu_adi": "Ahu-2",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 3
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 4,
+  "obj_inst": 20
+ },
+ {
+  "ahu_adi": "Ahu-3",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 88
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 4
+ },
+ {
+  "ahu_adi": "Ahu-4",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 13
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 6
+ },
+ {
+  "ahu_adi": "Ahu-5",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 23
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 4,
+  "obj_inst": 4
+ },
+ {
+  "ahu_adi": "Ahu-6",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 0,
+  "obj_inst": 13
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 8
+ },
+ {
+  "ahu_adi": "Ahu-7",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 32
+ },
+ {
+  "ahu_adi": "Ahu-8",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 10
+ },
+ {
+  "ahu_adi": "Ahu-8",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 42
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 4,
+  "obj_inst": 14
+ },
+ {
+  "ahu_adi": "Ahu-9",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 61
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 16
+ },
+ {
+  "ahu_adi": "Ahu-10",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 69
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 4,
+  "obj_inst": 16
+ },
+ {
+  "ahu_adi": "Ahu-11",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 70
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 4,
+  "obj_inst": 6
+ },
+ {
+  "ahu_adi": "Ahu-12",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0120",
+  "obj_type": 0,
+  "obj_inst": 22
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 4,
+  "obj_inst": 18
+ },
+ {
+  "ahu_adi": "Ahu-13",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0103",
+  "obj_type": 0,
+  "obj_inst": 79
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 4,
+  "obj_inst": 2
+ },
+ {
+  "ahu_adi": "Ahu-14",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 3
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 4,
+  "obj_inst": 4
+ },
+ {
+  "ahu_adi": "Ahu-15",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 12
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 1
+ },
+ {
+  "ahu_adi": "Ahu-16",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 1
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 2
+ },
+ {
+  "ahu_adi": "Ahu-17",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 8
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 3
+ },
+ {
+  "ahu_adi": "Ahu-18",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 15
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 4,
+  "obj_inst": 4
+ },
+ {
+  "ahu_adi": "Ahu-19",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011C",
+  "obj_type": 0,
+  "obj_inst": 22
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 4,
+  "obj_inst": 2
+ },
+ {
+  "ahu_adi": "Ahu-20",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 3
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 4,
+  "obj_inst": 4
+ },
+ {
+  "ahu_adi": "Ahu-21",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 13
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 4,
+  "obj_inst": 15
+ },
+ {
+  "ahu_adi": "Ahu-22",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 54
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 4,
+  "obj_inst": 13
+ },
+ {
+  "ahu_adi": "Ahu-23",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 43
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 4,
+  "obj_inst": 6
+ },
+ {
+  "ahu_adi": "Ahu-24",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 21
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 4,
+  "obj_inst": 8
+ },
+ {
+  "ahu_adi": "Ahu-26",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x011D",
+  "obj_type": 0,
+  "obj_inst": 30
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 4,
+  "obj_inst": 6
+ },
+ {
+  "ahu_adi": "Ahu-27",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x011F",
+  "obj_type": 0,
+  "obj_inst": 22
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0121",
+  "obj_type": 4,
+  "obj_inst": 18
+ },
+ {
+  "ahu_adi": "Ahu-28",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.4",
+  "dnet": 4,
+  "mac_hex": "0x0121",
+  "obj_type": 0,
+  "obj_inst": 5
+ },
+ {
+  "ahu_adi": "Ahu-29",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0104",
+  "obj_type": 4,
+  "obj_inst": 28
+ },
+ {
+  "ahu_adi": "Ahu-29",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.6",
+  "dnet": 6,
+  "mac_hex": "0x0104",
+  "obj_type": 0,
+  "obj_inst": 125
+ },
+ {
+  "ahu_adi": "Ahu-30",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0121",
+  "obj_type": 4,
+  "obj_inst": 30
+ },
+ {
+  "ahu_adi": "Ahu-30",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0121",
+  "obj_type": 0,
+  "obj_inst": 37
+ },
+ {
+  "ahu_adi": "Ahu-31",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 6,
+  "mac_hex": "0x0102",
+  "obj_type": 4,
+  "obj_inst": 23
+ },
+ {
+  "ahu_adi": "Ahu-31",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 6,
+  "mac_hex": "0x0102",
+  "obj_type": 0,
+  "obj_inst": 69
+ },
+ {
+  "ahu_adi": "Ahu-33",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 4,
+  "obj_inst": 23
+ },
+ {
+  "ahu_adi": "Ahu-33",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 85
+ },
+ {
+  "ahu_adi": "Ahu-34",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Start/Stop",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 4,
+  "obj_inst": 26
+ },
+ {
+  "ahu_adi": "Ahu-34",
+  "lokasyon": "MAS-2",
+  "nokta_tipi": "Basınç (Pa)",
+  "gateway_ip": "192.168.0.5",
+  "dnet": 5,
+  "mac_hex": "0x0108",
+  "obj_type": 0,
+  "obj_inst": 96
+ }
 ]

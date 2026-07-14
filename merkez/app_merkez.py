@@ -695,7 +695,7 @@ for lok_id in HASTANELER:
 BAKIM_BILESENLER = [
     "heating_valve_body", "heating_valve_signal",
     "cooling_valve_body", "cooling_valve_signal",
-    "supply_sensor", "return_sensor",
+    "supply_sensor", "return_sensor", "pressure_sensor",
 ]
 BAKIM_BILESEN_ETIKET = {
     "heating_valve_body":   "Isıtma Vanası Gövde",
@@ -703,6 +703,7 @@ BAKIM_BILESEN_ETIKET = {
     "cooling_valve_body":   "Soğutma Vanası Gövde",
     "cooling_valve_signal": "Soğutma Vanası 0-10V",
     "supply_sensor":        "Üfleme Sensör",
+    "pressure_sensor":      "Basınç Sensörü",
     "return_sensor":        "Emiş Sensör",
 }
 BAKIM_DURUMLAR = ["OK", "FAULTY", "MAINTENANCE", "N/A"]

@@ -1149,6 +1149,11 @@
                                 onclick="filterResults('optimal')">
                                 <i class="fas fa-check-circle"></i> Optimal
                             </button>
+                            <button class="btn btn-sm filter-btn" data-filter="analizdisi"
+                                onclick="filterResults('analizdisi')" id="analizDisiBtn"
+                                title="Ön koşul kapısında atlanan santraller (STOP / sensör arızası / fan basmıyor / veri yok)">
+                                <i class="fas fa-ban"></i> Analiz Dışı <span id="analizDisiSayi"></span>
+                            </button>
                             <button class="btn btn-sm filter-btn filter-tekrar" data-filter="tekrar"
                                 onclick="showTekrarOzet()">
                                 <i class="fas fa-redo"></i> Tekrarlayan Alarmlar
@@ -1222,6 +1227,9 @@
 
                                 <th>Yaklaşım Gidiş</th>
                                 <th>Yaklaşım Dönüş</th>
+                                <th>ΔT Kaynağı</th>
+                                <th>Onay</th>
+                                <th>Atlama Nedeni</th>
                                 <th>Kural</th>
                                 <th>Talimat</th>
                                 <th>Tekrar (Bu Ay)</th>
@@ -1229,7 +1237,7 @@
                         </thead>
                         <tbody id="resultsBody">
                             <tr>
-                                <td colspan="15" class="empty-state">
+                                <td colspan="19" class="empty-state">
                                     <i class="fas fa-inbox"></i>
                                     <div>Henüz analiz yapılmadı. Veri yükleyin veya örnek veri seçin.</div>
                                 </td>
@@ -1782,6 +1790,8 @@
                 } else if (filter === 'warning' && badge === 'warning') {
                     show = true;
                 } else if (filter === 'optimal' && badge === 'optimal') {
+                    show = true;
+                } else if (filter === 'analizdisi' && row.dataset.analizdisi === '1') {
                     show = true;
                 }
 
@@ -2818,7 +2828,7 @@
             tbody.innerHTML = '';
 
             if (currentResults.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="16" class="empty-state"><i class="fas fa-inbox"></i><div>Sonuç bulunamadı</div></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="19" class="empty-state"><i class="fas fa-inbox"></i><div>Sonuç bulunamadı</div></td></tr>';
                 updateKPIs(0, 0, 0, 0);
                 updateChart([]);
                 return;
@@ -2843,6 +2853,15 @@
                 else if (severity === 'WARNING') badgeClass = 'badge-warning';
                 else if (row.Status === 'MISSING_DATA') badgeClass = 'badge-missing';
 
+                // SAĞLAMLAŞTIRMA: Analiz Dışı işareti (ön koşul kapısında atlananlar)
+                const _rule = String(row.Rule || '');
+                const _status = String(row.Status || '');
+                const _analizDisi = _rule.startsWith('SKIP') || _rule === 'FAN_BASMIYOR' ||
+                    ['ANALIZ_DISI', 'STANDBY', 'MAINTENANCE'].includes(_status) ||
+                    (row['Atlama Nedeni'] || '') !== '';
+                tr.dataset.analizdisi = _analizDisi ? '1' : '0';
+                if (_analizDisi) tr.style.opacity = '0.75';
+
                 tr.innerHTML = `
                     <td>${row.Location || row.Mahal || ''}</td>
                     <td>${row.Type || ''}</td>
@@ -2858,6 +2877,9 @@
 
                     <td>${row['Approach_Supply (°C)'] || ''}</td>
                     <td>${row['Approach_Return (°C)'] || ''}</td>
+                    <td><small>${row['DT Source'] || ''}</small></td>
+                    <td>${row['Onay'] || ''}</td>
+                    <td>${(row['Atlama Nedeni'] && row['Atlama Nedeni'].includes('ESKALASYON')) ? '<span style="color:#ef4444;font-weight:700;">'+row['Atlama Nedeni']+'</span>' : (row['Atlama Nedeni'] || '')}</td>
                     <td><small>${row.Rule || ''}</small></td>
                     <td><button class="instruction-btn" onclick="showInstructions('${row.Rule || ''}')" >ℹ️ Talimat</button></td>
                     <td>${row['Tekrar (Bu Ay)'] || ''}</td>
@@ -2870,6 +2892,11 @@
             updateChart(scores);
             updateCapacityStatus(currentResults);
             updateCoolingKw(currentResults);
+
+            // Analiz Dışı sayacı (buton rozetinde göster)
+            const _adCount = tbody.querySelectorAll('tr[data-analizdisi="1"]').length;
+            const _adSpan = document.getElementById('analizDisiSayi');
+            if (_adSpan) _adSpan.textContent = _adCount > 0 ? `(${_adCount})` : '';
         }
 
         // Talep edilen / üretilen soğutma kW (AHU bazlı)
@@ -3232,6 +3259,7 @@
                 'Cool Valve (%)', 'Heat Valve (%)',
                 'SAT (°C)', 'Return Temp (°C)',
                 'Approach Supply (°C)', 'Approach Return (°C)',
+                'ΔT Kaynağı', 'Onay', 'Atlama Nedeni',
                 'Rule'
             ];
 
@@ -3261,6 +3289,9 @@
                 'Return Temp (°C)':      getVal(row, ['Return (°C)', 'Return Temp', 'return_temp', 'RAT']),
                 'Approach Supply (°C)':  getVal(row, ['Approach_Supply (°C)', 'Approach Supply (°C)']),
                 'Approach Return (°C)':  getVal(row, ['Approach_Return (°C)', 'Approach Return (°C)']),
+                'ΔT Kaynağı':            getVal(row, ['DT Source']),
+                'Onay':                  getVal(row, ['Onay']),
+                'Atlama Nedeni':         getVal(row, ['Atlama Nedeni']),
                 'Rule':                  getVal(row, ['Rule', 'rule'])
             }));
 
@@ -3274,7 +3305,7 @@
                 { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
                 { wch: 18 }, { wch: 8 },  { wch: 10 }, { wch: 12 },
                 { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 16 },
-                { wch: 16 }, { wch: 20 }
+                { wch: 16 }, { wch: 14 }, { wch: 8 }, { wch: 20 }, { wch: 20 }
             ];
 
             XLSX.utils.book_append_sheet(wb, ws, 'HVAC Analiz');
@@ -3701,7 +3732,7 @@
             try {
                 const cards = (maintenanceData && maintenanceData.cards) || {};
                 const filter = document.getElementById('maintPdfFilter').value;
-                const components = ['heating_valve_body', 'heating_valve_signal', 'cooling_valve_body', 'cooling_valve_signal', 'supply_sensor', 'return_sensor'];
+                const components = ['heating_valve_body', 'heating_valve_signal', 'cooling_valve_body', 'cooling_valve_signal', 'supply_sensor', 'return_sensor', 'pressure_sensor'];
                 const totalComp = components.length;
 
                 // Her santral için özet satır oluştur: arızalı/bakımdaki bileşen sayısı + durum
@@ -3915,6 +3946,7 @@
                 cooling_valve_signal: 'OK',
                 supply_sensor: 'OK',
                 return_sensor: 'OK',
+                pressure_sensor: 'OK',
                 notes: ''
             };
             nameInput.value = '';
@@ -3933,7 +3965,7 @@
             // Local state'den yeniden render
             renderMaintenanceCards(
                 maintenanceData,
-                ['heating_valve_body', 'heating_valve_signal', 'cooling_valve_body', 'cooling_valve_signal', 'supply_sensor', 'return_sensor'],
+                ['heating_valve_body', 'heating_valve_signal', 'cooling_valve_body', 'cooling_valve_signal', 'supply_sensor', 'return_sensor', 'pressure_sensor'],
                 ['OK', 'FAULTY', 'MAINTENANCE', 'N/A'],
                 {
                     heating_valve_body: 'Isıtma Vanası Gövde',
@@ -3941,7 +3973,8 @@
                     cooling_valve_body: 'Soğutma Vanası Gövde',
                     cooling_valve_signal: 'Soğutma Vanası 0-10V',
                     supply_sensor: 'Üfleme Sensör',
-                    return_sensor: 'Emiş Sensör'
+                    return_sensor: 'Emiş Sensör',
+                    pressure_sensor: 'Basınç Sensörü'
                 }
             );
         }

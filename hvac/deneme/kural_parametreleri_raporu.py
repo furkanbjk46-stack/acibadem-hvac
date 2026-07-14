@@ -209,6 +209,14 @@ def build():
     headers7 = ["Kural", "Skor", "Kategori", "Gecerli Ekipman", "Kullandigi Sahalar / Tetikleyici"]
     cw7 = [50, 15, 25, 35, 152]
     rows7 = [
+        ["FAN_BASMIYOR", "9.5", "CRITICAL", "Sadece AHU (basinc noktali)",
+         "Start=ACIK + kanal basinci <=20 Pa (2 ardisik) -> fan hava basmiyor"],
+        ["TERS_DT", "8.5", "CRITICAL", "Sadece AHU",
+         "Sogutmada hava dT < -1.0C (ufleme emisten sicak)"],
+        ["LOKAL_CALISMA", "6.0", "WARNING", "Sadece AHU (start noktali)",
+         "Start=KAPALI + basinc >20 Pa -> BMS disi lokal calistirma"],
+        ["VERI_EKSIK", "5.0", "WARNING", "AHU",
+         "SAT hedef disi + EMIS verisi yok -> teshis dogrulanamaz"],
         ["SIMUL_HEAT_COOL", "10.0", "CRITICAL", "AHU + FCU", "Heat Valve (%) ve Cool Valve (%) >= %5"],
         ["CHILLER_BYPASS", "9.0", "CRITICAL", "Sadece CHILLER", "Plant/Inlet-Outlet ΔT < 1.0°C"],
         ["NOT_COOLING", "9.0", "CRITICAL", "AHU + FCU", "SAT (°C), Mode=Cooling, SAT > Set+tol, vana >=%70"],

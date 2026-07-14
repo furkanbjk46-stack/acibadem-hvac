@@ -24,6 +24,7 @@ BILESEN_ETIKET = {
     "cooling_valve_signal": "Soğutma Vanası 0-10V",
     "supply_sensor":        "Üfleme Sensörü",
     "return_sensor":        "Emiş Sensörü",
+    "pressure_sensor":      "Basınç Sensörü",
 }
 
 # Renkler (RGB)
@@ -78,6 +79,28 @@ def generate(year: int = None, month: int = None) -> str:
 
     cards = (_oku(CARDS_FILE).get("cards") or {})
     takvim_kayit = _oku(TAKVIM_FILE).get(ay_str) or {}
+
+    # Denetim izi özeti: bu ay elle susturma sayısı + aktif susturmalar (kandırma paterni)
+    AUDIT_FILE = os.path.join(BASE_DIR, "configs", "bakim_audit_log.jsonl")
+    elle_susturma = 0
+    try:
+        with open(AUDIT_FILE, "r", encoding="utf-8") as f:
+            for satir in f:
+                try:
+                    k = json.loads(satir)
+                    if k.get("neden") == "elle susturma" and str(k.get("ts", "")).startswith(ay_str):
+                        elle_susturma += 1
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    aktif_susturma = []
+    simdi_iso = now.isoformat(timespec="seconds")
+    for ad, c in cards.items():
+        for k in BILESEN_ETIKET:
+            sup = (c.get(k + "_meta") or {}).get("suppressed_until")
+            if sup and sup > simdi_iso:
+                aktif_susturma.append(f"{ad} · {BILESEN_ETIKET[k]}")
     bakim_yapildi = bool(takvim_kayit.get("yapildi"))
     bakim_tarih = takvim_kayit.get("tarih", "")
 
@@ -125,6 +148,13 @@ def generate(year: int = None, month: int = None) -> str:
     pdf.cell(0, 8, f"Özet: {len(cards)} santral  |  {len(sorunlu)} santralde kayıt  |  "
                    f"{toplam_ariza} ARIZALI bileşen  |  {toplam_bakim} BAKIMDA bileşen",
              new_x="LMARGIN", new_y="NEXT")
+    # Denetim izi satırı (elle susturma paterni görünür kalsın — SAĞLAMLAŞTIRMA 4.3)
+    pdf.set_font(font, "", 9)
+    pdf.set_text_color(*(KIRMIZI if (elle_susturma or aktif_susturma) else GRI))
+    _sus_txt = f"Denetim izi: bu ay {elle_susturma} elle susturma"
+    if aktif_susturma:
+        _sus_txt += "  |  AKTİF SUSTURULMUŞ: " + ", ".join(aktif_susturma[:6])
+    pdf.cell(0, 6, _sus_txt, new_x="LMARGIN", new_y="NEXT")
     pdf.ln(2)
 
     def santral_karti(ad, card):

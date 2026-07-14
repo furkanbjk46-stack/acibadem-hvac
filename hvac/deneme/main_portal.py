@@ -44,8 +44,10 @@ CONFIG = {
     "APP_TITLE": "HVAC ΔT Öneri Motoru — Engine v2",
     
     # Hedef ΔT değerleri
-    "TARGET_DT_AHU": 5.0,           # Eski su-bazlı hedef — artık AHU skorlamasında kullanılmıyor (geriye dönük referans)
-    "TARGET_AIR_DT_AHU_COOL": 10.0, # AHU hava ΔT hedefi (Return-SAT, soğutma)
+    # S7: eski çift anahtar "TARGET_DT_AHU" KALDIRILDI (5/10 karışıklığının köküydü).
+    # AHU soğutma hedefi artık DİNAMİK (emiş − 16.5, 4-8 bandı); bu anahtar yalnız
+    # emiş verisi yokken fallback'tir ve CONFIG_LIMITS ile 4-8 aralığına zorlanır.
+    "TARGET_AIR_DT_AHU_COOL": 6.0,  # AHU hava ΔT fallback (Return-SAT, soğutma) — dinamik hedef esas
     "TARGET_AIR_DT_AHU_HEAT": 10.0, # AHU hava ΔT hedefi (SAT-Return, ısıtma)
     "VALVE_THRESHOLD": 40.0,        # AHU vana minimum analiz eşiği (%)
     "TARGET_DT_CHILLER": 5.0,
@@ -109,7 +111,60 @@ CONFIG = {
     "DAILY_REPORT_MINUTE": 0,     # Günlük rapor dakikası (0-59)
     "MONTHLY_REPORT_DAY": 5,      # Aylık rapor günü (1-28)
     "MONTHLY_REPORT_HOUR": 17,    # Aylık rapor saati (0-23)
+
+    # SAĞLAMLAŞTIRMA F5 — ön koşul kapısı eşikleri
+    "PRESSURE_RUN_MIN_PA": 20.0,      # üstü = fan çalışıyor
+    "PRESSURE_FAULT_MAX_PA": 1500.0,  # üstü = basınç sensörü arızası (QBM2030 saturasyon)
+    "SENSOR_VALID_MIN_C": 1.0,        # üfleme/emiş geçerli alt sınır (0 = tipik arıza)
+    "SENSOR_VALID_MAX_C": 50.0,       # geçerli üst sınır (100 = tipik arıza)
+    "MANUAL_SUPPRESS_HOURS": 24,      # elle OK'a çekme = bu kadar saat susturma
+    "DEBOUNCE_OKUMA": 2,              # kapı durumu değişimi için ardışık aynı okuma
+    "DUZELME_OKUMA": 3,               # sensör 'düzeldi' için ardışık geçerli okuma
+    "TAKILI_OKUMA": 12,               # takılı sensör şüphesi (~6 saat)
+    "SKIP_ESKALASYON_GUN": 7,         # bu kadar gün analiz dışı → rapor üstüne eskalasyon
 }
+
+# ═══════════ SAĞLAMLAŞTIRMA F5 — CONFIG GOVERNANCE ═══════════
+# Aralık dışı config değeri uygulamayı AÇTIRMAZ (fail-fast) — "5 mi 10 mu"
+# sınıfı sessiz bozulmalar bir daha yaşanmasın. Aynı doğrulama ayar kaydetme
+# yolunda da çalışır (UI'dan geçersiz değer anında reddedilir).
+CONFIG_LIMITS = {
+    "TARGET_AIR_DT_AHU_COOL": (4.0, 8.0),
+    "TARGET_DT_CHILLER": (2.0, 7.0),
+    "SAT_COOLING_MIN": (12.0, 17.0), "SAT_COOLING_MAX": (16.0, 20.0),
+    "COMFORT_DEPARTURE": (1.0, 6.0), "OAT_BIAS_MAX": (0.0, 3.0),
+    "PRESSURE_RUN_MIN_PA": (10.0, 100.0), "PRESSURE_FAULT_MAX_PA": (1000.0, 3000.0),
+    "SENSOR_VALID_MIN_C": (0.5, 5.0), "SENSOR_VALID_MAX_C": (45.0, 60.0),
+    "MANUAL_SUPPRESS_HOURS": (1, 72),
+}
+
+def config_dogrula(cfg: dict) -> list:
+    """Config değerlerini CONFIG_LIMITS'e göre doğrular; hata listesi döner (boş=geçerli)."""
+    hatalar = []
+    for anahtar, (alt, ust) in CONFIG_LIMITS.items():
+        if anahtar not in cfg:
+            continue
+        try:
+            v = float(cfg[anahtar])
+        except (TypeError, ValueError):
+            hatalar.append(f"{anahtar}: sayısal değil ({cfg[anahtar]!r})")
+            continue
+        if not (alt <= v <= ust):
+            hatalar.append(f"{anahtar}: {v} aralık dışı (izin: {alt}-{ust})")
+    # Çapraz kontrol: fallback hedef + bias, tipik emişle (24) ulaşılabilir olmalı
+    try:
+        if (float(cfg.get("TARGET_AIR_DT_AHU_COOL", 6)) + float(cfg.get("OAT_BIAS_MAX", 2))
+                > 24.0 - float(cfg.get("SAT_COOLING_MIN", 15))):
+            hatalar.append(
+                "ÇAPRAZ: TARGET_AIR_DT_AHU_COOL + OAT_BIAS_MAX > 24 − SAT_COOLING_MIN "
+                "— hedef tipik emişle ulaşılamaz, SAT bandıyla fiziksel çelişki")
+    except (TypeError, ValueError):
+        pass
+    # Eski anahtar tespiti (S7): TARGET_DT_AHU artık yasak
+    if "TARGET_DT_AHU" in cfg:
+        hatalar.append("TARGET_DT_AHU: KALDIRILDI — hvac_settings.json'dan silin "
+                       "(AHU hedefi artık dinamik; fallback: TARGET_AIR_DT_AHU_COOL)")
+    return hatalar
 
 # ================ AYAR YÖNETİMİ ================
 # Eski hardcoded yollar — geriye uyumluluk için tutuluyor
@@ -119,6 +174,38 @@ MAINTENANCE_FILE = os.path.join(os.path.dirname(__file__), "configs", "maintenan
 DEFAULT_CONFIG = CONFIG.copy()  # Varsayılan ayarları sakla
 
 AHU_SAT_LIMITLERI_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_sat_limitleri.json")
+AHU_NOKTA_KONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_nokta_konfig.json")
+
+_NOKTA_SETI_CACHE = {"mtime": None, "veri": {}}
+
+def _nokta_var(location: str, name: str) -> dict:
+    """Santralde hangi nokta tiplerinin TANIMLI olduğunu döndürür (kapı katmanı için).
+    {'basinc': bool, 'sat': bool, 'return': bool, 'start': bool}
+    Konfig dosyası değişirse cache otomatik yenilenir."""
+    try:
+        mt = os.path.getmtime(AHU_NOKTA_KONFIG_FILE)
+        if _NOKTA_SETI_CACHE["mtime"] != mt:
+            with open(AHU_NOKTA_KONFIG_FILE, "r", encoding="utf-8") as f:
+                konfig = json.load(f)
+            veri = {}
+            for p in konfig:
+                k = (p.get("lokasyon", ""), p.get("ahu_adi", ""))
+                s = veri.setdefault(k, {"basinc": False, "sat": False, "return": False, "start": False})
+                t = p.get("nokta_tipi", "")
+                if t.startswith("Basınç"):
+                    s["basinc"] = True
+                elif t.startswith("SAT"):
+                    s["sat"] = True
+                elif t.startswith("Return"):
+                    s["return"] = True
+                elif t == "Start/Stop":
+                    s["start"] = True
+            _NOKTA_SETI_CACHE["mtime"] = mt
+            _NOKTA_SETI_CACHE["veri"] = veri
+        return _NOKTA_SETI_CACHE["veri"].get(
+            (location, name), {"basinc": False, "sat": True, "return": True, "start": False})
+    except Exception:
+        return {"basinc": False, "sat": True, "return": True, "start": False}
 AHU_TASARIM_KAPASITE_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_tasarim_kapasiteleri.json")
 CHILLER_FCU_AYARLAR_FILE = os.path.join(os.path.dirname(__file__), "configs", "chiller_fcu_ayarlari.json")
 
@@ -156,7 +243,7 @@ def _get_monthly_reports_dir(location_id: str = None) -> str:
 MAINTENANCE_COMPONENTS = [
     "heating_valve_body", "heating_valve_signal",
     "cooling_valve_body", "cooling_valve_signal",
-    "supply_sensor", "return_sensor"
+    "supply_sensor", "return_sensor", "pressure_sensor"
 ]
 MAINTENANCE_STATUSES = ["OK", "FAULTY", "MAINTENANCE", "N/A"]
 MAINTENANCE_LABELS = {
@@ -211,8 +298,10 @@ def get_maintenance_notes(equipment_name: str) -> list:
     return notes
 
 def load_settings_from_file():
-    """JSON dosyasından ayarları yükle."""
+    """JSON dosyasından ayarları yükle. F5: doğrulamadan geçemeyen config
+    uygulamayı AÇTIRMAZ (fail-fast) — hangi anahtarın neden reddedildiği yazılır."""
     global CONFIG
+    saved_settings = {}
     try:
         if os.path.exists(SETTINGS_FILE):
             with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
@@ -225,10 +314,24 @@ def load_settings_from_file():
     except Exception as e:
         logging.warning(f"Ayarlar yüklenirken hata: {e}")
 
+    # F5 fail-fast: birleşik config (dosyadaki fazla anahtarlar dahil) doğrulanır
+    _hatalar = config_dogrula({**CONFIG, **saved_settings})
+    if _hatalar:
+        _msg = "CONFIG DOĞRULAMA HATASI — uygulama başlatılmadı:\n  - " + "\n  - ".join(_hatalar)
+        logging.critical(_msg)
+        raise SystemExit(_msg)
+
 def save_settings_to_file(new_settings: dict):
-    """Ayarları JSON dosyasına kaydet."""
+    """Ayarları JSON dosyasına kaydet. F5: geçersiz değer kaydedilmeden reddedilir."""
     global CONFIG
     try:
+        # F5: kaydetme yolunda da aynı doğrulama (UI'dan 10 girilirse anında ret)
+        _aday = {**CONFIG, **new_settings}
+        _hatalar = config_dogrula(_aday)
+        if _hatalar:
+            logging.error("Ayar kaydetme REDDEDİLDİ: " + " | ".join(_hatalar))
+            return {"success": False, "errors": _hatalar}
+
         # Zamanlayıcı anahtarları değişti mi kontrol et
         timer_keys = {"DAILY_REPORT_HOUR", "DAILY_REPORT_MINUTE", "MONTHLY_REPORT_DAY", "MONTHLY_REPORT_HOUR"}
         timer_changed = any(
@@ -732,6 +835,110 @@ INSTRUCTION_GUIDE = {
         ],
         "setpoint_chain": "Dış Hava (<10°C) → AHU %100 Taze Hava (Free-Cooling) → Kollektör Setpoint Düşür → 2. Chiller Devreye Al"
     },
+    "FAN_BASMIYOR": {
+        "severity": "CRITICAL",
+        "score": 9.5,
+        "title": "Fan Basınç Üretmiyor (Start Açık)",
+        "description": "BMS start komutu AÇIK ve basınç sensörü geçerli okuma veriyor, ancak kanal fark basıncı ≤ 20 Pa (2 ardışık okuma ile doğrulandı). Fan komut almasına rağmen hava basmıyor — mekanik veya elektriksel fan arızası. Bu santral analiz edilemedi; alarm fan arızasına aittir.",
+        "steps": [
+            "Sahada fanın fiilen dönüp dönmediğini kontrol edin",
+            "Kayış kontrolü yapın - kopuk veya gevşek olabilir",
+            "MCC panosunda termik/sigorta atmış mı kontrol edin",
+            "Frekans invertörü arıza kodu var mı bakın",
+            "Emiş/üfleme damperleri tam kapalı kalmış olabilir - damper konumlarını kontrol edin",
+            "Basınç sensörünün hortum bağlantılarını kontrol edin (hortum çıkmışsa okuma 0'a yakın kalır)",
+            "Arıza giderildikten sonra santralin analize otomatik döndüğünü bir sonraki turda doğrulayın"
+        ],
+        "causes": [
+            "Kayış kopması/kayması",
+            "Termik atması veya elektrik besleme sorunu",
+            "Fan motoru arızası",
+            "Frekans invertörü arızası veya lokalde durdurulmuş",
+            "Damperler kapalı kalmış",
+            "Basınç sensörü hortumu çıkmış (yanlış alarm ihtimali)"
+        ]
+    },
+    "LOKAL_CALISMA": {
+        "severity": "WARNING",
+        "score": 6.0,
+        "title": "Kumanda Dışı Çalışma (Lokal)",
+        "description": "BMS start komutu KAPALI olmasına rağmen kanal fark basıncı > 20 Pa — santral fiilen çalışıyor. Birisi santrali sahada elle (lokal) çalıştırmış veya pano anahtarı LOKAL konumda bırakılmış. Santral BMS kontrolü dışında; enerji optimizasyonu ve program bu santralde etkisiz.",
+        "steps": [
+            "MCC panosunda AUTO/LOKAL anahtar konumunu kontrol edin",
+            "Bakım sonrası anahtar AUTO'ya alınmamış olabilir - son bakım kaydına bakın",
+            "Santrali lokale alan personeli ve gerekçesini tespit edin",
+            "Gerekçe geçerliyse (bakım/test) işlem bitince AUTO'ya aldırın",
+            "BMS start komut noktasının doğru noktaya eşlendiğini doğrulayın (yanlış eşleme de aynı tabloyu verir)",
+            "Mesai dışı çalışma varsa enerji israfını raporlayın"
+        ],
+        "causes": [
+            "Pano anahtarı LOKAL konumda bırakılmış",
+            "Bakım/test sonrası AUTO'ya alınmamış",
+            "Bilinçli manuel müdahale (konfor şikayeti vb.)",
+            "BMS komut noktası yanlış eşlenmiş",
+            "Kontaktör köprülenmiş/bypass edilmiş"
+        ]
+    },
+    "TERS_DT": {
+        "severity": "CRITICAL",
+        "score": 8.5,
+        "title": "Ters ΔT — Soğutmada Üfleme Emişten Sıcak",
+        "description": "Soğutma modunda üfleme sıcaklığı emiş sıcaklığından yüksek (hava ΔT negatif, eşik < -1.0°C). Santral soğutmak yerine havayı ısıtıyor. Ya ısıtma tarafı devrede/kaçırıyor, ya sensörler karışık, ya da mod ataması yanlış. Enerji israfı + konfor kaybı aynı anda.",
+        "steps": [
+            "Üfleme ve emiş sensörlerinin fiziksel yerlerini doğrulayın (etiket/bağlantı karışıklığı en sık neden)",
+            "Isıtma vanası kapalı görünürken coil'e giden boruyu elle kontrol edin - sıcaksa vana kaçırıyor",
+            "Isıtma vanası aktüatörünü %0 komutla test edin - tam kapanıyor mu",
+            "BMS'de santralin mod atamasını kontrol edin (ısıtma/soğutma karışıklığı)",
+            "Taze hava karışım oranını kontrol edin - dış hava sıcakken yüksek taze hava benzer tablo yapabilir",
+            "Plakalı eşanjör/ısı geri kazanım varsa bypass damperini kontrol edin"
+        ],
+        "causes": [
+            "Üfleme/emiş sensörleri ters bağlanmış veya yer değiştirmiş",
+            "Isıtma vanası kaçırıyor (aktüatör tam kapatmıyor)",
+            "Mod ataması yanlış (ısıtma modunda soğutma beklentisi)",
+            "Isı geri kazanım bypass'ı yanlış konumda",
+            "Yüksek taze hava oranı + sıcak dış hava"
+        ]
+    },
+    "VERI_EKSIK": {
+        "severity": "WARNING",
+        "score": 5.0,
+        "title": "Veri Eksik — Teşhis Doğrulanamıyor",
+        "description": "Kritik teşhis için gereken sensör verisi (genellikle emiş sıcaklığı) sistemde yok. Eski sürüm bu durumda yanlış KRİTİK alarm üretiyordu; yeni mantık teşhisi doğrulayamadığı için beklemede. Bu bir arıza teşhisi DEĞİL, veri altyapısı uyarısıdır — nokta tamamlanana kadar bu santralde tam analiz yapılamaz.",
+        "steps": [
+            "Eksik sensörün BMS'de nokta olarak tanımlı olup olmadığını kontrol edin",
+            "BMS'de varsa: ahu_nokta_konfig.json'a noktayı ekleyin (gateway/dnet/mac/obj bilgileri ile)",
+            "BMS'de yoksa: sensörün fiziksel montajı var mı sahada kontrol edin",
+            "Sensör fiziksel olarak yoksa montaj planlaması yapın",
+            "Nokta eklendikten sonra ilk okuma turunda satırın tam analize döndüğünü doğrulayın"
+        ],
+        "causes": [
+            "Nokta konfigürasyona hiç eklenmemiş",
+            "Sensör fiziksel olarak monte edilmemiş",
+            "BMS'de nokta var ama adreslemesi yanlış",
+            "İletişim kopukluğu (gateway/hat sorunu)"
+        ]
+    },
+    "TAKILI_SENSOR": {
+        "severity": "WARNING",
+        "score": 4.0,
+        "title": "Takılı Sensör Şüphesi",
+        "description": "Sensör 12 ardışık okumada (~6 saat) hiç değişmedi (±0.05°C bandında sabit). Canlı bir HVAC sisteminde sıcaklık bu kadar uzun süre kılı kılına sabit kalmaz — sensör donmuş/takılı veya bayat veri geliyor olabilir. Değer 'makul' göründüğü için aralık kontrolüne yakalanmaz; bu kural o boşluğu kapatır. Dijital bakım kartına otomatik işaret düşülmüştür.",
+        "steps": [
+            "BMS'de sensörün anlık değerini canlı izleyin - hiç oynamıyor mu",
+            "Sensöre fiziksel etki testi yapın (elle ısıtma) - değer tepki veriyor mu",
+            "Tepki yoksa sensör kablosunu ve pano giriş kartı kanalını kontrol edin",
+            "Giriş kartı kanalı donmuşsa kartı resetleyin/değiştirin",
+            "Sensör arızalıysa değiştirin",
+            "Değer tekrar canlanınca bakım kartındaki otomatik işaretin 3 geçerli okuma sonrası kalktığını doğrulayın"
+        ],
+        "causes": [
+            "Sensör elemanı arızası (donmuş çıkış)",
+            "Pano giriş kartı kanalı donmuş",
+            "İletişim katmanından bayat/önbellek değer geliyor",
+            "Kablo kısa devre veya gevşek klemens"
+        ]
+    },
     "STANDBY": {
         "severity": "OPTIMAL",
         "score": 0.0,
@@ -818,6 +1025,9 @@ class EquipmentProfile:
     temperatures: TemperatureData = None
     valves: ValveData = None
     humidity: Optional[float] = None
+    # SAĞLAMLAŞTIRMA F2 — ön koşul kapısı girdileri
+    start_stop: Optional[float] = None    # 1.0=START, 0.0=STOP (BMS komut noktası, salt-okuma)
+    pressure_pa: Optional[float] = None   # kanal fark basıncı (Pa)
     
     def __post_init__(self):
         if self.temperatures is None:
@@ -846,6 +1056,8 @@ class AnalysisResult:
     recommended_sat: Optional[float] = None  # SAT recommendation
     field_experience_issues: List[Dict[str, Any]] = None  # Saha tecrübesi kural ihlalleri
     maintenance_notes: List[str] = None  # Bakım kartı notları
+    onay: str = ""            # Ön koşul kapısı onay sayısı ("3/3", "2/3", "-")
+    atlama_nedeni: str = ""   # ANALİZ DIŞI ise neden (+ kaç gündür)
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -867,6 +1079,8 @@ class AnalysisResult:
             "Band": self.band,
             "DT Source": self.dt_source,
             "Maintenance Notes": " | ".join(self.maintenance_notes) if self.maintenance_notes else "",
+            "Onay": self.onay,
+            "Atlama Nedeni": self.atlama_nedeni,
         }
 
 # ================ UTILITY FONKSİYONLARI ================
@@ -1074,7 +1288,7 @@ class HVACAnalyzer:
         logger.debug(f"EXTRACT {name}: SAT={temps.sat}, Room={temps.room}, Set={temps.setpoint}, normalized keys={list(normalized.keys())[:10]}")
         
         # Create profile
-        return EquipmentProfile(
+        profile = EquipmentProfile(
             type=equipment_type,
             name=name,
             location=location,
@@ -1084,6 +1298,10 @@ class HVACAnalyzer:
             valves=valves,
             humidity=self.utils.to_float(normalized.get("Humidity (%)"))
         )
+        # SAĞLAMLAŞTIRMA F2: ön koşul kapısı girdileri (collector'dan gelirse)
+        profile.start_stop = self.utils.to_float(normalized.get("Start/Stop"))
+        profile.pressure_pa = self.utils.to_float(normalized.get("Basınç (Pa)"))
+        return profile
     
     def calculate_delta_t(self, profile: EquipmentProfile) -> Tuple[Optional[float], str]:
         """Calculate **WATER** ΔT (coil/plant). 
@@ -1106,17 +1324,21 @@ class HVACAnalyzer:
                 delta_t = inlet - outlet
             else:
                 delta_t = outlet - inlet
-
             dt_source = "Inlet/Outlet (Water)"
-            if delta_t is not None and delta_t < 0:
-                delta_t = abs(delta_t)
+            # S5: abs() kaldırıldı — negatif ΔT yön bilgisidir (ters çalışma), korunur.
 
         # Priority 2: Plant water (Plant Supply/Return) fallback
-        if delta_t is None and profile.temperatures.plant_supply is not None and profile.temperatures.plant_return is not None:
+        # S1: AHU'da YASAK — kolektör suyu ΔT'si tüm santrallere aynı gelir, santral
+        # teşhisi gibi kullanılamaz (MAS-1'de 6 santral birebir aynı ΔT vakası).
+        # Chiller/Kolektör/Kazan gibi merkezi ekipmanlarda fallback kalır.
+        if (delta_t is None
+                and self.classify_equipment_type(profile.type) != EquipmentType.AHU
+                and profile.temperatures.plant_supply is not None
+                and profile.temperatures.plant_return is not None):
             delta_t = profile.temperatures.plant_return - profile.temperatures.plant_supply
             dt_source = "Plant Supply/Return (Water)"
             if delta_t is not None and delta_t < 0:
-                delta_t = abs(delta_t)
+                delta_t = abs(delta_t)  # merkezi ekipmanda yön Plant S/R sırasından belirsiz olabilir
 
         return delta_t, dt_source
 
@@ -1139,9 +1361,8 @@ class HVACAnalyzer:
         else:
             air_dt = return_air - supply_air
 
-        if air_dt is not None and air_dt < 0:
-            air_dt = abs(air_dt)
-
+        # S5: abs() kaldırıldı — negatif hava ΔT "ters çalışma" kanıtıdır (soğutmada
+        # üfleme emişten sıcak → TERS_DT kuralı). Yön kaybedilmez.
         return air_dt
 
     
@@ -1181,7 +1402,15 @@ class HVACAnalyzer:
         
         # Equipment specific targets (cooling mode)
         if eq_type == EquipmentType.AHU:
-            return self.config["TARGET_AIR_DT_AHU_COOL"] + oat_bias
+            # S6: DİNAMİK hedef — sabit sayı yerine emiş bazlı: hedef = emiş − SAT bandı ortası.
+            # Böylece hedef her zaman SAT bandıyla (15-18) fiziksel olarak tutarlı ve
+            # ulaşılabilirdir; "5 mi 10 mu" config karışıklığı sonuç üretemez. 4.0-8.0 sıkıştırılır.
+            _ret = profile.temperatures.return_ if profile.temperatures.return_ is not None else profile.temperatures.room
+            if _ret is not None:
+                _sat_orta = (self.config.get("SAT_COOLING_MIN", 15.0)
+                             + self.config.get("SAT_COOLING_MAX", 18.0)) / 2.0   # 16.5
+                return max(4.0, min(8.0, _ret - _sat_orta + oat_bias))
+            return self.config["TARGET_AIR_DT_AHU_COOL"] + oat_bias  # emiş yoksa fallback
         elif eq_type == EquipmentType.CHILLER:
             return self.config["TARGET_DT_CHILLER"]
         elif eq_type == EquipmentType.FCU:
@@ -1475,16 +1704,9 @@ class HVACAnalyzer:
             })
             return result
         
-        # 2. Comfort override
-        departure = self.calculate_departure(profile)
-        if departure is not None and departure > self.config["COMFORT_DEPARTURE"]:
-            result.update({
-                "action": "Prioritize Comfort",
-                "reason": f"Oda-Setpoint sapması yüksek ({departure:.1f}°C). ΔT optimizasyonu ertelendi.",
-                "rule": "COMFORT_OVERRIDE"
-            })
-            return result
-
+        # S4: COMFORT_OVERRIDE (skor 4) zincirin SONUNA taşındı — eskiden burada erken
+        # dönerek LOW_FLOW(8)/COOL_EFF_LOW(7)/CHILLER_BYPASS(9) gibi daha ağır kuralları
+        # maskeliyordu (Ahu-5 vs Ahu-9 vakası: daha kötü santral daha hafif etiket alıyordu).
 
         # 3a. Heating diagnostics - SAT kontrolü (LOW_FLOW_DETECTED, skor 8)
         # AHU HARİÇ: AHU'nun bireysel su sensörü yoktur (kolektör suyu tüm AHU'lara
@@ -1590,7 +1812,18 @@ class HVACAnalyzer:
                 "rule": "LOW_DT_SYNDROME"
             })
             return result
-        
+
+        # 6. Comfort override — S4 gereği EN SONA alındı: yalnızca daha ağır hiçbir
+        # kural tetiklenmediyse döner (maskeleme gücü kalktı).
+        departure = self.calculate_departure(profile)
+        if departure is not None and departure > self.config["COMFORT_DEPARTURE"]:
+            result.update({
+                "action": "Prioritize Comfort",
+                "reason": f"Oda-Setpoint sapması yüksek ({departure:.1f}°C). ΔT optimizasyonu ertelendi.",
+                "rule": "COMFORT_OVERRIDE"
+            })
+            return result
+
         return result
     
 
@@ -1620,6 +1853,10 @@ class HVACAnalyzer:
 
         # Kural bazlı minimum skor — kural atanmışsa en az bu kadar olmalı
         rule_boosts = {
+            "FAN_BASMIYOR":              9.5,  # SAĞLAMLAŞTIRMA F2
+            "TERS_DT":                   8.5,  # SAĞLAMLAŞTIRMA S5
+            "LOKAL_CALISMA":             6.0,  # SAĞLAMLAŞTIRMA F2
+            "VERI_EKSIK":                5.0,  # SAĞLAMLAŞTIRMA S2
             "SIMUL_HEAT_COOL":          10.0,
             "CHILLER_BYPASS":            9.0,
             "NOT_COOLING":               9.0,
@@ -1646,6 +1883,45 @@ class HVACAnalyzer:
 
         return min(score, 10.0)
     
+    def tutarlilik_kontrol(self, result: AnalysisResult, profile: EquipmentProfile,
+                           effective_mode: str = "") -> AnalysisResult:
+        """S8/S9 — Motorun kendi çelişkilerini yakalayan son kontrol katmanı.
+        Her düzeltme loglanır: motorun çelişki üretme sıklığı bir kalite metriğidir."""
+        _duzeltmeler = []
+        _is_cooling = "COOL" in (effective_mode or "").upper()
+        ret = profile.temperatures.return_ if profile.temperatures.return_ is not None else profile.temperatures.room
+        sat_cool_min = self.config.get("SAT_COOLING_MIN", 15.0)
+
+        # 1) SAT OPTIMAL iken LOW_DT/LOW_DT_SYNDROME CRITICAL olamaz → WARNING + İNCELE
+        if (result.sat_status == "OPTIMAL" and result.severity == "CRITICAL"
+                and result.rule in ("LOW_DT", "LOW_DT_SYNDROME")):
+            result.severity = "WARNING"
+            result.reason = (result.reason + " | İNCELE: SAT optimal iken ΔT kritiği çelişkili — şiddet düşürüldü.").strip(" |")
+            _duzeltmeler.append("LOW_DT kritik + SAT optimal → WARNING")
+
+        # 2) Önerilen SAT fiziksel tutarlılık (S9 — Ahu-9 27°C vakası):
+        #    soğutmada öneri emişten yüksek veya bandın belirgin altında olamaz.
+        if result.recommended_sat is not None and _is_cooling:
+            _rs = result.recommended_sat
+            if (ret is not None and _rs >= ret) or _rs < sat_cool_min - 1.0:
+                result.recommended_sat = None
+                result.reason = (result.reason + " | Öneri tutarsız bulundu ve kaldırıldı.").strip(" |")
+                _duzeltmeler.append(f"tutarsız SAT önerisi ({_rs:.1f}) boşaltıldı")
+
+        # 3) OPTIMAL etiket + yüksek skor çelişkisi
+        if result.severity == "OPTIMAL" and result.score >= 6.0 and result.rule not in ("STANDBY", "MAINTENANCE"):
+            result.severity = "WARNING"
+            _duzeltmeler.append(f"OPTIMAL + skor {result.score:.1f} → WARNING")
+
+        # 4) NORMAL/IN_BAND satırda öneri olamaz (S10 yan bulgusu)
+        if result.rule in ("NORMAL", "IN_BAND") and result.recommended_sat is not None:
+            result.recommended_sat = None
+            _duzeltmeler.append("NORMAL satırdaki SAT önerisi boşaltıldı")
+
+        if _duzeltmeler:
+            logging.info(f"TUTARLILIK[{profile.name}]: " + " ; ".join(_duzeltmeler))
+        return result
+
     def map_severity(self, status: str, score: float) -> str:
         """Map backend status to UI severity. Score takes priority."""
         # CRITICAL: Score >= 7.0 always means CRITICAL, regardless of status
@@ -1769,6 +2045,11 @@ class HVACAnalyzer:
         heating_valve = profile.valves.heating if profile.valves.heating is not None else 0
         mode_upper = profile.mode.upper() if profile.mode else ""
 
+        # SAĞLAMLAŞTIRMA F2: Start/Stop verisi VARSA STANDBY kararını ön koşul kapısı
+        # verir — vana bazlı tahmin devre dışı (kapı ANALIZ dediyse fan fiilen çalışıyor).
+        if getattr(profile, "start_stop", None) is not None:
+            return None
+
         # OFF modu → direkt STANDBY (vanaya bakmadan)
         OFF_MODES = {"OFF", "KAPALI", "DEVRE DISI", "DISABLED", "STOP", "STOPPED"}
         if (not any(t in eq_type_upper for t in SKIP_STANDBY_TYPES)) and \
@@ -1830,7 +2111,8 @@ class HVACAnalyzer:
         # a) Herhangi bir bileşen MAINTENANCE ise cihaz "BAKIMDA" — bakım süren cihazda
         #    üretilen alarmlar gürültüdür; analiz atlanır (STANDBY ile aynı model).
         _MAINT_KEYS = ("supply_sensor", "return_sensor", "heating_valve_body",
-                       "cooling_valve_body", "heating_valve_signal", "cooling_valve_signal")
+                       "cooling_valve_body", "heating_valve_signal", "cooling_valve_signal",
+                       "pressure_sensor")
         _bakimda = [k for k in _MAINT_KEYS if maint.get(k) == "MAINTENANCE"]
         if _bakimda:
             result.status = "MAINTENANCE"
@@ -1849,6 +2131,80 @@ class HVACAnalyzer:
             profile.valves.heating = None
         if maint.get("cooling_valve_signal") == "FAULTY":
             profile.valves.cooling = None
+
+        # --- SAĞLAMLAŞTIRMA F2: ÖN KOŞUL KAPISI (Start → Basınç → Sensör aralık) ---
+        # Start/Stop verisi gelen santrallerde analiz öncesi 3 kapılı onay zinciri çalışır.
+        # Veri yoksa (FCU'lar, nokta eklenmemiş santraller) eski davranış aynen sürer.
+        _kapi_bulgu = None
+        if getattr(profile, "start_stop", None) is not None or getattr(profile, "pressure_pa", None) is not None:
+            try:
+                from on_kosul import kapi_degerlendir
+                _n = _nokta_var(profile.location, profile.name)
+                _kapi = kapi_degerlendir(
+                    profile.location, profile.name,
+                    start=profile.start_stop,
+                    basinc=profile.pressure_pa,
+                    basinc_nokta_var=_n.get("basinc", False) or profile.pressure_pa is not None,
+                    ufleme=profile.temperatures.sat if profile.temperatures.sat is not None else profile.temperatures.supply,
+                    donus=profile.temperatures.return_ if profile.temperatures.return_ is not None else profile.temperatures.room,
+                    ufleme_var=_n.get("sat", True),
+                    donus_var=_n.get("return", True),
+                    cfg=self.config,
+                )
+            except Exception as _ke:
+                logging.warning(f"Ön koşul kapısı hatası ({profile.name}): {_ke}")
+                _kapi = {"karar": "ANALIZ", "bulgu": None, "notlar": [], "onay": "", "skip_gun": 0, "eskalasyon": False}
+
+            result.onay = _kapi.get("onay", "")
+            _skip_gun_not = f" ({_kapi['skip_gun']} gündür)" if _kapi.get("skip_gun", 0) >= 1 else ""
+            _esk = " — 7+ GÜN ESKALASYON!" if _kapi.get("eskalasyon") else ""
+
+            if _kapi["karar"] == "SKIP_STOP":
+                result.status = "ANALIZ_DISI"
+                result.rule = "SKIP_STOP"
+                result.action = "ANALİZ DIŞI — STOP"
+                result.reason = "BMS start komutu KAPALI, basınç yok — normal kapalı santral."
+                result.atlama_nedeni = "STOP" + _skip_gun_not + _esk
+                result.severity = "OPTIMAL"
+                result.sat_status = "STANDBY"
+                result.score = 0.0
+                return result
+            if _kapi["karar"] == "SKIP_FAN":
+                _ig = INSTRUCTION_GUIDE.get("FAN_BASMIYOR", {})
+                result.status = "ANALIZ_DISI"
+                result.rule = "FAN_BASMIYOR"
+                result.action = "KRİTİK: Fan Basınç Üretmiyor (Start Açık)"
+                result.reason = f"Start AÇIK ama kanal basıncı ≤ {self.config.get('PRESSURE_RUN_MIN_PA', 20):.0f} Pa (2 ardışık okuma). Kayış/termik/fan arızası."
+                result.atlama_nedeni = "FAN_BASMIYOR" + _skip_gun_not + _esk
+                result.severity = _ig.get("severity", "CRITICAL")
+                result.score = _ig.get("score", 9.5)
+                result.sat_status = "NO DATA"
+                return result
+            if _kapi["karar"] in ("SKIP_BASINC_SENSOR_ARIZA", "SKIP_SENSOR_ARIZA"):
+                result.status = "ANALIZ_DISI"
+                result.rule = _kapi["karar"]
+                result.action = "ANALİZ DIŞI — Sensör Arızası"
+                result.reason = "Sensör aralık/basınç onayı geçilemedi; dijital bakım kartına otomatik işaret düşüldü."
+                result.atlama_nedeni = _kapi["karar"] + _skip_gun_not + _esk
+                result.severity = "WARNING"
+                result.sat_status = "SENSOR_FAULT"
+                result.score = 3.0
+                return result
+            if _kapi["karar"] == "SKIP_VERI_YOK":
+                result.status = "ANALIZ_DISI"
+                result.rule = "SKIP_VERI_YOK"
+                result.action = "ANALİZ DIŞI — Veri Alınamadı"
+                result.reason = "BACnet okuması başarısız (iletişim) — arıza değil, veri sorunu."
+                result.atlama_nedeni = "VERI_YOK" + _skip_gun_not + _esk
+                result.severity = "WARNING"
+                result.sat_status = "NO DATA"
+                result.score = 2.0
+                return result
+            # ANALIZ kararı: LOKAL_CALISMA bulgusu ve 2/3 notu sona taşınır
+            _kapi_bulgu = _kapi.get("bulgu")
+            if _kapi.get("notlar"):
+                maintenance_notes.extend(_kapi["notlar"])
+                result.maintenance_notes = maintenance_notes
 
         # --- 0. STANDBY CHECK ---
         standby = self._analyze_base(profile, result, oat, effective_mode=effective_mode)
@@ -1895,7 +2251,17 @@ class HVACAnalyzer:
             result.score = 5.0  # Sıralamada dibe düşmemesi için minimum skor
         else:
             check_tolerance = tol_norm
-            if delta_t < (target_dt - check_tolerance):
+            # S5/TERS_DT: soğutmada negatif hava ΔT = üfleme emişten SICAK — santral
+            # havayı ısıtıyor. Isıtma vanası kaçağı / sensör yer değişikliği / mod karışıklığı.
+            if (not is_heating) and delta_t < -1.0:
+                _ig_ters = INSTRUCTION_GUIDE.get("TERS_DT", {})
+                result.status = "TERS"
+                result.action = "KRİTİK: Ters ΔT — Soğutmada Üfleme Emişten Sıcak"
+                result.reason = f"Hava ΔT = {delta_t:+.1f}°C (negatif): üfleme emişten sıcak. Isıtma vanası kaçağı / sensör karışıklığı / mod hatası."
+                result.rule = "TERS_DT"
+                result.severity = _ig_ters.get("severity", "CRITICAL")
+                result.score = _ig_ters.get("score", 8.5)
+            elif delta_t < (target_dt - check_tolerance):
                 result.status = "LOW"
                 result.action = "Düşük ΔT"
                 result.reason = f"ΔT ({delta_t:.1f}) < Hedef ({target_dt:.1f})"
@@ -1967,7 +2333,16 @@ class HVACAnalyzer:
                     # hedefe çıkamıyor mu? Emiş verisi varsa ve üfleme emişten en az
                     # 2°C sıcaksa santral fiilen ISITIYOR demektir → KRİTİK değil UYARI.
                     _isitiyor = (not skip_return and ret is not None and sat > ret + 2.0)
-                    if relevant_valve >= HIGH_VALVE_FOR_CRITICAL and not _isitiyor:
+                    # S2 (simetrik): Emiş verisi yoksa ısıtma doğrulanamaz — VERI_EKSIK.
+                    if ret is None and relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
+                        _ig_ve = INSTRUCTION_GUIDE.get("VERI_EKSIK", {})
+                        result.sat_status = "NO DATA"
+                        result.action = "UYARI: Veri Eksik — Isıtma Doğrulanamıyor"
+                        result.reason = f"Üfleme ({sat:.1f}°C) hedef altında ama EMİŞ verisi yok — 'ısıtmıyor' teşhisi doğrulanamaz. Emiş noktası tamamlanmalı."
+                        result.rule = "VERI_EKSIK"
+                        result.severity = _ig_ve.get("severity", "WARNING")
+                        result.score = max(result.score, _ig_ve.get("score", 5.0))
+                    elif relevant_valve >= HIGH_VALVE_FOR_CRITICAL and not _isitiyor:
                         # Vana yüksek açık ve hava ısınmıyor → gerçek sorun
                         result.sat_status = "NOT_HEATING"
                         result.action = "KRİTİK: Isıtmıyor"
@@ -2017,7 +2392,16 @@ class HVACAnalyzer:
                     # hedefe inemiyor mu? Emiş verisi varsa ve üfleme emişten en az
                     # 2°C soğuksa santral fiilen SOĞUTUYOR demektir → KRİTİK değil UYARI.
                     _sogutuyor = (not skip_return and ret is not None and sat < ret - 2.0)
-                    if relevant_valve >= HIGH_VALVE_FOR_CRITICAL and not _sogutuyor:
+                    # S2: Emiş verisi hiç YOKSA soğutma doğrulanamaz — KRİTİK yerine VERI_EKSIK.
+                    if ret is None and relevant_valve >= HIGH_VALVE_FOR_CRITICAL:
+                        _ig_ve = INSTRUCTION_GUIDE.get("VERI_EKSIK", {})
+                        result.sat_status = "NO DATA"
+                        result.action = "UYARI: Veri Eksik — Soğutma Doğrulanamıyor"
+                        result.reason = f"Üfleme ({sat:.1f}°C) hedef üstünde ama EMİŞ verisi yok — 'soğutmuyor' teşhisi doğrulanamaz. Emiş noktası tamamlanmalı."
+                        result.rule = "VERI_EKSIK"
+                        result.severity = _ig_ve.get("severity", "WARNING")
+                        result.score = max(result.score, _ig_ve.get("score", 5.0))
+                    elif relevant_valve >= HIGH_VALVE_FOR_CRITICAL and not _sogutuyor:
                         # Vana yüksek açık ve hava soğumuyor → gerçek soğutma sorunu
                         result.sat_status = "NOT_COOLING"
                         result.action = "KRİTİK: Soğutmuyor"
@@ -2060,8 +2444,8 @@ class HVACAnalyzer:
                 special = {"action": "", "reason": "", "rule": ""}
             elif skip_return and special["rule"] == "AIR_DT_LOW_COOL":
                 special = {"action": "", "reason": "", "rule": ""}
-        # NOT_COOLING / NOT_HEATING kritik kural — özel durum tarafından ezilmez
-        if special["rule"] and result.rule not in ("NOT_COOLING", "NOT_HEATING"):
+        # NOT_COOLING / NOT_HEATING / TERS_DT / VERI_EKSIK — özel durum tarafından ezilmez
+        if special["rule"] and result.rule not in ("NOT_COOLING", "NOT_HEATING", "TERS_DT", "VERI_EKSIK"):
             result.action = special["action"]
             result.reason = special["reason"]
             result.rule = special["rule"]
@@ -2090,7 +2474,21 @@ class HVACAnalyzer:
         if result.severity == "OPTIMAL" and result.rule not in ("NORMAL", "IN_BAND", "STANDBY"):
             result.severity = self.map_severity(result.status, result.score)
 
-        return result
+        # SAĞLAMLAŞTIRMA F2: LOKAL_CALISMA bulgusu (STOP komutu + basınç var) — analiz
+        # yapıldı; daha ağır bir bulgu yoksa satır etiketi LOKAL_CALISMA olur, varsa not düşülür.
+        if _kapi_bulgu == "LOKAL_CALISMA":
+            _ig = INSTRUCTION_GUIDE.get("LOKAL_CALISMA", {})
+            if result.severity == "OPTIMAL":
+                result.rule = "LOKAL_CALISMA"
+                result.action = "UYARI: Kumanda Dışı Çalışma (Lokal)"
+                result.reason = "BMS start komutu KAPALI ama kanal basıncı var — santral lokalde çalıştırılıyor."
+                result.severity = _ig.get("severity", "WARNING")
+                result.score = max(result.score, _ig.get("score", 6.0))
+            else:
+                result.reason = (result.reason + " | LOKAL ÇALIŞMA: BMS komutu kapalıyken çalışıyor.").strip(" |")
+
+        # S8/S9: tutarlılık son kontrolü
+        return self.tutarlilik_kontrol(result, profile, effective_mode)
 
     def analyze_fcu_performance(self, profile: EquipmentProfile, effective_mode: str,
                               plant_supply, plant_return, oat, tol_crit, tol_norm) -> AnalysisResult:
@@ -2225,8 +2623,9 @@ class HVACAnalyzer:
             result.severity = "WARNING"
         elif result.rule in ["IN_BAND", "NORMAL"]:
             result.severity = "OPTIMAL"
-        
-        return result
+
+        # S8/S9: tutarlılık son kontrolü
+        return self.tutarlilik_kontrol(result, profile, effective_mode)
 
 # ================ FASTAPI UYGULAMASI ================
 app = FastAPI(title=CONFIG["APP_TITLE"])
@@ -3058,7 +3457,11 @@ async def save_settings(request: Request):
             raise HTTPException(status_code=400, detail="Ayarlar boş olamaz")
         
         success = save_settings_to_file(new_settings)
-        
+
+        # F5: doğrulama reddi — hangi anahtarın neden reddedildiği kullanıcıya döner
+        if isinstance(success, dict) and not success.get("success", True):
+            raise HTTPException(status_code=422,
+                                detail="Ayar reddedildi: " + " | ".join(success.get("errors", [])))
         if success:
             return {"success": True, "message": "Ayarlar kaydedildi"}
         else:
@@ -3112,13 +3515,24 @@ async def save_maintenance(request: Request):
         # çift yönlü senkronunda son-yazan-kazanır kıyası için gereklidir.
         eski_cards = load_maintenance_cards().get("cards", {}) or {}
         simdi_utc = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        _suppress_listesi = []  # SAĞLAMLAŞTIRMA F3: SİSTEM FAULTY → elle OK çekilenler
         for eq_name, card in cards.items():
-            eski = {k: v for k, v in (eski_cards.get(eq_name) or {}).items() if k != "_updated_at"}
-            yeni = {k: v for k, v in card.items() if k != "_updated_at"}
+            eski_kart = eski_cards.get(eq_name) or {}
+            eski = {k: v for k, v in eski_kart.items() if k != "_updated_at" and not k.endswith("_meta")}
+            yeni = {k: v for k, v in card.items() if k != "_updated_at" and not k.endswith("_meta")}
             if yeni != eski:
                 card["_updated_at"] = simdi_utc
             else:
-                card["_updated_at"] = (eski_cards.get(eq_name) or {}).get("_updated_at", simdi_utc)
+                card["_updated_at"] = eski_kart.get("_updated_at", simdi_utc)
+            # Meta alanları UI'dan gelmez — SİSTEM metalarını (history/susturma) koru
+            for _mk, _mv in eski_kart.items():
+                if _mk.endswith("_meta") and _mk not in card:
+                    card[_mk] = _mv
+            # Elle temizleme tespiti: SİSTEM kaynaklı FAULTY → OK çekildi mi?
+            for comp in MAINTENANCE_COMPONENTS:
+                if (eski_kart.get(comp) == "FAULTY" and card.get(comp) == "OK"
+                        and (eski_kart.get(comp + "_meta") or {}).get("source") == "SISTEM"):
+                    _suppress_listesi.append((eq_name, comp))
 
         data = {
             "last_updated": datetime.datetime.now().isoformat(),
@@ -3128,6 +3542,14 @@ async def save_maintenance(request: Request):
 
         success = save_maintenance_cards(data)
         if success:
+            # SAĞLAMLAŞTIRMA F3: elle OK çekilen SİSTEM işaretlerine 24s susturma yaz
+            # (işaret silinmez; süre dolunca sensör hâlâ arızalıysa otomatik geri gelir)
+            for _eq, _comp in _suppress_listesi:
+                try:
+                    from on_kosul import elle_ok_suppress
+                    elle_ok_suppress(_eq, _comp, kim=body.get("updated_by", "Operatör"), cfg=CONFIG)
+                except Exception as _se:
+                    logging.warning(f"Elle susturma kaydı hatası ({_eq}.{_comp}): {_se}")
             return {"success": True, "message": f"{len(cards)} cihazın bakım kartı kaydedildi"}
         else:
             raise HTTPException(status_code=500, detail="Bakım kartları kaydedilemedi")
@@ -4441,27 +4863,51 @@ async def onay_ver():
         ws = wb.active
         ws.title = "HVAC Analiz"
 
+        # S10: Meta satırı — raporun hangi motor/config ile üretildiği izlenebilir olsun
+        import hashlib
+        try:
+            with open(_get_settings_file(), "rb") as _cf:
+                _cfg_sha = hashlib.sha256(_cf.read()).hexdigest()[:8]
+        except Exception:
+            _cfg_sha = "????????"
+        _oat_meta = next((r.get("OAT (°C)") for r in rows if r.get("OAT (°C)") not in (None, "")), "—")
+        _eskalasyon_var = any("ESKALASYON" in str(r.get("Atlama Nedeni", "")) for r in rows)
+        _meta_txt = (f"Motor v2.1-SAGLAM | Config: {_cfg_sha} | AHU hedef: dinamik(4-8, emiş−16.5) "
+                     f"| OAT: {_oat_meta} | Üretim: {ts}")
+        if _eskalasyon_var:
+            _meta_txt = "⚠ 7+ GÜNDÜR ANALİZ DIŞI SANTRAL VAR — 'Analiz Dışı' sayfasına bakın! | " + _meta_txt
+        _mc = ws.cell(row=1, column=1, value=_meta_txt)
+        _mc.font = Font(bold=True, size=9, color=("9C0006" if _eskalasyon_var else "444444"))
+        ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=20)
+
         headers = [
             "Mahal", "Tip", "Ekipman", "Aksiyon",
             "ΔT (°C)", "Hedef (°C)", "Sapma",
             "SAT Durum", "Önerilen SAT (°C)", "Skor", "Durum",
             "Kural", "Üfleme °C", "Emiş °C", "Set °C",
             "Soğutma V%", "Isıtma V%",
+            "ΔT Kaynağı", "Onay", "Atlama Nedeni",   # S10 yeni sütunlar
         ]
 
-        # Başlık satırı
+        # Başlık satırı (2. satır — 1. satır meta)
         hdr_fill = PatternFill("solid", fgColor="012D75")
         hdr_font = Font(bold=True, color="FFFFFF", size=10)
         for ci, h in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=ci, value=h)
+            cell = ws.cell(row=2, column=ci, value=h)
             cell.fill = hdr_fill
             cell.font = hdr_font
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        ws.row_dimensions[1].height = 32
+        ws.row_dimensions[2].height = 32
+
+        # S10: ANALİZ DIŞI satırlar ayrı sayfaya — ana tabloda kaybolmaz, çöp ΔT yazılmaz
+        _skip_rows = [r for r in rows
+                      if str(r.get("Status", "")) in ("ANALIZ_DISI", "STANDBY", "MAINTENANCE")
+                      or str(r.get("Rule", "")).startswith("SKIP")]
+        _ana_rows = [r for r in rows if r not in _skip_rows]
 
         # Veri satırları — renk kodlaması
         sev_renk = {"CRITICAL": "FFCCCC", "WARNING": "FFF3CC", "OPTIMAL": "CCFFEE"}
-        for ri, r in enumerate(rows, 2):
+        for ri, r in enumerate(_ana_rows, 3):
             sev  = str(r.get("Severity", ""))
             fill = PatternFill("solid", fgColor=sev_renk.get(sev, "FFFFFF"))
             vals = [
@@ -4471,7 +4917,7 @@ async def onay_ver():
                 r.get("Action", ""),
                 r.get("ΔT (°C)", r.get("Su ΔT (°C)", "")),
                 r.get("Target ΔT (°C)", ""),
-                r.get("Departure", ""),
+                r.get("ΔT Dev (°C)", ""),   # S10: Sapma artık dolu (işaretli deviation)
                 r.get("SAT Status", ""),
                 r.get("Recommended SAT (°C)", ""),
                 r.get("Score", ""),
@@ -4482,15 +4928,39 @@ async def onay_ver():
                 r.get("Set (°C)", ""),
                 r.get("Cool Valve (%)", ""),
                 r.get("Heat Valve (%)", ""),
+                r.get("DT Source", ""),      # S10: ΔT Kaynağı (Hava / Su-Coil / boş=YOK)
+                r.get("Onay", ""),           # S10: ön koşul onayı (3/3, 2/3)
+                r.get("Atlama Nedeni", ""),
             ]
             for ci, val in enumerate(vals, 1):
                 cell = ws.cell(row=ri, column=ci, value=val)
                 cell.fill = fill
 
         # Sütun genişlikleri
-        for ci, w in enumerate([10,8,14,22,8,10,8,14,16,7,10,16,10,10,8,10,10], 1):
-            ws.column_dimensions[ws.cell(row=1, column=ci).column_letter].width = w
-        ws.freeze_panes = "A2"
+        for ci, w in enumerate([10,8,14,22,8,10,8,14,16,7,10,16,10,10,8,10,10,14,7,18], 1):
+            ws.column_dimensions[ws.cell(row=2, column=ci).column_letter].width = w
+        ws.freeze_panes = "A3"
+
+        # S10 / Not 3.4: "ANALİZ DIŞI" sayfası — atlanan santral kaybolmaz
+        if _skip_rows:
+            ws2 = wb.create_sheet("Analiz Dışı")
+            _h2 = ["Mahal", "Ekipman", "Kural", "Atlama Nedeni", "Aksiyon", "Açıklama", "Onay"]
+            for ci, h in enumerate(_h2, 1):
+                c2 = ws2.cell(row=1, column=ci, value=h)
+                c2.fill = hdr_fill
+                c2.font = hdr_font
+            for ri, r in enumerate(_skip_rows, 2):
+                _esk = "ESKALASYON" in str(r.get("Atlama Nedeni", ""))
+                f2 = PatternFill("solid", fgColor=("FFCCCC" if _esk or str(r.get("Severity")) == "CRITICAL" else "EEEEEE"))
+                for ci, val in enumerate([
+                    r.get("Location", ""), r.get("Name", ""), r.get("Rule", ""),
+                    r.get("Atlama Nedeni", ""), r.get("Action", ""), r.get("Reason", ""),
+                    r.get("Onay", ""),
+                ], 1):
+                    c2 = ws2.cell(row=ri, column=ci, value=val)
+                    c2.fill = f2
+            for ci, w in enumerate([10, 14, 22, 22, 28, 60, 7], 1):
+                ws2.column_dimensions[ws2.cell(row=1, column=ci).column_letter].width = w
 
         # Kaydet
         onay_klasor = os.path.join(os.path.dirname(__file__), "hvac_onaylanan")
