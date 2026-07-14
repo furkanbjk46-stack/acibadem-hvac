@@ -276,17 +276,34 @@ def save_maintenance_cards(data: dict) -> bool:
         print(f"Bakım kartı kaydetme hatası: {e}")
         return False
 
-def get_maintenance_card(equipment_name: str) -> dict:
-    """Tek bir cihazın bakım kartını getir. Yoksa tüm bileşenler OK döner."""
-    data = load_maintenance_cards()
-    card = data.get("cards", {}).get(equipment_name, None)
-    if card is None:
-        return {comp: "OK" for comp in MAINTENANCE_COMPONENTS}
-    return card
+def kart_key(location: str, equipment_name: str) -> str:
+    """Bakım kartı KANONİK anahtarı: 'LOKASYON AD' (lokasyon-nitelikli, BÜYÜK harf).
+    Aynı santral adı birden çok lokasyonda olabildiği için (örn. Ahu-6 hem MAS-1 hem
+    MAS-2) kart anahtarı DAİMA lokasyonla nitelenir. Böylece sistemin otomatik işareti
+    ile operatörün elle açtığı kart AYNI karta düşer (mükerrer 'Ahu-6' kartı önlenir)."""
+    name = (equipment_name or "").strip()
+    loc = (location or "").strip()
+    return (f"{loc} {name}".strip()).upper()
 
-def get_maintenance_notes(equipment_name: str) -> list:
+def get_maintenance_card(equipment_name: str, location: str = None) -> dict:
+    """Tek bir cihazın bakım kartını getir. Yoksa tüm bileşenler OK döner.
+    Anahtar lokasyon-nitelikli aranır ('MAS-1 AHU-6'); bulunamazsa geriye-dönük
+    uyumluluk için eski ad-yalnız anahtarlara ('AHU-6' / ham ad) düşülür."""
+    data = load_maintenance_cards()
+    cards = data.get("cards", {}) or {}
+    aranacak = []
+    if location:
+        aranacak.append(kart_key(location, equipment_name))
+    # Geriye-dönük: eski ad-yalnız kartlar (büyük harf ve ham) + lokasyonsuz kanonik
+    aranacak.extend([(equipment_name or "").strip().upper(), equipment_name])
+    for k in aranacak:
+        if k and k in cards:
+            return cards[k]
+    return {comp: "OK" for comp in MAINTENANCE_COMPONENTS}
+
+def get_maintenance_notes(equipment_name: str, location: str = None) -> list:
     """Arızalı/bakımdaki bileşenler için analiz notları üret."""
-    card = get_maintenance_card(equipment_name)
+    card = get_maintenance_card(equipment_name, location)
     notes = []
     for comp in MAINTENANCE_COMPONENTS:
         status = card.get(comp, "OK")
@@ -2016,7 +2033,7 @@ class HVACAnalyzer:
         # Dispatch based on type
         if eq_type == EquipmentType.AHU:
             # Bakım kartını al (varsa)
-            maint_card = get_maintenance_card(profile.name) if profile.name else {}
+            maint_card = get_maintenance_card(profile.name, profile.location) if profile.name else {}
             return self.analyze_ahu_performance(profile, effective_mode, plant_supply, plant_return, oat, tol_crit, tol_norm, maintenance_card=maint_card)
         else:
             # FCU, Chiller, and others use the standard logic
