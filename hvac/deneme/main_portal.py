@@ -1320,7 +1320,15 @@ class HVACAnalyzer:
         if inlet is not None and outlet is not None:
             # Cooling coil: water warms across coil -> outlet > inlet
             # Heating coil: water cools across coil -> inlet > outlet
-            if self.utils.is_heating_mode(profile.mode):
+            _eq_dt = self.classify_equipment_type(profile.type)
+            if _eq_dt == EquipmentType.CHILLER:
+                # CHILLER ÜRETİM tarafıdır — coil'in TERSİ. Evaporatöre dönüş suyu SICAK
+                # girer (inlet), soğutulup SOĞUK çıkar (outlet) → faydalı soğutma ΔT'si
+                # = inlet - outlet (POZİTİF = soğutuyor). Eskiden coil formülü (outlet-inlet)
+                # uygulanıp ΔT negatif çıkıyor, sağlıklı chiller sahte CHILLER_BYPASS (-4)
+                # olarak KRİTİK işaretleniyordu.
+                delta_t = inlet - outlet
+            elif self.utils.is_heating_mode(profile.mode):
                 delta_t = inlet - outlet
             else:
                 delta_t = outlet - inlet
