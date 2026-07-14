@@ -317,6 +317,7 @@ def get_bakim_ozet() -> dict:
         "cooling_valve_signal": "Soğutma Vanası 0-10V",
         "supply_sensor":        "Üfleme Sensör",
         "return_sensor":        "Emiş Sensör",
+        "pressure_sensor":      "Basınç Sensörü",
     }
     try:
         mc_file = os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")

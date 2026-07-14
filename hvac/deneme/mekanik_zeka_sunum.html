@@ -430,7 +430,35 @@
                     </tr>
                 </thead>
                 <tbody>
+                                        <tr>
+                        <td><strong>FAN_BASMIYOR</strong> <span class="badge badge-purple">YENİ</span></td>
+                        <td>9.5</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU (basınç noktalı)</td>
+                        <td>Start AÇIK ama kanal basıncı ≤20 Pa — fan hava basmıyor (kayış/termik/fan)</td>
+                    </tr>
                     <tr>
+                        <td><strong>TERS_DT</strong> <span class="badge badge-purple">YENİ</span></td>
+                        <td>8.5</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>Sadece AHU</td>
+                        <td>Soğutmada üfleme emişten sıcak (hava ΔT negatif) — ısıtma kaçağı/sensör karışıklığı</td>
+                    </tr>
+                    <tr>
+                        <td><strong>LOKAL_CALISMA</strong> <span class="badge badge-purple">YENİ</span></td>
+                        <td>6.0</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>AHU (start noktalı)</td>
+                        <td>BMS komutu KAPALI ama basınç var — santral lokalde çalıştırılıyor</td>
+                    </tr>
+                    <tr>
+                        <td><strong>VERI_EKSIK</strong> <span class="badge badge-purple">YENİ</span></td>
+                        <td>5.0</td>
+                        <td><span class="badge badge-warning">WARNING</span></td>
+                        <td>AHU</td>
+                        <td>Kritik teşhis için gereken sensör verisi yok — teşhis beklemede (yanlış KRİTİK yerine)</td>
+                    </tr>
+<tr>
                         <td><strong>SIMUL_HEAT_COOL</strong></td>
                         <td>10.0</td>
                         <td><span class="badge badge-critical">CRITICAL</span></td>

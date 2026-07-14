@@ -41,9 +41,16 @@ PROP_PRESENT_VAL  = 85
 # ================================================================
 
 def _detect_point_type(point_name: str) -> str:
-    """Nokta adından canonical key türet (main_portal.py HVACUtils uyumlu)."""
+    """Nokta adından canonical key türet (main_portal.py HVACUtils uyumlu).
+    Tanınmayan ad → boş string döner (çağıran atlar) — eskiden her bilinmeyen
+    ad Return (emiş) sayılıyordu; start/basınç noktaları emiş sıcaklığı gibi
+    analize sızıyordu (SAĞLAMLAŞTIRMA 2.3)."""
     pn = point_name.lower().strip()
     # Sıra önemli: önce daha spesifik kontroller
+    if "start" in pn:                        # start/stop komut noktası (binary)
+        return "Start/Stop"
+    if ("bas" in pn and ("nc" in pn or "nç" in pn)) or "pressure" in pn:
+        return "Basınç (Pa)"                 # kanal fark basıncı
     if pn.endswith(" set") or pn == "set":
         return "Set (°C)"
     if "fleme" in pn:                        # üfleme sıcaklığı
@@ -52,7 +59,11 @@ def _detect_point_type(point_name: str) -> str:
         return "Cool Valve (%)"
     if "van" in pn:                          # ısıtma vanası (soğutma zaten yakalandı)
         return "Heat Valve (%)"
-    return "Return (°C)"                     # emüş / emüs sıcaklığı
+    if "emi" in pn or "emü" in pn or "return" in pn or "dönü" in pn or "donu" in pn:
+        return "Return (°C)"                 # emiş / dönüş sıcaklığı
+    # Tanınmayan ad — Return varsaymak yerine uyar ve atla
+    logger.warning("Tanınmayan nokta adı (atlandı): %s", point_name)
+    return ""
 
 
 def _ahu_adi(point_name: str) -> str:
@@ -99,10 +110,13 @@ def build_config_from_excel(excel_path: str) -> list:
         if not point_name or point_name.lower() == "nan":
             continue
         try:
+            _tip = _detect_point_type(point_name)
+            if not _tip:
+                continue  # tanınmayan nokta adı — uyarı loglandı, konfige eklenmez
             config.append({
                 "ahu_adi":    _ahu_adi(point_name),
                 "lokasyon":   str(row.get("LOCATION (MAHAL)", "MAS-1")).strip(),
-                "nokta_tipi": _detect_point_type(point_name),
+                "nokta_tipi": _tip,
                 "gateway_ip": str(row.get("Gateway IP", "")).strip(),
                 "dnet":       int(float(row.get("Network (DNET)", 0))),
                 "mac_hex":    str(row.get("MAC (DADR)", "0x01")).strip(),
@@ -637,8 +651,9 @@ def _ahu_row_olustur(ahu_adi: str, lokasyon: str, veriler: dict,
         "Type":     "AHU",
     }
 
-    # BACnet'ten okunan değerler
-    for alan in ["SAT (°C)", "Return (°C)", "Cool Valve (%)", "Heat Valve (%)", "Set (°C)"]:
+    # BACnet'ten okunan değerler (Start/Stop ve Basınç: ön koşul kapısı için — SAĞLAMLAŞTIRMA F1)
+    for alan in ["SAT (°C)", "Return (°C)", "Cool Valve (%)", "Heat Valve (%)", "Set (°C)",
+                 "Start/Stop", "Basınç (Pa)"]:
         if veriler.get(alan) is not None:
             row[alan] = veriler[alan]
 

@@ -5,7 +5,7 @@ import pandas as pd
 OUT = os.path.join(os.path.dirname(__file__), "static", "outputs", "kural_parametreleri_raporu.xlsx")
 
 df1 = pd.DataFrame([
-    ["TARGET_DT_AHU", "5.0°C", "AHU hedef ΔT (soğutma modu)", "Inlet/Outlet (coil su giriş-çıkış); yoksa Plant Supply/Return. AHU+soğutma+OAT varsa ±2°C OAT bias eklenir"],
+    ["AHU SOĞUTMA HEDEFİ", "DİNAMİK: emiş−16.5, 4-8°C bandı", "AHU hava ΔT hedefi artık sabit değil; emişe göre hesaplanır (fallback TARGET_AIR_DT_AHU_COOL=6)", "Inlet/Outlet (coil su giriş-çıkış); yoksa Plant Supply/Return. AHU+soğutma+OAT varsa ±2°C OAT bias eklenir"],
     ["TARGET_DT_FCU", "5.0°C", "FCU hedef ΔT (soğutma modu)", "Inlet/Outlet (coil su) -> fallback Plant Supply/Return"],
     ["TARGET_DT_CHILLER", "5.0°C", "Chiller hedef ΔT", "Plant Supply/Return (chillerda Inlet/Outlet genelde yok)"],
     ["TARGET_DT_COLLECTOR", "3.0°C", "Kolektör (ana toplayıcı) hedef ΔT", "Plant Supply (°C) ve Plant Return (°C) - kolektör giriş/çıkış sıcaklıkları. delta_t = |Plant Return - Plant Supply|"],
@@ -48,6 +48,10 @@ df6 = pd.DataFrame([
 ], columns=["Parametre", "Değer", "Referans Aldığı Veri"])
 
 df7 = pd.DataFrame([
+    ["FAN_BASMIYOR", "9.5", "CRITICAL", "Sadece AHU (basınç noktalı)", "Start=AÇIK + kanal basıncı <=20 Pa (2 ardışık okuma) -> fan hava basmıyor; analiz atlanır, alarm üretilir"],
+    ["TERS_DT", "8.5", "CRITICAL", "Sadece AHU", "Soğutmada hava ΔT < -1.0°C (üfleme emişten sıcak) -> ısıtma kaçağı/sensör karışıklığı"],
+    ["LOKAL_CALISMA", "6.0", "WARNING", "Sadece AHU (start+basınç noktalı)", "Start=KAPALI + basınç >20 Pa -> BMS dışı lokal çalıştırma; analiz yine yapılır"],
+    ["VERI_EKSIK", "5.0", "WARNING", "AHU", "SAT hedef dışı + EMİŞ verisi yok -> kritik teşhis doğrulanamaz (eski sürüm yanlış KRİTİK basıyordu)"],
     ["SIMUL_HEAT_COOL", "10.0", "CRITICAL", "AHU + FCU", "Heat Valve (%) ve Cool Valve (%) >= %5"],
     ["CHILLER_BYPASS", "9.0", "CRITICAL", "Sadece CHILLER", "Plant/Inlet-Outlet ΔT < 1.0°C"],
     ["NOT_COOLING", "9.0", "CRITICAL", "AHU + FCU", "SAT (°C), Mode=Cooling, SAT > Set+tol, vana >=%70"],
