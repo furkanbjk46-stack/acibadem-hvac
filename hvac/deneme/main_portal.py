@@ -2722,31 +2722,38 @@ def validate_equipment_data(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
                 errors.append(f"{equipment_name}: '{field}' alanı zorunludur")
         
         # Validate temperature ranges (-10°C to +100°C)
+        # SAĞLAMLAŞTIRMA: aralık dışı okuma (örn. 409.2°C) ARIZALI SENSÖR sinyalidir —
+        # tüm partiyi (55 santral) reddetmek yerine o alanı GEÇERSIZ sayıp None yaparız.
+        # Böylece diğer santraller analiz edilir; bozuk okuyan santral ilgili satırda
+        # "veri eksik / sensör arızası" olarak yüzeye çıkar. Batch ASLA bu yüzden çökmez.
         for field in temp_fields:
             value = row.get(field)
             if value is not None and value != "":
                 try:
                     temp = float(value)
                     if temp < -10 or temp > 100:
-                        errors.append(
-                            f"{equipment_name}: '{field}' değeri geçersiz ({temp}°C). "
-                            f"Geçerli aralık: -10°C ile +100°C arası"
+                        warnings.append(
+                            f"{equipment_name}: '{field}' aralık dışı ({temp}°C) — "
+                            f"arızalı sensör, okuma geçersiz sayıldı (-10°C..+100°C)."
                         )
+                        row[field] = None   # geçersiz okuma → eksik veri gibi ele alınır
                 except (ValueError, TypeError):
                     # Skip non-numeric values (they might be intentionally empty)
                     pass
-        
-        # Validate valve percentages (0-100%)
+
+        # Validate valve percentages (0-100%) — aynı ilke: aralık dışı vana okuması
+        # partiyi çökertmez, geçersiz sayılır (vana pozisyonu bilinmiyor kabul edilir).
         for field in valve_fields:
             value = row.get(field)
             if value is not None and value != "":
                 try:
                     valve = float(value)
                     if valve < 0 or valve > 100:
-                        errors.append(
-                            f"{equipment_name}: '{field}' değeri geçersiz ({valve}%). "
-                            f"Geçerli aralık: 0% ile 100% arası"
+                        warnings.append(
+                            f"{equipment_name}: '{field}' aralık dışı ({valve}%) — "
+                            f"okuma geçersiz sayıldı (0%..100%)."
                         )
+                        row[field] = None
                 except (ValueError, TypeError):
                     pass
         
@@ -4407,6 +4414,9 @@ async def recommend_json(payload: Dict[str, Any]):
 
         return JSONResponse(result)
 
+    except HTTPException:
+        # Doğrulama (400) vb. HTTP hataları olduğu gibi geçer — 500'e maskelenmez.
+        raise
     except Exception as e:
         logger.error(f"Recommend JSON error: {e}")
         raise HTTPException(status_code=500, detail=f"Analiz hatası: {str(e)}")
