@@ -192,8 +192,14 @@ def data_bridge_uret(analizorler: list, bacnet_eslesmeler: list) -> str:
 
 
 def _ahu_nokta_tipi(point_name: str) -> str:
-    """ahu_collector.py _detect_point_type ile birebir ayni mantik."""
+    """ahu_collector.py _detect_point_type ile birebir ayni mantik (SAGLAMLASTIRMA F1).
+    Start/Stop ve Basinc noktalari on kosul kapisi icin taninir; taninmayan ad artik
+    Return VARSAYILMAZ, bos doner (cagiran satiri atlar)."""
     pn = point_name.lower().strip()
+    if "start" in pn:
+        return "Start/Stop"
+    if ("bas" in pn and ("nc" in pn or "nç" in pn)) or "pressure" in pn:
+        return "Basınç (Pa)"
     if pn.endswith(" set") or pn == "set":
         return "Set (°C)"
     if "fleme" in pn:
@@ -202,7 +208,9 @@ def _ahu_nokta_tipi(point_name: str) -> str:
         return "Cool Valve (%)"
     if "van" in pn:
         return "Heat Valve (%)"
-    return "Return (°C)"
+    if "emi" in pn or "emü" in pn or "return" in pn or "dönü" in pn or "donu" in pn:
+        return "Return (°C)"
+    return ""  # taninmayan ad — konfige eklenmez
 
 
 def _ahu_adi(point_name: str) -> str:
@@ -235,11 +243,16 @@ def ahu_noktalari_oku(ws):
         mac_hex = str(mac_hex).strip() if mac_hex else son_mac
         son_gateway, son_dnet, son_mac = gateway_ip, dnet_str, mac_hex
 
+        _tip = _ahu_nokta_tipi(point_name)
+        if not _tip:
+            uyarilar.append(f"AHU noktasi TANINMADI, atlandi ('{point_name}') — "
+                            "ad 'ufleme/emis/vana/set/start/basinc' anahtarlarindan birini icermeli")
+            continue
         try:
             konfig.append({
                 "ahu_adi":    _ahu_adi(point_name),
                 "lokasyon":   str(mahal).strip() if mahal else "MAS-1",
-                "nokta_tipi": _ahu_nokta_tipi(point_name),
+                "nokta_tipi": _tip,
                 "gateway_ip": gateway_ip,
                 "dnet":       int(float(dnet_str)),
                 "mac_hex":    mac_hex or "0x01",
@@ -306,7 +319,21 @@ def data_collector_uret(analizorler: list) -> str:
 
 SAT_BAND_VARSAYILAN = {
     "SAT_COOLING_MIN": 15.0, "SAT_COOLING_MAX": 18.0,
-    "SAT_HEATING_MIN": 27.0, "SAT_HEATING_MAX": 30.0,
+    "SAT_HEATING_MIN": 28.0, "SAT_HEATING_MAX": 31.0,   # SAGLAMLASTIRMA ile guncellendi
+}
+
+# SAGLAMLASTIRMA F5 — on kosul kapisi esikleri (her yeni lokasyona yazilir; on_kosul.py
+# bu degerleri CONFIG'ten override alir, config_dogrula acilista bunlari denetler).
+ON_KOSUL_VARSAYILAN = {
+    "TARGET_AIR_DT_AHU_COOL": 6.0,     # AHU hava dT fallback (dinamik hedef esas: emis-16.5, 4-8 bandi)
+    "TARGET_AIR_DT_AHU_HEAT": 10.0,
+    "PRESSURE_RUN_MIN_PA": 20.0,       # ustu = fan calisiyor
+    "PRESSURE_FAULT_MAX_PA": 1500.0,   # ustu = basinc sensoru arizasi
+    "SENSOR_VALID_MIN_C": 1.0,         # ufleme/emis gecerli aralik alt
+    "SENSOR_VALID_MAX_C": 50.0,        # gecerli aralik ust
+    "MANUAL_SUPPRESS_HOURS": 24,       # elle OK = 24s susturma
+    "DEBOUNCE_OKUMA": 2, "DUZELME_OKUMA": 3, "TAKILI_OKUMA": 12,
+    "SKIP_ESKALASYON_GUN": 7,
 }
 SAT_BAND_PROFIL_ETIKETI = {
     "SAT_COOLING_MIN": "Sogutma Min Ufleme (SAT)",
@@ -345,6 +372,8 @@ def hvac_settings_uret(profil: dict) -> dict:
             ayarlar[anahtar] = float(deger_str) if deger_str else varsayilan
         except ValueError:
             ayarlar[anahtar] = varsayilan
+    # SAGLAMLASTIRMA: on kosul kapisi esiklerini de yaz (main_portal fail-fast'i icin)
+    ayarlar.update(ON_KOSUL_VARSAYILAN)
     return ayarlar
 
 

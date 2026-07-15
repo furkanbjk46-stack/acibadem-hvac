@@ -126,8 +126,8 @@ alan_baslik(ws1, 'A37', '  5. GENEL AHU UFLEME BANDI (Opsiyonel — bos ise vars
 
 satir(ws1, 38, 'Sogutma Min Ufleme (SAT)',  'Bos = varsayilan 15.0 kullanilir',                 '15.0', zorunlu=False)
 satir(ws1, 39, 'Sogutma Max Ufleme (SAT)',  'Bos = varsayilan 18.0 kullanilir',                 '18.0', zorunlu=False)
-satir(ws1, 40, 'Isitma Min Ufleme (SAT)',   'Bos = varsayilan 27.0 kullanilir',                 '27.0', zorunlu=False)
-satir(ws1, 41, 'Isitma Max Ufleme (SAT)',   'Bos = varsayilan 30.0 kullanilir',                 '30.0', zorunlu=False)
+satir(ws1, 40, 'Isitma Min Ufleme (SAT)',   'Bos = varsayilan 28.0 kullanilir',                 '28.0', zorunlu=False)
+satir(ws1, 41, 'Isitma Max Ufleme (SAT)',   'Bos = varsayilan 31.0 kullanilir',                 '31.0', zorunlu=False)
 
 ws1.row_dimensions[42].height = 8
 ws1.row_dimensions[43].height = 22
@@ -323,10 +323,15 @@ ws_ahu.row_dimensions[1].height = 30
 ws_ahu.merge_cells('A1:H1')
 baslik(ws_ahu, 'A1', 'AHU NOKTA LiSTESi (Mekanik Zeka / HVAC Analiz)')
 
-ws_ahu.row_dimensions[2].height = 30
+ws_ahu.row_dimensions[2].height = 42
 ws_ahu.merge_cells('A2:H2')
 ws_ahu['A2'] = ('Bu sayfa SANTRAL (chiller/kazan) noktalarindan AYRIDIR — sadece AHU (klima santrali) '
-                'noktalari icin kullanilir. ahu_collector.py --setup ile islenir.')
+                'noktalari icin kullanilir. ahu_collector.py --setup ile islenir.  '
+                'YENI: Her AHU icin sicaklik/vana noktalarina EK OLARAK "Start/Stop" (calisma komutu, '
+                'binary Object Type=4) ve "Basinc" (kanal fark basinci Pa, analog Object Type=0) '
+                'noktalari da girilebilir — bunlar ON KOSUL KAPISI icin kullanilir (santral gercekten '
+                'calisiyor mu, fan basiyor mu, sensor saglam mi). Basinc sensoru olmayan santrallerde '
+                'basinc noktasi bos birakilir (kapi otomatik 2/3 onaya duser).')
 ws_ahu['A2'].fill = PatternFill('solid', start_color=ACIK_MAVI)
 ws_ahu['A2'].font = Font(size=9, name='Arial', color=KOYU_MAVI, italic=True)
 ws_ahu['A2'].alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
@@ -360,16 +365,20 @@ ws_ahu.cell(row=4, column=8).value = 'MAS-1'
 for col in range(1, 9):
     ws_ahu.cell(row=4, column=col).font = Font(size=10, name='Arial', italic=True, color='0070C0')
 
-ws_ahu.row_dimensions[55].height = 54
+ws_ahu.row_dimensions[55].height = 78
 ws_ahu.merge_cells('A55:H55')
 ws_ahu['A55'] = (
     'ONEMLI — Point Name formati: ILK KELIME AHU adidir (orn. "Ahu-3"), sistem bunu otomatik ayirir. '
     'Devamindaki kelimeye gore nokta tipi otomatik tespit edilir: '
+    '"Start" iceren -> Start/Stop komutu (Object Type=4)  |  "Basinc" iceren -> kanal basinci Pa (Object Type=0)  |  '
     '"Ufleme" iceren -> SAT/ufleme sicakligi  |  "...Sogutma Vana..." -> sogutma vana yuzdesi  |  '
     '"...Isitma Vana..." -> isitma vana yuzdesi  |  "...Set" ile bitenler -> set sicakligi  |  '
-    'digerleri -> emis/donus sicakligi. Ornekler: "Ahu-3 Ufleme", "Ahu-3 Emis", "Ahu-3 Isitma Vana", '
-    '"Ahu-3 Sogutma Vana", "Ahu-3 Set". LOCATION (MAHAL) sutunu hangi hat/bolgede oldugunu belirtir '
-    '(orn. MAS-1, MAS-2 — Lokasyon Profili sayfasindaki Hat 1/Hat 2 adlarina karsilik gelir).'
+    '"Emis/Donus" iceren -> emis/donus sicakligi. '
+    'Ornekler: "Ahu-3 Ufleme", "Ahu-3 Emis", "Ahu-3 Isitma Vana", "Ahu-3 Sogutma Vana", "Ahu-3 Set", '
+    '"Ahu-3 Start", "Ahu-3 Basinc". '
+    'DIKKAT: Bu anahtar kelimelerden HICBIRINI icermeyen isimler ARTIK atlanir (eskiden yanlislikla '
+    'emis sayiliyordu) — tanimlanamayan nokta konfige eklenmez, kurulumda uyari verilir. '
+    'LOCATION (MAHAL): hangi hat/bolge (orn. MAS-1, MAS-2 — Lokasyon Profili Hat 1/Hat 2 adlarina karsilik).'
 )
 ws_ahu['A55'].fill = PatternFill('solid', start_color=TURUNCU)
 ws_ahu['A55'].font = Font(size=9, name='Arial', color='833C00', italic=True)
@@ -447,7 +456,9 @@ talimatlar = [
     ('ADIM 1', 'Lokasyon Profili sayfasini doldurun (sari hucreler)'),
     ('ADIM 2', 'Modbus Analizorler sayfasina sahadan aldiginiz IP ve cihaz bilgilerini girin'),
     ('ADIM 3', 'BACnet Noktalar sayfasina Desigo CC santral (chiller/kazan) noktalarini girin'),
-    ('ADIM 3b', 'AHU Noktalari sayfasina klima santrali (AHU) noktalarini girin — santral noktalarindan AYRI sayfa'),
+    ('ADIM 3b', 'AHU Noktalari sayfasina klima santrali (AHU) noktalarini girin — santral noktalarindan AYRI sayfa. '
+                'Sicaklik/vana noktalarina EK OLARAK varsa "Ahu-X Start" (Object Type=4) ve "Ahu-X Basinc" '
+                '(Object Type=0) noktalarini da girin — on kosul kapisi bunlari kullanir'),
     ('ADIM 3c', 'AHU SAT ve Kapasite sayfasini doldurun (OPSiYONEL — daha dogru analiz icin)'),
     ('ADIM 4', 'Doldurulmus Excel dosyasini lokasyon_kurulum_otomasyon.py ile isleyin'),
     ('ADIM 5', 'Otomatik olarak uretilenler (lokasyon_kurulum_otomasyon.py):'),
@@ -455,7 +466,8 @@ talimatlar = [
     ('',       '  - data_bridge.py  (Chiller/MCC kategorileri + BACNET_MAP)'),
     ('',       '  - ahu_nokta_konfig.json  (AHU Noktalari sayfasindan)'),
     ('',       '  - ahu_sat_limitleri.json / ahu_tasarim_kapasiteleri.json  (AHU SAT ve Kapasite sayfasindan, doldurulduysa)'),
-    ('',       '  - hvac_settings.json  (Genel AHU Ufleme Bandi alanlarindan, CONFIG override — kaynak kod degismez)'),
+    ('',       '  - hvac_settings.json  (Genel AHU Ufleme Bandi + on kosul kapisi esikleri: basinc/sensor '
+               'gecerlilik araliklari, susturma suresi vb. — CONFIG override, kaynak kod degismez)'),
     ('',       '  - chiller_fcu_ayarlari.json  (Chiller/FCU Kapasite Bilgisi alanlarindan, doldurulduysa)'),
     ('',       '  - location_manager.py  (KRiTiK — lokasyon kimligi + tek/cift hat semasi, Hat Sayisina gore)'),
     ('',       '  - supabase_config.json  (lokasyon ID + Supabase baglanti bilgisi)'),
@@ -473,6 +485,10 @@ talimatlar = [
     ('ONEMLI', 'Point Name sutunundaki degerler data_collector ile birebir eslesmeli'),
     ('ONEMLI', 'Cihaz Adi BUYUK HARF + tire formatinda olmali (orn. MCC-1, CHILLER-2) — Modbus Analizorler sayfasindaki uyariya bakin'),
     ('ONEMLI', 'Veri Okuma Saati / GM Sync Saati alanlari bilgi amaclidir, sistemde sabittir (07:10 / 08:00)'),
+    ('YENI', 'ON KOSUL KAPISI: AHU Start/Basinc noktalari girilirse, analiz oncesi 3 kapili kontrol calisir '
+             '(1-santral calisiyor mu, 2-fan basinc uretiyor mu, 3-sensorler saglam mi). Kapiyi gecemeyen '
+             'santral "Analiz Disi" isaretlenir, sahte alarm uretilmez. Basinc noktasi olmayan santral 2/3 '
+             'onayla analiz edilir. Start/Basinc noktalari YOKSA eski davranis aynen surer (kapi devreye girmez).'),
 ]
 
 for i, (adim, text) in enumerate(talimatlar, 3):
@@ -486,6 +502,10 @@ for i, (adim, text) in enumerate(talimatlar, 3):
     elif adim == 'HENUZ YOK':
         bg_a, fg_a = GRI, '666666'
         bg_b = GRI
+    elif adim == 'YENI':
+        bg_a, fg_a = YESIL, '375623'
+        bg_b = YESIL
+        ws4.row_dimensions[i].height = 58
     else:
         bg_a, fg_a = BEYAZ, BEYAZ
         bg_b = BEYAZ
