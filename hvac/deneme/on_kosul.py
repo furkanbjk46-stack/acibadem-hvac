@@ -66,8 +66,22 @@ def _durum_yaz(d: dict):
 SENSOR_ALANLARI = ("supply_sensor", "return_sensor", "pressure_sensor")
 
 
+HISTORY_MAX = 20  # kart meta geçmişinde tutulacak son kayıt sayısı
+
+
 def _simdi() -> str:
     return datetime.datetime.now().isoformat(timespec="seconds")
+
+
+def _history_ekle(meta: dict, kayit: dict):
+    """Meta geçmişine kayıt ekler ve son HISTORY_MAX ile sınırlar.
+    Budama nedeni: kart JSONB'si her değişimde büyüyordu; bakım kartları
+    Supabase ile senkronlandığı için şişen geçmiş doğrudan egress maliyeti
+    (tam denetim izi zaten append-only bakim_audit_log.jsonl dosyasında)."""
+    h = meta.setdefault("history", [])
+    h.append(kayit)
+    if len(h) > HISTORY_MAX:
+        meta["history"] = h[-HISTORY_MAX:]
 
 
 def _audit(santral: str, alan: str, eski: str, yeni: str, kim: str, neden: str):
@@ -132,8 +146,7 @@ def sistem_isaret_koy(santral: str, alan: str, neden: str, cfg: dict = None):
         "auto_since": simdi,
         "suppressed_until": meta.get("suppressed_until"),
     })
-    meta.setdefault("history", []).append(
-        {"ts": simdi, "kim": "SISTEM", "eski": eski, "yeni": "FAULTY", "neden": neden})
+    _history_ekle(meta, {"ts": simdi, "kim": "SISTEM", "eski": eski, "yeni": "FAULTY", "neden": neden})
     kart[meta_key] = meta
     kart["_updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     data["last_updated"] = simdi
@@ -159,8 +172,7 @@ def sistem_isaret_kaldir(santral: str, alan: str, neden: str = "3 ardışık ge�
     meta["source"] = "SISTEM"
     meta["auto_reason"] = ""
     meta["suppressed_until"] = None
-    meta.setdefault("history", []).append(
-        {"ts": simdi, "kim": "SISTEM", "eski": "FAULTY", "yeni": "OK", "neden": neden})
+    _history_ekle(meta, {"ts": simdi, "kim": "SISTEM", "eski": "FAULTY", "yeni": "OK", "neden": neden})
     kart[alan + "_meta"] = meta
     kart["_updated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     _kartlari_yaz(data)
@@ -182,9 +194,8 @@ def elle_ok_suppress(santral: str, alan: str, kim: str = "Operatör", cfg: dict 
     bitis = (datetime.datetime.now()
              + datetime.timedelta(hours=cfg["MANUAL_SUPPRESS_HOURS"])).isoformat(timespec="seconds")
     meta["suppressed_until"] = bitis
-    meta.setdefault("history", []).append(
-        {"ts": _simdi(), "kim": kim, "eski": "FAULTY", "yeni": "OK",
-         "neden": f"elle temizleme → {cfg['MANUAL_SUPPRESS_HOURS']}s susturma"})
+    _history_ekle(meta, {"ts": _simdi(), "kim": kim, "eski": "FAULTY", "yeni": "OK",
+                         "neden": f"elle temizleme → {cfg['MANUAL_SUPPRESS_HOURS']}s susturma"})
     kart[alan + "_meta"] = meta
     _kartlari_yaz(data)
     _audit(santral, alan, "FAULTY", "OK", kim, "elle susturma")

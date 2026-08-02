@@ -396,6 +396,12 @@ def sync_bakim_kartlari(client, lokasyon_id: str):
       satırı silinir (sahadan QR ile sadece MEVCUT kartlar düzenlenir).
     - Sahadan (merkez portal QR sayfası) yapılan değişiklikler yerel
       maintenance_cards.json dosyasına indirilir → analiz motoru anında görür.
+
+    EGRESS OPTİMİZASYONU (delta senkron): Eskiden her turda TÜM kartların `kart`
+    JSONB gövdesi indiriliyordu (46 kart × ~2 KB × günde 720 tur ≈ 60 MB/gün →
+    Supabase egress kotasını tüketiyordu). Artık önce yalnızca `cihaz,updated_at`
+    çekilir (~60 byte/kart); `kart` gövdesi SADECE buluttaki sürümü yerelden yeni
+    olan cihazlar için indirilir. Tipik turda 0 gövde iner.
     """
     mc_file = os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
     try:
@@ -405,11 +411,30 @@ def sync_bakim_kartlari(client, lokasyon_id: str):
                 data = json.load(f)
         cards = data.get("cards", {}) or {}
 
+        # 0) HAFİF TARAMA — sadece zaman damgaları (kart gövdesi YOK)
         r = client.table("bakim_kartlari") \
-            .select("cihaz,kart,updated_at") \
+            .select("cihaz,updated_at") \
             .eq("lokasyon_id", lokasyon_id) \
             .range(0, 999).execute()
         bulut = {x["cihaz"]: x for x in (r.data or [])}
+
+        # 0b) Buluttaki sürümü yerelden YENİ olan cihazları belirle — gövde yalnız onlar için inecek
+        _indirilecek = []
+        for cihaz, satir in bulut.items():
+            if cihaz not in cards:
+                continue  # yerelde yok → aşağıda silinecek, gövdesine gerek yok
+            _yerel_ts = _ts_parse(cards[cihaz].get("_updated_at") if isinstance(cards[cihaz], dict) else None)
+            if _ts_parse(satir.get("updated_at")) > _yerel_ts:
+                _indirilecek.append(cihaz)
+
+        if _indirilecek:
+            r2 = client.table("bakim_kartlari") \
+                .select("cihaz,kart,updated_at") \
+                .eq("lokasyon_id", lokasyon_id) \
+                .in_("cihaz", _indirilecek).execute()
+            for x in (r2.data or []):
+                bulut[x["cihaz"]] = x  # gövdeli satırla değiştir
+            logger.info(f"🔧 {len(_indirilecek)} kartın gövdesi indirildi (delta senkron)")
 
         yerel_degisti = False
         simdi = datetime.now(timezone.utc).isoformat()
@@ -442,7 +467,13 @@ def sync_bakim_kartlari(client, lokasyon_id: str):
             yerel_ts = _ts_parse(cards[cihaz].get("_updated_at") if isinstance(cards[cihaz], dict) else None)
             bulut_ts = _ts_parse(satir.get("updated_at"))
             if bulut_ts > yerel_ts:
-                yeni = dict(satir.get("kart") or {})
+                # GÜVENLİK: delta senkronda gövde inmediyse (ağ hatası vb.) yerel kartı
+                # boş dict ile EZME — bu turu atla, sonraki turda tekrar denenir.
+                _govde = satir.get("kart")
+                if not _govde:
+                    logger.warning(f"Bakım kartı gövdesi inmedi, atlandı: {cihaz}")
+                    continue
+                yeni = dict(_govde)
                 yeni["_updated_at"] = satir.get("updated_at")
                 cards[cihaz] = yeni
                 yerel_degisti = True
@@ -467,6 +498,11 @@ def sync_bakim_kartlari(client, lokasyon_id: str):
         logger.warning(f"Bakım kartı senkronizasyon hatası: {e}")
 
 
+# Heartbeat upsert'i 'returning=minimal' destekliyor mu (postgrest sürümüne göre);
+# ilk hatada False'a düşer ve bir daha denenmez.
+_HB_MINIMAL_OK = True
+
+
 def send_heartbeat(client, lokasyon_id: str):
     """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
     try:
@@ -476,7 +512,22 @@ def send_heartbeat(client, lokasyon_id: str):
             "durum": "online",
             "bakim_ozet": get_bakim_ozet(),
         }
-        client.table("lokasyonlar").upsert(payload, on_conflict="lokasyon_id").execute()
+        # returning="minimal": yazılan satır geri DÖNMESİN — bakim_ozet JSONB'si
+        # (arızalı/bakımda cihaz listeleri) her 2 dakikada boşuna indiriliyordu (egress).
+        # GÜVENLİK: heartbeat kritik (kesilirse lokasyon 'çevrimdışı' görünür ve Synapse
+        # alarm verir). Bu yüzden minimal HER hatada normal upsert'e düşer ve bir daha
+        # denenmez — sürüm uyumsuzluğunda çift istek atmayalım.
+        global _HB_MINIMAL_OK
+        if _HB_MINIMAL_OK:
+            try:
+                client.table("lokasyonlar").upsert(
+                    payload, on_conflict="lokasyon_id", returning="minimal").execute()
+            except Exception as _me:
+                _HB_MINIMAL_OK = False
+                logger.info(f"Heartbeat 'minimal' desteklenmiyor, standart moda geçildi: {_me}")
+                client.table("lokasyonlar").upsert(payload, on_conflict="lokasyon_id").execute()
+        else:
+            client.table("lokasyonlar").upsert(payload, on_conflict="lokasyon_id").execute()
         logger.debug(f"💓 Heartbeat gönderildi: {lokasyon_id}")
     except Exception as e:
         logger.warning(f"Heartbeat hatası: {e}")
@@ -634,10 +685,14 @@ def start_background_sync():
                     # Her turda: BACnet komut polling (≈1 dk aralık)
                     if _bacnet_writer_ok and _sb_url and _sb_key:
                         _komutlari_isle(_sb_url, _sb_key, lokasyon_id)
-                    # Her 2 turda bir: heartbeat + güncelleme kontrolü + bakım kartı sync
+                    # Her 2 turda bir (≈2 dk): heartbeat + güncelleme kontrolü
                     if _tick % 2 == 0:
                         send_heartbeat(client, lokasyon_id)
                         check_and_apply_update(client, lokasyon_id)
+                    # Bakım kartı senkronu: her 10 turda bir (≈10 dk) — EGRESS optimizasyonu.
+                    # Sahadan QR ile yapılan kart değişikliğinin lokasyona inmesi için
+                    # 2 dk gereksiz hassastı; 10 dk saha akışı için fazlasıyla yeterli.
+                    if _tick % 10 == 0:
                         sync_bakim_kartlari(client, lokasyon_id)
                     # HVAC analizi: her _HVAC_PERIYOT_DK dakikada bir
                     # son çalışma zamanı DOSYAYA yazılır — program restart'ta tekrar tetiklenmez
