@@ -19,6 +19,28 @@ BACNET_PORT    = 47808
 WRITE_TIMEOUT  = 5.0
 PROP_PRESENT_VALUE = 85  # BACnet property ID
 
+# ── GÜVENLİK: komut değeri kabul aralığı (°C) ──────────────────────────────
+# komutlar tablosuna yazma yetkisi olan herkes sahaya setpoint gönderebiliyor.
+# Bu yüzden BACnet'e yazmadan ÖNCE değer burada sınırlanır: aralık dışı komut
+# cihaza HİÇ gönderilmez, 'hata' olarak işaretlenir (savunma derinliği —
+# Supabase RLS politikaları ilk katman, bu ikinci katman).
+KOMUT_DEGER_MIN = 5.0
+KOMUT_DEGER_MAX = 40.0
+
+
+def komut_degeri_gecerli(deger):
+    """Komut değerini doğrular. (gecerli: bool, sebep: str) döner."""
+    try:
+        d = float(deger)
+    except (TypeError, ValueError):
+        return False, f"Gecersiz deger tipi: {deger!r}"
+    if d != d or d in (float("inf"), float("-inf")):  # NaN / sonsuz
+        return False, f"Gecersiz sayisal deger: {deger!r}"
+    if not (KOMUT_DEGER_MIN <= d <= KOMUT_DEGER_MAX):
+        return False, (f"Deger izinli aralik disinda: {d} "
+                       f"(izinli {KOMUT_DEGER_MIN}-{KOMUT_DEGER_MAX} C)")
+    return True, ""
+
 
 # ================================================================
 # YARDIMCI FONKSİYONLAR
@@ -209,6 +231,13 @@ def komutlari_isle(sb_url: str, sb_key: str, lokasyon_id: str):
                 _komut_guncelle(sb_url, sb_key, kid, "hata",
                                 f"Nokta tanımsız: {nokta_adi}")
                 logger.warning(f"  ⚠️ Tanımsız nokta: {nokta_adi}")
+                continue
+
+            # GÜVENLİK KAPISI: aralık dışı/bozuk değer sahaya gönderilmez
+            _gecerli, _sebep = komut_degeri_gecerli(hedef)
+            if not _gecerli:
+                _komut_guncelle(sb_url, sb_key, kid, "hata", _sebep)
+                logger.warning(f"  🛑 Komut reddedildi ({nokta_adi}): {_sebep}")
                 continue
 
             n = noktalar[nokta_adi]
