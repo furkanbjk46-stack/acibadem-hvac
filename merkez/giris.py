@@ -235,17 +235,34 @@ footer, #MainMenu{visibility:hidden;}
 .block-container{padding-top:14vh !important; padding-bottom:6vh !important;
                  position:relative; z-index:1;}
 
-/* ── Buzlu cam panel ── */
+/* ── Buzlu cam panel ──
+   Genislik CSS ile sinirlanir: layout="wide" oldugu icin panel aksi halde
+   ekrani boydan boya kaplar ve tasarimin oranlari bozulur. */
 .st-key-giris_panel{
+  max-width:780px !important;
+  margin:0 auto !important;
   background:rgba(15,23,42,0.40) !important;
   backdrop-filter:blur(22px) saturate(140%%) !important;
   -webkit-backdrop-filter:blur(22px) saturate(140%%) !important;
   border:1px solid rgba(56,189,248,0.22) !important;
   border-radius:18px !important;
-  padding:34px 32px !important;
+  padding:40px 38px !important;
   box-shadow:0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08) !important;
 }
 .st-key-giris_panel [data-testid="stVerticalBlock"]{gap:0.35rem;}
+
+/* Iki yariyi ayiran dikey cizgi (tasarimdaki bolunmus ekran gorunumu) */
+.st-key-giris_panel [data-testid="stHorizontalBlock"]{align-items:stretch;}
+.st-key-giris_panel [data-testid="stColumn"]:first-of-type{
+  border-right:1px solid rgba(56,189,248,0.16);
+  padding-right:34px !important;
+}
+.st-key-giris_panel [data-testid="stColumn"]:last-of-type{
+  padding-left:34px !important;
+  display:flex;flex-direction:column;justify-content:center;
+}
+/* Sol yari: marka ustte, istatistikler altta */
+.g-sol{display:flex;flex-direction:column;justify-content:space-between;min-height:236px;}
 
 .g-ust{font-family:'Plus Jakarta Sans',sans-serif;font-size:8.5px;letter-spacing:3.4px;
        color:#94a3b8;text-transform:uppercase;}
@@ -395,54 +412,64 @@ def _giris_formu(kullanici_ad: str, parola_hash: str):
     """Giriş ekranını basar. (st.stop() çağırmaz — çağıran karar verir.)"""
     import streamlit as st
     _stil()
-    _, orta, _ = st.columns([1, 2.4, 1])
-    with orta:
-        with st.container(key="giris_panel"):
-            sol, sag = st.columns([1.05, 1], gap="large")
+    # Dış sütun kullanılmaz; panel genişliğini CSS'teki max-width belirler
+    # (dar ekranda sütun panelden ince kalıp tasarımı bozuyordu).
+    with st.container(key="giris_panel"):
+        sol, sag = st.columns([1.05, 1], gap="large")
 
-            with sol:
-                st.markdown(
-                    "<div class='g-ust'>Acıbadem Sağlık Grubu</div>"
-                    "<div class='g-mrk'>SYNAPSE</div>"
-                    "<div class='g-alt'>Operasyonel Zeka</div>"
-                    "<div style='height:26px'></div>"
-                    "<div class='g-istat'><span><span class='g-nokta'></span>Sistem</span>"
-                    "<b>ÇEVRİMİÇİ</b></div>"
-                    "<div class='g-istat'><span>Güvenli Bağlantı</span><b>AKTİF</b></div>",
-                    unsafe_allow_html=True)
+        with sol:
+            # NOT: Buradaki değerler bilinçli olarak SABİTTİR, canlı veri değildir.
+            # Giriş yapmamış ziyaretçiye kaç hastane/santral izlendiği bilgisi
+            # verilmemesi için ve giriş sayfasının her açılışında Supabase
+            # sorgusu (egress) oluşmaması için veri çekilmez.
+            st.markdown(
+                "<div class='g-sol'>"
+                "<div>"
+                "<div class='g-ust'>Acıbadem Sağlık Grubu</div>"
+                "<div class='g-mrk'>SYNAPSE</div>"
+                "<div class='g-alt'>Operasyonel Zeka</div>"
+                "</div>"
+                "<div>"
+                "<div class='g-istat'><span><span class='g-nokta'></span>Sistem</span>"
+                "<b>ÇEVRİMİÇİ</b></div>"
+                "<div class='g-istat'><span>Güvenli Bağlantı</span><b>AKTİF</b></div>"
+                "<div class='g-istat'><span>Yetkilendirme</span><b>GEREKLİ</b></div>"
+                "</div>"
+                "</div>",
+                unsafe_allow_html=True)
 
-            with sag:
-                kilitli, kalan = _kilitli_mi()
-                if kilitli:
-                    st.error("Çok fazla hatalı deneme. %d saniye sonra tekrar deneyin."
-                             % kalan)
-                else:
-                    with st.form("giris_formu", clear_on_submit=False):
-                        ad = st.text_input("Kullanıcı Adı", key="giris_ad",
-                                           placeholder="kullanici.adi")
-                        pr = st.text_input("Parola", type="password", key="giris_pr",
-                                           placeholder="••••••••••")
-                        gonder = st.form_submit_button("Giriş Yap",
-                                                       use_container_width=True)
-                    if gonder:
-                        # Kullanıcı adı da zamanlama-güvenli karşılaştırılır
-                        ad_ok = hmac.compare_digest(ad.strip(), kullanici_ad)
-                        if ad_ok and parola_dogrula(pr, parola_hash):
-                            _basari_kaydet()
-                            st.session_state["giris_ok"] = True
-                            st.session_state["giris_son_hareket"] = time.time()
-                            # Jeton burada üretilir ama çerez BİR SONRAKİ
-                            # çalıştırmada yazılır: st.rerun() hemen çağrıldığı
-                            # için bileşenin JS'i çalışmaya fırsat bulamaz.
-                            st.session_state["giris_jeton"] = _jeton_uret(
-                                parola_hash, OTURUM_SAAT * 3600)
-                            st.session_state["giris_cerez_yaz"] = True
-                            st.rerun()
-                        else:
-                            _hata_kaydet()
-                            st.error("Kullanıcı adı veya parola hatalı.")
-                    st.markdown("<div class='g-kucuk'>Yetkisiz erişim girişimleri "
-                                "kayıt altına alınır</div>", unsafe_allow_html=True)
+        with sag:
+            kilitli, kalan = _kilitli_mi()
+            if kilitli:
+                st.error("Çok fazla hatalı deneme. %d saniye sonra tekrar deneyin."
+                         % kalan)
+            else:
+                with st.form("giris_formu", clear_on_submit=False):
+                    ad = st.text_input("Kullanıcı Adı", key="giris_ad",
+                                       placeholder="kullanici.adi")
+                    pr = st.text_input("Parola", type="password", key="giris_pr",
+                                       placeholder="••••••••••")
+                    gonder = st.form_submit_button("Giriş Yap",
+                                                   use_container_width=True)
+                if gonder:
+                    # Kullanıcı adı da zamanlama-güvenli karşılaştırılır
+                    ad_ok = hmac.compare_digest(ad.strip(), kullanici_ad)
+                    if ad_ok and parola_dogrula(pr, parola_hash):
+                        _basari_kaydet()
+                        st.session_state["giris_ok"] = True
+                        st.session_state["giris_son_hareket"] = time.time()
+                        # Jeton burada üretilir ama çerez BİR SONRAKİ
+                        # çalıştırmada yazılır: st.rerun() hemen çağrıldığı
+                        # için bileşenin JS'i çalışmaya fırsat bulamaz.
+                        st.session_state["giris_jeton"] = _jeton_uret(
+                            parola_hash, OTURUM_SAAT * 3600)
+                        st.session_state["giris_cerez_yaz"] = True
+                        st.rerun()
+                    else:
+                        _hata_kaydet()
+                        st.error("Kullanıcı adı veya parola hatalı.")
+                st.markdown("<div class='g-kucuk'>Yetkisiz erişim girişimleri "
+                            "kayıt altına alınır</div>", unsafe_allow_html=True)
 
 
 def cikis_yap():
