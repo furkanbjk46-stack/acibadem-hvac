@@ -45,6 +45,7 @@ OTURUM_SAAT      = 12        # bu kadar hareketsizlikten sonra oturum düşer
 KILIT_ESIGI      = 8         # bu kadar hatalı denemeden sonra geçici kilit
 KILIT_SURE_SN    = 300       # kilit süresi (5 dk)
 MAKS_GECIKME_SN  = 8         # hatalı denemede uygulanan azami bekleme
+CEREZ_AD         = "synapse_oturum"   # oturum çerezinin adı
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
 _ARKAPLAN = os.path.join(_BASE, "assets", "login_bg.jpg")
@@ -107,6 +108,82 @@ def _hata_kaydet():
 def _basari_kaydet():
     with _kilit:
         _durum["hata"] = 0
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# OTURUM ÇEREZİ — sayfa yenilemesinde oturumun düşmemesi için
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# NEDEN: Streamlit'in session_state'i tarayıcı oturumuna bağlıdır; F5'te sıfırlanır.
+# Kalıcılık için imzalı bir jeton çerezde tutulur.
+#
+# GÜVENLİK TASARIMI:
+#   * Çerezde parola YOKTUR — yalnızca "son kullanma zamanı + rastgele değer +
+#     HMAC imzası" bulunur.
+#   * İmza anahtarı parola karmasından türetilir; karma yalnızca sunucudadır.
+#     Bu sayede saldırgan geçerli jeton UYDURAMAZ.
+#   * Yan fayda: parola değiştirilince imza anahtarı da değişir → eski tüm
+#     oturumlar kendiliğinden geçersiz olur.
+#   * Süre sunucu tarafında doğrulanır; çerezdeki tarihe güvenilmez.
+#
+# Çerez yazma tarayıcı tarafında yapılır (Streamlit çerez yazamaz), ancak
+# DOĞRULAMA tamamen sunucuda (st.context.cookies) yapılır — kritik olan budur.
+
+def _imza_anahtari(parola_hash: str) -> bytes:
+    """İmza anahtarını parola karmasından türetir (karma sunucuda kalır)."""
+    return hashlib.sha256(("synapse-oturum-v1|" + parola_hash).encode()).digest()
+
+
+def _jeton_uret(parola_hash: str, saniye: int) -> str:
+    son = int(time.time()) + saniye
+    rastgele = _secrets.token_hex(8)
+    govde = "%d.%s" % (son, rastgele)
+    imza = hmac.new(_imza_anahtari(parola_hash), govde.encode(), hashlib.sha256).hexdigest()
+    return govde + "." + imza
+
+
+def _jeton_gecerli(jeton: str, parola_hash: str) -> bool:
+    """Jetonun imzasını ve süresini SUNUCUDA doğrular."""
+    try:
+        son_s, rastgele, imza = jeton.split(".")
+        govde = "%s.%s" % (son_s, rastgele)
+        beklenen = hmac.new(_imza_anahtari(parola_hash), govde.encode(),
+                            hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(imza, beklenen):
+            return False                      # imza tutmuyor → uydurma
+        return int(son_s) > time.time()       # süresi dolmuş mu
+    except Exception:
+        return False
+
+
+def _cerez_oku(ad: str) -> str:
+    import streamlit as st
+    try:
+        return str(st.context.cookies.get(ad, "") or "")
+    except Exception:
+        return ""
+
+
+def _cerez_yaz(jeton: str, saniye: int):
+    """Çerezi tarayıcıya yazar. Bileşen IFRAME içinde çalıştığı için
+    uygulamanın kendi alan adına yazmak üzere window.parent kullanılır."""
+    import streamlit.components.v1 as components
+    components.html(
+        """<script>
+        try{
+          var g = (window.parent.location.protocol === 'https:') ? '; Secure' : '';
+          window.parent.document.cookie =
+            "%s=%s; path=/; max-age=%d; SameSite=Lax" + g;
+        }catch(e){}
+        </script>""" % (CEREZ_AD, jeton, saniye), height=0)
+
+
+def _cerez_sil():
+    import streamlit.components.v1 as components
+    components.html(
+        """<script>
+        try{ window.parent.document.cookie = "%s=; path=/; max-age=0"; }catch(e){}
+        </script>""" % CEREZ_AD, height=0)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -282,6 +359,9 @@ def giris_kapisi():
     import streamlit as st
 
     if oturum_gecerli():
+        # Girişten sonraki ilk çalıştırmada çerez yazılır (bkz. aşağıdaki not)
+        if st.session_state.pop("giris_cerez_yaz", None):
+            _cerez_yaz(st.session_state.get("giris_jeton", ""), OTURUM_SAAT * 3600)
         return
 
     kullanici_ad, parola_hash = _ayarlar()
@@ -289,6 +369,31 @@ def giris_kapisi():
         _kurulum_ekrani()
         return
 
+    # ── Çıkış yapıldıysa: çerezi burada sil ──
+    # cikis_yap() içinde silinemez; orada st.rerun() hemen çağrıldığı için
+    # bileşenin JS'i çalışmaz ve çerez kalır → kullanıcı anında geri giriş
+    # yapmış olurdu. Bu yüzden silme, giriş ekranının basıldığı bu çalıştırmaya
+    # ertelenir ve çerez geri yükleme adımı bu turda ATLANIR.
+    if st.session_state.pop("giris_cerez_sil", None):
+        _cerez_sil()
+        _giris_formu(kullanici_ad, parola_hash)
+        st.stop()
+
+    # ── Sayfa yenilendiyse: çerezdeki jetonla oturumu geri getir ──
+    jeton = _cerez_oku(CEREZ_AD)
+    if jeton and _jeton_gecerli(jeton, parola_hash):
+        st.session_state["giris_ok"] = True
+        st.session_state["giris_jeton"] = jeton
+        st.session_state["giris_son_hareket"] = time.time()
+        return
+
+    _giris_formu(kullanici_ad, parola_hash)
+    st.stop()
+
+
+def _giris_formu(kullanici_ad: str, parola_hash: str):
+    """Giriş ekranını basar. (st.stop() çağırmaz — çağıran karar verir.)"""
+    import streamlit as st
     _stil()
     _, orta, _ = st.columns([1, 2.4, 1])
     with orta:
@@ -326,20 +431,32 @@ def giris_kapisi():
                             _basari_kaydet()
                             st.session_state["giris_ok"] = True
                             st.session_state["giris_son_hareket"] = time.time()
+                            # Jeton burada üretilir ama çerez BİR SONRAKİ
+                            # çalıştırmada yazılır: st.rerun() hemen çağrıldığı
+                            # için bileşenin JS'i çalışmaya fırsat bulamaz.
+                            st.session_state["giris_jeton"] = _jeton_uret(
+                                parola_hash, OTURUM_SAAT * 3600)
+                            st.session_state["giris_cerez_yaz"] = True
                             st.rerun()
                         else:
                             _hata_kaydet()
                             st.error("Kullanıcı adı veya parola hatalı.")
                     st.markdown("<div class='g-kucuk'>Yetkisiz erişim girişimleri "
                                 "kayıt altına alınır</div>", unsafe_allow_html=True)
-    st.stop()
 
 
 def cikis_yap():
-    """Oturumu kapatır."""
+    """Oturumu kapatır.
+
+    Çerez BURADA silinmez — çağıran taraf hemen st.rerun() yaptığı için
+    silme bileşeninin JS'i çalışmaz ve çerez kalırdı (kullanıcı anında geri
+    giriş yapmış olurdu). Bunun yerine bayrak bırakılır; çerez, giriş ekranının
+    basıldığı bir sonraki çalıştırmada giris_kapisi() içinde silinir.
+    """
     import streamlit as st
-    for k in ("giris_ok", "giris_son_hareket"):
+    for k in ("giris_ok", "giris_son_hareket", "giris_jeton", "giris_cerez_yaz"):
         st.session_state.pop(k, None)
+    st.session_state["giris_cerez_sil"] = True
 
 
 # ═══════════════════════════════════════════════════════════════════════════
