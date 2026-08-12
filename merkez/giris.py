@@ -156,8 +156,48 @@ def _jeton_gecerli(jeton: str, parola_hash: str) -> bool:
         return False
 
 
+# ── Çerez okuma köprüsü ────────────────────────────────────────────────────
+#
+# NEDEN AYRI BİR KÜTÜPHANE:
+# Streamlit Cloud'da yapılan ölçüm (?tani=1) şunu gösterdi:
+#   * çerez tarayıcıya YAZILIYOR (synapse_oturum hem bileşende hem üst belgede var)
+#   * ancak SUNUCU hiçbir çerez görmüyor: st.context.cookies TAMAMEN BOŞ,
+#     tarayıcıda 9 çerez varken bile.
+# Yani Cloud ortamında çerezler sunucu tarafına geçmiyor ve st.context.cookies
+# kullanılamıyor. Değerin tarayıcıdan Python'a geri dönmesi için çift yönlü bir
+# bileşen gerekiyor; extra-streamlit-components/CookieManager tam olarak bunu yapar.
+#
+# SAVUNMALI KURULUM: kütüphane yoksa veya hata verirse uygulama ÇÖKMEZ;
+# st.context.cookies'e geri düşer (yerelde çalışır, Cloud'da oturum kalıcı olmaz).
+
+def _cm():
+    """CookieManager örneğini döner; kullanılamıyorsa None."""
+    import streamlit as st
+    if st.session_state.get("_cm_kullanilamaz"):
+        return None
+    cm = st.session_state.get("_cm")
+    if cm is not None:
+        return cm
+    try:
+        import extra_streamlit_components as stx
+        cm = stx.CookieManager(key="synapse_cerez_yoneticisi")
+        st.session_state["_cm"] = cm
+        return cm
+    except Exception:
+        st.session_state["_cm_kullanilamaz"] = True
+        return None
+
+
 def _cerez_oku(ad: str) -> str:
     import streamlit as st
+    cm = _cm()
+    if cm is not None:
+        try:
+            deger = cm.get(ad)
+            if deger:
+                return str(deger)
+        except Exception:
+            pass
     try:
         return str(st.context.cookies.get(ad, "") or "")
     except Exception:
@@ -197,8 +237,25 @@ function _syn_yaz(ad, deger, saniye){
 
 
 def _cerez_yaz(jeton: str, saniye: int):
-    """Çerezi tarayıcıya yazar (bkz. _CEREZ_JS içindeki gerekçe)."""
+    """Çerezi tarayıcıya yazar (bkz. _CEREZ_JS içindeki gerekçe).
+
+    Önce CookieManager denenir — çünkü okuma da onun üzerinden yapılıyor ve
+    yazdığını kendi önbelleğinde de tutar. Kullanılamıyorsa doğrudan JS'e düşülür.
+    """
+    import streamlit as st
     import streamlit.components.v1 as components
+
+    cm = _cm()
+    if cm is not None:
+        try:
+            from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+            cm.set(CEREZ_AD, jeton,
+                   expires_at=_dt.now(_tz.utc) + _td(seconds=saniye),
+                   key="synapse_cerez_yaz")
+            return
+        except Exception:
+            pass
+
     components.html(
         "<script>%s _syn_yaz(%r, %r, %d);</script>"
         % (_CEREZ_JS, CEREZ_AD, jeton, saniye), height=0)
@@ -206,6 +263,19 @@ def _cerez_yaz(jeton: str, saniye: int):
 
 def _cerez_sil():
     import streamlit.components.v1 as components
+
+    import streamlit as st
+    cm = _cm()
+    # cm.delete yalnızca BİR KEZ çağrılır: her turda çağrılması hem yinelenen
+    # bileşen anahtarı hatasına yol açar hem de her seferinde yeni bir rerun
+    # tetikler.
+    if cm is not None and not st.session_state.get("_cm_silindi"):
+        st.session_state["_cm_silindi"] = True
+        try:
+            cm.delete(CEREZ_AD, key="synapse_cerez_sil")
+        except Exception:
+            pass
+
     components.html(
         """<script>
         var _a = %r;
@@ -435,23 +505,47 @@ def giris_kapisi():
             _cerez_yaz(jeton, OTURUM_SAAT * 3600)
         return
 
-    # ── Çıkış yapıldıysa: çerezi burada sil ──
-    # cikis_yap() içinde silinemez; orada st.rerun() hemen çağrıldığı için
-    # bileşenin JS'i çalışmaz ve çerez kalır → kullanıcı anında geri giriş
-    # yapmış olurdu. Bu yüzden silme, giriş ekranının basıldığı bu çalıştırmaya
-    # ertelenir ve çerez geri yükleme adımı bu turda ATLANIR.
-    if st.session_state.pop("giris_cerez_sil", None):
+    # ── Çıkış yapıldıysa ──
+    # Silme cikis_yap() içinde yapılamaz: orada st.rerun() hemen çağrıldığı için
+    # bileşenin JS'i çalışmaz. Bu yüzden silme buraya ertelenir.
+    #
+    # Bayrak, çerez GERÇEKTEN silinene kadar korunur. Tek seferde tüketilseydi
+    # şu olurdu (ve oldu): CookieManager.delete() kendi rerun'unu tetikleyip
+    # bu çalıştırmayı yarıda keser, bayrak tükenmiş olur, sonraki turda önbellekte
+    # duran eski jeton okunup oturum GERİ AÇILIRDI — yani "Çıkış" çalışmazdı.
+    if st.session_state.get("giris_cikis"):
         _cerez_sil()
+        if not _cerez_oku(CEREZ_AD):
+            st.session_state.pop("giris_cikis", None)
+            st.session_state.pop("_cm_silindi", None)
         _giris_formu(kullanici_ad, parola_hash)
         st.stop()
 
     # ── Sayfa yenilendiyse: çerezdeki jetonla oturumu geri getir ──
+    # NOT: Bu çağrı aynı zamanda CookieManager bileşenini render eder.
     jeton = _cerez_oku(CEREZ_AD)
     if jeton and _jeton_gecerli(jeton, parola_hash):
         st.session_state["giris_ok"] = True
         st.session_state["giris_jeton"] = jeton
         st.session_state["giris_son_hareket"] = time.time()
         return
+
+    # CookieManager değeri İLK çalıştırmada döndürmez; bir tur sonra gelir.
+    # Bu turda giriş formu basılırsa kullanıcı yazmaya başlar ve bileşen
+    # cevap verince form sıfırlanır. Bu yüzden bir kez kısa bekleme yapılır.
+    # Bileşen hiç cevap vermezse diye elle geçiş butonu bırakıldı — kimse
+    # bekleme ekranında takılı kalmasın.
+    if _cm() is not None and not st.session_state.get("_cerez_beklendi"):
+        st.session_state["_cerez_beklendi"] = True
+        _stil()
+        with st.container(key="giris_panel"):
+            st.markdown(
+                "<div class='g-ust'>Acıbadem Sağlık Grubu</div>"
+                "<div class='g-mrk'>SYNAPSE</div>"
+                "<div class='g-alt'>Oturum denetleniyor…</div>",
+                unsafe_allow_html=True)
+            st.button("Giriş ekranına geç", key="_bekleme_atla")
+        st.stop()
 
     _giris_formu(kullanici_ad, parola_hash)
     st.stop()
@@ -612,9 +706,12 @@ def cikis_yap():
     basıldığı bir sonraki çalıştırmada giris_kapisi() içinde silinir.
     """
     import streamlit as st
-    for k in ("giris_ok", "giris_son_hareket", "giris_jeton", "giris_cerez_yaz"):
+    # _cerez_beklendi BİLEREK sıfırlanmaz: sıfırlanırsa çıkıştan sonra
+    # "Oturum denetleniyor…" ekranı bir kez daha görünür. O bekleme yalnızca
+    # yeni bir sayfa açılışında (session_state zaten boşken) gereklidir.
+    for k in ("giris_ok", "giris_son_hareket", "giris_jeton"):
         st.session_state.pop(k, None)
-    st.session_state["giris_cerez_sil"] = True
+    st.session_state["giris_cikis"] = True
 
 
 # ═══════════════════════════════════════════════════════════════════════════
