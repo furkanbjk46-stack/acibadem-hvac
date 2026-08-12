@@ -1,4 +1,7 @@
-streamlit>=1.32.0
+streamlit>=1.42.0
+# 1.42 ZORUNLU: giris.py oturum cerezini st.context.cookies ile okur.
+# Daha eski surumde bu alan yoktur; cerez sessizce okunamaz ve kullanici
+# her sayfa yenilemesinde/lokasyon detayina geciste oturumdan duser.
 streamlit-autorefresh>=1.0.1
 supabase>=2.3.0
 pandas>=2.0.0

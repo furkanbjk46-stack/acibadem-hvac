@@ -375,15 +375,24 @@ def giris_kapisi():
     """Giriş yapılmamışsa giriş ekranını basar ve uygulamayı durdurur."""
     import streamlit as st
 
-    if oturum_gecerli():
-        # Girişten sonraki ilk çalıştırmada çerez yazılır (bkz. aşağıdaki not)
-        if st.session_state.pop("giris_cerez_yaz", None):
-            _cerez_yaz(st.session_state.get("giris_jeton", ""), OTURUM_SAAT * 3600)
-        return
-
     kullanici_ad, parola_hash = _ayarlar()
     if not kullanici_ad or not parola_hash:
         _kurulum_ekrani()
+        return
+
+    if oturum_gecerli():
+        # KENDİNİ ONARAN ÇEREZ YAZIMI:
+        # Çerez yalnızca "giriş sonrası ilk çalıştırmada" yazılsaydı, o tek
+        # denemenin kaçırıldığı durumda (bileşen render edilmeden yeni bir
+        # rerun olması gibi) oturum kalıcı olmaz ve kullanıcı her sayfa
+        # yenilemesinde düşerdi. Bu yüzden çerez, sunucu onu göremediği her
+        # çalıştırmada yeniden yazılır. İşlem fiyatı birkaç yüz bayt HTML'dir.
+        if not _cerez_oku(CEREZ_AD):
+            jeton = st.session_state.get("giris_jeton")
+            if not jeton or not _jeton_gecerli(jeton, parola_hash):
+                jeton = _jeton_uret(parola_hash, OTURUM_SAAT * 3600)
+                st.session_state["giris_jeton"] = jeton
+            _cerez_yaz(jeton, OTURUM_SAAT * 3600)
         return
 
     # ── Çıkış yapıldıysa: çerezi burada sil ──
@@ -418,10 +427,10 @@ def _giris_formu(kullanici_ad: str, parola_hash: str):
         sol, sag = st.columns([1.05, 1], gap="large")
 
         with sol:
-            # NOT: Buradaki değerler bilinçli olarak SABİTTİR, canlı veri değildir.
-            # Giriş yapmamış ziyaretçiye kaç hastane/santral izlendiği bilgisi
-            # verilmemesi için ve giriş sayfasının her açılışında Supabase
-            # sorgusu (egress) oluşmaması için veri çekilmez.
+            # Yalnızca sistemin çevrimiçi olduğu belirtilir.
+            # Lokasyon/santral sayıları BİLİNÇLİ OLARAK gösterilmez:
+            #   1) Giriş yapmamış ziyaretçiye kaç hastane izlendiği bilgisi sızar
+            #   2) Giriş sayfasının her açılışında Supabase sorgusu (egress) oluşur
             st.markdown(
                 "<div class='g-sol'>"
                 "<div>"
@@ -429,12 +438,8 @@ def _giris_formu(kullanici_ad: str, parola_hash: str):
                 "<div class='g-mrk'>SYNAPSE</div>"
                 "<div class='g-alt'>Operasyonel Zeka</div>"
                 "</div>"
-                "<div>"
                 "<div class='g-istat'><span><span class='g-nokta'></span>Sistem</span>"
                 "<b>ÇEVRİMİÇİ</b></div>"
-                "<div class='g-istat'><span>Güvenli Bağlantı</span><b>AKTİF</b></div>"
-                "<div class='g-istat'><span>Yetkilendirme</span><b>GEREKLİ</b></div>"
-                "</div>"
                 "</div>",
                 unsafe_allow_html=True)
 
@@ -463,7 +468,6 @@ def _giris_formu(kullanici_ad: str, parola_hash: str):
                         # için bileşenin JS'i çalışmaya fırsat bulamaz.
                         st.session_state["giris_jeton"] = _jeton_uret(
                             parola_hash, OTURUM_SAAT * 3600)
-                        st.session_state["giris_cerez_yaz"] = True
                         st.rerun()
                     else:
                         _hata_kaydet()
