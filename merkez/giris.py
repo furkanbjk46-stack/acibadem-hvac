@@ -182,8 +182,12 @@ def _cm():
         import extra_streamlit_components as stx
         cm = stx.CookieManager(key="synapse_cerez_yoneticisi")
         st.session_state["_cm"] = cm
+        st.session_state.pop("_cm_hata", None)
         return cm
-    except Exception:
+    except Exception as e:
+        # Hata mesajı saklanır: ?tani=1 ekranında gösterilir. Kütüphane
+        # yayın ortamında yüklenemezse sorunu buradan görebilmek gerekir.
+        st.session_state["_cm_hata"] = "%s: %s" % (type(e).__name__, e)
         st.session_state["_cm_kullanilamaz"] = True
         return None
 
@@ -574,10 +578,32 @@ def _tani_ekrani(parola_hash: str):
         adlar = []
         st.error("st.context.cookies okunamadi: %s" % e)
 
+    # ── CookieManager durumu (asıl okuma yolu) ──
+    try:
+        import extra_streamlit_components as _stx
+        stx_yuklendi = True
+        stx_surum = getattr(_stx, "__version__", "surum bilgisi yok")
+    except Exception as e:
+        stx_yuklendi = False
+        stx_surum = "%s: %s" % (type(e).__name__, e)
+
+    cm = _cm()
+    cm_cerezleri = "-"
+    if cm is not None:
+        try:
+            cm_cerezleri = sorted((cm.get_all() or {}).keys())
+        except Exception as e:
+            cm_cerezleri = "get_all hatasi: %s" % e
+
     jeton = _cerez_oku(CEREZ_AD)
 
     st.write({
         "streamlit_surumu": surum,
+        "extra_streamlit_components_yuklendi": stx_yuklendi,
+        "extra_streamlit_components_surum": stx_surum,
+        "CookieManager_olusturuldu": cm is not None,
+        "CookieManager_hatasi": st.session_state.get("_cm_hata", "-"),
+        "CookieManager_gordugu_cerezler": cm_cerezleri,
         "st.context.cookies_destekleniyor": cookies_var,
         "sunucunun_gordugu_cerez_adlari": adlar,
         "oturum_cerezi_geldi_mi": bool(jeton),
