@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNAPSE — Giriş Sayfası Tasarım Seçenekleri</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#060b14;
+    background-image:radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
+    background-attachment:fixed;
+    font-family:'Plus Jakarta Sans',sans-serif;color:#cbd5e1;padding:32px 20px 60px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  .sayfa-bas{text-align:center;margin-bottom:10px}
+  .kicker{font-size:11px;color:#94a3b8;letter-spacing:3px;text-transform:uppercase}
+  .baslik{font-family:'Playfair Display',serif;font-size:32px;color:#f8fafc;font-weight:600;letter-spacing:1px;margin-top:4px}
+  .altbaslik{font-size:12px;color:#38bdf8;letter-spacing:2px;text-transform:uppercase;margin-top:6px}
+  .mockup-uyari{
+    max-width:760px;margin:22px auto 40px;text-align:center;font-size:12.5px;line-height:1.6;
+    background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.35);
+    border-radius:10px;padding:12px 16px;color:#fcd34d;
+  }
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(490px,1fr));gap:34px}
+  @media(max-width:1040px){.grid{grid-template-columns:1fr}}
+
+  .kart{background:rgba(15,23,42,0.45);border:1px solid rgba(56,189,248,0.14);border-radius:16px;overflow:hidden}
+  .kart-bas{padding:16px 20px;border-bottom:1px solid rgba(56,189,248,0.12);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .no{font-family:'Playfair Display',serif;font-size:22px;color:#38bdf8;font-weight:600;line-height:1}
+  .ad{font-family:'Playfair Display',serif;font-size:19px;color:#f8fafc;font-weight:600}
+  .etiket{margin-left:auto;font-size:9.5px;letter-spacing:1.4px;text-transform:uppercase;
+    padding:4px 10px;border-radius:20px;background:rgba(16,185,129,0.14);
+    border:1px solid rgba(16,185,129,0.4);color:#6ee7b7;white-space:nowrap}
+  .etiket.orta{background:rgba(245,158,11,0.13);border-color:rgba(245,158,11,0.4);color:#fcd34d}
+  .sahne{padding:26px 20px;background:radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
+    min-height:392px;display:flex;align-items:center;justify-content:center}
+  .not{padding:15px 20px 20px;font-size:12.5px;line-height:1.65;color:#94a3b8;border-top:1px solid rgba(56,189,248,0.10)}
+  .not b{color:#e2e8f0;font-weight:600}
+  .not ul{margin:8px 0 0 17px}
+  .not li{margin-bottom:4px}
+
+  /* ---- ortak form parçaları ---- */
+  .cam{background:rgba(15,23,42,0.55);border:1px solid rgba(56,189,248,0.18);
+       border-radius:14px;backdrop-filter:blur(12px);box-shadow:0 18px 50px rgba(0,0,0,0.45)}
+  .lbl{font-size:9.5px;letter-spacing:1.6px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px;display:block}
+  .inp{width:100%;background:rgba(2,6,23,0.65);border:1px solid rgba(56,189,248,0.20);
+       border-radius:8px;padding:10px 12px;color:#e2e8f0;font-size:13.5px;font-family:inherit}
+  .inp.ph{color:#64748b}
+  .btn{width:100%;margin-top:16px;padding:11px;border-radius:8px;border:1px solid rgba(56,189,248,0.45);
+       background:rgba(14,165,233,0.22);color:#e0f2fe;font-size:12px;letter-spacing:2px;
+       text-transform:uppercase;font-weight:600;font-family:inherit}
+  .alan{margin-bottom:13px}
+
+  /* 1 — Minimal */
+  .m1{width:330px;padding:32px 28px;text-align:center}
+  .m1 .marka{font-family:'Playfair Display',serif;font-size:27px;color:#f8fafc;font-weight:600;letter-spacing:1px}
+  .m1 .kicker2{font-size:8.5px;letter-spacing:3px;color:#94a3b8;text-transform:uppercase}
+  .m1 .cizgi{height:1px;background:linear-gradient(90deg,transparent,rgba(56,189,248,0.45),transparent);margin:18px 0 22px}
+  .m1 .sol{text-align:left}
+
+  /* 2 — Split */
+  .m2{display:flex;width:100%;max-width:470px;height:340px;overflow:hidden}
+  .m2 .sol{flex:1.05;padding:24px 20px;border-right:1px solid rgba(56,189,248,0.14);
+           background:linear-gradient(160deg,rgba(14,165,233,0.14),transparent 60%);
+           display:flex;flex-direction:column;justify-content:space-between}
+  .m2 .sag{flex:1;padding:26px 20px;display:flex;flex-direction:column;justify-content:center}
+  .m2 .marka{font-family:'Playfair Display',serif;font-size:21px;color:#f8fafc;font-weight:600;line-height:1.25}
+  .istat{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;
+         border-bottom:1px solid rgba(56,189,248,0.10);font-size:10.5px;color:#94a3b8}
+  .istat b{font-family:'Playfair Display',serif;font-size:15px;color:#38bdf8;font-weight:700}
+  .nokta{display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;
+         margin-right:6px;box-shadow:0 0 8px #10b981}
+
+  /* 3 — Terminal */
+  .m3{width:390px;padding:24px 22px;font-family:'JetBrains Mono',monospace}
+  .m3 .ust{display:flex;align-items:center;gap:7px;margin-bottom:16px}
+  .m3 .lamba{width:9px;height:9px;border-radius:50%}
+  .m3 .satir{font-size:10.5px;color:#64748b;line-height:1.85}
+  .m3 .satir .ok{color:#10b981}
+  .m3 .satir .uy{color:#fbbf24}
+  .m3 .cizgi{height:1px;background:rgba(56,189,248,0.16);margin:14px 0}
+  .m3 .lbl{font-family:'JetBrains Mono',monospace}
+  .m3 .inp{font-family:'JetBrains Mono',monospace;font-size:12.5px}
+  .m3 .btn{font-family:'JetBrains Mono',monospace}
+  .imlec{display:inline-block;width:7px;height:13px;background:#38bdf8;vertical-align:-2px;
+          animation:yanip 1.1s steps(2) infinite}
+  @keyframes yanip{0%,100%{opacity:1}50%{opacity:0}}
+
+  /* 4 — PIN */
+  .m4{width:310px;padding:26px 24px;text-align:center}
+  .m4 .marka{font-family:'Playfair Display',serif;font-size:20px;color:#f8fafc;font-weight:600}
+  .pinler{display:flex;gap:11px;justify-content:center;margin:20px 0 6px}
+  .pin{width:38px;height:46px;border-radius:9px;background:rgba(2,6,23,0.7);
+       border:1px solid rgba(56,189,248,0.22);display:flex;align-items:center;
+       justify-content:center;font-size:20px;color:#38bdf8}
+  .pin.dolu{border-color:rgba(56,189,248,0.6);box-shadow:0 0 14px rgba(56,189,248,0.18)}
+  .tus{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:20px}
+  .tus div{padding:11px 0;border-radius:9px;background:rgba(15,23,42,0.75);
+           border:1px solid rgba(56,189,248,0.14);font-size:16px;color:#e2e8f0;
+           font-family:'Playfair Display',serif}
+  .tus div.bos{background:transparent;border:none}
+
+  .son{margin-top:44px;background:rgba(15,23,42,0.45);border:1px solid rgba(56,189,248,0.14);
+       border-radius:14px;padding:22px 26px}
+  .son h3{font-family:'Playfair Display',serif;color:#f8fafc;font-size:18px;font-weight:600;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(56,189,248,0.10)}
+  th{color:#38bdf8;font-size:10px;letter-spacing:1.3px;text-transform:uppercase;font-weight:600}
+  td{color:#cbd5e1}
+  .son p{font-size:12.5px;line-height:1.7;color:#94a3b8;margin-top:14px}
+  .son p b{color:#e2e8f0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="sayfa-bas">
+    <div class="kicker">ACIBADEM SAĞLIK GRUBU</div>
+    <div class="baslik">SYNAPSE // Giriş Sayfası Tasarımları</div>
+    <div class="altbaslik">4 Seçenek — Karşılaştırma</div>
+  </div>
+
+  <div class="mockup-uyari">
+    ⚠ Bu sayfa yalnızca <b>tasarım taslağıdır</b> — çalışan bir giriş ekranı değildir.
+    Hiçbir alan veri toplamaz, hiçbir yere bağlanmaz. Seçim yapıldıktan sonra gerçek
+    giriş <code>app_merkez.py</code> içine kodlanacaktır.
+  </div>
+
+  <div class="grid">
+
+    <!-- ============ 1 ============ -->
+    <div class="kart">
+      <div class="kart-bas">
+        <span class="no">01</span><span class="ad">Minimal Kart</span>
+        <span class="etiket">Kolay · 1 saat</span>
+      </div>
+      <div class="sahne">
+        <div class="cam m1">
+          <div class="kicker2">ACIBADEM SAĞLIK GRUBU</div>
+          <div class="marka">SYNAPSE</div>
+          <div class="cizgi"></div>
+          <div class="sol">
+            <div class="alan">
+              <span class="lbl">Kullanıcı Adı</span>
+              <div class="inp ph">kullanici.adi</div>
+            </div>
+            <div class="alan">
+              <span class="lbl">Parola</span>
+              <div class="inp ph">••••••••••</div>
+            </div>
+          </div>
+          <div class="btn">Giriş Yap</div>
+        </div>
+      </div>
+      <div class="not">
+        <b>Ne sunar:</b> Sade, ortalanmış tek panel. Portalın mevcut cam görünümüyle birebir uyumlu.
+        <ul>
+          <li>Streamlit'te en az uğraşla çıkar, kırılma riski düşük</li>
+          <li>Telefon ve tablette sorunsuz</li>
+          <li>Marka vurgusu orta — sadece isim görünür</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ============ 2 ============ -->
+    <div class="kart">
+      <div class="kart-bas">
+        <span class="no">02</span><span class="ad">Bölünmüş Ekran</span>
+        <span class="etiket orta">Orta · 2-3 saat</span>
+      </div>
+      <div class="sahne">
+        <div class="cam m2">
+          <div class="sol">
+            <div>
+              <div class="kicker" style="font-size:8px">ACIBADEM SAĞLIK GRUBU</div>
+              <div class="marka">SYNAPSE<br><span style="font-size:11px;color:#38bdf8;letter-spacing:2px;text-transform:uppercase">Operasyonel Zeka</span></div>
+            </div>
+            <div>
+              <div class="istat"><span><span class="nokta"></span>Maslak</span><b>ÇEVRİMİÇİ</b></div>
+              <div class="istat"><span>İzlenen Santral</span><b>46</b></div>
+              <div class="istat" style="border:none"><span>Aktif Alarm</span><b style="color:#f59e0b">3</b></div>
+            </div>
+          </div>
+          <div class="sag">
+            <div class="alan">
+              <span class="lbl">Kullanıcı Adı</span>
+              <div class="inp ph">kullanici.adi</div>
+            </div>
+            <div class="alan">
+              <span class="lbl">Parola</span>
+              <div class="inp ph">••••••••••</div>
+            </div>
+            <div class="btn">Giriş</div>
+          </div>
+        </div>
+      </div>
+      <div class="not">
+        <b>Ne sunar:</b> Solda marka + canlı sistem özeti, sağda form. Kurumsal ve etkileyici.
+        <ul>
+          <li>Girişten <b>önce</b> sistem canlı görünüyor — sunum/demo için güçlü</li>
+          <li><span style="color:#fcd34d">Dikkat:</span> giriş yapmamış kişiye lokasyon sayısı/alarm bilgisi gösterir. İstersen o kısmı statik görsele çeviririz</li>
+          <li>Dar ekranda alt alta iner, ek CSS ister</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ============ 3 ============ -->
+    <div class="kart">
+      <div class="kart-bas">
+        <span class="no">03</span><span class="ad">Komuta Terminali</span>
+        <span class="etiket orta">Orta · 2 saat</span>
+      </div>
+      <div class="sahne">
+        <div class="cam m3">
+          <div class="ust">
+            <span class="lamba" style="background:#ef4444"></span>
+            <span class="lamba" style="background:#f59e0b"></span>
+            <span class="lamba" style="background:#10b981"></span>
+            <span style="font-size:10px;color:#64748b;margin-left:6px">synapse — güvenli oturum</span>
+          </div>
+          <div class="satir">
+            <span class="ok">✓</span> bağlantı kuruldu &nbsp;·&nbsp; supabase<br>
+            <span class="ok">✓</span> lokasyon servisi &nbsp;·&nbsp; 2/2 yanıt<br>
+            <span class="uy">!</span> kimlik doğrulaması bekleniyor<span class="imlec"></span>
+          </div>
+          <div class="cizgi"></div>
+          <div class="alan">
+            <span class="lbl">&gt; kullanıcı</span>
+            <div class="inp ph">_</div>
+          </div>
+          <div class="alan">
+            <span class="lbl">&gt; parola</span>
+            <div class="inp ph">••••••••</div>
+          </div>
+          <div class="btn">oturum aç</div>
+        </div>
+      </div>
+      <div class="not">
+        <b>Ne sunar:</b> Teknik/operasyonel kimlik. "Operasyonel Zeka" temasıyla en tutarlı seçenek.
+        <ul>
+          <li>Mühendis ekibe hitap eder, sistemi ciddi gösterir</li>
+          <li>Bağlantı durumu girişten önce görünür — arıza teşhisini kolaylaştırır</li>
+          <li>Yönetim sunumunda fazla "teknik" durabilir</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ============ 4 ============ -->
+    <div class="kart">
+      <div class="kart-bas">
+        <span class="no">04</span><span class="ad">PIN / Dokunmatik</span>
+        <span class="etiket">Kolay · 1-2 saat</span>
+      </div>
+      <div class="sahne">
+        <div class="cam m4">
+          <div class="kicker2" style="font-size:8.5px;letter-spacing:3px;color:#94a3b8;text-transform:uppercase">Acıbadem</div>
+          <div class="marka">SYNAPSE</div>
+          <div class="pinler">
+            <div class="pin dolu">•</div><div class="pin dolu">•</div>
+            <div class="pin dolu">•</div><div class="pin"></div>
+          </div>
+          <div class="lbl" style="margin-top:10px">Saha Erişim Kodu</div>
+          <div class="tus">
+            <div>1</div><div>2</div><div>3</div>
+            <div>4</div><div>5</div><div>6</div>
+            <div>7</div><div>8</div><div>9</div>
+            <div class="bos"></div><div>0</div><div>←</div>
+          </div>
+        </div>
+      </div>
+      <div class="not">
+        <b>Ne sunar:</b> Mevcut saha PIN mantığının görsel hali. Tablet/telefonda tek elle kullanım.
+        <ul>
+          <li>Sahada hızlı — klavye açmadan girilir</li>
+          <li><span style="color:#fcd34d">Güvenlik uyarısı:</span> 4 haneli PIN internete açık bir portal için <b>zayıftır</b>; kaba kuvvetle denenebilir</li>
+          <li>Önerim: tek başına değil, kullanıcı+parolanın <b>yanında</b> ikinci katman olarak</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="son">
+    <h3>Karşılaştırma</h3>
+    <table>
+      <tr><th>Tasarım</th><th>Güçlü yanı</th><th>Zayıf yanı</th><th>Uygun olduğu yer</th></tr>
+      <tr><td>01 Minimal Kart</td><td>Hızlı, sağlam, her cihazda çalışır</td><td>Sıradan görünebilir</td><td>Kalıcı, sorunsuz çözüm</td></tr>
+      <tr><td>02 Bölünmüş Ekran</td><td>Kurumsal, etkileyici</td><td>Giriş öncesi bilgi sızdırabilir</td><td>Yönetime sunum</td></tr>
+      <tr><td>03 Komuta Terminali</td><td>Tema ile en tutarlı</td><td>Yönetim için fazla teknik</td><td>Mühendislik ekibi</td></tr>
+      <tr><td>04 PIN</td><td>Sahada en hızlı</td><td>Tek başına güvenliği zayıf</td><td>İkinci katman</td></tr>
+    </table>
+    <p><b>Not:</b> Dördü de aynı güvenlik altyapısını kullanır — görsel tercih, güvenlik seviyesini değiştirmez.
+    Asıl belirleyici olan parolaların nasıl saklandığı ve oturumun nasıl yönetildiğidir. Hangisini seçersen seç,
+    parolalar <b>düz metin olarak değil</b>, karma (hash) halinde Streamlit secrets içinde tutulacak;
+    ayrıca ard arda hatalı denemede gecikme uygulanacak.</p>
+  </div>
+
+</div>
+</body>
+</html>

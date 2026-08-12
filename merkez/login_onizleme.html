@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNAPSE — Giriş Önizleme (Bölünmüş Ekran + Buzlu Cam)</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ─────────────────────────────────────────────────────────────
+     SYNAPSE renk paleti — app_merkez.py ile birebir
+       arka plan  #020617 / #0f172a / #060b14
+       aksan      #38bdf8 (sky-400) · #0ea5e9 (sky-500)
+       baslik     #f8fafc      govde #cbd5e1      etiket #94a3b8
+       durum      #10b981 yesil · #f59e0b amber · #ef4444 kirmizi
+     ───────────────────────────────────────────────────────────── */
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#060b14;background-image:radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
+    background-attachment:fixed;font-family:'Plus Jakarta Sans',sans-serif;color:#cbd5e1;padding:30px 18px 60px}
+  .wrap{max-width:1220px;margin:0 auto}
+  .kicker{font-size:11px;color:#94a3b8;letter-spacing:3px;text-transform:uppercase;text-align:center}
+  .baslik{font-family:'Playfair Display',serif;font-size:30px;color:#f8fafc;font-weight:600;text-align:center;margin-top:4px}
+  .uyari{max-width:720px;margin:20px auto 34px;text-align:center;font-size:12.5px;line-height:1.6;
+    background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.35);border-radius:10px;padding:11px 16px;color:#fcd34d}
+  .bolum{font-family:'Playfair Display',serif;font-size:19px;color:#f8fafc;font-weight:600;margin:34px 0 14px;
+    padding-bottom:9px;border-bottom:1px solid rgba(56,189,248,0.16)}
+  .bolum span{font-size:12px;color:#38bdf8;letter-spacing:2px;text-transform:uppercase;
+    font-family:'Plus Jakarta Sans',sans-serif;margin-left:10px}
+
+  /* ===== arka plan sahnesi =====
+     Noron/sinaps gorseli zaten cyan baskin — portal paletiyle dogal uyumlu,
+     bu yuzden doygunluk DUSURULMEZ, canli birakilir (yalnizca hafif karartma).
+     Asil sorun okunurluk: gorsel cok hareketli ve parlak noktalar iceriyor,
+     panel altinda kalan yazi kaybolmasin diye vinyet + koyu katman uygulanir. */
+  .sahne{position:relative;border-radius:14px;overflow:hidden;border:1px solid rgba(56,189,248,0.16)}
+  .sahne::before{content:"";position:absolute;inset:0;
+    background:url('assets/login_bg.jpg') center/cover no-repeat;
+    filter:brightness(0.78) contrast(1.04)}
+  .sahne::after{content:"";position:absolute;inset:0;
+    background:
+      radial-gradient(ellipse at 50% 50%, rgba(2,6,23,0.30) 0%, rgba(2,6,23,0.72) 100%),
+      linear-gradient(180deg, rgba(2,6,23,0.42) 0%, transparent 30%, rgba(2,6,23,0.55) 100%)}
+  .icerik{position:relative;z-index:2;height:100%;display:flex;align-items:center;justify-content:center;padding:26px}
+
+  /* ===== MASAUSTU ===== */
+  .masa{aspect-ratio:16/9}
+  .panel{display:flex;width:min(760px,94%);border-radius:18px;overflow:hidden;
+    background:rgba(15,23,42,0.40);
+    backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);
+    border:1px solid rgba(56,189,248,0.22);
+    box-shadow:0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)}
+  .p-sol{flex:1.08;padding:34px 30px;display:flex;flex-direction:column;justify-content:space-between;
+    border-right:1px solid rgba(56,189,248,0.16);
+    background:linear-gradient(155deg, rgba(56,189,248,0.12), transparent 62%)}
+  .p-sag{flex:1;padding:34px 30px;display:flex;flex-direction:column;justify-content:center}
+  .mrk-ust{font-size:8.5px;letter-spacing:3.4px;color:#94a3b8;text-transform:uppercase}
+  .mrk{font-family:'Playfair Display',serif;font-size:31px;color:#f8fafc;font-weight:600;letter-spacing:1px;
+    line-height:1.15;margin-top:5px;text-shadow:0 2px 22px rgba(0,0,0,0.55)}
+  .mrk-alt{font-size:9.5px;letter-spacing:2.6px;color:#38bdf8;text-transform:uppercase;margin-top:7px}
+  .istat{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;
+    border-bottom:1px solid rgba(56,189,248,0.14);font-size:10.5px;color:#cbd5e1}
+  .istat:last-child{border:none}
+  .istat b{font-family:'Playfair Display',serif;font-size:15px;color:#38bdf8;font-weight:700;
+    text-shadow:0 0 15px rgba(56,189,248,0.45)}
+  .nokta{display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;margin-right:7px;
+    box-shadow:0 0 9px #10b981}
+  .lbl{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:#94a3b8;margin-bottom:7px;display:block}
+  .inp{width:100%;background:rgba(2,6,23,0.42);border:1px solid rgba(56,189,248,0.22);
+    border-radius:9px;padding:11px 13px;color:#64748b;font-size:13px;font-family:inherit;backdrop-filter:blur(6px)}
+  .alan{margin-bottom:15px}
+  .btn{width:100%;margin-top:8px;padding:12px;border-radius:9px;
+    border:1px solid rgba(56,189,248,0.45);
+    background:linear-gradient(180deg, rgba(14,165,233,0.30), rgba(14,165,233,0.16));
+    color:#e0f2fe;font-size:11.5px;letter-spacing:2.4px;text-transform:uppercase;font-weight:600;
+    text-align:center;box-shadow:0 6px 22px rgba(14,165,233,0.18)}
+  .kucuk{font-size:9.5px;color:#64748b;text-align:center;margin-top:14px;letter-spacing:0.4px}
+
+  /* ===== TELEFON ===== */
+  .tel-satir{display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap}
+  .telefon{width:310px;flex-shrink:0}
+  .tel-cerceve{aspect-ratio:9/19.5;border-radius:34px;border-width:9px;border-style:solid;border-color:#1e293b}
+  .tel-panel{width:100%;border-radius:20px;padding:26px 20px;text-align:center;
+    background:rgba(15,23,42,0.40);
+    backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);
+    border:1px solid rgba(56,189,248,0.22);
+    box-shadow:0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)}
+  .pinler{display:flex;gap:11px;justify-content:center;margin:20px 0 4px}
+  .pin{width:34px;height:42px;border-radius:9px;background:rgba(2,6,23,0.42);
+    border:1px solid rgba(56,189,248,0.22);display:flex;align-items:center;justify-content:center;
+    font-size:19px;color:#38bdf8}
+  .pin.dolu{border-color:rgba(56,189,248,0.65);box-shadow:0 0 15px rgba(56,189,248,0.22)}
+  .tus{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:20px}
+  .tus div{padding:12px 0;border-radius:11px;background:rgba(15,23,42,0.55);
+    border:1px solid rgba(56,189,248,0.16);font-size:17px;color:#e2e8f0;font-family:'Playfair Display',serif}
+  .tus div.bos{background:transparent;border:none}
+  .tel-not{flex:1;min-width:290px}
+
+  .kutu{background:rgba(15,23,42,0.45);border:1px solid rgba(56,189,248,0.14);border-radius:13px;
+    padding:20px 24px;margin-top:16px}
+  .kutu h4{font-family:'Playfair Display',serif;color:#f8fafc;font-size:16px;font-weight:600;margin-bottom:10px}
+  .kutu p{font-size:12.8px;line-height:1.72;color:#94a3b8;margin-bottom:9px}
+  .kutu b{color:#e2e8f0}
+  .kutu ul{margin:6px 0 10px 18px}
+  .kutu li{font-size:12.8px;line-height:1.7;color:#94a3b8;margin-bottom:5px}
+  .risk{background:rgba(239,68,68,0.09);border-color:rgba(239,68,68,0.32)}
+  .risk h4{color:#fca5a5}
+  .ok{color:#10b981}
+
+  .palet{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+  .cip{display:flex;align-items:center;gap:7px;font-size:10.5px;color:#94a3b8;
+    background:rgba(2,6,23,0.5);border:1px solid rgba(56,189,248,0.14);border-radius:20px;padding:5px 11px}
+  .kare{width:11px;height:11px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">ACIBADEM SAĞLIK GRUBU</div>
+  <div class="baslik">SYNAPSE — Giriş Önizleme</div>
+  <div class="uyari">⚠ Tasarım taslağı — çalışmaz, veri toplamaz. Onayından sonra <code>app_merkez.py</code>'ye kodlanacak.</div>
+
+  <!-- ========== MASAUSTU ========== -->
+  <div class="bolum">Masaüstü <span>Bölünmüş Ekran · Kullanıcı + Parola</span></div>
+  <div class="sahne masa">
+    <div class="icerik">
+      <div class="panel">
+        <div class="p-sol">
+          <div>
+            <div class="mrk-ust">Acıbadem Sağlık Grubu</div>
+            <div class="mrk">SYNAPSE</div>
+            <div class="mrk-alt">Operasyonel Zeka</div>
+          </div>
+          <div>
+            <div class="istat"><span><span class="nokta"></span>Sistem</span><b>ÇEVRİMİÇİ</b></div>
+            <div class="istat"><span>Bağlı Lokasyon</span><b>2</b></div>
+            <div class="istat"><span>İzlenen Santral</span><b>46</b></div>
+          </div>
+        </div>
+        <div class="p-sag">
+          <div class="alan">
+            <span class="lbl">Kullanıcı Adı</span>
+            <div class="inp">kullanici.adi</div>
+          </div>
+          <div class="alan">
+            <span class="lbl">Parola</span>
+            <div class="inp">••••••••••</div>
+          </div>
+          <div class="btn">Giriş Yap</div>
+          <div class="kucuk">Yetkisiz erişim girişimleri kayıt altına alınır</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="palet">
+    <span class="cip"><span class="kare" style="background:#38bdf8"></span>#38bdf8 aksan</span>
+    <span class="cip"><span class="kare" style="background:#0ea5e9"></span>#0ea5e9 buton</span>
+    <span class="cip"><span class="kare" style="background:#f8fafc"></span>#f8fafc başlık</span>
+    <span class="cip"><span class="kare" style="background:#cbd5e1"></span>#cbd5e1 gövde</span>
+    <span class="cip"><span class="kare" style="background:#94a3b8"></span>#94a3b8 etiket</span>
+    <span class="cip"><span class="kare" style="background:#10b981"></span>#10b981 çevrimiçi</span>
+    <span class="cip"><span class="kare" style="background:#0f172a;border:1px solid #334155"></span>#0f172a panel</span>
+  </div>
+
+  <!-- ========== TELEFON ========== -->
+  <div class="bolum">Telefon <span>PIN ile Hızlı Giriş</span></div>
+  <div class="tel-satir">
+    <div class="telefon">
+      <div class="sahne tel-cerceve">
+        <div class="icerik" style="padding:14px">
+          <div class="tel-panel">
+            <div class="mrk-ust" style="font-size:7.5px">Acıbadem</div>
+            <div class="mrk" style="font-size:23px">SYNAPSE</div>
+            <div class="pinler">
+              <div class="pin dolu">•</div><div class="pin dolu">•</div>
+              <div class="pin dolu">•</div><div class="pin"></div>
+              <div class="pin"></div><div class="pin"></div>
+            </div>
+            <div class="lbl" style="margin-top:12px">6 Haneli Erişim Kodu</div>
+            <div class="tus">
+              <div>1</div><div>2</div><div>3</div>
+              <div>4</div><div>5</div><div>6</div>
+              <div>7</div><div>8</div><div>9</div>
+              <div class="bos"></div><div>0</div><div>←</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tel-not">
+      <div class="kutu">
+        <h4>Bu görsel neden daha iyi oturdu</h4>
+        <p>Nöron/sinaps ağı — <b>SYNAPSE</b> adıyla doğrudan örtüşüyor, tesadüfi bir görsel değil.
+        Baskın rengi zaten <b>cyan</b>, yani portalın paletiyle çakışmıyor.</p>
+        <p>Bu yüzden önceki görselde yaptığım <b>doygunluk düşürme işlemini kaldırdım</b> —
+        görsel artık canlı hâliyle duruyor. Tek müdahale okunurluk için: hafif karartma
+        (%78 parlaklık) + vinyet, çünkü görselde çok sayıda parlak nokta var ve panel
+        altındaki yazılar kaybolabiliyordu.</p>
+        <p>Renkler <b>app_merkez.py</b> ile birebir: aksan <b>#38bdf8</b>, buton <b>#0ea5e9</b>,
+        panel <b>#0f172a</b>. Önceki görsel <code>assets/login_bg_orbit.jpg</code> olarak duruyor,
+        istersen geri döneriz.</p>
+      </div>
+
+      <div class="kutu">
+        <h4>PC / telefon ayrımı</h4>
+        <p><b>Yapılabilir</b> — ekran genişliğine göre masaüstünde parola, telefonda PIN gösterilir.
+        Ancak görünmemesi erişilememesi demek değil: ikisi de sayfada mevcut olur.</p>
+      </div>
+
+      <div class="kutu risk">
+        <h4>⚠ PIN kullanılacaksa zorunlu önlemler</h4>
+        <p>Saldırgan PC'den tarayıcısını telefon gibi gösterip PIN yolunu deneyebilir —
+        o anda güvenlik <b>en zayıf halkaya</b> iner.</p>
+        <ul>
+          <li><b>6 hane</b> (4 değil) — tasarımda 6 hane çizildi</li>
+          <li>5 hatalı denemede kilit + artan gecikme</li>
+          <li>Kişiye özel PIN — kim girdi belli olsun</li>
+        </ul>
+      </div>
+
+      <div class="kutu">
+        <h4>Önerim — cihaz tanıma</h4>
+        <p>Telefonda <b>ilk giriş</b> kullanıcı adı + parola ile yapılır, o cihaza özel anahtar saklanır,
+        sonrasında <b>sadece o cihazda</b> PIN açılır.</p>
+        <p><span class="ok">✓</span> Sahada hız aynı<br>
+        <span class="ok">✓</span> Tanımadığı cihazda PIN yolu hiç açılmaz<br>
+        <span class="ok">✓</span> Telefon kaybolursa yetkisi tek tıkla iptal</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

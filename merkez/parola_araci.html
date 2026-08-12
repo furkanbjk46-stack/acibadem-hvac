@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SYNAPSE — Parola Karma Aracı</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#060b14;background-image:radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
+    background-attachment:fixed;font-family:'Plus Jakarta Sans',sans-serif;color:#cbd5e1;
+    padding:40px 20px 60px;min-height:100vh}
+  .wrap{max-width:660px;margin:0 auto}
+  .ust{font-size:9px;letter-spacing:3.4px;color:#94a3b8;text-transform:uppercase;text-align:center}
+  .mrk{font-family:'Playfair Display',serif;font-size:30px;color:#f8fafc;font-weight:600;
+    text-align:center;letter-spacing:1px;margin-top:5px}
+  .alt{font-size:10px;letter-spacing:2.6px;color:#38bdf8;text-transform:uppercase;
+    text-align:center;margin-top:7px}
+
+  .cevrimdisi{margin:24px auto 0;max-width:560px;text-align:center;font-size:12px;line-height:1.65;
+    background:rgba(16,185,129,0.10);border:1px solid rgba(16,185,129,0.35);
+    border-radius:10px;padding:11px 16px;color:#6ee7b7}
+
+  .panel{margin-top:26px;background:rgba(15,23,42,0.55);border:1px solid rgba(56,189,248,0.20);
+    border-radius:16px;padding:30px 28px}
+  label{display:block;font-size:9px;letter-spacing:1.8px;text-transform:uppercase;
+    color:#94a3b8;margin-bottom:7px}
+  input{width:100%;background:rgba(2,6,23,0.6);border:1px solid rgba(56,189,248,0.22);
+    border-radius:9px;padding:11px 13px;color:#e2e8f0;font-size:14px;font-family:inherit}
+  input:focus{outline:none;border-color:rgba(56,189,248,0.65);box-shadow:0 0 0 3px rgba(56,189,248,0.13)}
+  .alan{margin-bottom:16px}
+  button{width:100%;margin-top:6px;padding:12px;border-radius:9px;cursor:pointer;
+    border:1px solid rgba(56,189,248,0.45);
+    background:linear-gradient(180deg, rgba(14,165,233,0.30), rgba(14,165,233,0.16));
+    color:#e0f2fe;font-size:11.5px;letter-spacing:2.4px;text-transform:uppercase;
+    font-weight:600;font-family:inherit}
+  button:hover{background:linear-gradient(180deg, rgba(14,165,233,0.45), rgba(14,165,233,0.26))}
+  button:disabled{opacity:.5;cursor:not-allowed}
+
+  .uyari{margin-top:14px;font-size:12px;color:#fca5a5;min-height:18px}
+  .sonuc{margin-top:22px;display:none}
+  .sonuc.gorunur{display:block}
+  .sonuc h4{font-family:'Playfair Display',serif;color:#f8fafc;font-size:16px;margin-bottom:6px}
+  .sonuc p{font-size:12.5px;color:#94a3b8;line-height:1.7;margin-bottom:12px}
+  pre{background:rgba(2,6,23,0.75);border:1px solid rgba(56,189,248,0.20);border-radius:10px;
+    padding:16px;font-size:12px;color:#7dd3fc;overflow-x:auto;white-space:pre;
+    font-family:ui-monospace,'Cascadia Mono',Consolas,monospace;line-height:1.7}
+  .kopyala{margin-top:10px;padding:9px;font-size:10.5px}
+  .adim{margin-top:26px;font-size:12.8px;line-height:1.75;color:#94a3b8}
+  .adim b{color:#e2e8f0}
+  .adim ol{margin:8px 0 0 18px}
+  .adim li{margin-bottom:7px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="ust">Acıbadem Sağlık Grubu</div>
+  <div class="mrk">SYNAPSE</div>
+  <div class="alt">Parola Karma Aracı</div>
+
+  <div class="cevrimdisi">
+    🔒 Bu araç <b>tamamen çevrimdışı</b> çalışır. Parolanız bu sayfadan hiçbir yere gönderilmez —
+    hesaplama tarayıcınızın içinde yapılır. İnternet bağlantınızı kesip de kullanabilirsiniz.
+  </div>
+
+  <div class="panel">
+    <div class="alan">
+      <label for="kul">Kullanıcı Adı</label>
+      <input id="kul" type="text" value="acibadem" autocomplete="off">
+    </div>
+    <div class="alan">
+      <label for="p1">Parola</label>
+      <input id="p1" type="password" placeholder="en az 8 karakter" autocomplete="new-password">
+    </div>
+    <div class="alan">
+      <label for="p2">Parola (tekrar)</label>
+      <input id="p2" type="password" placeholder="aynısını tekrar yazın" autocomplete="new-password">
+    </div>
+    <button id="btn">Karma Üret</button>
+    <div class="uyari" id="uyari"></div>
+
+    <div class="sonuc" id="sonuc">
+      <h4>Streamlit Secrets'a eklenecek satırlar</h4>
+      <p>Streamlit Cloud → app → <b>Settings → Secrets</b> ekranını açın ve aşağıdaki üç satırı
+      mevcut içeriğin <b>altına ekleyin</b>. <b>[supabase]</b> ve <b>[anthropic]</b> bölümlerini silmeyin.</p>
+      <pre id="cikti"></pre>
+      <button class="kopyala" id="kopya">Panoya Kopyala</button>
+    </div>
+  </div>
+
+  <div class="adim">
+    <b>Sonraki adımlar</b>
+    <ol>
+      <li>Yukarıdaki üç satırı kopyalayın</li>
+      <li>Streamlit Cloud → app → Settings → Secrets → en alta yapıştırın → <b>Save</b></li>
+      <li>Uygulama yeniden başlar; portalı açtığınızda giriş ekranı gelir</li>
+      <li>Kullanıcı adı ve <b>parolanızla</b> girin (karma ile değil)</li>
+      <li>QR bakım sayfasının hâlâ parolasız açıldığını kontrol edin</li>
+    </ol>
+    <p style="margin-top:12px">Parolanızı unutursanız sorun değil — bu aracı tekrar açıp yeni bir
+    karma üretir, Secrets'taki satırı değiştirirsiniz.</p>
+  </div>
+
+</div>
+
+<script>
+// PBKDF2-SHA256, 200.000 tur — giris.py ile birebir ayni format:
+//   pbkdf2_sha256$<tur>$<tuz_hex>$<ozet_hex>
+const TUR = 200000;
+
+function hex(buf){
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function karmaUret(parola, tuz){
+  const anahtar = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(parola), 'PBKDF2', false, ['deriveBits']);
+  const bit = await crypto.subtle.deriveBits(
+    {name:'PBKDF2', salt:tuz, iterations:TUR, hash:'SHA-256'}, anahtar, 256);
+  return hex(bit);
+}
+
+const $ = id => document.getElementById(id);
+
+$('btn').addEventListener('click', async () => {
+  const kul = $('kul').value.trim() || 'acibadem';
+  const p1 = $('p1').value, p2 = $('p2').value;
+  const uyari = $('uyari');
+  uyari.textContent = '';
+
+  if (p1.length < 8){ uyari.textContent = 'Parola en az 8 karakter olmalı.'; return; }
+  if (p1 !== p2){ uyari.textContent = 'Parolalar aynı değil.'; return; }
+
+  $('btn').disabled = true;
+  $('btn').textContent = 'Hesaplanıyor…';
+  try{
+    const tuz = crypto.getRandomValues(new Uint8Array(16));
+    const ozet = await karmaUret(p1, tuz);
+    $('cikti').textContent =
+      '[giris]\n' +
+      'kullanici = "' + kul + '"\n' +
+      'parola_hash = "pbkdf2_sha256$' + TUR + '$' + hex(tuz) + '$' + ozet + '"';
+    $('sonuc').classList.add('gorunur');
+  } catch(e){
+    uyari.textContent = 'Hesaplama hatası: ' + e.message;
+  } finally {
+    $('btn').disabled = false;
+    $('btn').textContent = 'Karma Üret';
+  }
+});
+
+$('kopya').addEventListener('click', () => {
+  navigator.clipboard.writeText($('cikti').textContent).then(() => {
+    $('kopya').textContent = 'Kopyalandı ✓';
+    setTimeout(() => $('kopya').textContent = 'Panoya Kopyala', 1800);
+  });
+});
+</script>
+</body>
+</html>

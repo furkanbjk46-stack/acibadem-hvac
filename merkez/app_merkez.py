@@ -19,7 +19,11 @@ st.set_page_config(
 )
 
 from streamlit_autorefresh import st_autorefresh
-if "bakim" not in st.query_params:  # QR bakım sayfasında form yenilenmesin
+# Otomatik yenileme yalnızca GİRİŞ YAPILMIŞ portal ekranlarında çalışır.
+#   - QR bakım sayfasında: form doldurulurken sıfırlanmasın
+#   - Giriş ekranında: 10 sn'de bir yenileme, yazılan kullanıcı adı/parolayı
+#     siler ve girişi imkânsız hale getirirdi
+if "bakim" not in st.query_params and st.session_state.get("giris_ok"):
     st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
 # ============ CSS ============
@@ -844,6 +848,16 @@ def _qr_bakim_sayfasi():
 if "bakim" in st.query_params:
     _qr_bakim_sayfasi()
     st.stop()
+
+# ============ GİRİŞ KAPISI ============
+# Buraya kadar olan tek şey QR bakım sayfasıdır (yukarıda st.stop() ile biter) —
+# saha personeli QR okuttuğunda parola sorulmaz, mevcut akış korunur.
+# Bu satırdan SONRAKİ her şey (GM portalı) kimlik doğrulaması ister.
+#
+# Neden zorunlu: portal Supabase'e service_role anahtarıyla bağlanır ve
+# service_role RLS'i bypass eder → portala erişebilen veritabanına tam yetkilidir.
+import giris
+giris.giris_kapisi()   # giriş yoksa giriş ekranını basar ve durdurur
 
 now = datetime.now()  # timezone-naive — pandas karsilastirmalari icin
 try:

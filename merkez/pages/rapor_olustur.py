@@ -17,6 +17,13 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# ── GİRİŞ KAPISI ──────────────────────────────────────────────────────────
+# ZORUNLU: Streamlit çoklu sayfa yapısında bu dosya KENDİ URL'sinden
+# (/rapor_olustur) doğrudan açılabilir; app_merkez.py'deki kapı burayı
+# korumaz. Bu yüzden her sayfa kendi kapısını kurar.
+import giris
+giris.giris_kapisi()
+
 # ── CSS ──────────────────────────────────────────────────
 st.markdown("""
 <style>
