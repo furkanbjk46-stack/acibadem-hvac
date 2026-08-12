@@ -380,6 +380,15 @@ def giris_kapisi():
         _kurulum_ekrani()
         return
 
+    # Teşhis ekranı — giriş yapılmış olsun olmasın çalışır, gizli değer göstermez
+    try:
+        _tani = str(st.query_params.get("tani", "") or "")
+    except Exception:
+        _tani = ""
+    if _tani == "1":
+        _tani_ekrani(parola_hash)
+        st.stop()
+
     if oturum_gecerli():
         # KENDİNİ ONARAN ÇEREZ YAZIMI:
         # Çerez yalnızca "giriş sonrası ilk çalıştırmada" yazılsaydı, o tek
@@ -415,6 +424,49 @@ def giris_kapisi():
 
     _giris_formu(kullanici_ad, parola_hash)
     st.stop()
+
+
+def _tani_ekrani(parola_hash: str):
+    """?tani=1 ile açılan teşhis ekranı.
+
+    Oturumun sayfa yenilemesinde neden düştüğünü yayın ortamında tespit etmek
+    için. GİZLİ DEĞER GÖSTERMEZ — yalnızca 'var/yok' ve 'geçerli/geçersiz'
+    bilgisi ile çerez ADLARI listelenir; jeton içeriği ve parola karması asla
+    yazdırılmaz.
+    """
+    import streamlit as st
+    st.markdown("### SYNAPSE — Oturum Teşhisi")
+
+    try:
+        surum = st.__version__
+    except Exception:
+        surum = "bilinmiyor"
+    cookies_var = hasattr(st.context, "cookies")
+
+    try:
+        adlar = sorted(dict(st.context.cookies).keys())
+    except Exception as e:
+        adlar = []
+        st.error("st.context.cookies okunamadi: %s" % e)
+
+    jeton = _cerez_oku(CEREZ_AD)
+
+    st.write({
+        "streamlit_surumu": surum,
+        "st.context.cookies_destekleniyor": cookies_var,
+        "sunucunun_gordugu_cerez_adlari": adlar,
+        "oturum_cerezi_geldi_mi": bool(jeton),
+        "oturum_cerezi_gecerli_mi": bool(jeton) and _jeton_gecerli(jeton, parola_hash),
+        "session_state_giris_ok": bool(st.session_state.get("giris_ok")),
+    })
+
+    st.caption(
+        "Beklenen: streamlit 1.42+, destekleniyor=True ve giriş yaptıktan sonra "
+        "sayfayı yenileyince listede 'synapse_oturum' görünmeli. Görünmüyorsa "
+        "çerez tarayıcıya yazılamıyor demektir."
+    )
+    st.info("Bu sayfa yalnızca teşhis içindir; adres satırından ?tani=1 "
+            "kaldırılınca normal giriş ekranı gelir.")
 
 
 def _giris_formu(kullanici_ad: str, parola_hash: str):
