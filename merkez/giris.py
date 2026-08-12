@@ -164,25 +164,56 @@ def _cerez_oku(ad: str) -> str:
         return ""
 
 
+_CEREZ_JS = """
+// Cerezi olabildigince cok yoldan yazmayi dener ve isini garantiye alir.
+//
+// NEDEN BU KADAR YOL:
+// Streamlit Cloud'da uygulama bir sarmalayici IFRAME icinde calisabiliyor.
+// O durumda:
+//   * window.parent.document erisimi capraz-kaynak olur ve HATA firlatir
+//     -> tek basina window.parent kullanan yazim sessizce basarisiz olur
+//   * cerez ucuncu-taraf baglamda kalir; SameSite=Lax ile TARAYICI GONDERMEZ
+//     -> SameSite=None; Secure gerekir (yalnizca https'te gecerlidir)
+// Bu yuzden once bilesenin KENDI belgesine (ki uygulamanin alan adina aittir)
+// yazilir, sonra parent denenir; her birinde once None+Secure, tutmazsa Lax.
+function _syn_yaz(ad, deger, saniye){
+  var temel = ad + "=" + deger + "; path=/; max-age=" + saniye;
+  var denemeler = [temel + "; SameSite=None; Secure", temel + "; SameSite=Lax"];
+  var yazildi = false;
+
+  for (var i = 0; i < denemeler.length && !yazildi; i++){
+    try{
+      document.cookie = denemeler[i];
+      yazildi = document.cookie.indexOf(ad + "=") > -1;
+    }catch(e){}
+  }
+  // Ust belgeye de dene (ayni kaynaksa calisir, degilse hata yutulur)
+  for (var j = 0; j < denemeler.length; j++){
+    try{ window.parent.document.cookie = denemeler[j]; }catch(e){}
+  }
+  return yazildi;
+}
+"""
+
+
 def _cerez_yaz(jeton: str, saniye: int):
-    """Çerezi tarayıcıya yazar. Bileşen IFRAME içinde çalıştığı için
-    uygulamanın kendi alan adına yazmak üzere window.parent kullanılır."""
+    """Çerezi tarayıcıya yazar (bkz. _CEREZ_JS içindeki gerekçe)."""
     import streamlit.components.v1 as components
     components.html(
-        """<script>
-        try{
-          var g = (window.parent.location.protocol === 'https:') ? '; Secure' : '';
-          window.parent.document.cookie =
-            "%s=%s; path=/; max-age=%d; SameSite=Lax" + g;
-        }catch(e){}
-        </script>""" % (CEREZ_AD, jeton, saniye), height=0)
+        "<script>%s _syn_yaz(%r, %r, %d);</script>"
+        % (_CEREZ_JS, CEREZ_AD, jeton, saniye), height=0)
 
 
 def _cerez_sil():
     import streamlit.components.v1 as components
     components.html(
         """<script>
-        try{ window.parent.document.cookie = "%s=; path=/; max-age=0"; }catch(e){}
+        var _a = %r;
+        var _v = ["; SameSite=None; Secure", "; SameSite=Lax", ""];
+        for (var i = 0; i < _v.length; i++){
+          try{ document.cookie = _a + "=; path=/; max-age=0" + _v[i]; }catch(e){}
+          try{ window.parent.document.cookie = _a + "=; path=/; max-age=0" + _v[i]; }catch(e){}
+        }
         </script>""" % CEREZ_AD, height=0)
 
 
@@ -465,6 +496,50 @@ def _tani_ekrani(parola_hash: str):
         "sayfayı yenileyince listede 'synapse_oturum' görünmeli. Görünmüyorsa "
         "çerez tarayıcıya yazılamıyor demektir."
     )
+
+    # ── TARAYICI TARAFI ÖLÇÜM ──
+    # Sunucu çerezleri boş görüyorsa sorun ya yazmada ya da çerezin sunucuya
+    # gönderilmemesinde. Bunu ayırmak için ölçüm bileşenin İÇİNDEN yapılır.
+    st.markdown("---")
+    st.markdown("**Tarayıcı tarafı** (bileşen iframe'inin gördüğü)")
+    import streamlit.components.v1 as components
+    components.html("""
+    <div style="font-family:ui-monospace,Consolas,monospace;font-size:12px;
+                color:#cbd5e1;background:#0b1220;border:1px solid #1e3a5f;
+                border-radius:8px;padding:12px;line-height:1.75">
+    <script>
+      function yaz(k, v){
+        document.write('<div><b style="color:#38bdf8">' + k + ':</b> ' + v + '</div>');
+      }
+      var adlar = document.cookie.split(';').map(function(c){
+        return c.trim().split('=')[0];
+      }).filter(function(x){ return x; });
+      yaz('bilesen belgesinin cerez adlari', adlar.length ? adlar.join(', ') : '(bos)');
+      yaz('synapse_oturum bilesende', document.cookie.indexOf('synapse_oturum=') > -1);
+
+      var ustErisim = false, ustCerez = '(erisilemedi)';
+      try{
+        var d = window.parent.document;
+        ustErisim = true;
+        var ua = d.cookie.split(';').map(function(c){ return c.trim().split('=')[0]; })
+                  .filter(function(x){ return x; });
+        ustCerez = ua.length ? ua.join(', ') : '(bos)';
+      }catch(e){ ustCerez = 'HATA: ' + e.name; }
+      yaz('ust belgeye erisim', ustErisim);
+      yaz('ust belgenin cerez adlari', ustCerez);
+
+      var iframeIcinde = '(bilinmiyor)';
+      try{ iframeIcinde = (window.parent.self !== window.parent.top); }catch(e){ iframeIcinde = 'ERISILEMEDI (capraz kaynak)'; }
+      yaz('uygulama iframe icinde mi', iframeIcinde);
+
+      try{ yaz('ust adres kaynagi', window.parent.location.origin); }
+      catch(e){ yaz('ust adres kaynagi', 'ERISILEMEDI'); }
+
+      try{ yaz('ancestorOrigins', JSON.stringify(Array.from(window.location.ancestorOrigins || []))); }
+      catch(e){ yaz('ancestorOrigins', '-'); }
+    </script>
+    </div>
+    """, height=220)
     st.info("Bu sayfa yalnızca teşhis içindir; adres satırından ?tani=1 "
             "kaldırılınca normal giriş ekranı gelir.")
 
