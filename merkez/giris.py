@@ -197,7 +197,21 @@ def _cerez_oku(ad: str) -> str:
     cm = _cm()
     if cm is not None:
         try:
-            deger = cm.get(ad)
+            # get_all() KULLANILIR, get() DEĞİL.
+            #
+            # Kütüphanede get(), yalnızca CookieManager NESNESİ OLUŞTURULURKEN
+            # doldurulan bir önbelleği okur. Nesneyi session_state'te sakladığımız
+            # için (ki saklamak zorundayız, yoksa her turda yeni bileşen oluşur)
+            # o önbellek ilk çalıştırmadaki BOŞ haliyle donup kalıyordu ve
+            # get() hep None dönüyordu.
+            #
+            # Belirtisi tam olarak şuydu: ?tani=1 ekranı (get_all çağırdığı için)
+            # çerezi geçerli görüyor, ama giriş kapısı (get çağırdığı için)
+            # göremeyip kullanıcıyı giriş ekranına atıyordu.
+            #
+            # get_all() bileşeni yeniden çalıştırır ve güncel çerezleri getirir.
+            tum = cm.get_all(key="synapse_cerez_okuma") or {}
+            deger = tum.get(ad)
             if deger:
                 return str(deger)
         except Exception:
