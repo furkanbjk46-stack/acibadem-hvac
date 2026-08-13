@@ -902,7 +902,10 @@ st.markdown("""
 .st-key-cikis_kutusu{
     position:fixed !important; top:10px !important;
     left:0 !important; right:0 !important; width:100% !important;
-    z-index:1000 !important;
+    /* Streamlit'in kendi ust seridi (stHeader) z-index:999990 ve fixed;
+       daha dusuk bir deger verilirse buton GORUNUR ama tiklama seride gider
+       ve buton olu kalir. Bu yuzden onun uzerine cikilir. */
+    z-index:999999 !important;
     /* DIKKAT: Bu kapsayici DIKEY bir flex (stVerticalBlock). Dolayisiyla
        yatay hizalama justify-content ile DEGIL align-items ile yapilir;
        justify-content burada butonu saga degil ASAGI yaslar. */
