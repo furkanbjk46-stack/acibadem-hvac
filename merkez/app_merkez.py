@@ -7,6 +7,7 @@ from __future__ import annotations
 import os, json, logging
 import numpy as np
 import streamlit as st
+import streamlit.components.v1 as _components
 import pandas as pd
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
@@ -1101,7 +1102,11 @@ with sol:
         dr = int(durum_renk[1:3],16); dg = int(durum_renk[3:5],16); db = int(durum_renk[5:7],16)
 
         tum_kartlar += (
-            f'<a class="{card_cls}" href="?detay={lok_id}" target="_self" title="{lok_info["kisa"]} detayına git" '
+            # data-lok + lok-kart: tıklama JS ile yakalanıp gizli Streamlit
+            # butonuna yönlendirilir → sayfa YENİDEN YÜKLENMEZ (aşağıya bak).
+            # href yine de duruyor: JS çalışmazsa eski tam sayfa yolu yedek kalır.
+            f'<a class="{card_cls} lok-kart" data-lok="{lok_id}" '
+            f'href="?detay={lok_id}" target="_self" title="{lok_info["kisa"]} detayına git" '
             f'style="padding:14px;position:relative;">'
             + sira_badge +
             f'<div style="display:flex;align-items:center;gap:14px;">'
@@ -1137,6 +1142,62 @@ with sol:
 
     tum_kartlar += '</div>'
     st.markdown(tum_kartlar, unsafe_allow_html=True)
+
+    # ── Lokasyon kartı geçişi: SAYFA YENİDEN YÜKLENMEDEN ──
+    #
+    # Kartlar ham <a href="?detay=..."> bağlantısıydı; tıklayınca TAM SAYFA
+    # YÜKLEMESİ oluyordu. Bunun iki bedeli vardı:
+    #   1) yeni oturum açıldığı için oturum çerezden geri kuruluyor, arada
+    #      "Oturum doğrulanıyor" ekranı görünüyordu
+    #   2) tüm sayfa (veri + grafikler) sıfırdan yükleniyordu — yavaş
+    #
+    # Çözüm: kart tıklaması JS ile yakalanır ve görünmez bir Streamlit
+    # butonuna tıklatılır. Buton normal bir Streamlit etkileşimi olduğu için
+    # uygulama AYNI OTURUM içinde yeniden çalışır; sayfa yeniden yüklenmez.
+    #
+    # Güvenlik ağı: buton bulunamazsa (JS engellenirse, seçici değişirse)
+    # varsayılan davranış korunur ve eski href yolu çalışır.
+    with st.container(key="gizli_detay_butonlari"):
+        for _lok_id, _ in lok_sira:
+            if st.button("git", key=f"gizli_detay_{_lok_id}"):
+                st.session_state["detay_lokasyon"] = _lok_id
+                st.rerun()
+
+    st.markdown("""
+    <style>
+    /* Butonlar ekran dışında tutulur. display:none KULLANILMAZ — bazı
+       tarayıcılarda gizli öğeye programatik tıklama güvenilir çalışmaz. */
+    .st-key-gizli_detay_butonlari{
+        position:fixed !important; left:-9999px !important; top:0 !important;
+        width:1px !important; height:1px !important; overflow:hidden !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    _components.html("""
+    <script>
+    (function(){
+      var d;
+      try { d = window.parent.document; } catch(e) { return; }  // erişilemezse yedek yol kalsın
+      var kartlar = d.querySelectorAll('a.lok-kart');
+      for (var i = 0; i < kartlar.length; i++){
+        var a = kartlar[i];
+        if (a.dataset.baglandi === '1') continue;   // her rerun'da tekrar bağlanmasın
+        a.dataset.baglandi = '1';
+        a.addEventListener('click', function(ev){
+          var lok = this.getAttribute('data-lok');
+          var btn = d.querySelector('.st-key-gizli_detay_' + lok + ' button');
+          if (btn){
+            ev.preventDefault();      // tam sayfa yüklemesini engelle
+            btn.click();              // aynı oturumda rerun
+          }
+          // btn yoksa: preventDefault cagrilmaz, href ile eski yol calisir
+        });
+      }
+    })();
+    </script>
+    """, height=0)
+
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
     # ── Global Özet (Aylık + Trend) ──
