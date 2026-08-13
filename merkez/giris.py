@@ -555,18 +555,43 @@ def giris_kapisi():
     # bekleme ekranında takılı kalmasın.
     if _cm() is not None and not st.session_state.get("_cerez_beklendi"):
         st.session_state["_cerez_beklendi"] = True
-        _stil()
-        with st.container(key="giris_panel"):
-            st.markdown(
-                "<div class='g-ust'>Acıbadem Sağlık Grubu</div>"
-                "<div class='g-mrk'>SYNAPSE</div>"
-                "<div class='g-alt'>Oturum denetleniyor…</div>",
-                unsafe_allow_html=True)
-            st.button("Giriş ekranına geç", key="_bekleme_atla")
+        _bekleme_ekrani()
         st.stop()
 
     _giris_formu(kullanici_ad, parola_hash)
     st.stop()
+
+
+def _bekleme_ekrani():
+    """Oturum çerezi doğrulanırken gösterilen ara ekran.
+
+    NEDEN AYRI BİR EKRAN:
+    Tam sayfa yüklemesinde (lokasyon kartı, F5) çerezi okuyan bileşenin
+    tarayıcıya gidip dönmesi bir tur sürer. Bu turda giriş formuna benzeyen
+    bir panel gösterilirse kullanıcı OTURUMDAN ATILDIĞINI sanır — oysa oturum
+    yerinde duruyordur. Bu yüzden burada form yok, alan yok: yalnızca marka ve
+    "doğrulanıyor" göstergesi. Böylece geçiş, kesinti değil bekleme gibi okunur.
+    """
+    import streamlit as st
+    _stil()
+    st.markdown("""
+    <style>
+      .g-bekle{display:flex;flex-direction:column;align-items:center;
+               justify-content:center;min-height:52vh;text-align:center;}
+      .g-bekle .halka{width:34px;height:34px;margin-bottom:20px;border-radius:50%;
+        border:2px solid rgba(56,189,248,0.22);border-top-color:#38bdf8;
+        animation:gDon 0.9s linear infinite;}
+      @keyframes gDon{to{transform:rotate(360deg);}}
+      .g-bekle .yazi{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
+        letter-spacing:2.6px;text-transform:uppercase;color:#94a3b8;margin-top:10px;}
+    </style>
+    <div class="g-bekle">
+      <div class="halka"></div>
+      <div style="font-family:'Playfair Display',serif;font-size:30px;color:#f8fafc;
+                  font-weight:600;letter-spacing:1px;">SYNAPSE</div>
+      <div class="yazi">Oturum doğrulanıyor</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def _tani_ekrani(parola_hash: str):
