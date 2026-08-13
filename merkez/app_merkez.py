@@ -887,6 +887,66 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ============ ÇIKIŞ BUTONU ============
+# Sabit konumda (üst sağ) — sayfa akışına girmez, böylece header'ın ortalanmış
+# düzenini bozmaz ve detay/rapor dahil TÜM ekranlarda aynı yerde durur.
+# right:72px → Streamlit'in kendi üst-sağ menüsüyle çakışmasın diye.
+st.markdown("""
+<style>
+/* Kapsayici tam genislikte birakilir ve icerik SAGA YASLANIR.
+   Genisligi daraltmayi denemek ise yaramadi: Streamlit kapsayiciya kendi
+   genisligini veriyor, sag kenar hizalaninca sol kenar ekran disina tasip
+   buton sol ust kosede kesik gorunuyordu.
+   pointer-events:none -> gorunmez serit altindaki sayfayi tiklamayi engellemesin;
+   butonda tekrar acilir. */
+.st-key-cikis_kutusu{
+    position:fixed !important; top:10px !important;
+    left:0 !important; right:0 !important; width:100% !important;
+    z-index:1000 !important;
+    /* DIKKAT: Bu kapsayici DIKEY bir flex (stVerticalBlock). Dolayisiyla
+       yatay hizalama justify-content ile DEGIL align-items ile yapilir;
+       justify-content burada butonu saga degil ASAGI yaslar. */
+    display:flex !important; flex-direction:column !important;
+    align-items:flex-end !important;
+    padding:0 72px 0 0 !important; gap:0 !important;
+    pointer-events:none !important;   /* alttaki sayfa tiklanabilir kalsin */
+}
+/* Ara katmanlar tam genislikte kaliyor; daraltilmazsa hizalama ise yaramaz */
+.st-key-cikis_kutusu [data-testid="stElementContainer"],
+.st-key-cikis_kutusu [data-testid="stButton"],
+.st-key-cikis_kutusu .stTooltipIcon{
+    width:auto !important; min-width:0 !important;
+}
+.st-key-cikis_kutusu [data-testid="stButton"]{pointer-events:auto !important;}
+.st-key-cikis_kutusu .stButton button{white-space:nowrap !important; min-height:34px !important;}
+.st-key-cikis_kutusu .stButton button{
+    background:rgba(15,23,42,0.55) !important;
+    border:1px solid rgba(56,189,248,0.28) !important;
+    color:#cbd5e1 !important;
+    font-family:'Plus Jakarta Sans',sans-serif !important;
+    /* Simge butonu: kare oranli, ortalanmis */
+    font-size:15px !important; line-height:1 !important;
+    padding:0 !important; border-radius:9px !important;
+    width:34px !important; height:34px !important;
+    display:flex !important; align-items:center !important; justify-content:center !important;
+    backdrop-filter:blur(10px) !important; -webkit-backdrop-filter:blur(10px) !important;
+    box-shadow:0 4px 16px rgba(0,0,0,0.35) !important;
+    transition:background .18s ease, border-color .18s ease, color .18s ease !important;
+}
+.st-key-cikis_kutusu .stButton button:hover{
+    background:rgba(14,165,233,0.20) !important;
+    border-color:rgba(56,189,248,0.60) !important;
+    color:#e0f2fe !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+with st.container(key="cikis_kutusu"):
+    # Yalnizca simge — metin yok. Ne ise yaradigi help balonunda yazili.
+    if st.button("⏻", key="cikis_btn", help="Oturumu kapat"):
+        giris.cikis_yap()
+        st.rerun()
+
 # ── Lokasyon detay yönlendirmesi (kart ikonu tıklanınca) — aynı sayfada, animasyonlu ──
 if "detay" in st.query_params:
     _lok = st.query_params["detay"]
