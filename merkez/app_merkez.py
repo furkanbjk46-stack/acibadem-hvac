@@ -452,20 +452,34 @@ def _fetch_yarin_tahmin() -> dict | None:
         return None
 
 
+def _hedef_bolge(ort: float) -> str:
+    """Sıcaklığın düştüğü bölgeyi doğrudan döner (histerezissiz)."""
+    for i, sinir in enumerate(_CH_SINIRLAR):
+        if ort < sinir:
+            return _CH_MODLAR[i]
+    return _CH_MODLAR[-1]
+
+
 def _ch_modu_hesapla(ort: float, mevcut: str) -> str:
-    """4 bölgeli chiller modu — ±2°C histerezis."""
-    if mevcut not in _CH_MODLAR:
-        # Bilinmiyor: doğrudan hesapla
-        for i, sinir in enumerate(_CH_SINIRLAR):
-            if ort < sinir:
-                return _CH_MODLAR[i]
-        return _CH_MODLAR[-1]
-    idx = _CH_MODLAR.index(mevcut)
-    if idx < len(_CH_SINIRLAR) and ort > _CH_SINIRLAR[idx] + _CH_H:
-        return _CH_MODLAR[idx + 1]
-    if idx > 0 and ort < _CH_SINIRLAR[idx - 1] - _CH_H:
-        return _CH_MODLAR[idx - 1]
-    return mevcut
+    """4 bölgeli chiller modu — ±2°C histerezis, KADEMESİZ geçiş.
+
+    Histerezis korunur: mevcut bölgeden çıkmak için sınırın _CH_H kadar ötesine
+    geçilmelidir (sınırda gidip gelmeyi önler). Ancak çıkış koşulu sağlandığında
+    hedef bölgeye DOĞRUDAN gidilir.
+
+    ÖNCEKİ DAVRANIŞ: her kontrolde en fazla bir bölge ilerleniyordu; sıcaklık iki
+    bölge birden atladığında setpoint 6.5 → 7.0 → 7.5 diye iki adımda gidiyordu.
+    Bu hem hedefe geç varıyor hem iki kat komut/log üretiyordu.
+    """
+    if mevcut in _CH_MODLAR:
+        idx = _CH_MODLAR.index(mevcut)
+        ust = _CH_SINIRLAR[idx]     if idx < len(_CH_SINIRLAR) else None  # yukarı çıkış sınırı
+        alt = _CH_SINIRLAR[idx - 1] if idx > 0                  else None  # aşağı iniş sınırı
+        cikis_var = ((ust is not None and ort > ust + _CH_H) or
+                     (alt is not None and ort < alt - _CH_H))
+        if not cikis_var:
+            return mevcut           # bölgede kal
+    return _hedef_bolge(ort)        # çıkış koşulu sağlandı → doğrudan hedefe
 
 
 def _dig_modu_hesapla(ort: float, mevcut: str) -> str:
@@ -488,6 +502,14 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
 
     _IST = _tz(_td(hours=3))  # Türkiye UTC+3 (sabit, DST yok)
 
+    # YARIŞ KORUMASI: Aynı anda birden fazla çalıştırma olmamalı.
+    # Loglarda görülen tablo buydu: dönem geçişinde aynı saniye içinde AYNI 11
+    # komut iki kez gönderilmiş, 10 adet log kaydı düşmüştü. Sebep, eşzamanlı
+    # çalışan kontrollerin hepsinin "dönem değişmiş" görüp, hiçbiri henüz
+    # oto_donem'i yazmadan komut göndermesiydi.
+    if not _OTO_KONTROL_LOCK.acquire(blocking=False):
+        logging.getLogger(__name__).info("oto_set_kontrol: zaten çalışıyor, atlanıyor.")
+        return
     try:
         # ── OTO SET aktif mi kontrol et ──
         _aktif_req = _ur2.Request(
@@ -545,8 +567,15 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
         dig_degisti   = yeni_dig != mevcut_dig
         donem_degisti = _donem   != mevcut_donem  # 06:00 veya 19:00 geçişi
 
-        # Dönem değişmedi ve mod değişmedi → sadece kontrol zamanını güncelle
-        if not ch_degisti and not dig_degisti and not donem_degisti:
+        # GÜNLÜK YENİDEN GÖNDERİM (güvenlik ağı):
+        # Mod değişmese bile günde bir kez setpoint'ler yeniden yazılır. Amaç,
+        # sahada elle değiştirilen bir setpoint'in süresiz yanlış kalmasını
+        # önlemek. Günde 1 kez olduğu için log/komut yükü oluşturmaz.
+        _bugun = _dtt.now(_IST).strftime("%Y-%m-%d")
+        gunluk_yenileme = _sb_ayar_oku("oto_son_yenileme") != _bugun
+
+        # Hiçbir tetikleyici yoksa → sadece kontrol zamanını güncelle
+        if not ch_degisti and not dig_degisti and not donem_degisti and not gunluk_yenileme:
             _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
                 "zaman": _dtt.now(_IST).isoformat(),
                 "donem": _donem, "ref_sicaklik": _ref,
@@ -564,9 +593,20 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             _loks = list({x["lokasyon"] for x in _jj2.loads(_r.read())})
 
         komutlar = []
-        # Dönem geçişinde her iki grubu da gönder; sadece mod değişmişse ilgiliyi gönder
-        _ch_gonder  = ch_degisti  or donem_degisti
-        _dig_gonder = dig_degisti or donem_degisti
+        # SADECE gerçekten modu değişen grup gönderilir.
+        #
+        # Önceden dönem geçişinde (06:00/19:00) mod aynı olsa bile HER İKİ grup
+        # yeniden gönderiliyordu; loglardaki "sogutma → sogutma" (36 kez) ve
+        # "ilimli → ilimli" (35 kez) kayıtları bundandı. Dönem değişiminin
+        # setpoint'lere doğrudan etkisi yok: dönem yalnızca hangi tahminin
+        # (gündüz max / gece min) referans alınacağını belirler; bu da zaten
+        # mod hesabına girer. Mod gerçekten değişmişse ch_degisti/dig_degisti
+        # true olur ve komut gider.
+        #
+        # Ayrıca günde bir kez, mod değişmese de setpoint'ler yeniden yazılır
+        # (sahada elle değiştirilmiş olabilir).
+        _ch_gonder  = ch_degisti  or gunluk_yenileme
+        _dig_gonder = dig_degisti or gunluk_yenileme
 
         for lok in _loks:
             if _ch_gonder:
@@ -600,6 +640,8 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
         if _dig_gonder:
             _sb_ayar_yaz("oto_mod_diger", yeni_dig)
         _sb_ayar_yaz("oto_donem", _donem)
+        if gunluk_yenileme and komutlar:
+            _sb_ayar_yaz("oto_son_yenileme", _bugun)
         _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
             "zaman": _dtt.now(_IST).isoformat(),
             "donem": _donem, "ref_sicaklik": _ref,
@@ -611,16 +653,21 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
         # Log
         _lok_str = ", ".join(_loks)
         _log_kayitlar = []
+        # tip: gerçek mod geçişi "chiller"/"diger"; günlük yeniden gönderim ise
+        # "*_yenileme". Ayrı tutulmasının sebebi, arayüzün "son geçiş" satırında
+        # "ilimli → ilimli" gibi geçiş olmayan kayıtları göstermemesi.
         if _ch_gonder:
             _log_kayitlar.append({
-                "tip": "chiller", "eski_mod": mevcut_ch, "yeni_mod": yeni_ch,
+                "tip": "chiller" if ch_degisti else "chiller_yenileme",
+                "eski_mod": mevcut_ch, "yeni_mod": yeni_ch,
                 "tahmin_ort": _ref,
                 "komut_sayisi": sum(1 for k in komutlar if k["nokta_adi"] in _CH_NOKTALAR),
                 "lokasyonlar": _lok_str,
             })
         if _dig_gonder:
             _log_kayitlar.append({
-                "tip": "diger", "eski_mod": mevcut_dig, "yeni_mod": yeni_dig,
+                "tip": "diger" if dig_degisti else "diger_yenileme",
+                "eski_mod": mevcut_dig, "yeni_mod": yeni_dig,
                 "tahmin_ort": _ref,
                 "komut_sayisi": sum(1 for k in komutlar if k["nokta_adi"] not in _CH_NOKTALAR),
                 "lokasyonlar": _lok_str,
@@ -639,20 +686,24 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
 
     except Exception as _oe:
         logging.getLogger(__name__).warning(f"oto_set_kontrol hata: {_oe}")
+    finally:
+        _OTO_KONTROL_LOCK.release()
 
 
 # ─── Arka plan thread: her 5 dakikada bir otomatik set kontrolü ───────────────
 import threading as _threading
 
-# Process-level flag — kaç tarayıcı sekmesi açılırsa açılsın tek thread çalışır
-_OTO_THREAD_STARTED = False
-_OTO_THREAD_LOCK    = _threading.Lock()
+_OTO_KONTROL_LOCK = _threading.Lock()   # eşzamanlı kontrolü engeller
+
 
 def _oto_set_loop(sb_url: str, sb_key: str):
     import time as _time
     while True:
+        try:
+            _oto_set_kontrol(sb_url, sb_key)   # ilk kontrol hemen, sonra 5 dk'da bir
+        except Exception as _le:
+            logging.getLogger(__name__).warning(f"oto_set_loop hata: {_le}")
         _time.sleep(300)   # 5 dakika
-        _oto_set_kontrol(sb_url, sb_key)
 
 # ═══════════════════════════════════════════════════════════════
 
@@ -671,18 +722,28 @@ url  = config.get("supabase_url","")
 key  = config.get("supabase_key","")
 bagli = bool(url and "BURAYA" not in url)
 
-# Otomatik set arka plan thread'ini başlat (process genelinde 1 kez)
+# ─── Otomatik set arka plan thread'i — SÜREÇ GENELİNDE TEK KEZ ───────────────
+#
+# ÖNCEKİ HATA: Bayrak modül düzeyinde `_OTO_THREAD_STARTED = False` olarak
+# tutuluyordu. Streamlit ana dosyayı HER YENİDEN ÇALIŞTIRMADA baştan işlediği
+# için bu satır da her seferinde yeniden çalışıyor, bayrak False'a dönüyor ve
+# YENİ BİR THREAD ÇİFTİ başlıyordu. Portal 10 saniyede bir kendini yenilediği
+# için thread'ler birikiyordu; dönem geçişinde hepsi aynı anda uyanıp aynı
+# komutları defalarca gönderiyordu (loglarda 2 günde 72 kayıt).
+#
+# st.cache_resource rerun'lardan ve oturumlardan etkilenmez; süreçte tek kez
+# çalışır. Böylece tek bir döngü thread'i olur.
+@st.cache_resource(show_spinner=False)
+def _oto_thread_baslat(sb_url: str, sb_key: str):
+    t = _threading.Thread(
+        target=_oto_set_loop, args=(sb_url, sb_key), daemon=True, name="oto-set"
+    )
+    t.start()
+    return {"baslatildi": True}
+
+
 if bagli:
-    with _OTO_THREAD_LOCK:
-        if not _OTO_THREAD_STARTED:
-            _OTO_THREAD_STARTED = True
-            _threading.Thread(
-                target=_oto_set_loop, args=(url, key), daemon=True, name="oto-set"
-            ).start()
-            # İlk kontrolü hemen yap (thread 5 dk bekler)
-            _threading.Thread(
-                target=_oto_set_kontrol, args=(url, key), daemon=True
-            ).start()
+    _oto_thread_baslat(url, key)
 
 # m² değerlerini Supabase'den yükle (yoksa config/default kullan)
 m2_config = {}
@@ -1721,9 +1782,13 @@ with sag:
     _eski_yeni_ikon = lambda e,y: "⬆️" if (
         ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(y)
         > ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(e)) else "⬇️"
+    # "Son geçiş" yalnızca GERÇEK mod değişimlerinden seçilir; günlük yeniden
+    # gönderim kayıtları (*_yenileme) buraya girmez, yoksa "ilimli → ilimli"
+    # gibi geçiş olmayan bir satır gösterilirdi.
+    _ml_gecisler = [x for x in _ml_data if x["tip"] in ("chiller", "diger")]
     _son_gecis_html = ""
-    if _ml_data:
-        _ml_son = _ml_data[0]
+    if _ml_gecisler:
+        _ml_son = _ml_gecisler[0]
         _son_tip = "🧊 Chiller" if _ml_son["tip"]=="chiller" else "🌀 Kol/FCU/AHU"
         try: _son_ok = _eski_yeni_ikon(_ml_son["eski_mod"], _ml_son["yeni_mod"])
         except: _son_ok = "↔️"
