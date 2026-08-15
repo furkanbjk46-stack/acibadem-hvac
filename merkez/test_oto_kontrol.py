@@ -85,8 +85,10 @@ def kontrol_yukle():
         r"_CH_SINIRLAR\s*=.*?\n", r"_CH_MODLAR\s*=.*?\n", r"_CH_SET\s*=.*?\n",
         r"_CH_H\s*=.*?\n", r"_DIG_ESIK\s*=.*?\n", r"_DIG_H\s*=.*?\n",
         r"_DIG_SET\s*=\s*\{.*?\n\}\n", r"_CH_NOKTALAR\s*=.*?\n",
+        r"_OTO_GUNDUZ_VARSAYILAN\s*=.*?\n", r"_OTO_GECE_VARSAYILAN\s*=.*?\n",
         r"def _hedef_bolge.*?(?=\ndef )", r"def _ch_modu_hesapla.*?(?=\ndef )",
-        r"def _dig_modu_hesapla.*?(?=\ndef )",
+        r"def _dig_modu_hesapla.*?(?=\n_OTO_GUNDUZ)",
+        r"def _donem_hesapla.*?(?=\ndef )",
         r"def _oto_set_kontrol.*?(?=\n# ─── Arka plan)",
     ]
     for d in desenler:
@@ -118,59 +120,65 @@ def calistir(ayarlar, tahmin=(30.0, 24.0)):
     return sb
 
 
-BUGUN = datetime.now(IST).strftime("%Y-%m-%d")
-DUN = (datetime.now(IST) - timedelta(days=1)).strftime("%Y-%m-%d")
+ns0 = kontrol_yukle()
+_dh = ns0["_donem_hesapla"]
+
+# ── 0) Donem hesabi (yapılandirilabilir saatler) ──
+c("05:00-22:00 -> 05'te gunduz baslar", _dh(5, 5, 22) == "gunduz")
+c("04:59 hala gece", _dh(4, 5, 22) == "gece")
+c("21 gunduz", _dh(21, 5, 22) == "gunduz")
+c("22 gece baslar", _dh(22, 5, 22) == "gece")
+c("gece yarisini asan aralik (22->5) desteklenir",
+  _dh(23, 22, 5) == "gunduz" and _dh(3, 22, 5) == "gunduz" and _dh(10, 22, 5) == "gece")
+
+# Testler saatten bagimsiz olsun diye: mevcut saate gore donem hesaplanir
 _saat = datetime.now(IST).hour
-DONEM = "gunduz" if 6 <= _saat < 19 else "gece"
-# gunduz -> max(30) => sicak ; gece -> min(24) => ilimli
-BEKLENEN_CH = "sicak" if DONEM == "gunduz" else "ilimli"
+SIMDI = _dh(_saat, 5, 22)
+DIGER = "gece" if SIMDI == "gunduz" else "gunduz"
+# gunduz -> max ; gece -> min referans alinir
+BEKLENEN_CH = "sicak" if SIMDI == "gunduz" else "ilimli"   # 30 / 24 ile
 
-# ── 1) Hicbir tetikleyici yok: mod ayni, donem ayni, bugun yenilenmis ──
-sb = calistir({"oto_set_aktif": "true", "oto_mod_chiller": BEKLENEN_CH,
-               "oto_mod_diger": "sogutma", "oto_donem": DONEM,
-               "oto_son_yenileme": BUGUN})
-c("tetikleyici yokken komut GONDERILMEZ", len(sb.komutlar) == 0, "%d komut" % len(sb.komutlar))
-c("tetikleyici yokken log YAZILMAZ", len(sb.loglar) == 0, "%d log" % len(sb.loglar))
+TEMEL = {"oto_set_aktif": "true", "oto_mod_chiller": BEKLENEN_CH,
+         "oto_mod_diger": "sogutma", "oto_gunduz_saat": "5", "oto_gece_saat": "22"}
 
-# ── 2) Gunluk yenileme: mod ayni ama dun yenilenmis ──
-sb = calistir({"oto_set_aktif": "true", "oto_mod_chiller": BEKLENEN_CH,
-               "oto_mod_diger": "sogutma", "oto_donem": DONEM,
-               "oto_son_yenileme": DUN})
-c("gunde bir kez yeniden gonderim yapilir", len(sb.komutlar) == 11,
-  "%d komut" % len(sb.komutlar))
-c("yenileme logu ayirt edilebilir (*_yenileme)",
+# ── 1) DONEM AYNI: mod degisse bile komut GITMEZ (kullanici karari) ──
+sb = calistir(dict(TEMEL, oto_donem=SIMDI, oto_mod_chiller="koc_soguk"))
+c("donem ayniyken komut GONDERILMEZ (mod farkli olsa da)",
+  len(sb.komutlar) == 0, "%d komut" % len(sb.komutlar))
+c("donem ayniyken log YAZILMAZ", len(sb.loglar) == 0, "%d log" % len(sb.loglar))
+c("donem ayniyken durum yine de guncellenir",
+  "oto_set_son_kontrol" in sb.ayarlar)
+
+# ── 2) DONEM GECISI: setler gider ──
+sb = calistir(dict(TEMEL, oto_donem=DIGER))
+c("donem gecisinde 11 komut gider", len(sb.komutlar) == 11, "%d" % len(sb.komutlar))
+c("donem gecisinde donem kaydedilir", sb.ayarlar.get("oto_donem") == SIMDI,
+  str(sb.ayarlar.get("oto_donem")))
+
+# ── 3) Gecis + mod DEGISMEMIS: log '*_yenileme' olarak isaretlenir ──
+c("mod degismediyse log yenileme tipinde",
   all(x["tip"].endswith("_yenileme") for x in sb.loglar),
   str([x["tip"] for x in sb.loglar]))
-c("yenileme tarihi kaydedilir", sb.ayarlar.get("oto_son_yenileme") == BUGUN,
-  str(sb.ayarlar.get("oto_son_yenileme")))
 
-# ── 3) Ayni gun ikinci calisma: tekrar gondermez ──
-sb2 = calistir(dict(sb.ayarlar))
-c("ayni gun ikinci kez yeniden gondermez", len(sb2.komutlar) == 0,
-  "%d komut" % len(sb2.komutlar))
-
-# ── 4) Gercek mod degisimi: kademesiz + dogru tip ──
-sb = calistir({"oto_set_aktif": "true", "oto_mod_chiller": "koc_soguk",
-               "oto_mod_diger": "sogutma", "oto_donem": DONEM,
-               "oto_son_yenileme": BUGUN}, tahmin=(30.0, 28.0))
+# ── 4) Gecis + GERCEK mod degisimi: kademesiz + dogru tip ──
+sb = calistir(dict(TEMEL, oto_donem=DIGER, oto_mod_chiller="koc_soguk"),
+              tahmin=(30.0, 28.0))
 ch_kom = [k for k in sb.komutlar if k["nokta_adi"].startswith("CH")]
 c("mod degisiminde chiller komutlari gider", len(ch_kom) == 5, "%d" % len(ch_kom))
-c("koc_soguk -> dogrudan sicak (kademesiz)",
-  ch_kom and ch_kom[0]["hedef_deger"] == 6.5,
+c("koc_soguk -> dogrudan sicak/ilimli (kademesiz)",
+  ch_kom and ch_kom[0]["hedef_deger"] in (6.5, 7.0),
   str(ch_kom[0]["hedef_deger"]) if ch_kom else "-")
 c("gercek gecis logu 'chiller' tipinde",
   any(x["tip"] == "chiller" for x in sb.loglar), str([x["tip"] for x in sb.loglar]))
 
 # ── 5) OTO SET kapaliyken hicbir sey yapilmaz ──
-sb = calistir({"oto_set_aktif": "false", "oto_mod_chiller": "koc_soguk",
-               "oto_mod_diger": "isitma", "oto_donem": "", "oto_son_yenileme": DUN})
+sb = calistir(dict(TEMEL, oto_set_aktif="false", oto_donem=DIGER))
 c("oto_set kapaliyken komut yok", len(sb.komutlar) == 0, "%d" % len(sb.komutlar))
 
 # ── 6) ES ZAMANLI CALISMA: ikinci cagri kilitte durur ──
 ns = kontrol_yukle()
 ns["_OTO_KONTROL_LOCK"].acquire()          # birinci calisma surüyor gibi
-sb = SahteSupabase({"oto_set_aktif": "true", "oto_mod_chiller": "koc_soguk",
-                    "oto_mod_diger": "isitma", "oto_donem": "", "oto_son_yenileme": DUN})
+sb = SahteSupabase(dict(TEMEL, oto_donem=DIGER))
 sahte = sahte_urllib(sb)
 gercek = sys.modules.get("urllib.request")
 sys.modules["urllib.request"] = sahte

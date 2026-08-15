@@ -491,6 +491,19 @@ def _dig_modu_hesapla(ort: float, mevcut: str) -> str:
     return "sogutma" if ort >= _DIG_ESIK else "isitma"
 
 
+_OTO_GUNDUZ_VARSAYILAN = 5    # gündüz setleri bu saatte gider
+_OTO_GECE_VARSAYILAN   = 22   # gece setleri bu saatte gider
+
+
+def _donem_hesapla(saat: int, gunduz_saat: int, gece_saat: int) -> str:
+    """Saate göre dönem. Gece yarısını aşan aralıklar da desteklenir."""
+    if gunduz_saat == gece_saat:
+        return "gunduz"
+    if gunduz_saat < gece_saat:          # ör. 5 → 22
+        return "gunduz" if gunduz_saat <= saat < gece_saat else "gece"
+    return "gunduz" if (saat >= gunduz_saat or saat < gece_saat) else "gece"
+
+
 def _oto_set_kontrol(sb_url: str, sb_key: str):
     """
     Yarınki gündüz/gece tahminlerine göre dönem bazlı set kontrolü.
@@ -527,12 +540,6 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
         if tahmin is None:
             return
 
-        # Dönem belirle: gündüz 06:00–19:00, gece 19:00–06:00 (İstanbul UTC+3)
-        _saat = _dtt.now(_IST).hour
-        _gunduz = 6 <= _saat < 19
-        _donem  = "gunduz" if _gunduz else "gece"
-        _ref    = tahmin["max"] if _gunduz else tahmin["min"]
-
         def _sb_ayar_oku(k):
             _q = _ur2.Request(
                 sb_url + f"/rest/v1/ayarlar?key=eq.{k}&select=value",
@@ -556,6 +563,23 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             )
             _ur2.urlopen(_q, timeout=6)
 
+        # ── DÖNEM: kullanıcının belirlediği saatlere göre ──
+        # Saatler Synapse kumanda panelinden değiştirilebilir; burada okunur.
+        def _saat_oku(k, varsayilan):
+            try:
+                s = int(float(_sb_ayar_oku(k)))
+                return s if 0 <= s <= 23 else varsayilan
+            except (TypeError, ValueError):
+                return varsayilan
+
+        _gunduz_saat = _saat_oku("oto_gunduz_saat", _OTO_GUNDUZ_VARSAYILAN)
+        _gece_saat   = _saat_oku("oto_gece_saat",   _OTO_GECE_VARSAYILAN)
+
+        _saat   = _dtt.now(_IST).hour
+        _donem  = _donem_hesapla(_saat, _gunduz_saat, _gece_saat)
+        _gunduz = _donem == "gunduz"
+        _ref    = tahmin["max"] if _gunduz else tahmin["min"]
+
         mevcut_ch    = _sb_ayar_oku("oto_mod_chiller")
         mevcut_dig   = _sb_ayar_oku("oto_mod_diger")
         mevcut_donem = _sb_ayar_oku("oto_donem")  # son uygulanan dönem
@@ -565,22 +589,28 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
 
         ch_degisti    = yeni_ch  != mevcut_ch
         dig_degisti   = yeni_dig != mevcut_dig
-        donem_degisti = _donem   != mevcut_donem  # 06:00 veya 19:00 geçişi
+        donem_degisti = _donem   != mevcut_donem
 
-        # GÜNLÜK YENİDEN GÖNDERİM (güvenlik ağı):
-        # Mod değişmese bile günde bir kez setpoint'ler yeniden yazılır. Amaç,
-        # sahada elle değiştirilen bir setpoint'in süresiz yanlış kalmasını
-        # önlemek. Günde 1 kez olduğu için log/komut yükü oluşturmaz.
-        _bugun = _dtt.now(_IST).strftime("%Y-%m-%d")
-        gunluk_yenileme = _sb_ayar_oku("oto_son_yenileme") != _bugun
-
-        # Hiçbir tetikleyici yoksa → sadece kontrol zamanını güncelle
-        if not ch_degisti and not dig_degisti and not donem_degisti and not gunluk_yenileme:
+        # KOMUT YALNIZCA DÖNEM GEÇİŞİNDE GİDER.
+        #
+        # Kullanıcı kararı: setler yalnızca belirlenen saatlerde (varsayılan
+        # 05:00 gündüz / 22:00 gece) gönderilir. Gün ortasında hava tahmini
+        # değişse bile komut gitmez; bir sonraki geçişte uygulanır. Böylece
+        # sahaya ne zaman komut gideceği öngörülebilir olur.
+        #
+        # Geçişte, mod değişmemiş olsa bile setler yeniden yazılır — sahada
+        # elle değiştirilmiş bir setpoint günde iki kez düzeltilmiş olur.
+        # (Bu, önceki "günlük yenileme" mekanizmasının yerini alır; o mekanizma
+        # rastgele bir saatte — süreç ilk başladığında — tetikleniyordu.)
+        if not donem_degisti:
             _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
                 "zaman": _dtt.now(_IST).isoformat(),
                 "donem": _donem, "ref_sicaklik": _ref,
                 "yarin_max": tahmin["max"], "yarin_min": tahmin["min"],
-                "chiller_mod": yeni_ch, "diger_mod": yeni_dig, "komut_sayisi": 0
+                "chiller_mod": mevcut_ch or yeni_ch,
+                "diger_mod": mevcut_dig or yeni_dig,
+                "komut_sayisi": 0,
+                "gunduz_saat": _gunduz_saat, "gece_saat": _gece_saat,
             }))
             return
 
@@ -603,10 +633,9 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
         # mod hesabına girer. Mod gerçekten değişmişse ch_degisti/dig_degisti
         # true olur ve komut gider.
         #
-        # Ayrıca günde bir kez, mod değişmese de setpoint'ler yeniden yazılır
-        # (sahada elle değiştirilmiş olabilir).
-        _ch_gonder  = ch_degisti  or gunluk_yenileme
-        _dig_gonder = dig_degisti or gunluk_yenileme
+        # Buraya yalnızca dönem geçişinde gelinir; her iki grup da yazılır.
+        _ch_gonder  = True
+        _dig_gonder = True
 
         for lok in _loks:
             if _ch_gonder:
@@ -640,8 +669,6 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
         if _dig_gonder:
             _sb_ayar_yaz("oto_mod_diger", yeni_dig)
         _sb_ayar_yaz("oto_donem", _donem)
-        if gunluk_yenileme and komutlar:
-            _sb_ayar_yaz("oto_son_yenileme", _bugun)
         _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
             "zaman": _dtt.now(_IST).isoformat(),
             "donem": _donem, "ref_sicaklik": _ref,
@@ -1769,6 +1796,29 @@ with sag:
     _os_cnt     = _os.get("komut_sayisi", 0)
     _os_donem   = _os.get("donem","")
     _donem_ikon = "🌞" if _os_donem=="gunduz" else ("🌙" if _os_donem=="gece" else "")
+
+    # ── Dönem saatleri (kullanıcı tarafından değiştirilebilir) ──
+    def _oto_saat_oku(anahtar, varsayilan):
+        try:
+            with _oaur.urlopen(_oaur.Request(
+                url + f"/rest/v1/ayarlar?key=eq.{anahtar}&select=value",
+                headers={"apikey": key, "Authorization": "Bearer " + key}), timeout=4) as r:
+                d = _oajson.loads(r.read())
+            return int(float(d[0]["value"])) if d else varsayilan
+        except Exception:
+            return varsayilan
+
+    _g_saat  = _oto_saat_oku("oto_gunduz_saat", _OTO_GUNDUZ_VARSAYILAN)
+    _ge_saat = _oto_saat_oku("oto_gece_saat",   _OTO_GECE_VARSAYILAN)
+
+    # Panelde ANLIK dönem gösterilir (son kontroldeki değil) — kullanıcı
+    # sistemin şu an hangi durumda olduğunu görebilmeli.
+    _simdi_saat  = now_display.hour   # İstanbul saati (yukarıda hesaplanıyor)
+    _simdi_donem = _donem_hesapla(_simdi_saat, _g_saat, _ge_saat)
+    _sd_ikon     = "🌞" if _simdi_donem == "gunduz" else "🌙"
+    _sd_ad       = "GÜNDÜZ" if _simdi_donem == "gunduz" else "GECE"
+    _sd_renk     = "#f59e0b" if _simdi_donem == "gunduz" else "#818cf8"
+    _sonraki     = ("%02d:00" % _ge_saat) if _simdi_donem == "gunduz" else ("%02d:00" % _g_saat)
     _ch_label   = {"koc_soguk":"❄️ 8.0°C","serin":"🌤️ 7.5°C",
                    "ilimli":"☀️ 7.0°C","sicak":"🔥 6.5°C"}.get(_os_ch, _os_ch)
     _dig_label  = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
@@ -1813,6 +1863,17 @@ with sag:
         f"<div style='font-size:11px;font-weight:700;color:{_st_renk};'>{_st_txt}"
         f"<span style='font-size:9px;font-weight:400;color:rgba(180,220,255,0.4);margin-left:6px;'>{_alt_txt}</span></div>"
         f"</div>"
+        # ── ANLIK DÖNEM rozeti (sistem şu an hangi durumda) ──
+        f"<div style='text-align:right;'>"
+        f"<div style='background:rgba(255,255,255,0.04);border:1px solid {_sd_renk}55;"
+        f"border-radius:6px;padding:4px 10px;'>"
+        f"<div style='font-size:11px;font-weight:700;color:{_sd_renk};'>{_sd_ikon} {_sd_ad}</div>"
+        f"<div style='font-size:8px;color:rgba(180,220,255,0.45);margin-top:1px;'>"
+        f"{_g_saat:02d}:00 gündüz · {_ge_saat:02d}:00 gece</div>"
+        f"</div>"
+        f"<div style='font-size:8px;color:rgba(180,220,255,0.35);margin-top:3px;'>"
+        f"sıradaki geçiş {_sonraki}</div>"
+        f"</div>"
         f"</div>"
         # ── Ayırıcı ──
         f"<div style='border-top:1px solid rgba(56, 189, 248,0.08);margin-bottom:10px;'></div>"
@@ -1856,6 +1917,34 @@ with sag:
             headers={"apikey":key,"Authorization":"Bearer "+key,
                      "Content-Type":"application/json","Prefer":"resolution=merge-duplicates"}), timeout=4)
         st.rerun()
+
+    # ── Geçiş saatleri ayarı ──
+    # Setler yalnızca bu saatlerde gönderilir; buradan değiştirilebilir.
+    with st.expander(f"🕐 Geçiş saatleri — gündüz {_g_saat:02d}:00 · gece {_ge_saat:02d}:00"):
+        _sc1, _sc2 = st.columns(2)
+        with _sc1:
+            _yeni_g = st.number_input("Gündüz başlangıcı", min_value=0, max_value=23,
+                                      value=int(_g_saat), step=1, key="oto_gunduz_saat_in",
+                                      help="Gündüz setleri bu saatte gönderilir")
+        with _sc2:
+            _yeni_ge = st.number_input("Gece başlangıcı", min_value=0, max_value=23,
+                                       value=int(_ge_saat), step=1, key="oto_gece_saat_in",
+                                       help="Gece setleri bu saatte gönderilir")
+        if _yeni_g == _yeni_ge:
+            st.warning("Gündüz ve gece saati aynı olamaz.")
+        elif st.button("Saatleri Kaydet", key="oto_saat_kaydet", use_container_width=True):
+            for _k, _v in (("oto_gunduz_saat", _yeni_g), ("oto_gece_saat", _yeni_ge)):
+                _oaur.urlopen(_oaur.Request(
+                    url + "/rest/v1/ayarlar",
+                    data=_oajson.dumps({"key": _k, "value": str(int(_v))}).encode(),
+                    method="POST",
+                    headers={"apikey": key, "Authorization": "Bearer " + key,
+                             "Content-Type": "application/json",
+                             "Prefer": "resolution=merge-duplicates"}), timeout=4)
+            st.success(f"Kaydedildi — gündüz {int(_yeni_g):02d}:00, gece {int(_yeni_ge):02d}:00")
+            st.rerun()
+        st.caption("Setler yalnızca bu saatlerde gönderilir. Gün ortasında hava "
+                   "tahmini değişse bile komut gitmez, bir sonraki geçişte uygulanır.")
 
     # Detay listesi — session_state toggle (autorefresh'e karşı dayanıklı)
     if _ml_data:
