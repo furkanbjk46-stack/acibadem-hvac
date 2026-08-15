@@ -432,8 +432,18 @@ _DIG_SET  = {
 _CH_NOKTALAR = ["CH1_REM_SET","CH2_REM_SET","CH3_REM_SET","CH4_REM_SET","CH5_REM_SET"]
 
 
-def _fetch_yarin_tahmin() -> dict | None:
-    """Open-Meteo'dan yarının gündüz max ve gece min sıcaklığını döner."""
+def _fetch_tahmin() -> dict | None:
+    """Open-Meteo'dan bugünün ve yarının max/min sıcaklıklarını döner.
+
+    HANGİ DEĞER NEREDE KULLANILIR:
+      * Gündüz seti (varsayılan 05:00) → BUGÜNÜN max'ı.
+        05:00'te başlayan gündüz bugünün gündüzüdür; yarının max'ına bakmak
+        bir gün kayması yaratıyordu (bugün 30°C / yarın 22°C gibi günlerde
+        sıcak bir güne ılıman set gidiyordu).
+      * Gece seti (varsayılan 22:00) → YARININ min'i.
+        22:00'de başlayan gece takvimde yarına sarkar ve en düşük sıcaklık
+        yarın sabaha doğru oluşur; doğru referans yarının min'idir.
+    """
     try:
         import urllib.request as _ur, json as _jj
         _api = (
@@ -444,9 +454,13 @@ def _fetch_yarin_tahmin() -> dict | None:
         )
         with _ur.urlopen(_api, timeout=8) as _r:
             _d = _jj.loads(_r.read())
+        _mx = _d["daily"]["temperature_2m_max"]
+        _mn = _d["daily"]["temperature_2m_min"]
         return {
-            "max": round(_d["daily"]["temperature_2m_max"][1], 1),  # yarın max (gündüz)
-            "min": round(_d["daily"]["temperature_2m_min"][1], 1),  # yarın min (gece)
+            "bugun_max": round(_mx[0], 1),
+            "bugun_min": round(_mn[0], 1),
+            "yarin_max": round(_mx[1], 1),
+            "yarin_min": round(_mn[1], 1),
         }
     except Exception:
         return None
@@ -536,7 +550,7 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             logging.getLogger(__name__).info("oto_set_kontrol: devre disi, atlanıyor.")
             return
 
-        tahmin = _fetch_yarin_tahmin()
+        tahmin = _fetch_tahmin()
         if tahmin is None:
             return
 
@@ -578,7 +592,8 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
         _saat   = _dtt.now(_IST).hour
         _donem  = _donem_hesapla(_saat, _gunduz_saat, _gece_saat)
         _gunduz = _donem == "gunduz"
-        _ref    = tahmin["max"] if _gunduz else tahmin["min"]
+        # Gündüz → BUGÜNÜN max'ı, gece → YARININ min'i (gerekçe: _fetch_tahmin)
+        _ref    = tahmin["bugun_max"] if _gunduz else tahmin["yarin_min"]
 
         mevcut_ch    = _sb_ayar_oku("oto_mod_chiller")
         mevcut_dig   = _sb_ayar_oku("oto_mod_diger")
@@ -606,7 +621,7 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
             _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
                 "zaman": _dtt.now(_IST).isoformat(),
                 "donem": _donem, "ref_sicaklik": _ref,
-                "yarin_max": tahmin["max"], "yarin_min": tahmin["min"],
+                "bugun_max": tahmin["bugun_max"], "yarin_min": tahmin["yarin_min"],
                 "chiller_mod": mevcut_ch or yeni_ch,
                 "diger_mod": mevcut_dig or yeni_dig,
                 "komut_sayisi": 0,
@@ -672,7 +687,7 @@ def _oto_set_kontrol(sb_url: str, sb_key: str):
         _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
             "zaman": _dtt.now(_IST).isoformat(),
             "donem": _donem, "ref_sicaklik": _ref,
-            "yarin_max": tahmin["max"], "yarin_min": tahmin["min"],
+            "bugun_max": tahmin["bugun_max"], "yarin_min": tahmin["yarin_min"],
             "chiller_mod": yeni_ch, "diger_mod": yeni_dig,
             "komut_sayisi": len(komutlar), "lokasyonlar": _loks,
         }))
@@ -1789,7 +1804,8 @@ with sag:
     # OTO SET durum değerleri
     _os_zaman   = _os.get("zaman","")[:16].replace("T"," ")
     _os_ref     = _os.get("ref_sicaklik", _os.get("tahmin_ort", "—"))
-    _os_max     = _os.get("yarin_max","—")
+    # Gündüz seti bugünün max'ına, gece seti yarının min'ine bakar
+    _os_max     = _os.get("bugun_max", _os.get("yarin_max","—"))
     _os_min     = _os.get("yarin_min","—")
     _os_ch      = _os.get("chiller_mod","—")
     _os_dig     = _os.get("diger_mod","—")
@@ -1882,7 +1898,8 @@ with sag:
         f"<div style='display:flex;align-items:baseline;gap:6px;'>"
         f"<span style='font-family:Playfair Display,Plus Jakarta Sans,serif;font-size:18px;font-weight:900;"
         f"color:#38bdf8;text-shadow:0 0 12px rgba(56, 189, 248,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
-        f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>yarın max:{_os_max} / min:{_os_min}</span>"
+        f"<span style='font-size:9px;color:rgba(150,210,255,0.4);'>"
+        f"bugün max:{_os_max} · yarın min:{_os_min}</span>"
         f"</div>"
         f"<span style='font-size:8px;color:rgba(150,210,255,0.3);'>{_os_zaman}</span>"
         f"</div>"

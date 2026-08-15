@@ -104,14 +104,16 @@ def c(ad, kosul, detay=""):
     T.append((ad, bool(kosul), detay))
 
 
-def calistir(ayarlar, tahmin=(30.0, 24.0)):
-    """Tek bir _oto_set_kontrol cagrisi yapar, sahte supabase dondurur."""
+def calistir(ayarlar, tahmin=(30.0, 24.0), bugun_min=20.0, yarin_max=31.0):
+    """Tek bir _oto_set_kontrol cagrisi yapar, sahte supabase dondurur.
+    tahmin = (bugun_max, yarin_min) — kodun gercekten kullandigi iki deger."""
     ns = kontrol_yukle()
     sb = SahteSupabase(ayarlar)
     sahte = sahte_urllib(sb)
     gercek = sys.modules.get("urllib.request")
     sys.modules["urllib.request"] = sahte
-    ns["_fetch_yarin_tahmin"] = lambda: {"max": tahmin[0], "min": tahmin[1]}
+    ns["_fetch_tahmin"] = lambda: {"bugun_max": tahmin[0], "yarin_min": tahmin[1],
+                                   "bugun_min": bugun_min, "yarin_max": yarin_max}
     try:
         ns["_oto_set_kontrol"]("https://sahte", "anahtar")
     finally:
@@ -174,6 +176,21 @@ c("gercek gecis logu 'chiller' tipinde",
 # ── 5) OTO SET kapaliyken hicbir sey yapilmaz ──
 sb = calistir(dict(TEMEL, oto_set_aktif="false", oto_donem=DIGER))
 c("oto_set kapaliyken komut yok", len(sb.komutlar) == 0, "%d" % len(sb.komutlar))
+
+# ── 5b) DOGRU REFERANS: gunduz->BUGUN max, gece->YARIN min ──
+# Bugun sicak (30) ama yarin serin (15). Gunduz setinde BUGUNUN degeri
+# kullanilmalidir; yarininki kullanilsaydi sicak bir gune yanlis set giderdi.
+sb = calistir(dict(TEMEL, oto_donem=DIGER, oto_mod_chiller="serin"),
+              tahmin=(30.0, 24.0), yarin_max=15.0)
+_ch = [k for k in sb.komutlar if k["nokta_adi"].startswith("CH")]
+_ref_log = sb.loglar[0]["tahmin_ort"] if sb.loglar else None
+if SIMDI == "gunduz":
+    c("gunduz referansi BUGUNUN max'i (30) — yarininki (15) degil",
+      _ref_log == 30.0, "referans=%s" % _ref_log)
+    c("gunduz setinde sicak bolge (6.5) gider",
+      _ch and _ch[0]["hedef_deger"] == 6.5, str(_ch[0]["hedef_deger"]) if _ch else "-")
+else:
+    c("gece referansi YARININ min'i (24)", _ref_log == 24.0, "referans=%s" % _ref_log)
 
 # ── 6) ES ZAMANLI CALISMA: ikinci cagri kilitte durur ──
 ns = kontrol_yukle()
