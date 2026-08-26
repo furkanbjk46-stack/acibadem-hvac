@@ -1493,6 +1493,10 @@ with merkez:
 <meta charset="utf-8">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Altlık MapLibre vektör; işaretçiler Leaflet'te kalsın diye köprü eklentisi -->
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"/>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
 <style>
 * {{ margin:0; padding:0; box-sizing:border-box; }}
 body {{ background:#020617; }}
@@ -1516,17 +1520,13 @@ body {{ background:#020617; }}
 }}
 .leaflet-control-zoom a:hover {{ background:rgba(15, 23, 42, 0.9) !important; }}
 
-/* ── ALTLIK KOYULTMA ──
-   OpenStreetMap açık renkli bir altlık; portal teması lacivert. Döşemeler
-   CSS ile ters çevrilip lacivert tona boyanır. Filtre YALNIZCA döşeme
-   katmanına uygulanır (.leaflet-tile-pane) — böylece hastane işaretçileri,
-   glow halkaları ve popup'lar kendi renklerini korur. */
-.leaflet-tile-pane {{
-    filter: invert(1) grayscale(1) brightness(0.55) contrast(1.05)
-            sepia(0.35) hue-rotate(175deg) saturate(2.2);
+/* Altlık koyu vektör olduğu için CSS ile koyultma gerekmiyor;
+   yalnızca portalın lacivert tonuna hafifçe yaklaştırılır. */
+.leaflet-gl-layer {{
+    filter: saturate(0.6) hue-rotate(-10deg) brightness(0.95);
 }}
 
-/* OpenStreetMap lisansı atıf zorunlu kılar — küçük ve soluk gösterilir. */
+/* Veri OpenStreetMap kaynaklı — lisans atıf zorunlu kılar, küçük gösterilir. */
 .leaflet-control-attribution {{
     background:rgba(2,6,23,0.55) !important;
     color:rgba(150,210,255,0.45) !important;
@@ -1555,19 +1555,37 @@ var map = L.map('map', {{
     preferCanvas: true
 }});
 
-// OpenStreetMap — API anahtarı gerektirmez.
+// VersaTiles "eclipse" — koyu vektör altlık, API anahtarı GEREKTİRMEZ.
 //
-// NEDEN DEĞİŞTİ: Önceden CartoDB "dark_all" altlığı kullanılıyordu ve kodda
-// "ücretsiz, API key yok" notu vardı. CARTO politikasını değiştirdi; artık
-// anahtarsız isteklerde döşemelerin üzerine "API KEY REQUIRED" filigranı
-// basıyor ve harita okunmaz hâle geliyordu.
+// GEÇMİŞ: Önce CartoDB "dark_all" kullanılıyordu; CARTO politikasını
+// değiştirip anahtarsız isteklere "API KEY REQUIRED" filigranı basmaya
+// başladı. Ardından OpenStreetMap denendi ama sokak detayı yüzünden kontrol
+// paneli için fazla kalabalıktı.
 //
-// OSM açık renkli olduğu için koyu görünüm CSS filtresiyle sağlanır
-// (yukarıdaki .leaflet-tile-pane kuralı).
-L.tileLayer('https://tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
-    maxZoom: 19, noWrap: true,
+// Altlık MapLibre (vektör), işaretçiler ise Leaflet. İkisini birleştirmek için
+// maplibre-gl-leaflet köprüsü kullanılır: böylece mevcut hastane ikonları,
+// nefes alan glow halkaları ve popup'lar olduğu gibi korunur.
+var glKatman = L.maplibreGL({{
+    style: 'https://tiles.versatiles.org/assets/styles/eclipse/style.json',
     attribution: '&copy; OpenStreetMap'
 }}).addTo(map);
+
+// BOYUT TAZELEME — Streamlit bileşen çerçevesi ilk anda sıfır/yanlış
+// yükseklikte açılabiliyor. MapLibre o anda çizim yapamaz ve kendiliğinden
+// yenilemez; sonuç: işaretçiler görünür ama ALTLIK BOŞ kalır.
+// Bu yüzden yerleşim oturduktan sonra hem Leaflet hem MapLibre yeniden ölçülür.
+function haritaTazele() {{
+    try {{
+        map.invalidateSize();
+        var ml = glKatman.getMaplibreMap ? glKatman.getMaplibreMap() : null;
+        if (ml) {{ ml.resize(); }}
+    }} catch (e) {{}}
+}}
+[100, 400, 1200].forEach(function(ms) {{ setTimeout(haritaTazele, ms); }});
+window.addEventListener('resize', haritaTazele);
+if (window.ResizeObserver) {{
+    new ResizeObserver(haritaTazele).observe(document.getElementById('map'));
+}}
 
 var hospitals = {hjs};
 
