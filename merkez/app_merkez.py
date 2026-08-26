@@ -1323,12 +1323,8 @@ with sol:
     #
     # Güvenlik ağı: buton bulunamazsa (JS engellenirse, seçici değişirse)
     # varsayılan davranış korunur ve eski href yolu çalışır.
-    with st.container(key="gizli_detay_butonlari"):
-        for _lok_id, _ in lok_sira:
-            if st.button("git", key=f"gizli_detay_{_lok_id}"):
-                st.session_state["detay_lokasyon"] = _lok_id
-                st.rerun()
-
+    # CSS butonlardan ÖNCE gönderilir: sonra gönderilirse butonlar ilk çizimde
+    # bir an görünüp sonra kayboluyor (yüklenirken ekranda "git" yazıları belirir).
     st.markdown("""
     <style>
     /* Butonlar ekran dışında tutulur. display:none KULLANILMAZ — bazı
@@ -1339,6 +1335,12 @@ with sol:
     }
     </style>
     """, unsafe_allow_html=True)
+
+    with st.container(key="gizli_detay_butonlari"):
+        for _lok_id, _ in lok_sira:
+            if st.button("git", key=f"gizli_detay_{_lok_id}"):
+                st.session_state["detay_lokasyon"] = _lok_id
+                st.rerun()
 
     _components.html("""
     <script>
@@ -1513,7 +1515,26 @@ body {{ background:#020617; }}
     border-color:rgba(255, 255, 255, 0.08) !important;
 }}
 .leaflet-control-zoom a:hover {{ background:rgba(15, 23, 42, 0.9) !important; }}
-.leaflet-control-attribution {{ display:none !important; }}
+
+/* ── ALTLIK KOYULTMA ──
+   OpenStreetMap açık renkli bir altlık; portal teması lacivert. Döşemeler
+   CSS ile ters çevrilip lacivert tona boyanır. Filtre YALNIZCA döşeme
+   katmanına uygulanır (.leaflet-tile-pane) — böylece hastane işaretçileri,
+   glow halkaları ve popup'lar kendi renklerini korur. */
+.leaflet-tile-pane {{
+    filter: invert(1) grayscale(1) brightness(0.55) contrast(1.05)
+            sepia(0.35) hue-rotate(175deg) saturate(2.2);
+}}
+
+/* OpenStreetMap lisansı atıf zorunlu kılar — küçük ve soluk gösterilir. */
+.leaflet-control-attribution {{
+    background:rgba(2,6,23,0.55) !important;
+    color:rgba(150,210,255,0.45) !important;
+    font-size:8px !important;
+    padding:1px 5px !important;
+    border-radius:4px 0 0 0 !important;
+}}
+.leaflet-control-attribution a {{ color:rgba(56,189,248,0.55) !important; text-decoration:none; }}
 @keyframes breathe-outer {{
     0%,100% {{ opacity:0.10; transform:scale(0.92); }}
     50%      {{ opacity:0.28; transform:scale(1.20); }}
@@ -1530,13 +1551,22 @@ var map = L.map('map', {{
     center: [39.0, 35.0],
     zoom: 5,
     zoomControl: true,
-    attributionControl: false,
+    attributionControl: true,   // OSM lisansı atıf zorunlu kılıyor (CSS ile küçültüldü)
     preferCanvas: true
 }});
 
-// CartoDB Dark Matter — ücretsiz, API key yok
-L.tileLayer('https://{{s}}.basemaps.cartocdn.com/dark_all/{{z}}/{{x}}/{{y}}{{r}}.png', {{
-    maxZoom: 19, subdomains: 'abcd', noWrap: true
+// OpenStreetMap — API anahtarı gerektirmez.
+//
+// NEDEN DEĞİŞTİ: Önceden CartoDB "dark_all" altlığı kullanılıyordu ve kodda
+// "ücretsiz, API key yok" notu vardı. CARTO politikasını değiştirdi; artık
+// anahtarsız isteklerde döşemelerin üzerine "API KEY REQUIRED" filigranı
+// basıyor ve harita okunmaz hâle geliyordu.
+//
+// OSM açık renkli olduğu için koyu görünüm CSS filtresiyle sağlanır
+// (yukarıdaki .leaflet-tile-pane kuralı).
+L.tileLayer('https://tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+    maxZoom: 19, noWrap: true,
+    attribution: '&copy; OpenStreetMap'
 }}).addTo(map);
 
 var hospitals = {hjs};
