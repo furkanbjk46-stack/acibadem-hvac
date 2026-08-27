@@ -1890,12 +1890,18 @@ with sag:
                    ) if _os_cnt > 0 else "<span style='color:rgba(180,220,255,0.3);'>Mod değişmedi</span>"
 
     # Mod geçiş değerleri
-    _ml_ch  = [x for x in _ml_data if x["tip"]=="chiller"]
-    _ml_dig = [x for x in _ml_data if x["tip"]=="diger"]
+    # startswith kullanılır: dönem geçişinde mod değişmediğinde kayıtlar
+    # "chiller_yenileme"/"diger_yenileme" tipiyle yazılıyor. Tam eşitlik
+    # arandığında rozet günlük normal işleyişte "🧊 0 · 🌀 0 · Σ 2" gibi
+    # bozuk görünüyordu (simülasyonda yakalandı).
+    _ml_ch  = [x for x in _ml_data if str(x.get("tip","")).startswith("chiller")]
+    _ml_dig = [x for x in _ml_data if str(x.get("tip","")).startswith("diger")]
     _ml_top = len(_ml_data)
-    _eski_yeni_ikon = lambda e,y: "⬆️" if (
-        ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(y)
-        > ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"].index(e)) else "⬇️"
+    # Mod değişmediyse (dönem yenilemesi) yön oku yerine ↔️ gösterilir;
+    # aksi halde "serin → serin" satırı yanıltıcı biçimde ⬇️ görünüyordu.
+    _SIRA = ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"]
+    _eski_yeni_ikon = lambda e, y: ("↔️" if e == y else
+                                    ("⬆️" if _SIRA.index(y) > _SIRA.index(e) else "⬇️"))
     # "Son geçiş" yalnızca GERÇEK mod değişimlerinden seçilir; günlük yeniden
     # gönderim kayıtları (*_yenileme) buraya girmez, yoksa "ilimli → ilimli"
     # gibi geçiş olmayan bir satır gösterilirdi.
@@ -2025,7 +2031,11 @@ with sag:
             _gecis_satirlari = ""
             for _mk in _ml_data[:20]:
                 _mk_z  = _mk["created_at"][:16].replace("T", " ")
-                _mk_ti = "🧊" if _mk["tip"] == "chiller" else "🌀"
+                _mk_tip = str(_mk.get("tip", ""))
+                _mk_ti  = "🧊" if _mk_tip.startswith("chiller") else "🌀"
+                # Mod değişmeyen (dönem geçişi) kayıtlar ayırt edilsin
+                _mk_et  = " <span style='color:rgba(150,210,255,0.35);'>· yenileme</span>" \
+                          if _mk_tip.endswith("_yenileme") else ""
                 try:
                     _mk_ok = _eski_yeni_ikon(_mk["eski_mod"], _mk["yeni_mod"])
                 except Exception:
@@ -2039,6 +2049,7 @@ with sag:
                     f" → <b style='color:#38bdf8;'>{_mk['yeni_mod']}</b>"
                     f" &nbsp;<span style='color:#f59e0b;'>{_mk['tahmin_ort']}°C</span>"
                     f" &nbsp;<span style='color:rgba(16,185,129,0.7);'>{_mk['komut_sayisi']} komut</span>"
+                    f"{_mk_et}"
                     f"</div>"
                 )
             st.markdown(
