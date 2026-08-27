@@ -291,6 +291,21 @@ def _demo_modu() -> bool:
         return False
 
 
+def _gizli_oku(bolum: str, anahtar: str, varsayilan: str = "") -> str:
+    """st.secrets'tan güvenli okuma.
+
+    Sunum uygulamasında secrets dosyası HİÇ YOKTUR; st.secrets'a dokunmak
+    Streamlit'in sayfaya "No secrets found" uyarısı basmasına yol açıyor ve bu
+    sunumda görünüyordu. Demo modunda secrets'a hiç bakılmaz.
+    """
+    if _demo_modu():
+        return varsayilan
+    try:
+        return str(st.secrets.get(bolum, {}).get(anahtar, "") or varsayilan)
+    except Exception:
+        return varsayilan
+
+
 def load_config():
     # ── SUNUM/DEMO MODU ──
     # Portal canlı Supabase yerine ÖRNEK VERİ sunucusuna bağlanır.
@@ -879,11 +894,7 @@ def _qr_bakim_sayfasi():
         return
 
     # ── Saha PIN koruması (secrets'ta [saha] pin tanımlıysa) ──
-    saha_pin = ""
-    try:
-        saha_pin = str(st.secrets.get("saha", {}).get("pin", "") or "")
-    except Exception:
-        pass
+    saha_pin = _gizli_oku("saha", "pin")
     if not saha_pin:
         saha_pin = str(config.get("saha_pin", "") or "")
     if saha_pin and not st.session_state.get("saha_pin_ok"):
@@ -2276,11 +2287,7 @@ with sag:
         )
 
         # ── AI yetki kontrolü ──
-        _api_key = ""
-        try:
-            _api_key = st.secrets.get("anthropic", {}).get("api_key", "")
-        except Exception:
-            pass
+        _api_key = _gizli_oku("anthropic", "api_key")
 
         if not _api_key:
             st.markdown(

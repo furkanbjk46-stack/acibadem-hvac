@@ -456,16 +456,22 @@ def _ayarlar():
     ve fail-closed davranış korunur.
     """
     import streamlit as st
+
+    # ÖNCE ortam değişkenleri: yalnızca sunum uygulamasında tanımlıdırlar.
+    # Sıra bilinçli — secrets önce okunsaydı, secrets dosyası bulunmayan demo
+    # uygulamasında Streamlit sayfanın tepesine "No secrets found" uyarısı
+    # basıyordu (sunumda görünmemeli).
+    ad = os.environ.get("SYNAPSE_GIRIS_KULLANICI", "").strip()
+    ph = os.environ.get("SYNAPSE_GIRIS_PAROLA_HASH", "").strip()
+    if ad and ph:
+        return ad, ph
+
     try:
         g = st.secrets.get("giris", {})
-        ad = str(g.get("kullanici", "") or "")
-        ph = str(g.get("parola_hash", "") or "")
-        if ad and ph:
-            return ad, ph
+        return (str(g.get("kullanici", "") or ""),
+                str(g.get("parola_hash", "") or ""))
     except Exception:
-        pass
-    return (os.environ.get("SYNAPSE_GIRIS_KULLANICI", "").strip(),
-            os.environ.get("SYNAPSE_GIRIS_PAROLA_HASH", "").strip())
+        return "", ""
 
 
 def oturum_gecerli() -> bool:
