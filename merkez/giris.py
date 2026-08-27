@@ -448,13 +448,24 @@ footer, #MainMenu{visibility:hidden;}
 # ═══════════════════════════════════════════════════════════════════════════
 
 def _ayarlar():
-    """secrets'tan [giris] bilgilerini okur. (kullanici, parola_hash)"""
+    """Giriş bilgilerini döner. (kullanici, parola_hash)
+
+    Önce Streamlit secrets, sonra ortam değişkenleri okunur. Ortam değişkeni
+    yolu YALNIZCA sunum/demo içindir (SUNUM_BASLAT.bat bunları ayarlar);
+    Streamlit Cloud'da bu değişkenler bulunmadığı için üretimde devreye girmez
+    ve fail-closed davranış korunur.
+    """
     import streamlit as st
     try:
         g = st.secrets.get("giris", {})
-        return str(g.get("kullanici", "") or ""), str(g.get("parola_hash", "") or "")
+        ad = str(g.get("kullanici", "") or "")
+        ph = str(g.get("parola_hash", "") or "")
+        if ad and ph:
+            return ad, ph
     except Exception:
-        return "", ""
+        pass
+    return (os.environ.get("SYNAPSE_GIRIS_KULLANICI", "").strip(),
+            os.environ.get("SYNAPSE_GIRIS_PAROLA_HASH", "").strip())
 
 
 def oturum_gecerli() -> bool:

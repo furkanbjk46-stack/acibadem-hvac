@@ -266,7 +266,45 @@ HASTANELER = {
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "merkez_config.json")
 
+@st.cache_resource(show_spinner=False)
+def _demo_sunucusu_baslat():
+    """Sunum modunda örnek veri sunucusunu UYGULAMA İÇİNDE başlatır.
+
+    Böylece sunum yapılacak bilgisayarda Python kurulu olması gerekmez:
+    portal kendi verisini kendisi servis eder. Uygulama Streamlit Cloud'a
+    ikinci bir demo uygulaması olarak kurulduğunda da çalışır — tarayıcıdan
+    adrese girmek yeterlidir.
+    """
+    import sys as _sys
+    _sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import _sim_sunucu
+    return _sim_sunucu.sunucu_baslat(8099)
+
+
+def _demo_modu() -> bool:
+    """Sunum modu açık mı? (ortam değişkeni veya secrets)"""
+    if os.environ.get("SYNAPSE_DEMO", "").strip() == "1":
+        return True
+    try:
+        return str(st.secrets.get("demo", {}).get("aktif", "")).lower() in ("1", "true", "evet")
+    except Exception:
+        return False
+
+
 def load_config():
+    # ── SUNUM/DEMO MODU ──
+    # Portal canlı Supabase yerine ÖRNEK VERİ sunucusuna bağlanır.
+    # Streamlit Cloud'daki gerçek uygulamada ne bu ortam değişkeni ne de
+    # [demo] secrets bölümü bulunur; dolayısıyla ÜRETİM ETKİLENMEZ.
+    if _demo_modu():
+        return {"supabase_url": _demo_sunucusu_baslat(), "supabase_key": "simulasyon"}
+
+    # Harici simülasyon sunucusu (SUNUM_BASLAT.bat ile yerel kullanım)
+    _sim = os.environ.get("SYNAPSE_SIM_URL", "").strip()
+    if _sim:
+        return {"supabase_url": _sim,
+                "supabase_key": os.environ.get("SYNAPSE_SIM_KEY", "simulasyon")}
+
     # Streamlit Cloud: önce st.secrets'a bak
     try:
         if "supabase" in st.secrets:
@@ -1052,6 +1090,20 @@ with st.container(key="cikis_kutusu"):
     if st.button("⏻", key="cikis_btn", help="Oturumu kapat"):
         giris.cikis_yap()
         st.rerun()
+
+# ── SUNUM/DEMO UYARISI ──
+# Simülasyon sunucusuna bağlıyken ekranda görünür bir işaret durur; böylece
+# demo ekranının görüntüsü gerçek veriyle karıştırılmaz. Üretimde (canlı
+# Supabase) bu blok hiç çalışmaz.
+if "127.0.0.1" in url or "localhost" in url:
+    st.markdown(
+        "<div style='position:fixed;top:10px;left:18px;z-index:999999;"
+        "background:rgba(245,158,11,0.16);border:1px solid rgba(245,158,11,0.55);"
+        "color:#fcd34d;border-radius:8px;padding:5px 12px;font-size:10px;"
+        "letter-spacing:1.6px;text-transform:uppercase;font-weight:700;"
+        "font-family:Plus Jakarta Sans,sans-serif;backdrop-filter:blur(10px);'>"
+        "● Simülasyon — Örnek Veri</div>",
+        unsafe_allow_html=True)
 
 # ── Lokasyon detay yönlendirmesi (kart ikonu tıklanınca) — aynı sayfada, animasyonlu ──
 if "detay" in st.query_params:
