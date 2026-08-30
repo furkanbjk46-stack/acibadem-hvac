@@ -14,6 +14,12 @@
       "port": 8010
     },
     {
+      "name": "Synapse Demo",
+      "runtimeExecutable": "streamlit",
+      "runtimeArgs": ["run", "merkez/app_demo.py", "--server.port=8507", "--server.headless=true"],
+      "port": 8507
+    },
+    {
       "name": "GM Merkez",
       "runtimeExecutable": "streamlit",
       "runtimeArgs": ["run", "merkez/app_merkez.py", "--server.port=8505", "--server.headless=true"],

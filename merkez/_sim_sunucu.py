@@ -24,6 +24,7 @@ Gonderilen komutlar ve loglar bellekte biriktirilir; su adreslerden okunabilir:
 import argparse
 import json
 import random
+import re
 import sys
 import threading
 from datetime import datetime, timedelta, timezone
@@ -33,14 +34,25 @@ from urllib.parse import parse_qs, urlparse
 IST = timezone(timedelta(hours=3))
 
 # ── Portaldaki HASTANELER listesiyle ayni kimlikler ────────────────────────
+#
+# KIMLIKLER BIREBIR AYNI OLMALI: portal, lokasyonu `lokasyon_id` ile eslestirir.
+# Ilk surumde "adana_ort" yazilmisti; portaldaki karsiligi "adana_ortopedia"
+# oldugu icin o hastane sunumda "KURULMADI" gorunuyordu.
+#
+# m2 degerleri de portaldaki HASTANELER tablosuyla ayni; boylece kWh/m2/gun
+# gostergeleri hastaneler arasinda gercekci sekilde farklilasir.
 LOKASYONLAR = [
-    ("maslak", "MASLAK"), ("altunizade", "ALTUNİZADE"), ("kozyatagi", "KOZYATAĞI"),
-    ("taksim", "TAKSİM"), ("atakent", "ATAKENT"), ("atasehir", "ATAŞEHİR"),
-    ("bakirkoy", "BAKIRKÖY"), ("fulya", "FULYA"), ("international", "INTERNAT."),
-    ("kadikoy", "KADİKÖY"), ("kartal", "KARTAL"), ("ankara", "ANKARA"),
-    ("bayindir", "BAYINDIR"), ("bursa", "BURSA"), ("kocaeli", "KOCAELİ"),
-    ("eskisehir", "ESKİŞEHİR"), ("izmir", "İZMİR"), ("kayseri", "KAYSERİ"),
-    ("adana", "ADANA"), ("adana_ort", "ADANA ORT."), ("bodrum", "BODRUM"),
+    ("maslak", "MASLAK", 15000), ("altunizade", "ALTUNİZADE", 10000),
+    ("kozyatagi", "KOZYATAĞI", 12000), ("taksim", "TAKSİM", 8000),
+    ("atakent", "ATAKENT", 20000), ("atasehir", "ATAŞEHİR", 14000),
+    ("bakirkoy", "BAKIRKÖY", 12000), ("fulya", "FULYA", 9000),
+    ("international", "INTERNAT.", 18000), ("kadikoy", "KADİKÖY", 8000),
+    ("kartal", "KARTAL", 11000), ("ankara", "ANKARA", 16000),
+    ("bayindir", "BAYINDIR", 12000), ("bursa", "BURSA", 13000),
+    ("kocaeli", "KOCAELİ", 10000), ("eskisehir", "ESKİŞEHİR", 9000),
+    ("izmir", "İZMİR", 15000), ("kayseri", "KAYSERİ", 11000),
+    ("adana", "ADANA", 12000), ("adana_ortopedia", "ADANA ORT.", 5000),
+    ("bodrum", "BODRUM", 7000),
 ]
 
 CH_NOKTALAR = ["CH1_REM_SET", "CH2_REM_SET", "CH3_REM_SET", "CH4_REM_SET", "CH5_REM_SET"]
@@ -63,8 +75,22 @@ SENARYO = {
 }
 
 
+# Uretilecek gecmis. 14 ay: yillik trend grafigi ve "gecen yilin ayni ayi"
+# karsilastirmasi icin bir onceki yilin ayni ayini da kapsamasi gerekir.
+GECMIS_GUN = 430
+
+
 def _bugun():
     return datetime.now(IST).date()
+
+
+def _mevsim(gun):
+    """0.0 = kisin en soguk gunu, 1.0 = yazin en sicak gunu.
+
+    Zirve ~1 Agustos (yilin 213. gunu) olacak sekilde kosinus egrisi.
+    """
+    import math
+    return (1 + math.cos(2 * math.pi * (gun.timetuple().tm_yday - 213) / 365)) / 2
 
 
 def veri_uret():
@@ -75,7 +101,7 @@ def veri_uret():
 
     lokasyonlar, energy, kartlar, noktalar, bildirimler = [], [], [], [], []
 
-    for lok_id, kisa in LOKASYONLAR:
+    for lok_id, kisa, lok_m2 in LOKASYONLAR:
         senaryo = SENARYO.get(lok_id, ("normal", ""))[0]
 
         # ── lokasyonlar tablosu ──
@@ -115,22 +141,35 @@ def veri_uret():
                              "gateway_ip": "10.0.0.1", "dnet": 1,
                              "mac_hex": "0A0B0C", "obj_type": 2, "obj_inst": 1})
 
-        # ── energy_data — son 40 gun ──
-        taban = 45000 + rnd.randint(-8000, 25000)
-        for i in range(40):
+        # ── energy_data — GECMIS_GUN gunluk gecmis ────────────────────────
+        # Tuketim m2 ile olceklenir: aksi halde 5.000 m2'lik Adana Ortopedia da
+        # 20.000 m2'lik Atakent de ~45.000 kWh tuketiyor gorunuyor ve
+        # kWh/m2/gun gostergesi anlamsizlasiyordu (kucuk hastane 9, buyuk 2).
+        taban = round(lok_m2 * (1.05 + 0.55 * rnd.random()))
+        for i in range(GECMIS_GUN):
             gun = bugun - timedelta(days=i)
             if senaryo == "veri_yok" and gun == dun:
                 continue                      # dun verisi bilerek eksik
-            mevsim = 1.0 + 0.12 * rnd.random()
-            toplam = round(taban * mevsim)
+
+            # Mevsimsellik: yaz zirvesi, kis dibi. Ilk surumde tum gunler ayni
+            # seviyedeydi; yillik trend grafigi duz cikiyor ve "gecen aya gore
+            # %244 artis" gibi anlamsiz karsilastirmalar uretiyordu.
+            yaz = _mevsim(gun)                         # 0 = kis, 1 = yaz
+            gunluk = 0.92 + 0.16 * rnd.random()        # gunden gune dalgalanma
+            hafta_sonu = 0.93 if gun.weekday() >= 5 else 1.0
+            toplam = round(taban * (0.82 + 0.38 * yaz) * gunluk * hafta_sonu)
+
+            # Sogutma yazin artar, kazan dogalgazi kisin.
+            sogutma_pay = 0.05 + 0.20 * yaz
+            chiller = round(toplam * sogutma_pay * 0.85)
+            vrf = round(toplam * sogutma_pay * 0.15)
             mcc = round(toplam * 0.22)
-            chiller = round(toplam * 0.16)
-            vrf = round(toplam * 0.03)
             kojen = round(toplam * 0.35) if lok_id in ("maslak", "izmir", "ankara") else 0
             sebeke = toplam - kojen
+            kazan = round(toplam * (0.010 - 0.008 * yaz))
 
             ch_set = 7.0
-            ch_yuk = 55 + rnd.randint(-10, 20)
+            ch_yuk = round((35 + 45 * yaz) + rnd.randint(-8, 8))
             if gun == dun and senaryo == "kritik_yuk":
                 ch_yuk = 96
             if gun == dun and senaryo == "set_yuksek":
@@ -147,12 +186,12 @@ def veri_uret():
                 "VRF_Split_Tuketim_kWh": vrf,
                 "Toplam_Sogutma_Tuketim_kWh": chiller + vrf,
                 "Diger_Yuk_kWh": max(0, toplam - mcc - chiller - vrf),
-                "Kazan_Dogalgaz_m3": round(toplam * 0.004),
+                "Kazan_Dogalgaz_m3": kazan,
                 "Kojen_Dogalgaz_m3": round(kojen / 6.2) if kojen else 0,
                 "Su_Tuketimi_m3": round(toplam * 0.0009),
-                "Dis_Hava_Sicakligi_C": 24 + rnd.randint(-4, 6),
+                "Dis_Hava_Sicakligi_C": round(6 + 24 * yaz + rnd.randint(-3, 3), 1),
                 "Chiller_Set_Temp_C": ch_set,
-                "Chiller_Load_Percent": ch_yuk,
+                "Chiller_Load_Percent": max(0, min(100, ch_yuk)),
                 "TRDP1_kWh": round(sebeke * 0.42), "TRDP2_kWh": round(sebeke * 0.12),
                 "TRDP3_kWh": round(sebeke * 0.16), "TRDP4_kWh": round(sebeke * 0.12),
             })
@@ -184,7 +223,7 @@ def veri_uret():
         {"key": "oto_donem", "value": ters},          # ← gecisi tetikler
         {"key": "oto_gunduz_saat", "value": "5"},
         {"key": "oto_gece_saat", "value": "22"},
-        {"key": "m2_degerler", "value": json.dumps({l: 40000 for l, _ in LOKASYONLAR})},
+        {"key": "m2_degerler", "value": json.dumps({l: m for l, _, m in LOKASYONLAR})},
     ]
 
     return {
@@ -207,6 +246,7 @@ def veri_uret():
 VERI = veri_uret()
 KILIT = threading.Lock()
 SAYAC = {"komut": 0, "log": 0, "ayar_yazma": 0, "istek": 0}
+YOL_SAYAC = {}
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -279,6 +319,10 @@ class Islek(BaseHTTPRequestHandler):
             SAYAC["istek"] += 1
         yol = urlparse(self.path).path
         sorgu = parse_qs(urlparse(self.path).query)
+        if not yol.startswith("/_sim/"):
+            with KILIT:
+                anahtar = self.path[:120] + " | Range=" + str(self.headers.get("Range"))
+                YOL_SAYAC[anahtar] = YOL_SAYAC.get(anahtar, 0) + 1
 
         if yol == "/_sim/ozet":
             return self._yaz({"sayaclar": SAYAC,
@@ -288,22 +332,44 @@ class Islek(BaseHTTPRequestHandler):
                               "enerji_satiri": len(VERI["energy_data"])})
         if yol == "/_sim/komutlar":
             return self._yaz(VERI["komutlar"])
+        if yol == "/_sim/yollar":
+            # Hangi sorgu kac kez atildi? Sayfalama dongusu gibi bir yerde
+            # takilma olup olmadigini teshis etmek icin.
+            return self._yaz(sorted(YOL_SAYAC.items(), key=lambda x: -x[1])[:25])
 
         tablo = self._tablo()
         if tablo is None or tablo not in VERI:
             return self._yaz([], 200)
 
         satirlar = _sirala(_filtre_uygula(VERI[tablo], sorgu), sorgu)
-        if "limit" in sorgu:
-            satirlar = satirlar[:int(sorgu["limit"][0])]
-        # Range basligi (supabase-py .range() bunu kullanir)
+
+        # ── SAYFALAMA — SONSUZ DONGU TUZAGI ───────────────────────────────
+        # supabase-py'nin .range(a, b) cagrisi sunucuya `offset` ve `limit`
+        # SORGU PARAMETRESI olarak gelir (Range basligi olarak degil).
+        # Ilk surum `offset`i yok sayiyordu: portal 2. sayfayi istedigine
+        # inaniyor ama yine ILK 1000 satiri aliyordu. Gelen satir sayisi hep
+        # sayfa boyuna esit oldugu icin "son sayfa" kosulu hic saglanmiyor,
+        # dongu sonsuza kadar donuyordu. 430 gunluk veriye gecilince sayfa
+        # hic acilmaz oldu (sunum makinesinde kilitlenme demekti); 40 gunluk
+        # veride tek sayfaya sigdigi icin hata gorunmuyordu.
+        try:
+            ofset = int(sorgu["offset"][0]) if "offset" in sorgu else 0
+        except (ValueError, IndexError):
+            ofset = 0
+        try:
+            adet = int(sorgu["limit"][0]) if "limit" in sorgu else None
+        except (ValueError, IndexError):
+            adet = None
+        satirlar = satirlar[ofset:] if adet is None else satirlar[ofset:ofset + adet]
+
+        # Range basligi — bazi istemciler sayfalamayi boyle yapar.
+        # "0-999" ve "items=0-999" bicimlerinin ikisi de kabul edilir.
         aralik = self.headers.get("Range")
-        if aralik and "-" in aralik:
-            try:
-                bas, son = aralik.split("-")
-                satirlar = satirlar[int(bas):int(son) + 1]
-            except ValueError:
-                pass
+        if aralik and "offset" not in sorgu:
+            eslesme = re.search(r"(\d+)\s*-\s*(\d+)", aralik)
+            if eslesme:
+                bas, son = int(eslesme.group(1)), int(eslesme.group(2))
+                satirlar = satirlar[bas:son + 1]
         return self._yaz(satirlar)
 
     def _govde_oku(self):
@@ -372,18 +438,33 @@ class Islek(BaseHTTPRequestHandler):
         return self._yaz([])
 
 
+_SUNUCU = {"adres": None}
+
+
 def sunucu_baslat(port: int = 8099) -> str:
     """Sunucuyu ARKA PLAN THREAD'inde baslatir ve adresini doner.
 
     Portalin kendi surecinden cagrilmak icindir: boylece sunum makinesinde
     ayrica Python calistirmaya gerek kalmaz, uygulama kendi verisini kendi
     servis eder. Yalnizca 127.0.0.1'e baglanir.
+
+    TEKRAR CAGRILABILIR: Ana sayfa ve lokasyon detay sayfasi ayni surecte
+    calisir ve ikisi de bu fonksiyonu cagirir. Ikinci cagrida yeni sunucu
+    acilmaz; zaten calisan sunucunun adresi doner. (Aksi halde "port zaten
+    kullanimda" hatasi aliniyordu.)
     """
-    srv = ThreadingHTTPServer(("127.0.0.1", port), Islek)
-    t = threading.Thread(target=srv.serve_forever, daemon=True,
-                         name="sim-sunucu")
-    t.start()
-    return "http://127.0.0.1:%d" % port
+    if _SUNUCU["adres"]:
+        return _SUNUCU["adres"]
+    try:
+        srv = ThreadingHTTPServer(("127.0.0.1", port), Islek)
+        threading.Thread(target=srv.serve_forever, daemon=True,
+                         name="sim-sunucu").start()
+    except OSError:
+        # Port dolu: ayni surecte baska bir modul kopyasi ya da SUNUM_BASLAT
+        # ile ayri bir sunucu calisiyor olabilir. Adresi yine de kullaniriz.
+        pass
+    _SUNUCU["adres"] = "http://127.0.0.1:%d" % port
+    return _SUNUCU["adres"]
 
 
 def main():

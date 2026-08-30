@@ -237,7 +237,35 @@ HASTANELER = {
 # ── Config & Lokasyon seç ────────────────────────────
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs", "merkez_config.json")
 
+def _demo_modu() -> bool:
+    """Sunum modu açık mı? app_merkez._demo_modu ile aynı kural."""
+    if os.environ.get("SYNAPSE_DEMO", "").strip() == "1":
+        return True
+    try:
+        return str(st.secrets.get("demo", {}).get("aktif", "")).lower() in ("1", "true", "evet")
+    except Exception:
+        return False
+
+
 def load_config():
+    # ── SUNUM/DEMO MODU ──
+    # Bu sayfa ana sayfadan BAĞIMSIZ olarak kendi config'ini okuyordu; demo
+    # modunu bilmediği için canlı Supabase adresine bağlanmaya çalışıyor ve
+    # "Bu lokasyon için veri bulunamadı" diyordu. Ayrıca st.secrets'a
+    # dokunduğu için sunumda "No secrets found" uyarısı görünüyordu.
+    # Artık ana sayfayla aynı örnek veri sunucusunu kullanır.
+    if _demo_modu():
+        import sys as _sys
+        _sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        import _sim_sunucu
+        return {"supabase_url": _sim_sunucu.sunucu_baslat(8099),
+                "supabase_key": "simulasyon"}
+
+    # Harici simülasyon sunucusu (SUNUM_BASLAT.bat ile yerel kullanım)
+    _sim = os.environ.get("SYNAPSE_SIM_URL", "").strip()
+    if _sim:
+        return {"supabase_url": _sim, "supabase_key": "simulasyon"}
+
     try:
         if "supabase" in st.secrets:
             cfg = {
