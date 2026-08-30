@@ -45,6 +45,9 @@ class Sahte:
 
     def istek(self, url, key, yol, veri=None, method="GET", timeout=10):
         if method == "GET":
+            if "/ayarlar?key=like.oto_*" in yol:
+                # RLS izni yoksa PostgREST bos liste doner -> kontrol atlanir.
+                return [{"key": k} for k in self.ayarlar if k.startswith("oto_")]
             if "/ayarlar?key=eq." in yol:
                 k = yol.split("key=eq.")[1].split("&")[0]
                 return [{"value": self.ayarlar[k]}] if k in self.ayarlar else []
@@ -159,6 +162,14 @@ durum_sifirla()
 sb = Sahte(dict(TEMEL, oto_set_aktif="false"))
 calistir(sb, saat=12)
 c("oto_set kapaliyken yazma yok", len(sb.yazilan) == 0)
+
+# ── 6b) Kural okunamiyorsa (RLS izni yok) hicbir sey yapilmaz ──
+# Varsayilan saatlerle calisip yanlis saatte set gondermek YASAK.
+durum_sifirla()
+sb = Sahte({})
+calistir(sb, saat=12)
+c("kural okunamazsa yazma yok", len(sb.yazilan) == 0)
+c("kural okunamazsa durum yazilmaz", not os.path.exists(oto_set.DURUM_FILE))
 
 # ── 7) Nokta yoksa yazma yok ──
 durum_sifirla()

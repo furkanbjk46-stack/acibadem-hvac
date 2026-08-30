@@ -90,6 +90,19 @@ def _ayar_oku(url, key, anahtar, varsayilan=""):
         return varsayilan
 
 
+def _kural_okunabilir(url, key):
+    """Merkezdeki oto_ ayarlarına gerçekten erişilebiliyor mu?
+
+    RLS izni verilmemişse PostgREST boş liste döner; ağ yoksa istisna atar.
+    İkisinde de False dönülür ve kontrol atlanır (fail-closed).
+    """
+    try:
+        d = _istek(url, key, "/rest/v1/ayarlar?key=like.oto_*&select=key&limit=1")
+        return bool(d)
+    except Exception:
+        return False
+
+
 def _saat_oku(url, key, anahtar, varsayilan):
     try:
         s = int(float(_ayar_oku(url, key, anahtar, "")))
@@ -196,6 +209,12 @@ def kontrol(sb_url, sb_key, lokasyon_id):
     değişse bile set gitmez; bir sonraki geçişte uygulanır.
     """
     try:
+        # Kural okunamıyorsa (RLS izni yok / ağ yok) hiçbir şey yapılmaz.
+        # Varsayılan saatlerle çalışıp yanlış saatte set göndermektense beklemek
+        # güvenlidir — bu fonksiyonun tek tetikleyicisi merkezdeki kuraldır.
+        if not _kural_okunabilir(sb_url, sb_key):
+            return
+
         if str(_ayar_oku(sb_url, sb_key, "oto_set_aktif", "true")).lower() != "true":
             return
 
