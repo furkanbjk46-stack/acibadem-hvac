@@ -1928,9 +1928,56 @@ with sag:
     try:
         with _oaur.urlopen(_oaur.Request(
             url + "/rest/v1/oto_mod_log?order=created_at.desc&limit=60"
-                 "&select=tip,eski_mod,yeni_mod,tahmin_ort,komut_sayisi,created_at",
+                 "&select=tip,eski_mod,yeni_mod,tahmin_ort,komut_sayisi,created_at,lokasyonlar",
             headers={"apikey":key,"Authorization":"Bearer "+key}), timeout=4) as r:
             _ml_data = _oajson.loads(r.read())
+    except Exception: pass
+
+    # ── DURUM LOG'DAN TÜRETİLİR ──────────────────────────────────────────
+    # Karar lokasyon PC'sinde veriliyor ve lokasyon `ayarlar` tablosuna
+    # YAZAMAZ (anon anahtara yazma yetkisi bilinçli olarak verilmedi —
+    # GitHub'da açık olan anahtarla ayar değiştirilebilmesi güvenlik açığı
+    # olurdu). Lokasyonun yazabildiği tek yer `oto_mod_log`. Bu yüzden kartın
+    # durumu oradan türetilir; yukarıdaki `ayarlar` okuması yalnızca merkezin
+    # eski kayıtları için yedektir ve log daha yeniyse devre dışı kalır.
+    def _log_zamani(kayit):
+        """created_at (UTC) → İstanbul saatinde ISO metin.
+
+        Karşılaştırma ve gösterim aynı saat diliminde olmalı: merkezin eski
+        `ayarlar` kaydı İstanbul saatiyle yazılıyordu, log ise UTC. Dönüşüm
+        yapılmazsa 3 saatlik fark yüzünden eski kayıt yeni görünür.
+        """
+        from datetime import timezone as _tzz
+        try:
+            return datetime.fromisoformat(
+                str(kayit.get("created_at", "")).replace("Z", "+00:00")
+            ).astimezone(_tzz(timedelta(hours=3))).isoformat()
+        except Exception:
+            return ""
+
+    try:
+        _ch_k  = next((x for x in _ml_data if str(x.get("tip","")).startswith("chiller")), None)
+        _dig_k = next((x for x in _ml_data if str(x.get("tip","")).startswith("diger")), None)
+        _son_z = max([_log_zamani(x) for x in (_ch_k, _dig_k) if x] or [""])
+        # Log VARSA o kazanır. `ayarlar` kaydını artık kimse yazmıyor (merkezin
+        # karar döngüsü kapatıldı), dolayısıyla oradaki değer yalnızca geçmişten
+        # kalmadır; zaman karşılaştırmasıyla seçmek, geçiş anında yazılmış eski
+        # bir kaydın saatlerce kartta kalmasına yol açıyordu.
+        if _son_z:
+            _t = _fetch_tahmin() or {}
+            _yeni = [x for x in (_ch_k, _dig_k) if x and _log_zamani(x) == _son_z]
+            _os = {
+                "zaman": _son_z,
+                "ref_sicaklik": (_ch_k or _dig_k or {}).get("tahmin_ort", "—"),
+                "bugun_max": _t.get("bugun_max", "—"),
+                "yarin_min": _t.get("yarin_min", "—"),
+                "chiller_mod": (_ch_k or {}).get("yeni_mod", "—"),
+                "diger_mod":   (_dig_k or {}).get("yeni_mod", "—"),
+                # Yalnızca son turda gönderilenler sayılır; bir önceki dönemin
+                # kaydı hâlâ listede olabilir.
+                "komut_sayisi": sum(int(x.get("komut_sayisi") or 0) for x in _yeni),
+                "lokasyonlar": (_ch_k or _dig_k or {}).get("lokasyonlar", ""),
+            }
     except Exception: pass
 
     # Toggle değerleri
