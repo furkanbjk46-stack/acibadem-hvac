@@ -837,8 +837,22 @@ def _oto_thread_baslat(sb_url: str, sb_key: str):
     return {"baslatildi": True}
 
 
-if bagli:
-    _oto_thread_baslat(url, key)
+# ARTIK BAŞLATILMIYOR — oto-set kararı LOKASYON tarafına taşındı.
+#
+# NEDEN: Streamlit Cloud, kimse kullanmayınca uygulamayı uyutuyor; bu thread de
+# onunla birlikte duruyordu. Setler belirlenen saatte değil, biri portalı
+# açtığında gidiyordu. Sahadan ölçülen örnekler (ayar 08:00/23:00):
+#     31.08 00:32  <- 23:00 olmalıydı
+#     30.08 08:56  <- 08:00 olmalıydı
+#     29.08 11:35  <- hiçbir geçiş saati değil
+#
+# Karar artık hvac/deneme/oto_set.py içinde, lokasyon PC'sinin 7/24 çalışan
+# döngüsünde veriliyor. Merkez yalnızca KURALI yayınlar (saatler, açık/kapalı)
+# ve durumu gösterir. İkisi birden çalışırsa komutlar çift gider; bu yüzden
+# buradaki başlatma bilerek kaldırıldı.
+#
+# if bagli:
+#     _oto_thread_baslat(url, key)
 
 # m² değerlerini Supabase'den yükle (yoksa config/default kullan)
 m2_config = {}
@@ -1891,12 +1905,25 @@ with sag:
             d = _oajson.loads(r.read())
             _oto_aktif_su = (d[0]["value"] == "true") if d else True
     except Exception: pass
+    # DURUM ARTIK LOKASYONDAN GELİYOR.
+    # Oto-set kararı lokasyon PC'sinde veriliyor ve durumu lokasyon bazlı
+    # anahtara yazıyor: oto_set_son_kontrol_<lokasyon>. En güncel olanı
+    # gösteririz. Eski tek anahtar (oto_set_son_kontrol) yedek olarak kalır.
     try:
         with _oaur.urlopen(_oaur.Request(
-            url + "/rest/v1/ayarlar?key=eq.oto_set_son_kontrol&select=value",
+            url + "/rest/v1/ayarlar?key=like.oto_set_son_kontrol*&select=key,value",
             headers={"apikey":key,"Authorization":"Bearer "+key}), timeout=4) as r:
-            d = _oajson.loads(r.read())
-            _os = _oajson.loads(d[0]["value"]) if d else {}
+            _kayitlar = _oajson.loads(r.read())
+        _adaylar = []
+        for _kv in _kayitlar:
+            try:
+                _j = _oajson.loads(_kv["value"])
+                _j["_kaynak_anahtar"] = _kv["key"]
+                _adaylar.append(_j)
+            except Exception:
+                pass
+        if _adaylar:
+            _os = sorted(_adaylar, key=lambda x: str(x.get("zaman", "")))[-1]
     except Exception: pass
     try:
         with _oaur.urlopen(_oaur.Request(

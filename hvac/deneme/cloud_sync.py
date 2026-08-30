@@ -645,6 +645,13 @@ def start_background_sync():
     except Exception:
         _bacnet_writer_ok = False
 
+    # Oto-set karar motoru (yoksa sessizce atla)
+    try:
+        from oto_set import kontrol as _oto_set_kontrol
+        _oto_set_ok = True
+    except Exception:
+        _oto_set_ok = False
+
     # HVAC AHU analiz modülünü import et (yoksa sessizce atla)
     try:
         from ahu_collector import hvac_analiz_calistir as _hvac_analiz
@@ -682,7 +689,19 @@ def start_background_sync():
         while True:
             try:
                 if client:
+                    # OTO-SET KARARI — her turda (≈1 dk), yalnızca dönem
+                    # geçişinde komut üretir.
+                    #
+                    # Karar bilerek BURADA veriliyor: merkez portal (Streamlit
+                    # Cloud) kimse kullanmayınca uyuduğu için setler saatinde
+                    # değil, biri portalı açtığında gidiyordu (ör. 23:00 yerine
+                    # 00:32). Lokasyon PC'si 7/24 açık olduğundan zamanlama
+                    # burada güvenilir.
+                    if _oto_set_ok and _sb_url and _sb_key:
+                        _oto_set_kontrol(_sb_url, _sb_key, lokasyon_id)
                     # Her turda: BACnet komut polling (≈1 dk aralık)
+                    # Oto-set'in ürettiği komutlar da bu akıştan geçer; böylece
+                    # değer doğrulama kapısı (5-40 °C) ve denetim izi korunur.
                     if _bacnet_writer_ok and _sb_url and _sb_key:
                         _komutlari_isle(_sb_url, _sb_key, lokasyon_id)
                     # Her 2 turda bir (≈2 dk): heartbeat + güncelleme kontrolü
