@@ -38,6 +38,14 @@ METRIKLER = {
         "kolonlar": ["Kazan_Dogalgaz_m3", "Kojen_Dogalgaz_m3"],
         "birim": "m³", "renk": "#f97316",
         "artis_iyi": False, "ikinci": "yogunluk",
+        # Kırılım: toplam doğalgazın ne kadarı ısıtma (kazan), ne kadarı
+        # elektrik üretimi (kojen). Kojeni olan hastane toplamda yüksek
+        # çıkıyor ve "verimsiz" gibi okunuyordu — oysa o gaz elektriğe
+        # dönüyor. Bu yüzden VERİMLİLİK yalnızca KAZAN gazına bakar.
+        "kirilim": [("Kazan (ısıtma)", ["Kazan_Dogalgaz_m3"], "#ef4444"),
+                    ("Kojen (elektrik)", ["Kojen_Dogalgaz_m3"], "#10b981")],
+        "ik_kolonlar": ["Kazan_Dogalgaz_m3"],
+        "ik_birim": "m³/m²/gün (kazan)", "ik_sutun": "KAZAN m³/M²/GÜN",
     },
     "sogutma": {
         "ad": "SOĞUTMA", "ikon": "❄️",
@@ -151,6 +159,15 @@ _onceki, _ = _topla(_df, _o_bas, _o_bit, _M["kolonlar"])
 _payda, _ = _topla(_df, _bas, _bit, [ORAN_PAYDA]) \
     if _M.get("ikinci") == "oran" else ({}, {})
 
+# İkinci gösterge farklı bir kolon kümesinden hesaplanabilir
+# (doğalgazda verimlilik yalnızca kazan gazına bakar).
+_IK_KOLONLAR = _M.get("ik_kolonlar")
+_ik_kaynak = _topla(_df, _bas, _bit, _IK_KOLONLAR)[0] if _IK_KOLONLAR else _su
+
+# Kırılım (yığılmış grafik + tablo sütunları)
+_KIRILIM = _M.get("kirilim") or []
+_kirilim_veri = {ad: _topla(_df, _bas, _bit, kols)[0] for ad, kols, _r in _KIRILIM}
+
 if not _su:
     st.warning(f"{_secim} için veri yok.")
     st.stop()
@@ -169,13 +186,14 @@ for _lid, _deger in _su.items():
     # Kojen tesisi olmayan hastane %0 ile "en zayıf" görünüyordu; aynı şekilde
     # su/doğalgaz verisi gelmeyen bir lokasyon da "en verimli" çıkardı.
     # Satır tabloda kalır, göstergesi "—" olur.
-    if _deger <= 0:
+    _ik_deger = _ik_kaynak.get(_lid, 0)
+    if _deger <= 0 or _ik_deger <= 0:
         _ikinci = None
     elif _ORAN:
         _pyd = _payda.get(_lid, 0)
-        _ikinci = (_deger / _pyd * 100) if _pyd else None
+        _ikinci = (_ik_deger / _pyd * 100) if _pyd else None
     else:
-        _ikinci = (_deger / _m2 / _gun * _M.get("ik_carpan", 1)) \
+        _ikinci = (_ik_deger / _m2 / _gun * _M.get("ik_carpan", 1)) \
             if (_m2 and _gun) else None
     _satirlar.append({
         "id": _lid,
@@ -187,6 +205,7 @@ for _lid, _deger in _su.items():
         "ikinci": _ikinci,
         "onceki": _onc,
         "degisim": ((_deger - _onc) / _onc * 100) if _onc else None,
+        "kirilim": {_ad: _kirilim_veri[_ad].get(_lid, 0) for _ad, _k, _r in _KIRILIM},
     })
 
 # İkinci göstergenin başlığı/birimi
@@ -303,14 +322,43 @@ def _bar(baslik, veriler, etiketler, renkler, metin, eksen_basligi):
 
 
 with _sol:
-    st.plotly_chart(
-        _bar(f"Toplam tüketim ({_M['birim']})",
-             [r["deger"] for r in _satirlar],
-             [r["ad"] for r in _satirlar],
-             [r["renk"] for r in _satirlar],
-             [_tr(r["deger"]) for r in _satirlar],
-             _M["birim"]),
-        use_container_width=True, key="ozet_bar_toplam")
+    if _KIRILIM:
+        # Yığılmış çubuk: toplamın hangi parçadan geldiği görünür.
+        # Doğalgazda Maslak'ın yüksek toplamı kojenden mi kazandan mı
+        # geliyor sorusu tek bakışta cevaplanır.
+        _f = go.Figure()
+        for _ad, _k, _rnk in _KIRILIM:
+            _f.add_trace(go.Bar(
+                x=[r["kirilim"].get(_ad, 0) for r in _satirlar],
+                y=[r["ad"] for r in _satirlar],
+                name=_ad, orientation="h",
+                marker=dict(color=_rnk, line=dict(width=0)),
+                hovertemplate="%{y} · " + _ad + ": %{x:,.0f}<extra></extra>",
+            ))
+        _f.update_layout(
+            barmode="stack",
+            title=dict(text=f"Toplam tüketim ({_M['birim']}) — kırılım",
+                       font=dict(size=12, color="rgba(150,210,255,0.75)")),
+            height=max(320, 22 * len(_satirlar) + 110),
+            margin=dict(l=8, r=30, t=40, b=30),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="rgba(200,230,255,0.7)", size=10),
+            xaxis=dict(title=_M["birim"], gridcolor="rgba(56,189,248,0.08)",
+                       zerolinecolor="rgba(56,189,248,0.15)"),
+            yaxis=dict(autorange="reversed"),
+            legend=dict(orientation="h", y=1.06, x=0,
+                        font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
+        )
+        st.plotly_chart(_f, use_container_width=True, key="ozet_bar_kirilim")
+    else:
+        st.plotly_chart(
+            _bar(f"Toplam tüketim ({_M['birim']})",
+                 [r["deger"] for r in _satirlar],
+                 [r["ad"] for r in _satirlar],
+                 [r["renk"] for r in _satirlar],
+                 [_tr(r["deger"]) for r in _satirlar],
+                 _M["birim"]),
+            use_container_width=True, key="ozet_bar_toplam")
 
 with _sag:
     if _yog:
@@ -351,11 +399,17 @@ for _i, _r in enumerate(_satirlar, 1):
                      f"{'▼' if _r['degisim'] <= 0 else '▲'}"
                      f"{abs(_r['degisim']):.1f}%</span>")
     _yog_html = _ik_metin(_r["ikinci"])
+    _kir_html = "".join(
+        f"<td style='padding:5px 6px;text-align:right;color:{_rnk};'>"
+        f"{_tr(_r['kirilim'].get(_ad, 0))}</td>"
+        for _ad, _k, _rnk in _KIRILIM
+    )
     _satir_html += (
         f"<tr style='border-bottom:1px solid rgba(56,189,248,0.06);'>"
         f"<td style='padding:5px 6px;color:rgba(150,210,255,0.35);'>{_i}</td>"
         f"<td style='padding:5px 6px;color:{_r['renk']};font-weight:600;'>{_r['ad']}</td>"
         f"<td style='padding:5px 6px;text-align:right;color:#f8fafc;'>{_tr(_r['deger'])}</td>"
+        f"{_kir_html}"
         f"<td style='padding:5px 6px;text-align:right;color:rgba(200,230,255,0.6);'>%{_pay:.1f}</td>"
         f"<td style='padding:5px 6px;text-align:right;color:rgba(200,230,255,0.6);'>{_yog_html}</td>"
         f"<td style='padding:5px 6px;text-align:right;'>{_deg_html}</td>"
@@ -371,7 +425,10 @@ st.markdown(
     f"<th style='text-align:left;padding:4px 6px;'>#</th>"
     f"<th style='text-align:left;padding:4px 6px;'>LOKASYON</th>"
     f"<th style='text-align:right;padding:4px 6px;'>{_M['birim'].upper()}</th>"
-    f"<th style='text-align:right;padding:4px 6px;'>PAY</th>"
+    + "".join(
+        f"<th style='text-align:right;padding:4px 6px;color:{_rnk};'>"
+        f"{_ad.split(' ')[0].upper()}</th>" for _ad, _k, _rnk in _KIRILIM)
+    + f"<th style='text-align:right;padding:4px 6px;'>PAY</th>"
     f"<th style='text-align:right;padding:4px 6px;'>"
     f"{_M.get('ik_sutun') or (_M['birim'] + '/m²/gün').upper()}</th>"
     f"<th style='text-align:right;padding:4px 6px;'>ÖNCEKİ DÖNEME</th>"

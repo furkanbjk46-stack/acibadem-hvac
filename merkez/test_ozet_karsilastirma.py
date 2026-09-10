@@ -86,6 +86,39 @@ c("dogalgaz = kazan + kojen",
   set(METRIKLER["dogalgaz"]["kolonlar"]) == {"Kazan_Dogalgaz_m3", "Kojen_Dogalgaz_m3"},
   METRIKLER["dogalgaz"]["kolonlar"])
 
+# ── Dogalgaz kirilimi: kazan (isitma) / kojen (elektrik) ──────────────────
+# Kojeni olan hastane TOPLAM dogalgazda yuksek cikiyor ve "verimsiz" gibi
+# okunuyordu; oysa o gaz elektrige donuyor. Bu yuzden kirilim gosterilir ve
+# VERIMLILIK yalnizca KAZAN gazina bakar.
+_dg = METRIKLER["dogalgaz"]
+c("dogalgazda kirilim tanimli", bool(_dg.get("kirilim")))
+_kir_kolonlar = [k for _a, kols, _r in _dg.get("kirilim", []) for k in kols]
+c("kirilim parcalari toplami ana kolonlarla ayni",
+  set(_kir_kolonlar) == set(_dg["kolonlar"]),
+  (sorted(_kir_kolonlar), sorted(_dg["kolonlar"])))
+c("kirilim parcalari cakismiyor", len(_kir_kolonlar) == len(set(_kir_kolonlar)))
+c("verimlilik YALNIZCA kazan gazina bakar",
+  _dg.get("ik_kolonlar") == ["Kazan_Dogalgaz_m3"], _dg.get("ik_kolonlar"))
+c("kirilimli metrikte sutun adi kazan oldugunu soyler",
+  "KAZAN" in (_dg.get("ik_sutun") or ""), _dg.get("ik_sutun"))
+c("kirilim parcalarinin ayri renkleri var",
+  len({r for _a, _k, r in _dg["kirilim"]}) == len(_dg["kirilim"]))
+
+# Kirilim mantiginin sayisal dogrulamasi: kojeni olan hastane TOPLAMDA
+# yuksek, ama KAZAN bazinda dusuk olabilmeli — ayrimin butun amaci bu.
+_kojenli = {"kazan": 300, "kojen": 14000, "m2": 15000, "gun": 10}
+_kojensiz = {"kazan": 900, "kojen": 0, "m2": 10000, "gun": 10}
+_top_k = _kojenli["kazan"] + _kojenli["kojen"]
+_top_s = _kojensiz["kazan"] + _kojensiz["kojen"]
+c("kojenli hastane TOPLAM gazda onde", _top_k > _top_s, (_top_k, _top_s))
+c("kazan bazinda kojenli hastane DAHA IYI cikabiliyor",
+  (_kojenli["kazan"] / _kojenli["m2"] / _kojenli["gun"])
+  < (_kojensiz["kazan"] / _kojensiz["m2"] / _kojensiz["gun"]))
+
+# Kirilimi olmayan metrikler bos liste ile calismali (sayfa cokmesin)
+for _ad in ("enerji", "sogutma", "su", "kojen"):
+    c("[%s] kirilim yok (tek parca)" % _ad, not METRIKLER[_ad].get("kirilim"))
+
 # ── Donem araliklari ──────────────────────────────────────────────────────
 # Sayfadaki _aralik() ile ayni kurallar; "Bu ay" kiyasi gecen ayin AYNI GUN
 # araligi olmali (kismi ayi tam ayla kiyaslamak sahte dusus uretiyordu).
