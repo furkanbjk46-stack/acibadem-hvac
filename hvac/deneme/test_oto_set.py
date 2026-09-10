@@ -210,6 +210,62 @@ oto_set.CH_SET.update(_eski_set)
 c("aralik disi setpoint SAHAYA GITMEZ",
   all(d != 500.0 for d, _, _ in sb.yazilan), str([d for d, _, _ in sb.yazilan][:3]))
 
+# ── 11b) GORUNURLUK: her cikis yolu SEBEP birakmali ──
+# Sistem 10 gun boyunca sessizce durdu ve kimse fark etmedi; sessiz return
+# yok artik. Her senaryodan sonra durum_ozet() ne oldugunu soylemeli.
+def sonuc():
+    return oto_set.durum_ozet()["sonuc"]
+
+
+durum_sifirla()
+calistir(Sahte({}), saat=12)
+c("[gorunurluk] kural okunamadi bildirilir", sonuc() == "kural_okunamadi", sonuc())
+
+durum_sifirla()
+calistir(Sahte(dict(TEMEL, oto_set_aktif="false")), saat=12)
+c("[gorunurluk] oto-set kapali bildirilir", sonuc() == "kapali", sonuc())
+
+durum_sifirla()
+calistir(Sahte(TEMEL), tahmin=None, saat=12)
+c("[gorunurluk] tahmin yok bildirilir", sonuc() == "tahmin_yok", sonuc())
+
+durum_sifirla()
+calistir(Sahte(TEMEL), saat=12)
+c("[gorunurluk] setler yazildi bildirilir", sonuc() == "yazildi", sonuc())
+calistir(Sahte(TEMEL), saat=12)          # ayni donem — gecis yok
+c("[gorunurluk] gecis yok bildirilir", sonuc() == "gecis_yok", sonuc())
+
+durum_sifirla()
+calistir(Sahte(TEMEL, yazma_basarili=False), saat=12)
+c("[gorunurluk] BACnet hatasi bildirilir", sonuc() == "yazma_hatasi", sonuc())
+
+durum_sifirla()
+calistir(Sahte(TEMEL, noktalar=[]), saat=12)
+c("[gorunurluk] nokta yok bildirilir", sonuc() == "nokta_yok", sonuc())
+
+_ozet = oto_set.durum_ozet()
+c("[gorunurluk] ozet zaman ve okunur metin icerir",
+  bool(_ozet.get("zaman")) and bool(_ozet.get("metin")), str(_ozet))
+c("[gorunurluk] her sonuc kodunun Turkce karsiligi var",
+  all(k in oto_set.SONUC_METIN for k in
+      ("kural_okunamadi", "kapali", "gecis_yok", "tahmin_yok",
+       "nokta_yok", "yazildi", "yazma_hatasi", "hata", "henuz_calismadi")))
+
+# bacnet_writer yuklenemezse bu "nokta yok" gibi gorunmemeli — gercek sebep
+# kaybolursa teshis yine imkansiz hale gelir.
+durum_sifirla()
+_gercek_uygula = oto_set._setleri_uygula
+
+
+def _patlat(*a, **k):
+    raise RuntimeError("bacnet_writer yuklenemedi: test")
+
+
+oto_set._setleri_uygula = _patlat
+calistir(Sahte(TEMEL), saat=12)
+oto_set._setleri_uygula = _gercek_uygula
+c("[gorunurluk] bacnet_writer yoksa 'hata' olarak bildirilir", sonuc() == "hata", sonuc())
+
 # ── 12) Merkez ile kural esitligi (sapma olmasin) ──
 try:
     _mk = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(

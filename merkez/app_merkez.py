@@ -2009,6 +2009,29 @@ with sag:
     _os_donem   = _os.get("donem","")
     _donem_ikon = "🌞" if _os_donem=="gunduz" else ("🌙" if _os_donem=="gece" else "")
 
+    # ── LOKASYONLARIN OTO-SET SAĞLIĞI ─────────────────────────────────────
+    # Lokasyon her heartbeat'te son turda ne yaptığını bildirir
+    # (bakim_ozet.oto). Sistem sessizce durduğunda burada görünür — 10 gün
+    # boyunca hiç komut gitmediği hâlde kimsenin fark etmemesinin sebebi
+    # böyle bir göstergenin olmamasıydı.
+    _oto_saglik = []
+    try:
+        with _oaur.urlopen(_oaur.Request(
+            url + "/rest/v1/lokasyonlar?select=lokasyon_id,bakim_ozet,ping_zamani",
+            headers={"apikey": key, "Authorization": "Bearer " + key}), timeout=4) as r:
+            for _lr in _oajson.loads(r.read()):
+                _bo = _lr.get("bakim_ozet")
+                if isinstance(_bo, str):
+                    try:
+                        _bo = _oajson.loads(_bo)
+                    except Exception:
+                        _bo = {}
+                _o = (_bo or {}).get("oto")
+                if isinstance(_o, dict):
+                    _oto_saglik.append((_lr["lokasyon_id"], _o))
+    except Exception:
+        pass
+
     # ── Dönem saatleri (kullanıcı tarafından değiştirilebilir) ──
     def _oto_saat_oku(anahtar, varsayilan):
         try:
@@ -2036,6 +2059,58 @@ with sag:
     _dig_label  = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
     _cnt_html   = (f"<span style='color:#f59e0b;font-weight:700;'>⚡ {_os_cnt} komut gönderildi</span>"
                    ) if _os_cnt > 0 else "<span style='color:rgba(180,220,255,0.3);'>Mod değişmedi</span>"
+
+    # Lokasyon sağlık satırları: her lokasyonun son turda ne yaptığı.
+    # Normal bekleme yeşil/soluk, gerçek bir engel (tahmin yok, kural
+    # okunamadı, BACnet hatası) turuncu-kırmızı gösterilir.
+    _SAGLIK_RENK = {
+        "yazildi": "#10b981", "gecis_yok": "rgba(180,220,255,0.35)",
+        "tahmin_yok": "#f59e0b", "kural_okunamadi": "#ef4444",
+        "yazma_hatasi": "#ef4444", "hata": "#ef4444",
+        "nokta_yok": "#f59e0b", "kapali": "rgba(180,220,255,0.35)",
+        "henuz_calismadi": "#f59e0b",
+    }
+    # YALNIZCA dikkat gerektirenler satır satır listelenir; normal beklemedeki
+    # lokasyonlar tek satırda özetlenir. Hepsini listelemek kartı 715px'e
+    # çıkarıyor, metinleri kırpıyor ve asıl uyarıyı gürültüde kaybediyordu.
+    _NORMAL = ("gecis_yok", "yazildi", "kapali")
+    _sorunlu = [(l, o) for l, o in _oto_saglik if str(o.get("sonuc", "")) not in _NORMAL]
+    _normal_sayi = len(_oto_saglik) - len(_sorunlu)
+
+    _saglik_html = ""
+    for _lid, _o in sorted(_sorunlu):
+        _ad = HASTANELER.get(_lid, {}).get("kisa", _lid)
+        _sn = str(_o.get("sonuc", ""))
+        _rk = _SAGLIK_RENK.get(_sn, "#f59e0b")
+        _mt = str(_o.get("metin") or _sn or "—")
+        _zm = str(_o.get("zaman") or "")[11:16]
+        _saglik_html += (
+            f"<div style='font-size:9px;padding:2px 0;'>"
+            f"<span style='color:{_rk};'>●</span> "
+            f"<b style='color:rgba(200,230,255,0.7);'>{_ad}</b> "
+            f"<span style='color:rgba(150,210,255,0.3);'>{_zm}</span><br>"
+            f"<span style='color:{_rk};'>{_mt}</span></div>"
+        )
+    if _oto_saglik:
+        _ozet_satir = (
+            f"<div style='font-size:9px;color:rgba(16,185,129,0.75);padding:2px 0;'>"
+            f"✓ {_normal_sayi} lokasyon normal</div>" if _normal_sayi else ""
+        )
+        _saglik_html = (
+            f"<div style='border-top:1px solid rgba(56,189,248,0.08);"
+            f"margin-top:6px;padding-top:6px;max-height:150px;overflow-y:auto;'>"
+            f"<div style='font-size:7px;letter-spacing:1px;"
+            f"color:rgba(56,189,248,0.45);padding-bottom:3px;'>SAHA DURUMU</div>"
+            f"{_ozet_satir}{_saglik_html}</div>"
+        )
+    else:
+        # Hiç lokasyon bildirim yapmıyorsa bu da bir bilgidir: ya yama
+        # inmemiştir ya da süreç çalışmıyordur. Sessiz kalmak yanıltır.
+        _saglik_html = (
+            f"<div style='border-top:1px solid rgba(56,189,248,0.08);"
+            f"margin-top:6px;padding-top:6px;font-size:9px;color:#f59e0b;'>"
+            f"⚠ Lokasyonlardan oto-set durumu gelmiyor</div>"
+        )
 
     # Mod geçiş değerleri
     # startswith kullanılır: dönem geçişinde mod değişmediğinde kayıtlar
@@ -2121,6 +2196,7 @@ with sag:
         # ── Satır 4: Komut + son geçiş ──
         f"<div style='font-size:9px;border-top:1px solid rgba(56, 189, 248,0.08);padding-top:6px;'>"
         f"{_cnt_html}</div>"
+        f"{_saglik_html}"
         f"{_son_gecis_html}"
         f"</div>",
         unsafe_allow_html=True

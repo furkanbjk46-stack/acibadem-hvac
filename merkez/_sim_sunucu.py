@@ -142,6 +142,22 @@ def veri_uret():
             ozet = {"toplam_ariza": 0, "toplam_bakim": 0, "arizali_cihazlar": [],
                     "aylik_bakim": {"uyari": True, "ay": "Ağustos"}}
 
+        # Oto-set sagligi — lokasyon her heartbeat'te bunu bildirir.
+        # Sunumda cogu lokasyon normal beklemede; birkacinda gercek engel
+        # gosterilir ki gostergenin ise yaradigi gorulsun.
+        if senaryo != "kurulmadi":
+            _oto_sonuc = {
+                "cevrimdisi": ("kural_okunamadi", "Merkezdeki kural okunamıyor (ağ/izin)"),
+                "veri_yok":   ("tahmin_yok", "Hava tahmini alınamadı, geçiş ertelendi"),
+                "ariza":      ("yazma_hatasi", "BACnet yazma hatası"),
+            }.get(senaryo, ("gecis_yok", "Bekliyor — geçiş saati değil"))
+            ozet["oto"] = {
+                "zaman": (ping or datetime.now(IST).isoformat(timespec="seconds")),
+                "sonuc": _oto_sonuc[0], "metin": _oto_sonuc[1], "aciklama": "",
+                "donem": "gunduz" if 5 <= datetime.now(IST).hour < 22 else "gece",
+                "chiller_mod": "serin", "diger_mod": "sogutma",
+            }
+
         lokasyonlar.append({
             "lokasyon_id": lok_id,
             "isim": kisa,

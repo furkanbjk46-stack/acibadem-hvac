@@ -18,6 +18,20 @@ from datetime import datetime, date, timezone
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [SYNC] %(message)s')
 logger = logging.getLogger(__name__)
 
+# ── LOG DOSYASI ───────────────────────────────────────────────────────────
+# cloud_sync watchdog tarafından arka planda başlatılıyor; konsolu kimse
+# görmüyordu. Bir arıza olduğunda (örn. oto-set'in sessizce durması) sahada
+# bakılacak hiçbir iz kalmıyordu. Log artık dosyaya da yazılır ve döner:
+# 2 MB'ta yenilenir, 3 yedek tutulur — disk şişmez.
+try:
+    from logging.handlers import RotatingFileHandler as _RFH
+    _LOG_DOSYA = os.path.join(os.path.dirname(__file__), "cloud_sync.log")
+    _fh = _RFH(_LOG_DOSYA, maxBytes=2_000_000, backupCount=3, encoding="utf-8")
+    _fh.setFormatter(logging.Formatter('%(asctime)s [SYNC] %(levelname)s %(message)s'))
+    logging.getLogger().addHandler(_fh)
+except Exception as _le:      # log kurulamazsa program yine de çalışmalı
+    logger.warning(f"Log dosyasi kurulamadi: {_le}")
+
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "supabase_config.json")
 DATA_FILE = os.path.join(os.path.dirname(__file__), "energy_data.csv")
 HVAC_FILE = os.path.join(os.path.dirname(__file__), "hvac_analysis_history.csv")
@@ -506,11 +520,23 @@ _HB_MINIMAL_OK = True
 def send_heartbeat(client, lokasyon_id: str):
     """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
     try:
+        _ozet = get_bakim_ozet() or {}
+        # Oto-set'in son turda ne yaptığı da heartbeat ile taşınır: "geçiş
+        # saati değil", "tahmin alınamadı", "5 set yazıldı" gibi. Böylece
+        # sistem sessizce durduğunda merkez portaldan görülür.
+        # Ayrı bir tablo/kolon ve yeni RLS izni gerekmez.
+        if _oto_set_ok:
+            try:
+                from oto_set import durum_ozet as _oto_durum_ozet
+                _ozet["oto"] = _oto_durum_ozet()
+            except Exception as _oe:
+                logger.debug(f"oto_set durum ozeti alinamadi: {_oe}")
+
         payload = {
             "lokasyon_id": lokasyon_id,
             "ping_zamani": datetime.now().isoformat(),
             "durum": "online",
-            "bakim_ozet": get_bakim_ozet(),
+            "bakim_ozet": _ozet,
         }
         # returning="minimal": yazılan satır geri DÖNMESİN — bakim_ozet JSONB'si
         # (arızalı/bakımda cihaz listeleri) her 2 dakikada boşuna indiriliyordu (egress).

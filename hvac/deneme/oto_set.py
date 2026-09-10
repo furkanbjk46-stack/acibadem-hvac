@@ -132,6 +132,57 @@ def durum_yaz(d):
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# GÖRÜNÜRLÜK — "neden komut gitmedi?" sorusunun cevabı
+#
+# İlk sürümde kontrolün DÖRT çıkış yolu da sessizce return ediyordu (kural
+# okunamadı / oto-set kapalı / dönem değişmedi / tahmin yok). Saha kurulumunda
+# cloud_sync logu yalnızca konsola yazdığı ve o konsol kimsede görünmediği
+# için sistem 10 gün boyunca sessizce durdu ve kimse fark etmedi.
+#
+# Artık her tur bir SONUÇ bırakır; heartbeat bunu Supabase'e taşır ve merkez
+# portal kartta gösterir. Ek RLS izni gerekmez — `lokasyonlar` satırına
+# yazma yetkisi zaten var.
+# ══════════════════════════════════════════════════════════════════════════
+_SON_SONUC = {"zaman": None, "sonuc": "henuz_calismadi", "aciklama": ""}
+
+# Kullanıcıya gösterilecek metinler
+SONUC_METIN = {
+    "henuz_calismadi":  "Henüz çalışmadı",
+    "kural_okunamadi":  "Merkezdeki kural okunamıyor (ağ/izin)",
+    "kapali":           "Oto-set kapalı",
+    "gecis_yok":        "Bekliyor — geçiş saati değil",
+    "tahmin_yok":       "Hava tahmini alınamadı, geçiş ertelendi",
+    "nokta_yok":        "Bu lokasyon için tanımlı set noktası yok",
+    "yazildi":          "Setler yazıldı",
+    "yazma_hatasi":     "BACnet yazma hatası",
+    "hata":             "Beklenmeyen hata",
+}
+
+
+def _sonuc_yaz(sonuc, aciklama=""):
+    _SON_SONUC.update({"zaman": datetime.now().isoformat(timespec="seconds"),
+                       "sonuc": sonuc, "aciklama": str(aciklama)[:200]})
+    if sonuc not in ("gecis_yok", "yazildi"):
+        logger.warning("oto_set: %s %s", SONUC_METIN.get(sonuc, sonuc), aciklama)
+    return _SON_SONUC
+
+
+def durum_ozet():
+    """Heartbeat'in Supabase'e taşıyacağı küçük özet."""
+    d = durum_oku()
+    return {
+        "zaman": _SON_SONUC["zaman"],
+        "sonuc": _SON_SONUC["sonuc"],
+        "metin": SONUC_METIN.get(_SON_SONUC["sonuc"], _SON_SONUC["sonuc"]),
+        "aciklama": _SON_SONUC["aciklama"],
+        "donem": d.get("donem"),
+        "chiller_mod": d.get("chiller_mod"),
+        "diger_mod": d.get("diger_mod"),
+        "son_yazim": d.get("zaman"),
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # Karar mantığı — merkez ile birebir aynı
 # ══════════════════════════════════════════════════════════════════════════
 def donem_hesapla(saat, gunduz_saat, gece_saat):
@@ -213,9 +264,11 @@ def kontrol(sb_url, sb_key, lokasyon_id):
         # Varsayılan saatlerle çalışıp yanlış saatte set göndermektense beklemek
         # güvenlidir — bu fonksiyonun tek tetikleyicisi merkezdeki kuraldır.
         if not _kural_okunabilir(sb_url, sb_key):
+            _sonuc_yaz("kural_okunamadi")
             return
 
         if str(_ayar_oku(sb_url, sb_key, "oto_set_aktif", "true")).lower() != "true":
+            _sonuc_yaz("kapali")
             return
 
         gunduz_saat = _saat_oku(sb_url, sb_key, "oto_gunduz_saat", GUNDUZ_VARSAYILAN)
@@ -227,13 +280,15 @@ def kontrol(sb_url, sb_key, lokasyon_id):
 
         durum = durum_oku()
         if donem == durum.get("donem"):
-            return                                     # geçiş yok → sessiz
+            _sonuc_yaz("gecis_yok", "%s · sonraki %02d:00"
+                       % (donem, gece_saat if donem == "gunduz" else gunduz_saat))
+            return
 
         tahmin = tahmin_al()
         if not tahmin:
             # Tahmin yoksa geçiş ERTELENİR: yanlış referansla set göndermektense
             # bir sonraki turda tekrar denemek güvenlidir.
-            logger.warning("oto_set: tahmin yok, gecis erteleniyor.")
+            _sonuc_yaz("tahmin_yok", "%s dönemine geçilemedi" % donem)
             return
 
         ref = tahmin["bugun_max"] if donem == "gunduz" else tahmin["yarin_min"]
@@ -245,7 +300,11 @@ def kontrol(sb_url, sb_key, lokasyon_id):
 
         yazilan, hatali = _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler)
         if yazilan == 0 and hatali == 0:
+            _sonuc_yaz("nokta_yok")
             return                                     # bu lokasyonda nokta yok
+
+        _sonuc_yaz("yazildi" if hatali == 0 else "yazma_hatasi",
+                   "%s · %d yazıldı, %d hata" % (donem, yazilan, hatali))
 
         durum_yaz({
             "donem": donem, "chiller_mod": yeni_ch, "diger_mod": yeni_dig,
@@ -264,7 +323,7 @@ def kontrol(sb_url, sb_key, lokasyon_id):
                     yazilan, hatali)
 
     except Exception as e:
-        logger.warning("oto_set kontrol hatasi: %s", e)
+        _sonuc_yaz("hata", e)
 
 
 def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler):
@@ -272,8 +331,10 @@ def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler):
     try:
         from bacnet_writer import bacnet_yaz, komut_degeri_gecerli
     except Exception as e:
-        logger.warning("oto_set: bacnet_writer yok (%s)", e)
-        return 0, 0
+        # Sessizce (0,0) dönülürse çağıran bunu "bu lokasyonda nokta yok"
+        # sanıyor ve gerçek sebep kayboluyordu. Yükseltilen hata dışarıdaki
+        # try/except'te "hata" sonucuna dönüşür ve merkezde görünür.
+        raise RuntimeError("bacnet_writer yuklenemedi: %s" % e)
 
     try:
         noktalar = {n["nokta_adi"]: n for n in _istek(
