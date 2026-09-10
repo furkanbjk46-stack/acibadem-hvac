@@ -102,6 +102,36 @@ c("izmir dun kritik yukte",
 c("bursa dun set yuksek",
   any(r["Tarih"] == dun and r["Chiller_Set_Temp_C"] == 10.5 for r in per_lok["bursa"]))
 
+# ── Sehirlere gore dis hava / chiller set farki ───────────────────────────
+# Kart artik her lokasyonun KENDI degerini listeliyor; 21 hastane ayni
+# sicakligi gosterirse sunumda anlamsiz durur.
+son_gun = {r["lokasyon_id"]: r for r in en if r["Tarih"] == son}
+dis_degerler = {k: v["Dis_Hava_Sicakligi_C"] for k, v in son_gun.items()}
+c("her lokasyonun dis hava degeri var", all(v is not None for v in dis_degerler.values()))
+c("dis hava lokasyona gore farklilasiyor", len(set(dis_degerler.values())) > 5,
+  sorted(set(dis_degerler.values())))
+c("Adana Kayseri'den sicak", dis_degerler["adana"] > dis_degerler["kayseri"],
+  (dis_degerler["adana"], dis_degerler["kayseri"]))
+# Ayni sehirdeki hastaneler ayni havayi gormeli (sunumda celiski olmasin).
+c("Adana ve Adana Ortopedia ayni havada",
+  dis_degerler["adana"] == dis_degerler["adana_ortopedia"],
+  (dis_degerler["adana"], dis_degerler["adana_ortopedia"]))
+_ist = ["maslak", "altunizade", "kadikoy", "taksim", "fulya", "atakent"]
+c("Istanbul hastaneleri ayni havada", len({dis_degerler[l] for l in _ist}) == 1,
+  {l: dis_degerler[l] for l in _ist})
+c("dis hava makul aralikta (-5 .. 42)",
+  all(-5 <= v <= 42 for v in dis_degerler.values()),
+  sorted(dis_degerler.values())[:3] + sorted(dis_degerler.values())[-3:])
+
+set_degerler = {k: v["Chiller_Set_Temp_C"] for k, v in son_gun.items()}
+c("her lokasyonun chiller set degeri var", all(v is not None for v in set_degerler.values()))
+c("chiller set 6.0-11.0 araliginda",
+  all(6.0 <= v <= 11.0 for v in set_degerler.values()),
+  sorted(set(set_degerler.values())))
+c("sicak sehirde set daha dusuk (oto-set mantigi)",
+  set_degerler["adana"] <= set_degerler["kayseri"],
+  (set_degerler["adana"], set_degerler["kayseri"]))
+
 # ── m2 ayari ──────────────────────────────────────────────────────────────
 import json
 m2_ayar = json.loads([a for a in V["ayarlar"] if a["key"] == "m2_degerler"][0]["value"])

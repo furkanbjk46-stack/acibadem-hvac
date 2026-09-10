@@ -55,6 +55,16 @@ LOKASYONLAR = [
     ("bodrum", "BODRUM", 7000),
 ]
 
+# Sehirlere gore ortalama sicaklik farki (°C). Adana/Bodrum sicak, Ankara ve
+# Eskisehir karasal ve soguk. Portal artik her lokasyonun KENDI dis hava ve
+# chiller set degerini listeledigi icin bu farkin veride de olmasi gerekiyor;
+# aksi halde 21 hastane de ayni sicakligi gosteriyordu.
+SEHIR_SICAKLIK_FARKI = {
+    "adana": 4.5, "adana_ortopedia": 4.5, "bodrum": 3.5, "izmir": 2.5,
+    "bursa": 0.5, "kocaeli": 0.0, "eskisehir": -3.0, "ankara": -2.5,
+    "bayindir": -2.5, "kayseri": -4.5,
+}
+
 CH_NOKTALAR = ["CH1_REM_SET", "CH2_REM_SET", "CH3_REM_SET", "CH4_REM_SET", "CH5_REM_SET"]
 DIG_NOKTALAR = ["GUNDUZ_KOLLEKTOR_SET", "GECE_KOLLEKTOR_SET", "A_BLOK_FCU_SET",
                 "B_BLOK_FCU_SET", "ZON1_KLIMA_SANTRALI_SET", "ZON2_KLIMA_SANTRALI_SET"]
@@ -82,6 +92,16 @@ GECMIS_GUN = 430
 
 def _bugun():
     return datetime.now(IST).date()
+
+
+def _gun_sapmasi(gun):
+    """O gune ozgu hava sapmasi (-3.0 .. +3.0 °C), TUM lokasyonlarda AYNI.
+
+    Gunun kendisinden turetilir; boylece ayni sehirdeki (hatta ayni bolgedeki)
+    hastaneler ayni gunde ayni havayi gorur ve sunumda celiskili degerler
+    cikmaz.
+    """
+    return (random.Random(gun.toordinal()).random() * 6.0) - 3.0
 
 
 def _mevsim(gun):
@@ -168,7 +188,26 @@ def veri_uret():
             sebeke = toplam - kojen
             kazan = round(toplam * (0.010 - 0.008 * yaz))
 
-            ch_set = 7.0
+            # Dis hava sehre gore kayar (Adana sicak, Kayseri soguk).
+            #
+            # Gunluk sapma LOKASYONA gore degil GUNE gore uretilir: ayni
+            # sehirdeki hastaneler ayni havayi gormeli. Ilk surumde sapma her
+            # lokasyon icin bagimsiz cekiliyordu ve kart "ADANA 29.8 °C /
+            # ADANA ORT. 34.8 °C" gibi ayni sehirde 5 derece fark gosteriyordu.
+            dis_hava = round(6 + 24 * yaz + SEHIR_SICAKLIK_FARKI.get(lok_id, 0.0)
+                             + _gun_sapmasi(gun), 1)
+
+            # Chiller set, oto-set kuralinin ta kendisi: hava sicaksa dusuk set.
+            # Boylece sunumda "sicak sehir = daha dusuk set" iliskisi gorunur.
+            if dis_hava >= 26:
+                ch_set = 6.5
+            elif dis_hava >= 23:
+                ch_set = 7.0
+            elif dis_hava >= 7:
+                ch_set = 7.5
+            else:
+                ch_set = 8.0
+
             ch_yuk = round((35 + 45 * yaz) + rnd.randint(-8, 8))
             if gun == dun and senaryo == "kritik_yuk":
                 ch_yuk = 96
@@ -189,7 +228,7 @@ def veri_uret():
                 "Kazan_Dogalgaz_m3": kazan,
                 "Kojen_Dogalgaz_m3": round(kojen / 6.2) if kojen else 0,
                 "Su_Tuketimi_m3": round(toplam * 0.0009),
-                "Dis_Hava_Sicakligi_C": round(6 + 24 * yaz + rnd.randint(-3, 3), 1),
+                "Dis_Hava_Sicakligi_C": dis_hava,
                 "Chiller_Set_Temp_C": ch_set,
                 "Chiller_Load_Percent": max(0, min(100, ch_yuk)),
                 "TRDP1_kWh": round(sebeke * 0.42), "TRDP2_kWh": round(sebeke * 0.12),

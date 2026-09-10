@@ -1742,14 +1742,25 @@ hospitals.forEach(function(h) {{
     if dis_hava_val is not None:
         _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
     min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
+    # Her lokasyonun KENDİ chiller set'i ve KENDİ dış hava değeri.
+    # Kart eskiden yalnızca min/max rozetini ve İstanbul'un dış havasını
+    # gösteriyordu; Ankara/İzmir/Adana gibi farklı iklimlerdeki hastanelerin
+    # değerleri hiç görünmüyordu.
+    lok_sicaklik = {}
     if not df_all.empty and "Chiller_Set_Temp_C" in df_all.columns:
         son_veri = df_all.sort_values("Tarih").groupby("lokasyon_id").last().reset_index()
         for _, row in son_veri.iterrows():
             lok_id = row["lokasyon_id"]
-            if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))):
-                chiller_vals[lok_id] = float(row["Chiller_Set_Temp_C"])
-            if dis_hava_val is None and pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))):
-                dis_hava_val = float(row["Dis_Hava_Sicakligi_C"])
+            _set = float(row["Chiller_Set_Temp_C"]) \
+                if pd.notna(row.get("Chiller_Set_Temp_C", float("nan"))) else None
+            _dis = float(row["Dis_Hava_Sicakligi_C"]) \
+                if pd.notna(row.get("Dis_Hava_Sicakligi_C", float("nan"))) else None
+            if _set is not None:
+                chiller_vals[lok_id] = _set
+            if _set is not None or _dis is not None:
+                lok_sicaklik[lok_id] = {"set": _set, "dis": _dis}
+            if dis_hava_val is None and _dis is not None:
+                dis_hava_val = _dis
                 _dis_hava_kaynak = "📊 DB"
         if chiller_vals:
             min_lok = min(chiller_vals, key=chiller_vals.get)
@@ -2225,7 +2236,53 @@ with sag:
             f"🔥 Max &nbsp;<b style='color:#ef4444;font-family:Playfair Display,Plus Jakarta Sans,serif;'>{max_val:.1f}°C</b>"
             f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
         )
-    if dis_hava_val is not None or min_val is not None:
+    # ── Lokasyon lokasyon liste ──
+    # Yönetim sunumunda "hangi hastane hangi sette çalışıyor" sorusunun
+    # cevabı min/max rozetinden okunamıyordu; tüm lokasyonlar listelenir.
+    # Sıralama: en düşük set üstte (en çok enerji harcayan yerleşim).
+    _liste_ic = ""
+    if lok_sicaklik:
+        _sirali = sorted(
+            lok_sicaklik.items(),
+            key=lambda kv: (kv[1]["set"] is None, kv[1]["set"] if kv[1]["set"] is not None else 0)
+        )
+        for _lid, _v in _sirali:
+            _ad = HASTANELER.get(_lid, {}).get("kisa", _lid)
+            _rk = HASTANELER.get(_lid, {}).get("renk", "#38bdf8")
+            _s = f"{_v['set']:.1f}°C" if _v["set"] is not None else "—"
+            _d = f"{_v['dis']:.1f}°C" if _v["dis"] is not None else "—"
+            # Alışılmadık set değerleri (7 °C bandı dışı) dikkat çeksin
+            _s_renk = "#38bdf8"
+            if _v["set"] is not None and not (6.0 <= _v["set"] <= 9.0):
+                _s_renk = "#f59e0b"
+            # Sabit 3 kolonlu grid: dar sag kolonda satirlar alt alta kirilmasin.
+            # Emoji kullanilmaz — basliktaki HAVA/SET etiketleri yeterli ve
+            # emoji genisligi 165px'lik kolonda satiri ikiye boluyordu.
+            _liste_ic += (
+                f"<div style='display:grid;grid-template-columns:1fr auto auto;"
+                f"align-items:center;column-gap:6px;padding:3px 0;white-space:nowrap;"
+                f"border-bottom:1px solid rgba(56,189,248,0.06);'>"
+                f"<span style='font-size:9px;color:{_rk};overflow:hidden;"
+                f"text-overflow:ellipsis;'>{_ad}</span>"
+                f"<span style='font-size:9px;color:rgba(150,210,255,0.45);"
+                f"min-width:34px;text-align:right;'>{_d}</span>"
+                f"<span style='font-size:10px;font-weight:700;color:{_s_renk};"
+                f"font-family:Playfair Display,Plus Jakarta Sans,serif;"
+                f"min-width:34px;text-align:right;'>{_s}</span>"
+                f"</div>"
+            )
+        _liste_ic = (
+            f"<div style='margin-top:10px;max-height:190px;overflow-y:auto;'>"
+            f"<div style='display:grid;grid-template-columns:1fr auto auto;"
+            f"column-gap:6px;font-size:7px;letter-spacing:1px;white-space:nowrap;"
+            f"color:rgba(56,189,248,0.45);padding-bottom:4px;'>"
+            f"<span>HASTANE</span>"
+            f"<span style='min-width:34px;text-align:right;'>HAVA</span>"
+            f"<span style='min-width:34px;text-align:right;'>SET</span></div>"
+            f"{_liste_ic}</div>"
+        )
+
+    if dis_hava_val is not None or min_val is not None or _liste_ic:
         st.markdown(
             f"<div style='background:rgba(15, 23, 42, 0.4);backdrop-filter:blur(12px);"
             f"border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:14px 16px;'>"
@@ -2233,6 +2290,7 @@ with sag:
             f"color:rgba(56, 189, 248,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
             f"{_ch_ic}"
             f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
+            f"{_liste_ic}"
             f"</div>",
             unsafe_allow_html=True
         )
