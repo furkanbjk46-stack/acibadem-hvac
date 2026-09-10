@@ -2068,7 +2068,7 @@ with sag:
         "tahmin_yok": "#f59e0b", "kural_okunamadi": "#ef4444",
         "yazma_hatasi": "#ef4444", "hata": "#ef4444",
         "nokta_yok": "#f59e0b", "kapali": "rgba(180,220,255,0.35)",
-        "henuz_calismadi": "#f59e0b",
+        "henuz_calismadi": "#f59e0b", "modul_yok": "#ef4444",
     }
     # YALNIZCA dikkat gerektirenler satır satır listelenir; normal beklemedeki
     # lokasyonlar tek satırda özetlenir. Hepsini listelemek kartı 715px'e

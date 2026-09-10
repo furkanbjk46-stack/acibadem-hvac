@@ -517,20 +517,33 @@ def sync_bakim_kartlari(client, lokasyon_id: str):
 _HB_MINIMAL_OK = True
 
 
+def _oto_durum_topla() -> dict:
+    """Oto-set'in son turda ne yaptığı — heartbeat bunu Supabase'e taşır.
+
+    ASLA İSTİSNA ATMAZ. İlk sürümde bu blok doğrudan send_heartbeat içindeydi
+    ve `_oto_set_ok` bayrağına bakıyordu; oysa o bayrak start_background_sync
+    fonksiyonunun YEREL değişkeni. Heartbeat'ten erişilince NameError oluştu,
+    dıştaki try bunu yuttu ve HEARTBEAT HİÇ GÖNDERİLMEDİ — lokasyon çevrimdışı
+    görünmeye başladı. Bu yüzden burası kendi başına, dışarıya hata sızdırmayan
+    bir fonksiyon.
+
+    Modül yüklenemiyorsa bu da bir CEVAPTIR; sessiz kalmak yanıltır.
+    """
+    try:
+        from oto_set import durum_ozet
+        return durum_ozet()
+    except Exception as e:
+        return {"zaman": datetime.now().isoformat(timespec="seconds"),
+                "sonuc": "modul_yok",
+                "metin": "oto_set modülü yüklenemedi",
+                "aciklama": str(e)[:200]}
+
+
 def send_heartbeat(client, lokasyon_id: str):
     """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
     try:
         _ozet = get_bakim_ozet() or {}
-        # Oto-set'in son turda ne yaptığı da heartbeat ile taşınır: "geçiş
-        # saati değil", "tahmin alınamadı", "5 set yazıldı" gibi. Böylece
-        # sistem sessizce durduğunda merkez portaldan görülür.
-        # Ayrı bir tablo/kolon ve yeni RLS izni gerekmez.
-        if _oto_set_ok:
-            try:
-                from oto_set import durum_ozet as _oto_durum_ozet
-                _ozet["oto"] = _oto_durum_ozet()
-            except Exception as _oe:
-                logger.debug(f"oto_set durum ozeti alinamadi: {_oe}")
+        _ozet["oto"] = _oto_durum_topla()
 
         payload = {
             "lokasyon_id": lokasyon_id,
