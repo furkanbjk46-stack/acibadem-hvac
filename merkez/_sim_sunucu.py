@@ -182,6 +182,14 @@ def veri_uret():
         # 20.000 m2'lik Atakent de ~45.000 kWh tuketiyor gorunuyor ve
         # kWh/m2/gun gostergesi anlamsizlasiyordu (kucuk hastane 9, buyuk 2).
         taban = round(lok_m2 * (1.05 + 0.55 * rnd.random()))
+
+        # Lokasyona ozgu katsayilar. Bunlar olmadan soğutma payi ve kojen
+        # karsilama orani 21 hastanede BIREBIR AYNI cikiyor (%23,2 / %35,0)
+        # ve karsilastirma sayfasi "hepsi esit" gosteriyordu.
+        kat_sogutma = 0.80 + 0.40 * rnd.random()      # 0.80 - 1.20
+        kat_su      = 0.75 + 0.50 * rnd.random()
+        kat_kazan   = 0.80 + 0.40 * rnd.random()
+        oran_kojen  = 0.28 + 0.14 * rnd.random()      # %28 - %42 karsilama
         for i in range(GECMIS_GUN):
             gun = bugun - timedelta(days=i)
             if senaryo == "veri_yok" and gun == dun:
@@ -196,13 +204,14 @@ def veri_uret():
             toplam = round(taban * (0.82 + 0.38 * yaz) * gunluk * hafta_sonu)
 
             # Sogutma yazin artar, kazan dogalgazi kisin.
-            sogutma_pay = 0.05 + 0.20 * yaz
+            sogutma_pay = (0.05 + 0.20 * yaz) * kat_sogutma
             chiller = round(toplam * sogutma_pay * 0.85)
             vrf = round(toplam * sogutma_pay * 0.15)
             mcc = round(toplam * 0.22)
-            kojen = round(toplam * 0.35) if lok_id in ("maslak", "izmir", "ankara") else 0
+            kojen = round(toplam * oran_kojen) \
+                if lok_id in ("maslak", "izmir", "ankara") else 0
             sebeke = toplam - kojen
-            kazan = round(toplam * (0.010 - 0.008 * yaz))
+            kazan = round(toplam * (0.010 - 0.008 * yaz) * kat_kazan)
 
             # Dis hava sehre gore kayar (Adana sicak, Kayseri soguk).
             #
@@ -243,7 +252,7 @@ def veri_uret():
                 "Diger_Yuk_kWh": max(0, toplam - mcc - chiller - vrf),
                 "Kazan_Dogalgaz_m3": kazan,
                 "Kojen_Dogalgaz_m3": round(kojen / 6.2) if kojen else 0,
-                "Su_Tuketimi_m3": round(toplam * 0.0009),
+                "Su_Tuketimi_m3": round(toplam * 0.0009 * kat_su, 1),
                 "Dis_Hava_Sicakligi_C": dis_hava,
                 "Chiller_Set_Temp_C": ch_set,
                 "Chiller_Load_Percent": max(0, min(100, ch_yuk)),

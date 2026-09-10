@@ -17,17 +17,55 @@ METRIKLER sözlüğüne eklenerek aynı sayfayı kullanabilir.
 
 import pandas as _pd
 
-# ── Hangi metrik? ─────────────────────────────────────────────────────────
-# kolonlar: birden fazlaysa toplanır (ör. doğalgaz = kazan + kojen)
+# ── Metrik tanımları ──────────────────────────────────────────────────────
+# kolonlar   : birden fazlaysa toplanır (ör. doğalgaz = kazan + kojen)
+# artis_iyi  : True ise artış iyidir (üretim); False ise düşüş iyidir (tüketim)
+# ikinci     : ikinci grafik ne göstersin —
+#              "yogunluk" → birim/m²/gün  (büyük hastane haksız yere kötü
+#                           görünmesin diye m² ve gün sayısına bölünür)
+#              "oran"     → metriğin toplam elektrik tüketimine oranı;
+#                           soğutma payı ve kojen karşılama oranı bu şekilde
+#                           çok daha anlamlı kıyaslanır
 METRIKLER = {
     "enerji": {
         "ad": "TOPLAM ENERJİ", "ikon": "⚡",
         "kolonlar": ["Toplam_Hastane_Tuketim_kWh"],
         "birim": "kWh", "renk": "#38bdf8",
-        "yogunluk": True,          # kWh/m² anlamlı mı
-        "artis_iyi": False,        # tüketimde artış kötüdür
+        "artis_iyi": False, "ikinci": "yogunluk",
+    },
+    "dogalgaz": {
+        "ad": "DOĞALGAZ", "ikon": "🔥",
+        "kolonlar": ["Kazan_Dogalgaz_m3", "Kojen_Dogalgaz_m3"],
+        "birim": "m³", "renk": "#f97316",
+        "artis_iyi": False, "ikinci": "yogunluk",
+    },
+    "sogutma": {
+        "ad": "SOĞUTMA", "ikon": "❄️",
+        "kolonlar": ["Toplam_Sogutma_Tuketim_kWh"],
+        "birim": "kWh", "renk": "#06b6d4",
+        "artis_iyi": False, "ikinci": "oran",
+        "oran_ad": "Soğutmanın toplam tüketimdeki payı",
+        "ik_sutun": "SOĞUTMA PAYI",
+    },
+    "su": {
+        "ad": "SU", "ikon": "💧",
+        "kolonlar": ["Su_Tuketimi_m3"],
+        "birim": "m³", "renk": "#38bdf8",
+        "artis_iyi": False, "ikinci": "yogunluk",
+        # m³/m²/gün ~0,0009 çıkıyor ve tabloda her satır 0.00 görünüyordu.
+        # Litreye çevrilince (×1000) hastaneler arası fark okunur hale gelir.
+        "ik_carpan": 1000, "ik_birim": "L/m²/gün", "ik_sutun": "L/M²/GÜN",
+    },
+    "kojen": {
+        "ad": "KOJEN ÜRETİM", "ikon": "⚙️",
+        "kolonlar": ["Kojen_Uretim_kWh"],
+        "birim": "kWh", "renk": "#10b981",
+        "artis_iyi": True, "ikinci": "oran",
+        "oran_ad": "Kojen karşılama oranı (üretim / tüketim)",
+        "ik_sutun": "KARŞILAMA",
     },
 }
+ORAN_PAYDA = "Toplam_Hastane_Tuketim_kWh"
 
 _metrik_key = st.session_state.get("detay_ozet", "enerji")
 _M = METRIKLER.get(_metrik_key, METRIKLER["enerji"])
@@ -93,35 +131,52 @@ def _aralik(secim):
 _bas, _bit, _o_bas, _o_bit = _aralik(_secim)
 
 
-def _topla(df, bas, bit):
-    """Lokasyon başına metrik toplamı ve veri günü sayısı."""
+def _topla(df, bas, bit, kolonlar):
+    """Lokasyon başına toplam ve veri günü sayısı."""
     d = df[(df["Tarih"] >= bas) & (df["Tarih"] <= bit)]
     if d.empty:
         return {}, {}
-    kolonlar = [c for c in _M["kolonlar"] if c in d.columns]
+    kolonlar = [c for c in kolonlar if c in d.columns]
     if not kolonlar:
         return {}, {}
     d = d.copy()
     d["_deger"] = d[kolonlar].sum(axis=1)
-    toplam = d.groupby("lokasyon_id")["_deger"].sum().to_dict()
-    gun = d.groupby("lokasyon_id")["Tarih"].nunique().to_dict()
-    return toplam, gun
+    return (d.groupby("lokasyon_id")["_deger"].sum().to_dict(),
+            d.groupby("lokasyon_id")["Tarih"].nunique().to_dict())
 
 
-_su, _su_gun = _topla(_df, _bas, _bit)
-_onceki, _ = _topla(_df, _o_bas, _o_bit)
+_su, _su_gun = _topla(_df, _bas, _bit, _M["kolonlar"])
+_onceki, _ = _topla(_df, _o_bas, _o_bit, _M["kolonlar"])
+# Oran göstergesi için payda (toplam elektrik tüketimi)
+_payda, _ = _topla(_df, _bas, _bit, [ORAN_PAYDA]) \
+    if _M.get("ikinci") == "oran" else ({}, {})
 
 if not _su:
     st.warning(f"{_secim} için veri yok.")
     st.stop()
 
 # ── Satırları kur ─────────────────────────────────────────────────────────
+_ORAN = _M.get("ikinci") == "oran"
+_DUSUK_IYI = not _M["artis_iyi"]          # tüketimde düşük iyi, üretimde yüksek
+
 _satirlar = []
 for _lid, _deger in _su.items():
     _bilgi = HASTANELER.get(_lid, {})
     _m2 = _bilgi.get("m2") or 0
     _gun = _su_gun.get(_lid, 0) or 1
     _onc = _onceki.get(_lid, 0)
+    # Değeri sıfır olan lokasyon bu metrik için KIYASA GİRMEZ.
+    # Kojen tesisi olmayan hastane %0 ile "en zayıf" görünüyordu; aynı şekilde
+    # su/doğalgaz verisi gelmeyen bir lokasyon da "en verimli" çıkardı.
+    # Satır tabloda kalır, göstergesi "—" olur.
+    if _deger <= 0:
+        _ikinci = None
+    elif _ORAN:
+        _pyd = _payda.get(_lid, 0)
+        _ikinci = (_deger / _pyd * 100) if _pyd else None
+    else:
+        _ikinci = (_deger / _m2 / _gun * _M.get("ik_carpan", 1)) \
+            if (_m2 and _gun) else None
     _satirlar.append({
         "id": _lid,
         "ad": _bilgi.get("kisa", _lid),
@@ -129,10 +184,43 @@ for _lid, _deger in _su.items():
         "deger": _deger,
         "m2": _m2,
         "gun": _gun,
-        "yogunluk": (_deger / _m2 / _gun) if (_m2 and _gun) else None,
+        "ikinci": _ikinci,
         "onceki": _onc,
         "degisim": ((_deger - _onc) / _onc * 100) if _onc else None,
     })
+
+# İkinci göstergenin başlığı/birimi
+_IK_BIRIM = "%" if _ORAN else _M.get("ik_birim", f"{_M['birim']}/m²/gün")
+_IK_BASLIK = (_M.get("oran_ad", "Oran") if _ORAN
+              else f"Verimlilik ({_IK_BIRIM})")
+_IK_BASLIK += " — yüksek olan iyi" if not _DUSUK_IYI else " — düşük olan iyi"
+
+# Ondalık basamak, değerlerin büyüklüğüne göre seçilir. Sabit 2 basamakta
+# doğalgaz (~0,09) ve su (~0,0009) satırlarının hepsi "0.00" görünüyor,
+# lokasyonlar arasındaki fark tamamen kayboluyordu.
+def _ondalik_sec(degerler):
+    d = [abs(v) for v in degerler if v]
+    if not d:
+        return 2
+    ort = sum(d) / len(d)
+    if ort >= 100:
+        return 0
+    if ort >= 10:
+        return 1
+    if ort >= 1:
+        return 2
+    if ort >= 0.1:
+        return 3
+    return 4
+
+
+_IK_OND = 1 if _ORAN else _ondalik_sec([r["ikinci"] for r in _satirlar])
+
+
+def _ik_metin(v):
+    if v is None:
+        return "—"
+    return f"%{v:.1f}" if _ORAN else f"{v:.{_IK_OND}f}"
 
 _satirlar.sort(key=lambda r: r["deger"], reverse=True)
 _toplam = sum(r["deger"] for r in _satirlar)
@@ -147,10 +235,13 @@ def _tr(sayi, ondalik=0):
 
 
 # ── Üst şerit: özet göstergeler ───────────────────────────────────────────
-_yog = [r for r in _satirlar if r["yogunluk"] is not None]
-_en_verimli   = min(_yog, key=lambda r: r["yogunluk"]) if _yog else None
-_en_verimsiz  = max(_yog, key=lambda r: r["yogunluk"]) if _yog else None
-_ort_yogunluk = (sum(r["yogunluk"] for r in _yog) / len(_yog)) if _yog else None
+_yog = [r for r in _satirlar if r["ikinci"] is not None]
+_dusuk = min(_yog, key=lambda r: r["ikinci"]) if _yog else None
+_yuksek = max(_yog, key=lambda r: r["ikinci"]) if _yog else None
+# "İyi" olan uç, metriğin yönüne göre değişir: tüketimde düşük, üretimde yüksek
+_en_iyi  = _dusuk if _DUSUK_IYI else _yuksek
+_en_kotu = _yuksek if _DUSUK_IYI else _dusuk
+_ort_ikinci = (sum(r["ikinci"] for r in _yog) / len(_yog)) if _yog else None
 
 
 def _kutu(ikon, baslik, deger, alt, renk="#38bdf8"):
@@ -165,17 +256,22 @@ def _kutu(ikon, baslik, deger, alt, renk="#38bdf8"):
     )
 
 
-_kutular = _kutu("Σ", "TOPLAM", f"{_tr(_toplam)} {_M['birim']}",
-                 f"{len(_satirlar)} lokasyon · {_secim.lower()}")
-if _en_verimli:
-    _kutular += _kutu("🏆", "EN VERİMLİ", f"{_en_verimli['yogunluk']:.2f}",
-                      f"{_en_verimli['ad']} · {_M['birim']}/m²/gün", "#10b981")
-if _en_verimsiz:
-    _kutular += _kutu("⚠️", "EN YÜKSEK", f"{_en_verimsiz['yogunluk']:.2f}",
-                      f"{_en_verimsiz['ad']} · {_M['birim']}/m²/gün", "#f59e0b")
-if _ort_yogunluk:
-    _kutular += _kutu("⌀", "ORTALAMA", f"{_ort_yogunluk:.2f}",
-                      f"{_M['birim']}/m²/gün")
+_veri_olan = len(_yog)
+_alt_metin = f"{len(_satirlar)} lokasyon · {_secim.lower()}"
+if _veri_olan < len(_satirlar):
+    # Ör. kojen: 20 hastanenin yalnızca 3'ünde tesis var. Kıyasın hangi
+    # kümede yapıldığı görünmezse tablo yanıltır.
+    _alt_metin = f"{_veri_olan}/{len(_satirlar)} lokasyonda veri · {_secim.lower()}"
+
+_kutular = _kutu("Σ", "TOPLAM", f"{_tr(_toplam)} {_M['birim']}", _alt_metin)
+if _en_iyi:
+    _kutular += _kutu("🏆", "EN İYİ", _ik_metin(_en_iyi["ikinci"]),
+                      f"{_en_iyi['ad']} · {_IK_BIRIM}", "#10b981")
+if _en_kotu:
+    _kutular += _kutu("⚠️", "EN ZAYIF", _ik_metin(_en_kotu["ikinci"]),
+                      f"{_en_kotu['ad']} · {_IK_BIRIM}", "#f59e0b")
+if _ort_ikinci is not None:
+    _kutular += _kutu("⌀", "ORTALAMA", _ik_metin(_ort_ikinci), _IK_BIRIM)
 
 st.markdown(f"<div style='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;'>"
             f"{_kutular}</div>", unsafe_allow_html=True)
@@ -218,20 +314,25 @@ with _sol:
 
 with _sag:
     if _yog:
-        # Verimlilik: m² ve gün sayısına bölünmüş — büyük hastane otomatik
-        # olarak "kötü" görünmesin diye ham tüketim yerine bu kıyaslanır.
-        _ys = sorted(_yog, key=lambda r: r["yogunluk"])
+        # İyi olan üstte: tüketim metriklerinde küçükten büyüğe,
+        # üretimde (kojen) büyükten küçüğe sıralanır.
+        _ys = sorted(_yog, key=lambda r: r["ikinci"], reverse=not _DUSUK_IYI)
+        _iyi_renk = []
+        for r in _ys:
+            _iyi = (r["ikinci"] <= (_ort_ikinci or 0)) if _DUSUK_IYI \
+                else (r["ikinci"] >= (_ort_ikinci or 0))
+            _iyi_renk.append("#10b981" if _iyi else "#f59e0b")
         st.plotly_chart(
-            _bar(f"Verimlilik ({_M['birim']}/m²/gün) — düşük olan iyi",
-                 [r["yogunluk"] for r in _ys],
+            _bar(_IK_BASLIK,
+                 [r["ikinci"] for r in _ys],
                  [r["ad"] for r in _ys],
-                 ["#10b981" if r["yogunluk"] <= (_ort_yogunluk or 0) else "#f59e0b"
-                  for r in _ys],
-                 [f"{r['yogunluk']:.2f}" for r in _ys],
-                 f"{_M['birim']}/m²/gün"),
-            use_container_width=True, key="ozet_bar_yogunluk")
+                 _iyi_renk,
+                 [_ik_metin(r["ikinci"]) for r in _ys],
+                 _IK_BIRIM),
+            use_container_width=True, key="ozet_bar_ikinci")
     else:
-        st.info("m² bilgisi olmadığı için verimlilik karşılaştırması yapılamadı.")
+        st.info("Karşılaştırma için yeterli veri yok "
+                "(m² bilgisi ya da toplam tüketim eksik).")
 
 # ── Tablo ─────────────────────────────────────────────────────────────────
 st.markdown("<div style='font-size:10px;letter-spacing:2px;"
@@ -249,7 +350,7 @@ for _i, _r in enumerate(_satirlar, 1):
         _deg_html = (f"<span style='color:{'#10b981' if _iyi else '#ef4444'};'>"
                      f"{'▼' if _r['degisim'] <= 0 else '▲'}"
                      f"{abs(_r['degisim']):.1f}%</span>")
-    _yog_html = f"{_r['yogunluk']:.2f}" if _r["yogunluk"] is not None else "—"
+    _yog_html = _ik_metin(_r["ikinci"])
     _satir_html += (
         f"<tr style='border-bottom:1px solid rgba(56,189,248,0.06);'>"
         f"<td style='padding:5px 6px;color:rgba(150,210,255,0.35);'>{_i}</td>"
@@ -271,7 +372,8 @@ st.markdown(
     f"<th style='text-align:left;padding:4px 6px;'>LOKASYON</th>"
     f"<th style='text-align:right;padding:4px 6px;'>{_M['birim'].upper()}</th>"
     f"<th style='text-align:right;padding:4px 6px;'>PAY</th>"
-    f"<th style='text-align:right;padding:4px 6px;'>{_M['birim']}/M²/GÜN</th>"
+    f"<th style='text-align:right;padding:4px 6px;'>"
+    f"{_M.get('ik_sutun') or (_M['birim'] + '/m²/gün').upper()}</th>"
     f"<th style='text-align:right;padding:4px 6px;'>ÖNCEKİ DÖNEME</th>"
     f"<th style='text-align:right;padding:4px 6px;'>M²</th>"
     f"</tr></thead><tbody>{_satir_html}</tbody></table></div>",

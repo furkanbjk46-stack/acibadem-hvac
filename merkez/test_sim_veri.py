@@ -132,6 +132,38 @@ c("sicak sehirde set daha dusuk (oto-set mantigi)",
   set_degerler["adana"] <= set_degerler["kayseri"],
   (set_degerler["adana"], set_degerler["kayseri"]))
 
+# ── Lokasyonlar arasi farklilasma (karsilastirma sayfasi icin) ────────────
+# Bu katsayilar olmadan sogutma payi ve kojen karsilama orani 21 hastanede
+# birebir ayni cikiyor ve karsilastirma sayfasi "hepsi esit" gosteriyordu.
+def _oran(r, pay_kolon):
+    t = r["Toplam_Hastane_Tuketim_kWh"]
+    return (r[pay_kolon] / t) if t else 0
+
+
+_sog_oran = {k: _oran(v, "Toplam_Sogutma_Tuketim_kWh") for k, v in son_gun.items()}
+c("sogutma payi lokasyona gore farklilasiyor",
+  len({round(v, 3) for v in _sog_oran.values()}) > 5,
+  sorted({round(v, 3) for v in _sog_oran.values()}))
+c("sogutma payi makul aralikta (%5-%40)",
+  all(0.05 <= v <= 0.40 for v in _sog_oran.values()),
+  (min(_sog_oran.values()), max(_sog_oran.values())))
+
+_koj = {k: _oran(v, "Kojen_Uretim_kWh") for k, v in son_gun.items()
+        if v["Kojen_Uretim_kWh"] > 0}
+c("kojen yalnizca 3 lokasyonda var", len(_koj) == 3, sorted(_koj))
+c("kojen karsilama orani lokasyona gore farkli",
+  len({round(v, 3) for v in _koj.values()}) == len(_koj),
+  {k: round(v, 3) for k, v in _koj.items()})
+c("kojen karsilama orani makul (%25-%45)",
+  all(0.25 <= v <= 0.45 for v in _koj.values()), _koj)
+
+_su_yog = {k: v["Su_Tuketimi_m3"] / m2[k] * 1000 for k, v in son_gun.items() if m2[k]}
+c("su yogunlugu litre olarak okunabilir (0.3-3 L/m2/gun)",
+  all(0.3 <= v <= 3.0 for v in _su_yog.values()),
+  {k: round(v, 2) for k, v in list(_su_yog.items())[:4]})
+c("su yogunlugu lokasyona gore farklilasiyor",
+  len({round(v, 2) for v in _su_yog.values()}) > 5)
+
 # ── m2 ayari ──────────────────────────────────────────────────────────────
 import json
 m2_ayar = json.loads([a for a in V["ayarlar"] if a["key"] == "m2_degerler"][0]["value"])

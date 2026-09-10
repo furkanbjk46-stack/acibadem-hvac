@@ -1139,9 +1139,13 @@ if "detay" in st.query_params:
         st.rerun()
 
 # ── Global özet karşılaştırma yönlendirmesi (metrik kartına tıklanınca) ──
+# Karşılaştırma sayfasının tanıdığı metrikler. ozet_karsilastirma.py içindeki
+# METRIKLER ile aynı olmalı — test_ozet_karsilastirma.py bunu doğrular.
+OZET_METRIKLERI = ("enerji", "dogalgaz", "sogutma", "su", "kojen")
+
 if "ozet" in st.query_params:
     _oz = st.query_params["ozet"]
-    if _oz in ("enerji",):          # yalnızca tanımlı metrikler
+    if _oz in OZET_METRIKLERI:
         st.session_state["detay_ozet"] = _oz
         st.query_params.clear()
         st.rerun()
@@ -1511,15 +1515,15 @@ with sol:
 
         _gec_ay_label = _ay_tr[_gec_ay_no - 1]
 
-        # 4. eleman: tıklanınca karşılaştırma sayfasını açan metrik anahtarı.
-        # Şimdilik yalnızca Toplam Enerji bağlı (deneme); diğerleri için
-        # ozet_karsilastirma.py içindeki METRIKLER sözlüğüne eklemek yeterli.
+        # 5. eleman: tıklanınca karşılaştırma sayfasını açan metrik anahtarı.
+        # Karşılığı ozet_karsilastirma.py içindeki METRIKLER sözlüğündedir;
+        # ikisi OZET_METRIKLERI ile birlikte doğrulanır (test_ozet_karsilastirma).
         _metrikler = [
             ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh", False, "enerji"),
-            ("🔥 Doğalgaz",      None,                         "m³",  False, None),
-            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh", False, None),
-            ("💧 Su",             "Su_Tuketimi_m3",             "m³",  False, None),
-            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh", True,  None),  # üretimde artış iyidir
+            ("🔥 Doğalgaz",      None,                         "m³",  False, "dogalgaz"),
+            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh", False, "sogutma"),
+            ("💧 Su",             "Su_Tuketimi_m3",             "m³",  False, "su"),
+            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh", True,  "kojen"),  # üretimde artış iyidir
         ]
 
         for _lbl, _col, _birim, _artis_iyi, _ozet_key in _metrikler:
