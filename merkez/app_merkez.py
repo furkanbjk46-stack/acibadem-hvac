@@ -1138,6 +1138,22 @@ if "detay" in st.query_params:
         st.query_params.clear()
         st.rerun()
 
+# ── Global özet karşılaştırma yönlendirmesi (metrik kartına tıklanınca) ──
+if "ozet" in st.query_params:
+    _oz = st.query_params["ozet"]
+    if _oz in ("enerji",):          # yalnızca tanımlı metrikler
+        st.session_state["detay_ozet"] = _oz
+        st.query_params.clear()
+        st.rerun()
+
+if st.session_state.get("detay_ozet"):
+    with st.container(key="ozet_gecis_katmani"):
+        _oz_dosya = os.path.join(os.path.dirname(__file__), "pages", "ozet_karsilastirma.py")
+        with open(_oz_dosya, "r", encoding="utf-8") as _f:
+            _oz_kaynak = _f.read()
+        exec(compile(_oz_kaynak, _oz_dosya, "exec"), globals())
+    st.stop()
+
 if st.session_state.get("detay_lokasyon"):
     st.markdown("""
     <style>
@@ -1495,15 +1511,18 @@ with sol:
 
         _gec_ay_label = _ay_tr[_gec_ay_no - 1]
 
+        # 4. eleman: tıklanınca karşılaştırma sayfasını açan metrik anahtarı.
+        # Şimdilik yalnızca Toplam Enerji bağlı (deneme); diğerleri için
+        # ozet_karsilastirma.py içindeki METRIKLER sözlüğüne eklemek yeterli.
         _metrikler = [
-            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh", False),
-            ("🔥 Doğalgaz",      None,                         "m³",  False),
-            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh", False),
-            ("💧 Su",             "Su_Tuketimi_m3",             "m³",  False),
-            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh", True),  # üretimde artış iyidir
+            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh", False, "enerji"),
+            ("🔥 Doğalgaz",      None,                         "m³",  False, None),
+            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh", False, None),
+            ("💧 Su",             "Su_Tuketimi_m3",             "m³",  False, None),
+            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh", True,  None),  # üretimde artış iyidir
         ]
 
-        for _lbl, _col, _birim, _artis_iyi in _metrikler:
+        for _lbl, _col, _birim, _artis_iyi, _ozet_key in _metrikler:
             if _col is None:  # Doğalgaz: kazan + kojen toplamı
                 _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
                 _ga   = _cs(_df_gec_ay,  "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay,  "Kojen_Dogalgaz_m3")
@@ -1526,17 +1545,66 @@ with sol:
                 + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
             ) if _trend_parts else ""
 
-            st.markdown(f"""
-            <div style="padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);
-                        border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);">
+            # Tıklanabilir metrikler <a> ile sarılır; lokasyon kartlarıyla aynı
+            # desen (JS gizli butona tıklatır → aynı oturumda rerun, sayfa
+            # yeniden yüklenmez). Bağlı olmayan metrikler düz <div> kalır.
+            _ic = f"""
               <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}</span>
+                <span style="font-size:11px; color:rgba(150,210,255,0.7);">{_lbl}{
+                    ' <span style="font-size:9px;color:rgba(56,189,248,0.45);">›</span>'
+                    if _ozet_key else ''}</span>
                 <span style="font-size:12px; font-weight:700; color:#38bdf8;
                              font-family:'Playfair Display','Plus Jakarta Sans',serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _gk, _artis_iyi)}</span>
               </div>
-              {_trend_html}
-            </div>
+              {_trend_html}"""
+            _stil = ("padding:7px 10px; margin:3px 0; background:rgba(0,20,50,0.6);"
+                     "border-radius:8px; border:1px solid rgba(56, 189, 248,0.1);"
+                     "display:block; text-decoration:none;")
+            if _ozet_key:
+                st.markdown(
+                    f'<a class="ozet-kart" data-ozet="{_ozet_key}" href="?ozet={_ozet_key}" '
+                    f'style="{_stil}cursor:pointer;">{_ic}</a>',
+                    unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div style="{_stil}">{_ic}</div>', unsafe_allow_html=True)
+
+        # Tıklanabilir metrikler için gizli butonlar + JS köprüsü
+        _tiklanabilir = [k for *_, k in _metrikler if k]
+        if _tiklanabilir:
+            st.markdown("""
+            <style>
+            .st-key-gizli_ozet_butonlari{
+                position:fixed !important; left:-9999px !important; top:0 !important;
+                width:1px !important; height:1px !important; overflow:hidden !important;
+            }
+            a.ozet-kart:hover{ border-color:rgba(56,189,248,0.4) !important; }
+            </style>
             """, unsafe_allow_html=True)
+            with st.container(key="gizli_ozet_butonlari"):
+                for _k in _tiklanabilir:
+                    if st.button("git", key=f"gizli_ozet_{_k}"):
+                        st.session_state["detay_ozet"] = _k
+                        st.rerun()
+            _components.html("""
+            <script>
+            (function(){
+              var d;
+              try { d = window.parent.document; } catch(e) { return; }
+              var kartlar = d.querySelectorAll('a.ozet-kart');
+              for (var i = 0; i < kartlar.length; i++){
+                var a = kartlar[i];
+                if (a.dataset.baglandi === '1') continue;
+                a.dataset.baglandi = '1';
+                a.addEventListener('click', function(ev){
+                  var k = this.getAttribute('data-ozet');
+                  var btn = d.querySelector('.st-key-gizli_ozet_' + k + ' button');
+                  if (btn){ ev.preventDefault(); btn.click(); }
+                  // btn yoksa href ile eski yol calisir
+                });
+              }
+            })();
+            </script>
+            """, height=0)
 
 # ════════════════════════════════
 # MERKEZ KOLON — TÜRKİYE HARİTASI
