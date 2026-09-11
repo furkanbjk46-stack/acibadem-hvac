@@ -2141,20 +2141,45 @@ with sag:
         "yazma_hatasi": "#ef4444", "hata": "#ef4444",
         "nokta_yok": "#f59e0b", "kapali": "rgba(180,220,255,0.35)",
         "henuz_calismadi": "#f59e0b", "modul_yok": "#ef4444",
+        "sahada_farkli": "#ef4444", "dogrulanamadi": "#f59e0b",
+        "uygulanmadi": "#ef4444",
     }
+
+    # Bir lokasyonun GERÇEK sorunu: anlık tur sonucu normal olsa bile (her
+    # dakika "gecis_yok" yazılır) son geçişin sahadaki sonucu ya da chiller'ın
+    # seti uygulamaması kalıcı olarak gösterilir.
+    _SON_YAZIM_METIN = {
+        "yazma_hatasi":  "Son geçişte BACnet yazma hatası",
+        "sahada_farkli": "Son geçiş: cihazda farklı değer var",
+        "dogrulanamadi": "Son geçiş: cihazdan geri okunamadı",
+    }
+
+    def _saglik_sorunu(o):
+        _k = str(o.get("sonuc", ""))
+        if _k not in ("gecis_yok", "yazildi", "kapali"):
+            return _k, str(o.get("metin") or _k)
+        _sy = o.get("son_yazim_sonuc")
+        if _sy in _SON_YAZIM_METIN:
+            return _sy, _SON_YAZIM_METIN[_sy]
+        _dg = o.get("dogrulama") or {}
+        if _dg.get("sonuc") == "uygulanmadi":
+            _uy = ", ".join(str(x).replace("_REM_SET", "") for x in (_dg.get("uymayan") or []))
+            return "uygulanmadi", "Chiller seti UYGULAMADI" + (f" ({_uy})" if _uy else "")
+        return None, None
     # YALNIZCA dikkat gerektirenler satır satır listelenir; normal beklemedeki
     # lokasyonlar tek satırda özetlenir. Hepsini listelemek kartı 715px'e
     # çıkarıyor, metinleri kırpıyor ve asıl uyarıyı gürültüde kaybediyordu.
-    _NORMAL = ("gecis_yok", "yazildi", "kapali")
-    _sorunlu = [(l, o) for l, o in _oto_saglik if str(o.get("sonuc", "")) not in _NORMAL]
+    _sorunlu = []
+    for _l, _o in _oto_saglik:
+        _kod, _metin = _saglik_sorunu(_o)
+        if _kod:
+            _sorunlu.append((_l, _o, _kod, _metin))
     _normal_sayi = len(_oto_saglik) - len(_sorunlu)
 
     _saglik_html = ""
-    for _lid, _o in sorted(_sorunlu):
+    for _lid, _o, _sn, _mt in sorted(_sorunlu, key=lambda x: x[0]):
         _ad = HASTANELER.get(_lid, {}).get("kisa", _lid)
-        _sn = str(_o.get("sonuc", ""))
         _rk = _SAGLIK_RENK.get(_sn, "#f59e0b")
-        _mt = str(_o.get("metin") or _sn or "—")
         _zm = str(_o.get("zaman") or "")[11:16]
         _saglik_html += (
             f"<div style='font-size:9px;padding:2px 0;'>"
@@ -3070,9 +3095,13 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                 st.warning(f"⚠️ {_uc_lok_isim} için tanımlı nokta yok.")
                 _uc_nokta_adi = None
 
+        # Sınırlar lokasyondaki güvenlik kapısıyla AYNI (bacnet_writer
+        # KOMUT_DEGER_MIN/MAX). Önceden 0–99 kabul ediliyordu: 3 °C yazan
+        # kullanıcı "gönderildi" görüyor, komut lokasyonda sessizce hata oluyordu.
+        # test_bacnet_writer.py iki tarafın eşitliğini doğrular.
         _uc_deger = st.number_input(
             "Hedef Değer (°C)",
-            min_value=0.0, max_value=99.0, value=7.0, step=0.5,
+            min_value=5.0, max_value=40.0, value=7.0, step=0.5,
             key="uc_deger"
         )
 
@@ -3112,9 +3141,11 @@ with st.expander("⚙️  Ayarlar", expanded=False):
             st.caption("Son komutlar:")
             if _uc_son_komutlar:
                 _durum_renk = {
-                    "bekliyor":    "🟡",
-                    "tamamlandi":  "✅",
-                    "hata":        "❌",
+                    "bekliyor":      "🟡",
+                    "tamamlandi":    "✅",   # cihazdan geri okunarak doğrulandı
+                    "dogrulanamadi": "⚠️",   # cihaz kabul etti ama geri okunamadı
+                    "suresi_doldu":  "⌛",   # lokasyon geç aldı, uygulanmadı
+                    "hata":          "❌",
                 }
                 for _k in _uc_son_komutlar:
                     _zaman = (_k.get("created_at", "")[:16].replace("T", " "))

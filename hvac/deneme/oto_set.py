@@ -153,10 +153,22 @@ SONUC_METIN = {
     "gecis_yok":        "Bekliyor — geçiş saati değil",
     "tahmin_yok":       "Hava tahmini alınamadı, geçiş ertelendi",
     "nokta_yok":        "Bu lokasyon için tanımlı set noktası yok",
-    "yazildi":          "Setler yazıldı",
+    "yazildi":          "Setler yazıldı ve cihazda doğrulandı",
     "yazma_hatasi":     "BACnet yazma hatası",
+    "sahada_farkli":    "Yazıldı ama cihazda farklı değer var",
+    "dogrulanamadi":    "Yazıldı ama cihazdan geri okunamadı",
     "hata":             "Beklenmeyen hata",
 }
+
+# Chiller'ın yeni seti gerçekten uygulayıp uygulamadığı (IC SET izlemesi)
+DOGRULAMA_METIN = {
+    "bekliyor":    "Chiller'ların yeni seti uygulaması bekleniyor",
+    "uygulandi":   "Chiller'lar yeni seti uyguladı",
+    "uygulanmadi": "Chiller'lar yeni seti UYGULAMADI",
+}
+# Chiller uzaktan seti gecikmeli uygulayabilir; bu süre boyunca her dakika
+# IC SET okunur, süre dolduğunda hâlâ tutmuyorsa "uygulanmadi" denir.
+IC_IZLEME_DK = 15
 
 
 def _sonuc_yaz(sonuc, aciklama=""):
@@ -179,7 +191,63 @@ def durum_ozet():
         "chiller_mod": d.get("chiller_mod"),
         "diger_mod": d.get("diger_mod"),
         "son_yazim": d.get("zaman"),
+        # Son geçişin sahadaki sonucu — "sonuc" her dakika "gecis_yok" ile
+        # güncellendiği için geçişteki sorun burada KALICI tutulur.
+        "son_yazim_sonuc": d.get("son_yazim_sonuc"),
+        "saha": d.get("saha"),
+        "dogrulama": ({
+            "sonuc": d["dogrulama"].get("sonuc"),
+            "metin": DOGRULAMA_METIN.get(d["dogrulama"].get("sonuc"), ""),
+            "okunan": d["dogrulama"].get("okunan"),
+            "uymayan": d["dogrulama"].get("uymayan"),
+        } if isinstance(d.get("dogrulama"), dict) else None),
     }
+
+
+def _ic_dogrulama_ilerlet(durum, lokasyon_id, simdi):
+    """Geçişten sonraki dakikalarda chiller IC SET'lerini okur.
+
+    REM SET'e yazılan değer cihazda "oturmuş" olsa bile chiller onu uygulamayabilir
+    (yerel modda, arızada, sınır dışında). Asıl soru "chiller yeni seti kullanıyor
+    mu" olduğu için IC SET izlenir. Beklemeye kilitlenmez: kontrol() her dakika
+    çağrılır, bu fonksiyon her çağrıda bir kez okur.
+    """
+    d = durum.get("dogrulama")
+    if not isinstance(d, dict) or d.get("sonuc") != "bekliyor":
+        return
+    try:
+        from bacnet_writer import bacnet_oku, geri_okuma_haritasi
+    except Exception:
+        return
+    harita = geri_okuma_haritasi(lokasyon_id)
+    okunan = {}
+    for ad, hedef in (d.get("hedefler") or {}).items():
+        n = harita.get(ad)
+        if not n:
+            continue
+        ok, val = bacnet_oku(n["gateway_ip"], n["dnet"], n["mac_hex"],
+                             n["obj_type"], n["obj_inst"])
+        okunan[ad] = round(float(val), 2) if ok else None
+    d["okunan"] = okunan
+    d["son_kontrol"] = simdi.isoformat(timespec="seconds")
+
+    uymayan = [ad for ad, h in (d.get("hedefler") or {}).items()
+               if okunan.get(ad) is None or abs(okunan[ad] - float(h)) > 0.05]
+    try:
+        gecen = (simdi - datetime.fromisoformat(d["baslangic"])).total_seconds() / 60
+    except Exception:
+        gecen = IC_IZLEME_DK + 1
+    if not uymayan:
+        d["sonuc"] = "uygulandi"
+        d["uymayan"] = []
+        logger.info("oto_set: chiller'lar yeni seti uyguladı (%s)", okunan)
+    elif gecen >= IC_IZLEME_DK:
+        d["sonuc"] = "uygulanmadi"
+        d["uymayan"] = uymayan
+        logger.warning("oto_set: %d dk sonra chiller'lar seti UYGULAMADI — %s (okunan %s)",
+                       IC_IZLEME_DK, uymayan, okunan)
+    durum["dogrulama"] = d
+    durum_yaz(durum)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -280,6 +348,7 @@ def kontrol(sb_url, sb_key, lokasyon_id):
 
         durum = durum_oku()
         if donem == durum.get("donem"):
+            _ic_dogrulama_ilerlet(durum, lokasyon_id, simdi)
             _sonuc_yaz("gecis_yok", "%s · sonraki %02d:00"
                        % (donem, gece_saat if donem == "gunduz" else gunduz_saat))
             return
@@ -298,13 +367,35 @@ def kontrol(sb_url, sb_key, lokasyon_id):
         hedefler = {n: CH_SET[yeni_ch] for n in CH_NOKTALAR}
         hedefler.update(DIG_SET[yeni_dig])
 
-        yazilan, hatali = _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler)
+        yazilan, hatali, detay = _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler)
         if yazilan == 0 and hatali == 0:
             _sonuc_yaz("nokta_yok")
             return                                     # bu lokasyonda nokta yok
 
-        _sonuc_yaz("yazildi" if hatali == 0 else "yazma_hatasi",
-                   "%s · %d yazıldı, %d hata" % (donem, yazilan, hatali))
+        # "Yazıldı" artık ACK'a değil, cihazdan GERİ OKUNAN değere dayanır.
+        oturdu    = sum(1 for s in detay.values() if s.get("durum") == "oturdu")
+        farkli    = sum(1 for s in detay.values() if s.get("durum") == "sahada_farkli")
+        okunamadi = sum(1 for s in detay.values() if s.get("durum") == "dogrulanamadi")
+        if hatali:
+            kod = "yazma_hatasi"
+        elif farkli:
+            kod = "sahada_farkli"
+        elif okunamadi:
+            kod = "dogrulanamadi"
+        else:
+            kod = "yazildi"
+        _sonuc_yaz(kod, "%s · %d doğrulandı, %d farklı, %d okunamadı, %d hata"
+                   % (donem, oturdu, farkli, okunamadi, hatali))
+
+        # Chiller IC SET izlemesi: yazması kabul edilen ve okuma karşılığı
+        # tanımlı noktalar için sonraki dakikalarda kontrol edilir.
+        try:
+            from bacnet_writer import geri_okuma_haritasi
+            harita = geri_okuma_haritasi(lokasyon_id)
+        except Exception:
+            harita = {}
+        ic_hedef = {ad: s["deger"] for ad, s in detay.items()
+                    if s.get("yazma_ok") and ad in harita}
 
         durum_yaz({
             "donem": donem, "chiller_mod": yeni_ch, "diger_mod": yeni_dig,
@@ -312,6 +403,13 @@ def kontrol(sb_url, sb_key, lokasyon_id):
             "yarin_min": tahmin["yarin_min"],
             "zaman": simdi.isoformat(timespec="seconds"),
             "yazilan": yazilan, "hatali": hatali,
+            "son_yazim_sonuc": kod,
+            "saha": {"dogrulandi": oturdu, "farkli": farkli,
+                     "okunamadi": okunamadi, "hata": hatali},
+            "dogrulama": ({"sonuc": "bekliyor",
+                           "baslangic": simdi.isoformat(timespec="seconds"),
+                           "hedefler": ic_hedef, "okunan": {}, "uymayan": []}
+                          if ic_hedef else None),
             "gunduz_saat": gunduz_saat, "gece_saat": gece_saat,
         })
 
@@ -327,9 +425,15 @@ def kontrol(sb_url, sb_key, lokasyon_id):
 
 
 def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler):
-    """Setpoint'leri BACnet ile yazar. (yazilan, hatali) döner."""
+    """Setpoint'leri BACnet ile yazar ve cihazdan geri okuyarak doğrular.
+
+    (yazilan, hatali, detay) döner:
+      yazilan : cihazın kabul ettiği (SimpleACK) yazma sayısı
+      hatali  : reddedilen / cevapsız / değer kapısından geçemeyen
+      detay   : {nokta: {durum, mesaj, okunan, deger, yazma_ok}}
+    """
     try:
-        from bacnet_writer import bacnet_yaz, komut_degeri_gecerli
+        from bacnet_writer import komut_degeri_gecerli, yaz_dogrula_toplu
     except Exception as e:
         # Sessizce (0,0) dönülürse çağıran bunu "bu lokasyonda nokta yok"
         # sanıyor ve gerçek sebep kayboluyordu. Yükseltilen hata dışarıdaki
@@ -343,9 +447,10 @@ def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler):
             "&select=nokta_adi,gateway_ip,dnet,mac_hex,obj_type,obj_inst" % lokasyon_id)}
     except Exception as e:
         logger.warning("oto_set: nokta listesi alinamadi: %s", e)
-        return 0, 0
+        return 0, 0, {}
 
-    yazilan = hatali = 0
+    hatali = 0
+    isler = []
     for ad, deger in hedefler.items():
         n = noktalar.get(ad)
         if not n:
@@ -356,14 +461,18 @@ def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler):
             logger.error("oto_set: %s reddedildi — %s", ad, sebep)
             hatali += 1
             continue
-        ok, mesaj = bacnet_yaz(n["gateway_ip"], n["dnet"], n["mac_hex"],
-                               n["obj_type"], n["obj_inst"], deger)
-        if ok:
-            yazilan += 1
-        else:
-            hatali += 1
-            logger.error("oto_set: %s yazilamadi — %s", ad, mesaj)
-    return yazilan, hatali
+        isler.append((ad, n, deger))
+
+    if not isler:
+        return 0, hatali, {}
+
+    detay = yaz_dogrula_toplu(isler)
+    yazilan = sum(1 for s in detay.values() if s.get("yazma_ok"))
+    hatali += sum(1 for s in detay.values() if not s.get("yazma_ok"))
+    for ad, s in detay.items():
+        if s.get("durum") != "oturdu":
+            logger.error("oto_set: %s — %s", ad, s.get("mesaj"))
+    return yazilan, hatali, detay
 
 
 def _log_yaz(sb_url, sb_key, lokasyon_id, eski_durum, yeni_ch, yeni_dig, ref, hedefler):

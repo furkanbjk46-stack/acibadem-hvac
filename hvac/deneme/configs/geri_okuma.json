@@ -1,0 +1,10 @@
+{
+  "_aciklama": "Yazilan set noktasi -> sahada GERCEKLESEN degerin okundugu nokta. Kaynak: hedefli_okuma_sablonu_2.xlsx. REM SET yazilabilir deger, IC SET chiller'in o an kullandigi (okunan) deger. Oto-set yazdiktan sonra IC SET izlenir; chiller uzaktan seti uygulamazsa Synapse'te 'UYGULAMADI' uyarisi cikar.",
+  "maslak": {
+    "CH1_REM_SET": {"okuma_noktasi": "CH-1 IC SET", "gateway_ip": "192.168.0.2", "dnet": 2, "mac_hex": "011F", "obj_type": 1, "obj_inst": 27},
+    "CH2_REM_SET": {"okuma_noktasi": "CH-2 IC SET", "gateway_ip": "192.168.0.2", "dnet": 2, "mac_hex": "011F", "obj_type": 1, "obj_inst": 29},
+    "CH3_REM_SET": {"okuma_noktasi": "CH-3 IC SET", "gateway_ip": "192.168.0.2", "dnet": 2, "mac_hex": "011F", "obj_type": 1, "obj_inst": 31},
+    "CH4_REM_SET": {"okuma_noktasi": "CH-4 IC SET", "gateway_ip": "192.168.0.2", "dnet": 2, "mac_hex": "011F", "obj_type": 0, "obj_inst": 346},
+    "CH5_REM_SET": {"okuma_noktasi": "CH-5 IC SET", "gateway_ip": "192.168.0.2", "dnet": 2, "mac_hex": "011F", "obj_type": 0, "obj_inst": 363}
+  }
+}
