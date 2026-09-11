@@ -309,6 +309,31 @@ def veri_uret():
 
 VERI = veri_uret()
 KILIT = threading.Lock()
+
+
+def ping_tazele(simdi=None):
+    """Lokasyon ping'lerini SENARYOYA gore su ana gore yeniden hesaplar.
+
+    NEDEN: Portal, ping'i 10 dakikadan eski lokasyonu CEVRIMDISI sayar.
+    Ilk surumde ping sunucu acildiginda BIR KEZ uretiliyordu; demo 10 dk'dan
+    uzun acik kalinca butun hastaneler cevrimdisina dusuyordu (sunumda
+    "hepsi kapali" gorunuyordu). Artik her `lokasyonlar` isteginde:
+      normal / diger senaryolar -> 30 sn once  (CEVRIMICI)
+      cevrimdisi (Kartal)       -> 3 saat once (CEVRIMDISI)
+      kurulmadi (Bodrum)        -> yok         (KURULMADI)
+    """
+    simdi = simdi or datetime.now(IST)
+    with KILIT:
+        for r in VERI["lokasyonlar"]:
+            senaryo = SENARYO.get(r["lokasyon_id"], ("normal", ""))[0]
+            if senaryo == "kurulmadi":
+                ping = None
+            elif senaryo == "cevrimdisi":
+                ping = (simdi - timedelta(hours=3)).isoformat(timespec="seconds")
+            else:
+                ping = (simdi - timedelta(seconds=30)).isoformat(timespec="seconds")
+            r["ping_zamani"] = ping
+            r["son_sync"] = ping
 SAYAC = {"komut": 0, "log": 0, "ayar_yazma": 0, "istek": 0}
 YOL_SAYAC = {}
 
@@ -404,6 +429,9 @@ class Islek(BaseHTTPRequestHandler):
         tablo = self._tablo()
         if tablo is None or tablo not in VERI:
             return self._yaz([], 200)
+
+        if tablo == "lokasyonlar":
+            ping_tazele()
 
         satirlar = _sirala(_filtre_uygula(VERI[tablo], sorgu), sorgu)
 

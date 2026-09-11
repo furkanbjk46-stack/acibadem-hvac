@@ -217,6 +217,34 @@ c("sayfalama dongusu sonlaniyor ve tum satirlari topluyor", toplandi == len(en),
 c("Range '0-999' calisir", len(cek("/rest/v1/energy_data", "0-999")) == 1000)
 c("Range 'items=0-999' calisir", len(cek("/rest/v1/energy_data", "items=0-999")) == 1000)
 
+# ── Ping tazeleme: demo 10 dk'dan uzun acik kalinca hepsi cevrimdisi oluyordu ──
+from datetime import datetime, timedelta, timezone as _tz
+_IST = _tz(timedelta(hours=3))
+with S.KILIT:
+    for _r in S.VERI["lokasyonlar"]:
+        if _r["ping_zamani"]:
+            _r["ping_zamani"] = "2020-01-01T00:00:00+03:00"      # bilerek eskit
+_lok = {r["lokasyon_id"]: r for r in cek("/rest/v1/lokasyonlar")}
+_simdi = datetime.now(_IST)
+
+
+def _yas_dk(p):
+    return (_simdi - datetime.fromisoformat(p)).total_seconds() / 60
+
+
+c("[ping] eskitilen normal lokasyon istekte TAZELENIR (<10 dk -> cevrimici)",
+  _lok["maslak"]["ping_zamani"] and _yas_dk(_lok["maslak"]["ping_zamani"]) < 10,
+  _lok["maslak"]["ping_zamani"])
+c("[ping] senaryolu ama cevrimici lokasyon da taze (izmir kritik_yuk)",
+  _yas_dk(_lok["izmir"]["ping_zamani"]) < 10, _lok["izmir"]["ping_zamani"])
+c("[ping] Kartal senaryo geregi CEVRIMDISI kalir (>10 dk)",
+  _yas_dk(_lok["kartal"]["ping_zamani"]) > 10, _lok["kartal"]["ping_zamani"])
+c("[ping] Bodrum KURULMADI (ping yok)", _lok["bodrum"]["ping_zamani"] is None)
+_cevrimici = sum(1 for r in _lok.values() if r["ping_zamani"] and _yas_dk(r["ping_zamani"]) < 10)
+c("[ping] 21 lokasyonun 19'u cevrimici, 1 cevrimdisi, 1 kurulmadi",
+  (_cevrimici, sum(1 for r in _lok.values() if r["ping_zamani"] is None)) == (19, 1),
+  (_cevrimici, len(_lok)))
+
 c("lokasyon filtresi calisiyor",
   {r["lokasyon_id"] for r in cek("/rest/v1/energy_data?lokasyon_id=eq.maslak")} == {"maslak"})
 
