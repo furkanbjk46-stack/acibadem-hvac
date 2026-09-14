@@ -51,11 +51,18 @@ except ImportError:
     pass  # lisans.py yoksa eski davranis (geriye donuk uyumluluk)
 
 # Bulut senkronizasyonu (Supabase) — arka planda otomatik başlat
-try:
-    from cloud_sync import start_background_sync
-    start_background_sync()
-except Exception:
-    pass  # supabase_config.json yoksa veya ayarlanmamışsa sessizce atla
+#
+# Watchdog altında (HVAC_WATCHDOG=1) BAŞLATILMAZ: watchdog zaten ayrı bir
+# cloud_sync.py süreci çalıştırıyor. Önceden burada da başlatılıyordu ve
+# Streamlit bu dosyayı her sayfa açılışında baştan çalıştırdığı için döngüler
+# çoğalıyor, oto-set aynı geçişi 2-3 kez uyguluyordu. Watchdog olmadan
+# (run_portal.py vb.) eski davranış sürer; tek kopyayı cloud_sync'teki kilit korur.
+if os.environ.get("HVAC_WATCHDOG") != "1":
+    try:
+        from cloud_sync import start_background_sync
+        start_background_sync()
+    except Exception:
+        pass  # supabase_config.json yoksa veya ayarlanmamışsa sessizce atla
 
 
 @st.cache_resource(ttl=300)

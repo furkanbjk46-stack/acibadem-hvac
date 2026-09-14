@@ -54,11 +54,17 @@ c("gecen yilin ayni ayini kapsiyor", tarihler[0][:4] < tarihler[-1][:4], tarihle
 
 # ── Mevsimsellik ──────────────────────────────────────────────────────────
 aylik = defaultdict(int)
+ay_gunleri = defaultdict(set)
 for r in en:
     aylik[r["Tarih"][:7]] += r["Toplam_Hastane_Tuketim_kWh"]
+    ay_gunleri[r["Tarih"][:7]].add(r["Tarih"])
 sirali = sorted(aylik.items())
-yaz = [v for k, v in sirali if k[5:7] in ("07", "08")]
-kis = [v for k, v in sirali if k[5:7] in ("01", "02")]
+# Yalnizca TAM aylar kiyaslanir. Veri bugunden 430 gun geri gidiyor; eylul
+# ortasinda calisinca bir onceki yilin temmuzu YARIM ay kaliyor ve toplami
+# kisin tam ayindan dusuk cikiyordu (test takvime gore bozuluyordu).
+tam = {k for k, g in ay_gunleri.items() if len(g) >= 28}
+yaz = [v for k, v in sirali if k[5:7] in ("07", "08") and k in tam]
+kis = [v for k, v in sirali if k[5:7] in ("01", "02") and k in tam]
 c("yaz tuketimi kistan yuksek", min(yaz) > max(kis), "yaz=%s kis=%s" % (min(yaz), max(kis)))
 
 sog = defaultdict(int)

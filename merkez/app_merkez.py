@@ -2142,7 +2142,7 @@ with sag:
         "nokta_yok": "#f59e0b", "kapali": "rgba(180,220,255,0.35)",
         "henuz_calismadi": "#f59e0b", "modul_yok": "#ef4444",
         "sahada_farkli": "#ef4444", "dogrulanamadi": "#f59e0b",
-        "uygulanmadi": "#ef4444",
+        "uygulanmadi": "#ef4444", "mesgul": "rgba(180,220,255,0.35)",
     }
 
     # Bir lokasyonun GERÇEK sorunu: anlık tur sonucu normal olsa bile (her
@@ -2156,7 +2156,8 @@ with sag:
 
     def _saglik_sorunu(o):
         _k = str(o.get("sonuc", ""))
-        if _k not in ("gecis_yok", "yazildi", "kapali"):
+        # "mesgul": iki tur çakıştı, biri atlandı — kilit işini yapıyor, sorun değil
+        if _k not in ("gecis_yok", "yazildi", "kapali", "mesgul"):
             return _k, str(o.get("metin") or _k)
         _sy = o.get("son_yazim_sonuc")
         if _sy in _SON_YAZIM_METIN:

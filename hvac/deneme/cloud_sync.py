@@ -623,8 +623,40 @@ def run_sync():
     return True
 
 
+_ARKA_PLAN = {"basladi": False}
+_ARKA_PLAN_KILIDI = threading.Lock()
+
+
 def start_background_sync():
-    """Arka planda periyodik senkronizasyon ve heartbeat başlat"""
+    """Arka planda periyodik senkronizasyon ve heartbeat başlat.
+
+    Dönüş: True  — bu süreç döngüleri başlattı (ya da zaten çalıştırıyor)
+           False — döngüler BAŞKA bir süreçte çalışıyor, burada başlatılmadı
+           None  — yapılandırma yok / otomatik sync kapalı
+
+    TEK KOPYA GARANTİSİ: Önceden app_portal.py her Streamlit çalışmasında bu
+    fonksiyonu çağırıyor ve her seferinde YENİ döngüler başlıyordu; watchdog'un
+    ayrı cloud_sync.py süreci de çalıştığı için oto-set aynı geçişi 2-3 kez
+    uyguluyor, komutlar ve heartbeat tekrarlanıyordu. Artık:
+      * aynı süreçte ikinci çağrı hiçbir şey başlatmaz,
+      * makinede döngüleri yalnızca kilidi alan TEK süreç çalıştırır.
+    """
+    with _ARKA_PLAN_KILIDI:
+        if _ARKA_PLAN["basladi"]:
+            return True
+        try:
+            from kilit import surec_kilidi_al
+            sahip = surec_kilidi_al("cloud_sync")
+        except Exception as _ke:
+            # Kilit modülü yoksa (yarım güncelleme) eski davranış: başlat.
+            # Başlatmamak heartbeat'i keser ve lokasyon çevrimdışı görünür.
+            logger.warning(f"Tek kopya kilidi kullanılamadı, döngüler yine de başlatılıyor: {_ke}")
+            sahip = True
+        if not sahip:
+            logger.info("Arka plan döngüleri başka bir süreçte çalışıyor — bu süreçte başlatılmadı.")
+            return False
+        _ARKA_PLAN["basladi"] = True
+
     config = load_config()
     if not config:
         return
@@ -808,6 +840,7 @@ def start_background_sync():
     t_hb.start()
 
     logger.info(f"🔄 Arka plan senkronizasyonu başlatıldı (günlük {_SYNC_SAAT:02d}:{_SYNC_DAKIKA:02d}, heartbeat: 2 dk)")
+    return True
 
 
 # ============ Manuel / Subprocess çalıştırma ============
@@ -819,11 +852,15 @@ if __name__ == "__main__":
     # NOT: Startup'ta run_sync() ÇAĞIRILMAZ.
     # Sync zamanlaması _sync_loop tarafından (sync_son_calisma.txt ile) yönetilir.
     # Bu sayede restart/güncelleme sonrasında çift sync olmaz.
-    start_background_sync()
+    _basladi = start_background_sync()
 
-    # Ana thread canlı kalsın (daemon thread'ler ölmesin)
+    # Ana thread canlı kalsın (daemon thread'ler ölmesin).
+    # Döngüler başka bir süreçteyse (False) dakikada bir yeniden denenir:
+    # o süreç kapanırsa işletim sistemi kilidi bırakır ve görev burada devralınır.
     try:
         while True:
             time.sleep(60)
+            if _basladi is False:
+                _basladi = start_background_sync()
     except KeyboardInterrupt:
         print("\nCloud Sync durduruldu.")

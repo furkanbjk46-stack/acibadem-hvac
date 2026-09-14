@@ -55,7 +55,8 @@ class Sahte:
         if method == "GET":
             if "/ayarlar?key=like.oto_*" in yol:
                 # RLS izni yoksa PostgREST bos liste doner -> kontrol atlanir.
-                return [{"key": k} for k in self.ayarlar if k.startswith("oto_")]
+                return [{"key": k, "value": v} for k, v in self.ayarlar.items()
+                        if k.startswith("oto_")]
             if "/ayarlar?key=eq." in yol:
                 k = yol.split("key=eq.")[1].split("&")[0]
                 return [{"value": self.ayarlar[k]}] if k in self.ayarlar else []
@@ -303,6 +304,95 @@ oto_set._setleri_uygula = _patlat
 calistir(Sahte(TEMEL), saat=12)
 oto_set._setleri_uygula = _gercek_uygula
 c("[gorunurluk] bacnet_writer yoksa 'hata' olarak bildirilir", sonuc() == "hata", sonuc())
+
+# ── 11a) KURAL OKUMA: varsayilana ASLA dusulmez ──
+# 12.09: anlik ag hatasinda gece_saat varsayilan 22'ye dustu, 22:41'de gece
+# gecisi yapildi, bir dakika sonra geri donuldu. Artik ayarlardan biri
+# eksik/bozuksa o tur HICBIR SEY yapilmaz.
+for _ad, _ayar in [
+        ("gece saati eksik (anlik ag hatasi senaryosu)",
+         {"oto_set_aktif": "true", "oto_gunduz_saat": "8"}),
+        ("gunduz saati eksik", {"oto_set_aktif": "true", "oto_gece_saat": "23"}),
+        ("aktif bayragi eksik", {"oto_gunduz_saat": "8", "oto_gece_saat": "23"}),
+        ("saat sayi degil", dict(TEMEL, oto_gece_saat="yirmi uc")),
+        ("saat 0-23 disinda", dict(TEMEL, oto_gece_saat="25")),
+        ("bos deger", dict(TEMEL, oto_gece_saat=""))]:
+    durum_sifirla()
+    sb = Sahte(_ayar)
+    calistir(sb, saat=22, dakika=41)          # 12.09 olayinin saati
+    c("[kural] %s -> YAZMA YOK" % _ad, len(sb.yazilan) == 0, len(sb.yazilan))
+    c("[kural] %s -> kural_okunamadi" % _ad,
+      oto_set.durum_ozet()["sonuc"] == "kural_okunamadi", oto_set.durum_ozet()["sonuc"])
+
+durum_sifirla()
+sb = Sahte(TEMEL)
+calistir(sb, saat=22, dakika=41)
+c("[kural] ayarlar tamken 22:41 GUNDUZ sayilir (gece 23:00)",
+  oto_set.durum_oku().get("donem") == "gunduz", oto_set.durum_oku().get("donem"))
+
+
+class _IstekHatasi(Sahte):
+    def istek(self, url, key, yol, veri=None, method="GET", timeout=10):
+        if "/ayarlar" in yol:
+            raise OSError("zaman asimi")
+        return super().istek(url, key, yol, veri, method, timeout)
+
+
+durum_sifirla()
+sb = _IstekHatasi(TEMEL)
+calistir(sb, saat=22, dakika=41)
+c("[kural] ayar istegi ag hatasi -> yazma yok", len(sb.yazilan) == 0)
+c("[kural] ag hatasinin sebebi aciklamada",
+  "ağ" in (oto_set.durum_ozet().get("aciklama") or ""), oto_set.durum_ozet().get("aciklama"))
+c("[kural] kodda varsayilan saat sabiti KALMADI",
+  not hasattr(oto_set, "GUNDUZ_VARSAYILAN") and not hasattr(oto_set, "GECE_VARSAYILAN"))
+
+# ── 11b2) KILIT: ayni anda ikinci tur hicbir sey yapmaz ──
+import kilit as _kilit
+durum_sifirla()
+sb = Sahte(TEMEL)
+with _kilit.kisa_kilit("oto_set") as _alindi:
+    c("[kilit] test kilidi aldi", _alindi)
+    calistir(sb, saat=12)                     # baska bir tur kilidi tutuyorken
+c("[kilit] kilit mesgulken YAZMA YOK", len(sb.yazilan) == 0, len(sb.yazilan))
+c("[kilit] kilit mesgulken durum 'mesgul'", oto_set.durum_ozet()["sonuc"] == "mesgul",
+  oto_set.durum_ozet()["sonuc"])
+c("[kilit] mesgul turu donemi ISARETLEMEZ (sonraki tur gecisi yapabilsin)",
+  oto_set.durum_oku().get("donem") is None, oto_set.durum_oku())
+calistir(sb, saat=12)                         # kilit birakildi
+c("[kilit] kilit birakilinca gecis yapilir", len(sb.yazilan) == 11, len(sb.yazilan))
+
+# Esanli iki tur (thread) — tek gecis olmali
+import threading as _th
+durum_sifirla()
+sb = Sahte(TEMEL)
+_orj_uygula = oto_set._setleri_uygula
+
+
+def _yavas_uygula(*a, **k):
+    import time as _t
+    _t.sleep(0.3)                             # sahaya yazma suruyor gibi
+    return _orj_uygula(*a, **k)
+
+
+oto_set._setleri_uygula = _yavas_uygula
+_ciktilar = []
+_bariyer = _th.Barrier(2)
+
+
+def _tur():
+    _bariyer.wait()
+    with _kilit.kisa_kilit("oto_set") as al:
+        _ciktilar.append(al)
+
+
+# calistir() modul degiskenlerini degistirdigi icin esanlilik kilit
+# seviyesinde sinanir: iki thread ayni anda kilidi ister, yalnizca biri alir.
+_t1, _t2 = _th.Thread(target=_tur), _th.Thread(target=_tur)
+_t1.start(); _t2.start(); _t1.join(); _t2.join()
+oto_set._setleri_uygula = _orj_uygula
+c("[kilit] esanli iki istekten YALNIZCA biri kilidi alir",
+  sorted(_ciktilar) == [False, True], _ciktilar)
 
 # ── 11c) SAHADA DOGRULAMA — "yazildi" artik ACK'a degil GERI OKUMAYA dayanir ──
 # Sikayet: log "gonderildi" diyor ama sahada set degismiyor. Cihaz yazmayi

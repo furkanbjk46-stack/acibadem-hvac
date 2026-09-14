@@ -23,6 +23,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FLAG_FILE = os.path.join(BASE_DIR, "_restart.flag")
 FULL_RESTART_FLAG = os.path.join(BASE_DIR, "_full_restart.flag")
 
+# Alt süreçler watchdog altında çalıştıklarını bilsin. app_portal.py bunu
+# görünce kendi içinde senkronizasyon döngüsü BAŞLATMAZ; döngüler yalnızca
+# aşağıda başlatılan cloud_sync.py sürecinde çalışır (tek kopya).
+_COCUK_ENV = dict(os.environ, HVAC_WATCHDOG="1")
+
 
 def start_portals():
     procs = []
@@ -31,7 +36,7 @@ def start_portals():
         [sys.executable, "-m", "streamlit", "run", "app_portal.py",
          "--server.port", "8501",
          "--server.headless", "true"],
-        cwd=BASE_DIR
+        cwd=BASE_DIR, env=_COCUK_ENV
     )
     logger.info(f"✅ Enerji Portal başlatıldı (PID: {p1.pid}, Port: 8501)")
     procs.append(p1)
@@ -40,28 +45,28 @@ def start_portals():
         [sys.executable, "-m", "uvicorn", "main_portal:app",
          "--host", "127.0.0.1",
          "--port", "8005"],
-        cwd=BASE_DIR
+        cwd=BASE_DIR, env=_COCUK_ENV
     )
     logger.info(f"✅ HVAC Portal başlatıldı (PID: {p2.pid}, Port: 8005)")
     procs.append(p2)
 
     p3 = subprocess.Popen(
         [sys.executable, "cloud_sync.py"],
-        cwd=BASE_DIR
+        cwd=BASE_DIR, env=_COCUK_ENV
     )
     logger.info(f"✅ Cloud Sync başlatıldı (PID: {p3.pid})")
     procs.append(p3)
 
     p4 = subprocess.Popen(
         [sys.executable, "data_collector.py"],
-        cwd=BASE_DIR
+        cwd=BASE_DIR, env=_COCUK_ENV
     )
     logger.info(f"✅ Veri Toplayici başlatıldı (PID: {p4.pid}) — Modbus + BACnet")
     procs.append(p4)
 
     p5 = subprocess.Popen(
         [sys.executable, "data_bridge.py"],
-        cwd=BASE_DIR
+        cwd=BASE_DIR, env=_COCUK_ENV
     )
     logger.info(f"✅ Data Bridge başlatıldı (PID: {p5.pid}) — her gece 23:45 energy_data.csv'ye yazar")
     procs.append(p5)

@@ -60,8 +60,11 @@ DIG_SET  = {
 }
 CH_NOKTALAR = ["CH1_REM_SET", "CH2_REM_SET", "CH3_REM_SET", "CH4_REM_SET", "CH5_REM_SET"]
 
-GUNDUZ_VARSAYILAN = 5
-GECE_VARSAYILAN   = 22
+# NOT: Varsayılan geçiş saati BİLEREK YOK. Önceden ayar okunamazsa 05:00/22:00
+# kullanılıyordu; 12.09'da anlık bir ağ hatasında gece geçişi 23:00 yerine
+# 22:41'de yapıldı, bir dakika sonra geri dönüldü (sahaya 3 set turu gitti).
+# Kural okunamazsa o tur hiçbir şey yapılmaz — bkz. _kural_oku.
+KURAL_ANAHTARLARI = ("oto_set_aktif", "oto_gunduz_saat", "oto_gece_saat")
 
 _tahmin_onbellek = {"zaman": None, "veri": None}
 _TAHMIN_OMRU_DK = 30
@@ -82,33 +85,31 @@ def _istek(url, key, yol, veri=None, method="GET", timeout=10):
         return json.loads(govde) if govde.strip() else []
 
 
-def _ayar_oku(url, key, anahtar, varsayilan=""):
-    try:
-        d = _istek(url, key, "/rest/v1/ayarlar?key=eq.%s&select=value" % anahtar)
-        return d[0]["value"] if d else varsayilan
-    except Exception:
-        return varsayilan
+def _kural_oku(url, key):
+    """Merkezdeki oto-set kuralını TEK istekte okur. (kural | None, sebep) döner.
 
-
-def _kural_okunabilir(url, key):
-    """Merkezdeki oto_ ayarlarına gerçekten erişilebiliyor mu?
-
-    RLS izni verilmemişse PostgREST boş liste döner; ağ yoksa istisna atar.
-    İkisinde de False dönülür ve kontrol atlanır (fail-closed).
+    Önceki sürüm önce "erişilebiliyor mu" diye bir istek atıyor, sonra her
+    ayarı ayrı istekle okuyordu; ilk istek geçip sonrakilerden biri anlık
+    ağ hatasına düşerse o ayar SESSİZCE varsayılana (05:00/22:00) dönüyordu.
+    Artık üç ayar birlikte gelir; biri eksik ya da bozuksa kural YOK sayılır.
     """
     try:
-        d = _istek(url, key, "/rest/v1/ayarlar?key=like.oto_*&select=key&limit=1")
-        return bool(d)
-    except Exception:
-        return False
-
-
-def _saat_oku(url, key, anahtar, varsayilan):
+        d = _istek(url, key, "/rest/v1/ayarlar?key=like.oto_*&select=key,value")
+    except Exception as e:
+        return None, "ağ/izin hatası: %s" % e
+    ayar = {r.get("key"): r.get("value") for r in (d or []) if isinstance(r, dict)}
+    eksik = [k for k in KURAL_ANAHTARLARI if ayar.get(k) in (None, "")]
+    if eksik:
+        return None, "eksik ayar: %s" % ", ".join(eksik)
     try:
-        s = int(float(_ayar_oku(url, key, anahtar, "")))
-        return s if 0 <= s <= 23 else varsayilan
+        gunduz = int(float(ayar["oto_gunduz_saat"]))
+        gece = int(float(ayar["oto_gece_saat"]))
     except (TypeError, ValueError):
-        return varsayilan
+        return None, "saat ayarı sayı değil"
+    if not (0 <= gunduz <= 23 and 0 <= gece <= 23):
+        return None, "saat ayarı 0-23 dışında"
+    return {"aktif": str(ayar["oto_set_aktif"]).strip().lower() == "true",
+            "gunduz_saat": gunduz, "gece_saat": gece}, ""
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -157,6 +158,7 @@ SONUC_METIN = {
     "yazma_hatasi":     "BACnet yazma hatası",
     "sahada_farkli":    "Yazıldı ama cihazda farklı değer var",
     "dogrulanamadi":    "Yazıldı ama cihazdan geri okunamadı",
+    "mesgul":           "Başka bir tur çalışıyor, bu tur atlandı",
     "hata":             "Beklenmeyen hata",
 }
 
@@ -174,7 +176,7 @@ IC_IZLEME_DK = 15
 def _sonuc_yaz(sonuc, aciklama=""):
     _SON_SONUC.update({"zaman": datetime.now().isoformat(timespec="seconds"),
                        "sonuc": sonuc, "aciklama": str(aciklama)[:200]})
-    if sonuc not in ("gecis_yok", "yazildi"):
+    if sonuc not in ("gecis_yok", "yazildi", "mesgul"):
         logger.warning("oto_set: %s %s", SONUC_METIN.get(sonuc, sonuc), aciklama)
     return _SON_SONUC
 
@@ -322,25 +324,45 @@ def tahmin_al(zorla=False):
 # ANA KONTROL — cloud_sync döngüsünden her dakika çağrılır
 # ══════════════════════════════════════════════════════════════════════════
 def kontrol(sb_url, sb_key, lokasyon_id):
+    """Her dakika çağrılır; kararı KİLİT altında verir.
+
+    Aynı geçiş saniyeler arayla 2-3 kez uygulanıyordu: birden fazla döngü aynı
+    anda durum dosyasını okuyup "geçiş var" diyor, hepsi sahaya yazıyordu.
+    Kilit başka bir tur tarafından tutuluyorsa bu tur hiçbir şey yapmadan
+    atlanır ("mesgul"); bir dakika sonra durum dosyası güncel olarak okunur.
+    """
+    try:
+        from kilit import kisa_kilit
+    except Exception:
+        return _kontrol_kilitsiz(sb_url, sb_key, lokasyon_id)   # kilit modülü yoksa eski davranış
+    with kisa_kilit("oto_set") as alindi:
+        if not alindi:
+            _sonuc_yaz("mesgul")
+            return
+        return _kontrol_kilitsiz(sb_url, sb_key, lokasyon_id)
+
+
+def _kontrol_kilitsiz(sb_url, sb_key, lokasyon_id):
     """Dönem geçişi olduysa setpoint'leri BACnet ile yazar.
 
     Komut YALNIZCA dönem geçişinde üretilir. Gün ortasında hava tahmini
     değişse bile set gitmez; bir sonraki geçişte uygulanır.
     """
     try:
-        # Kural okunamıyorsa (RLS izni yok / ağ yok) hiçbir şey yapılmaz.
-        # Varsayılan saatlerle çalışıp yanlış saatte set göndermektense beklemek
-        # güvenlidir — bu fonksiyonun tek tetikleyicisi merkezdeki kuraldır.
-        if not _kural_okunabilir(sb_url, sb_key):
-            _sonuc_yaz("kural_okunamadi")
+        # Kural okunamıyorsa (RLS izni yok / ağ yok / ayar eksik) hiçbir şey
+        # yapılmaz. Varsayılan saatlerle çalışıp yanlış saatte set göndermektense
+        # beklemek güvenlidir — bu fonksiyonun tek tetikleyicisi merkezdeki kuraldır.
+        kural, sebep = _kural_oku(sb_url, sb_key)
+        if kural is None:
+            _sonuc_yaz("kural_okunamadi", sebep)
             return
 
-        if str(_ayar_oku(sb_url, sb_key, "oto_set_aktif", "true")).lower() != "true":
+        if not kural["aktif"]:
             _sonuc_yaz("kapali")
             return
 
-        gunduz_saat = _saat_oku(sb_url, sb_key, "oto_gunduz_saat", GUNDUZ_VARSAYILAN)
-        gece_saat   = _saat_oku(sb_url, sb_key, "oto_gece_saat",   GECE_VARSAYILAN)
+        gunduz_saat = kural["gunduz_saat"]
+        gece_saat   = kural["gece_saat"]
 
         # Lokasyon PC'si Türkiye saatinde; yerel saat doğrudan kullanılır.
         simdi = datetime.now()
