@@ -50,6 +50,7 @@ class Sahte:
         self.saha = dict(saha or {})
         self.harita = dict(harita or {})
         self.ic = dict(ic or {})
+        self.komut_log = []      # komutlar tablosuna yazılan oto-set satırları
 
     def istek(self, url, key, yol, veri=None, method="GET", timeout=10):
         if method == "GET":
@@ -65,6 +66,10 @@ class Sahte:
             return []
         if "/oto_mod_log" in yol:
             self.loglar.extend(veri if isinstance(veri, list) else [veri])
+        if "/komutlar" in yol:
+            if getattr(self, "komut_log_hatasi", False):
+                raise OSError("RLS: new row violates row-level security policy")
+            self.komut_log.extend(veri if isinstance(veri, list) else [veri])
         return []
 
 
@@ -78,7 +83,9 @@ def calistir(sb, tahmin=(30.0, 24.0), saat=12, lokasyon="maslak", dakika=0):
     class _DT(datetime):
         @classmethod
         def now(cls, tz=None):
-            return datetime(2026, 8, 31, saat, dakika, 0)
+            # tz verilirse gerçek datetime gibi saat dilimli döner
+            d = datetime(2026, 8, 31, saat, dakika, 0)
+            return d.replace(tzinfo=tz) if tz else d
     oto_set.datetime = _DT
 
     # Sahte BACnet — gercek cihaza yazilmaz
@@ -94,7 +101,9 @@ def calistir(sb, tahmin=(30.0, 24.0), saat=12, lokasyon="maslak", dakika=0):
             ok, mesaj = _yaz(n["gateway_ip"], n["dnet"], n["mac_hex"],
                              n["obj_type"], n["obj_inst"], deger)
             s = {"deger": deger, "yazma_ok": ok, "mesaj": mesaj,
-                 "okunan": None, "ic_okunan": None}
+                 "okunan": None,
+                 "ic_okunan": (sb.ic.get((geri_okuma or {}).get(ad, {}).get("obj_inst"))
+                               if ok and ad in (geri_okuma or {}) else None)}
             if not ok:
                 s["durum"] = "yazma_hatasi"
             else:
@@ -428,6 +437,69 @@ sb = Sahte(TEMEL, yazma_basarili=False, saha={"CH1_REM_SET": 99})
 calistir(sb, saat=12)
 c("[saha] yazma hatasi farkli degerden once gelir",
   oto_set.durum_ozet()["sonuc"] == "yazma_hatasi", oto_set.durum_ozet()["sonuc"])
+
+# ── 11c2) KOMUT LOGU — Uzaktan Kontrol'de "hangi noktaya kac derece gitti" ──
+durum_sifirla()
+sb = Sahte(TEMEL)
+calistir(sb, tahmin=(30.0, 24.0), saat=12)          # gunduz, sicak -> CH 6.5, sogutma
+_kl = {r["nokta_adi"]: r for r in sb.komut_log}
+c("[komut logu] gecisten sonra 11 noktanin hepsi yazildi", len(sb.komut_log) == 11, len(sb.komut_log))
+c("[komut logu] chiller degeri dogru (6.5)", _kl.get("CH1_REM_SET", {}).get("hedef_deger") == 6.5,
+  _kl.get("CH1_REM_SET"))
+c("[komut logu] kollektor degeri dogru (gunduz sogutma 7.0)",
+  _kl.get("GUNDUZ_KOLLEKTOR_SET", {}).get("hedef_deger") == oto_set.DIG_SET["sogutma"]["GUNDUZ_KOLLEKTOR_SET"],
+  _kl.get("GUNDUZ_KOLLEKTOR_SET"))
+c("[komut logu] hepsi OTO-SET onekli", all(r["hata_mesaji"].startswith("OTO-SET") for r in sb.komut_log))
+c("[komut logu] mesaj gecis turunu soyler", "gündüz geçişi" in _kl["CH1_REM_SET"]["hata_mesaji"],
+  _kl["CH1_REM_SET"]["hata_mesaji"])
+c("[komut logu] dogrulanan nokta 'tamamlandi'", _kl["CH1_REM_SET"]["durum"] == "tamamlandi")
+c("[komut logu] HICBIR satir 'bekliyor' degil (RLS + guvenlik)",
+  all(r["durum"] != "bekliyor" for r in sb.komut_log))
+c("[komut logu] executed_at UTC", all(r["executed_at"].endswith("+00:00") for r in sb.komut_log))
+c("[komut logu] lokasyon alani dolu", all(r["lokasyon"] == "maslak" for r in sb.komut_log))
+
+_onceki = len(sb.komut_log)
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=1)  # gecis yok
+c("[komut logu] gecis yokken yeni satir YAZILMAZ", len(sb.komut_log) == _onceki)
+
+durum_sifirla()
+sb = Sahte(TEMEL, saha={"CH2_REM_SET": 7.5}, yazma_basarili=True)
+calistir(sb, tahmin=(30.0, 24.0), saat=12)
+_kl = {r["nokta_adi"]: r for r in sb.komut_log}
+c("[komut logu] cihazda farkli deger 'hata' ve mesajda gorunur",
+  _kl["CH2_REM_SET"]["durum"] == "hata", _kl["CH2_REM_SET"])
+
+durum_sifirla()
+sb = Sahte(TEMEL, yazma_basarili=False)
+calistir(sb, saat=12)
+c("[komut logu] yazma hatasi da loglanir",
+  len(sb.komut_log) == 11 and all(r["durum"] == "hata" for r in sb.komut_log))
+
+durum_sifirla()
+_eski_set = dict(oto_set.CH_SET)
+oto_set.CH_SET["sicak"] = 500.0
+sb = Sahte(TEMEL)
+calistir(sb, tahmin=(30.0, 24.0), saat=12)
+oto_set.CH_SET.update(_eski_set)
+_red = [r for r in sb.komut_log if "Gönderilmedi" in r["hata_mesaji"]]
+c("[komut logu] guvenlik kapisinin reddettigi 5 chiller de loglanir", len(_red) == 5, len(_red))
+c("[komut logu] reddedilen deger sahaya GITMEDI", all(d != 500.0 for d, _, _ in sb.yazilan))
+
+durum_sifirla()
+sb = Sahte(TEMEL, harita={"CH1_REM_SET": {"gateway_ip": "x", "dnet": 2, "mac_hex": "011F",
+                                          "obj_type": 1, "obj_inst": 101}},
+           ic={101: 7.5})
+calistir(sb, tahmin=(30.0, 24.0), saat=12)
+_kl = {r["nokta_adi"]: r for r in sb.komut_log}
+c("[komut logu] chiller satirinda IC SET bilgisi var", "IC SET: 7.5" in _kl["CH1_REM_SET"]["hata_mesaji"],
+  _kl["CH1_REM_SET"]["hata_mesaji"])
+
+durum_sifirla()
+sb = Sahte(TEMEL)
+sb.komut_log_hatasi = True                           # RLS SQL'i henuz calistirilmamis
+calistir(sb, saat=12)
+c("[komut logu] log yazilamasa da gecis TAMAMLANIR", len(sb.yazilan) == 11
+  and oto_set.durum_oku().get("donem") == "gunduz", (len(sb.yazilan), oto_set.durum_oku().get("donem")))
 
 # ── 11d) CHILLER IC SET IZLEMESI ──
 # REM SET oturmus olsa bile chiller onu uygulamayabilir (yerel mod vb.).

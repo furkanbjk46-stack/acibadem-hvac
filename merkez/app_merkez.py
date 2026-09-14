@@ -3113,7 +3113,9 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                 .select("nokta_adi,hedef_deger,durum,hata_mesaji,created_at,executed_at")
                 .eq("lokasyon", _uc_lok_id)
                 .order("created_at", desc=True)
-                .limit(30)
+                # Oto-set her geçişte ~11 satır yazar; gece + gündüz birlikte
+                # görünsün diye 50.
+                .limit(50)
                 .execute()
                 .data
             )
@@ -3149,9 +3151,19 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                     "hata":          "❌",
                 }
                 for _k in _uc_son_komutlar:
-                    _zaman = (_k.get("created_at", "")[:16].replace("T", " "))
+                    # created_at UTC gelir; ekranda İstanbul saati gösterilir
+                    try:
+                        from datetime import timezone as _ktz
+                        _zaman = (datetime.fromisoformat(str(_k.get("created_at", "")).replace("Z", "+00:00"))
+                                  .astimezone(_ktz(timedelta(hours=3))).strftime("%Y-%m-%d %H:%M"))
+                    except Exception:
+                        _zaman = (_k.get("created_at", "")[:16].replace("T", " "))
                     _icon  = _durum_renk.get(_k["durum"], "⏳")
-                    _hata  = f" — {_k['hata_mesaji']}" if _k.get("hata_mesaji") else ""
+                    _hm    = str(_k.get("hata_mesaji") or "")
+                    # Oto-set'in yazdığı satırlar (lokasyon PC'si) 🤖 ile ayrılır
+                    if _hm.startswith("OTO-SET"):
+                        _icon += " 🤖"
+                    _hata  = f" — {_hm}" if _hm else ""
                     st.markdown(
                         f"{_icon} `{_k['nokta_adi']}` → **{_k['hedef_deger']}°C** "
                         f"<span style='color:rgba(255,255,255,0.5);font-size:11px;'>{_zaman}{_hata}</span>",

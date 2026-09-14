@@ -35,7 +35,7 @@ import json
 import logging
 import os
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -389,7 +389,9 @@ def _kontrol_kilitsiz(sb_url, sb_key, lokasyon_id):
         hedefler = {n: CH_SET[yeni_ch] for n in CH_NOKTALAR}
         hedefler.update(DIG_SET[yeni_dig])
 
-        yazilan, hatali, detay = _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler)
+        _etiket = "%s geçişi · chiller=%s · kollektör/FCU=%s" % (
+            "gündüz" if donem == "gunduz" else "gece", yeni_ch, yeni_dig)
+        yazilan, hatali, detay = _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler, _etiket)
         if yazilan == 0 and hatali == 0:
             _sonuc_yaz("nokta_yok")
             return                                     # bu lokasyonda nokta yok
@@ -446,7 +448,56 @@ def _kontrol_kilitsiz(sb_url, sb_key, lokasyon_id):
         _sonuc_yaz("hata", e)
 
 
-def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler):
+# Uzaktan Kontrol "Son komutlar" listesinde oto-set satırlarını ayırt eden önek.
+# merkez/rls_komut_log.sql de bu öneke bakar: lokasyon anahtarı yalnızca bu
+# önekli ve SONUÇLANMIŞ kayıt ekleyebilir.
+OTO_KOMUT_ONEK = "OTO-SET"
+_KOMUT_TABLO_DURUMU = {
+    "oturdu":        "tamamlandi",
+    "sahada_farkli": "hata",
+    "yazma_hatasi":  "hata",
+    "dogrulanamadi": "dogrulanamadi",
+}
+
+
+def _komut_logu_yaz(sb_url, sb_key, lokasyon_id, detay, reddedilen, etiket):
+    """Her noktaya ne gönderildiğini ve sonucunu `komutlar` tablosuna yazar.
+
+    v7.0'da oto-set lokasyona taşınınca komutlar tablosu kullanılmaz olmuş ve
+    "kollektöre kaç derece gitti, chiller'a kaç gitti, ACK geldi mi" bilgisi
+    Uzaktan Kontrol ekranından kaybolmuştu. Satırlar sahaya yazma BİTTİKTEN
+    sonra, sonuçlanmış durumda eklenir — lokasyon hiçbir zaman `bekliyor`
+    komut üretmez (RLS de buna izin vermez).
+    Kayıt yazılamazsa geçiş etkilenmez; yalnızca uyarı loglanır.
+    """
+    simdi = datetime.now(timezone.utc).isoformat()
+    satirlar = []
+    for ad, s in detay.items():
+        mesaj = s.get("mesaj") or ""
+        if s.get("ic_okunan") is not None:
+            mesaj += " · IC SET: %s" % s["ic_okunan"]
+        satirlar.append({
+            "lokasyon": lokasyon_id, "nokta_adi": ad, "hedef_deger": s.get("deger"),
+            "durum": _KOMUT_TABLO_DURUMU.get(s.get("durum"), "hata"),
+            "hata_mesaji": "%s · %s · %s" % (OTO_KOMUT_ONEK, etiket, mesaj),
+            "executed_at": simdi,
+        })
+    for ad, deger, sebep in reddedilen:
+        satirlar.append({
+            "lokasyon": lokasyon_id, "nokta_adi": ad, "hedef_deger": deger,
+            "durum": "hata",
+            "hata_mesaji": "%s · %s · Gönderilmedi: %s" % (OTO_KOMUT_ONEK, etiket, sebep),
+            "executed_at": simdi,
+        })
+    if not satirlar:
+        return
+    try:
+        _istek(sb_url, sb_key, "/rest/v1/komutlar", veri=satirlar, method="POST")
+    except Exception as e:
+        logger.warning("oto_set komut logu yazilamadi (rls_komut_log.sql calistirildi mi?): %s", e)
+
+
+def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler, etiket=""):
     """Setpoint'leri BACnet ile yazar ve cihazdan geri okuyarak doğrular.
 
     (yazilan, hatali, detay) döner:
@@ -473,6 +524,7 @@ def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler):
 
     hatali = 0
     isler = []
+    reddedilen = []
     for ad, deger in hedefler.items():
         n = noktalar.get(ad)
         if not n:
@@ -482,18 +534,28 @@ def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler):
         if not gecerli:
             logger.error("oto_set: %s reddedildi — %s", ad, sebep)
             hatali += 1
+            reddedilen.append((ad, deger, sebep))
             continue
         isler.append((ad, n, deger))
 
     if not isler:
+        _komut_logu_yaz(sb_url, sb_key, lokasyon_id, {}, reddedilen, etiket)
         return 0, hatali, {}
 
-    detay = yaz_dogrula_toplu(isler)
+    # Chiller'lar için IC SET o anki değeri de okunur (bilgi amaçlı; asıl
+    # "uyguladı mı" kararı sonraki dakikalardaki izlemede verilir).
+    try:
+        from bacnet_writer import geri_okuma_haritasi
+        harita = geri_okuma_haritasi(lokasyon_id)
+    except Exception:
+        harita = {}
+    detay = yaz_dogrula_toplu(isler, {ad: harita[ad] for ad, _n, _d in isler if ad in harita})
     yazilan = sum(1 for s in detay.values() if s.get("yazma_ok"))
     hatali += sum(1 for s in detay.values() if not s.get("yazma_ok"))
     for ad, s in detay.items():
         if s.get("durum") != "oturdu":
             logger.error("oto_set: %s — %s", ad, s.get("mesaj"))
+    _komut_logu_yaz(sb_url, sb_key, lokasyon_id, detay, reddedilen, etiket)
     return yazilan, hatali, detay
 
 
