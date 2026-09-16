@@ -94,6 +94,24 @@ def _bugun():
     return datetime.now(IST).date()
 
 
+def _bol(toplam, agirliklar):
+    """Toplami agirliklara gore tam sayilara boler; parcalar toplami BIREBIR verir."""
+    t = sum(agirliklar) or 1
+    parcalar = [int(round(toplam * a / t)) for a in agirliklar[:-1]]
+    son = toplam - sum(parcalar)
+    if son < 0:                       # cok kucuk toplamlarda yuvarlama tasmasi
+        parcalar[0] += son
+        son = 0
+    return parcalar + [son]
+
+
+# Karsilastirma sayfasindaki "hedef" esikleri (sunum icin ornek degerler).
+# ikinci gostergenin biriminde: enerji kWh/m2/gun, dogalgaz kazan m3/m2/gun,
+# su L/m2/gun, sogutma ve kojen %. Kojende hedef ALT sinirdir (uretimde yuksek iyi).
+HEDEF_ESIKLERI = {"enerji": 1.60, "dogalgaz": 0.0045, "su": 1.50,
+                  "sogutma": 24.0, "kojen": 33.0}
+
+
 def _gun_sapmasi(gun):
     """O gune ozgu hava sapmasi (-3.0 .. +3.0 °C), TUM lokasyonlarda AYNI.
 
@@ -190,6 +208,19 @@ def veri_uret():
         kat_su      = 0.75 + 0.50 * rnd.random()
         kat_kazan   = 0.80 + 0.40 * rnd.random()
         oran_kojen  = 0.28 + 0.14 * rnd.random()      # %28 - %42 karsilama
+
+        # ── Sistem kirilimi (chiller / kule / MCC pano) ──
+        # Karsilastirma sayfasinin lokasyon detay penceresi icin. Maslak'ta bu
+        # kolonlar gercek sayaclardan dolu; demoda tum lokasyonlar icin uretilir.
+        # AYRI rastgele uretec kullanilir: ana uretecten sayi cekilirse
+        # tum mevcut tuketim degerleri kayar ve sunum verisi degisirdi.
+        rk = random.Random("%s-kirilim" % lok_id)
+        n_ch = 2 if lok_m2 < 8000 else 3 if lok_m2 < 12000 else 4 if lok_m2 < 16000 else 5
+        n_kule = 1 if n_ch <= 2 else 2 if n_ch <= 3 else 3
+        ch_agirlik = [0.7 + 0.6 * rk.random() for _ in range(n_ch)]
+        kule_agirlik = [0.8 + 0.4 * rk.random() for _ in range(n_kule)]
+        mcc_agirlik = [0.6 + 0.8 * rk.random() for _ in range(4)]
+        kule_orani = 0.08 + 0.05 * rk.random()          # kule tuketimi / chiller
         for i in range(GECMIS_GUN):
             gun = bugun - timedelta(days=i)
             if senaryo == "veri_yok" and gun == dun:
@@ -239,6 +270,15 @@ def veri_uret():
             if gun == dun and senaryo == "set_yuksek":
                 ch_set = 10.5
 
+            kule = round(chiller * kule_orani)
+            satir_kirilim = {}
+            for _i, _v in enumerate(_bol(chiller, ch_agirlik), 1):
+                satir_kirilim["Chiller%d_kWh" % _i] = _v
+            for _i, _v in enumerate(_bol(kule, kule_agirlik), 1):
+                satir_kirilim["Kule%d_kWh" % _i] = _v
+            for _i, _v in enumerate(_bol(mcc, mcc_agirlik), 1):
+                satir_kirilim["MCC%d_kWh" % _i] = _v
+
             energy.append({
                 "lokasyon_id": lok_id,
                 "Tarih": gun.isoformat(),
@@ -247,9 +287,12 @@ def veri_uret():
                 "Kojen_Uretim_kWh": kojen,
                 "MCC_Tuketim_kWh": mcc,
                 "Chiller_Tuketim_kWh": chiller,
+                "Chiller_Adet": n_ch,
                 "VRF_Split_Tuketim_kWh": vrf,
                 "Toplam_Sogutma_Tuketim_kWh": chiller + vrf,
-                "Diger_Yuk_kWh": max(0, toplam - mcc - chiller - vrf),
+                # Kuleler chiller ve MCC'den AYRI sayilir; diger yuk kalan kisimdir
+                "Diger_Yuk_kWh": max(0, toplam - mcc - chiller - vrf - kule),
+                **satir_kirilim,
                 "Kazan_Dogalgaz_m3": kazan,
                 "Kojen_Dogalgaz_m3": round(kojen / 6.2) if kojen else 0,
                 "Su_Tuketimi_m3": round(toplam * 0.0009 * kat_su, 1),
@@ -287,6 +330,7 @@ def veri_uret():
         {"key": "oto_donem", "value": ters},          # ← gecisi tetikler
         {"key": "oto_gunduz_saat", "value": "5"},
         {"key": "oto_gece_saat", "value": "22"},
+        {"key": "hedef_esikleri", "value": json.dumps(HEDEF_ESIKLERI)},
         {"key": "m2_degerler", "value": json.dumps({l: m for l, _, m in LOKASYONLAR})},
     ]
 

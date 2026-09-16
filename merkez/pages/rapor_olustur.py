@@ -115,6 +115,13 @@ HASTANELER = {
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs", "merkez_config.json")
 
 def load_config():
+    # ── SUNUM/DEMO MODU ── (lokasyon_detay.py ile aynı): örnek veri sunucusu
+    # kullanılır. Olmadan demoda "Rapor oluştur" canlı Supabase'e gidiyordu.
+    if os.environ.get("SYNAPSE_DEMO", "").strip() == "1":
+        import sys as _sys
+        _sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        import _sim_sunucu
+        return {"supabase_url": _sim_sunucu.sunucu_baslat(8099), "supabase_key": "simulasyon"}
     try:
         if "supabase" in st.secrets:
             cfg = {

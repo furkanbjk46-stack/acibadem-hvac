@@ -24,7 +24,11 @@ from streamlit_autorefresh import st_autorefresh
 #   - QR bakım sayfasında: form doldurulurken sıfırlanmasın
 #   - Giriş ekranında: 10 sn'de bir yenileme, yazılan kullanıcı adı/parolayı
 #     siler ve girişi imkânsız hale getirirdi
-if "bakim" not in st.query_params and st.session_state.get("giris_ok"):
+#   - Sunum modunda karşılaştırma sayfasında: detay penceresi açıkken 10 sn'lik
+#     yenileme pencereyi kapatıyordu (yalnızca demo; canlı portal değişmez)
+if ("bakim" not in st.query_params and st.session_state.get("giris_ok")
+        and not (os.environ.get("SYNAPSE_DEMO", "").strip() == "1"
+                 and st.session_state.get("detay_ozet"))):
     st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
 # ============ CSS ============
@@ -1152,7 +1156,13 @@ if "ozet" in st.query_params:
 
 if st.session_state.get("detay_ozet"):
     with st.container(key="ozet_gecis_katmani"):
-        _oz_dosya = os.path.join(os.path.dirname(__file__), "pages", "ozet_karsilastirma.py")
+        # Sunum modunda genişletilmiş sürüm (tıklanabilir detay penceresi,
+        # hedef eşikleri, sistem dağılımı). Canlı portal mevcut sayfayı kullanır.
+        # Demo dosyası BİLEREK pages/ dışında: Streamlit pages/ altındaki her
+        # dosyayı kenar menüsüne ekliyor, canlı portalın menüsünde görünüyordu.
+        _oz_dosya = (os.path.join(os.path.dirname(__file__), "sunum", "ozet_karsilastirma_demo.py")
+                     if _demo_modu() else
+                     os.path.join(os.path.dirname(__file__), "pages", "ozet_karsilastirma.py"))
         with open(_oz_dosya, "r", encoding="utf-8") as _f:
             _oz_kaynak = _f.read()
         exec(compile(_oz_kaynak, _oz_dosya, "exec"), globals())
