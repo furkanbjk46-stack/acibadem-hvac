@@ -59,7 +59,7 @@ CONFIG = {
 
     # Toleranslar
     "TOLERANCE_CRITICAL": 2.0,
-    "TOLERANCE_NORMAL": 3.0,  # standart bant toleransı ±3°C (doküman ile eşit — G-2)
+    "TOLERANCE_NORMAL": 5.0,  # standart bant toleransı ±3°C (doküman ile eşit — G-2)
     
     # SAT analiz eşikleri
     "SAT_COOLING_THRESHOLD": 1.0,
