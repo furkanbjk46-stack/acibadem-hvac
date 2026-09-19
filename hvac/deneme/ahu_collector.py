@@ -495,7 +495,14 @@ def ek_ekipman_satirlari_olustur(outlet: float | None, inlet: float | None,
                 row["Set (°C)"] = ic_set
             rows.append(row)
 
-    if outlet_heat is not None and inlet_heat is not None and abs(outlet_heat - inlet_heat) >= CALISMA_DT_ESIGI:
+    # Üç kazanın durumu da okunabiliyor ve hepsi KAPALI ise kollektör ΔT'si soğuma
+    # artığıdır (sahte BAND_LOW). Durum bilinmiyorsa eski davranış korunur.
+    _kazan_durum = [_nokta_oku(f"KAZAN-{n} DURUM BILGISI", enerji_verileri) for n in (1, 2, 3)]
+    _kazanlar_kapali = all(d is not None and d == 0 for d in _kazan_durum)
+    if _kazanlar_kapali:
+        logger.info("Tüm kazanlar kapalı — ısıtma kollektörü analiz dışı")
+    if (not _kazanlar_kapali and outlet_heat is not None and inlet_heat is not None
+            and abs(outlet_heat - inlet_heat) >= CALISMA_DT_ESIGI):
         rows.append({
             "Name": "Isitma Kollektoru", "Location": lokasyon, "Type": "Collector",
             "Inlet (°C)": inlet_heat, "Outlet (°C)": outlet_heat,

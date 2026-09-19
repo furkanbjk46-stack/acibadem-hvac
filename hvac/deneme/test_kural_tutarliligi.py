@@ -133,6 +133,44 @@ c("PDF: korumasız summary[...] okuması kalmadı",
   len(re.findall(r"summary\[data\.row\.index\]", html)) == 2)
 c("PDF: satır bölünmesi engellendi (rowPageBreak: 'avoid')", "rowPageBreak: 'avoid'" in html)
 
+# ── 4) v7.7: TERS_DT maskelenmesi, tek vana modu, kısmi yük, konfor, kollektör ──
+for cv in (45, 60, 69):
+    r = _analiz(_prof(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=cv))
+    c(f"soğutmada üfleme sıcak, vana %{cv} → TERS_DT KRİTİK kalır (SAT_WARNING ezmez)",
+      r.rule == "TERS_DT" and r.severity == "CRITICAL", (r.rule, r.severity))
+p26 = _prof(sat=22.0, ret=22.5, setp=22.0, hv=9.44, cv=0)
+p26.temperatures.oat = 21.7
+c("[Ahu-26] yalnız ısıtma vanası %9 açık → ISITMA (OAT'tan soğutma değil)",
+  "HEAT" in az.determine_effective_mode(p26), az.determine_effective_mode(p26))
+c("iki vana da kapalı → OAT kuralı hâlâ çalışır",
+  az.determine_effective_mode(_prof(hv=0, cv=0)) == "UNKNOWN")
+r = _analiz(_prof(mode="COOLING", sat=21.0, ret=23.71, room=23.71, setp=23.0, cv=20))
+c("[Ahu-13] vana %20 kısık, düşük ΔT → LOW_DT değil", r.rule != "LOW_DT", r.rule)
+r = _analiz(_prof(mode="COOLING", sat=22.0, ret=24.0, room=24.0, setp=23.0, cv=80))
+c("vana %80 açık, düşük ΔT → LOW_DT (veya daha ağır) korunur", r.rule != "NORMAL", r.rule)
+r = _analiz(_prof(mode="COOLING", sat=16.0, ret=26.2, room=26.2, setp=23.0, cv=40))
+c("sapma 3.2 → COMFORT_OVERRIDE (değişmedi)", r.rule == "COMFORT_OVERRIDE", r.rule)
+r = _analiz(_prof(mode="COOLING", sat=16.0, ret=36.06, room=36.06, setp=23.0, cv=40))
+c("sapma 13, vana %40 → COMFORT_CONTROL_FAULT KRİTİK",
+  r.rule == "COMFORT_CONTROL_FAULT" and r.severity == "CRITICAL", (r.rule, r.severity))
+r = _analiz(_prof(mode="COOLING", sat=16.0, ret=36.06, room=36.06, setp=23.0, cv=95))
+c("sapma 13, vana %95 → COMFORT_CAPACITY_FAULT KRİTİK",
+  r.rule == "COMFORT_CAPACITY_FAULT" and r.severity == "CRITICAL", (r.rule, r.severity))
+
+import ahu_collector as ac
+_orj = ac._nokta_oku
+def _kollektor(durumlar):
+    ac._nokta_oku = lambda ad, ev=None: durumlar.get(ad)
+    try:
+        return [x for x in ac.ek_ekipman_satirlari_olustur(None, None, 39.18, 45.0)
+                if x["Name"] == "Isitma Kollektoru"]
+    finally:
+        ac._nokta_oku = _orj
+_k = {f"KAZAN-{n} DURUM BILGISI": 0 for n in (1, 2, 3)}
+c("üç kazan kapalı → ısıtma kollektörü analiz dışı", _kollektor(_k) == [])
+c("bir kazan açık → kollektör analizde", len(_kollektor(dict(_k, **{"KAZAN-2 DURUM BILGISI": 1}))) == 1)
+c("kazan durumu bilinmiyor → kollektör analizde (geri uyum)", len(_kollektor({})) == 1)
+
 gecen = sum(1 for _, k, _ in T if k)
 for ad, k, d in T:
     print(("PASS " if k else "FAIL ") + ad + ("" if k else "   [%s]" % (d,)))

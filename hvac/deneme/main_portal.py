@@ -69,7 +69,12 @@ CONFIG = {
     "SAT_HEATING_MIN": 27.0,  # Isıtma için minimum SAT
     "SAT_HEATING_MAX": 30.0,  # Isıtma için maksimum SAT
     "COMFORT_DEPARTURE": 3.0,
-    
+    # Konfor sapması derecelendirmesi: bu değerin ÜSTÜNDEKİ sapma "optimizasyon
+    # ertelendi" diye geçiştirilmez, KRİTİK kurala döner. Vana bu eşik ve üstünde
+    # açıksa kapasite yetersiz; altındaysa kontrol/set sorunu.
+    "COMFORT_CRITICAL_DEPARTURE": 6.0,
+    "COMFORT_CAPACITY_VALVE": 90.0,
+
     # Skorlama parametreleri
     "SCORE_DEPARTURE_WEIGHT": 1.5,
     "SCORE_LOW_DT_BONUS": 4.0,
@@ -809,6 +814,31 @@ INSTRUCTION_GUIDE = {
             "Donma koruma devre dışı",
             "Otomasyon hatası"
         ]
+    },
+    "COMFORT_CAPACITY_FAULT": {
+        "severity": "CRITICAL",
+        "score": 8.0,
+        "title": "Konfor Sağlanamıyor — Kapasite Yetersiz",
+        "description": "Oda-set sapması >6°C ve ilgili vana ≥%90 açık. Santral tam kapasitede ama mahal konforu sağlanamıyor.",
+        "steps": [
+            "Su giriş sıcaklığını ve debisini kontrol edin (kollektör/chiller/kazan)",
+            "Coil ve filtre kirliliğini kontrol edin",
+            "Fan debisi ve kanal basıncını kontrol edin",
+            "Mahal yükü (kapı/pencere, cihaz ısısı) arttı mı kontrol edin",
+            "Sürekli ise ek kapasite değerlendirin"
+        ],
+    },
+    "COMFORT_CONTROL_FAULT": {
+        "severity": "CRITICAL",
+        "score": 8.0,
+        "title": "Konfor Sağlanamıyor — Kontrol/Set Sorunu",
+        "description": "Oda-set sapması >6°C ama ilgili vana %90'ın altında. Kapasite kullanılmıyor: kontrol döngüsü, set değeri veya vana aktüatörü sorunu.",
+        "steps": [
+            "BMS'te santral set değerini ve modunu kontrol edin",
+            "Vana aktüatörünün komutu takip ettiğini sahada doğrulayın",
+            "Oda/emiş sensörünün doğru okuduğunu kontrol edin",
+            "PID/kontrol döngüsü ayarlarını ve manuel override olup olmadığını kontrol edin"
+        ],
     },
     "INSUFFICIENT_CAPACITY": {
         "severity": "WARNING",
@@ -1922,6 +1952,21 @@ class HVACAnalyzer:
         # 6. Comfort override — S4 gereği EN SONA alındı: yalnızca daha ağır hiçbir
         # kural tetiklenmediyse döner (maskeleme gücü kalktı).
         departure = self.calculate_departure(profile)
+        if departure is not None and departure > self.config["COMFORT_CRITICAL_DEPARTURE"]:
+            _vana = heat_v if is_heating else cool_v
+            if _vana >= self.config["COMFORT_CAPACITY_VALVE"]:
+                result.update({
+                    "action": "KRİTİK: Konfor Sağlanamıyor — Kapasite Yetersiz",
+                    "reason": f"Oda-Setpoint sapması {departure:.1f}°C, vana %{_vana:.0f} (tam açık). Santral kapasitesi yetmiyor.",
+                    "rule": "COMFORT_CAPACITY_FAULT"
+                })
+            else:
+                result.update({
+                    "action": "KRİTİK: Konfor Sağlanamıyor — Kontrol/Set Sorunu",
+                    "reason": f"Oda-Setpoint sapması {departure:.1f}°C ama vana yalnız %{_vana:.0f}. Kontrol döngüsü/set/vana aktüatörü kontrol edilmeli.",
+                    "rule": "COMFORT_CONTROL_FAULT"
+                })
+            return result
         if departure is not None and departure > self.config["COMFORT_DEPARTURE"]:
             result.update({
                 "action": "Prioritize Comfort",
@@ -2077,6 +2122,13 @@ class HVACAnalyzer:
             if heat_v > cool_v and heat_v >= 15:
                 return "HEATING (Auto)"
             if cool_v > heat_v and cool_v >= 15:
+                return "COOLING (Auto)"
+
+            # Tek vana açık (diğeri ~%0): kısık da olsa mod o vanadır
+            # (MAS-1 Ahu-26: ısıtma %9.44 / soğutma %0 iken OAT'tan SOĞUTMA çıkıyordu)
+            if heat_v >= 0.5 and cool_v < 0.5:
+                return "HEATING (Auto)"
+            if cool_v >= 0.5 and heat_v < 0.5:
                 return "COOLING (Auto)"
 
             # 3. SAT vs Return sıcaklık farkı
@@ -2401,6 +2453,15 @@ class HVACAnalyzer:
                 result.rule = "TERS_DT"
                 result.severity = _ig_ters.get("severity", "CRITICAL")
                 result.score = _ig_ters.get("score", 8.5)
+            elif delta_t < (target_dt - check_tolerance) and \
+                    (_h_valve if is_heating else _c_valve) < self.config["VALVE_THRESHOLD"]:
+                # Vana kısık → düşük ΔT beklenen kısmi yüktür, arıza değil
+                result.status = "IN_BAND"
+                result.band = "Kısmi yük"
+                result.action = "Normal (kısmi yük)"
+                result.reason = (f"ΔT ({delta_t:.1f}) < Hedef ({target_dt:.1f}) ama ilgili vana "
+                                 f"%{(_h_valve if is_heating else _c_valve):.0f} (<%{self.config['VALVE_THRESHOLD']:.0f}): kısmi yük.")
+                result.rule = "NORMAL"
             elif delta_t < (target_dt - check_tolerance):
                 result.status = "LOW"
                 result.action = "Düşük ΔT"
@@ -2422,6 +2483,10 @@ class HVACAnalyzer:
         # AHU-özel versiyonudur ve öncelikli olarak çalışır. İki mantığı
         # birleştirirken dikkat edin; inline AHU kontrolleri daha hassastır.
         # VANA EŞİK KONTROLÜ: Vana <%40 ise SAT kontrolü yapılmaz
+
+        _ters_onceki = ({_a: getattr(result, _a) for _a in
+                         ("status", "action", "reason", "rule", "severity", "score")}
+                        if result.rule == "TERS_DT" else None)
 
         # UNKNOWN mod → mod tespit edilemedi, SAT analizi yanlış sonuç üretir — atla
         _skip_sat_check = (effective_mode == "UNKNOWN")
@@ -2574,6 +2639,11 @@ class HVACAnalyzer:
                 else:
                     result.sat_status = "OPTIMAL"
 
+        # TERS_DT (KRİTİK) daha hafif bir SAT kuralıyla (SAT_WARNING vb.) ezilmesin
+        if _ters_onceki is not None and result.rule != "TERS_DT" and result.severity != "CRITICAL":
+            for _a, _v in _ters_onceki.items():
+                setattr(result, _a, _v)
+
         # --- 3. SPECIAL CONDITIONS ---
         special = self.check_special_conditions(profile, delta_t, effective_mode=effective_mode)
         # MZ-9: Arızalı sensöre dayanan özel kurallar bastırılır —
@@ -2585,7 +2655,9 @@ class HVACAnalyzer:
             elif skip_return and special["rule"] == "AIR_DT_LOW_COOL":
                 special = {"action": "", "reason": "", "rule": ""}
         # NOT_COOLING / NOT_HEATING / TERS_DT / VERI_EKSIK — özel durum tarafından ezilmez
-        if special["rule"] and result.rule not in ("NOT_COOLING", "NOT_HEATING", "TERS_DT", "VERI_EKSIK"):
+        # İstisna: SIMUL_HEAT_COOL, TERS_DT'nin kök nedenidir (ısıtma+soğutma birlikte) — o kazanır
+        if special["rule"] and (result.rule not in ("NOT_COOLING", "NOT_HEATING", "TERS_DT", "VERI_EKSIK")
+                                or (result.rule == "TERS_DT" and special["rule"] == "SIMUL_HEAT_COOL")):
             result.action = special["action"]
             result.reason = special["reason"]
             result.rule = special["rule"]
@@ -2763,6 +2835,8 @@ class HVACAnalyzer:
             result.severity = "WARNING"
         elif result.rule in ["IN_BAND", "NORMAL"]:
             result.severity = "OPTIMAL"
+        elif result.rule in ("COMFORT_CAPACITY_FAULT", "COMFORT_CONTROL_FAULT"):
+            result.severity = "CRITICAL"
 
         # S8/S9: tutarlılık son kontrolü
         return self.tutarlilik_kontrol(result, profile, effective_mode)
