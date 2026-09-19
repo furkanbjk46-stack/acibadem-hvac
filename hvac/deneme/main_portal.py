@@ -917,6 +917,74 @@ INSTRUCTION_GUIDE = {
             "Yüksek taze hava oranı + sıcak dış hava"
         ]
     },
+    # ── Ön koşul kapısı (on_kosul.py) kararları ──
+    # Bu kodlar raporun Kural sütununda görünüyor ama açıklamaları yoktu;
+    # talimat butonu "Bu kural için talimat bulunamadı" diyordu.
+    "SKIP_STOP": {
+        "severity": "OPTIMAL",
+        "score": 0.0,
+        "title": "Analiz Dışı — Santral Kapalı (STOP)",
+        "description": "BMS start komutu KAPALI ve kanal basıncı yok: santral bilerek kapatılmış. Kapalı santralde ΔT/üfleme analizi anlamsız olduğu için analiz yapılmadı. Arıza DEĞİLDİR. Aynı santral günlerce kapalı görünüyorsa kapatmanın bilinçli olduğunu doğrulayın.",
+        "steps": [
+            "Santralin kapalı olması planlı mı (mahal kullanım dışı, bakım, mevsimsel) doğrulayın",
+            "Kapalı olmaması gerekiyorsa BMS'de start komutu ve zaman programını kontrol edin",
+            "Satırdaki gün sayısı uzuyorsa (7+ gün eskalasyon) santral sahibine bilgi verin"
+        ],
+        "causes": [
+            "Planlı kapatma / mahal kullanım dışı",
+            "BMS zaman programı santrali kapatıyor",
+            "Bakım için elle durdurulmuş"
+        ]
+    },
+    "SKIP_VERI_YOK": {
+        "severity": "WARNING",
+        "score": 2.0,
+        "title": "Analiz Dışı — Veri Alınamadı",
+        "description": "Bu santralin BACnet okuması başarısız oldu (iletişim sorunu). Santral arızalı demek DEĞİLDİR; yalnızca veri gelmediği için analiz yapılamadı. Sorun sürerse santral izlenemez hâle gelir.",
+        "steps": [
+            "BMS/gateway bağlantısını ve ilgili cihazın çevrimiçi olduğunu kontrol edin",
+            "Okuma şablonundaki nokta adreslerinin (DNET/MAC/nesne) değişmediğini doğrulayın",
+            "Aynı gateway'e bağlı diğer santrallerde de veri yoksa ağ/gateway arızası olabilir",
+            "Gün sayısı uzuyorsa (7+ gün eskalasyon) otomasyon firmasına bildirin"
+        ],
+        "causes": [
+            "Gateway / BACnet ağı iletişim kesintisi",
+            "Kontrol paneli kapalı veya yeniden başlıyor",
+            "Nokta adresi değişmiş / şablon güncel değil"
+        ]
+    },
+    "SKIP_SENSOR_ARIZA": {
+        "severity": "WARNING",
+        "score": 3.0,
+        "title": "Analiz Dışı — Sensör Arızası",
+        "description": "Üfleme veya emiş sensörü fiziksel olarak mümkün olmayan bir değer okuyor (aralık dışı). Hatalı sensörle yapılan analiz yanlış alarm üretir; bu yüzden santral analiz dışı bırakıldı ve dijital bakım kartına otomatik arıza işareti düşüldü.",
+        "steps": [
+            "Bakım kartında işaretlenen sensörü (üfleme / emiş) sahada kontrol edin",
+            "Sensör kablosu, klemens ve BMS'deki ölçek/offset ayarını doğrulayın",
+            "Sensör değiştirildiyse bakım kartındaki arıza işaretini kaldırın — analiz otomatik devreye girer"
+        ],
+        "causes": [
+            "Sensör arızalı veya kopuk",
+            "Kablo/klemens temassızlığı",
+            "BMS'de yanlış ölçek/offset tanımı"
+        ]
+    },
+    "SKIP_BASINC_SENSOR_ARIZA": {
+        "severity": "WARNING",
+        "score": 3.0,
+        "title": "Analiz Dışı — Basınç Sensörü Arızası",
+        "description": "Kanal basınç sensörü tutarsız/aralık dışı değer okuyor. Fanın çalışıp çalışmadığı basınçla doğrulandığı için bu sensör olmadan santralin gerçekten hava bastığı onaylanamaz; analiz dışı bırakıldı ve bakım kartına işaret düşüldü.",
+        "steps": [
+            "Kanal basınç sensörünü ve hortum bağlantılarını kontrol edin (tıkanma, kopma)",
+            "BMS'deki basınç ölçeğini ve birimini (Pa) doğrulayın",
+            "Sensör onarılınca bakım kartındaki arıza işaretini kaldırın"
+        ],
+        "causes": [
+            "Basınç hortumu kopuk/tıkalı",
+            "Sensör arızalı",
+            "BMS ölçek/birim hatası"
+        ]
+    },
     "VERI_EKSIK": {
         "severity": "WARNING",
         "score": 5.0,
@@ -1320,7 +1388,20 @@ class HVACAnalyzer:
         profile.pressure_pa = self.utils.to_float(normalized.get("Basınç (Pa)"))
         return profile
     
-    def calculate_delta_t(self, profile: EquipmentProfile) -> Tuple[Optional[float], str]:
+    def _isitma_modunda(self, profile: EquipmentProfile, effective_mode: Optional[str] = None) -> bool:
+        """ΔT yönü için mod kararı — hedef ΔT ile AYNI kaynaktan.
+
+        effective_mode verilirse o kullanılır (AUTO modu vana/sıcaklıkla çözülmüş
+        hâli). Eskiden ΔT ham profile.mode'a ("AUTO"), hedef ise effective_mode'a
+        bakıyordu: ısıtma vanası %100 olan AUTO santralde ΔT SOĞUTMA formülüyle
+        hesaplanıp ISITMA hedefiyle kıyaslanıyordu (MAS-1 Ahu-7: üfleme 13.0,
+        emiş 23.57 → ΔT +10.6 / sapma +0.6 görünüyordu; gerçekte −10.6).
+        """
+        if effective_mode:
+            return "HEAT" in str(effective_mode).upper()
+        return self.utils.is_heating_mode(profile.mode)
+
+    def calculate_delta_t(self, profile: EquipmentProfile, effective_mode: Optional[str] = None) -> Tuple[Optional[float], str]:
         """Calculate **WATER** ΔT (coil/plant). 
 
         IMPORTANT:
@@ -1345,7 +1426,7 @@ class HVACAnalyzer:
                 # uygulanıp ΔT negatif çıkıyor, sağlıklı chiller sahte CHILLER_BYPASS (-4)
                 # olarak KRİTİK işaretleniyordu.
                 delta_t = inlet - outlet
-            elif self.utils.is_heating_mode(profile.mode):
+            elif self._isitma_modunda(profile, effective_mode):
                 delta_t = inlet - outlet
             else:
                 delta_t = outlet - inlet
@@ -1367,7 +1448,7 @@ class HVACAnalyzer:
 
         return delta_t, dt_source
 
-    def calculate_air_delta_t(self, profile: EquipmentProfile) -> Optional[float]:
+    def calculate_air_delta_t(self, profile: EquipmentProfile, effective_mode: Optional[str] = None) -> Optional[float]:
         """Calculate AIR ΔT from Supply/Return (AHU discharge vs return air)."""
         # Supply (°C) / Return (°C) yoksa SAT (üfleme) ve Room (dönüş) üzerinden hesapla
         supply_air = profile.temperatures.supply
@@ -1381,7 +1462,7 @@ class HVACAnalyzer:
         if supply_air is None or return_air is None:
             return None
 
-        if self.utils.is_heating_mode(profile.mode):
+        if self._isitma_modunda(profile, effective_mode):
             air_dt = supply_air - return_air
         else:
             air_dt = return_air - supply_air
@@ -1761,7 +1842,7 @@ class HVACAnalyzer:
                 return_air = profile.temperatures.room
             water_in = profile.temperatures.inlet if profile.temperatures.inlet is not None else profile.temperatures.plant_supply
             water_out = profile.temperatures.outlet if profile.temperatures.outlet is not None else profile.temperatures.plant_return
-            air_dt = self.calculate_air_delta_t(profile)
+            air_dt = self.calculate_air_delta_t(profile, effective_mode)
 
             # COOLING: valve high but supply air still warm relative to entering water
             if (not is_heating and profile.valves.cooling is not None and 
@@ -2043,8 +2124,9 @@ class HVACAnalyzer:
         """Ortak delta_t hesaplaması ve STANDBY kontrolü. STANDBY ise doldurulmuş result döner, değilse None."""
         # Delta T hesaplamaları (tüm path'ler için ortak)
         eq_type = self.classify_equipment_type(profile.type)
-        delta_t, dt_source = self.calculate_delta_t(profile)
-        air_dt = self.calculate_air_delta_t(profile)
+        # ΔT yönü hedefle AYNI moddan (effective_mode) — bkz. _isitma_modunda
+        delta_t, dt_source = self.calculate_delta_t(profile, effective_mode)
+        air_dt = self.calculate_air_delta_t(profile, effective_mode)
         result.air_delta_t = air_dt
 
         # AHU'larda bireysel su sensörü yok — kolektör suyu tüm AHU'lara aynı
@@ -2846,6 +2928,18 @@ async def portal_home(request: Request):
             status_code=302,
         )
     return HTMLResponse(_load_or_create_portal_html())
+
+@app.get("/api/instruction-guide")
+async def api_instruction_guide():
+    """Talimat butonlarının TEK kaynağı.
+
+    Ön yüzdeki (index.html) talimat listesi elle kopyalanmıştı ve arka uçtan
+    geri kalmıştı (25'e karşı 32 kural): TERS_DT, SENSOR_FAULT, VERI_EKSIK,
+    FAN_BASMIYOR... butonları "talimat bulunamadı" diyordu. Ön yüz artık
+    buradan okur; gömülü liste yalnızca yedek olarak kalır.
+    """
+    return INSTRUCTION_GUIDE
+
 
 @app.get("/home", include_in_schema=False)
 async def home_redirect():

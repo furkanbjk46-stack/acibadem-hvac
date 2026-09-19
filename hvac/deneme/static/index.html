@@ -3354,10 +3354,23 @@
         }
 
         // Show instructions modal
-        function showInstructions(ruleCode) {
-            console.log('showInstructions called with ruleCode:', ruleCode);
-            console.log('Available keys in INSTRUCTION_DATA:', Object.keys(INSTRUCTION_DATA));
+        // Talimatlar arka uçtan (INSTRUCTION_GUIDE) bir kez yüklenir ve gömülü
+        // listenin üzerine yazılır. Gömülü liste 25 kuralda kalmıştı; arka uç 36
+        // kural üretiyor → bazı butonlar "talimat bulunamadı" diyordu.
+        // İstek başarısız olursa gömülü liste yedek olarak kullanılır.
+        let _talimatYuklemesi = null;
+        function _talimatlariYukle() {
+            if (!_talimatYuklemesi) {
+                _talimatYuklemesi = fetch('/api/instruction-guide')
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => { if (d && typeof d === 'object') Object.assign(INSTRUCTION_DATA, d); })
+                    .catch(() => { _talimatYuklemesi = null; });   // sonra tekrar denenebilsin
+            }
+            return _talimatYuklemesi || Promise.resolve();
+        }
 
+        async function showInstructions(ruleCode) {
+            await _talimatlariYukle();
             const instruction = INSTRUCTION_DATA[ruleCode];
             console.log('Found instruction:', instruction);
 
@@ -3383,7 +3396,7 @@
             // Set steps
             const stepsList = document.getElementById('instructionSteps');
             stepsList.innerHTML = '';
-            instruction.steps.forEach(step => {
+            (instruction.steps || []).forEach(step => {
                 const li = document.createElement('li');
                 li.textContent = step;
                 stepsList.appendChild(li);
@@ -3842,6 +3855,10 @@
                     startY: 112,
                     head: [['Santral Kodu', 'Kontrol Edilen Bileşen', 'Arıza/Bakım Sayısı', 'Sistem Durumu', 'Öncelik Seviyesi']],
                     body: body,
+                    // Satır sayfaya sığmıyorsa bölünmez, tamamı sonraki sayfaya geçer.
+                    // Bölünen satırın devam parçası hook'lara row.index = -1 ile
+                    // geliyordu → summary[-1] undefined → "reading 'badgeLabel'" hatası.
+                    rowPageBreak: 'avoid',
                     theme: 'grid',
                     styles: { font: FN, fontSize: 9, cellPadding: 7, lineColor: [220, 220, 220], lineWidth: 0.7, halign: 'center', valign: 'middle', textColor: [51, 51, 51] },
                     headStyles: { font: FN, fontStyle: 'bold', fillColor: NAVY, textColor: [255, 255, 255], fontSize: 10 },
@@ -3852,6 +3869,7 @@
                     didParseCell: function (data) {
                         if (data.section !== 'body') return;
                         const s = summary[data.row.index];
+                        if (!s) return;   // bölünmüş satır parçası (index -1) — güvenli geç
                         if (s.critical) data.cell.styles.fillColor = [255, 235, 238];
                         if (data.column.index === 3) {
                             data.cell.styles.textColor = s.statusColor;
@@ -3866,6 +3884,7 @@
                         // Öncelik sütununa rozet (badge) görünümü çiz
                         if (data.section === 'body' && data.column.index === 4) {
                             const s = summary[data.row.index];
+                            if (!s) return;   // bölünmüş satır parçası (index -1) — rozet çizilmez
                             const txt = s.badgeLabel;
                             pdf.setFont(FN, 'bold');
                             pdf.setFontSize(8);
