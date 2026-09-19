@@ -2059,7 +2059,11 @@ class HVACAnalyzer:
                 result.reason = (result.reason + " | Öneri tutarsız bulundu ve kaldırıldı.").strip(" |")
                 _duzeltmeler.append(f"tutarsız SAT önerisi ({_rs:.1f}) boşaltıldı")
 
-        # 3) OPTIMAL etiket + yüksek skor çelişkisi
+        # 3) OPTIMAL etiket + yüksek skor çelişkisi. NORMAL/IN_BAND satırda çelişki
+        #    skordadır (etiketi değil): kural normal ise skor uyarı eşiğinin altına çekilir.
+        if result.rule in ("NORMAL", "IN_BAND") and result.severity == "OPTIMAL" and result.score >= 6.0:
+            _duzeltmeler.append(f"NORMAL satır skoru {result.score:.1f} → 5.9")
+            result.score = 5.9
         if result.severity == "OPTIMAL" and result.score >= 6.0 and result.rule not in ("STANDBY", "MAINTENANCE"):
             result.severity = "WARNING"
             _duzeltmeler.append(f"OPTIMAL + skor {result.score:.1f} → WARNING")

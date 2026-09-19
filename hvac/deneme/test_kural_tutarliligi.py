@@ -157,6 +157,11 @@ r = _analiz(_prof(mode="COOLING", sat=16.0, ret=36.06, room=36.06, setp=23.0, cv
 c("sapma 13, vana %95 → COMFORT_CAPACITY_FAULT KRİTİK",
   r.rule == "COMFORT_CAPACITY_FAULT" and r.severity == "CRITICAL", (r.rule, r.severity))
 
+for cv in (13, 20, 35):
+    r = _analiz(_prof(mode="COOLING", sat=21.0, ret=23.71, room=23.71, setp=23.0, cv=cv))
+    c(f"NORMAL kural önemi OPTIMAL (WARNING değil), vana %{cv}",
+      r.rule != "NORMAL" or (r.severity == "OPTIMAL" and r.score < 6.0), (r.rule, r.severity, r.score))
+
 import ahu_collector as ac
 _orj = ac._nokta_oku
 def _kollektor(durumlar):
