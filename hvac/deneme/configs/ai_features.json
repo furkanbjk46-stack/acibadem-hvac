@@ -1,0 +1,24 @@
+{
+  "_aciklama": "AI olgunluk puanindaki ileri ozelliklerin GERCEK durumu. ai_progress.py bu dosyayi okur; dosya yoksa hepsi kapali sayilir. Bir ozelligi yalnizca KODU GERCEKTEN CALISIYORSA true yap — puan, sahada calisan seyi yansitmali.",
+
+  "prediction_model": {
+    "active": true,
+    "_kanit": "monthly_report/forecast_engine.py — MLPredictor (GradientBoosting). Veri biriktikce auto_train_if_needed() ile kendini yeniden egitir; predict_month_from_history() aylik tahmin, predict_scenario() senaryo tahmini uretir. Egitilmis model: configs/ml_forecast_model.pkl. app_portal.py rapor ekraninda kullanilir.",
+    "_acik_20260920": true
+  },
+
+  "statistical_anomaly": {
+    "active": false,
+    "_neden": "z-score + mevsimsel desen analizi henuz yazilmadi. Mevcut anomali tespiti yuzde farki bazli (dun / gecen yil ayni gun), istatistiksel degil."
+  },
+
+  "weather_api": {
+    "active": false,
+    "_neden": "Hava durumu API entegrasyonu yok. Dis hava sicakligi BMS'ten okunuyor; ileriye donuk tahmin/proaktif uyari icin harici API baglanmadi."
+  },
+
+  "feedback_filtering": {
+    "active": false,
+    "_neden": "Geri bildirim TOPLANIYOR ama KULLANILMIYOR. savings_engine.learn_from_outcome() kaydi JSON'a ekler; bu veri hicbir yerde okunup esik/oneri degistirmez. Ogrenme dongusu kurulunca true yapilacak."
+  }
+}

@@ -391,12 +391,20 @@ graph LR
   <div class="section">
     <h2>🧠 Yapay Zeka Olgunluk Durumu</h2>
 
+    <div class="alert alert-info">
+      <strong>Bu puan elle yazılmaz — kod hesaplar.</strong> <code>ai_progress.py</code> dört kategoriyi
+      ölçer: veri günü sayısı, kaydedilen geri bildirim sayısı, aktif temel özellikler ve
+      <em>gerçekten çalışan</em> ileri AI özellikleri. Aşağıdaki değerler 20 Eylül 2026'da motorun
+      döndürdüğü sonuçtur; her lokasyon kendi verisine göre farklı puan gösterir.
+    </div>
+
     <div style="text-align:center; margin-bottom: 20px;">
-      <div style="display:inline-block; background: linear-gradient(135deg, var(--green), var(--blue)); color:white; padding: 14px 32px; border-radius: 12px; font-size: 22px; font-weight: 800;">
-        %92 — Otonom 🤖
+      <div style="display:inline-block; background: linear-gradient(135deg, var(--orange), var(--blue)); color:white; padding: 14px 32px; border-radius: 12px; font-size: 22px; font-weight: 800;">
+        %60–85 — Lokasyona göre değişir
       </div>
       <div style="font-size:12px; color:var(--text-light); margin-top:8px;">
-        Faz 6 (otonom set gönderimi) ve Faz 7 (doğrulama altyapısı) ile +5 puan
+        Maslak'ta veri olgunluğu maksimumdadır (1000+ gün); puanı belirleyen değişken
+        <strong>geri bildirim sayısı</strong>dır
       </div>
     </div>
 
@@ -404,28 +412,64 @@ graph LR
       <div class="progress-item">
         <div class="label"><span>📊 Veri Olgunluğu</span><span class="score" style="color:var(--green);">25/25</span></div>
         <div class="progress-bar"><div class="fill" style="width:100%; background:var(--green);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">1000 gün veri (2023→), maksimum</div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Maslak: 1000+ gün veri (2023→), maksimum. Yeni kurulan lokasyonda düşük başlar</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>💬 Geri Bildirim</span><span class="score" style="color:var(--orange);">14/25</span></div>
-        <div class="progress-bar"><div class="fill" style="width:56%; background:var(--orange);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Her öneri kabul/red'de +puan | Onay workflow aktif</div>
+        <div class="label"><span>💬 Geri Bildirim</span><span class="score" style="color:var(--orange);">0–25</span></div>
+        <div class="progress-bar"><div class="fill" style="width:30%; background:var(--orange);"></div></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Kayıt sayısına göre: 10 / 30 / 50 / 100 eşiklerinde +5 puan. <strong>Dikkat: kayıt sayılır, öğrenme değil</strong></div>
       </div>
       <div class="progress-item">
         <div class="label"><span>⚙️ Özellik Olgunluğu</span><span class="score" style="color:var(--green);">30/30</span></div>
         <div class="progress-bar"><div class="fill" style="width:100%; background:var(--green);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">9 temel özellik aktif, maksimum</div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">7 temel özellik aktif, maksimum</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🚀 İleri AI</span><span class="score" style="color:var(--green);">20/20</span></div>
-        <div class="progress-bar"><div class="fill" style="width:100%; background:var(--green);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">BACnet okuma + <strong>yazma (oto-set)</strong>, GM Merkez, bulut altyapı, doğrulama katmanı</div>
+        <div class="label"><span>🚀 İleri AI</span><span class="score" style="color:var(--orange);">5/20</span></div>
+        <div class="progress-bar"><div class="fill" style="width:25%; background:var(--orange);"></div></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Yalnızca <strong>ML tüketim tahmini</strong> çalışıyor (4 özellikten 1'i)</div>
       </div>
     </div>
 
+    <h3>İleri AI — Dürüst Durum</h3>
+    <table>
+      <thead><tr><th>Özellik</th><th>Durum</th><th>Gerçekte ne var?</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>ML Tüketim Tahmini</strong></td>
+          <td><span class="badge badge-done">ÇALIŞIYOR</span></td>
+          <td>GradientBoosting modeli, veri biriktikçe <strong>kendini otomatik yeniden eğitiyor</strong>;
+            aylık tahmin ve senaryo tahmini üretiyor (<code>forecast_engine.py</code>)</td>
+        </tr>
+        <tr>
+          <td><strong>Geri Bildirim Filtresi</strong></td>
+          <td><span class="badge badge-active">YARIM</span></td>
+          <td>Kabul/red <em>kaydediliyor</em> ama <strong>hiçbir yerde okunup karara dönüşmüyor</strong>.
+            Sistem geri bildirimden şu an öğrenmiyor — döngü kurulmadı</td>
+        </tr>
+        <tr>
+          <td>İstatistiksel Anomali</td>
+          <td><span class="badge badge-future">YOK</span></td>
+          <td>Mevcut anomali tespiti yüzde farkı bazlı (dün / geçen yıl aynı gün); z-score + mevsimsel
+            desen analizi yazılmadı</td>
+        </tr>
+        <tr>
+          <td>Hava Durumu API</td>
+          <td><span class="badge badge-future">YOK</span></td>
+          <td>Dış hava BMS'ten okunuyor; ileriye dönük tahmin için harici API bağlanmadı</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="alert alert-warning">
+      <strong>Not:</strong> Faz 6 (otonom set gönderimi) ve Faz 7 (doğrulama altyapısı) bu puanı
+      <em>yükseltmez</em> — çünkü puan formülü öğrenme/tahmin yeteneklerini ölçer, otomasyonu ve kod
+      kalitesini değil. Bu iki faz sistemi daha güvenilir yaptı, daha "öğrenen" yapmadı.
+    </div>
+
     <div style="margin-top:4px; text-align:center; font-size:13px; color:var(--text-light);">
-      🎯 <strong>Sonraki Hedef:</strong> Saha verisiyle regresyon (gerçek okumalar dondurulup her değişiklikte
-      karşılaştırılacak) + Altunizade BACnet entegrasyonu
+      🎯 <strong>Sonraki Hedef:</strong> Geri bildirim döngüsünü gerçekten kurmak (reddedilen öneriyi
+      bastır, kabul edileni öne çıkar, eşiği kişiselleştir) → İleri AI 5/20 → 10/20
     </div>
 
     <h3>Seviye Haritası</h3>
@@ -584,8 +628,8 @@ graph TD
       <tbody>
         <tr><td>İstatistiksel Anomali</td><td>z-score + mevsimsel desen</td><td>900+ veri ✅</td></tr>
         <tr><td>Hava Durumu API</td><td>Proaktif uyarı</td><td>API key</td></tr>
-        <tr><td>Tüketim Tahmini</td><td>ML Motor (GradientBoosting) + Senaryo</td><td>✅ Tamamlandı</td></tr>
-        <tr><td>Geri Bildirim Filtresi</td><td>Reddedileni gizle, öne çıkar</td><td>50+ feedback</td></tr>
+        <tr><td>Tüketim Tahmini</td><td>ML Motor (GradientBoosting) + Senaryo — veri arttıkça kendini eğitir</td><td>✅ Çalışıyor</td></tr>
+        <tr><td>Geri Bildirim Filtresi</td><td>Reddedileni gizle, öne çıkar</td><td>⚠️ <strong>Kurulmadı</strong> — kayıt var, kullanım yok</td></tr>
       </tbody>
     </table>
   </div>
@@ -634,7 +678,7 @@ graph LR
     RULES --> REC["💡 Öneriler&lt;br/&gt;CRITICAL/WARNING/INFO"]:::rec
     REC --> USER["👤 Kullanıcı Kararı&lt;br/&gt;✅ Kabul / ❌ Red"]:::user
     USER --> TRAIN["📝 Training Data&lt;br/&gt;Kayıt ediliyor"]:::train
-    TRAIN -.->|"Faz 5'te"| FILTER["🧠 Akıllı Filtre&lt;br/&gt;Kişiselleştirilmiş"]:::future
+    TRAIN -.->|"HENÜZ KURULMADI"| FILTER["🧠 Akıllı Filtre&lt;br/&gt;Kişiselleştirilmiş"]:::future
     FILTER -.-> RULES
 
     classDef data fill:#3b82f6,stroke:#1e40af,color:#fff
@@ -650,8 +694,8 @@ graph LR
       <thead><tr><th>Katman</th><th>Şu An</th><th>Faz 5 Sonrası</th></tr></thead>
       <tbody>
         <tr><td>Veri</td><td>✅ 1000 gün → analiz</td><td>✅ + mevsimsel desen</td></tr>
-        <tr><td>Kurallar</td><td>⚙️ 12 kural aktif (8-12 eklendi)</td><td>⚙️ 15+ kural (feedback bazlı)</td></tr>
-        <tr><td>Öğrenme</td><td>🧠 Feedback filtreleme aktif</td><td>🤖 Eşik kişiselleştirme</td></tr>
+        <tr><td>Kurallar</td><td>⚙️ 12 tasarruf + 35 teşhis kuralı aktif</td><td>⚙️ Feedback bazlı yeni kurallar</td></tr>
+        <tr><td>Öğrenme</td><td>📝 Feedback <strong>kaydediliyor</strong> (henüz karara dönüşmüyor)</td><td>🤖 Reddedileni bastır + eşik kişiselleştirme</td></tr>
         <tr><td>Öneri</td><td>💡 Dinamik + bağlamsal öneriler</td><td>💡 Tam kişiselleştirilmiş</td></tr>
         <tr><td>Tahmin</td><td>✅ ML Motor (GradientBoosting) aktif</td><td>📈 Hava API + proaktif uyarı</td></tr>
         <tr><td>Otomasyon</td><td>✅ BACnet okuma 08:30 otomatik</td><td>🤖 BACnet write + FCU kilitleme</td></tr>
@@ -933,8 +977,8 @@ gantt
         <li>ML Tüketim Tahmini motoru (GradientBoosting) üretimde</li>
         <li>Kural 8-12 tamamlandı: mevsimsel chiller geçişi, hafta sonu, kojen-kazan, verimlilik takibi</li>
         <li>Otonom Swarm AI stabilizasyonu</li>
-        <li>Feedback filtresi altyapısı (kabul/red kaydı aktif)</li>
-        <li>Faz 5 %100 tamamlandı — AI olgunluk %78'e ulaştı</li>
+        <li>Feedback <em>kayıt</em> altyapısı (kabul/red JSON'a yazılıyor — öğrenme döngüsü hâlâ açık madde)</li>
+        <li>Faz 5 tamamlandı — ML tahmin motoru üretimde</li>
       </ul>
     </div>
 
@@ -1187,8 +1231,9 @@ gantt
     ~5 ay Faz 0 kavram doğrulama (ChatGPT), ardından Faz 1-5 tam geliştirme,
     Faz 5.5 (BACnet + Supabase bulut + GM Merkez), <strong>Faz 6 (otonom set gönderimi)</strong> ve
     <strong>Faz 7 (doğrulama ve güvence)</strong>.
-    Toplam <strong>~13,5 ayda 90+ özellik</strong> aktif, <strong>48.373 satır kod</strong>,
-    <strong>%92 AI olgunluk</strong>.
+    Toplam <strong>~13,5 ayda 90+ özellik</strong> aktif, <strong>48.373 satır kod</strong>.
+    AI olgunluk puanı lokasyona göre <strong>%60–85</strong> (kodun kendi hesabı); öğrenen tek bileşen
+    ML tüketim tahminidir, geri bildirim döngüsü henüz açık maddedir.
     56 AHU BACnet okuma + yazma, uzak yama, lisans sistemi, GM Merkez portalı, 35 teşhis kuralı ve
     466 otomatik kontrol üretimde.
     Sırada: saha verisiyle regresyon ve Altunizade BACnet entegrasyonu! 🤖🚀
