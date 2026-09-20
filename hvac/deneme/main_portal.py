@@ -690,10 +690,10 @@ INSTRUCTION_GUIDE = {
         "causes": []
     },
     "MISSING_DATA": {
-        "severity": "CRITICAL",
-        "score": 5.0,  # kod satıra 5.0 verir (sıralamada dibe düşmesin) — rehber eşitlendi
+        "severity": "WARNING",
+        "score": 5.0,
         "title": "Veri Eksik",
-        "description": "ΔT hesaplanamadı. Gerekli sensör verileri eksik veya hatalı.",
+        "description": "ΔT hesaplanamadı. Önem cihazın durumuna göre değişir: cihaz ÇALIŞIYORKEN (start=1, kanal basıncı var veya vana açık) veri gelmemesi KRİTİK'tir (skor 7.5, kör uçuş); cihaz kapalı/boştayken UYARI'dır (skor 5.0) çünkü veri olmaması beklenen durumdur.",
         "steps": [
             "Gidiş ve dönüş sıcaklık sensörlerini kontrol edin",
             "BMS'de sensör bağlantılarını doğrulayın",
@@ -1850,8 +1850,10 @@ class HVACAnalyzer:
         # bazında ölçülemez. AHU'da "vana açık ama üfleme soğuk" durumu zaten
         # HEAT_EFF_LOW (CRITICAL) ile yakalanır. LOW_FLOW yalnızca gerçek su Inlet/Outlet
         # ΔT'si olan ekipmanlarda (FCU coil / Kazan / Kolektör) çalışır.
+        # Vana kapalıyken su durgundur: büyük su ΔT'si BEKLENEN durumdur, debi
+        # arızası değil. Bu yüzden LOW_FLOW yalnız ısıtma vanası açıkken aranır.
         if (is_heating and eq_type not in (EquipmentType.CHILLER, EquipmentType.AHU)
-                and delta_t is not None):
+                and delta_t is not None and heat_v >= 0.5):
             if (delta_t >= self.config["TARGET_DT_HEAT"] and
                 profile.temperatures.sat is not None and
                 profile.temperatures.sat < self.config["HEAT_SAT_LOW_THRESHOLD"]):
@@ -1952,7 +1954,10 @@ class HVACAnalyzer:
         # 6. Comfort override — S4 gereği EN SONA alındı: yalnızca daha ağır hiçbir
         # kural tetiklenmediyse döner (maskeleme gücü kalktı).
         departure = self.calculate_departure(profile)
-        if departure is not None and departure > self.config["COMFORT_CRITICAL_DEPARTURE"]:
+        # Kapalı/boşta cihazda konfor sapması ARIZA DEĞİLDİR (gece durdurulan santralde
+        # oda ısınır); kritik konfor kuralları yalnız çalışan cihazda üretilir.
+        if (departure is not None and departure > self.config["COMFORT_CRITICAL_DEPARTURE"]
+                and self._cihaz_calisiyor(profile)):
             _vana = heat_v if is_heating else cool_v
             if _vana >= self.config["COMFORT_CAPACITY_VALVE"]:
                 result.update({
@@ -2008,6 +2013,8 @@ class HVACAnalyzer:
             "TERS_DT":                   8.5,  # SAĞLAMLAŞTIRMA S5
             "LOKAL_CALISMA":             6.0,  # SAĞLAMLAŞTIRMA F2
             "VERI_EKSIK":                5.0,  # SAĞLAMLAŞTIRMA S2
+            "COMFORT_CAPACITY_FAULT":    8.0,
+            "COMFORT_CONTROL_FAULT":     8.0,
             "SIMUL_HEAT_COOL":          10.0,
             "CHILLER_BYPASS":            9.0,
             "NOT_COOLING":               9.0,
@@ -2064,6 +2071,14 @@ class HVACAnalyzer:
         if result.rule in ("NORMAL", "IN_BAND") and result.severity == "OPTIMAL" and result.score >= 6.0:
             _duzeltmeler.append(f"NORMAL satır skoru {result.score:.1f} → 5.9")
             result.score = 5.9
+        # 3b) Rehberde UYARI olarak tanımlı bir kural, kritik skor taşıyamaz.
+        #     (Skor sonunda vana çarpanıyla 7.0'ı aşabiliyor: "uyarı ama skoru
+        #     kritik" satırı sıralamada gerçek kritiklerin arasına giriyordu.)
+        if result.severity == "WARNING" and (result.score or 0) >= 7.0 \
+                and INSTRUCTION_GUIDE.get(result.rule, {}).get("severity") == "WARNING":
+            _duzeltmeler.append(f"UYARI kuralı {result.rule} skoru {result.score:.1f} → 6.9")
+            result.score = 6.9
+
         if result.severity == "OPTIMAL" and result.score >= 6.0 and result.rule not in ("STANDBY", "MAINTENANCE"):
             result.severity = "WARNING"
             _duzeltmeler.append(f"OPTIMAL + skor {result.score:.1f} → WARNING")
@@ -2077,16 +2092,37 @@ class HVACAnalyzer:
             logging.info(f"TUTARLILIK[{profile.name}]: " + " ; ".join(_duzeltmeler))
         return result
 
+    def _cihaz_calisiyor(self, profile: EquipmentProfile) -> bool:
+        """Cihaz fiilen çalışıyor mu? (veri eksikliğinin ciddiyetini belirler)
+
+        ÇALIŞAN bir santralden veri gelmemesi KRİTİKTİR (kör uçuş); kapalı/boşta
+        bir cihazda veri olmaması beklenen durumdur ve kırmızı alarm gürültüsüdür.
+        """
+        if getattr(profile, "start_stop", None) == 1:
+            return True
+        _p = getattr(profile, "pressure_pa", None)
+        if _p is not None and _p > self.config.get("PRESSURE_RUN_MIN_PA", 50.0):
+            return True
+        _c = profile.valves.cooling if profile.valves else None
+        _h = profile.valves.heating if profile.valves else None
+        return (_c or 0) >= 0.5 or (_h or 0) >= 0.5
+
+    def _veri_eksik_siddeti(self, profile: EquipmentProfile):
+        """MISSING_DATA için (önem, skor). Çalışıyorsa kritik, değilse uyarı."""
+        if self._cihaz_calisiyor(profile):
+            return "CRITICAL", 7.5
+        return "WARNING", 5.0
+
     def map_severity(self, status: str, score: float) -> str:
         """Map backend status to UI severity. Score takes priority."""
         # CRITICAL: Score >= 7.0 always means CRITICAL, regardless of status
         if score >= 7.0:
             return "CRITICAL"
-        
-        # CRITICAL: Missing data is always critical
-        if status == "MISSING_DATA":
-            return "CRITICAL"
-        
+
+        # NOT: "MISSING_DATA her zaman KRİTİK" kuralı KALDIRILDI. Kapalı cihazda
+        # veri olmaması beklenen durumdur; önem artık _veri_eksik_siddeti() ile
+        # cihazın çalışıp çalışmadığına göre atanır (skor da onunla tutarlı).
+
         # WARNING: Score between 5.0 and 7.0, or status is LOW/HIGH
         if 5.0 <= score < 7.0:
             return "WARNING"
@@ -2423,9 +2459,14 @@ class HVACAnalyzer:
         elif delta_t is None:
             result.status = "MISSING_DATA"
             result.band = "N/A"
-            result.action = "Veri Eksik"
             result.rule = "MISSING_DATA"
-            result.score = 5.0  # Sıralamada dibe düşmemesi için minimum skor
+            result.severity, result.score = self._veri_eksik_siddeti(profile)
+            if result.severity == "CRITICAL":
+                result.action = "KRİTİK: Veri Eksik — Cihaz Çalışıyor"
+                result.reason = "Cihaz çalışıyor ama ΔT hesaplanamadı: sensör/nokta verisi gelmiyor (kör uçuş)."
+            else:
+                result.action = "Veri Eksik"
+                result.reason = "ΔT hesaplanamadı; cihaz çalışmıyor/boşta — veri eksikliği beklenen durum."
         else:
             check_tolerance = tol_norm
             # TALEP KAPISI: her iki vana da fiilen KAPALIYSA (<%0.5) santral iklimlendirme
@@ -2550,7 +2591,11 @@ class HVACAnalyzer:
                         result.reason = f"Üfleme ({sat:.1f}°C) hedef altında ama EMİŞ verisi yok — 'ısıtmıyor' teşhisi doğrulanamaz. Emiş noktası tamamlanmalı."
                         result.rule = "VERI_EKSIK"
                         result.severity = _ig_ve.get("severity", "WARNING")
-                        result.score = max(result.score, _ig_ve.get("score", 5.0))
+                        # Skor önemle AYNI kaynaktan gelir: VERI_EKSIK bilinçli olarak
+                        # UYARI'dır (teşhis doğrulanamıyor), bu yüzden skoru da uyarı
+                        # seviyesine ÇEKİLİR. max() kullanılırsa ΔT yokluğundan gelen
+                        # 7.5'lik kritik skor kalıp "uyarı ama skor kritik" çelişkisi doğar.
+                        result.score = _ig_ve.get("score", 5.0)
                     elif relevant_valve >= HIGH_VALVE_FOR_CRITICAL and not _isitiyor:
                         # Vana yüksek açık ve hava ısınmıyor → gerçek sorun
                         result.sat_status = "NOT_HEATING"
@@ -2609,7 +2654,11 @@ class HVACAnalyzer:
                         result.reason = f"Üfleme ({sat:.1f}°C) hedef üstünde ama EMİŞ verisi yok — 'soğutmuyor' teşhisi doğrulanamaz. Emiş noktası tamamlanmalı."
                         result.rule = "VERI_EKSIK"
                         result.severity = _ig_ve.get("severity", "WARNING")
-                        result.score = max(result.score, _ig_ve.get("score", 5.0))
+                        # Skor önemle AYNI kaynaktan gelir: VERI_EKSIK bilinçli olarak
+                        # UYARI'dır (teşhis doğrulanamıyor), bu yüzden skoru da uyarı
+                        # seviyesine ÇEKİLİR. max() kullanılırsa ΔT yokluğundan gelen
+                        # 7.5'lik kritik skor kalıp "uyarı ama skor kritik" çelişkisi doğar.
+                        result.score = _ig_ve.get("score", 5.0)
                     elif relevant_valve >= HIGH_VALVE_FOR_CRITICAL and not _sogutuyor:
                         # Vana yüksek açık ve hava soğumuyor → gerçek soğutma sorunu
                         result.sat_status = "NOT_COOLING"
@@ -2723,7 +2772,7 @@ class HVACAnalyzer:
         if delta_t is None:
             result.status = "MISSING_DATA"
             result.band = "N/A"
-            result.score = 5.0  # Sıralamada dibe düşmemesi için minimum skor
+            result.severity, result.score = self._veri_eksik_siddeti(profile)
         else:
             tolerance = tol_norm
             lower = target_dt - tolerance
@@ -2816,9 +2865,13 @@ class HVACAnalyzer:
                 result.reason = "Hedef band içinde"
                 result.rule = "IN_BAND"
             elif result.status == "MISSING_DATA":
-                result.action = "Veri Eksik"
-                result.reason = "ΔT hesaplanamadı - sensör verisi eksik"
                 result.rule = "MISSING_DATA"
+                if self._cihaz_calisiyor(profile):
+                    result.action = "KRİTİK: Veri Eksik — Cihaz Çalışıyor"
+                    result.reason = "Cihaz çalışıyor ama ΔT hesaplanamadı: sensör/nokta verisi gelmiyor."
+                else:
+                    result.action = "Veri Eksik"
+                    result.reason = "ΔT hesaplanamadı; cihaz çalışmıyor/boşta — beklenen durum."
                 
         # Recommend SAT logic
         result.recommended_sat = self.calculate_recommended_sat(
@@ -2831,8 +2884,16 @@ class HVACAnalyzer:
             result.sat_status, result.rule
         ))
         
-        # Map severity for UI (considering rule type)
-        result.severity = self.map_severity(result.status, result.score)
+        # Map severity for UI (considering rule type).
+        if result.status == "MISSING_DATA":
+            # Veri eksikliğinin önemi cihazın çalışma durumundan gelir; ama araya
+            # daha ağır bir kural girdiyse (ör. SIMUL_HEAT_COOL, skor 10) onun
+            # şiddeti korunur — skor ile önem asla çelişmemeli.
+            _onem, _skor = self._veri_eksik_siddeti(profile)
+            result.score = max(result.score or 0.0, _skor)
+            result.severity = "CRITICAL" if (_onem == "CRITICAL" or result.score >= 7.0) else _onem
+        else:
+            result.severity = self.map_severity(result.status, result.score)
         
         # Override severity for specific rules
         if result.rule in ["BAND_LOW", "BAND_HIGH"]:

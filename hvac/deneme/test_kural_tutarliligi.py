@@ -162,6 +162,36 @@ for cv in (13, 20, 35):
     c(f"NORMAL kural önemi OPTIMAL (WARNING değil), vana %{cv}",
       r.rule != "NORMAL" or (r.severity == "OPTIMAL" and r.score < 6.0), (r.rule, r.severity, r.score))
 
+# ── 5) Veri eksikliği önemi cihazın çalışma durumuna bağlıdır ───────────
+_pk = _prof(mode="COOLING", cv=0, hv=0)          # kapalı cihaz, hiç sıcaklık yok
+r = _analiz(_pk)
+c("kapalı cihazda veri yok → UYARI (kırmızı alarm gürültüsü değil)",
+  r.rule == "MISSING_DATA" and r.severity == "WARNING", (r.rule, r.severity, r.score))
+_pc = _prof(mode="COOLING", cv=0, hv=0)
+_pc.start_stop = 1                                # çalışıyor ama veri gelmiyor
+r = _analiz(_pc)
+c("çalışan cihazda veri yok → KRİTİK ve skor ≥7 (sıralamada üstte)",
+  r.rule == "MISSING_DATA" and r.severity == "CRITICAL" and r.score >= 7.0,
+  (r.rule, r.severity, r.score))
+_pb = _prof(mode="COOLING", cv=0, hv=0)
+_pb.pressure_pa = 450                             # kanal basıncı var → çalışıyor
+r = _analiz(_pb)
+c("kanal basıncı varken veri yok → KRİTİK", r.severity == "CRITICAL", (r.rule, r.severity))
+_pv = _prof(mode="COOLING", cv=60, hv=0)          # vana açık → çalışıyor
+r = _analiz(_pv)
+c("vana açıkken veri yok → KRİTİK", r.severity == "CRITICAL", (r.rule, r.severity))
+
+# Kapalı cihazda konfor sapması arıza değildir (gece durdurulan santral)
+r = _analiz(_prof(mode="HEATING", room=32.7, setp=18.5, cv=0, hv=0))
+c("kapalı cihazda konfor sapması kritik üretmez",
+  r.rule not in ("COMFORT_CONTROL_FAULT", "COMFORT_CAPACITY_FAULT"), r.rule)
+
+# Vana kapalıyken su durgundur: büyük su ΔT'si debi arızası değildir
+r = _analiz(_prof(tip="FCU", mode="HEATING", sat=24.8, inlet=64.5, outlet=10.4, cv=0, hv=0))
+c("ısıtma vanası kapalıyken LOW_FLOW_DETECTED üretilmez", r.rule != "LOW_FLOW_DETECTED", r.rule)
+r = _analiz(_prof(tip="FCU", mode="HEATING", sat=24.8, inlet=64.5, outlet=10.4, cv=0, hv=80))
+c("ısıtma vanası açıkken LOW_FLOW_DETECTED korunur", r.rule == "LOW_FLOW_DETECTED", r.rule)
+
 import ahu_collector as ac
 _orj = ac._nokta_oku
 def _kollektor(durumlar):
