@@ -166,6 +166,10 @@
                 Synapse (SYN) sisteminin HVAC analiz modülü. Acıbadem Hastanesi'ndeki AHU, FCU, Chiller, Kolektör ve
                 Eşanjör ekipmanlarının sıcaklık/vana verilerini her gün otomatik analiz eder, sorunları teşhis eder
                 ve sahaya uygulanabilir aksiyon önerileri üretir.
+                <br><br>
+                <strong>Sürüm v8.2 — 20 Eylül 2026</strong> &nbsp;|&nbsp; 35 teşhis kuralı &nbsp;|&nbsp;
+                talep esaslı mod çözümü &nbsp;|&nbsp; çıkış denetimi (15 değişmez kural) &nbsp;|&nbsp;
+                180 kontrollük öz test
             </div>
         </div>
 
@@ -210,14 +214,22 @@
             <div class="mermaid">
                 graph LR
                 A["🌐 BACnet/IP<br />Desigo BMS<br />56 AHU/FCU"]:::input --> B["📥 ahu_collector.py<br />Otomatik Okuma<br />(cloud_sync tetikler)"]:::proc
-                B --> C["🔍 Tip Algılama<br />+ ΔT Hesaplama<br />Su + Hava ΔT"]:::proc
-                C --> D["📏 15+ Kural<br />Band Kontrolü<br />Severity Skoru"]:::proc
-                D --> E["📲 Personel Bildirimi<br />Supabase bildirimler"]:::output
+                B --> C["🔍 Mod Çözümü<br />(talep esaslı)<br />+ ΔT Hesaplama"]:::proc
+                C --> D["📏 35 Kural<br />Band Kontrolü<br />Severity Skoru"]:::proc
+                D --> G["🧪 Çıkış Denetimi<br />15 değişmez kural"]:::audit
+                G --> E["📲 Personel Bildirimi<br />Supabase bildirimler"]:::output
                 E --> F["✅ Onay + Excel<br />İndir / Saha Uygula"]:::output
 
                 classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
                 classDef proc fill:#f59e0b,stroke:#92400e,color:#fff
+                classDef audit fill:#8b5cf6,stroke:#5b21b6,color:#fff
                 classDef output fill:#10b981,stroke:#065f46,color:#fff
+            </div>
+            <div class="alert alert-info">
+                <strong>v8.1 ile eklendi —</strong> Analiz sonuçları ekrana basılmadan önce <strong>çıkış
+                denetiminden</strong> geçer: motorun kendi içinde çelişip çelişmediği 15 değişmez kuralla
+                kontrol edilir (ör. "kritik ama skoru düşük", "mod ısıtma ama soğutma alarmı"). Çelişkili
+                satır gizlenmez; portalda <strong>Tutarsız</strong> filtresinde toplanır.
             </div>
 
             <h3>Çalışma Zamanlaması</h3>
@@ -312,18 +324,29 @@
         <div class="section page-break">
             <h2>🔄 Akıllı Mod Algılama ve SAT Analizi</h2>
 
-            <h3>Otomatik Mod Tespiti</h3>
-            <p>Sistem, ekipmanın soğutma mı ısıtma mı yaptığını <strong>vana verilerinden</strong> otomatik tespit eder:</p>
+            <h3>Otomatik Mod Tespiti — Talep Esaslı <span class="badge badge-purple">v8.0</span></h3>
+            <p>Sistem, ekipmanın soğutma mı ısıtma mı yaptığını önce <strong>talepten</strong> (mahal ile set
+                farkı), vana tam açıldığında ise <strong>vanadan</strong> belirler:</p>
+
+            <div class="alert alert-warning">
+                <strong>Neden değişti?</strong> Eski mantık "hangi vana açıksa o moddadır" diyordu. Ama kışın
+                mahal setin üstündeyse santral <strong>soğutma</strong> yapar; ısıtma vanası yalnızca üflemeyi
+                santralin minimumunun (15/18°C) altına düşürmemek için açılır. Motor bunu "ısıtma" sanıp
+                üflemenin 28°C'ye çıkmasını bekliyor ve <strong>yanlış kritik alarm</strong> üretiyordu.
+            </div>
 
             <div class="mermaid">
                 graph TD
-                V["📊 Vana Verisi<br />Soğutma % + Isıtma %"]:::input --> CHECK{"Her iki vana<br />&ge; 5%?"}
+                V["📊 Mod + Vana + Sıcaklık"]:::input --> M0{"BMS modu<br />açık mı?"}
+                M0 -->|Evet| FIX["✅ BMS modu<br />(otorite)"]:::blue
+                M0 -->|Hayır AUTO| CHECK{"Her iki vana<br />&ge; %15?"}
                 CHECK -->|Evet| AMB["⚠️ AMBIGUOUS<br />Eşzamanlı çakışma"]:::red
-                CHECK -->|Hayır| C2{"Soğutma &ge; 5%?"}
-                C2 -->|Evet| COOL["❄️ COOLING<br />Soğutma modu"]:::blue
-                C2 -->|Hayır| C3{"Isıtma &ge; 5%?"}
-                C3 -->|Evet| HEAT["🔥 HEATING<br />Isıtma modu"]:::orange
-                C3 -->|Hayır| STBY["💤 STANDBY<br />Bekleme modu"]:::gray
+                CHECK -->|Hayır| HI{"Bir vana<br />&ge; %90?"}
+                HI -->|Evet| VMODE["🔒 Vana modu<br />kesin karar"]:::orange
+                HI -->|Hayır| DEM{"Mahal-Set farkı<br />&ge; 0.5°C?"}
+                DEM -->|"Mahal &gt; Set"| COOL["❄️ COOLING (Demand)<br />soğutma talebi"]:::blue
+                DEM -->|"Mahal &lt; Set"| HEAT["🔥 HEATING (Demand)<br />ısıtma talebi"]:::orange
+                DEM -->|Fark yok| SENS["🌡️ Üfleme-Emiş farkı<br />→ Dış hava → UNKNOWN"]:::gray
 
                 classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
                 classDef blue fill:#3b82f6,stroke:#1e40af,color:#fff
@@ -331,32 +354,59 @@
                 classDef red fill:#ef4444,stroke:#991b1b,color:#fff
                 classDef gray fill:#6b7280,stroke:#374151,color:#fff
             </div>
+            <p>Ölü bant <strong>0,5°C</strong>'dir — BMS'in kullandığı değerle aynı. Vana eşikleri
+                (<strong>Min Analiz %40</strong>, <strong>Yüksek Vana %90</strong>) ayarlar panelinden okunur ve
+                hem ısıtma hem soğutma için geçerlidir.</p>
 
-            <h3>SAT Status (Üfleme Sıcaklığı Analizi)</h3>
+            <h3>SAT Status (Üfleme Sıcaklığı Analizi) <span class="badge badge-purple">v8.0</span></h3>
+            <p>Her santralin kendi üfleme sınırları vardır (<code>configs/ahu_sat_limitleri.json</code>):
+                <strong>minimum 15 veya 18°C</strong>, <strong>maksimum 28 veya 31°C</strong>. Alarm, vananın
+                ne kadar açık olduğuna bağlıdır:</p>
             <table>
                 <thead>
                     <tr>
-                        <th>Mod</th>
-                        <th>Normal Aralık</th>
-                        <th>Önerilen SAT</th>
-                        <th>Anormal Durum</th>
+                        <th>Durum</th>
+                        <th>Vana</th>
+                        <th>Üfleme</th>
+                        <th>Sonuç</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>❄️ Soğutma</td>
-                        <td>15°C – 18°C</td>
-                        <td>16.5°C</td>
-                        <td>SAT &gt; 18°C → <span class="badge badge-critical">NOT_COOLING</span></td>
+                        <td>Kısmi yük</td>
+                        <td>%40 – %89</td>
+                        <td>min/max arasında</td>
+                        <td><span class="badge badge-optimal">KISMI_YUK</span> — alarm yok, talep kadar
+                            ısıtıyor/soğutuyor</td>
                     </tr>
                     <tr>
-                        <td>🔥 Isıtma</td>
-                        <td>28°C – 31°C</td>
-                        <td>29.5°C</td>
-                        <td>SAT &lt; 28°C → <span class="badge badge-critical">NOT_HEATING</span></td>
+                        <td>Tam soğutma</td>
+                        <td>≥ %90</td>
+                        <td>minimuma (15/18°C) inmiyor</td>
+                        <td><span class="badge badge-critical">NOT_COOLING</span></td>
+                    </tr>
+                    <tr>
+                        <td>Tam ısıtma</td>
+                        <td>≥ %90</td>
+                        <td>maksimuma (28/31°C) çıkmıyor</td>
+                        <td><span class="badge badge-critical">NOT_HEATING</span></td>
+                    </tr>
+                    <tr>
+                        <td>Sınır ihlali</td>
+                        <td>Fark etmez</td>
+                        <td>min altı / max üstü</td>
+                        <td><span class="badge badge-warning">SAT_LOW</span> /
+                            <span class="badge badge-warning">SAT_HIGH</span></td>
+                    </tr>
+                    <tr>
+                        <td>Analiz dışı</td>
+                        <td>&lt; %40</td>
+                        <td>—</td>
+                        <td><span class="badge badge-info">VALVE_LOW</span> — vana kısıkken üfleme değerlendirilmez</td>
                     </tr>
                 </tbody>
             </table>
+            <p>Önerilen üfleme: soğutmada <strong>16,5°C</strong>, ısıtmada <strong>29,5°C</strong>.</p>
 
             <h3>Sıcaklık Setpoint Zinciri (örnek)</h3>
             <p>Her kontrol noktası bir sonrakini besler — enerji tasarrufu zincirin tamamında optimize edilir:</p>
@@ -390,9 +440,11 @@
 
         <!-- ========== 4. TEŞHİS KURALLARI ========== -->
         <div class="section page-break">
-            <h2>🩺 Teşhis Sistemi — 15+ Akıllı Kural</h2>
+            <h2>🩺 Teşhis Sistemi — 35 Akıllı Kural</h2>
             <p>Motor, her ekipmanı bir dizi kuralla kontrol eder. Her kural bir <strong>severity (önem)</strong>
-                seviyesi ve <strong>skor</strong> üretir.</p>
+                seviyesi ve <strong>skor</strong> üretir. Kodda <strong>35 kural</strong> atanır,
+                <strong>38 talimat açıklaması</strong> tanımlıdır; her kuralın en az bir test vakası vardır
+                ve açıklaması <code>/api/instruction-guide</code> ucundan tek kaynaktan gelir.</p>
 
             <h3>Severity Seviyeleri</h3>
             <div class="severity-grid">
@@ -494,11 +546,29 @@
                         <td>Su ΔT iyi ama üfleme soğuk → debi/pompa sorunu (AHU'da HEAT_EFF_LOW ile yakalanır)</td>
                     </tr>
                     <tr>
+                        <td><strong>COMFORT_CAPACITY_FAULT</strong> <span class="badge badge-purple">YENİ v7.7</span></td>
+                        <td>8.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
+                        <td>Oda-set sapması &gt;6°C <em>ve</em> vana ≥%90 — santral tam kapasitede ama konfor
+                            sağlanamıyor (kapasite yetersiz)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>COMFORT_CONTROL_FAULT</strong> <span class="badge badge-purple">YENİ v7.7</span></td>
+                        <td>8.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
+                        <td>Oda-set sapması &gt;6°C ama vana &lt;%90 — kapasite kullanılmıyor: kontrol döngüsü,
+                            set değeri veya vana aktüatörü sorunu</td>
+                    </tr>
+                    <tr>
                         <td><strong>INSUFFICIENT_CAPACITY</strong></td>
                         <td>6.0</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
                         <td>Sadece FCU</td>
-                        <td>Kapasite yetersiz, konfor sağlanamıyor (oda-set sapması &gt;2°C ve vana &gt;%80)</td>
+                        <td>Kapasite yetersiz (oda-set sapması &gt;2°C ve vana &gt;%80).
+                            <em>Not: sahada FCU'lardan vana yüzdesi gelmediği için pratikte tetiklenmez;
+                            FCU analizi gündeme geldiğinde set-mahal farkına göre yeniden yazılacak.</em></td>
                     </tr>
                     <tr>
                         <td><strong>HEAT_EFF_LOW</strong></td>
@@ -547,21 +617,104 @@
                         <td>4.0</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
                         <td>AHU + FCU</td>
-                        <td>Oda sıcaklığı set'ten &gt;3°C uzak</td>
+                        <td>Oda-set sapması 3–6°C arası. <em>6°C üstü artık kritik iki kurala ayrılır
+                            (yukarı bak). Kapalı/boştaki cihazda üretilmez — gece durdurulan santralde odanın
+                            ısınması arıza değildir.</em></td>
+                    </tr>
+                    <tr>
+                        <td><strong>MISSING_DATA</strong> <span class="badge badge-purple">v7.9</span></td>
+                        <td>7.5 / 5.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span> veya
+                            <span class="badge badge-warning">WARNING</span></td>
+                        <td>Tümü</td>
+                        <td>Önem cihazın durumuna bağlıdır: <strong>çalışıyorken</strong> (start=1, kanal basıncı
+                            var veya vana açık) veri gelmemesi KRİTİK (kör uçuş); <strong>kapalıyken</strong>
+                            UYARI — veri olmaması beklenen durumdur</td>
+                    </tr>
+                    <tr>
+                        <td><strong>STANDBY</strong></td>
+                        <td>0.0</td>
+                        <td><span class="badge badge-optimal">OPTIMAL</span></td>
+                        <td>AHU + FCU</td>
+                        <td>Her iki vana da kapalı (&lt;%0,5): fan dönüyor ama iklimlendirme talebi yok.
+                            Hava ΔT'si tanısal değildir (sirkülasyon/fan ısısı)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>SKIP_STOP / SKIP_VERI_YOK / SKIP_SENSOR_ARIZA /
+                            SKIP_BASINC_SENSOR_ARIZA</strong></td>
+                        <td>0–3</td>
+                        <td><span class="badge badge-optimal">OPTIMAL</span> /
+                            <span class="badge badge-warning">WARNING</span></td>
+                        <td>AHU</td>
+                        <td>Ön koşul kapısı kararları: cihaz durmuş, veri alınamadı, üfleme/emiş sensörü aralık
+                            dışı, basınç sensörü arızalı → analiz yapılmaz, sebep satırda yazar</td>
                     </tr>
                     <tr>
                         <td><strong>BAND_HIGH / BAND_LOW / IN_BAND</strong></td>
                         <td>0-3</td>
-                        <td><span class="badge badge-warning">WARNING</span></td>
-                        <td>Sadece FCU</td>
-                        <td>ΔT hedef altında/üstünde/içinde</td>
+                        <td><span class="badge badge-warning">WARNING</span> /
+                            <span class="badge badge-optimal">OPTIMAL</span></td>
+                        <td>FCU / Kolektör / Chiller (su ΔT)</td>
+                        <td>ΔT hedef altında/üstünde/içinde. <em>Isıtma kollektörü, üç kazanın da durumu 0 ise
+                            analiz dışıdır (soğuma artığı sahte BAND_LOW üretiyordu)</em></td>
                     </tr>
                     <tr>
                         <td><strong>NORMAL</strong></td>
                         <td>0.0</td>
                         <td><span class="badge badge-optimal">OPTIMAL</span></td>
                         <td>Sadece AHU</td>
-                        <td>Sistem normal çalışıyor ✅</td>
+                        <td>Sistem normal çalışıyor ✅ <em>(kısmi yük dahil: vana &lt;%40 iken düşük ΔT
+                            beklenen durumdur, LOW_DT üretilmez)</em></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>🔧 Eylül 2026 Kural Düzeltmeleri (v7.6 – v8.2)</h3>
+            <p>Saha analizlerinde ve otomatik testlerde bulunan tutarsızlıklar düzeltildi:</p>
+            <table>
+                <thead>
+                    <tr><th>Sorun</th><th>Eski davranış</th><th>Yeni davranış</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Vana eşiği ayardan okunmuyordu</td>
+                        <td>Ayar ekranı %90 diyor, kod %70 sabitti — girilen değer yok sayılıyordu</td>
+                        <td>Ayarlar → <strong>Yüksek Vana Eşiği</strong> gerçekten uygulanıyor</td>
+                    </tr>
+                    <tr>
+                        <td>Ters ΔT maskeleniyordu</td>
+                        <td>Soğutmada üfleme emişten sıcakken vana %45–69 ise üfleme <em>uyarısı</em> yazıyordu</td>
+                        <td>TERS_DT <strong>kritik</strong> kalır; kök neden SIMUL_HEAT_COOL ise o gösterilir</td>
+                    </tr>
+                    <tr>
+                        <td>Kısmi yükte yanlış alarm</td>
+                        <td>Isıtma vanası %80, üfleme 24°C → NOT_HEATING kritik</td>
+                        <td>Üfleme santral sınırları içindeyse <strong>KISMI_YUK</strong>, alarm yok</td>
+                    </tr>
+                    <tr>
+                        <td>ΔT yönü mod ile uyumsuzdu</td>
+                        <td>AUTO + ısıtma vanası %100 iken ΔT soğutma formülüyle hesaplanıyordu (+10,6 yerine −10,6)</td>
+                        <td>ΔT ve hedef <strong>aynı moddan</strong> türetilir</td>
+                    </tr>
+                    <tr>
+                        <td>Kısık vanada düşük ΔT</td>
+                        <td>Vana %13 iken bile "Düşük ΔT" uyarısı</td>
+                        <td>LOW_DT yalnız ilgili vana ≥%40 ise üretilir</td>
+                    </tr>
+                    <tr>
+                        <td>Vana kapalıyken debi alarmı</td>
+                        <td>Durgun sudaki büyük ΔT → LOW_FLOW_DETECTED kritik</td>
+                        <td>Yalnız ısıtma vanası açıkken aranır</td>
+                    </tr>
+                    <tr>
+                        <td>Skor ile önem çelişiyordu</td>
+                        <td>"Kritik ama skor 5" (listede aşağıda) / "uyarı ama skor 7,2" (kritiklerin arasında)</td>
+                        <td>Önem ile skor tek kaynaktan; çelişki otomatik düzeltilir</td>
+                    </tr>
+                    <tr>
+                        <td>Talimat butonları eksikti</td>
+                        <td>Ön yüz listesi arka uçtan geri kalmıştı — "açıklama yok" diyordu</td>
+                        <td>Talimatlar <code>/api/instruction-guide</code> ucundan tek kaynaktan yüklenir</td>
                     </tr>
                 </tbody>
             </table>
@@ -583,15 +736,101 @@
                     aynı senaryo AHU'da HEAT_EFF_LOW ile yakalanır)</li>
                 <li><strong>Sadece CHILLER'da çalışanlar:</strong> CHILLER_BYPASS, CHILLER_LOW_DT</li>
             </ul>
-            <p><strong>Çakışma önceliklendirmesi:</strong> Aynı cihazda birden fazla kuralın koşulu aynı anda
-                sağlanırsa, <strong>skoru daha yüksek olan kural</strong> kazanır (ör. LOW_FLOW_DETECTED skor 8,
-                INSUFFICIENT_CAPACITY/HEAT_EFF_LOW skor 7 → LOW_FLOW_DETECTED gösterilir). Bu önceliklendirme
-                <code>INSTRUCTION_GUIDE</code> skor tablosuna göre otomatik yapılır; eşit skorlarda önceden
-                set edilen kural korunur.</p>
+            <p><strong>Çakışma önceliklendirmesi <span class="badge badge-purple">v7.7 ile netleşti</span>:</strong>
+                Aynı cihazda birden fazla kuralın koşulu sağlanırsa sıra şudur:</p>
+            <ol style="font-size:13px; color:var(--text-light); padding-left:20px;">
+                <li><strong>Ön koşul kapısı</strong> — cihaz durmuş / fan basmıyor / sensör arızalı: analiz
+                    yapılmaz, teşhis üretilmez</li>
+                <li><strong>Talep kapısı</strong> — iki vana da kapalı: hava ΔT'si tanısal değil (BEKLEME)</li>
+                <li><strong>Kök neden</strong> — aynı anda ısıtma+soğutma (SIMUL_HEAT_COOL), sonucu olan
+                    TERS_DT'yi ezer</li>
+                <li><strong>Kritik teşhis</strong> — soğutmuyor / ısıtmıyor / ters ΔT; bunlar daha hafif
+                    kurallar tarafından <em>ezilemez</em></li>
+                <li><strong>Uyarı</strong> — üfleme bandı, konfor, band dışı ΔT</li>
+                <li><strong>Normal</strong></li>
+            </ol>
+            <p>Bu sıralama 22 elle yazılmış çift testi ve 4000 senaryoluk rastgele çakışma taramasıyla
+                sabitlenmiştir; skor tablosu (<code>INSTRUCTION_GUIDE</code>) yalnızca eşit seviyede karar verir.</p>
             <p><strong>AHU'da INSUFFICIENT_CAPACITY neden yok?</strong> AHU'larda genelde tek bir bölge/oda
                 sensörü olmadığından "oda-set sapması" kavramı tanımsızdır; bunun yerine AHU'da aynı senaryo
                 <strong>HEAT_EFF_LOW / COOL_EFF_LOW / NOT_HEATING / NOT_COOLING</strong> kuralları üzerinden
                 (üfleme sıcaklığı ve approach bazlı) tespit edilir.</p>
+        </div>
+
+        <!-- ========== DOĞRULAMA VE GÜVENCE ========== -->
+        <div class="section page-break">
+            <h2>🧪 Doğrulama ve Güvence — "Sıfır Hata" Nasıl Aranıyor?</h2>
+            <p>Mekanik Zeka, sistemin en iddialı ve en kritik parçasıdır; bu yüzden kararları üç ayrı katmanda
+                sınanır. Motorun karar yüzeyi küçük değildir: <strong>35 kural</strong>, <strong>52 ayar
+                eşiği</strong> ve çekirdek fonksiyonlarda <strong>617 karar dalı</strong>.</p>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="icon">🧪</div>
+                    <div class="value">180 kontrol</div>
+                    <div class="label">Öz test — lokasyonun kendi ayarlarıyla, portal açılışında</div>
+                </div>
+                <div class="info-card">
+                    <div class="icon">⚖️</div>
+                    <div class="value">15 değişmez</div>
+                    <div class="label">Çıkış denetimi — her analiz sonucunda, canlı</div>
+                </div>
+                <div class="info-card">
+                    <div class="icon">🎯</div>
+                    <div class="value">35 / 35</div>
+                    <div class="label">Kural kapsamı — her kuralın en az bir test vakası var</div>
+                </div>
+            </div>
+
+            <h3>1. Test Paketleri (yayından önce)</h3>
+            <table>
+                <thead>
+                    <tr><th>Paket</th><th>Kontrol</th><th>Ne güvence altına alır</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Golden vakalar</td><td>14</td><td>Sahadan gelen gerçek vakaların cevabı dondurulur —
+                        bu 14 vaka yeşil olmadan yayın yapılmaz</td></tr>
+                    <tr><td>Kural kataloğu</td><td>42</td><td>35 kuralın her biri: tetikleniyor mu, eşiğin
+                        altında susuyor mu, benzer sağlıklı durumda yanlış tetikleniyor mu</td></tr>
+                    <tr><td>Kural tutarlılığı</td><td>58</td><td>Verilen kararlar kalıcı kılınır (ΔT yönü,
+                        veri eksikliği önemi, kollektör kazan kontrolü…)</td></tr>
+                    <tr><td>Mod çözümü</td><td>26</td><td>"Isıtıyor mu soğutuyor mu" kararının yedi kaynağı ve
+                        sınır değerleri</td></tr>
+                    <tr><td>Öncelik matrisi</td><td>24</td><td>İki kural çakışınca hangisinin kazanacağı +
+                        4000 senaryoluk rastgele çakışma taraması</td></tr>
+                    <tr><td>Değişmez kurallar</td><td>15</td><td>Binlerce rastgele senaryoda bozulmaması gereken
+                        doğrular; karşı örnek bulunursa en küçük haliyle raporlanır</td></tr>
+                </tbody>
+            </table>
+
+            <h3>2. Çıkış Denetimi (canlı, her analizde)</h3>
+            <p>Sonuçlar ekrana basılmadan önce <code>kural_denetim.py</code>'deki 15 değişmez kuraldan geçer.
+                Kurallar testlerle <strong>aynı dosyada</strong> tanımlıdır; böylece testin aradığı kural ile
+                sahada uygulanan kural birbirinden ayrılamaz.</p>
+            <ul>
+                <li>Her üretilen kuralın talimat açıklaması var mı</li>
+                <li>Kritik bulgunun skoru kritik seviyede mi (ve tersi)</li>
+                <li>Normal satır kırmızı yanıyor mu</li>
+                <li>Mod ısıtma derken soğutma alarmı üretilmiş mi</li>
+                <li>Çalışmayan cihazda kritik alarm var mı</li>
+                <li>Soğutmada önerilen üfleme emişten sıcak mı</li>
+            </ul>
+            <div class="alert alert-info">
+                <strong>İhlal bulunursa sonuç değiştirilmez</strong> — satır işaretlenir, loga yazılır ve
+                portalda Kritik/Uyarı/Optimal filtrelerinin yanındaki <strong>Tutarsız</strong> filtresinde
+                toplanır. Amaç hatayı gizlemek değil, görünür kılmaktır.
+            </div>
+
+            <h3>3. Lokasyon Öz Testi (portal açılışında)</h3>
+            <p>Her lokasyonun <strong>kendi ayarları</strong> vardır (üfleme bandı, tolerans, chiller hedefi).
+                Aynı kod farklı ayarla farklı karar verir — bu yüzden 180 kontrol lokasyon PC'sinde de koşar.
+                Sonuç heartbeat ile Synapse'e gider ve lokasyon kartında görünür:</p>
+            <div class="alert alert-green">
+                🧪 <strong>öz test: 2 lokasyon 180/180 geçti</strong> — kalan varsa kırmızı satır ve hangi
+                paketin kaldığı yazılır.
+            </div>
+            <p>Böylece bozuk bir yama, bozulmuş bir ayar dosyası veya motoru anlamsız bir noktaya iten bir
+                lokasyon ayarı açılışta yakalanır.</p>
         </div>
 
         <!-- ========== 5. kW KARTLARI ========== -->
@@ -672,14 +911,53 @@
             <div class="alert alert-info">
                 <strong>Pratik kural:</strong> Önce 🔴 CRITICAL satırlarına bakılır (acil müdahale), sonra
                 🟡 WARNING satırları planlı bakım listesine eklenir. ⚪ MISSING_DATA satırları sensör/iletişim
-                kontrolü gerektirir.
+                kontrolü gerektirir. ⚖️ <strong>Tutarsız</strong> filtresinde satır varsa motorun kendi içinde
+                çelişen bir kararı var demektir — geliştirmeye bildirilmelidir.
+            </div>
+        </div>
+
+        <!-- ========== KOD VE DOSYA ========== -->
+        <div class="section">
+            <h2>📦 Mekanik Zeka — Kod ve Dosya Yapısı</h2>
+            <p>Mekanik Zeka, lokasyon programındaki iki uygulamadan biridir
+                (<code>main_portal.py</code>, FastAPI, port 8005). Diğeri Enerji ve Verimlilik'tir
+                (<code>app_portal.py</code>, Streamlit, port 8501). İkisine de tek portal girişinden ulaşılır.</p>
+
+            <table>
+                <thead>
+                    <tr><th>Dosya</th><th>Satır</th><th>Görev</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>main_portal.py</code></td><td>5.398</td><td>Kural motoru, ΔT/hedef/skor,
+                        talimat rehberi, API uçları, portal girişi</td></tr>
+                    <tr><td><code>static/index.html</code></td><td>4.234</td><td>Analiz arayüzü, filtreler,
+                        talimat penceresi, PDF üretimi</td></tr>
+                    <tr><td><code>ahu_collector.py</code></td><td>1.159</td><td>BACnet okuma → motora besleme,
+                        ek ekipman satırları (kollektör/chiller/kazan)</td></tr>
+                    <tr><td><code>on_kosul.py</code></td><td>430</td><td>Ön koşul kapısı: start/stop, kanal
+                        basıncı, sensör aralığı (2/3 – 3/3 onay)</td></tr>
+                    <tr><td><code>kural_denetim.py</code></td><td>169</td><td>15 değişmez kural — motor ve
+                        testler için tek kaynak</td></tr>
+                    <tr><td><code>oz_test.py</code></td><td>128</td><td>Lokasyon öz testi (180 kontrol) ve
+                        sonucun heartbeat'e aktarılması</td></tr>
+                    <tr><td>Test dosyaları (6 paket)</td><td>1.226</td><td>Golden, katalog, tutarlılık, mod,
+                        öncelik, değişmez kurallar</td></tr>
+                </tbody>
+            </table>
+
+            <div class="alert alert-green">
+                <strong>Sistem geneli:</strong> 142 takipli dosya, 93 kod dosyası,
+                <strong>48.373 ham satır</strong> (yorum ve boş satırlar çıkarılınca 39.248 net satır),
+                bunun 36.204'ü Python. 18 test dosyasında 3.593 satır test kodu.
             </div>
         </div>
 
         <!-- FOOTER -->
         <div class="footer">
             <strong>Mekanik Zeka</strong> — Synapse (SYN) HVAC Analiz Modülü — Acıbadem Hastanesi<br>
-            Bu belge, kullanım ve teşhis mantığının özetidir; mevcut kod ve dosya yapısı değişmemiştir.
+            Sürüm <strong>v8.2</strong> — 20 Eylül 2026 | 35 kural | 52 ayar eşiği | 617 karar dalı |
+            180 kontrollük öz test | 15 değişmez kuralla canlı çıkış denetimi<br>
+            <em>Bu belge motorun güncel davranışını anlatır; kural eşikleri ayarlar panelinden değiştirilebilir.</em>
         </div>
     </div>
 

@@ -162,6 +162,10 @@
                 Synapse (SYN) sisteminin enerji modülü. Acıbadem Hastanesi'nin elektrik, doğalgaz, su ve
                 chiller tüketimini günlük takip eder, anomalileri tespit eder ve maliyet düşürme
                 fırsatlarını otomatik olarak raporlar.
+                <br><br>
+                <strong>Sürüm v8.2 — 20 Eylül 2026</strong> &nbsp;|&nbsp; <code>app_portal.py</code> (Streamlit,
+                port 8501) &nbsp;|&nbsp; 22 Modbus analizör &nbsp;|&nbsp; 12 tasarruf kuralı &nbsp;|&nbsp;
+                GM Merkez'de lokasyon karşılaştırma
             </div>
         </div>
 
@@ -194,6 +198,33 @@
                 <strong>Özetle:</strong> Enerji ve Verimlilik, "ne kadar tükettik, normal mi, normal değilse
                 neden ve nasıl tasarruf edebiliriz?" sorusunu her gün otomatik olarak cevaplar.
             </div>
+
+            <h3>Sistemdeki Yeri</h3>
+            <p>Lokasyon PC'sinde iki uygulama birlikte çalışır; kullanıcı ikisine de <strong>tek portal
+                girişinden</strong> (port 8005) ulaşır:</p>
+            <table>
+                <thead>
+                    <tr><th>Modül</th><th>Dosya</th><th>Port</th><th>Kapsam</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>⚡ <strong>Enerji ve Verimlilik</strong></td>
+                        <td><code>app_portal.py</code> (Streamlit)</td>
+                        <td>8501</td>
+                        <td>Enerji verisi girişi, tüketim takibi, anomali, tasarruf önerileri, raporlama</td>
+                    </tr>
+                    <tr>
+                        <td>🧠 Mekanik Zeka</td>
+                        <td><code>main_portal.py</code> (FastAPI)</td>
+                        <td>8005</td>
+                        <td>HVAC teşhis motoru (ayrı belge)</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p>Enerji tarafının yardımcı modülleri: <code>data_collector.py</code> (Modbus okuma),
+                <code>data_bridge.py</code> (gece 23:45 aktarım), <code>daily_report.py</code>,
+                <code>monthly_summary_report.py</code> ve <code>monthly_report/</code> klasöründeki
+                11 dosyalık aylık rapor motoru (3.629 satır).</p>
         </div>
 
         <!-- ========== 2. TAKİP EDİLEN VERİLER ========== -->
@@ -473,6 +504,49 @@
             </div>
         </div>
 
+        <!-- ========== GM MERKEZ KARŞILAŞTIRMA ========== -->
+        <div class="section page-break">
+            <h2>🌐 GM Merkez'de Lokasyon Karşılaştırma <span class="badge badge-purple">YENİ</span></h2>
+            <p>Synapse GM Merkez portalındaki <strong>Global Özet</strong> kartlarının beşi de artık
+                tıklanabilir. Bir başlığa tıklandığında tüm lokasyonların o kalemdeki performansı yan yana
+                karşılaştırılır.</p>
+
+            <div class="feature-grid">
+                <div class="feature-card" style="border-left: 4px solid var(--orange);">
+                    <h4>📊 Karşılaştırılan Başlıklar</h4>
+                    <ul>
+                        <li>Toplam enerji tüketimi</li>
+                        <li>Doğalgaz — <strong>kazan ve kojen ayrı</strong></li>
+                        <li>Soğutma (chiller) tüketimi</li>
+                        <li>Su tüketimi</li>
+                        <li>kWh/m² verimlilik endeksi</li>
+                    </ul>
+                </div>
+                <div class="feature-card" style="border-left: 4px solid var(--teal);">
+                    <h4>🔍 Detay Penceresinde</h4>
+                    <ul>
+                        <li>Lokasyon sıralaması ve paylar</li>
+                        <li>Geçen yıl aynı dönemle karşılaştırma</li>
+                        <li>m² başına normalize edilmiş değerler</li>
+                        <li>Dönem seçimi ve trend grafiği</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>Neden önemli?</strong> Tek lokasyonun tüketimi tek başına "yüksek mi düşük mü" sorusunu
+                cevaplamaz. Aynı işlevdeki iki hastaneyi m² bazında yan yana koymak, yapısal farkları ve
+                iyileştirme potansiyelini görünür kılar.
+            </div>
+
+            <h3>Bilinen Açık Kalem</h3>
+            <div class="alert alert-warning">
+                <strong>Kojen / şebekeye satış:</strong> Toplam tüketim hesabında şebekeye satılan elektrik
+                kalemi henüz düşülmüyor; bu da toplamı olduğundan yüksek gösteriyor. TRDP-2 ve TRDP-4
+                sayaçları bağlandığında hesap tamamlanacak.
+            </div>
+        </div>
+
         <!-- ========== 6. KULLANIM ========== -->
         <div class="section page-break">
             <h2>👤 Kullanım — Operasyon Ekibi İçin</h2>
@@ -537,7 +611,12 @@
         <!-- FOOTER -->
         <div class="footer">
             <strong>Enerji ve Verimlilik</strong> — Synapse (SYN) Enerji Modülü — Acıbadem Hastanesi<br>
-            Bu belge, kullanım ve teşhis mantığının özetidir; mevcut kod ve dosya yapısı değişmemiştir.
+            Sürüm <strong>v8.2</strong> — 20 Eylül 2026 | <code>app_portal.py</code> (5.160 satır) +
+            aylık rapor motoru (3.629 satır) | 22 Modbus analizör | 12 tasarruf kuralı<br>
+            Synapse portal tarafında 220 otomatik kontrol (veri, karşılaştırma, giriş, oto-mod) yayından
+            önce çalıştırılır.<br>
+            <em>Bu belge modülün güncel davranışını anlatır; birim fiyatlar ve eşikler ayarlar panelinden
+            değiştirilebilir.</em>
         </div>
     </div>
 

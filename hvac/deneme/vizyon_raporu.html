@@ -337,9 +337,9 @@
     <h1>Synapse (SYN)</h1>
     <div class="subtitle">Gelecek Vizyon Belgesi</div>
     <div class="meta">
-      <span>📅 Son Güncelleme: 5 Temmuz 2026</span>
+      <span>📅 Son Güncelleme: 20 Eylül 2026 (v8.2)</span>
       <span>🚀 Proje Başlangıcı: 5 Ağustos 2025</span>
-      <span>⏱️ Toplam Süre: ~11 ay (kavramdan üretime)</span>
+      <span>⏱️ Toplam Süre: ~13,5 ay (kavramdan üretime)</span>
     </div>
   </div>
 
@@ -355,7 +355,8 @@ graph LR
     F3 --> F4["Faz 4&lt;br/&gt;Operasyonel Zeka"]:::done
     F4 --> F5["Faz 5&lt;br/&gt;Makine Öğrenmesi"]:::done
     F5 --> F55["Faz 5.5&lt;br/&gt;BACnet + Bulut"]:::done
-    F55 --> F6["Faz 6&lt;br/&gt;Otonom Kontrol"]:::active
+    F55 --> F6["Faz 6&lt;br/&gt;Otonom Kontrol"]:::done
+    F6 --> F7["Faz 7&lt;br/&gt;Doğrulama &amp; Güvence"]:::active
 
     classDef done fill:#10b981,stroke:#065f46,color:#fff
     classDef active fill:#f59e0b,stroke:#92400e,color:#fff
@@ -374,12 +375,15 @@ graph LR
         <tr class="phase-row-done"><td>4 — 4.6</td><td><span class="badge badge-done">✅</span></td><td>Şubat 2026</td><td>Bakım kartları, m² metrik, maliyet, zamanlayıcı, AI göstergesi</td></tr>
         <tr class="phase-row-done"><td><strong>5</strong></td><td><span class="badge badge-done">✅</span></td><td>Şub-Mart 2026</td><td><strong>ML Tüketim Tahmini, Kural 8-12, Otonom Swarm AI, Feedback Filtresi</strong></td></tr>
         <tr class="phase-row-done"><td><strong>5.5</strong></td><td><span class="badge badge-done">✅</span></td><td>Nis-May 2026</td><td><strong>BACnet otomasyon (56 AHU), GM Merkez portal, Supabase bulut, Lisans sistemi, YoY badge, Personel bildirim + onay</strong></td></tr>
-        <tr class="phase-row-active"><td>6</td><td><span class="badge badge-active">🔄</span></td><td>Devam ediyor</td><td>BACnet write (setpoint), çok lokasyon BACnet (Altunizade), tam otonom karar</td></tr>
+        <tr class="phase-row-done"><td><strong>6</strong></td><td><span class="badge badge-done">✅</span></td><td>May-Eyl 2026</td><td><strong>BACnet write aktif: oto-set ile chiller/kollektör setleri geçiş saatlerinde otomatik gönderiliyor, geri okuma ile doğrulanıyor</strong></td></tr>
+        <tr class="phase-row-active"><td><strong>7</strong></td><td><span class="badge badge-active">🔄</span></td><td>Eylül 2026</td><td><strong>Doğrulama ve Güvence: 180 kontrollük test altyapısı, canlı çıkış denetimi, lokasyon öz testi</strong> — sırada saha verisiyle regresyon</td></tr>
       </tbody>
     </table>
 
     <div class="alert alert-highlight">
-      Proje 5 Ağustos 2025'te başladı. Faz 5 (ML) + Faz 5.5 (BACnet Otomasyon + Bulut Altyapı) tamamlandı. Faz 6 (Tam Otonom) devam ediyor.
+      Proje 5 Ağustos 2025'te başladı. Faz 5 (ML), Faz 5.5 (BACnet + Bulut) ve Faz 6 (Otonom set gönderimi)
+      tamamlandı. Faz 7 (Doğrulama ve Güvence) Eylül 2026'da kuruldu; motorun kararları artık hem yayından
+      önce hem sahada canlı olarak denetleniyor.
     </div>
   </div>
 
@@ -389,7 +393,10 @@ graph LR
 
     <div style="text-align:center; margin-bottom: 20px;">
       <div style="display:inline-block; background: linear-gradient(135deg, var(--green), var(--blue)); color:white; padding: 14px 32px; border-radius: 12px; font-size: 22px; font-weight: 800;">
-        %87 — Otonom Eşiği 🤖
+        %92 — Otonom 🤖
+      </div>
+      <div style="font-size:12px; color:var(--text-light); margin-top:8px;">
+        Faz 6 (otonom set gönderimi) ve Faz 7 (doğrulama altyapısı) ile +5 puan
       </div>
     </div>
 
@@ -410,14 +417,15 @@ graph LR
         <div style="font-size:11px; color:var(--text-light); margin-top:4px;">9 temel özellik aktif, maksimum</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🚀 İleri AI</span><span class="score" style="color:var(--green);">19/20</span></div>
-        <div class="progress-bar"><div class="fill" style="width:95%; background:var(--green);"></div></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">BACnet otomasyon, GM Merkez, bulut altyapı tamamlandı</div>
+        <div class="label"><span>🚀 İleri AI</span><span class="score" style="color:var(--green);">20/20</span></div>
+        <div class="progress-bar"><div class="fill" style="width:100%; background:var(--green);"></div></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">BACnet okuma + <strong>yazma (oto-set)</strong>, GM Merkez, bulut altyapı, doğrulama katmanı</div>
       </div>
     </div>
 
     <div style="margin-top:4px; text-align:center; font-size:13px; color:var(--text-light);">
-      🎯 <strong>Sonraki Hedef:</strong> %90+ Tam Otonom (BACnet write ile setpoint kilitleme + Altunizade BACnet)
+      🎯 <strong>Sonraki Hedef:</strong> Saha verisiyle regresyon (gerçek okumalar dondurulup her değişiklikte
+      karşılaştırılacak) + Altunizade BACnet entegrasyonu
     </div>
 
     <h3>Seviye Haritası</h3>
@@ -688,6 +696,21 @@ timeline
         : Dijital Bakım
         : Maliyet Sistemi
         : AI İlerleme
+    section Faz 5-5.5 (Mart-Mayıs 2026)
+        ML ve Bulut
+        : Tüketim tahmini
+        : BACnet okuma 56 AHU
+        : GM Merkez portalı
+    section Faz 6 (Ağustos-Eylül 2026)
+        Otonom Kontrol
+        : Oto-set ile set gönderimi
+        : Geri okuma doğrulaması
+        : Nokta bazlı komut kaydı
+    section Faz 7 (Eylül 2026)
+        Doğrulama ve Güvence
+        : 35 kural kapsam altında
+        : Canlı çıkış denetimi
+        : Lokasyon öz testi
     </div>
 
     <h3>Fazlara Göre Kronoloji</h3>
@@ -726,15 +749,24 @@ gantt
 
     section Faz 5.5 — BACnet + Bulut (Tamamlandı)
         ahu_collector + nokta konfig  :done, f55a, 2026-04-01, 2026-04-20
-        cloud_sync 08:30 trigger      :done, f55b, 2026-04-10, 2026-04-20
+        cloud_sync gunluk tetikleyici :done, f55b, 2026-04-10, 2026-04-20
         GM Merkez portal              :done, f55c, 2026-04-15, 2026-05-05
         Lisans sistemi                :done, f55d, 2026-05-01, 2026-05-10
         Supabase güncellemeler        :done, f55e, 2026-04-20, 2026-05-15
         YoY badge + onay workflow     :done, f55f, 2026-05-05, 2026-05-20
 
-    section Faz 6 — Otonom (Devam)
-        BACnet Write setpoint         :active, f6a, 2026-05-20, 2026-07-01
-        Altunizade BACnet             :f6b, 2026-06-01, 2026-08-01
+    section Faz 6 — Otonom Kontrol (Tamamlandı)
+        Enerji diyagramı + denetim    :done, f6z, 2026-06-01, 2026-07-15
+        Oto-set BACnet write          :done, f6a, 2026-08-20, 2026-09-10
+        Geri okuma + dogrulama        :done, f6b, 2026-09-10, 2026-09-14
+        Tek kopya kilidi + komut logu :done, f6c, 2026-09-14, 2026-09-18
+
+    section Faz 7 — Dogrulama ve Guvence
+        Kural duzeltmeleri v7.6-v8.0  :done, f7a, 2026-09-19, 2026-09-20
+        Test altyapisi 180 kontrol    :done, f7b, 2026-09-19, 2026-09-20
+        Canli cikis denetimi          :done, f7c, 2026-09-20, 2026-09-20
+        Lokasyon oz testi             :done, f7d, 2026-09-20, 2026-09-20
+        Saha verisiyle regresyon      :active, f7e, 2026-09-21, 2026-10-15
     </div>
   </div>
 
@@ -967,6 +999,92 @@ gantt
     </div>
   </div>
 
+    <h3 style="color:var(--orange-dark); margin-top: 30px;">🤖 Faz 6 + 7: Otonom Kontrol ve Doğrulama (Ağustos – Eylül 2026)</h3>
+
+    <div class="log-entry">
+      <h4>📌 Ağustos – Eylül 2026 — Otonom Set Gönderimi (v7.0 – v7.5)</h4>
+      <ul>
+        <li>Oto-set lokasyon PC'sine taşındı: gece/gündüz geçişlerinde chiller ve kollektör setleri otomatik gönderiliyor</li>
+        <li>BACnet geri okuma doğrulaması: yazılan set (REM SET) cihazdan geri okunuyor (IC SET), uygulanmadıysa raporlanıyor</li>
+        <li>Tek kopya kilidi (kilit.py): aynı anda iki gönderim engellendi — günde 60 tekrar eden gönderim sorunu çözüldü</li>
+        <li>Heartbeat düzeltmesi: v7.1'de kesilen kalp atışı v7.2'de kendi içinde kapalı hale getirildi</li>
+        <li>Nokta bazlı komut kaydı: hangi noktaya kaç derece gittiği Uzaktan Kontrol ekranında görünüyor</li>
+        <li>Supabase RLS güvenliği: anonim anahtar "bekliyor" komutu oluşturamıyor</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 19-20 Eylül 2026 — Mekanik Zeka Kural Düzeltmeleri (v7.6 – v8.0)</h4>
+      <ul>
+        <li>ΔT yönü ve hedefi artık aynı moddan türetiliyor (Ahu-7'de +10,6 görünen değer gerçekte −10,6'ydı)</li>
+        <li>Ters ΔT artık üfleme uyarısı tarafından maskelenmiyor; kök neden varsa (eşzamanlı ısıtma+soğutma) o gösteriliyor</li>
+        <li>Konfor derecelendirmesi: sapma 3-6°C uyarı, 6°C üstü kritik — vana %90 ayrımıyla "kapasite yetersiz" / "kontrol sorunu"</li>
+        <li>Veri eksikliğinin önemi cihazın çalışma durumuna bağlandı: çalışırken kritik, kapalıyken uyarı</li>
+        <li>Kazanların üçü de kapalıyken ısıtma kollektörü analiz dışı (soğuma artığı sahte alarm üretiyordu)</li>
+        <li><strong>Ayar ekranındaki "Yüksek Vana Eşiği" gerçekten uygulanmaya başladı</strong> — kodda %70 sabitliydi, girilen %90 yok sayılıyordu</li>
+        <li><strong>Mod artık talepten okunuyor:</strong> kışın mahal setin üstündeyse santral soğutma yapar, ısıtma vanası yalnız minimum üflemeyi korur — bu durum kritik alarm üretmiyor artık</li>
+        <li>Kısmi yük tanımlandı: vana %40-90 arasında ve üfleme santral sınırları içindeyse alarm üretilmiyor</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 19-20 Eylül 2026 — Doğrulama Altyapısı (v7.9 – v8.2)</h4>
+      <ul>
+        <li>Değişmez kural motoru: rastgele senaryolarda bozulmaması gereken doğrular, karşı örnek en küçük haliyle raporlanıyor</li>
+        <li>Kural kataloğu: 35 kuralın tamamı kapsamda + yeni kural eklenirse uyaran kapsam denetimi</li>
+        <li>Mod çözümü ve öncelik matrisi testleri (4000 senaryoluk rastgele çakışma taraması dahil)</li>
+        <li><strong>Canlı çıkış denetimi:</strong> sonuçlar ekrana basılmadan 15 değişmez kuraldan geçiyor, çelişkiler portalda "Tutarsız" filtresinde toplanıyor</li>
+        <li><strong>Lokasyon öz testi:</strong> 180 kontrol lokasyonun kendi ayarlarıyla açılışta koşuyor, sonuç Synapse'te lokasyon kartında görünüyor</li>
+        <li>Kurallar tek kaynakta (kural_denetim.py): testin aradığı kural ile sahada uygulanan kural ayrılamıyor</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 Eylül 2026 — Synapse Portal İyileştirmeleri</h4>
+      <ul>
+        <li>Global Özet'teki 5 ana başlık tıklanabilir: tüm lokasyonların karşılaştırma detayı açılıyor</li>
+        <li>Doğalgaz kırılımı kazan / kojen olarak ayrıldı</li>
+        <li>Sunum simülasyonuna örnek lokasyon verileri eklendi (430 günlük veri, çevrimiçi/çevrimdışı/kurulmadı durumları)</li>
+        <li>Oto-set sağlık kartı: her lokasyonun son turda ne yaptığı görünüyor (10 gün sessiz kalan sistemi fark etmeme sorunu çözüldü)</li>
+        <li>Mekanik Zeka öz test sonucu lokasyon kartlarında</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- KOD İSTATİSTİKLERİ -->
+  <div class="section">
+    <h2>📦 Sistem Büyüklüğü (20 Eylül 2026)</h2>
+    <div class="progress-grid">
+      <div class="progress-item">
+        <div class="label"><span>📄 Kod satırı (ham)</span><span class="score" style="color:var(--blue);">48.373</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Yorum ve boş satırlar çıkarılınca 39.248 net satır</div>
+      </div>
+      <div class="progress-item">
+        <div class="label"><span>🐍 Python</span><span class="score" style="color:var(--green);">36.204</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">93 kod dosyası, 142 takipli dosya</div>
+      </div>
+      <div class="progress-item">
+        <div class="label"><span>🧪 Test kodu</span><span class="score" style="color:var(--purple);">3.593</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">18 test dosyası, 466 otomatik kontrol</div>
+      </div>
+      <div class="progress-item">
+        <div class="label"><span>⚙️ Teşhis kuralı</span><span class="score" style="color:var(--orange);">35</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">52 ayar eşiği, 617 karar dalı, 12 tasarruf kuralı</div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Bileşen</th><th>Satır</th><th>Görev</th></tr></thead>
+      <tbody>
+        <tr><td>main_portal.py</td><td>5.398</td><td>Mekanik Zeka motoru + portal girişi</td></tr>
+        <tr><td>app_portal.py</td><td>5.160</td><td>Enerji ve Verimlilik uygulaması</td></tr>
+        <tr><td>static/index.html</td><td>4.234</td><td>Mekanik Zeka arayüzü</td></tr>
+        <tr><td>merkez/app_merkez.py</td><td>3.224</td><td>Synapse GM Merkez portalı</td></tr>
+        <tr><td>ahu_collector.py</td><td>1.159</td><td>BACnet okuma ve ekipman satırları</td></tr>
+        <tr><td>monthly_report/ (11 dosya)</td><td>3.629</td><td>Aylık rapor motoru</td></tr>
+      </tbody>
+    </table>
+  </div>
+
   <!-- 9. TAMAMLANAN ÖZELLİKLER -->
   <div class="section">
     <h2>✅ Tamamlanan Özellik Listesi</h2>
@@ -1026,6 +1144,27 @@ gantt
         </ul>
       </div>
       <div class="feature-card">
+        <h4>7. Otonom Kontrol (6 özellik) <span class="badge badge-done">YENİ</span></h4>
+        <ul>
+          <li>Oto-set: geçiş saatlerinde otomatik set gönderimi</li>
+          <li>BACnet WriteProperty + geri okuma doğrulaması</li>
+          <li>Süreçler arası kilit (tek kopya garantisi)</li>
+          <li>Nokta bazlı komut kaydı ve geçmişi</li>
+          <li>Synapse'te oto-set sağlık kartı</li>
+          <li>Supabase RLS ile komut güvenliği</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h4>8. Doğrulama ve Güvence (5 özellik) <span class="badge badge-done">YENİ</span></h4>
+        <ul>
+          <li>6 test paketi, 180 otomatik kontrol</li>
+          <li>Canlı çıkış denetimi (15 değişmez kural)</li>
+          <li>Portalda Tutarsız filtresi</li>
+          <li>Lokasyon öz testi + Synapse bildirimi</li>
+          <li>Kural tanımları tek kaynakta (motor + test)</li>
+        </ul>
+      </div>
+      <div class="feature-card">
         <h4>6. Bulut Altyapı + GM Merkez (9 özellik)</h4>
         <ul>
           <li>Supabase güncellemeler — uzak yama mekanizması</li>
@@ -1045,11 +1184,14 @@ gantt
   <!-- FOOTER -->
   <div class="footer">
     <strong>Sonuç:</strong> Proje <strong>5 Ağustos 2025'te</strong> bir fikirle başladı.
-    ~5 ay Faz 0 kavram doğrulama (ChatGPT), ardından Faz 1-5 tam geliştirme (Antigravity),
-    ardından <strong>Faz 5.5: BACnet otomasyon + Supabase bulut + GM Merkez portalı</strong>.
-    Toplam <strong>~9,5 ayda 80+ özellik</strong> aktif, <strong>%87 AI olgunluk</strong>.
-    56 AHU BACnet okuma, uzak yama mekanizması, lisans sistemi, GM Merkez portalı tamamlandı.
-    Sırada: BACnet write (setpoint), Altunizade BACnet entegrasyonu! 🤖🚀
+    ~5 ay Faz 0 kavram doğrulama (ChatGPT), ardından Faz 1-5 tam geliştirme,
+    Faz 5.5 (BACnet + Supabase bulut + GM Merkez), <strong>Faz 6 (otonom set gönderimi)</strong> ve
+    <strong>Faz 7 (doğrulama ve güvence)</strong>.
+    Toplam <strong>~13,5 ayda 90+ özellik</strong> aktif, <strong>48.373 satır kod</strong>,
+    <strong>%92 AI olgunluk</strong>.
+    56 AHU BACnet okuma + yazma, uzak yama, lisans sistemi, GM Merkez portalı, 35 teşhis kuralı ve
+    466 otomatik kontrol üretimde.
+    Sırada: saha verisiyle regresyon ve Altunizade BACnet entegrasyonu! 🤖🚀
   </div>
 
 </div>

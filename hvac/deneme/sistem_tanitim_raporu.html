@@ -444,6 +444,10 @@
                 Acıbadem Hastanesi HVAC ve enerji sistemlerinin yapay zeka destekli otomatik analizi —
                 BACnet/Modbus entegrasyonu, Supabase bulut altyapısı, çok lokasyon (Maslak + Altunizade) yönetimi
                 ve GM Merkez portalı ile hastane konforunu koruyarak enerji maliyetlerini düşürme hedefi.
+                <br><br>
+                <strong>Sürüm v8.2 — 20 Eylül 2026</strong> &nbsp;|&nbsp; 48.373 satır kod &nbsp;|&nbsp;
+                35 teşhis + 12 tasarruf kuralı &nbsp;|&nbsp; otonom set gönderimi (oto-set) aktif &nbsp;|&nbsp;
+                canlı çıkış denetimi + lokasyon öz testi
             </div>
         </div>
 
@@ -515,10 +519,35 @@
                 </div>
                 <div class="info-card">
                     <div class="icon">⚙️</div>
-                    <div class="value">80+ özellik</div>
+                    <div class="value">90+ özellik</div>
                     <div class="label">Aktif Sistem Kapasitesi</div>
                 </div>
             </div>
+
+            <h3>Lokasyon PC'sinde Çalışan Süreçler</h3>
+            <p><code>portal_watchdog.py</code> beş süreci başlatır ve çökerse yeniden ayağa kaldırır.
+                Dosya adları yanıltıcıdır: <strong>main_portal = Mekanik Zeka</strong>,
+                <strong>app_portal = Enerji ve Verimlilik</strong>. Kullanıcı ikisine de tek portal
+                girişinden (port 8005) ulaşır.</p>
+            <table>
+                <thead>
+                    <tr><th>Süreç</th><th>Dosya</th><th>Port</th><th>Görev</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Mekanik Zeka</td><td><code>main_portal.py</code> (FastAPI)</td><td>8005</td>
+                        <td>HVAC teşhis motoru + portal girişi</td></tr>
+                    <tr><td>Enerji ve Verimlilik</td><td><code>app_portal.py</code> (Streamlit)</td><td>8501</td>
+                        <td>Enerji verisi, tüketim takibi, raporlama</td></tr>
+                    <tr><td>Bulut senkron</td><td><code>cloud_sync.py</code></td><td>—</td>
+                        <td>Heartbeat, uzak yama, analiz tetikleyici</td></tr>
+                    <tr><td>Veri toplayıcı</td><td><code>data_collector.py</code></td><td>—</td>
+                        <td>Modbus (22 analizör) + BACnet</td></tr>
+                    <tr><td>Veri köprüsü</td><td><code>data_bridge.py</code></td><td>—</td>
+                        <td>Gece 23:45 günlük veri aktarımı</td></tr>
+                </tbody>
+            </table>
+            <p>Portal açılışında ayrıca <strong>Mekanik Zeka öz testi</strong> arka planda çalışır
+                (180 kontrol, ~30 sn) ve sonucu heartbeat ile Synapse'e bildirilir.</p>
         </div>
 
         <!-- ========== 8. HEDEFLER ========== -->
@@ -688,19 +717,30 @@
         <div class="section page-break">
             <h2>🔄 Akıllı Mod Algılama ve SAT Analizi</h2>
 
-            <h3>Otomatik Mod Tespiti</h3>
-            <p>Sistem, ekipmanın soğutma mı ısıtma mı yaptığını <strong>vana verilerinden</strong> otomatik tespit eder:
-            </p>
+            <h3>Otomatik Mod Tespiti — Talep Esaslı <span class="badge badge-purple">v8.0</span></h3>
+            <p>Sistem, ekipmanın soğutma mı ısıtma mı yaptığını önce <strong>talepten</strong> (mahal ile set
+                farkı, ölü bant 0,5°C — BMS ile aynı), vana <strong>%90</strong>'a ulaştığında ise vanadan
+                belirler.</p>
+
+            <div class="alert alert-warning">
+                <strong>Neden değişti?</strong> Kışın mahal setin üstündeyse santral soğutma yapar; ısıtma
+                vanası yalnızca üflemeyi santralin minimumunun (15/18°C) altına düşürmemek için açılır. Eski
+                mantık bunu "ısıtma" sayıp üflemenin 28°C'ye çıkmasını bekliyor ve yanlış kritik alarm
+                üretiyordu.
+            </div>
 
             <div class="mermaid">
                 graph TD
-                V["📊 Vana Verisi<br />Soğutma % + Isıtma %"]:::input --> CHECK{"Her iki vana<br />&ge; 5%?"}
+                V["📊 Mod + Vana + Sıcaklık"]:::input --> M0{"BMS modu<br />açık mı?"}
+                M0 -->|Evet| FIX["✅ BMS modu<br />(otorite)"]:::blue
+                M0 -->|Hayır AUTO| CHECK{"Her iki vana<br />&ge; %15?"}
                 CHECK -->|Evet| AMB["⚠️ AMBIGUOUS<br />Eşzamanlı çakışma"]:::red
-                CHECK -->|Hayır| C2{"Soğutma &ge; 5%?"}
-                C2 -->|Evet| COOL["❄️ COOLING<br />Soğutma modu"]:::blue
-                C2 -->|Hayır| C3{"Isıtma &ge; 5%?"}
-                C3 -->|Evet| HEAT["🔥 HEATING<br />Isıtma modu"]:::orange
-                C3 -->|Hayır| STBY["💤 STANDBY<br />Bekleme modu"]:::gray
+                CHECK -->|Hayır| HI{"Bir vana<br />&ge; %90?"}
+                HI -->|Evet| VMODE["🔒 Vana modu<br />kesin karar"]:::orange
+                HI -->|Hayır| DEM{"Mahal-Set farkı<br />&ge; 0.5°C?"}
+                DEM -->|"Mahal &gt; Set"| COOL["❄️ COOLING (Demand)"]:::blue
+                DEM -->|"Mahal &lt; Set"| HEAT["🔥 HEATING (Demand)"]:::orange
+                DEM -->|Fark yok| SENS["🌡️ Üfleme-Emiş → Dış hava → UNKNOWN"]:::gray
 
                 classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
                 classDef blue fill:#3b82f6,stroke:#1e40af,color:#fff
@@ -709,31 +749,50 @@
                 classDef gray fill:#6b7280,stroke:#374151,color:#fff
             </div>
 
-            <h3>SAT Status (Üfleme Sıcaklığı Analizi)</h3>
+            <h3>SAT Status (Üfleme Sıcaklığı Analizi) <span class="badge badge-purple">v8.0</span></h3>
+            <p>Her santralin kendi üfleme sınırları vardır (<code>configs/ahu_sat_limitleri.json</code>):
+                minimum <strong>15/18°C</strong>, maksimum <strong>28/31°C</strong>. Alarm vananın açıklığına
+                bağlıdır:</p>
             <table>
                 <thead>
                     <tr>
-                        <th>Mod</th>
-                        <th>Normal Aralık</th>
-                        <th>Önerilen SAT</th>
-                        <th>Anormal Durum</th>
+                        <th>Durum</th>
+                        <th>Vana</th>
+                        <th>Üfleme</th>
+                        <th>Sonuç</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>❄️ Soğutma</td>
-                        <td>15°C – 18°C</td>
-                        <td>16.5°C</td>
-                        <td>SAT &gt; 18°C → <span class="badge badge-critical">NOT_COOLING</span></td>
+                        <td>Kısmi yük</td>
+                        <td>%40 – %89</td>
+                        <td>min/max arasında</td>
+                        <td><span class="badge badge-optimal">KISMI_YUK</span> — alarm yok</td>
                     </tr>
                     <tr>
-                        <td>🔥 Isıtma</td>
-                        <td>28°C – 31°C</td>
-                        <td>29.5°C</td>
-                        <td>SAT &lt; 28°C → <span class="badge badge-critical">NOT_HEATING</span></td>
+                        <td>Tam soğutma</td>
+                        <td>≥ %90</td>
+                        <td>minimuma inmiyor</td>
+                        <td><span class="badge badge-critical">NOT_COOLING</span></td>
+                    </tr>
+                    <tr>
+                        <td>Tam ısıtma</td>
+                        <td>≥ %90</td>
+                        <td>maksimuma çıkmıyor</td>
+                        <td><span class="badge badge-critical">NOT_HEATING</span></td>
+                    </tr>
+                    <tr>
+                        <td>Sınır ihlali</td>
+                        <td>Fark etmez</td>
+                        <td>min altı / max üstü</td>
+                        <td><span class="badge badge-warning">SAT_LOW</span> /
+                            <span class="badge badge-warning">SAT_HIGH</span></td>
                     </tr>
                 </tbody>
             </table>
+            <p>Önerilen üfleme: soğutmada <strong>16,5°C</strong>, ısıtmada <strong>29,5°C</strong>.
+                Vana eşikleri (Min Analiz %40, Yüksek Vana %90) ayarlar panelinden okunur ve her iki
+                iklimlendirme için de geçerlidir.</p>
 
             <h3>Sıcaklık Setpoint Zinciri (örnek)</h3>
             <p>Her kontrol noktası bir sonrakini besler — enerji tasarrufu zincirin tamamında optimize edilir:</p>
@@ -767,10 +826,10 @@
 
         <!-- ========== 4. TEŞHIS ve KURALLAR ========== -->
         <div class="section page-break">
-            <h2>🩺 Teşhis Sistemi — 15+ Akıllı Kural</h2>
+            <h2>🩺 Teşhis Sistemi — 35 Akıllı Kural</h2>
             <p>Motor, her ekipmanı bir dizi kuralla kontrol eder. Her kural bir <strong>severity (önem)</strong>
-                seviyesi ve
-                <strong>skor</strong> üretir.
+                seviyesi ve <strong>skor</strong> üretir. Kodda 35 kural atanır, 38 talimat açıklaması tanımlıdır;
+                karar yüzeyi 52 ayar eşiği ve 617 karar dalından oluşur.
             </p>
 
             <h3>Severity Seviyeleri</h3>
@@ -874,11 +933,34 @@
                         <td>Su ΔT iyi ama üfleme soğuk → debi/pompa sorunu (AHU'da HEAT_EFF_LOW ile yakalanır)</td>
                     </tr>
                     <tr>
+                        <td><strong>COMFORT_CAPACITY_FAULT</strong> <span class="badge badge-purple">YENİ v7.7</span></td>
+                        <td>8.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
+                        <td>Oda-set sapması &gt;6°C <em>ve</em> vana ≥%90 — tam kapasitede ama konfor yok</td>
+                    </tr>
+                    <tr>
+                        <td><strong>COMFORT_CONTROL_FAULT</strong> <span class="badge badge-purple">YENİ v7.7</span></td>
+                        <td>8.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span></td>
+                        <td>AHU + FCU</td>
+                        <td>Oda-set sapması &gt;6°C ama vana &lt;%90 — kontrol/set/aktüatör sorunu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>MISSING_DATA</strong> <span class="badge badge-purple">v7.9</span></td>
+                        <td>7.5 / 5.0</td>
+                        <td><span class="badge badge-critical">CRITICAL</span> /
+                            <span class="badge badge-warning">WARNING</span></td>
+                        <td>Tümü</td>
+                        <td>Çalışan cihazdan veri gelmemesi kritik (kör uçuş); kapalı cihazda uyarı</td>
+                    </tr>
+                    <tr>
                         <td><strong>INSUFFICIENT_CAPACITY</strong></td>
                         <td>6.0</td>
                         <td><span class="badge badge-warning">WARNING</span></td>
                         <td>Sadece FCU</td>
-                        <td>Kapasite yetersiz, konfor sağlanamıyor (oda-set sapması &gt;2°C ve vana &gt;%80)</td>
+                        <td>Kapasite yetersiz (oda-set sapması &gt;2°C ve vana &gt;%80).
+                            <em>Sahada FCU vana yüzdesi gelmediği için pratikte tetiklenmez</em></td>
                     </tr>
                     <tr>
                         <td><strong>HEAT_EFF_LOW</strong></td>
@@ -972,6 +1054,141 @@
                 sensörü olmadığından "oda-set sapması" kavramı tanımsızdır; bunun yerine AHU'da aynı senaryo
                 <strong>HEAT_EFF_LOW / COOL_EFF_LOW / NOT_HEATING / NOT_COOLING</strong> kuralları üzerinden
                 (üfleme sıcaklığı ve approach bazlı) tespit edilir.</p>
+        </div>
+
+        <!-- ========== OTONOM SET GÖNDERİMİ ========== -->
+        <div class="section page-break">
+            <h2>🤖 Otonom Set Gönderimi (Oto-Set) — Faz 6 Aktif</h2>
+            <p>Sistem artık yalnızca okumuyor; <strong>BMS'e set değeri de yazıyor</strong>. Gece/gündüz
+                geçiş saatlerinde chiller ve kollektör setleri dış hava tahminine göre otomatik güncellenir.</p>
+
+            <div class="mermaid">
+                graph LR
+                T["⏰ Geçiş saati<br />gündüz / gece"]:::input --> M["🌡️ Dış hava tahmini<br />mod seçimi"]:::proc
+                M --> W["📝 BACnet WriteProperty<br />REM SET"]:::proc
+                W --> R["🔍 Geri okuma<br />IC SET doğrulama"]:::audit
+                R --> L["📋 Komut kaydı<br />nokta bazında"]:::output
+                L --> S["🌐 Synapse<br />oto-set sağlık kartı"]:::output
+
+                classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
+                classDef proc fill:#f59e0b,stroke:#92400e,color:#fff
+                classDef audit fill:#8b5cf6,stroke:#5b21b6,color:#fff
+                classDef output fill:#10b981,stroke:#065f46,color:#fff
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>Özellik</th><th>Açıklama</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Geri okuma doğrulaması</td>
+                        <td>Yazılan set (REM SET) cihazdan geri okunur (IC SET); uygulanmadıysa
+                            "cihazda farklı değer var" diye raporlanır</td></tr>
+                    <tr><td>Tek kopya güvencesi</td>
+                        <td>Süreçler arası kilit (<code>kilit.py</code>) — aynı anda iki gönderim
+                            yapılamaz; günde 60 tekrar eden gönderim sorunu bu şekilde çözüldü</td></tr>
+                    <tr><td>Nokta bazlı komut kaydı</td>
+                        <td>Her gönderilen set ayrı satır olarak <code>komutlar</code> tablosuna yazılır;
+                            Uzaktan Kontrol ekranında hangi noktaya kaç derece gittiği görülür</td></tr>
+                    <tr><td>Sağlık bildirimi</td>
+                        <td>Her heartbeat'te son turun sonucu Synapse'e gider: yazıldı / geçiş yok /
+                            tahmin yok / yazma hatası / sahada farklı</td></tr>
+                    <tr><td>Güvenlik</td>
+                        <td>Supabase RLS: anonim anahtar "bekliyor" komutu oluşturamaz; yalnızca
+                            lokasyonun kendi kaydı güncellenebilir</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== KALİTE GÜVENCE ========== -->
+        <div class="section page-break">
+            <h2>🧪 Kalite Güvence — Kararlar Nasıl Doğrulanıyor?</h2>
+            <p>Mekanik Zeka sistemin en kritik parçasıdır; kararları üç katmanda sınanır.</p>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="icon">🧪</div>
+                    <div class="value">180</div>
+                    <div class="label">Öz test kontrolü — lokasyonun kendi ayarlarıyla, portal açılışında</div>
+                </div>
+                <div class="info-card">
+                    <div class="icon">⚖️</div>
+                    <div class="value">15</div>
+                    <div class="label">Değişmez kural — her analiz sonucunda canlı denetim</div>
+                </div>
+                <div class="info-card">
+                    <div class="icon">📋</div>
+                    <div class="value">466</div>
+                    <div class="label">Toplam otomatik kontrol (lokasyon + merkez)</div>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>Katman</th><th>Ne zaman</th><th>Ne güvence altına alır</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Test paketleri</strong> (6 paket, 180 kontrol)</td>
+                        <td>Yayından önce, geliştirme makinesinde</td>
+                        <td>Golden vakalar, kural kapsamı, mod çözümü, öncelik matrisi, değişmez kurallar</td></tr>
+                    <tr><td><strong>Çıkış denetimi</strong> (15 değişmez kural)</td>
+                        <td>Her analizde, sonuç ekrana basılmadan önce</td>
+                        <td>Motorun kendi içinde çelişmesi (kritik ama skoru düşük, normal ama kırmızı,
+                            mod ısıtma ama soğutma alarmı…)</td></tr>
+                    <tr><td><strong>Lokasyon öz testi</strong> (180 kontrol)</td>
+                        <td>Portal açılışında ve her güncellemeden sonra</td>
+                        <td>Lokasyonun kendi ayarlarıyla motorun doğru karar verdiği; bozuk yama/ayar
+                            dosyası açılışta yakalanır</td></tr>
+                    <tr><td><strong>Diğer paketler</strong></td>
+                        <td>Yayından önce</td>
+                        <td>Oto-set (103), BACnet yazma (55), heartbeat (20), kilit (20),
+                            Synapse portal (220)</td></tr>
+                </tbody>
+            </table>
+
+            <div class="alert alert-info">
+                <strong>Tutarsız filtresi:</strong> Çıkış denetimi bir çelişki bulursa sonucu değiştirmez —
+                satır işaretlenir ve portalda Kritik/Uyarı/Optimal filtrelerinin yanındaki
+                <strong>Tutarsız</strong> filtresinde toplanır. Hatayı gizlemek yerine görünür kılmak esastır.
+            </div>
+        </div>
+
+        <!-- ========== KOD İSTATİSTİKLERİ ========== -->
+        <div class="section">
+            <h2>📦 Kod ve Dosya İstatistikleri</h2>
+            <p>20 Eylül 2026 itibarıyla sistemin büyüklüğü (git'in takip ettiği dosyalar; üretilen CSV/log
+                dosyaları ve veri klasörleri hariç):</p>
+
+            <div class="kpi-strip">
+                <div class="kpi-item"><div class="val">142</div><div class="lbl">Takipli dosya</div></div>
+                <div class="kpi-item"><div class="val">93</div><div class="lbl">Kod dosyası</div></div>
+                <div class="kpi-item"><div class="val">48.373</div><div class="lbl">Ham satır</div></div>
+                <div class="kpi-item"><div class="val">39.248</div><div class="lbl">Net satır</div></div>
+                <div class="kpi-item"><div class="val">3.593</div><div class="lbl">Test satırı</div></div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>Dosya</th><th>Satır</th><th>Görev</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>hvac/deneme/main_portal.py</code></td><td>5.398</td>
+                        <td>Mekanik Zeka — kural motoru + portal girişi</td></tr>
+                    <tr><td><code>hvac/deneme/app_portal.py</code></td><td>5.160</td>
+                        <td>Enerji ve Verimlilik — Streamlit uygulaması</td></tr>
+                    <tr><td><code>hvac/deneme/static/index.html</code></td><td>4.234</td>
+                        <td>Mekanik Zeka arayüzü (filtreler, talimat, PDF)</td></tr>
+                    <tr><td><code>merkez/app_merkez.py</code></td><td>3.224</td>
+                        <td>Synapse GM Merkez portalı</td></tr>
+                    <tr><td><code>hvac/deneme/static/qrcode_generator.js</code></td><td>2.297</td>
+                        <td>QR bakım kartı üretimi (hazır kütüphane)</td></tr>
+                    <tr><td><code>hvac/deneme/ahu_collector.py</code></td><td>1.159</td>
+                        <td>BACnet okuma → analiz motoru beslemesi</td></tr>
+                </tbody>
+            </table>
+            <p><strong>Klasör dağılımı:</strong> lokasyon programı (<code>hvac/deneme</code>) ~21.800 satır,
+                Synapse merkez portalı (<code>merkez</code>) ~6.400, arayüz (<code>static</code>) ~5.800,
+                aylık rapor motoru (<code>monthly_report</code>) ~3.600 satır.</p>
         </div>
 
         <!-- ========== 5. ENERJİ MODÜLÜ ========== -->
@@ -1421,9 +1638,48 @@
                     </tr>
                     <tr>
                         <td>📍 <strong>lokasyonlar</strong></td>
-                        <td>Lokasyon metadata (harita koordinatları, isim)</td>
-                        <td>maslak, altunizade koordinatları</td>
+                        <td>Lokasyon metadata + heartbeat (ping, bakım özeti, oto-set sağlığı, öz test sonucu)</td>
+                        <td>"maslak — öz test 180/180, oto-set: yazıldı 23:00"</td>
                     </tr>
+                    <tr>
+                        <td>🎛️ <strong>komutlar</strong></td>
+                        <td>Gönderilen set komutları (nokta bazında, geri okuma sonucuyla)</td>
+                        <td>"OTO-SET CH-1 REM SET → 7.0°C, doğrulandı"</td>
+                    </tr>
+                    <tr>
+                        <td>🛠️ <strong>bakim_kartlari</strong></td>
+                        <td>Dijital bakım kartları (çift yönlü senkron)</td>
+                        <td>Ahu-7 üfleme sensörü: ARIZALI</td>
+                    </tr>
+                    <tr>
+                        <td>📊 <strong>hvac_summary</strong></td>
+                        <td>Günlük analiz özeti (Synapse'in lokasyon kartlarını beslediği kayıt)</td>
+                        <td>"51 AHU, 5 kritik, 23 uyarı"</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>Sürüm Geçmişi (Eylül 2026)</h3>
+            <table>
+                <thead>
+                    <tr><th>Sürüm</th><th>İçerik</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>v7.0 – v7.5</strong></td><td>Oto-set lokasyona taşındı, heartbeat düzeltmesi,
+                        BACnet geri okuma + doğrulama, tek kopya kilidi, nokta bazlı komut kaydı</td></tr>
+                    <tr><td><strong>v7.6</strong></td><td>ΔT yönü hedefle aynı moddan; talimatlar tek kaynaktan;
+                        PDF satır bölünmesi düzeltmesi</td></tr>
+                    <tr><td><strong>v7.7</strong></td><td>Ters ΔT maskelenmesi giderildi, tek vana modu,
+                        kısık vanada düşük ΔT kaldırıldı, konfor derecelendirmesi, kazan kapalıyken
+                        kollektör analiz dışı</td></tr>
+                    <tr><td><strong>v7.8</strong></td><td>NORMAL kural artık uyarı rengiyle görünmüyor</td></tr>
+                    <tr><td><strong>v7.9</strong></td><td>Değişmez kural motoru; veri eksikliğinin önemi cihazın
+                        çalışma durumuna bağlandı</td></tr>
+                    <tr><td><strong>v8.0</strong></td><td>Mod talep esaslı; vana eşikleri ayardan okunuyor
+                        (%90 sabiti düzeltildi); kısmi yükte yanlış alarm kalktı</td></tr>
+                    <tr><td><strong>v8.1</strong></td><td>Canlı çıkış denetimi + portalda Tutarsız filtresi</td></tr>
+                    <tr><td><strong>v8.2</strong></td><td>Lokasyon öz testi (180 kontrol) ve sonucunun
+                        Synapse'te gösterimi</td></tr>
                 </tbody>
             </table>
         </div>
@@ -1471,9 +1727,11 @@
 
         <!-- FOOTER -->
         <div class="footer">
-            <strong>Synapse (SYN)</strong> — Acıbadem Hastanesi<br>
-            2 Lokasyon (Maslak + Altunizade) | 56 AHU BACnet | 22 Modbus Analizör | 15+ kural | 80+ özellik<br>
-            BACnet/IP + Modbus TCP + Supabase Bulut + GM Merkez Portalı + Lisans Sistemi<br>
+            <strong>Synapse (SYN)</strong> — Acıbadem Hastanesi — Sürüm v8.2, 20 Eylül 2026<br>
+            2 Lokasyon (Maslak + Altunizade) | 56 AHU BACnet | 22 Modbus Analizör | 35 teşhis + 12 tasarruf kuralı |
+            90+ özellik | 48.373 satır kod<br>
+            BACnet/IP (okuma + yazma) + Modbus TCP + Supabase Bulut + GM Merkez Portalı + Lisans Sistemi<br>
+            466 otomatik kontrol | canlı çıkış denetimi | lokasyon öz testi<br>
             <em>Yapay zeka destekli otomatik hastane enerji optimizasyonu — Konfor + Tasarruf + Proaktif Bakım</em> 🏥⚡🧠
         </div>
 
