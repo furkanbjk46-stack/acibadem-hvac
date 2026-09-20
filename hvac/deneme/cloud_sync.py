@@ -539,6 +539,66 @@ def _oto_durum_topla() -> dict:
                 "aciklama": str(e)[:200]}
 
 
+def _geri_bildirim_ozet() -> dict:
+    """Tasarruf önerisi geri bildirim sayacı (ml_training_data.json).
+
+    NEDEN VAR: Öneri geri bildirimleri bugüne kadar yalnızca lokasyon PC'sinde
+    birikiyordu; merkezden kaç kayıt olduğu GÖRÜLEMİYORDU. Öğrenme döngüsünü
+    (reddedilen öneriyi aşağı al / bastır) kurmadan önce sahada ne kadar veri
+    olduğunu bilmek gerekir: kural başına yeterli geri bildirim yoksa öğrenme
+    motoru aylarca hiçbir şey yapmaz.
+
+    Heartbeat 2 dakikada bir gittiği için özet KÜÇÜK tutulur (sayılar + en çok
+    reddedilen 2 kural).
+    """
+    try:
+        try:
+            from location_manager import get_manager
+            yol = get_manager().get_data_path("ml_training_data.json")
+        except Exception:
+            yol = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "ml_training_data.json")
+        if not os.path.exists(yol):
+            return {"kayit": 0, "geri_bildirim": 0}
+        with open(yol, "r", encoding="utf-8") as f:
+            kayitlar = json.load(f)
+        if not isinstance(kayitlar, list):
+            return {"kayit": 0, "geri_bildirim": 0}
+
+        durum_sayac = {}
+        kural_red = {}
+        kural_geri_bildirim = {}
+        geri_bildirimli = 0
+        for k in kayitlar:
+            fb = k.get("feedback") or {}
+            durum = fb.get("status")
+            if not durum or durum == "pending":
+                continue
+            geri_bildirimli += 1
+            durum_sayac[durum] = durum_sayac.get(durum, 0) + 1
+            kural = (k.get("recommendation") or {}).get("rule_id") or "BILINMIYOR"
+            kural_geri_bildirim[kural] = kural_geri_bildirim.get(kural, 0) + 1
+            if durum == "not_applied":
+                kural_red[kural] = kural_red.get(kural, 0) + 1
+
+        # Öğrenme için eşik: bir kural hakkında karar vermek en az 5 geri bildirim ister
+        hazir = sorted(k for k, n in kural_geri_bildirim.items() if n >= 5)
+        en_cok_red = sorted(kural_red.items(), key=lambda x: -x[1])[:2]
+
+        return {
+            "kayit": len(kayitlar),
+            "geri_bildirim": geri_bildirimli,
+            "uygulandi": durum_sayac.get("applied", 0),
+            "uygulanmadi": durum_sayac.get("not_applied", 0),
+            "kismi": durum_sayac.get("partially_applied", 0),
+            "ogrenmeye_hazir_kural": hazir,
+            "en_cok_red": [{"kural": k, "adet": n} for k, n in en_cok_red],
+        }
+    except Exception as e:
+        logger.debug(f"Geri bildirim özeti okunamadı: {e}")
+        return {}
+
+
 def _oz_test_ozet() -> dict:
     """Mekanik Zeka öz testinin son sonucu (oz_test.py). Yoksa boş sözlük.
 
@@ -559,6 +619,7 @@ def send_heartbeat(client, lokasyon_id: str):
         _ozet = get_bakim_ozet() or {}
         _ozet["oto"] = _oto_durum_topla()
         _ozet["oz_test"] = _oz_test_ozet()
+        _ozet["geri_bildirim"] = _geri_bildirim_ozet()
 
         payload = {
             "lokasyon_id": lokasyon_id,

@@ -147,5 +147,79 @@ c("watchdog acilista oz testi baslatir", "_oz_test_baslat()" in _wd and "oz_test
 # Merkez portal oz test sonucunu gosteriyor mu
 c("merkez portal oz test sonucunu okur", '"oz_test"' in _metin or "'oz_test'" in _metin)
 
+# ── 7) Tasarruf onerisi geri bildirim sayaci ─────────────────────────────
+# Ogrenme dongusu kurulmadan once sahada ne kadar veri oldugunu gormek icin.
+import json as _json
+import tempfile as _tempfile
+
+cli8 = SahteClient()
+cloud_sync.send_heartbeat(cli8, "test_lok")
+_hb8 = (cli8.yazilanlar[0].get("bakim_ozet") or {}) if cli8.yazilanlar else {}
+c("heartbeat geri_bildirim alani tasir", "geri_bildirim" in _hb8, str(list(_hb8)))
+
+# Sayim dogru mu: bilinen bir veri dosyasiyla dogrulanir
+_gecici = _tempfile.mkdtemp(prefix="gb_")
+_veri_yolu = os.path.join(_gecici, "ml_training_data.json")
+
+
+def _kayit(kural, durum):
+    return {"id": f"{kural}_{durum}", "recommendation": {"rule_id": kural},
+            "feedback": ({"status": durum} if durum else None)}
+
+
+_ornek = (
+    [_kayit("CHILLER_SET_DYNAMIC", "not_applied") for _ in range(5)] +
+    [_kayit("FREE_COOLING_POTENTIAL", "applied") for _ in range(2)] +
+    [_kayit("MAS_IMBALANCE", "partially_applied")] +
+    [_kayit("WATER_ANOMALY", "pending")] +      # beklemede = geri bildirim SAYILMAZ
+    [_kayit("WATER_ANOMALY", None)]             # isaretlenmemis = sayilmaz
+)
+with open(_veri_yolu, "w", encoding="utf-8") as f:
+    _json.dump(_ornek, f)
+
+_eski_lm = sys.modules.get("location_manager")
+
+
+class _SahteLM:
+    @staticmethod
+    def get_manager():
+        class _M:
+            @staticmethod
+            def get_data_path(ad):
+                return _veri_yolu if ad == "ml_training_data.json" else ad
+        return _M()
+
+
+sys.modules["location_manager"] = _SahteLM
+try:
+    _o = cloud_sync._geri_bildirim_ozet()
+    c("toplam kayit dogru sayiliyor", _o.get("kayit") == 10, str(_o.get("kayit")))
+    c("yalnizca isaretlenmisler geri bildirim sayilir (beklemede/bos haric)",
+      _o.get("geri_bildirim") == 8, str(_o.get("geri_bildirim")))
+    c("uygulandi/uygulanmadi ayrimi dogru",
+      _o.get("uygulandi") == 2 and _o.get("uygulanmadi") == 5 and _o.get("kismi") == 1, str(_o))
+    c("5 geri bildirime ulasan kural ogrenmeye hazir sayilir",
+      _o.get("ogrenmeye_hazir_kural") == ["CHILLER_SET_DYNAMIC"], str(_o.get("ogrenmeye_hazir_kural")))
+    c("en cok reddedilen kural raporlanir",
+      (_o.get("en_cok_red") or [{}])[0].get("kural") == "CHILLER_SET_DYNAMIC", str(_o.get("en_cok_red")))
+    c("ozet KUCUK tutulur (heartbeat 2 dakikada bir gider)",
+      len(_json.dumps(_o)) < 400, str(len(_json.dumps(_o))))
+
+    # Bozuk dosya heartbeat'i BOZMAMALI
+    with open(_veri_yolu, "w", encoding="utf-8") as f:
+        f.write("{bozuk json")
+    c("bozuk veri dosyasinda ozet bos doner, cokmez", cloud_sync._geri_bildirim_ozet() == {})
+    cli9 = SahteClient()
+    cloud_sync.send_heartbeat(cli9, "test_lok")
+    c("bozuk veri dosyasinda heartbeat YINE gonderilir", len(cli9.yazilanlar) == 1)
+finally:
+    if _eski_lm is not None:
+        sys.modules["location_manager"] = _eski_lm
+    else:
+        sys.modules.pop("location_manager", None)
+
+c("merkez portal geri bildirim sayacini gosterir",
+  "geri_bildirim" in _metin and "ÖNERİ GERİ BİLDİRİMİ" in _metin)
+
 print("\n%d/%d PASS" % (gecti, gecti + basarisiz))
 raise SystemExit(1 if basarisiz else 0)

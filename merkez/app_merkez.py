@@ -2098,6 +2098,7 @@ with sag:
     # böyle bir göstergenin olmamasıydı.
     _oto_saglik = []
     _oz_test_saglik = []
+    _geri_bildirim_saglik = []
     try:
         with _oaur.urlopen(_oaur.Request(
             url + "/rest/v1/lokasyonlar?select=lokasyon_id,bakim_ozet,ping_zamani",
@@ -2118,6 +2119,11 @@ with sag:
                 _ot = (_bo or {}).get("oz_test")
                 if isinstance(_ot, dict) and _ot.get("toplam"):
                     _oz_test_saglik.append((_lr["lokasyon_id"], _ot))
+                # Tasarruf önerisi geri bildirimi: öğrenme döngüsünü kurmadan
+                # önce sahada ne kadar veri biriktiğini görmek için.
+                _gb = (_bo or {}).get("geri_bildirim")
+                if isinstance(_gb, dict) and _gb.get("kayit") is not None:
+                    _geri_bildirim_saglik.append((_lr["lokasyon_id"], _gb))
     except Exception:
         pass
 
@@ -2259,6 +2265,39 @@ with sag:
             f"<div style='font-size:7px;letter-spacing:1px;"
             f"color:rgba(56,189,248,0.45);padding-bottom:3px;'>MEKANİK ZEKA ÖZ TESTİ</div>"
             f"{_oz_satir}</div>"
+        )
+
+    # ── ÖNERİ GERİ BİLDİRİMİ ───────────────────────────────────────────────
+    # Öğrenme döngüsü (reddedilen öneriyi aşağı al) kural başına en az 5 geri
+    # bildirim ister. Burası "ne kadar veri birikti" sorusunun cevabıdır.
+    if _geri_bildirim_saglik:
+        _gb_toplam = sum(g.get("geri_bildirim", 0) for _, g in _geri_bildirim_saglik)
+        _gb_kayit = sum(g.get("kayit", 0) for _, g in _geri_bildirim_saglik)
+        _gb_uyg = sum(g.get("uygulandi", 0) for _, g in _geri_bildirim_saglik)
+        _gb_red = sum(g.get("uygulanmadi", 0) for _, g in _geri_bildirim_saglik)
+        _hazir = sorted({k for _, g in _geri_bildirim_saglik
+                         for k in (g.get("ogrenmeye_hazir_kural") or [])})
+        _renk = "#10b981" if _hazir else "rgba(180,220,255,0.45)"
+        _gb_html = (
+            f"<div style='font-size:9px;color:rgba(200,230,255,0.7);padding:2px 0;'>"
+            f"{_gb_kayit} öneri kaydı · <b>{_gb_toplam}</b> geri bildirim "
+            f"<span style='color:#10b981;'>✓{_gb_uyg}</span> "
+            f"<span style='color:#f59e0b;'>✗{_gb_red}</span></div>"
+        )
+        if _hazir:
+            _gb_html += (
+                f"<div style='font-size:9px;color:{_renk};padding:2px 0;'>"
+                f"öğrenmeye hazır kural: {', '.join(_hazir[:3])}</div>")
+        else:
+            _gb_html += (
+                f"<div style='font-size:9px;color:{_renk};padding:2px 0;'>"
+                f"henüz hiçbir kuralda 5 geri bildirim yok — öğrenme beklemede</div>")
+        _saglik_html += (
+            f"<div style='border-top:1px solid rgba(56,189,248,0.08);"
+            f"margin-top:6px;padding-top:6px;'>"
+            f"<div style='font-size:7px;letter-spacing:1px;"
+            f"color:rgba(56,189,248,0.45);padding-bottom:3px;'>ÖNERİ GERİ BİLDİRİMİ</div>"
+            f"{_gb_html}</div>"
         )
 
     # Mod geçiş değerleri
