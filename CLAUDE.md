@@ -68,10 +68,29 @@ for hedef in ['altunizade', 'maslak']:
 ## KURAL 2 — GitHub Repo Yapısı
 
 - **main branch** → Streamlit Cloud (GM merkez portal) otomatik deploy eder
-- `hvac/deneme/app_portal.py` → Geliştirme ana dosyası
+- `hvac/deneme/` → Lokasyon programı (Synergy) — dosya rolleri için KURAL 4'e bak
 - `lokasyonlar/` → Lokasyon zip paketleri
 - `merkez/` → GM merkez portal dosyaları
 - `requirements.txt` → Repo kökünde (merkez/ içinde değil)
+
+## ⚠️ KURAL 4 — Hangi İş Hangi Portalda (değişiklikten ÖNCE kontrol et)
+
+Lokasyon PC'sinde **iki ayrı uygulama** çalışır; `portal_watchdog.py` ikisini de başlatır.
+Dosya adları yanıltıcıdır: `main_portal` "ana program" değildir.
+
+| Dosya | Uygulama | Port | Buraya yapılan işler |
+|---|---|---|---|
+| `main_portal.py` | **Mekanik Zeka** (FastAPI) | 8005 | Kural motoru (`determine_effective_mode`, `analyze_ahu_performance`, `check_special_conditions`, `tutarlilik_kontrol`), ΔT/hedef/skor/önem, CONFIG eşikleri, `INSTRUCTION_GUIDE`, `/api/*` uçları, bakım kartı, QR bağlantı, portal giriş ekranı (`/`, `/hvac`, `/enerji`) |
+| `static/index.html` | Mekanik Zeka arayüzü | — | Analiz ekranı, talimat penceresi, PDF üretimi |
+| `app_portal.py` | **Enerji ve Verimlilik** (Streamlit) | 8501 | Enerji verisi girişi/düzenleme, tarih silme, bildirim banner'ı, tüketim takibi, doğalgaz/elektrik/kojen kalemleri, raporlama ekranları |
+
+**Enerji tarafının yardımcıları:** `data_bridge.py`, `data_collector.py`, `monthly_report/`, `daily_report.py`, `monthly_summary_report.py`
+
+**Ortak altyapı:** `cloud_sync.py`, `oto_set.py`, `bacnet_writer.py`, `ahu_collector.py` (AHU okur → Mekanik Zeka'ya besler), `kilit.py`, `portal_watchdog.py`, `on_kosul.py`, `bakim_durum.py`
+
+**Kural:** Bir geliştirme/değişiklik istendiğinde ÖNCE işin hangi tarafa ait olduğu tespit edilir, doğru dosya düzeltilir, yama KURAL 1'e göre o dosyayla yayınlanır. Enerji işi `main_portal`'a, mekanik kuralı `app_portal`'a yazılmaz.
+
+---
 
 ## KURAL 3 — Bağımlılıklar
 
