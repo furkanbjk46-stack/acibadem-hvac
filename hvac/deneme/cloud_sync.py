@@ -539,11 +539,26 @@ def _oto_durum_topla() -> dict:
                 "aciklama": str(e)[:200]}
 
 
+def _oz_test_ozet() -> dict:
+    """Mekanik Zeka öz testinin son sonucu (oz_test.py). Yoksa boş sözlük.
+
+    KENDİ İÇİNDE KAPALI: oz_test modülü bulunamazsa/okunamazsa heartbeat
+    bozulmaz — v7.1'de benzer bir içe aktarma hatası heartbeat'i kesmişti.
+    """
+    try:
+        import oz_test
+        return oz_test.son_sonuc() or {}
+    except Exception as e:
+        logger.debug(f"Öz test özeti okunamadı: {e}")
+        return {}
+
+
 def send_heartbeat(client, lokasyon_id: str):
     """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
     try:
         _ozet = get_bakim_ozet() or {}
         _ozet["oto"] = _oto_durum_topla()
+        _ozet["oz_test"] = _oz_test_ozet()
 
         payload = {
             "lokasyon_id": lokasyon_id,

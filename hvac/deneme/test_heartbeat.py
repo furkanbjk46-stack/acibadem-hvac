@@ -111,5 +111,41 @@ _kodlar = set(_os_mod.SONUC_METIN) | {"modul_yok"}
 _eksik = [k for k in _kodlar if '"%s"' % k not in _metin]
 c("merkez portal tum sonuc kodlarini taniyor", not _eksik, str(_eksik))
 
+# ── 6) Mekanik Zeka oz testi heartbeat'e eklenir ─────────────────────────
+import oz_test
+
+cli6 = SahteClient()
+cloud_sync.send_heartbeat(cli6, "test_lok")
+_hb = (cli6.yazilanlar[0].get("bakim_ozet") or {}) if cli6.yazilanlar else {}
+c("heartbeat oz_test alani tasir", "oz_test" in _hb, str(list(_hb)))
+
+_ozet = cloud_sync._oz_test_ozet()
+c("_oz_test_ozet sozluk doner", isinstance(_ozet, dict), str(type(_ozet)))
+
+# Sonuc dosyasi yoksa heartbeat BOZULMAZ (v7.1'de benzer import hatasi
+# heartbeat'i kesmisti) — dosya gecici olarak yeniden adlandirilir.
+_yol = oz_test.SONUC_DOSYASI
+_yedek = _yol + ".test_yedek"
+_vardi = os.path.exists(_yol)
+if _vardi:
+    os.rename(_yol, _yedek)
+try:
+    cli7 = SahteClient()
+    cloud_sync.send_heartbeat(cli7, "test_lok")
+    c("oz test sonucu yokken heartbeat YINE gonderilir", len(cli7.yazilanlar) == 1,
+      str(len(cli7.yazilanlar)))
+    c("oz test sonucu yoksa bos sozluk doner", cloud_sync._oz_test_ozet() == {})
+finally:
+    if _vardi:
+        os.rename(_yedek, _yol)
+
+# Portal acilisinda oz test baslatiliyor mu (watchdog kaynagi)
+_wd = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "portal_watchdog.py"), encoding="utf-8").read()
+c("watchdog acilista oz testi baslatir", "_oz_test_baslat()" in _wd and "oz_test.py" in _wd)
+
+# Merkez portal oz test sonucunu gosteriyor mu
+c("merkez portal oz test sonucunu okur", '"oz_test"' in _metin or "'oz_test'" in _metin)
+
 print("\n%d/%d PASS" % (gecti, gecti + basarisiz))
 raise SystemExit(1 if basarisiz else 0)

@@ -155,6 +155,9 @@ c("[KAPI] lokal çalışmada analiz yapılır, bulgu satırda kalır",
 import random
 
 _rnd = random.Random(20260920)
+# Tarama boyutu argümanla verilebilir: lokasyon öz testi (oz_test.py) daha küçük
+# bir sayı geçer — saha PC'si yavaş, açılışı geciktirmesin.
+_ADET = int(sys.argv[1]) if len(sys.argv) > 1 and sys.argv[1].isdigit() else 4000
 
 
 def _rt(a, b):
@@ -163,7 +166,7 @@ def _rt(a, b):
 
 _ihlal = []
 _sayim = {"simul": 0, "ters": 0, "sogutmuyor": 0, "isitmiyor": 0}
-for _i in range(4000):
+for _i in range(_ADET):
     _senaryo = _rnd.choice(("simul", "ters", "sogutmuyor", "isitmiyor"))
     _ret = _rt(20, 28)
     if _senaryo == "simul":                       # iki vana birden açık
@@ -185,7 +188,7 @@ for _i in range(4000):
                        f"sat={p.temperatures.sat} ret={p.temperatures.return_} "
                        f"cv={p.valves.cooling} hv={p.valves.heating}"))
 
-c("[TARAMA] 4000 rastgele çakışmada kritik koşul kritik sonuç verir",
+c(f"[TARAMA] {_ADET} rastgele çakışmada kritik koşul kritik sonuç verir",
   not _ihlal, _ihlal[:3])
 c("[TARAMA] dört çakışma türü de üretildi", all(v > 0 for v in _sayim.values()), _sayim)
 

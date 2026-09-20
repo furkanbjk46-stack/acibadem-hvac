@@ -2097,6 +2097,7 @@ with sag:
     # boyunca hiç komut gitmediği hâlde kimsenin fark etmemesinin sebebi
     # böyle bir göstergenin olmamasıydı.
     _oto_saglik = []
+    _oz_test_saglik = []
     try:
         with _oaur.urlopen(_oaur.Request(
             url + "/rest/v1/lokasyonlar?select=lokasyon_id,bakim_ozet,ping_zamani",
@@ -2111,6 +2112,12 @@ with sag:
                 _o = (_bo or {}).get("oto")
                 if isinstance(_o, dict):
                     _oto_saglik.append((_lr["lokasyon_id"], _o))
+                # Mekanik Zeka öz testi: lokasyon KENDİ ayarlarıyla testleri
+                # koşar (oz_test.py). Aynı kod farklı ayarla farklı karar verir;
+                # "bende yeşildi" yetmez, sahada da yeşil olmalı.
+                _ot = (_bo or {}).get("oz_test")
+                if isinstance(_ot, dict) and _ot.get("toplam"):
+                    _oz_test_saglik.append((_lr["lokasyon_id"], _ot))
     except Exception:
         pass
 
@@ -2218,6 +2225,40 @@ with sag:
             f"<div style='border-top:1px solid rgba(56,189,248,0.08);"
             f"margin-top:6px;padding-top:6px;font-size:9px;color:#f59e0b;'>"
             f"⚠ Lokasyonlardan oto-set durumu gelmiyor</div>"
+        )
+
+    # ── MEKANİK ZEKA ÖZ TESTİ ─────────────────────────────────────────────
+    # Lokasyon, portal açılışında kural testlerini KENDİ ayarlarıyla koşar.
+    # Kalan test varsa motor o lokasyonda beklendiği gibi karar vermiyordur.
+    if _oz_test_saglik:
+        _kalan = [(l, o) for l, o in _oz_test_saglik if o.get("durum") != "GECTI"]
+        _oz_satir = ""
+        for _lid, _o in sorted(_kalan, key=lambda x: x[0]):
+            _ad = HASTANELER.get(_lid, {}).get("kisa", _lid)
+            _dosya = ", ".join(str(d).replace("test_", "").replace(".py", "")
+                               for d in (_o.get("kalan_dosyalar") or [])[:3])
+            _oz_satir += (
+                f"<div style='font-size:9px;padding:2px 0;'>"
+                f"<span style='color:#ef4444;'>●</span> "
+                f"<b style='color:rgba(200,230,255,0.7);'>{_ad}</b> "
+                f"<span style='color:#ef4444;'>öz test KALDI "
+                f"{_o.get('gecen')}/{_o.get('toplam')}</span>"
+                + (f"<br><span style='color:#ef4444;'>{_dosya}</span>" if _dosya else "")
+                + "</div>"
+            )
+        if not _kalan:
+            _gt = _oz_test_saglik[0][1]
+            _oz_satir = (
+                f"<div style='font-size:9px;color:rgba(16,185,129,0.75);padding:2px 0;'>"
+                f"🧪 öz test: {len(_oz_test_saglik)} lokasyon "
+                f"{_gt.get('gecen')}/{_gt.get('toplam')} geçti</div>"
+            )
+        _saglik_html += (
+            f"<div style='border-top:1px solid rgba(56,189,248,0.08);"
+            f"margin-top:6px;padding-top:6px;'>"
+            f"<div style='font-size:7px;letter-spacing:1px;"
+            f"color:rgba(56,189,248,0.45);padding-bottom:3px;'>MEKANİK ZEKA ÖZ TESTİ</div>"
+            f"{_oz_satir}</div>"
         )
 
     # Mod geçiş değerleri

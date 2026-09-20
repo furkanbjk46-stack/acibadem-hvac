@@ -71,7 +71,23 @@ def start_portals():
     logger.info(f"✅ Data Bridge başlatıldı (PID: {p5.pid}) — her gece 23:45 energy_data.csv'ye yazar")
     procs.append(p5)
 
+    _oz_test_baslat()
     return procs
+
+
+def _oz_test_baslat():
+    """Mekanik Zeka öz testini ARKA PLANDA çalıştırır (portalı geciktirmez).
+
+    Testler lokasyonun KENDİ ayarlarıyla koşar: aynı kod farklı ayarla farklı
+    karar verir, bu yüzden 'bende yeşildi' yetmez. Sonuç configs/oz_test_sonuc.json
+    dosyasına yazılır ve heartbeat ile Synapse'e gider.
+    """
+    try:
+        subprocess.Popen([sys.executable, "oz_test.py"], cwd=BASE_DIR, env=_COCUK_ENV,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        logger.info("🧪 Mekanik Zeka öz testi arka planda başlatıldı")
+    except Exception as e:
+        logger.warning(f"Öz test başlatılamadı: {e}")   # portal çalışmaya devam eder
 
 
 def stop_portals(procs):
