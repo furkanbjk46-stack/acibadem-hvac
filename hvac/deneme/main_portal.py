@@ -1558,7 +1558,8 @@ class HVACAnalyzer:
         else:
             return self.config["TARGET_DT_DEFAULT"]
     
-    def analyze_sat_status(self, profile: EquipmentProfile) -> str:
+    def analyze_sat_status(self, profile: EquipmentProfile,
+                           effective_mode: Optional[str] = None) -> str:
         """Analyze SAT (Supply Air Temperature) status.
         
         IMPORTANT: Vana açıklığı düşükken (<%40) SAT beklenen değerlerin altında olması normaldir.
@@ -1590,22 +1591,30 @@ class HVACAnalyzer:
         if heating_valve < VALVE_THRESHOLD and cooling_valve < VALVE_THRESHOLD:
             return "VALVE LOW"
         
-        # Mod tespiti - AUTO modda vana pozisyonuna göre belirle
-        is_heating = self.utils.is_heating_mode(profile.mode)
-        
-        # AUTO modda hangi vana daha açık ise o modu kullan
-        if profile.mode and profile.mode.upper() == "AUTO":
-            if heating_valve > cooling_valve and heating_valve >= VALVE_THRESHOLD:
-                is_heating = True
-            elif cooling_valve > heating_valve and cooling_valve >= VALVE_THRESHOLD:
-                is_heating = False
-        
+        # Mod TEK KAYNAKTAN gelir: determine_effective_mode (talep esaslı).
+        # Eskiden burada vanaya bakılıp ayrı bir mod kararı üretiliyordu; motor
+        # "mod soğutma" derken bu fonksiyon "ısıtma" deyip NOT_HEATING üretiyordu.
+        if effective_mode:
+            is_heating = "HEAT" in effective_mode.upper()
+        else:
+            is_heating = self.utils.is_heating_mode(profile.mode)
+            if profile.mode and profile.mode.upper() == "AUTO":
+                if heating_valve > cooling_valve and heating_valve >= VALVE_THRESHOLD:
+                    is_heating = True
+                elif cooling_valve > heating_valve and cooling_valve >= VALVE_THRESHOLD:
+                    is_heating = False
+
         # İlgili vana kontrolü
         valve_pct = heating_valve if is_heating else cooling_valve
-        
+
         # İlgili vana düşükse analiz yapılamaz
         if valve_pct < VALVE_THRESHOLD:
             return "VALVE LOW"
+
+        # KISMİ YÜK: vana "Yüksek Vana Eşiği"ne ulaşmadan üflemenin hedefe
+        # varmasını beklemek yanlış alarm üretir (AHU yolundaki kural ile aynı).
+        if valve_pct < float(self.config.get("HIGH_VALVE_THRESHOLD", 90)):
+            return "KISMI_YUK"
         # =============================================================
         
         # Room/Return yoksa sadece SAT vs Setpoint karşılaştır
@@ -2004,7 +2013,7 @@ class HVACAnalyzer:
 
         # SAT issues (VALVE_LOW hariç - vana düşükken SAT sorunu normal)
         if sat_status not in ["OPTIMAL", "NO DATA", "VALVE_LOW", "VALVE LOW", "STANDBY",
-                              "SENSOR_FAULT", "MAINTENANCE"]:
+                              "SENSOR_FAULT", "MAINTENANCE", "KISMI_YUK"]:
             score += 2.0
 
         # Kural bazlı minimum skor — kural atanmışsa en az bu kadar olmalı
@@ -2051,7 +2060,7 @@ class HVACAnalyzer:
         sat_cool_min = self.config.get("SAT_COOLING_MIN", 15.0)
 
         # 1) SAT OPTIMAL iken LOW_DT/LOW_DT_SYNDROME CRITICAL olamaz → WARNING + İNCELE
-        if (result.sat_status == "OPTIMAL" and result.severity == "CRITICAL"
+        if (result.sat_status in ("OPTIMAL", "KISMI_YUK") and result.severity == "CRITICAL"
                 and result.rule in ("LOW_DT", "LOW_DT_SYNDROME")):
             result.severity = "WARNING"
             result.reason = (result.reason + " | İNCELE: SAT optimal iken ΔT kritiği çelişkili — şiddet düşürüldü.").strip(" |")
@@ -2158,6 +2167,24 @@ class HVACAnalyzer:
             # AMBIGUOUS: her iki vana da yüksek açık
             if heat_v >= 15 and cool_v >= 15:
                 return "AMBIGUOUS"
+
+            # 2a. Vana TAM açıksa (ayar: Yüksek Vana Eşiği) mod kesindir
+            _yuksek = float(self.config.get("HIGH_VALVE_THRESHOLD", 90))
+            if heat_v >= _yuksek and heat_v > cool_v:
+                return "HEATING (Auto)"
+            if cool_v >= _yuksek and cool_v > heat_v:
+                return "COOLING (Auto)"
+
+            # 2b. KISMİ açıklıkta modu TALEP belirler (set ile mahal/dönüş farkı).
+            # Kışın mahal setin üstündeyse santral SOĞUTMA yapar; ısıtma vanası
+            # yalnızca üflemeyi santralin minimumunun altına düşürmemek için açılır.
+            # Vanaya bakıp "ısıtma" demek, ΔT hedefini (10°C) yanlış seçtiriyordu.
+            _oda = profile.temperatures.room
+            if _oda is None:
+                _oda = profile.temperatures.return_
+            _set = profile.temperatures.setpoint
+            if _oda is not None and _set is not None and abs(_oda - _set) >= 0.5:
+                return "COOLING (Demand)" if _oda > _set else "HEATING (Demand)"
 
             if heat_v > cool_v and heat_v >= 15:
                 return "HEATING (Auto)"
@@ -2551,12 +2578,29 @@ class HVACAnalyzer:
         # VALVE_LOW path'ini tetikle → SAT analizi güvenli şekilde atlanır.
         relevant_valve = 0 if _skip_sat_check else (heating_valve if is_heating else cooling_valve)
 
-        # Vana yeterince açık değilse SAT kontrolü ATLA
-        # NOT_COOLING / NOT_HEATING tanısı için iki aşamalı vana eşiği:
-        #   VALVE_THRESHOLD (40%) → SAT kontrolüne giriş kapısı
-        #   HIGH_VALVE_THRESHOLD (70%) → KRİTİK NOT_COOLING/NOT_HEATING tanısı için gereken minimum açıklık
-        #   40-69% arası: SAT sorunuysa UYARI (SAT_WARNING), KRİTİK değil
-        HIGH_VALVE_FOR_CRITICAL = 70.0
+        # Vana eşikleri AYAR EKRANINDAN gelir (Ayarlar → Vana Eşikleri):
+        #   VALVE_THRESHOLD      "Min Analiz Eşiği"  (40) → SAT kontrolüne giriş kapısı
+        #   HIGH_VALVE_THRESHOLD "Yüksek Vana Eşiği" (90) → KRİTİK tanı için gereken açıklık
+        # DÜZELTME: burada 70.0 SABİT yazılıydı; ayar ekranındaki değer (90)
+        # yok sayılıyordu. Kullanıcının girdiği eşik artık gerçekten uygulanır.
+        HIGH_VALVE_FOR_CRITICAL = float(self.config.get("HIGH_VALVE_THRESHOLD", 90))
+
+        # Santralin ÜFLEME SINIRLARI (configs/ahu_sat_limitleri.json):
+        #   "cooling" = santralin MİNİMUM üflemesi (15/18)
+        #   "heating" = santralin MAKSİMUM üflemesi (28/31)
+        # Vana tam açılmadan (eşik altı) üflemenin bu iki sınır arasında olması
+        # NORMALDİR: kışın mahal setin üstündeyken santral soğutma yapar, ısıtma
+        # vanası yalnızca üflemeyi minimumun altına düşürmemek için açılır; ne
+        # kadar açılacağını set-mahal farkı belirler. Bu durumda üflemenin 28'e
+        # çıkmasını beklemek YANLIŞ alarm üretiyordu.
+        _birim_min = _ahu_sat_limit(profile.location, profile.name, "cooling")
+        if _birim_min is None:
+            _birim_min = self.config.get("SAT_COOLING_MIN", 15.0)
+        _birim_max = _ahu_sat_limit(profile.location, profile.name, "heating")
+        if _birim_max is None:
+            _birim_max = self.config.get("SAT_HEATING_MIN", 27.0)
+        _birim_tol = self.config.get("SAT_TOLERANS", 1.0)
+
         if skip_sat:
             # MZ-9: Üfleme sensörü FAULTY — SAT verisi güvenilmez, SAT tabanlı
             # alarmlar (NOT_COOLING/NOT_HEATING/SAT_*) üretilmez, not satırda kalır.
@@ -2564,6 +2608,11 @@ class HVACAnalyzer:
         elif relevant_valve < VALVE_THRESHOLD:
             result.sat_status = "VALVE_LOW"
             # SAT kontrolü yapılmadan devam et
+        elif (sat is not None and relevant_valve < HIGH_VALVE_FOR_CRITICAL
+              and (_birim_min - _birim_tol) <= sat <= (_birim_max + _birim_tol)):
+            # KISMİ YÜK: vana tam açık değil ve üfleme santralin sınırları içinde.
+            # Talep neyse o kadar ısıtıyor/soğutuyor — alarm üretilmez.
+            result.sat_status = "KISMI_YUK"
         elif sat is not None:
             if is_heating:
                 # Isıtma: SAT 28-35°C aralığında olmalı
@@ -2789,7 +2838,7 @@ class HVACAnalyzer:
                 result.band = f"±{tolerance:.1f}"
                 
         # Analyze SAT Status (Generic)
-        result.sat_status = self.analyze_sat_status(profile)
+        result.sat_status = self.analyze_sat_status(profile, effective_mode=effective_mode)
 
         # SAT status → rule mapping (FCU path): SAT_WARNING daha önce hiç atanamayan durumlar için
         _sat_to_rule = {

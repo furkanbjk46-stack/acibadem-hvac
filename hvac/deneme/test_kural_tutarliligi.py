@@ -138,10 +138,20 @@ for cv in (45, 60, 69):
     r = _analiz(_prof(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=cv))
     c(f"soğutmada üfleme sıcak, vana %{cv} → TERS_DT KRİTİK kalır (SAT_WARNING ezmez)",
       r.rule == "TERS_DT" and r.severity == "CRITICAL", (r.rule, r.severity))
+# [Ahu-26] Mod artık TALEBE göre belirlenir (20.09.2026 kararı): mahal 22.5,
+# set 22.0 → mahal setin ÜSTÜNDE, yani soğutma talebi var. Isıtma vanasının %9
+# açık olması santralin minimum üflemesini korumak içindir, ısıtma modu demek
+# değildir. Vana "Yüksek Vana Eşiği"ne (%90) ulaşmadıkça mod talepten okunur.
 p26 = _prof(sat=22.0, ret=22.5, setp=22.0, hv=9.44, cv=0)
 p26.temperatures.oat = 21.7
-c("[Ahu-26] yalnız ısıtma vanası %9 açık → ISITMA (OAT'tan soğutma değil)",
-  "HEAT" in az.determine_effective_mode(p26), az.determine_effective_mode(p26))
+c("[Ahu-26] mahal setin üstünde → SOĞUTMA talebi (vana %9 min üfleme koruması)",
+  "COOL" in az.determine_effective_mode(p26), az.determine_effective_mode(p26))
+_p26h = _prof(sat=22.0, ret=21.0, setp=22.0, hv=9.44, cv=0)
+c("[Ahu-26] mahal setin altında → ISITMA talebi", "HEAT" in az.determine_effective_mode(_p26h),
+  az.determine_effective_mode(_p26h))
+_p26t = _prof(sat=35.0, ret=22.5, setp=22.0, hv=95, cv=0)
+c("ısıtma vanası %95 (eşik üstü) → talep ne olursa olsun ISITMA",
+  "HEAT" in az.determine_effective_mode(_p26t), az.determine_effective_mode(_p26t))
 c("iki vana da kapalı → OAT kuralı hâlâ çalışır",
   az.determine_effective_mode(_prof(hv=0, cv=0)) == "UNKNOWN")
 r = _analiz(_prof(mode="COOLING", sat=21.0, ret=23.71, room=23.71, setp=23.0, cv=20))
