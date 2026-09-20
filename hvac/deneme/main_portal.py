@@ -179,6 +179,10 @@ MAINTENANCE_FILE = os.path.join(os.path.dirname(__file__), "configs", "maintenan
 DEFAULT_CONFIG = CONFIG.copy()  # Varsayılan ayarları sakla
 
 AHU_SAT_LIMITLERI_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_sat_limitleri.json")
+
+# Çıkış denetimi (değişmez kurallar) — testlerle ortak kaynak
+import kural_denetim
+DENETIM_SAYACI = {"kontrol": 0, "ihlal": 0}
 AHU_NOKTA_KONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_nokta_konfig.json")
 
 _NOKTA_SETI_CACHE = {"mtime": None, "veri": {}}
@@ -1173,6 +1177,7 @@ class AnalysisResult:
     maintenance_notes: List[str] = None  # Bakım kartı notları
     onay: str = ""            # Ön koşul kapısı onay sayısı ("3/3", "2/3", "-")
     atlama_nedeni: str = ""   # ANALİZ DIŞI ise neden (+ kaç gündür)
+    denetim: List[Dict[str, str]] = None   # Çıkış denetimi ihlalleri (kural_denetim.py)
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -1196,6 +1201,8 @@ class AnalysisResult:
             "Maintenance Notes": " | ".join(self.maintenance_notes) if self.maintenance_notes else "",
             "Onay": self.onay,
             "Atlama Nedeni": self.atlama_nedeni,
+            "Denetim": " | ".join(f"{i['kod']}: {i['mesaj']}" for i in (self.denetim or [])),
+            "Denetim Sayisi": len(self.denetim or []),
         }
 
 # ================ UTILITY FONKSİYONLARI ================
@@ -2099,6 +2106,22 @@ class HVACAnalyzer:
 
         if _duzeltmeler:
             logging.info(f"TUTARLILIK[{profile.name}]: " + " ; ".join(_duzeltmeler))
+
+        # ── ÇIKIŞ DENETİMİ ──────────────────────────────────────────────
+        # Sonuç ekrana basılmadan önce değişmez kurallardan geçer (kural_denetim.py
+        # — testlerle AYNI kaynak). Sonuç DEĞİŞTİRİLMEZ: satır "tutarsız" olarak
+        # işaretlenir, loga yazılır ve ön yüzde Tutarsız filtresinde toplanır.
+        try:
+            result.denetim = kural_denetim.denetle(
+                result, profile, analyzer=self, rehber=INSTRUCTION_GUIDE,
+                effective_mode=effective_mode)
+            if result.denetim:
+                DENETIM_SAYACI["ihlal"] += 1
+                logging.warning("DENETIM[%s]: %s", profile.name,
+                                " ; ".join(f"{i['kod']} {i['mesaj']}" for i in result.denetim))
+            DENETIM_SAYACI["kontrol"] += 1
+        except Exception as e:                     # denetim analizi ASLA çökertmez
+            logging.error("DENETIM hatasi (%s): %s", profile.name, e)
         return result
 
     def _cihaz_calisiyor(self, profile: EquipmentProfile) -> bool:

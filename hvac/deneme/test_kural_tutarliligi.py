@@ -202,6 +202,27 @@ c("ısıtma vanası kapalıyken LOW_FLOW_DETECTED üretilmez", r.rule != "LOW_FL
 r = _analiz(_prof(tip="FCU", mode="HEATING", sat=24.8, inlet=64.5, outlet=10.4, cv=0, hv=80))
 c("ısıtma vanası açıkken LOW_FLOW_DETECTED korunur", r.rule == "LOW_FLOW_DETECTED", r.rule)
 
+# ── 6) Çıkış denetimi: sonuç ekrana basılmadan önce denetlenir ──────────
+import kural_denetim
+
+r = _analiz(_prof(mode="COOLING", sat=16.5, ret=23.0, room=23.0, setp=23.0, cv=60))
+c("sağlıklı sonuçta denetim ihlali yok", r.denetim == [], r.denetim)
+c("denetim sonucu satıra yazılır (ön yüz filtresi için)",
+  "Denetim" in r.to_dict() and "Denetim Sayisi" in r.to_dict())
+c("denetim sayacı çalışıyor", mp.DENETIM_SAYACI["kontrol"] > 0, mp.DENETIM_SAYACI)
+
+# Kasıtlı çelişki: kural NORMAL ama önem KRİTİK → denetim yakalamalı
+class _Sahte:
+    rule, severity, score, action = "NORMAL", "CRITICAL", 9.0, "Normal"
+    sat_status, target_delta_t, recommended_sat = "OPTIMAL", 5.0, None
+_ihlal = kural_denetim.denetle(_Sahte(), _prof(cv=60), analyzer=az,
+                               rehber=mp.INSTRUCTION_GUIDE, effective_mode="COOLING")
+c("çelişkili sonuç denetimden geçemez", len(_ihlal) >= 1, _ihlal)
+c("ihlal kodu ve mesajı dolu",
+  all(i.get("kod") and i.get("mesaj") for i in _ihlal), _ihlal)
+c("motor ile test AYNI kural kaynağını kullanır",
+  mp.kural_denetim is kural_denetim)
+
 import ahu_collector as ac
 _orj = ac._nokta_oku
 def _kollektor(durumlar):

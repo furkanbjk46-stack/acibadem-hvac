@@ -90,124 +90,40 @@ def _calistir(s):
 
 
 # ── Değişmez kurallar ────────────────────────────────────────────────────
-# Her kural: (kod, açıklama, fonksiyon) — fonksiyon bozulma varsa metin döner.
-def K01(r, p, az, s):
-    if r.rule and r.rule not in mp.INSTRUCTION_GUIDE:
-        return f"kural '{r.rule}' için talimat açıklaması yok"
+# Kuralların TANIMI kural_denetim.py'dedir; motor da (main_portal çıkış
+# denetimi) aynı dosyayı kullanır. Böylece testin aradığı kural ile sahada
+# uygulanan kural birbirinden ayrılamaz.
+import kural_denetim
 
-def K02(r, p, az, s):
-    if r.severity not in GECERLI_ONEM:
-        return f"tanımsız önem: {r.severity!r}"
 
-def K03(r, p, az, s):
-    if r.rule in SESSIZ_KURALLAR and r.severity != "OPTIMAL":
-        return f"kural {r.rule} ama önem {r.severity} (normal satır uyarı gösteriyor)"
+def _sar(fn):
+    """kural_denetim imzasını bu dosyanın (r, p, az, s) imzasına uyarlar."""
+    def _ic(r, p, az, s):
+        em = az.determine_effective_mode(p)
+        if fn in (kural_denetim.K07, kural_denetim.K12):
+            return fn(r, p, az, mp.INSTRUCTION_GUIDE, effective_mode=em)
+        return fn(r, p, az, mp.INSTRUCTION_GUIDE)
+    return _ic
 
-def K04(r, p, az, s):
-    if r.score is not None and not (0.0 <= r.score <= 10.0):
-        return f"skor aralık dışı: {r.score}"
-
-def K05(r, p, az, s):
-    if r.rule in SESSIZ_KURALLAR and r.score is not None and r.score >= 6.0:
-        return f"kural {r.rule} ama skor {r.score} (uyarı eşiğinin üstünde)"
-
-def K06(r, p, az, s):
-    if r.target_delta_t is not None and r.target_delta_t <= 0:
-        return f"hedef ΔT pozitif değil: {r.target_delta_t}"
-
-def K07(r, p, az, s):
-    """Mod ile kural çelişmesin: ısıtmada soğutma alarmı üretilemez."""
-    if p.type not in ("AHU", "FCU"):
-        return   # chiller/kollektör vanası yoktur; mod kıyası anlamsız
-    em = (az.determine_effective_mode(p) or "").upper()
-    if "HEAT" in em and r.rule in SOGUTMA_KURALLARI:
-        return f"mod ISITMA ama soğutma kuralı {r.rule}"
-    if "COOL" in em and r.rule in ISITMA_KURALLARI:
-        return f"mod SOGUTMA ama ısıtma kuralı {r.rule}"
-
-def K08(r, p, az, s):
-    """Talep yokken (iki vana da kapalı) kritik alarm üretilemez."""
-    if p.type not in ("AHU", "FCU") or az._cihaz_calisiyor(p):
-        return   # çalışan cihaz (start/basınç) kritik üretebilir
-    cv = p.valves.cooling or 0
-    hv = p.valves.heating or 0
-    if cv < 0.5 and hv < 0.5 and r.severity == "CRITICAL":
-        return f"iki vana da kapalı ama KRİTİK: {r.rule}"
-
-def K09(r, p, az, s):
-    """Veri eksikliği: yalnızca cihaz ÇALIŞIYORSA kritik olabilir."""
-    if r.rule != "MISSING_DATA":
-        return
-    calisiyor = az._cihaz_calisiyor(p)
-    if r.severity == "CRITICAL" and not calisiyor:
-        return "cihaz çalışmıyor ama veri eksikliği KRİTİK"
-    if r.severity != "CRITICAL" and calisiyor:
-        return "cihaz çalışıyor, veri yok ama kritik değil (kör uçuş görünmüyor)"
-
-def K10(r, p, az, s):
-    """Üfleme durumu OPTIMAL iken üfleme alarmı olamaz."""
-    if r.sat_status == "OPTIMAL" and r.rule in ("SAT_HIGH", "SAT_LOW", "SAT_WARNING"):
-        return f"sat_status OPTIMAL ama kural {r.rule}"
-
-def K11(r, p, az, s):
-    """Normal satırda kritik dili kullanılamaz (operatörü yanıltır)."""
-    if r.rule in SESSIZ_KURALLAR and "KRİTİK" in (r.action or "").upper():
-        return f"kural {r.rule} ama eylem metni: {r.action!r}"
-
-def K12(r, p, az, s):
-    """Soğutmada önerilen üfleme, emişten sıcak olamaz."""
-    em = (az.determine_effective_mode(p) or "").upper()
-    ret = p.temperatures.return_ if p.temperatures.return_ is not None else p.temperatures.room
-    if "COOL" in em and r.recommended_sat is not None and ret is not None and r.recommended_sat >= ret:
-        return f"soğutmada öneri {r.recommended_sat} ≥ emiş {ret}"
 
 def K13(r, p, az, s):
-    """Aynı girdi aynı sonucu vermeli (kararlılık)."""
+    """Aynı girdi aynı sonucu vermeli (kararlılık).
+
+    Yalnızca testte vardır: motorun iki kez çalıştırılmasını gerektirir,
+    sahada her analizde tekrarlamak gereksiz maliyettir.
+    """
     tekrar = dict(s)
     tekrar["ad"] = None          # temiz geçmişle aynı girdi
     r2, _, _ = _calistir(tekrar)
     if (r2.rule, r2.severity, r2.score) != (r.rule, r.severity, r.score):
         return f"aynı girdi farklı sonuç: {(r.rule, r.severity, r.score)} vs {(r2.rule, r2.severity, r2.score)}"
 
-def K14(r, p, az, s):
-    """Kritik bulgunun skoru, uyarı eşiğinin altında kalamaz."""
-    if r.severity == "CRITICAL" and r.score is not None and r.score < 6.0:
-        return f"KRİTİK ama skor {r.score}"
 
-def K16(r, p, az, s):
-    """Skor kritik eşiğin üstündeyse önem de kritik olmalı (K14'ün aynası)."""
-    if r.score is not None and r.score >= 7.0 and r.severity != "CRITICAL":
-        return f"skor {r.score} ama önem {r.severity} ({r.rule})"
-
-
-def K15(r, p, az, s):
-    """Kural atanmışsa eylem metni boş kalamaz (arayüzde boş satır)."""
-    if r.rule and not (r.action or "").strip():
-        return f"kural {r.rule} ama eylem metni boş"
-
-
-KURALLAR = [
-    (f.__name__, f.__doc__ or "", f) for f in
-    (K01, K02, K03, K04, K05, K06, K07, K08, K09, K10, K11, K12, K13, K14, K15, K16)
-]
-ACIKLAMA = {
-    "K01": "her üretilen kuralın talimat açıklaması vardır",
-    "K02": "önem değeri tanımlı kümededir",
-    "K03": "NORMAL/IN_BAND/STANDBY satırın önemi OPTIMAL'dir",
-    "K04": "skor 0-10 aralığındadır",
-    "K05": "normal satırın skoru uyarı eşiğinin altındadır",
-    "K06": "hedef ΔT pozitiftir",
-    "K07": "mod ile kural çelişmez (ısıtmada soğutma alarmı yok)",
-    "K08": "iki vana da kapalıyken kritik alarm üretilmez",
-    "K09": "veri eksikken kritik teşhis konulmaz",
-    "K10": "üfleme durumu OPTIMAL iken üfleme alarmı olmaz",
-    "K11": "normal satırda kritik dili kullanılmaz",
-    "K12": "soğutmada önerilen üfleme emişten sıcak olamaz",
-    "K13": "aynı girdi aynı sonucu verir",
-    "K14": "kritik bulgunun skoru uyarı eşiğinin altında olmaz",
-    "K15": "kural atanmışsa eylem metni doludur",
-    "K16": "skor kritik eşiğin üstündeyse önem de kritiktir",
-}
+KURALLAR = [(fn.__name__, (fn.__doc__ or "").strip(), _sar(fn))
+            for fn in kural_denetim.KURALLAR]
+KURALLAR.append(("K13", K13.__doc__.splitlines()[0], K13))
+ACIKLAMA = dict(kural_denetim.ACIKLAMA)
+ACIKLAMA["K13"] = "aynı girdi aynı sonucu verir"
 
 
 # ── Karşı örneği sadeleştirme ────────────────────────────────────────────

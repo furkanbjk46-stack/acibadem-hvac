@@ -1154,6 +1154,11 @@
                                 title="Ön koşul kapısında atlanan santraller (STOP / sensör arızası / fan basmıyor / veri yok)">
                                 <i class="fas fa-ban"></i> Analiz Dışı <span id="analizDisiSayi"></span>
                             </button>
+                            <button class="btn btn-sm filter-btn" data-filter="tutarsiz"
+                                onclick="filterResults('tutarsiz')" id="tutarsizBtn"
+                                title="Çıkış denetimi: motorun kendi içinde çeliştiği satırlar (ör. kritik ama skoru düşük, mod ısıtma ama soğutma alarmı). Teşhisin sahada doğruluğunu değil, motorun tutarlılığını gösterir.">
+                                <i class="fas fa-scale-unbalanced"></i> Tutarsız <span id="tutarsizSayi"></span>
+                            </button>
                             <button class="btn btn-sm filter-btn filter-tekrar" data-filter="tekrar"
                                 onclick="showTekrarOzet()">
                                 <i class="fas fa-redo"></i> Tekrarlayan Alarmlar
@@ -1790,6 +1795,8 @@
                 } else if (filter === 'warning' && badge === 'warning') {
                     show = true;
                 } else if (filter === 'optimal' && badge === 'optimal') {
+                    show = true;
+                } else if (filter === 'tutarsiz' && row.dataset.tutarsiz === '1') {
                     show = true;
                 } else if (filter === 'analizdisi' && row.dataset.analizdisi === '1') {
                     show = true;
@@ -2862,6 +2869,11 @@
                 tr.dataset.analizdisi = _analizDisi ? '1' : '0';
                 if (_analizDisi) tr.style.opacity = '0.75';
 
+                // Çıkış denetimi: motorun kendi içinde çeliştiği satırlar
+                const _denetim = String(row['Denetim'] || '');
+                tr.dataset.tutarsiz = _denetim ? '1' : '0';
+                if (_denetim) tr.title = 'TUTARSIZ — ' + _denetim;
+
                 tr.innerHTML = `
                     <td>${row.Location || row.Mahal || ''}</td>
                     <td>${row.Type || ''}</td>
@@ -2897,6 +2909,13 @@
             const _adCount = tbody.querySelectorAll('tr[data-analizdisi="1"]').length;
             const _adSpan = document.getElementById('analizDisiSayi');
             if (_adSpan) _adSpan.textContent = _adCount > 0 ? `(${_adCount})` : '';
+
+            // Tutarsız sayacı — 0 ise buton sessiz kalır, varsa kırmızı rozet
+            const _tsCount = tbody.querySelectorAll('tr[data-tutarsiz="1"]').length;
+            const _tsSpan = document.getElementById('tutarsizSayi');
+            if (_tsSpan) _tsSpan.textContent = _tsCount > 0 ? `(${_tsCount})` : '';
+            const _tsBtn = document.getElementById('tutarsizBtn');
+            if (_tsBtn) _tsBtn.style.color = _tsCount > 0 ? '#ef4444' : '';
         }
 
         // Talep edilen / üretilen soğutma kW (AHU bazlı)
