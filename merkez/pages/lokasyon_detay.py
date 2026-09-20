@@ -1275,6 +1275,94 @@ with tab1:
             unsafe_allow_html=True
         )
 
+    # ══════════════════════════════════════════════════════
+    # SİSTEM SAĞLIĞI (lokasyona özgü)
+    # ══════════════════════════════════════════════════════
+    # Bu üç gösterge her lokasyon için AYRI anlamlıdır (kendi ayarları, kendi
+    # geçmişi, kendi geri bildirimi). Genel özet kartında toplanınca lokasyon
+    # sayısı arttıkça okunamaz hale geliyordu — 20.09.2026'da buraya taşındı.
+    _oto      = bakim_ozet.get("oto") or {}
+    _oz_test  = bakim_ozet.get("oz_test") or {}
+    _geri_bld = bakim_ozet.get("geri_bildirim") or {}
+
+    if _oto or _oz_test or _geri_bld:
+        st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="sec">🩺 SİSTEM SAĞLIĞI</div>', unsafe_allow_html=True)
+        sc1, sc2, sc3 = st.columns(3)
+
+        # ── Oto-set: son turda ne yaptı? ──
+        with sc1:
+            if _oto:
+                _sonuc = str(_oto.get("sonuc", ""))
+                _iyi = _sonuc in ("yazildi", "gecis_yok", "kapali", "mesgul")
+                _renk = "#10b981" if _iyi else "#ef4444"
+                _zaman = str(_oto.get("zaman") or "")[11:16]
+                _govde = (
+                    f"<div style='font-size:13px;color:{_renk};font-weight:700;'>"
+                    f"{'✓' if _iyi else '✗'} {_oto.get('metin') or _sonuc or '—'}</div>"
+                    + (f"<div style='font-size:10px;color:rgba(150,210,255,0.45);"
+                       f"margin-top:4px;'>son tur {_zaman}</div>" if _zaman else "")
+                )
+                # Son geçişin sahadaki sonucu (chiller seti uyguladı mı?)
+                _dg = (_oto.get("dogrulama") or {}).get("sonuc")
+                if _dg == "uygulanmadi":
+                    _govde += ("<div style='font-size:10px;color:#ef4444;margin-top:4px;'>"
+                               "Chiller seti UYGULAMADI</div>")
+            else:
+                _govde = ("<div style='font-size:12px;color:rgba(180,220,255,0.4);'>"
+                          "Bildirim gelmedi</div>")
+            st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>OTO-SET</div>"
+                        + _govde + "</div>", unsafe_allow_html=True)
+
+        # ── Mekanik Zeka öz testi: lokasyonun KENDİ ayarlarıyla ──
+        with sc2:
+            if _oz_test:
+                _gecti = _oz_test.get("durum") == "GECTI"
+                _renk = "#10b981" if _gecti else "#ef4444"
+                _kalan = ", ".join(str(d).replace("test_", "").replace(".py", "")
+                                   for d in (_oz_test.get("kalan_dosyalar") or [])[:2])
+                _govde = (
+                    f"<div style='font-size:13px;color:{_renk};font-weight:700;'>"
+                    f"{'✓' if _gecti else '✗'} {_oz_test.get('gecen')}/{_oz_test.get('toplam')} "
+                    f"{'geçti' if _gecti else 'KALDI'}</div>"
+                    + (f"<div style='font-size:10px;color:#ef4444;margin-top:4px;'>{_kalan}</div>"
+                       if _kalan else "")
+                    + f"<div style='font-size:10px;color:rgba(150,210,255,0.45);margin-top:4px;'>"
+                      f"{str(_oz_test.get('zaman') or '')[:16].replace('T', ' ')}</div>"
+                )
+            else:
+                _govde = ("<div style='font-size:12px;color:rgba(180,220,255,0.4);'>"
+                          "Henüz çalışmadı</div>")
+            st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>MEKANİK ZEKA ÖZ TESTİ</div>"
+                        + _govde + "</div>", unsafe_allow_html=True)
+
+        # ── Öneri geri bildirimi: öğrenme için yeterli veri var mı? ──
+        with sc3:
+            if _geri_bld:
+                _hazir = _geri_bld.get("ogrenmeye_hazir_kural") or []
+                _govde = (
+                    f"<div style='font-size:13px;color:rgba(200,230,255,0.85);font-weight:700;'>"
+                    f"{_geri_bld.get('geri_bildirim', 0)} geri bildirim "
+                    f"<span style='color:#10b981;'>✓{_geri_bld.get('uygulandi', 0)}</span> "
+                    f"<span style='color:#f59e0b;'>✗{_geri_bld.get('uygulanmadi', 0)}</span></div>"
+                    f"<div style='font-size:10px;color:rgba(150,210,255,0.45);margin-top:4px;'>"
+                    f"{_geri_bld.get('kayit', 0)} öneri kaydı</div>"
+                )
+                if _hazir:
+                    _govde += (f"<div style='font-size:10px;color:#10b981;margin-top:4px;'>"
+                               f"öğrenmeye hazır: {', '.join(_hazir[:2])}</div>")
+                else:
+                    _govde += ("<div style='font-size:10px;color:rgba(180,220,255,0.4);"
+                               "margin-top:4px;'>öğrenme beklemede (kural başına 5 gerekli)</div>")
+                _red = _geri_bld.get("en_cok_red") or []
+                if _red:
+                    _govde += (f"<div style='font-size:10px;color:#f59e0b;margin-top:4px;'>"
+                               f"en çok reddedilen: {_red[0].get('kural')} ({_red[0].get('adet')})</div>")
+            else:
+                _govde = ("<div style='font-size:12px;color:rgba(180,220,255,0.4);'>"
+                          "Bildirim gelmedi</div>")
+            st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>ÖNERİ GERİ BİLDİRİMİ</div>"
+                        + _govde + "</div>", unsafe_allow_html=True)
 
 
 # ════════ TAB 2: TREND & TAHMİN ════════

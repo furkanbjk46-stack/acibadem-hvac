@@ -218,8 +218,18 @@ finally:
     else:
         sys.modules.pop("location_manager", None)
 
-c("merkez portal geri bildirim sayacini gosterir",
-  "geri_bildirim" in _metin and "ÖNERİ GERİ BİLDİRİMİ" in _metin)
+# Lokasyona OZGU gostergeler detay sayfasinda gosterilir (genel ozet kartinda
+# degil): lokasyon sayisi arttikca genel kart okunamaz hale geliyordu.
+_detay_yol = os.path.join(os.path.dirname(_mk), "pages", "lokasyon_detay.py")
+_detay = open(_detay_yol, encoding="utf-8").read()
+c("lokasyon detay sayfasi geri bildirim sayacini gosterir",
+  'bakim_ozet.get("geri_bildirim")' in _detay and "ÖNERİ GERİ BİLDİRİMİ" in _detay)
+c("lokasyon detay sayfasi oz test sonucunu gosterir",
+  'bakim_ozet.get("oz_test")' in _detay and "ÖZ TESTİ" in _detay)
+c("lokasyon detay sayfasi oto-set durumunu gosterir",
+  'bakim_ozet.get("oto")' in _detay and "OTO-SET" in _detay)
+c("genel ozet karti lokasyona ozgu sayaclarla doldurulmuyor",
+  "ÖNERİ GERİ BİLDİRİMİ" not in _metin)
 
 print("\n%d/%d PASS" % (gecti, gecti + basarisiz))
 raise SystemExit(1 if basarisiz else 0)

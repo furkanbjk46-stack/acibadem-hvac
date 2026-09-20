@@ -2233,72 +2233,23 @@ with sag:
             f"⚠ Lokasyonlardan oto-set durumu gelmiyor</div>"
         )
 
-    # ── MEKANİK ZEKA ÖZ TESTİ ─────────────────────────────────────────────
-    # Lokasyon, portal açılışında kural testlerini KENDİ ayarlarıyla koşar.
-    # Kalan test varsa motor o lokasyonda beklendiği gibi karar vermiyordur.
+    # NOT: Mekanik Zeka öz testi ve öneri geri bildirimi göstergeleri buradan
+    # KALDIRILDI (20.09.2026). Bunlar lokasyona özgü bilgilerdir; genel özet
+    # kartında toplanınca lokasyon sayısı arttıkça okunamaz hale geliyordu.
+    # Artık her lokasyonun kendi detay sayfasında "SİSTEM SAĞLIĞI" bölümünde
+    # gösterilir (pages/lokasyon_detay.py). Genel kartta yalnızca DİKKAT
+    # GEREKTİREN oto-set durumları kalır — orası bir alarm yüzeyidir.
     if _oz_test_saglik:
-        _kalan = [(l, o) for l, o in _oz_test_saglik if o.get("durum") != "GECTI"]
-        _oz_satir = ""
-        for _lid, _o in sorted(_kalan, key=lambda x: x[0]):
+        _oz_kalan = [(l, o) for l, o in _oz_test_saglik if o.get("durum") != "GECTI"]
+        for _lid, _o in sorted(_oz_kalan, key=lambda x: x[0]):
             _ad = HASTANELER.get(_lid, {}).get("kisa", _lid)
-            _dosya = ", ".join(str(d).replace("test_", "").replace(".py", "")
-                               for d in (_o.get("kalan_dosyalar") or [])[:3])
-            _oz_satir += (
+            _saglik_html += (
                 f"<div style='font-size:9px;padding:2px 0;'>"
                 f"<span style='color:#ef4444;'>●</span> "
                 f"<b style='color:rgba(200,230,255,0.7);'>{_ad}</b> "
-                f"<span style='color:#ef4444;'>öz test KALDI "
-                f"{_o.get('gecen')}/{_o.get('toplam')}</span>"
-                + (f"<br><span style='color:#ef4444;'>{_dosya}</span>" if _dosya else "")
-                + "</div>"
+                f"<span style='color:#ef4444;'>Mekanik Zeka öz testi KALDI "
+                f"({_o.get('gecen')}/{_o.get('toplam')}) — detay sayfasına bakın</span></div>"
             )
-        if not _kalan:
-            _gt = _oz_test_saglik[0][1]
-            _oz_satir = (
-                f"<div style='font-size:9px;color:rgba(16,185,129,0.75);padding:2px 0;'>"
-                f"🧪 öz test: {len(_oz_test_saglik)} lokasyon "
-                f"{_gt.get('gecen')}/{_gt.get('toplam')} geçti</div>"
-            )
-        _saglik_html += (
-            f"<div style='border-top:1px solid rgba(56,189,248,0.08);"
-            f"margin-top:6px;padding-top:6px;'>"
-            f"<div style='font-size:7px;letter-spacing:1px;"
-            f"color:rgba(56,189,248,0.45);padding-bottom:3px;'>MEKANİK ZEKA ÖZ TESTİ</div>"
-            f"{_oz_satir}</div>"
-        )
-
-    # ── ÖNERİ GERİ BİLDİRİMİ ───────────────────────────────────────────────
-    # Öğrenme döngüsü (reddedilen öneriyi aşağı al) kural başına en az 5 geri
-    # bildirim ister. Burası "ne kadar veri birikti" sorusunun cevabıdır.
-    if _geri_bildirim_saglik:
-        _gb_toplam = sum(g.get("geri_bildirim", 0) for _, g in _geri_bildirim_saglik)
-        _gb_kayit = sum(g.get("kayit", 0) for _, g in _geri_bildirim_saglik)
-        _gb_uyg = sum(g.get("uygulandi", 0) for _, g in _geri_bildirim_saglik)
-        _gb_red = sum(g.get("uygulanmadi", 0) for _, g in _geri_bildirim_saglik)
-        _hazir = sorted({k for _, g in _geri_bildirim_saglik
-                         for k in (g.get("ogrenmeye_hazir_kural") or [])})
-        _renk = "#10b981" if _hazir else "rgba(180,220,255,0.45)"
-        _gb_html = (
-            f"<div style='font-size:9px;color:rgba(200,230,255,0.7);padding:2px 0;'>"
-            f"{_gb_kayit} öneri kaydı · <b>{_gb_toplam}</b> geri bildirim "
-            f"<span style='color:#10b981;'>✓{_gb_uyg}</span> "
-            f"<span style='color:#f59e0b;'>✗{_gb_red}</span></div>"
-        )
-        if _hazir:
-            _gb_html += (
-                f"<div style='font-size:9px;color:{_renk};padding:2px 0;'>"
-                f"öğrenmeye hazır kural: {', '.join(_hazir[:3])}</div>")
-        else:
-            _gb_html += (
-                f"<div style='font-size:9px;color:{_renk};padding:2px 0;'>"
-                f"henüz hiçbir kuralda 5 geri bildirim yok — öğrenme beklemede</div>")
-        _saglik_html += (
-            f"<div style='border-top:1px solid rgba(56,189,248,0.08);"
-            f"margin-top:6px;padding-top:6px;'>"
-            f"<div style='font-size:7px;letter-spacing:1px;"
-            f"color:rgba(56,189,248,0.45);padding-bottom:3px;'>ÖNERİ GERİ BİLDİRİMİ</div>"
-            f"{_gb_html}</div>"
-        )
 
     # Mod geçiş değerleri
     # startswith kullanılır: dönem geçişinde mod değişmediğinde kayıtlar
