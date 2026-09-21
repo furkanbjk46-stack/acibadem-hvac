@@ -2188,7 +2188,7 @@ with sag:
         _dg = o.get("dogrulama") or {}
         if _dg.get("sonuc") == "uygulanmadi":
             _uy = ", ".join(str(x).replace("_REM_SET", "") for x in (_dg.get("uymayan") or []))
-            return "uygulanmadi", "Chiller seti UYGULAMADI" + (f" ({_uy})" if _uy else "")
+            return "uygulanmadi", "Set cihazda UYGULANMADI" + (f" ({_uy})" if _uy else "")
         return None, None
     # YALNIZCA dikkat gerektirenler satır satır listelenir; normal beklemedeki
     # lokasyonlar tek satırda özetlenir. Hepsini listelemek kartı 715px'e

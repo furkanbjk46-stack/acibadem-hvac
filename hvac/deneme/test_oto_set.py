@@ -51,6 +51,11 @@ class Sahte:
         self.harita = dict(harita or {})
         self.ic = dict(ic or {})
         self.komut_log = []      # komutlar tablosuna yazılan oto-set satırları
+        # Gecikmeli geri okuma için her nokta AYRI adreste (obj_inst) durur;
+        # cihaz yazılan son değeri tutar, "saha" ile başka değer döndürülebilir.
+        self.inst_ad = {}        # obj_inst -> nokta adı
+        self.son_yazilan = {}    # obj_inst -> son yazılan değer
+        self.okuma_sayisi = 0    # cihazdan kaç okuma yapıldı
 
     def istek(self, url, key, yol, veri=None, method="GET", timeout=10):
         if method == "GET":
@@ -62,7 +67,11 @@ class Sahte:
                 k = yol.split("key=eq.")[1].split("&")[0]
                 return [{"value": self.ayarlar[k]}] if k in self.ayarlar else []
             if "/lokasyon_noktalar" in yol:
-                return [dict(NOKTA_ALANLARI, nokta_adi=n) for n in self.noktalar]
+                satirlar = []
+                for i, n in enumerate(self.noktalar):
+                    self.inst_ad[1000 + i] = n
+                    satirlar.append(dict(NOKTA_ALANLARI, nokta_adi=n, obj_inst=1000 + i))
+                return satirlar
             return []
         if "/oto_mod_log" in yol:
             self.loglar.extend(veri if isinstance(veri, list) else [veri])
@@ -92,6 +101,8 @@ def calistir(sb, tahmin=(30.0, 24.0), saat=12, lokasyon="maslak", dakika=0):
     sahte_bw = type(sys)("bacnet_writer")
     def _yaz(ip, dnet, mac, tip, inst, deger):
         sb.yazilan.append((deger, tip, inst))
+        if sb.yazma_basarili:
+            sb.son_yazilan[inst] = deger
         return (sb.yazma_basarili, "SimpleACK" if sb.yazma_basarili else "hata")
 
     def _yaz_dogrula_toplu(isler, geri_okuma=None):
@@ -118,8 +129,15 @@ def calistir(sb, tahmin=(30.0, 24.0), saat=12, lokasyon="maslak", dakika=0):
         return sonuc
 
     def _bacnet_oku(ip, dnet, mac, tip, inst, prop_id=85):
-        if inst in sb.ic:
+        sb.okuma_sayisi += 1
+        if inst in sb.ic:                                  # chiller IC SET
             return True, sb.ic[inst]
+        ad = sb.inst_ad.get(inst)                          # yazılan noktanın kendisi
+        if ad is not None:
+            v = sb.saha.get(ad, sb.son_yazilan.get(inst))
+            if v is None or v == "OKUNAMADI":
+                return False, "Cevap yok"
+            return True, v
         return False, "Cevap yok"
 
     import bacnet_writer as _gercek_bw
@@ -403,47 +421,101 @@ oto_set._setleri_uygula = _orj_uygula
 c("[kilit] esanli iki istekten YALNIZCA biri kilidi alir",
   sorted(_ciktilar) == [False, True], _ciktilar)
 
-# ── 11c) SAHADA DOGRULAMA — "yazildi" artik ACK'a degil GERI OKUMAYA dayanir ──
-# Sikayet: log "gonderildi" diyor ama sahada set degismiyor. Cihaz yazmayi
-# kabul edip (ACK) degeri uygulamayabilir (daha yuksek oncelikli yazma).
+# ── 11c) GECİKMELİ GERİ OKUMA — sahada gerçekten uygulandı mı? ──
+# Sahada gözlendi (21.09.2026): komut gönderildiği AN okunan değer ESKİDİR
+# (CH5'e 6.5 gitti, anında IC SET 7.5 okundu). Karar artık ILK_DOGRULAMA_DK
+# dakika sonra, cihazdan geri okunarak verilir — ve TÜM gönderilen setler için.
+c("[gecikme] ilk doğrulama 2-4 dk aralığında", 2 <= oto_set.ILK_DOGRULAMA_DK <= 4,
+  oto_set.ILK_DOGRULAMA_DK)
+
 durum_sifirla()
 sb = Sahte(TEMEL)
 calistir(sb, saat=12)
 _oz = oto_set.durum_ozet()
-c("[saha] hepsi geri okundu -> yazildi", _oz["sonuc"] == "yazildi", _oz["sonuc"])
-c("[saha] dogrulanan sayisi 11", (_oz.get("saha") or {}).get("dogrulandi") == 11, _oz.get("saha"))
+c("[gecikme] geçiş anında sonuç 'yazildi' (gönderildi, ACK alındı)", _oz["sonuc"] == "yazildi",
+  _oz["sonuc"])
+c("[gecikme] gönderilen 11 nokta sayıldı", (_oz.get("saha") or {}).get("gonderildi") == 11,
+  _oz.get("saha"))
+_dg = _oz.get("dogrulama") or {}
+c("[gecikme] geçiş anında doğrulama 'bekliyor'", _dg.get("sonuc") == "bekliyor", _dg)
 
+_okuma0 = sb.okuma_sayisi
+calistir(sb, saat=12, dakika=1)
+calistir(sb, saat=12, dakika=2)
+c("[gecikme] 3 dk dolmadan cihaz OKUNMAZ (eski değer döner)", sb.okuma_sayisi == _okuma0,
+  (sb.okuma_sayisi, _okuma0))
+c("[gecikme] 3 dk dolmadan hâlâ 'bekliyor'",
+  (oto_set.durum_ozet().get("dogrulama") or {}).get("sonuc") == "bekliyor")
+
+calistir(sb, saat=12, dakika=oto_set.ILK_DOGRULAMA_DK)
+_dg = oto_set.durum_ozet().get("dogrulama") or {}
+c("[gecikme] 3. dakikada TÜM setler okunur ve doğrulanır", _dg.get("sonuc") == "uygulandi", _dg)
+c("[gecikme] 11 noktanın hepsi okundu", len([v for v in (_dg.get("okunan") or {}).values()
+                                              if v is not None]) == 11, _dg.get("okunan"))
+
+# Kollektör / FCU setleri de doğrulanır (eskiden yalnız 5 chiller izleniyordu)
+_d = oto_set.durum_oku().get("dogrulama") or {}
+_kaynak = {ad: p.get("kaynak") for ad, p in (_d.get("noktalar") or {}).items()}
+c("[gecikme] kollektör seti doğrulamaya dahil",
+  "GUNDUZ_KOLLEKTOR_SET" in _kaynak, list(_kaynak))
+c("[gecikme] karşılığı olmayan noktada yazılan noktanın kendisi okunur",
+  _kaynak.get("GUNDUZ_KOLLEKTOR_SET") == "yazılan nokta", _kaynak.get("GUNDUZ_KOLLEKTOR_SET"))
+
+# Cihazda farklı değer kalırsa: süre dolana kadar bekler, sonra UYGULANMADI
 durum_sifirla()
-sb = Sahte(TEMEL, saha={"CH1_REM_SET": 7.5})          # 6.5 yazildi, cihazda 7.5
+sb = Sahte(TEMEL, saha={"CH1_REM_SET": 7.5})          # 6.5 yazıldı, cihazda 7.5 kaldı
 calistir(sb, tahmin=(30.0, 24.0), saat=12)
-_oz = oto_set.durum_ozet()
-c("[saha] cihazda farkli deger -> sahada_farkli", _oz["sonuc"] == "sahada_farkli", _oz["sonuc"])
-c("[saha] farkli sayisi 1", (_oz.get("saha") or {}).get("farkli") == 1, _oz.get("saha"))
-# Bir dakika sonra tur sonucu "gecis_yok" olur — ama sorun KAYBOLMAMALI
-calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=1)
-_oz = oto_set.durum_ozet()
-c("[saha] sonraki turda anlik sonuc gecis_yok", _oz["sonuc"] == "gecis_yok", _oz["sonuc"])
-c("[saha] ama son gecisin sorunu KALICI", _oz.get("son_yazim_sonuc") == "sahada_farkli",
-  _oz.get("son_yazim_sonuc"))
+c("[gecikme] cihazda farklı değer olsa da geçiş anında hüküm verilmez",
+  oto_set.durum_ozet()["sonuc"] == "yazildi", oto_set.durum_ozet()["sonuc"])
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.ILK_DOGRULAMA_DK)
+_dg = oto_set.durum_ozet().get("dogrulama") or {}
+c("[gecikme] tutmayan nokta süre dolana kadar 'bekliyor' kalır", _dg.get("sonuc") == "bekliyor", _dg)
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.IC_IZLEME_DK)
+_dg = oto_set.durum_ozet().get("dogrulama") or {}
+c("[gecikme] süre dolunca 'uygulanmadi'", _dg.get("sonuc") == "uygulanmadi", _dg)
+c("[gecikme] yalnızca tutmayan nokta listelenir", _dg.get("uymayan") == ["CH1_REM_SET"],
+  _dg.get("uymayan"))
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.IC_IZLEME_DK + 1)
+c("[gecikme] sonuç KALICI (sonraki turlarda kaybolmaz)",
+  (oto_set.durum_ozet().get("dogrulama") or {}).get("sonuc") == "uygulanmadi")
+
+# Chiller sonradan uygularsa (süre içinde) doğrulanır
+durum_sifirla()
+sb = Sahte(TEMEL, saha={"CH1_REM_SET": 7.5})
+calistir(sb, tahmin=(30.0, 24.0), saat=12)
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.ILK_DOGRULAMA_DK)
+sb.saha.pop("CH1_REM_SET")                            # cihaz sonunda uyguladı
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.ILK_DOGRULAMA_DK + 2)
+c("[gecikme] gecikmeli uygulanan set de doğrulanır",
+  (oto_set.durum_ozet().get("dogrulama") or {}).get("sonuc") == "uygulandi")
 
 durum_sifirla()
 sb = Sahte(TEMEL, saha={"A_BLOK_FCU_SET": "OKUNAMADI"})
 calistir(sb, saat=12)
-c("[saha] geri okunamadi -> dogrulanamadi",
-  oto_set.durum_ozet()["sonuc"] == "dogrulanamadi", oto_set.durum_ozet()["sonuc"])
+calistir(sb, saat=12, dakika=oto_set.IC_IZLEME_DK)
+_dg = oto_set.durum_ozet().get("dogrulama") or {}
+c("[gecikme] hiç okunamayan nokta süre sonunda uymayan listesinde",
+  "A_BLOK_FCU_SET" in (_dg.get("uymayan") or []), _dg)
 
 durum_sifirla()
 sb = Sahte(TEMEL, yazma_basarili=False, saha={"CH1_REM_SET": 99})
 calistir(sb, saat=12)
-c("[saha] yazma hatasi farkli degerden once gelir",
+c("[gecikme] yazma hatası geçiş anında bildirilir",
   oto_set.durum_ozet()["sonuc"] == "yazma_hatasi", oto_set.durum_ozet()["sonuc"])
+c("[gecikme] yazılamayan nokta doğrulamaya girmez", oto_set.durum_ozet().get("dogrulama") is None,
+  oto_set.durum_ozet().get("dogrulama"))
 
-# ── 11c2) KOMUT LOGU — Uzaktan Kontrol'de "hangi noktaya kac derece gitti" ──
+# ── 11c2) KOMUT LOGU — Uzaktan Kontrol'de "hangi noktaya kaç derece gitti" ──
 durum_sifirla()
 sb = Sahte(TEMEL)
 calistir(sb, tahmin=(30.0, 24.0), saat=12)          # gunduz, sicak -> CH 6.5, sogutma
+c("[komut logu] geçiş anında başarılı satır YAZILMAZ (bayat değer göstermesin)",
+  len(sb.komut_log) == 0, len(sb.komut_log))
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.ILK_DOGRULAMA_DK)
 _kl = {r["nokta_adi"]: r for r in sb.komut_log}
-c("[komut logu] gecisten sonra 11 noktanin hepsi yazildi", len(sb.komut_log) == 11, len(sb.komut_log))
+c("[komut logu] doğrulamadan sonra 11 noktanın hepsi yazıldı", len(sb.komut_log) == 11,
+  len(sb.komut_log))
+c("[komut logu] her nokta için TEK satır", len(_kl) == 11, len(_kl))
 c("[komut logu] chiller degeri dogru (6.5)", _kl.get("CH1_REM_SET", {}).get("hedef_deger") == 6.5,
   _kl.get("CH1_REM_SET"))
 c("[komut logu] kollektor degeri dogru (gunduz sogutma 7.0)",
@@ -452,27 +524,43 @@ c("[komut logu] kollektor degeri dogru (gunduz sogutma 7.0)",
 c("[komut logu] hepsi OTO-SET onekli", all(r["hata_mesaji"].startswith("OTO-SET") for r in sb.komut_log))
 c("[komut logu] mesaj gecis turunu soyler", "gündüz geçişi" in _kl["CH1_REM_SET"]["hata_mesaji"],
   _kl["CH1_REM_SET"]["hata_mesaji"])
+c("[komut logu] mesaj kaç dakika sonra doğrulandığını söyler",
+  "dk sonra cihazda doğrulandı" in _kl["CH1_REM_SET"]["hata_mesaji"], _kl["CH1_REM_SET"]["hata_mesaji"])
 c("[komut logu] dogrulanan nokta 'tamamlandi'", _kl["CH1_REM_SET"]["durum"] == "tamamlandi")
 c("[komut logu] HICBIR satir 'bekliyor' degil (RLS + guvenlik)",
   all(r["durum"] != "bekliyor" for r in sb.komut_log))
+c("[komut logu] durumlar RLS'in izin verdiği kümede",
+  all(r["durum"] in ("tamamlandi", "hata", "dogrulanamadi") for r in sb.komut_log))
 c("[komut logu] executed_at UTC", all(r["executed_at"].endswith("+00:00") for r in sb.komut_log))
 c("[komut logu] lokasyon alani dolu", all(r["lokasyon"] == "maslak" for r in sb.komut_log))
 
 _onceki = len(sb.komut_log)
-calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=1)  # gecis yok
-c("[komut logu] gecis yokken yeni satir YAZILMAZ", len(sb.komut_log) == _onceki)
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.ILK_DOGRULAMA_DK + 1)
+c("[komut logu] doğrulama bittikten sonra yeni satır YAZILMAZ", len(sb.komut_log) == _onceki)
 
 durum_sifirla()
 sb = Sahte(TEMEL, saha={"CH2_REM_SET": 7.5}, yazma_basarili=True)
 calistir(sb, tahmin=(30.0, 24.0), saat=12)
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.IC_IZLEME_DK)
 _kl = {r["nokta_adi"]: r for r in sb.komut_log}
-c("[komut logu] cihazda farkli deger 'hata' ve mesajda gorunur",
-  _kl["CH2_REM_SET"]["durum"] == "hata", _kl["CH2_REM_SET"])
+c("[komut logu] uygulanmayan set 'hata' ve cihazdaki değer mesajda",
+  _kl["CH2_REM_SET"]["durum"] == "hata" and "7.5" in _kl["CH2_REM_SET"]["hata_mesaji"],
+  _kl["CH2_REM_SET"])
+c("[komut logu] uygulanmayan satır hedefi de söyler", "hedef 6.5" in _kl["CH2_REM_SET"]["hata_mesaji"],
+  _kl["CH2_REM_SET"]["hata_mesaji"])
+
+durum_sifirla()
+sb = Sahte(TEMEL, saha={"A_BLOK_FCU_SET": "OKUNAMADI"})
+calistir(sb, saat=12)
+calistir(sb, saat=12, dakika=oto_set.IC_IZLEME_DK)
+_kl = {r["nokta_adi"]: r for r in sb.komut_log}
+c("[komut logu] hiç okunamayan nokta 'dogrulanamadi'",
+  _kl.get("A_BLOK_FCU_SET", {}).get("durum") == "dogrulanamadi", _kl.get("A_BLOK_FCU_SET"))
 
 durum_sifirla()
 sb = Sahte(TEMEL, yazma_basarili=False)
 calistir(sb, saat=12)
-c("[komut logu] yazma hatasi da loglanir",
+c("[komut logu] yazma hatası GEÇİŞ ANINDA loglanır (beklemeye gerek yok)",
   len(sb.komut_log) == 11 and all(r["durum"] == "hata" for r in sb.komut_log))
 
 durum_sifirla()
@@ -486,26 +574,32 @@ c("[komut logu] guvenlik kapisinin reddettigi 5 chiller de loglanir", len(_red) 
 c("[komut logu] reddedilen deger sahaya GITMEDI", all(d != 500.0 for d, _, _ in sb.yazilan))
 
 durum_sifirla()
-sb = Sahte(TEMEL, harita={"CH1_REM_SET": {"gateway_ip": "x", "dnet": 2, "mac_hex": "011F",
-                                          "obj_type": 1, "obj_inst": 101}},
-           ic={101: 7.5})
+sb = Sahte(TEMEL, harita={"CH1_REM_SET": {"okuma_noktasi": "CH-1 IC SET", "gateway_ip": "x",
+                                          "dnet": 2, "mac_hex": "011F", "obj_type": 1,
+                                          "obj_inst": 101}},
+           ic={101: 6.5})
 calistir(sb, tahmin=(30.0, 24.0), saat=12)
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.ILK_DOGRULAMA_DK)
 _kl = {r["nokta_adi"]: r for r in sb.komut_log}
-c("[komut logu] chiller satirinda IC SET bilgisi var", "IC SET: 7.5" in _kl["CH1_REM_SET"]["hata_mesaji"],
+c("[komut logu] chiller satırı GERÇEKLEŞEN noktayı (IC SET) söyler",
+  "CH-1 IC SET" in _kl["CH1_REM_SET"]["hata_mesaji"] and "6.5" in _kl["CH1_REM_SET"]["hata_mesaji"],
   _kl["CH1_REM_SET"]["hata_mesaji"])
 
 durum_sifirla()
 sb = Sahte(TEMEL)
 sb.komut_log_hatasi = True                           # RLS SQL'i henuz calistirilmamis
 calistir(sb, saat=12)
+calistir(sb, saat=12, dakika=oto_set.ILK_DOGRULAMA_DK)
 c("[komut logu] log yazilamasa da gecis TAMAMLANIR", len(sb.yazilan) == 11
   and oto_set.durum_oku().get("donem") == "gunduz", (len(sb.yazilan), oto_set.durum_oku().get("donem")))
+c("[komut logu] log yazilamasa da doğrulama TAMAMLANIR",
+  (oto_set.durum_ozet().get("dogrulama") or {}).get("sonuc") == "uygulandi")
 
-# ── 11d) CHILLER IC SET IZLEMESI ──
-# REM SET oturmus olsa bile chiller onu uygulamayabilir (yerel mod vb.).
-# Gecisten sonraki dakikalarda IC SET okunur; beklemeye kilitlenmez.
-HARITA = {f"CH{i}_REM_SET": {"gateway_ip": "10.0.0.1", "dnet": 2, "mac_hex": "011F",
-                             "obj_type": 1, "obj_inst": 100 + i} for i in range(1, 6)}
+# ── 11d) CHILLER IC SET — gerçekleşen değer ──
+# REM SET oturmuş olsa bile chiller onu uygulamayabilir (yerel mod vb.).
+HARITA = {f"CH{i}_REM_SET": {"okuma_noktasi": f"CH-{i} IC SET", "gateway_ip": "10.0.0.1",
+                             "dnet": 2, "mac_hex": "011F", "obj_type": 1, "obj_inst": 100 + i}
+          for i in range(1, 6)}
 IC_UYGULADI = {100 + i: 6.5 for i in range(1, 6)}      # sicak -> 6.5
 IC_ESKI = {100 + i: 7.5 for i in range(1, 6)}          # hala eski set
 
@@ -514,6 +608,10 @@ sb = Sahte(TEMEL, harita=HARITA, ic=IC_ESKI)
 calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=0)
 _dg = oto_set.durum_ozet().get("dogrulama") or {}
 c("[ic] gecisten hemen sonra izleme 'bekliyor'", _dg.get("sonuc") == "bekliyor", _dg)
+_d = oto_set.durum_oku().get("dogrulama") or {}
+c("[ic] chiller için IC SET okunacak, REM SET değil",
+  (_d.get("noktalar") or {}).get("CH1_REM_SET", {}).get("kaynak") == "CH-1 IC SET",
+  (_d.get("noktalar") or {}).get("CH1_REM_SET"))
 
 calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=5)          # 5 dk: hala eski
 _dg = oto_set.durum_ozet().get("dogrulama") or {}
@@ -524,7 +622,7 @@ sb.ic = dict(IC_UYGULADI)                                      # chiller uygulad
 calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=6)
 _dg = oto_set.durum_ozet().get("dogrulama") or {}
 c("[ic] chiller uygulayinca 'uygulandi'", _dg.get("sonuc") == "uygulandi", _dg)
-c("[ic] ozet metni okunur", "uyguladı" in (_dg.get("metin") or ""), _dg.get("metin"))
+c("[ic] ozet metni okunur", "uygulandı" in (_dg.get("metin") or ""), _dg.get("metin"))
 
 durum_sifirla()
 sb = Sahte(TEMEL, harita=HARITA, ic=IC_ESKI)
@@ -542,13 +640,26 @@ c("[ic] sonuc kalici", (oto_set.durum_ozet().get("dogrulama") or {}).get("sonuc"
 durum_sifirla()
 sb = Sahte(TEMEL, harita={}, ic=IC_ESKI)
 calistir(sb, saat=12)
-c("[ic] harita yoksa izleme baslatilmaz", oto_set.durum_ozet().get("dogrulama") is None,
+calistir(sb, saat=12, dakika=oto_set.ILK_DOGRULAMA_DK)
+c("[ic] IC haritası olmasa da setler doğrulanır (yazılan nokta okunur)",
+  (oto_set.durum_ozet().get("dogrulama") or {}).get("sonuc") == "uygulandi",
   oto_set.durum_ozet().get("dogrulama"))
 
 durum_sifirla()
 sb = Sahte(TEMEL, harita=HARITA, ic=IC_ESKI, yazma_basarili=False)
 calistir(sb, saat=12)
 c("[ic] yazilamayan noktanin IC'si izlenmez", oto_set.durum_ozet().get("dogrulama") is None,
+  oto_set.durum_ozet().get("dogrulama"))
+
+# Eski sürümden kalan doğrulama kaydı (yalnız "hedefler") çökmeden tamamlanır
+durum_sifirla()
+oto_set.durum_yaz({"donem": "gunduz", "chiller_mod": "sicak", "diger_mod": "sogutma",
+                   "dogrulama": {"sonuc": "bekliyor", "baslangic": "2026-08-31T12:00:00",
+                                 "hedefler": {"CH1_REM_SET": 6.5}, "okunan": {}, "uymayan": []}})
+sb = Sahte(TEMEL, harita=HARITA, ic=IC_UYGULADI)
+calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.ILK_DOGRULAMA_DK)
+c("[geri uyum] eski biçimdeki doğrulama kaydı yeni biçime çevrilip tamamlanır",
+  (oto_set.durum_ozet().get("dogrulama") or {}).get("sonuc") == "uygulandi",
   oto_set.durum_ozet().get("dogrulama"))
 
 # ── 12) Merkez ile kural esitligi (sapma olmasin) ──

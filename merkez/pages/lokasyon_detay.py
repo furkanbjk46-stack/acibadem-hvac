@@ -1303,11 +1303,21 @@ with tab1:
                     + (f"<div style='font-size:10px;color:rgba(150,210,255,0.45);"
                        f"margin-top:4px;'>son tur {_zaman}</div>" if _zaman else "")
                 )
-                # Son geçişin sahadaki sonucu (chiller seti uyguladı mı?)
-                _dg = (_oto.get("dogrulama") or {}).get("sonuc")
+                # Son geçişin sahadaki sonucu: gönderilen setler birkaç dakika
+                # sonra cihazdan geri okunur (anlık okuma eski değeri gösterir).
+                _dgd = _oto.get("dogrulama") or {}
+                _dg = _dgd.get("sonuc")
                 if _dg == "uygulanmadi":
+                    _uy = ", ".join(str(x).replace("_REM_SET", "").replace("_SET", "")
+                                    for x in (_dgd.get("uymayan") or [])[:4])
                     _govde += ("<div style='font-size:10px;color:#ef4444;margin-top:4px;'>"
-                               "Chiller seti UYGULAMADI</div>")
+                               "Set cihazda UYGULANMADI" + (f": {_uy}" if _uy else "") + "</div>")
+                elif _dg == "bekliyor":
+                    _govde += ("<div style='font-size:10px;color:#f59e0b;margin-top:4px;'>"
+                               "Setler gönderildi — cihazdan doğrulama bekleniyor</div>")
+                elif _dg == "uygulandi":
+                    _govde += ("<div style='font-size:10px;color:#10b981;margin-top:4px;'>"
+                               "Son geçişteki tüm setler cihazda doğrulandı</div>")
             else:
                 _govde = ("<div style='font-size:12px;color:rgba(180,220,255,0.4);'>"
                           "Bildirim gelmedi</div>")
