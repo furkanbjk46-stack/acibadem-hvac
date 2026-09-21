@@ -340,9 +340,13 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     # --- TRDP degerleri ---
     trdp1 = daily_kwh.get("TRDP-1", "") if daily_kwh else ""
     trdp3 = daily_kwh.get("TRDP-3", "") if daily_kwh else ""
-    # TRDP-2 ve TRDP-4 henuz bagli degil
+    # TRDP-4: Siemens PAC4200 (172.17.91.123) — 21.09.2026'dan itibaren otomatik.
+    # Ilk gun referans olmadigi icin bos kalir; ertesi gunden itibaren dolar.
+    trdp4 = daily_kwh.get("TRDP-4", "") if daily_kwh else ""
+    # TRDP-2 henuz bagli degil. Sebeke hesabi IKISINI birden ister (asagida):
+    # yalniz TRDP-4 dolu iken MCC+Chiller fallback'i korunur, cunku alt sayac
+    # toplami iki mekanik trafoyu birlikte temsil eder — tek birinin yerine konamaz.
     trdp2 = ""
-    trdp4 = ""
 
     # --- Sebeke fallback hesabi ---
     # TRDP-2/4 bos ise: Sebeke = TRDP-1 + TRDP-3 + MCC + Chiller
@@ -386,7 +390,7 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "TRDP1_kWh":                  trdp1,   # Otomatik (Modbus)
         "TRDP2_kWh":                  trdp2,   # Manuel / henuz bagli degil
         "TRDP3_kWh":                  trdp3,   # Otomatik (Modbus)
-        "TRDP4_kWh":                  trdp4,   # Manuel / henuz bagli degil
+        "TRDP4_kWh":                  trdp4,   # Otomatik (Modbus, PAC4200)
         "Sebeke_Tuketim_kWh":         sebeke_kwh,  # Otomatik hesaplandi
         "Kojen_Uretim_kWh":           "",
         "Kazan_Dogalgaz_m3":          "",

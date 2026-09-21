@@ -3371,7 +3371,8 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         # ── Açıklama ──
         "<div class='hsub' style='font-size:9px;margin-top:18px;letter-spacing:0;'>"
         "Mavi = Şebeke · Yeşil = Kojen · Sarı = Hastane Genel Toplam'a oran · "
-        "Birim: kWh/gün · TRDP-2/4 manuel girilir, otomatik okumaya geçince aynı alanlar otomatik dolar."
+        "Birim: kWh/gün · TRDP-1/3/4 otomatik (Modbus) · TRDP-2 manuel girilir; "
+        "ikisi birden ölçülene kadar mekanik kısım alt sayaç toplamından hesaplanır."
         "</div>"
         "</div></div>"
     )

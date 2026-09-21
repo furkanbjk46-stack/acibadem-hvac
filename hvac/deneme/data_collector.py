@@ -56,6 +56,10 @@ ANALYZERS = [
     {"ip": "172.18.91.136", "name": "CK-MCC-E01",   "brand": "siemens"},
     {"ip": "172.18.91.137", "name": "CK-MCC-F01",   "brand": "siemens"},
     {"ip": "172.17.91.125", "name": "TRDP-3",       "brand": "siemens"},
+    # TRDP-4 (mekanik trafo) — Siemens PAC4200, 21.09.2026'da otomatik okumaya alındı.
+    # data_bridge'de ALL_ANALYZERS'a EKLENMEZ: TRDP'ler şebeke tarafıdır, MCC/Chiller
+    # alt sayaç toplamına girerse çift sayım olur.
+    {"ip": "172.17.91.123", "name": "TRDP-4",       "brand": "siemens"},
 ]
 
 MODBUS_PORT    = 502
