@@ -2339,53 +2339,79 @@ class HVACAnalyzer:
         """Specific logic for Air Handling Units (Santraller)."""
         result = AnalysisResult()
         
-        # --- BAKIM KARTI KONTROLÜ ---
+        # --- BAKIM KARTI KONTROLÜ (BİLEŞEN BAZLI) ---
+        # 22.09.2026: BAKIMDA artık bileşen bazında uygulanır. Eskiden TEK bir bileşen
+        # bakımda işaretlenince santralin TÜM analizi atlanıyordu — ör. yalnız basınç
+        # sensörü kalibrasyondayken santral soğutmasa bile görünmüyordu. Artık ARIZALI
+        # ve BAKIMDA aynı modelle işlenir: o bileşenin verisi güvenilmez sayılır, ona
+        # bağlı teşhisler bastırılır, geri kalan analiz sürer. Yalnızca santralin
+        # TÜM (N/A olmayan) bileşenleri bakımdaysa santral bütünüyle bakımdadır.
         maint = maintenance_card or {}
         maintenance_notes = []
         skip_sat = False
         skip_return = False
-        
-        if maint.get("supply_sensor") == "FAULTY":
+        _DISI = ("FAULTY", "MAINTENANCE")          # verisi güvenilmez durumlar
+        _DURUM_ADI = {"FAULTY": "arızalı", "MAINTENANCE": "bakımda"}
+
+        def _kd(alan):
+            return maint.get(alan)
+
+        if _kd("supply_sensor") in _DISI:
             skip_sat = True
-            maintenance_notes.append("Üfleme sensörü arızalı - SAT verisi güvenilmez")
-        if maint.get("return_sensor") == "FAULTY":
+            maintenance_notes.append(f"Üfleme sensörü {_DURUM_ADI[_kd('supply_sensor')]} - SAT verisi güvenilmez")
+        if _kd("return_sensor") in _DISI:
             skip_return = True
-            maintenance_notes.append("Emiş sensörü arızalı - Emiş verisi güvenilmez")
-        if maint.get("heating_valve_body") == "FAULTY":
-            maintenance_notes.append("Isıtma vanası gövdesi arızalı - Bilinen arıza")
-        if maint.get("cooling_valve_body") == "FAULTY":
-            maintenance_notes.append("Soğutma vanası gövdesi arızalı - Bilinen arıza")
-        if maint.get("heating_valve_signal") == "FAULTY":
-            maintenance_notes.append("Isıtma vanası 0-10V arızalı - Vana pozisyonu güvenilmez")
-        if maint.get("cooling_valve_signal") == "FAULTY":
-            maintenance_notes.append("Soğutma vanası 0-10V arızalı - Vana pozisyonu güvenilmez")
+            maintenance_notes.append(f"Emiş sensörü {_DURUM_ADI[_kd('return_sensor')]} - Emiş verisi güvenilmez")
+        if _kd("heating_valve_body") in _DISI:
+            maintenance_notes.append(f"Isıtma vanası gövdesi {_DURUM_ADI[_kd('heating_valve_body')]} - Bilinen durum")
+        if _kd("cooling_valve_body") in _DISI:
+            maintenance_notes.append(f"Soğutma vanası gövdesi {_DURUM_ADI[_kd('cooling_valve_body')]} - Bilinen durum")
+        if _kd("heating_valve_signal") in _DISI:
+            maintenance_notes.append(f"Isıtma vanası 0-10V {_DURUM_ADI[_kd('heating_valve_signal')]} - Vana pozisyonu güvenilmez")
+        if _kd("cooling_valve_signal") in _DISI:
+            maintenance_notes.append(f"Soğutma vanası 0-10V {_DURUM_ADI[_kd('cooling_valve_signal')]} - Vana pozisyonu güvenilmez")
+
+        # Basınç sensörü: PERSONELİN işaretlediği arıza/bakım → basınç okuması yok
+        # sayılır (kapı start + sıcaklık sensörleriyle karar verir). Eskiden kart
+        # işareti okunmuyordu: bozuk sensör 10 Pa gösterince personel işaretlese bile
+        # "FAN BASMIYOR — KRİTİK" üretiliyordu. SİSTEMİN otomatik koyduğu işarette
+        # okuma kullanılmaya devam eder — sensör düzelince sistem bunu görüp işareti
+        # kendisi kaldırabilsin (on_kosul).
+        _bas_meta = maint.get("pressure_sensor_meta") or {}
+        basinc_yok_say = (_kd("pressure_sensor") in _DISI
+                          and not (_kd("pressure_sensor") == "FAULTY"
+                                   and _bas_meta.get("source") == "SISTEM"))
+        if basinc_yok_say:
+            maintenance_notes.append(f"Basınç sensörü {_DURUM_ADI[_kd('pressure_sensor')]} - "
+                                     f"basınç doğrulaması yapılmadı")
 
         result.maintenance_notes = maintenance_notes
 
         # --- MZ-9: BAKIM KARTI ANALİZE ENTEGRE ---
-        # a) Herhangi bir bileşen MAINTENANCE ise cihaz "BAKIMDA" — bakım süren cihazda
-        #    üretilen alarmlar gürültüdür; analiz atlanır (STANDBY ile aynı model).
+        # a) Santralin TÜM bileşenleri bakımdaysa santral bütünüyle bakımdadır —
+        #    analiz atlanır (STANDBY ile aynı model). N/A (santralde olmayan) sayılmaz.
         _MAINT_KEYS = ("supply_sensor", "return_sensor", "heating_valve_body",
                        "cooling_valve_body", "heating_valve_signal", "cooling_valve_signal",
                        "pressure_sensor")
-        _bakimda = [k for k in _MAINT_KEYS if maint.get(k) == "MAINTENANCE"]
-        if _bakimda:
+        _mevcut = [k for k in _MAINT_KEYS if maint.get(k, "OK") != "N/A"]
+        _bakimda = [k for k in _mevcut if maint.get(k) == "MAINTENANCE"]
+        if _mevcut and len(_bakimda) == len(_mevcut):
             result.status = "MAINTENANCE"
             result.action = "Bakımda"
-            result.reason = f"Cihaz bakımda ({len(_bakimda)} bileşen). Bakım bitene kadar analiz yapılmıyor."
+            result.reason = f"Santral bütünüyle bakımda ({len(_bakimda)} bileşen). Bakım bitene kadar analiz yapılmıyor."
             result.rule = "MAINTENANCE"
-            result.atlama_nedeni = f"BAKIMDA ({len(_bakimda)} bileşen)"
+            result.atlama_nedeni = f"BAKIMDA (tüm bileşenler)"
             result.severity = "OPTIMAL"
             result.sat_status = "MAINTENANCE"
             result.score = 0.0
             return result
 
-        # b) FAULTY vana SİNYALİ (0-10V) → pozisyon verisi güvenilmez; o vananın değeri
-        #    yok sayılır. Böylece SIMUL_HEAT_COOL / NOT_COOLING / NOT_HEATING gibi vana
-        #    koşullu kurallar sahte tetiklenmez (not zaten satıra düşüyor).
-        if maint.get("heating_valve_signal") == "FAULTY":
+        # b) Vana SİNYALİ (0-10V) arızalı/bakımda → pozisyon verisi güvenilmez; o vananın
+        #    değeri yok sayılır. Böylece SIMUL_HEAT_COOL / NOT_COOLING / NOT_HEATING gibi
+        #    vana koşullu kurallar sahte tetiklenmez (not zaten satıra düşüyor).
+        if _kd("heating_valve_signal") in _DISI:
             profile.valves.heating = None
-        if maint.get("cooling_valve_signal") == "FAULTY":
+        if _kd("cooling_valve_signal") in _DISI:
             profile.valves.cooling = None
 
         # --- SAĞLAMLAŞTIRMA F2: ÖN KOŞUL KAPISI (Start → Basınç → Sensör aralık) ---
@@ -2405,8 +2431,10 @@ class HVACAnalyzer:
                 _kapi = kapi_degerlendir(
                     profile.location, profile.name,
                     start=profile.start_stop,
-                    basinc=profile.pressure_pa,
-                    basinc_nokta_var=_n.get("basinc", False) or profile.pressure_pa is not None,
+                    # Kartta arızalı/bakımda işaretli basınç sensörü → okuma yok sayılır
+                    basinc=None if basinc_yok_say else profile.pressure_pa,
+                    basinc_nokta_var=(False if basinc_yok_say else
+                                      (_n.get("basinc", False) or profile.pressure_pa is not None)),
                     ufleme=profile.temperatures.sat if profile.temperatures.sat is not None else profile.temperatures.supply,
                     donus=profile.temperatures.return_ if profile.temperatures.return_ is not None else profile.temperatures.room,
                     ufleme_var=_n.get("sat", True),
@@ -2502,8 +2530,12 @@ class HVACAnalyzer:
             # bant kararı (LOW_DT/HIGH_DT) güvenilmez. Bastır, düşük öncelikli uyarı bırak.
             result.status = "SENSOR_FAULT"
             result.band = "N/A"
-            result.action = "Sensör Arızalı - ΔT Bant Kontrolü Atlandı"
-            result.reason = "Bakım kartında arızalı işaretli sensör var; hava ΔT bant analizi güvenilmez."
+            _bakimdaki = (maint.get("supply_sensor") == "MAINTENANCE" and skip_sat) or \
+                         (maint.get("return_sensor") == "MAINTENANCE" and skip_return)
+            result.action = ("Sensör Bakımda - ΔT Bant Kontrolü Atlandı" if _bakimdaki
+                             else "Sensör Arızalı - ΔT Bant Kontrolü Atlandı")
+            result.reason = ("Bakım kartında arızalı/bakımda işaretli sensör var; "
+                             "hava ΔT bant analizi güvenilmez.")
             result.rule = "SENSOR_FAULT"   # Kural sütunu boş kalmasın (özel kural sonra ezebilir)
             result.score = 3.0
         elif delta_t is None:

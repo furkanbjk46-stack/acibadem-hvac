@@ -412,6 +412,17 @@ def kapi_degerlendir(lokasyon: str, ahu_adi: str,
         if izle and izle["duzeldi"]:
             sistem_isaret_kaldir(_kart_key, alan)
 
+    # Basınç sensörü düzeldi: geçerli okuma (0 < p <= max) geldiyse SİSTEMİN koyduğu
+    # işaret kalkar (personelin elle koyduğuna dokunulmaz). Eskiden yalnız üfleme/emiş
+    # için vardı; basınç işareti bir kez konunca sonsuza dek kalıyordu.
+    if basinc_nokta_var and basinc is not None and karar == ham["karar"]:
+        try:
+            _b = float(basinc)
+            if 0.0 < _b <= cfg["PRESSURE_FAULT_MAX_PA"]:
+                sistem_isaret_kaldir(_kart_key, "pressure_sensor", "geçerli basınç okuması")
+        except (TypeError, ValueError):
+            pass
+
     _durum_yaz(durum)
 
     # Onay sayısı (rapor için): toplam kapı = basınç noktası varsa 3, yoksa 2.

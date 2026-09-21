@@ -223,6 +223,114 @@ c("ihlal kodu ve mesajı dolu",
 c("motor ile test AYNI kural kaynağını kullanır",
   mp.kural_denetim is kural_denetim)
 
+# ── 7) Bakım kartı: BİLEŞEN BAZLI bakım + basınç sensörü işareti (22.09.2026) ──
+_orj_kart = mp.get_maintenance_card
+_kart = {}
+mp.get_maintenance_card = lambda n, loc=None: dict(_kart)
+_BIL = ("heating_valve_body", "heating_valve_signal", "cooling_valve_body",
+        "cooling_valve_signal", "supply_sensor", "return_sensor", "pressure_sensor")
+_n7 = [0]
+
+
+def _p7(**kw):
+    _n7[0] += 1
+    p = _prof(ad=f"BK{_n7[0]}", **kw)
+    if "start" in kw:
+        p.start_stop = kw["start"]
+    if "basinc" in kw:
+        p.pressure_pa = kw["basinc"]
+    return p
+
+
+try:
+    # Basınç sensörü: kart temizken bozuk okuma → fan basmıyor (mevcut davranış)
+    _kart = {}
+    r = _analiz(_p7(mode="COOLING", sat=16.5, ret=23.0, setp=23.0, cv=60, start=1, basinc=10))
+    c("kart temiz + basınç 10 Pa → FAN_BASMIYOR (değişmedi)", r.rule == "FAN_BASMIYOR", r.rule)
+
+    # Personel basınç sensörünü ARIZALI işaretledi → okuma yok sayılır
+    _kart = {"pressure_sensor": "FAULTY"}
+    r = _analiz(_p7(mode="COOLING", sat=16.5, ret=23.0, setp=23.0, cv=60, start=1, basinc=10))
+    c("personel basınç sensörünü arızalı işaretlediyse FAN_BASMIYOR ÜRETİLMEZ",
+      r.rule != "FAN_BASMIYOR", r.rule)
+    c("  └ analiz sürer (santral sağlıklıysa NORMAL)", r.rule == "NORMAL", (r.rule, r.severity))
+    c("  └ satırda 'basınç doğrulaması yapılmadı' notu",
+      any("Basınç sensörü" in n for n in (r.maintenance_notes or [])), r.maintenance_notes)
+
+    # Basınç sensörü BAKIMDA → aynı şekilde yok sayılır
+    _kart = {"pressure_sensor": "MAINTENANCE"}
+    r = _analiz(_p7(mode="COOLING", sat=16.5, ret=23.0, setp=23.0, cv=60, start=1, basinc=10))
+    c("basınç sensörü bakımdayken de FAN_BASMIYOR üretilmez", r.rule != "FAN_BASMIYOR", r.rule)
+
+    # SİSTEMİN otomatik işareti → okuma KULLANILMAYA DEVAM EDER (düzelme görülsün)
+    _kart = {"pressure_sensor": "FAULTY", "pressure_sensor_meta": {"source": "SISTEM"}}
+    r = _analiz(_p7(mode="COOLING", sat=16.5, ret=23.0, setp=23.0, cv=60, start=1, basinc=10))
+    c("sistemin koyduğu basınç işaretinde okuma kullanılmaya devam eder",
+      r.rule == "FAN_BASMIYOR", r.rule)
+
+    # ── Bileşen bazlı bakım: tek bileşen bakımdayken analiz SÜRER ──
+    # Kullanıcı endişesi: "yalnız basınç sensörü bakımdayken santral soğutmasa
+    # bile görünmüyordu"
+    _kart = {"pressure_sensor": "MAINTENANCE"}
+    r = _analiz(_p7(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=95, start=1, basinc=450))
+    c("yalnız basınç sensörü bakımdayken santral soğutmuyorsa YİNE yakalanır",
+      r.rule == "NOT_COOLING" and r.severity == "CRITICAL", (r.rule, r.severity))
+    c("  └ santral bütünüyle 'bakımda' sayılmaz", r.rule != "MAINTENANCE", r.rule)
+
+    _kart = {"supply_sensor": "MAINTENANCE"}
+    r = _analiz(_p7(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=95))
+    c("üfleme sensörü bakımdayken üflemeye dayanan teşhis üretilmez",
+      r.rule not in ("NOT_COOLING", "COOL_EFF_LOW", "SAT_HIGH", "SAT_WARNING"), r.rule)
+    c("  └ satır 'Sensör Bakımda' der (arızalı değil)", "Bakımda" in (r.action or ""), r.action)
+
+    _kart = {"cooling_valve_signal": "MAINTENANCE"}
+    r = _analiz(_p7(mode="AUTO", sat=18.0, ret=23.0, setp=23.0, cv=60, hv=60))
+    c("vana sinyali bakımdayken o vananın yüzdesi yok sayılır (sahte SIMUL yok)",
+      r.rule != "SIMUL_HEAT_COOL", r.rule)
+
+    _kart = {"heating_valve_body": "MAINTENANCE"}
+    r = _analiz(_p7(mode="COOLING", sat=16.5, ret=23.0, setp=23.0, cv=60))
+    c("vana gövdesi bakımdayken analiz normal sürer, not düşer",
+      r.rule == "NORMAL" and any("Isıtma vanası gövdesi" in n for n in (r.maintenance_notes or [])),
+      (r.rule, r.maintenance_notes))
+
+    # ── Santral BÜTÜNÜYLE bakımda: tüm bileşenler ──
+    _kart = {b: "MAINTENANCE" for b in _BIL}
+    r = _analiz(_p7(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=95))
+    c("tüm bileşenler bakımdaysa santral bakımda — analiz atlanır",
+      r.rule == "MAINTENANCE" and r.severity == "OPTIMAL", (r.rule, r.severity))
+
+    _kart = {b: "MAINTENANCE" for b in _BIL}
+    _kart["pressure_sensor"] = "N/A"          # bu santralde basınç sensörü yok
+    r = _analiz(_p7(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=95))
+    c("olmayan (N/A) bileşen hesaba katılmaz — geri kalan hepsi bakımdaysa santral bakımda",
+      r.rule == "MAINTENANCE", r.rule)
+
+    _kart = {b: "MAINTENANCE" for b in _BIL}
+    _kart["supply_sensor"] = "OK"
+    r = _analiz(_p7(mode="COOLING", sat=16.5, ret=23.0, setp=23.0, cv=60))
+    c("tek bir bileşen bile sağlamsa santral bütünüyle bakımda sayılmaz",
+      r.rule != "MAINTENANCE", r.rule)
+finally:
+    mp.get_maintenance_card = _orj_kart
+
+# Sistemin koyduğu basınç işareti, geçerli okuma gelince KALKAR; personelinki kalkmaz
+import json as _json7
+with open(ok.CARDS_FILE, "w", encoding="utf-8") as _f:
+    _json7.dump({"cards": {
+        "MAS-1 BKSIS": {"pressure_sensor": "FAULTY", "pressure_sensor_meta": {"source": "SISTEM"}},
+        "MAS-1 BKELLE": {"pressure_sensor": "FAULTY"},
+    }}, _f)
+for _ahu in ("BKSIS", "BKELLE"):
+    for _ in range(2):                       # debounce: 2 ardışık aynı karar
+        ok.kapi_degerlendir("MAS-1", _ahu, start=1, basinc=450, basinc_nokta_var=True,
+                            ufleme=16.5, donus=23.0)
+_kartlar = _json7.load(open(ok.CARDS_FILE, encoding="utf-8"))["cards"]
+c("sistemin basınç işareti, geçerli okumada otomatik kalkar",
+  _kartlar["MAS-1 BKSIS"]["pressure_sensor"] == "OK", _kartlar["MAS-1 BKSIS"])
+c("personelin elle koyduğu basınç işaretine sistem DOKUNMAZ",
+  _kartlar["MAS-1 BKELLE"]["pressure_sensor"] == "FAULTY", _kartlar["MAS-1 BKELLE"])
+
 import ahu_collector as ac
 _orj = ac._nokta_oku
 def _kollektor(durumlar):
