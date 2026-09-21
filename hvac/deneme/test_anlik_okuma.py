@@ -161,14 +161,9 @@ finally:
     dc.modbus_get_kwh = _orj_oku
 
 # ── 4) Merkez tarafı ────────────────────────────────────────────────────
-_detay = open(os.path.join(os.path.dirname(os.path.dirname(BURASI)), "merkez", "pages",
-                           "lokasyon_detay.py"), encoding="utf-8").read()
-c("merkez okuma isteğini doğru önekle yazar", '"OKUMA:"' in _detay or "'OKUMA:'" in _detay
-  or "OKUMA:{" in _detay)
-c("merkez okuma isteğini 'bekliyor' olarak yazar (lokasyon yalnız bunu işler)",
-  '"durum":       "bekliyor"' in _detay or '"durum": "bekliyor"' in _detay)
-c("merkezde okunabilecek cihaz listesi lokasyondakiyle aynı",
-  '"maslak": ["TRDP-4"]' in _detay)
+# 21.09.2026: TRDP-4 doğrulandıktan sonra Synapse'teki "SAHA OKUMA TESTİ" butonu
+# kaldırıldı. Lokasyon altyapısı (bu dosyanın sınadığı) yerinde duruyor; yeni bir
+# sayaç bağlanırsa lokasyon_detay.py'ye buton geri eklenir (git geçmişi: a7ff707).
 
 gecen = sum(1 for _, k, _ in T if k)
 for ad, k, d in T:
