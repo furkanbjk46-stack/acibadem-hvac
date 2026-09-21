@@ -513,6 +513,19 @@ def komutlari_isle(sb_url: str, sb_key: str, lokasyon_id: str):
                 logger.warning(f"  ⌛ Süresi dolmuş komut atlandı ({nokta_adi}, {yas:.0f} dk)")
                 continue
 
+            # ANLIK SAHA OKUMASI ("OKUMA:<cihaz>") — merkezden istenen tek seferlik
+            # sayaç okuması. YAZMA değildir: nokta tablosuna, değer kapısına ve
+            # BACnet yazmaya ulaşmadan burada ayrılır (anlik_okuma.py).
+            if isinstance(nokta_adi, str) and nokta_adi.startswith("OKUMA:"):
+                try:
+                    from anlik_okuma import isle as _okuma_isle
+                    _od, _om = _okuma_isle(nokta_adi)
+                except Exception as _oe:
+                    _od, _om = "hata", f"Okuma yürütülemedi: {_oe}"
+                _komut_guncelle(sb_url, sb_key, kid, _od, _om)
+                logger.info(f"  📡 Anlık okuma {nokta_adi}: {_om}")
+                continue
+
             if nokta_adi not in noktalar:
                 _komut_guncelle(sb_url, sb_key, kid, "hata",
                                 f"Nokta tanımsız: {nokta_adi}")

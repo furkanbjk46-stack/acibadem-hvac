@@ -1375,6 +1375,89 @@ with tab1:
                         + _govde + "</div>", unsafe_allow_html=True)
 
 
+    # ══════════════════════════════════════════════════════
+    # SAHA OKUMA TESTİ — merkezden anlık sayaç okuması
+    # ══════════════════════════════════════════════════════
+    # Yeni bağlanan bir sayacın veri verip vermediğini görmek için sahaya gitmek
+    # ya da ertesi sabahın otomatik okumasını beklemek gerekmesin. İstek komutlar
+    # tablosuna "OKUMA:<cihaz>" olarak yazılır; lokasyon en geç 1 dk içinde
+    # ÜRETİMDEKİ okuyucuyla okur ve sonucu aynı satıra yazar. YAZMA DEĞİLDİR.
+    # Liste lokasyondaki anlik_okuma.IZINLI ile aynı olmalı (test_anlik_okuma).
+    ANLIK_OKUMA = {"maslak": ["TRDP-4"]}
+    _okunabilir = ANLIK_OKUMA.get(lok_id, [])
+    if _okunabilir:
+        st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="sec">📡 SAHA OKUMA TESTİ</div>', unsafe_allow_html=True)
+
+        def _son_okuma(cihaz):
+            try:
+                from supabase import create_client
+                r = (create_client(url, key).table("komutlar")
+                     .select("durum,hata_mesaji,created_at,executed_at")
+                     .eq("lokasyon", lok_id).eq("nokta_adi", f"OKUMA:{cihaz}")
+                     .order("created_at", desc=True).limit(1).execute())
+                return r.data[0] if r.data else None
+            except Exception:
+                return None
+
+        def _tr_saat(iso):
+            try:
+                t = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+                return (t + pd.Timedelta(hours=3)).strftime("%d.%m %H:%M:%S")
+            except Exception:
+                return str(iso or "")[:16]
+
+        for _cihaz in _okunabilir:
+            _son = _son_okuma(_cihaz)
+            _bekliyor = bool(_son and _son.get("durum") == "bekliyor")
+            oc1, oc2 = st.columns([1, 3])
+            with oc1:
+                if st.button(f"📡 {_cihaz} sahadan oku", key=f"oku_{lok_id}_{_cihaz}",
+                             disabled=_demo_modu() or _bekliyor,
+                             help="Lokasyon en geç 1 dakika içinde sayacı okur. Yalnızca okur, "
+                                  "cihaza hiçbir şey yazmaz ve günlük tüketim hesabını etkilemez."):
+                    try:
+                        from supabase import create_client
+                        create_client(url, key).table("komutlar").insert({
+                            "lokasyon":    lok_id,
+                            "nokta_adi":   f"OKUMA:{_cihaz}",
+                            "hedef_deger": 0,
+                            "durum":       "bekliyor",
+                        }).execute()
+                        st.rerun()
+                    except Exception as _oe:
+                        st.error(f"İstek gönderilemedi: {_oe}")
+                if st.button("🔄 Sonucu yenile", key=f"oku_yenile_{lok_id}_{_cihaz}"):
+                    st.rerun()
+
+            with oc2:
+                if not _son:
+                    _renk, _baslik, _govde = ("rgba(180,220,255,0.5)", "Henüz okuma istenmedi",
+                                              "Butona basınca lokasyon sayacı okuyup sonucu buraya yazar.")
+                else:
+                    _d = _son.get("durum")
+                    _mesaj = _son.get("hata_mesaji") or ""
+                    if _d == "bekliyor":
+                        _renk, _baslik = "#f59e0b", "⏳ İstek gönderildi — lokasyon okuyacak"
+                        _govde = (f"İstek: {_tr_saat(_son.get('created_at'))} · lokasyon en geç "
+                                  f"1 dk içinde işler. Sonuç için 'Sonucu yenile'.")
+                    elif _d == "tamamlandi":
+                        _renk, _baslik = "#10b981", "✓ Sahadan veri GELİYOR"
+                        _govde = f"{_mesaj}<br>okuma: {_tr_saat(_son.get('executed_at'))}"
+                    elif _d == "suresi_doldu":
+                        _renk, _baslik = "#f59e0b", "⌛ Lokasyon isteği zamanında almadı"
+                        _govde = f"{_mesaj} — lokasyon çevrimdışı olabilir."
+                    else:
+                        _renk, _baslik = "#ef4444", "✗ Sahadan veri GELMİYOR"
+                        _govde = f"{_mesaj}<br>deneme: {_tr_saat(_son.get('executed_at'))}"
+                st.markdown(
+                    "<div style='" + KART + "'>"
+                    "<div style='" + LBL + "'>" + _cihaz + " — SON OKUMA</div>"
+                    f"<div style='font-size:13px;color:{_renk};font-weight:700;'>{_baslik}</div>"
+                    f"<div style='font-size:11px;color:rgba(200,230,255,0.75);margin-top:6px;'>{_govde}</div>"
+                    "</div>", unsafe_allow_html=True)
+
+
 # ════════ TAB 2: TREND & TAHMİN ════════
 with tab2:
     st.markdown('<div class="sec">📈 YILLIK TÜKETİM TRENDİ</div>', unsafe_allow_html=True)
