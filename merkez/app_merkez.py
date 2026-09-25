@@ -1647,6 +1647,27 @@ with merkez:
 
     hjs = json.dumps(harita_js, ensure_ascii=False)
 
+    # ── Açılış görünümü: İSTANBUL ─────────────────────────────────────────
+    # Harita Türkiye geneline (zoom 5) açılıyordu; hastanelerin çoğu İstanbul'da
+    # olduğu için her yenilemede elle yakınlaştırmak gerekiyordu. Artık İstanbul
+    # sınırındaki lokasyonlara göre otomatik çerçevelenir. Kullanıcı uzaklaştırıp
+    # diğer şehirleri görebilir; bir kez haritaya dokunduktan sonra görünüm
+    # ZORLANMAZ (aşağıdaki kullaniciOynadi bayrağı).
+    # Sınır İstanbul İLİ ile kısıtlı: doğu ucu Pendik/Tuzla (~29.35). Kocaeli
+    # (lon 29.94) dahil edilince çerçeve doğuya kayıp İstanbul'u küçültüyordu.
+    _IST_SINIR = {"lat": (40.75, 41.45), "lon": (27.90, 29.60)}
+    _ist = [(h["lat"], h["lon"]) for h in harita_js
+            if _IST_SINIR["lat"][0] <= h["lat"] <= _IST_SINIR["lat"][1]
+            and _IST_SINIR["lon"][0] <= h["lon"] <= _IST_SINIR["lon"][1]]
+    if len(_ist) >= 2:
+        _odak = json.dumps([[min(p[0] for p in _ist), min(p[1] for p in _ist)],
+                            [max(p[0] for p in _ist), max(p[1] for p in _ist)]])
+    elif len(_ist) == 1:
+        _odak = json.dumps([[_ist[0][0] - 0.12, _ist[0][1] - 0.18],
+                            [_ist[0][0] + 0.12, _ist[0][1] + 0.18]])
+    else:
+        _odak = "null"   # İstanbul'da lokasyon yoksa Türkiye geneli görünümü kalır
+
     harita_html = f"""<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
@@ -1709,6 +1730,7 @@ body {{ background:#020617; }}
 var map = L.map('map', {{
     center: [39.0, 35.0],
     zoom: 5,
+    minZoom: 4,                 // uzaklaşınca Türkiye geneli görünebilsin
     zoomControl: true,
     attributionControl: true,   // OSM lisansı atıf zorunlu kılıyor (CSS ile küçültüldü)
     preferCanvas: true
@@ -1733,11 +1755,30 @@ var glKatman = L.maplibreGL({{
 // yükseklikte açılabiliyor. MapLibre o anda çizim yapamaz ve kendiliğinden
 // yenilemez; sonuç: işaretçiler görünür ama ALTLIK BOŞ kalır.
 // Bu yüzden yerleşim oturduktan sonra hem Leaflet hem MapLibre yeniden ölçülür.
+// AÇILIŞ ODAĞI — İstanbul. Kullanıcı haritaya dokunduğu anda (tekerlek, sürükleme,
+// zoom düğmesi) görünüm bir daha ZORLANMAZ; uzaklaşıp diğer şehirlere bakabilir.
+var ISTANBUL_SINIR = {_odak};
+var kullaniciOynadi = false;
+['wheel', 'mousedown', 'touchstart', 'dblclick'].forEach(function(olay) {{
+    map.getContainer().addEventListener(olay, function() {{ kullaniciOynadi = true; }}, {{ passive: true }});
+}});
+map.on('zoomstart', function(e) {{ if (e.hard) {{ kullaniciOynadi = true; }} }});
+
+function haritayiOdakla() {{
+    if (kullaniciOynadi || !ISTANBUL_SINIR) return;
+    try {{
+        map.fitBounds(ISTANBUL_SINIR, {{ padding: [38, 38], maxZoom: 11, animate: false }});
+    }} catch (e) {{}}
+}}
+
 function haritaTazele() {{
     try {{
         map.invalidateSize();
         var ml = glKatman.getMaplibreMap ? glKatman.getMaplibreMap() : null;
         if (ml) {{ ml.resize(); }}
+        // Çerçeve boyutu oturduktan SONRA odaklanılır: ilk anda kap yüksekliği
+        // 0 olabiliyor, o anda yapılan fitBounds yanlış zoom veriyordu.
+        haritayiOdakla();
     }} catch (e) {{}}
 }}
 [100, 400, 1200].forEach(function(ms) {{ setTimeout(haritaTazele, ms); }});
