@@ -167,8 +167,17 @@ c("merkez demo sayfasini YALNIZCA demo modunda secer",
   re.search(r'"sunum", "ozet_karsilastirma_demo\.py"\)\s*if _demo_modu\(\) else\s*'
             r'os\.path\.join\(os\.path\.dirname\(__file__\), "pages", "ozet_karsilastirma\.py"\)',
             _merkez) is not None)
-c("otomatik yenileme durdurma yalnizca demo modunda",
-  'os.environ.get("SYNAPSE_DEMO", "").strip() == "1"' in _merkez.split("st_autorefresh(interval")[0])
+# Detay penceresi canliya da geldigi icin 10 sn'lik yenileme karsilastirma
+# sayfasinda DEMO/CANLI ayrimi olmadan durdurulur; yoksa pencere kendiliginden
+# kapaniyor (kullanici: "10 sn sonra kayboluyor").
+_ar_kosul = _merkez.split("st_autorefresh(interval")[0].split("from streamlit_autorefresh")[-1]
+c("karsilastirma sayfasinda otomatik yenileme durur",
+  'not st.session_state.get("detay_ozet")' in _ar_kosul, _ar_kosul[-200:])
+c("yenileme durdurma demo moduna bagli DEGIL",
+  "SYNAPSE_DEMO" not in _ar_kosul, _ar_kosul[-200:])
+c("giris ekraninda yenileme yok (yazilan parola silinmesin)",
+  'st.session_state.get("giris_ok")' in _ar_kosul)
+c("QR bakim sayfasinda yenileme yok", '"bakim" not in st.query_params' in _ar_kosul)
 _rapor = open(os.path.join(BURASI, "pages", "rapor_olustur.py"), encoding="utf-8").read()
 c("rapor sayfasi demo modunda ornek veri sunucusunu kullanir", "_sim_sunucu.sunucu_baslat" in _rapor)
 # Aciklama (docstring) ve yorum satirlari haric tutulur: orada "bilerek

@@ -24,11 +24,11 @@ from streamlit_autorefresh import st_autorefresh
 #   - QR bakım sayfasında: form doldurulurken sıfırlanmasın
 #   - Giriş ekranında: 10 sn'de bir yenileme, yazılan kullanıcı adı/parolayı
 #     siler ve girişi imkânsız hale getirirdi
-#   - Sunum modunda karşılaştırma sayfasında: detay penceresi açıkken 10 sn'lik
-#     yenileme pencereyi kapatıyordu (yalnızca demo; canlı portal değişmez)
+#   - Karşılaştırma sayfasında (demo VE canlı): detay penceresi açıkken 10 sn'lik
+#     yenileme pencereyi kapatıyordu. Sayfa dönem toplamlarını gösteriyor,
+#     10 saniyede bir tazelenmesine zaten gerek yok.
 if ("bakim" not in st.query_params and st.session_state.get("giris_ok")
-        and not (os.environ.get("SYNAPSE_DEMO", "").strip() == "1"
-                 and st.session_state.get("detay_ozet"))):
+        and not st.session_state.get("detay_ozet")):
     st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
 # ============ CSS ============
