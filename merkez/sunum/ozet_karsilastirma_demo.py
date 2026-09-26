@@ -31,7 +31,8 @@ import sys as _sys
 import pandas as _pd
 
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
-import karsilastirma_hesap as _KH
+import karsilastirma_hesap as _KH          # hesaplar
+import karsilastirma_panel as _KP          # detay penceresi arayuzu (canli ile ORTAK)
 
 # ── Metrik tanımları — ozet_karsilastirma.py ile AYNI olmalı ──────────────
 # (test_ozet_karsilastirma.py iki dosyanın eşitliğini doğrular)
@@ -240,12 +241,7 @@ for _r in _satirlar:
     _r["kotu"], _r["durum"] = _KH.esik_durumu(_r["ikinci"], _ESIK, _M["artis_iyi"])
 
 
-def _tr(sayi, ondalik=0):
-    fmt = f"{sayi:,.{ondalik}f}"
-    if ondalik > 0:
-        tam, _, kusur = fmt.partition(".")
-        return tam.replace(",", ".") + "," + kusur
-    return fmt.replace(",", ".")
+_tr = _KP.tr
 
 
 # ── Üst şerit ─────────────────────────────────────────────────────────────
@@ -258,16 +254,7 @@ _ort_ikinci = (sum(r["ikinci"] for r in _yog) / len(_yog)) if _yog else None
 _esik_disi = sum(1 for r in _satirlar if r["kotu"])
 
 
-def _kutu(ikon, baslik, deger, alt, renk="#38bdf8"):
-    return (
-        f"<div style='flex:1;min-width:120px;background:rgba(0,20,50,0.6);"
-        f"border:1px solid rgba(56,189,248,0.12);border-radius:10px;padding:10px 12px;'>"
-        f"<div style='font-size:9px;color:rgba(150,210,255,0.55);letter-spacing:1px;'>"
-        f"{ikon} {baslik}</div>"
-        f"<div style='font-family:Playfair Display,serif;font-size:20px;font-weight:700;"
-        f"color:{renk};margin-top:2px;'>{deger}</div>"
-        f"<div style='font-size:9px;color:rgba(120,170,220,0.5);'>{alt}</div></div>"
-    )
+_kutu = _KP.kutu
 
 
 _veri_olan = len(_yog)
@@ -297,27 +284,11 @@ _AD2ID = {r["ad"]: r["id"] for r in _satirlar}
 
 
 def _yeni_secim(kaynak, lid):
-    """Aynı seçim her rerun'da pencereyi yeniden açmasın; yalnızca YENİ tıklama açar."""
-    anahtar = "_ozet_son_secim_" + kaynak
-    if not lid:
-        st.session_state.pop(anahtar, None)
-        return None
-    if st.session_state.get(anahtar) == lid:
-        return None
-    st.session_state[anahtar] = lid
-    return lid
+    return _KP.yeni_secim(st, kaynak, lid)
 
 
 def _grafik_secimi(olay):
-    try:
-        noktalar = olay["selection"]["points"]
-    except Exception:
-        return None
-    for p in noktalar or []:
-        lid = _AD2ID.get(p.get("y")) or _AD2ID.get(p.get("label"))
-        if lid:
-            return lid
-    return None
+    return _KP.grafik_secimi(olay, _AD2ID)
 
 
 _acilacak = None
@@ -427,28 +398,15 @@ for _i, _r in enumerate(_satirlar, 1):
 _tablo_df = _pd.DataFrame(_tablo)
 
 
-def _durum_stil(v):
-    if v in ("Eşik üstü", "Hedef altı"):
-        return "color:#f59e0b;font-weight:600"
-    if v == "Normal":
-        return "color:#10b981"
-    return "color:rgba(150,210,255,0.4)"
-
-
 try:
-    _stil = _tablo_df.style.map(_durum_stil, subset=["Durum"])
+    _stil = _tablo_df.style.map(_KP.durum_stil, subset=["Durum"])
 except AttributeError:                       # eski pandas
-    _stil = _tablo_df.style.applymap(_durum_stil, subset=["Durum"])
+    _stil = _tablo_df.style.applymap(_KP.durum_stil, subset=["Durum"])
 
 _olay3 = st.dataframe(_stil, hide_index=True, use_container_width=True,
                       key=f"ozet_demo_tablo_{_metrik_key}",
                       on_select="rerun", selection_mode="single-row")
-try:
-    _satir_idx = (_olay3["selection"]["rows"] or [None])[0]
-except Exception:
-    _satir_idx = None
-_acilacak = _yeni_secim("tablo", _satirlar[_satir_idx]["id"]
-                        if _satir_idx is not None and _satir_idx < len(_satirlar) else None) or _acilacak
+_acilacak = _yeni_secim("tablo", _KP.tablo_secimi(_olay3, _satirlar)) or _acilacak
 
 st.caption(f"Dönem: {_bas.strftime('%d.%m.%Y')} → {_bit.strftime('%d.%m.%Y')} "
            f"· Kıyas: {_o_bas.strftime('%d.%m.%Y')} → {_o_bit.strftime('%d.%m.%Y')}"
@@ -469,126 +427,25 @@ _GRUP = {"ort_ikinci": _ort_ikinci,
          "ort_sogutma_payi": (sum(_sog_paylari) / len(_sog_paylari)) if _sog_paylari else None}
 
 
-# ── Detay penceresi ───────────────────────────────────────────────────────
-def _ilerleme(ad, kwh, yuzde, renk):
-    return (
-        f"<div style='margin:6px 0;'>"
-        f"<div style='display:flex;justify-content:space-between;font-size:11px;"
-        f"color:rgba(200,230,255,0.8);'><span>{ad}</span>"
-        f"<span style='color:{renk};font-family:monospace;'>%{yuzde:.1f} · {_tr(kwh)} kWh</span></div>"
-        f"<div style='background:rgba(30,41,59,0.9);height:7px;border-radius:4px;overflow:hidden;'>"
-        f"<div style='width:{min(100, yuzde):.1f}%;height:100%;background:{renk};'></div></div></div>"
-    )
-
-
-def _mini_liste(baslik, kalemler, renk):
-    if not kalemler:
-        return ""
-    en_buyuk = max(k for _, k in kalemler) or 1
-    satirlar = "".join(
-        f"<div style='display:grid;grid-template-columns:90px 1fr 90px;gap:8px;align-items:center;"
-        f"font-size:10px;margin:3px 0;'><span style='color:rgba(200,230,255,0.75);'>{ad}</span>"
-        f"<div style='background:rgba(30,41,59,0.9);height:6px;border-radius:3px;overflow:hidden;'>"
-        f"<div style='width:{k / en_buyuk * 100:.0f}%;height:100%;background:{renk};'></div></div>"
-        f"<span style='text-align:right;font-family:monospace;color:rgba(200,230,255,0.6);'>"
-        f"{_tr(k)} kWh</span></div>" for ad, k in kalemler)
-    return (f"<div style='margin-top:10px;'><div style='font-size:9px;letter-spacing:1px;"
-            f"color:rgba(56,189,248,0.6);margin-bottom:2px;'>{baslik}</div>{satirlar}</div>")
-
-
+# ── Detay penceresi (gövdesi karsilastirma_panel.py'de — canlı ile ORTAK) ──
 @st.dialog("Lokasyon detayı", width="large")
 def _panel(lid):
     r = next((x for x in _satirlar if x["id"] == lid), None)
     if r is None:
         st.write("Lokasyon bulunamadı.")
         return
-    _kayitlar = _donem_df[_donem_df["lokasyon_id"] == lid].to_dict("records")
-    dag = _KH.sistem_dagilimi(_kayitlar)
+    dag = _KH.sistem_dagilimi(_donem_df[_donem_df["lokasyon_id"] == lid].to_dict("records"))
     try:
         _lok_kaydi = next((l for l in (fetch_lokasyonlar(url, key) or [])
                            if l.get("lokasyon_id") == lid), {})
     except Exception:
         _lok_kaydi = {}
-    ld = _KH.lokasyon_durumu(_lok_kaydi)
-
-    st.markdown(
-        f"<div style='font-family:Playfair Display,serif;font-size:22px;color:#f8fafc;'>{r['isim']}</div>"
-        f"<div style='font-size:10px;color:rgba(120,170,220,0.55);'>{_M['ad']} · {_secim} · "
-        f"{_bas.strftime('%d.%m.%Y')} → {_bit.strftime('%d.%m.%Y')}</div>",
-        unsafe_allow_html=True)
-
-    _k = (_kutu("Σ", "DÖNEM " + _M["ad"], f"{_tr(r['deger'])} {_M['birim']}",
-                f"{r['gun']} günlük veri")
-          + _kutu("📐", "GÖSTERGE", _ik_metin(r["ikinci"]), _IK_BIRIM,
-                  "#f59e0b" if r["kotu"] else "#10b981" if r["kotu"] is False else "#38bdf8")
-          + _kutu("🏢", "ALAN", f"{_tr(r['m2'])} m²", r["durum"]))
-    st.markdown(f"<div style='display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;'>{_k}</div>",
-                unsafe_allow_html=True)
-
-    # Teşhis
-    sev, baslik, maddeler = _KH.teshis(r, _GRUP, dag, _ESIK, _M["artis_iyi"], _IK_BIRIM,
-                                       ondalik=1 if _ORAN else _IK_OND,
-                                       beklenen_gun=_BEKLENEN_GUN)
-    _renk = {"uyari": ("#f59e0b", "rgba(245,158,11,0.08)", "⚠️"),
-             "normal": ("#10b981", "rgba(16,185,129,0.08)", "✓"),
-             "bilgi": ("#38bdf8", "rgba(56,189,248,0.06)", "ℹ️")}[sev]
-    st.markdown(
-        f"<div style='border:1px solid {_renk[0]}55;background:{_renk[1]};border-radius:10px;"
-        f"padding:10px 14px;margin:6px 0 12px;'>"
-        f"<div style='color:{_renk[0]};font-weight:700;font-size:12px;'>{_renk[2]} {baslik}</div>"
-        + "".join(f"<div style='font-size:11px;color:rgba(200,230,255,0.8);margin-top:4px;'>• {m}</div>"
-                  for m in maddeler)
-        + "</div>", unsafe_allow_html=True)
-
-    # Sistem bazlı dağılım
-    _s1, _s2 = st.columns([3, 2])
-    with _s1:
-        _h = ("<div style='font-size:10px;letter-spacing:1px;color:rgba(56,189,248,0.7);'>"
-              "SİSTEM BAZLI ELEKTRİK DAĞILIMI</div>"
-              "<div style='font-size:9px;color:rgba(120,170,220,0.45);margin-bottom:4px;'>"
-              "Sayaç verisi · ölçülmeyen yükler ayrı gösterilir</div>")
-        if dag["kalemler"]:
-            _h += "".join(_ilerleme(a, k, y, rn) for a, k, y, rn in dag["kalemler"])
-        else:
-            _h += "<div style='font-size:11px;color:rgba(150,210,255,0.5);'>Bu dönem için sistem kırılımı yok.</div>"
-        _h += _mini_liste("CHILLER BAZINDA", dag["chiller"], "#06b6d4")
-        _h += _mini_liste("SOĞUTMA KULELERİ", dag["kule"], "#38bdf8")
-        _h += _mini_liste("MCC PANOLARI", dag["mcc"], "#3b82f6")
-        st.markdown(_h, unsafe_allow_html=True)
-    with _s2:
-        _kay = dag["sebeke"] + dag["kojen"]
-        _h2 = ("<div style='font-size:10px;letter-spacing:1px;color:rgba(56,189,248,0.7);"
-               "margin-bottom:4px;'>ENERJİ KAYNAĞI</div>")
-        if _kay:
-            _h2 += _ilerleme("Şebeke", dag["sebeke"], dag["sebeke"] / _kay * 100, "#a855f7")
-            if dag["kojen"] > 0:                 # kojen tesisi olmayan hastanede satır gösterilmez
-                _h2 += _ilerleme("Kojen", dag["kojen"], dag["kojen"] / _kay * 100, "#10b981")
-        _h2 += ("<div style='font-size:10px;letter-spacing:1px;color:rgba(56,189,248,0.7);"
-                "margin:14px 0 4px;'>SİSTEM DURUMU</div>")
-        for _et, _dg in (("Bağlantı", ld["baglanti"]), ("Oto-set", ld["oto_metin"]),
-                         ("Chiller doğrulama", ld["dogrulama"] or "—"),
-                         ("Arızalı cihaz", str(ld["ariza"])), ("Bakımdaki cihaz", str(ld["bakim"])),
-                         ("Ort. chiller yükü", "—" if r.get("ort_chiller_yuk") is None
-                          else f"%{r['ort_chiller_yuk']:.0f}")):
-            _h2 += (f"<div style='display:flex;justify-content:space-between;gap:8px;font-size:10px;"
-                    f"padding:4px 0;border-bottom:1px solid rgba(56,189,248,0.07);'>"
-                    f"<span style='color:rgba(150,210,255,0.55);'>{_et}</span>"
-                    f"<span style='color:rgba(220,240,255,0.85);text-align:right;'>{_dg}</span></div>")
-        st.markdown(_h2, unsafe_allow_html=True)
-
-    _b1, _b2, _b3 = st.columns(3)
-    with _b1:
-        if st.button("📍 Lokasyon detayına git", use_container_width=True, key="ozet_panel_detay"):
-            st.session_state.pop("detay_ozet", None)
-            st.session_state["detay_lokasyon"] = lid
-            st.rerun()
-    with _b2:
-        if st.button("📄 Rapor oluştur", use_container_width=True, key="ozet_panel_rapor"):
-            st.session_state["rapor_lokasyon"] = lid
-            st.switch_page("pages/rapor_olustur.py")
-    with _b3:
-        if st.button("Kapat", use_container_width=True, key="ozet_panel_kapat"):
-            st.rerun()
+    _KP.panel_govde(st, r, dag, _KH.lokasyon_durumu(_lok_kaydi), {
+        "M": _M, "secim": _secim, "bas": _bas, "bit": _bit,
+        "ik_metin": _ik_metin, "ik_birim": _IK_BIRIM, "esik": _ESIK,
+        "oran": _ORAN, "ik_ond": _IK_OND, "beklenen_gun": _BEKLENEN_GUN,
+        "grup": _GRUP, "teshis": _KH.teshis, "anahtar": "ozet_panel",
+    })
 
 
 if _acilacak:

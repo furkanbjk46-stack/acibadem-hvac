@@ -188,12 +188,71 @@ _yuksek_iyi = sorted(_ornek, key=lambda r: r["ikinci"], reverse=True)
 c("tuketimde en dusuk en ustte", _dusuk_iyi[0]["ad"] == "B")
 c("uretimde en yuksek en ustte", _yuksek_iyi[0]["ad"] == "A")
 
+# ── Demo ile canli sayfa ayrismasin ───────────────────────────────────────
+# Detay penceresi once yalnizca demo'daydi; canliya tasindi. Ikisi de ayni
+# METRIKLER'i ve ayni ortak modulu kullanmali, yoksa sessizce ayrisirlar.
+DEMO = os.path.join(KOK, "merkez", "sunum", "ozet_karsilastirma_demo.py")
+_demo_metin = open(DEMO, encoding="utf-8").read()
+_dm = re.search(r"^METRIKLER\s*=\s*(\{.*?^\})", _demo_metin, re.S | re.M)
+c("demo METRIKLER sozlugu bulundu", bool(_dm))
+c("demo ile canli METRIKLER birebir ayni",
+  ast.literal_eval(_dm.group(1)) == METRIKLER if _dm else False)
+
+for _ad, _dosya, _metin in (("canli", SAYFA, _sayfa_metin), ("demo", DEMO, _demo_metin)):
+    c("[%s] ortak panel modulunu kullanir" % _ad, "karsilastirma_panel" in _metin)
+    c("[%s] pencere govdesi kopyalanmamis" % _ad,
+      _metin.count("panel_govde") == 1 and "SISTEM BAZLI ELEKTRIK" not in _metin)
+    c("[%s] detay penceresi tanimli" % _ad, '@st.dialog("Lokasyon detayı"' in _metin)
+    c("[%s] grafik tiklanabilir" % _ad, _metin.count('on_select="rerun"') >= 3)
+    c("[%s] tablo tek satir secimi" % _ad, 'selection_mode="single-row"' in _metin)
+    c("[%s] hedef esigi ayarlardan okunur" % _ad, '"hedef_esikleri"' in _metin)
+    c("[%s] durum sutunu esik_durumu'ndan gelir" % _ad, "_KH.esik_durumu" in _metin)
+    c("[%s] teshis ortak hesaptan" % _ad, "_KH.teshis" in _metin)
+
+# ── Ortak panel modulu (saf fonksiyonlar) ─────────────────────────────────
+sys.path.insert(0, os.path.join(KOK, "merkez"))
+import karsilastirma_panel as KP
+
+c("tr: binlik ayraci nokta", KP.tr(1234567) == "1.234.567", KP.tr(1234567))
+c("tr: ondalik virgul", KP.tr(12.34, 2) == "12,34", KP.tr(12.34, 2))
+c("durum_stil esik ustunu uyari rengiyle verir", "#f59e0b" in KP.durum_stil("Eşik üstü"))
+c("durum_stil hedef altini da uyari sayar", "#f59e0b" in KP.durum_stil("Hedef altı"))
+c("durum_stil normali yesil verir", "#10b981" in KP.durum_stil("Normal"))
+c("durum_stil bilinmeyeni sonuk verir", "rgba" in KP.durum_stil("—"))
+
+_ad2id = {"Maslak": "maslak", "Altunizade": "altunizade"}
+c("grafik secimi y ekseninden lokasyon bulur",
+  KP.grafik_secimi({"selection": {"points": [{"y": "Maslak"}]}}, _ad2id) == "maslak")
+c("grafik secimi pasta diliminden (label) bulur",
+  KP.grafik_secimi({"selection": {"points": [{"label": "Altunizade"}]}}, _ad2id) == "altunizade")
+c("grafik secimi bos olayda None", KP.grafik_secimi({}, _ad2id) is None)
+c("grafik secimi taninmayan etikette None",
+  KP.grafik_secimi({"selection": {"points": [{"y": "Yok"}]}}, _ad2id) is None)
+
+_sat = [{"id": "a"}, {"id": "b"}]
+c("tablo secimi satir indeksini id'ye cevirir",
+  KP.tablo_secimi({"selection": {"rows": [1]}}, _sat) == "b")
+c("tablo secimi bos secimde None", KP.tablo_secimi({"selection": {"rows": []}}, _sat) is None)
+c("tablo secimi tasan indekste None (sayfa cokmesin)",
+  KP.tablo_secimi({"selection": {"rows": [9]}}, _sat) is None)
+
+c("ilerleme cubugu %100'u asmaz", "width:100.0%" in KP.ilerleme("X", 10, 180.0, "#fff"))
+c("mini_liste bos kalemde hic cizmez", KP.mini_liste("BASLIK", [], "#fff") == "")
+_ml = KP.mini_liste("CHILLER", [("CH-1", 100), ("CH-2", 50)], "#06b6d4")
+c("mini_liste en buyuk kalemi tam genislikte cizer", "width:100%" in _ml)
+c("mini_liste yarisini yarim cizer", "width:50%" in _ml)
+c("kutu verilen rengi kullanir", "#ef4444" in KP.kutu("x", "B", "1", "alt", "#ef4444"))
+
 # ── Sayfa sozdizimi ───────────────────────────────────────────────────────
-try:
-    ast.parse(_sayfa_metin)
-    c("sayfa sozdizimi gecerli", True)
-except SyntaxError as e:
-    c("sayfa sozdizimi gecerli", False, str(e))
+for _ad, _metin in (("canli sayfa", _sayfa_metin), ("demo sayfa", _demo_metin),
+                    ("panel modulu", open(os.path.join(KOK, "merkez",
+                                                       "karsilastirma_panel.py"),
+                                          encoding="utf-8").read())):
+    try:
+        ast.parse(_metin)
+        c("%s sozdizimi gecerli" % _ad, True)
+    except SyntaxError as e:
+        c("%s sozdizimi gecerli" % _ad, False, str(e))
 
 print("\n%d/%d PASS" % (gecti, gecti + basarisiz))
 raise SystemExit(1 if basarisiz else 0)

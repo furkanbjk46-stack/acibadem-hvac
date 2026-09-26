@@ -15,7 +15,17 @@ sayfa yeniden yüklenmez — oturum korunur.
 METRIKLER sözlüğüne eklenerek aynı sayfayı kullanabilir.
 """
 
+import json as _json
+import os as _os
+import sys as _sys
+
 import pandas as _pd
+
+# exec ile app_merkez globals'i icinde calistigi icin __file__ = app_merkez.py;
+# dirname'i merkez/ klasoru → ortak moduller buradan gelir.
+_sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+import karsilastirma_hesap as _KH          # hesaplar (test edilebilir)
+import karsilastirma_panel as _KP          # detay penceresi arayuzu (demo ile ORTAK)
 
 # ── Metrik tanımları ──────────────────────────────────────────────────────
 # kolonlar   : birden fazlaysa toplanır (ör. doğalgaz = kazan + kojen)
@@ -89,7 +99,9 @@ st.markdown(
     f"<div style='font-size:9px;color:rgba(120,170,220,0.55);letter-spacing:5px;"
     f"text-transform:uppercase;'>ACIBADEM SAĞLIK GRUBU — LOKASYON KARŞILAŞTIRMA</div>"
     f"<div style='font-family:Playfair Display,serif;font-size:30px;font-weight:600;"
-    f"color:#f8fafc;margin-top:4px;'>{_M['ikon']} {_M['ad']}</div></div>",
+    f"color:#f8fafc;margin-top:4px;'>{_M['ikon']} {_M['ad']}</div>"
+    f"<div style='font-size:10px;color:rgba(120,170,220,0.45);margin-top:2px;'>"
+    f"Detay için çubuğa ya da tablo satırına tıklayın</div></div>",
     unsafe_allow_html=True)
 
 # ── Veri ──────────────────────────────────────────────────────────────────
@@ -105,6 +117,23 @@ _df["Tarih"] = _pd.to_datetime(_df["Tarih"], errors="coerce")
 _df = _df.dropna(subset=["Tarih"])
 
 _bugun = _pd.Timestamp(now_display.date()) if "now_display" in dir() else _pd.Timestamp.today().normalize()
+
+
+# ── Hedef eşikleri (ayarlar.hedef_esikleri) ───────────────────────────────
+# Tanımlıysa: ikinci grafikte kesikli hedef çizgisi, tabloda "Durum" sütunu
+# ve üst şeritte "hedef dışı" sayısı. Tanımlı değilse hiçbiri gösterilmez.
+@st.cache_data(ttl=120, show_spinner=False)
+def _hedef_esikleri_oku(_url, _key):
+    try:
+        from supabase import create_client
+        r = create_client(_url, _key).table("ayarlar").select("value") \
+            .eq("key", "hedef_esikleri").execute()
+        return _json.loads(r.data[0]["value"]) if r.data else {}
+    except Exception:
+        return {}
+
+
+_ESIK = _hedef_esikleri_oku(url, key).get(_metrik_key)
 
 # ── Dönem seçimi ──────────────────────────────────────────────────────────
 _DONEMLER = ["Bu ay", "Geçen ay", "Son 12 ay", "Bu yıl"]
@@ -137,6 +166,7 @@ def _aralik(secim):
 
 
 _bas, _bit, _o_bas, _o_bit = _aralik(_secim)
+_BEKLENEN_GUN = int((_bit - _bas).days) + 1     # teşhiste "veri günü eksik" kontrolü
 
 
 def _topla(df, bas, bit, kolonlar):
@@ -175,6 +205,7 @@ if not _su:
 # ── Satırları kur ─────────────────────────────────────────────────────────
 _ORAN = _M.get("ikinci") == "oran"
 _DUSUK_IYI = not _M["artis_iyi"]          # tüketimde düşük iyi, üretimde yüksek
+_donem_df = _df[(_df["Tarih"] >= _bas) & (_df["Tarih"] <= _bit)]
 
 _satirlar = []
 for _lid, _deger in _su.items():
@@ -195,9 +226,17 @@ for _lid, _deger in _su.items():
     else:
         _ikinci = (_ik_deger / _m2 / _gun * _M.get("ik_carpan", 1)) \
             if (_m2 and _gun) else None
+    # Detay penceresindeki "Ort. chiller yükü" satırı için
+    _yuk = None
+    if "Chiller_Load_Percent" in _donem_df.columns:
+        _y = _pd.to_numeric(_donem_df.loc[_donem_df["lokasyon_id"] == _lid,
+                                          "Chiller_Load_Percent"], errors="coerce").dropna()
+        _yuk = float(_y.mean()) if not _y.empty else None
     _satirlar.append({
         "id": _lid,
         "ad": _bilgi.get("kisa", _lid),
+        "isim": _bilgi.get("isim", _lid),
+        "ort_chiller_yuk": _yuk,
         "renk": _bilgi.get("renk", _M["renk"]),
         "deger": _deger,
         "m2": _m2,
@@ -243,14 +282,10 @@ def _ik_metin(v):
 
 _satirlar.sort(key=lambda r: r["deger"], reverse=True)
 _toplam = sum(r["deger"] for r in _satirlar)
+for _r in _satirlar:
+    _r["kotu"], _r["durum"] = _KH.esik_durumu(_r["ikinci"], _ESIK, _M["artis_iyi"])
 
-
-def _tr(sayi, ondalik=0):
-    fmt = f"{sayi:,.{ondalik}f}"
-    if ondalik > 0:
-        tam, _, kusur = fmt.partition(".")
-        return tam.replace(",", ".") + "," + kusur
-    return fmt.replace(",", ".")
+_tr = _KP.tr          # Türkçe sayı biçimi — pencere ile aynı olsun diye ortak
 
 
 # ── Üst şerit: özet göstergeler ───────────────────────────────────────────
@@ -263,17 +298,8 @@ _en_kotu = _yuksek if _DUSUK_IYI else _dusuk
 _ort_ikinci = (sum(r["ikinci"] for r in _yog) / len(_yog)) if _yog else None
 
 
-def _kutu(ikon, baslik, deger, alt, renk="#38bdf8"):
-    return (
-        f"<div style='flex:1;min-width:120px;background:rgba(0,20,50,0.6);"
-        f"border:1px solid rgba(56,189,248,0.12);border-radius:10px;padding:10px 12px;'>"
-        f"<div style='font-size:9px;color:rgba(150,210,255,0.55);letter-spacing:1px;'>"
-        f"{ikon} {baslik}</div>"
-        f"<div style='font-family:Playfair Display,serif;font-size:20px;font-weight:700;"
-        f"color:{renk};margin-top:2px;'>{deger}</div>"
-        f"<div style='font-size:9px;color:rgba(120,170,220,0.5);'>{alt}</div></div>"
-    )
-
+_kutu = _KP.kutu
+_esik_disi = sum(1 for r in _satirlar if r["kotu"])
 
 _veri_olan = len(_yog)
 _alt_metin = f"{len(_satirlar)} lokasyon · {_secim.lower()}"
@@ -291,22 +317,32 @@ if _en_kotu:
                       f"{_en_kotu['ad']} · {_IK_BIRIM}", "#f59e0b")
 if _ort_ikinci is not None:
     _kutular += _kutu("⌀", "ORTALAMA", _ik_metin(_ort_ikinci), _IK_BIRIM)
+if _ESIK is not None:
+    _kutular += _kutu("🎯", "HEDEF", ("≥ " if _M["artis_iyi"] else "≤ ") + _ik_metin(_ESIK),
+                      f"{_esik_disi} lokasyon hedef dışı",
+                      "#ef4444" if _esik_disi else "#10b981")
 
 st.markdown(f"<div style='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;'>"
             f"{_kutular}</div>", unsafe_allow_html=True)
 
-# ── Grafikler ─────────────────────────────────────────────────────────────
+# ── Grafikler (tıklanabilir) ──────────────────────────────────────────────
+_AD2ID = {r["ad"]: r["id"] for r in _satirlar}
+_acilacak = None
 _sol, _sag = st.columns(2)
 
 
-def _bar(baslik, veriler, etiketler, renkler, metin, eksen_basligi):
+def _bar(baslik, veriler, etiketler, renkler, metin, eksen_basligi, esik=None):
     f = go.Figure(go.Bar(
         x=veriler, y=etiketler, orientation="h",
         marker=dict(color=renkler, line=dict(width=0)),
         text=metin, textposition="outside",
         textfont=dict(size=10, color="rgba(200,230,255,0.75)"),
-        hovertemplate="%{y}: %{x:,.0f}<extra></extra>",
+        hovertemplate="%{y}: %{x:,.4g} — detay için tıklayın<extra></extra>",
     ))
+    if esik is not None:
+        f.add_vline(x=esik, line_width=1.5, line_dash="dash", line_color="#ef4444",
+                    annotation_text="hedef", annotation_position="top",
+                    annotation_font=dict(size=9, color="#ef4444"))
     f.update_layout(
         title=dict(text=baslik, font=dict(size=12, color="rgba(150,210,255,0.75)")),
         height=max(320, 22 * len(etiketler) + 90),
@@ -316,7 +352,7 @@ def _bar(baslik, veriler, etiketler, renkler, metin, eksen_basligi):
         xaxis=dict(title=eksen_basligi, gridcolor="rgba(56,189,248,0.08)",
                    zerolinecolor="rgba(56,189,248,0.15)"),
         yaxis=dict(autorange="reversed"),
-        showlegend=False,
+        showlegend=False, clickmode="event+select",
     )
     return f
 
@@ -333,7 +369,7 @@ with _sol:
                 y=[r["ad"] for r in _satirlar],
                 name=_ad, orientation="h",
                 marker=dict(color=_rnk, line=dict(width=0)),
-                hovertemplate="%{y} · " + _ad + ": %{x:,.0f}<extra></extra>",
+                hovertemplate="%{y} · " + _ad + ": %{x:,.0f} — detay için tıklayın<extra></extra>",
             ))
         _f.update_layout(
             barmode="stack",
@@ -348,17 +384,22 @@ with _sol:
             yaxis=dict(autorange="reversed"),
             legend=dict(orientation="h", y=1.06, x=0,
                         font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
+            clickmode="event+select",
         )
-        st.plotly_chart(_f, use_container_width=True, key="ozet_bar_kirilim")
+        _olay = st.plotly_chart(_f, use_container_width=True,
+                                key=f"ozet_bar_kirilim_{_metrik_key}",
+                                on_select="rerun", selection_mode="points")
     else:
-        st.plotly_chart(
+        _olay = st.plotly_chart(
             _bar(f"Toplam tüketim ({_M['birim']})",
                  [r["deger"] for r in _satirlar],
                  [r["ad"] for r in _satirlar],
                  [r["renk"] for r in _satirlar],
                  [_tr(r["deger"]) for r in _satirlar],
                  _M["birim"]),
-            use_container_width=True, key="ozet_bar_toplam")
+            use_container_width=True, key=f"ozet_bar_toplam_{_metrik_key}",
+            on_select="rerun", selection_mode="points")
+    _acilacak = _KP.yeni_secim(st, "bar1", _KP.grafik_secimi(_olay, _AD2ID)) or _acilacak
 
 with _sag:
     if _yog:
@@ -367,74 +408,100 @@ with _sag:
         _ys = sorted(_yog, key=lambda r: r["ikinci"], reverse=not _DUSUK_IYI)
         _iyi_renk = []
         for r in _ys:
+            if r["kotu"] is not None:        # hedef eşiği tanımlıysa ona göre renklenir
+                _iyi_renk.append("#f97316" if r["kotu"] else "#10b981")
+                continue
             _iyi = (r["ikinci"] <= (_ort_ikinci or 0)) if _DUSUK_IYI \
                 else (r["ikinci"] >= (_ort_ikinci or 0))
             _iyi_renk.append("#10b981" if _iyi else "#f59e0b")
-        st.plotly_chart(
+        _olay2 = st.plotly_chart(
             _bar(_IK_BASLIK,
                  [r["ikinci"] for r in _ys],
                  [r["ad"] for r in _ys],
                  _iyi_renk,
                  [_ik_metin(r["ikinci"]) for r in _ys],
-                 _IK_BIRIM),
-            use_container_width=True, key="ozet_bar_ikinci")
+                 _IK_BIRIM, esik=_ESIK),
+            use_container_width=True, key=f"ozet_bar_ikinci_{_metrik_key}",
+            on_select="rerun", selection_mode="points")
+        _acilacak = _KP.yeni_secim(st, "bar2", _KP.grafik_secimi(_olay2, _AD2ID)) or _acilacak
     else:
         st.info("Karşılaştırma için yeterli veri yok "
                 "(m² bilgisi ya da toplam tüketim eksik).")
 
-# ── Tablo ─────────────────────────────────────────────────────────────────
+# ── Tablo (satıra tıklanabilir) ───────────────────────────────────────────
+# HTML tablo tıklama olayı üretemediği için st.dataframe kullanılır; renkli
+# gösterim "Durum" sütununda korunur.
 st.markdown("<div style='font-size:10px;letter-spacing:2px;"
-            "color:rgba(56,189,248,0.6);margin:6px 0 4px;'>DETAY TABLOSU</div>",
+            "color:rgba(56,189,248,0.6);margin:6px 0 4px;'>DETAY TABLOSU "
+            "<span style='letter-spacing:0;color:rgba(120,170,220,0.45);'>"
+            "— satıra tıklayın</span></div>",
             unsafe_allow_html=True)
 
-_satir_html = ""
+_tablo = []
 for _i, _r in enumerate(_satirlar, 1):
-    _pay = (_r["deger"] / _toplam * 100) if _toplam else 0
-    if _r["degisim"] is None:
-        _deg_html = "<span style='color:rgba(150,210,255,0.3);'>—</span>"
-    else:
-        # Tüketimde düşüş iyidir (artis_iyi=False)
-        _iyi = (_r["degisim"] >= 0) if _M["artis_iyi"] else (_r["degisim"] <= 0)
-        _deg_html = (f"<span style='color:{'#10b981' if _iyi else '#ef4444'};'>"
-                     f"{'▼' if _r['degisim'] <= 0 else '▲'}"
-                     f"{abs(_r['degisim']):.1f}%</span>")
-    _yog_html = _ik_metin(_r["ikinci"])
-    _kir_html = "".join(
-        f"<td style='padding:5px 6px;text-align:right;color:{_rnk};'>"
-        f"{_tr(_r['kirilim'].get(_ad, 0))}</td>"
-        for _ad, _k, _rnk in _KIRILIM
-    )
-    _satir_html += (
-        f"<tr style='border-bottom:1px solid rgba(56,189,248,0.06);'>"
-        f"<td style='padding:5px 6px;color:rgba(150,210,255,0.35);'>{_i}</td>"
-        f"<td style='padding:5px 6px;color:{_r['renk']};font-weight:600;'>{_r['ad']}</td>"
-        f"<td style='padding:5px 6px;text-align:right;color:#f8fafc;'>{_tr(_r['deger'])}</td>"
-        f"{_kir_html}"
-        f"<td style='padding:5px 6px;text-align:right;color:rgba(200,230,255,0.6);'>%{_pay:.1f}</td>"
-        f"<td style='padding:5px 6px;text-align:right;color:rgba(200,230,255,0.6);'>{_yog_html}</td>"
-        f"<td style='padding:5px 6px;text-align:right;'>{_deg_html}</td>"
-        f"<td style='padding:5px 6px;text-align:right;color:rgba(150,210,255,0.35);'>"
-        f"{_tr(_r['m2'])}</td></tr>"
-    )
+    _satir = {"#": _i, "Lokasyon": _r["ad"], _M["birim"]: _tr(_r["deger"])}
+    for _ad, _k, _rnk in _KIRILIM:
+        _satir[_ad.split(" ")[0]] = _tr(_r["kirilim"].get(_ad, 0))
+    _satir["Pay"] = f"%{(_r['deger'] / _toplam * 100) if _toplam else 0:.1f}"
+    _satir[_M.get("ik_sutun") or (_M["birim"] + "/m²/gün")] = _ik_metin(_r["ikinci"])
+    _satir["Durum"] = _r["durum"]
+    _satir["Önceki döneme"] = ("—" if _r["degisim"] is None else
+                               f"{'▼' if _r['degisim'] <= 0 else '▲'}%{abs(_r['degisim']):.1f}")
+    _satir["m²"] = _tr(_r["m2"])
+    _tablo.append(_satir)
+_tablo_df = _pd.DataFrame(_tablo)
 
-st.markdown(
-    f"<div style='background:rgba(0,20,50,0.45);border:1px solid rgba(56,189,248,0.1);"
-    f"border-radius:10px;padding:6px 10px;overflow-x:auto;'>"
-    f"<table style='width:100%;border-collapse:collapse;font-size:10px;'>"
-    f"<thead><tr style='color:rgba(56,189,248,0.5);font-size:8px;letter-spacing:1px;'>"
-    f"<th style='text-align:left;padding:4px 6px;'>#</th>"
-    f"<th style='text-align:left;padding:4px 6px;'>LOKASYON</th>"
-    f"<th style='text-align:right;padding:4px 6px;'>{_M['birim'].upper()}</th>"
-    + "".join(
-        f"<th style='text-align:right;padding:4px 6px;color:{_rnk};'>"
-        f"{_ad.split(' ')[0].upper()}</th>" for _ad, _k, _rnk in _KIRILIM)
-    + f"<th style='text-align:right;padding:4px 6px;'>PAY</th>"
-    f"<th style='text-align:right;padding:4px 6px;'>"
-    f"{_M.get('ik_sutun') or (_M['birim'] + '/m²/gün').upper()}</th>"
-    f"<th style='text-align:right;padding:4px 6px;'>ÖNCEKİ DÖNEME</th>"
-    f"<th style='text-align:right;padding:4px 6px;'>M²</th>"
-    f"</tr></thead><tbody>{_satir_html}</tbody></table></div>",
-    unsafe_allow_html=True)
+try:
+    _stil = _tablo_df.style.map(_KP.durum_stil, subset=["Durum"])
+except AttributeError:                       # eski pandas
+    _stil = _tablo_df.style.applymap(_KP.durum_stil, subset=["Durum"])
+
+_olay3 = st.dataframe(_stil, hide_index=True, use_container_width=True,
+                      key=f"ozet_tablo_{_metrik_key}",
+                      on_select="rerun", selection_mode="single-row")
+_acilacak = _KP.yeni_secim(st, "tablo", _KP.tablo_secimi(_olay3, _satirlar)) or _acilacak
 
 st.caption(f"Dönem: {_bas.strftime('%d.%m.%Y')} → {_bit.strftime('%d.%m.%Y')} "
-           f"· Kıyas: {_o_bas.strftime('%d.%m.%Y')} → {_o_bit.strftime('%d.%m.%Y')}")
+           f"· Kıyas: {_o_bas.strftime('%d.%m.%Y')} → {_o_bit.strftime('%d.%m.%Y')}"
+           + (f" · Hedef eşiği: {('≥ ' if _M['artis_iyi'] else '≤ ')}"
+              f"{_ik_metin(_ESIK)} {_IK_BIRIM}" if _ESIK is not None else ""))
+
+# ── Grup bağlamı (teşhis "gruba göre" cümleleri için) ─────────────────────
+_sog_paylari = []
+for _lid in _su:
+    _d = _donem_df[_donem_df["lokasyon_id"] == _lid]
+    _t = _pd.to_numeric(_d.get("Toplam_Hastane_Tuketim_kWh"), errors="coerce").sum() \
+        if not _d.empty else 0
+    if _t:
+        _s = sum(_pd.to_numeric(_d[c], errors="coerce").sum()
+                 for c in _d.columns
+                 if c in ("Chiller_Tuketim_kWh", "VRF_Split_Tuketim_kWh") or c.startswith("Kule"))
+        _sog_paylari.append(_s / _t * 100)
+_GRUP = {"ort_ikinci": _ort_ikinci,
+         "ort_sogutma_payi": (sum(_sog_paylari) / len(_sog_paylari)) if _sog_paylari else None}
+
+
+# ── Detay penceresi (gövdesi karsilastirma_panel.py'de — demo ile ORTAK) ──
+@st.dialog("Lokasyon detayı", width="large")
+def _panel(lid):
+    r = next((x for x in _satirlar if x["id"] == lid), None)
+    if r is None:
+        st.write("Lokasyon bulunamadı.")
+        return
+    dag = _KH.sistem_dagilimi(_donem_df[_donem_df["lokasyon_id"] == lid].to_dict("records"))
+    try:
+        _lok_kaydi = next((l for l in (fetch_lokasyonlar(url, key) or [])
+                           if l.get("lokasyon_id") == lid), {})
+    except Exception:
+        _lok_kaydi = {}
+    _KP.panel_govde(st, r, dag, _KH.lokasyon_durumu(_lok_kaydi), {
+        "M": _M, "secim": _secim, "bas": _bas, "bit": _bit,
+        "ik_metin": _ik_metin, "ik_birim": _IK_BIRIM, "esik": _ESIK,
+        "oran": _ORAN, "ik_ond": _IK_OND, "beklenen_gun": _BEKLENEN_GUN,
+        "grup": _GRUP, "teshis": _KH.teshis, "anahtar": "ozet_panel",
+    })
+
+
+if _acilacak:
+    _panel(_acilacak)
+

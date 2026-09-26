@@ -156,8 +156,13 @@ def _metrikler(metin):
 
 
 c("demo ve canli sayfa AYNI metrik tanimlarini kullanir", _metrikler(_demo) == _metrikler(_canli))
-c("canli sayfa tiklama/pencere ozelligi ICERMEZ (sunum ozelligi sizmadi)",
-  "on_select" not in _canli and "st.dialog" not in _canli and "karsilastirma_hesap" not in _canli)
+# Detay penceresi artik CANLIDA DA var (once yalnizca demodaydi); ikisi de
+# ayni ortak modulu kullanmali, govdesi kopyalanmamali.
+for _tur, _metin in (("canli", _canli), ("demo", _demo)):
+    c("[%s] tiklama/detay penceresi bagli" % _tur,
+      "on_select" in _metin and "st.dialog" in _metin and "karsilastirma_hesap" in _metin)
+    c("[%s] pencere govdesi ortak modulden" % _tur,
+      "karsilastirma_panel" in _metin and _metin.count("panel_govde") == 1)
 c("merkez demo sayfasini YALNIZCA demo modunda secer",
   re.search(r'"sunum", "ozet_karsilastirma_demo\.py"\)\s*if _demo_modu\(\) else\s*'
             r'os\.path\.join\(os\.path\.dirname\(__file__\), "pages", "ozet_karsilastirma\.py"\)',
