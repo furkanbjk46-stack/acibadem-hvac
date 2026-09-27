@@ -1161,6 +1161,21 @@ with tab1:
             _kaynak_item("💧", "Su Tüketimi",    su_str,   "m³", "#38bdf8"),
         ]
     else:
+        # Maslak DIŞI lokasyonlar: trafo kartları yalnızca sayacı dolu olanlar
+        # için üretilir. Canlıda bugün hiçbiri dolu değil (liste boş kalır,
+        # ekran eskisi gibi görünür); simülasyonda her hastanede dolu olduğu
+        # için sunumda diğer kalemlerle birlikte görünür.
+        _trdp_kart = []
+        for _c in sorted([c for c in df.columns if re.fullmatch(r"TRDP\d+_kWh", str(c))
+                          and pd.to_numeric(df[c], errors="coerce").fillna(0).sum() > 0],
+                         key=lambda c: int(re.findall(r"\d+", c)[0])):
+            _no = re.findall(r"\d+", _c)[0]
+            _v = pd.to_numeric(son_df.get(_c), errors="coerce").fillna(0).sum() \
+                if _c in son_df.columns else 0
+            _trdp_kart.append(_kaynak_item(
+                "🔹" if int(_no) % 2 else "🔸", f"TRDP-{_no}",
+                f"{_v:,.0f}" if _v else "—", "kWh",
+                "#06b6d4" if int(_no) % 2 else "#f59e0b"))
         _kaynak_items = [
             _kaynak_item("🔥", "Kojen Doğalgaz", kgaz_str,   "m³",  "#f97316"),
             _kaynak_item("⚙️", "Kojen Üretim",   kurt_str,   "kWh", "#10b981"),
@@ -1168,9 +1183,9 @@ with tab1:
             _kaynak_item("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#f59e0b"),
             _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str,   "m³",  "#ef4444"),
             _kaynak_item("💧", "Su Tüketimi",    su_str,     "m³",  "#38bdf8"),
-        ]
+        ] + _trdp_kart
 
-    _cols_count = 4 if lok_id == "maslak" else 3
+    _cols_count = 4 if (lok_id == "maslak" or len(_kaynak_items) > 6) else 3
     _grid_items = "".join(_kaynak_items)
     st.markdown(
         f"<div style='display:grid;grid-template-columns:repeat({_cols_count},1fr);gap:10px;margin-bottom:8px;'>"
