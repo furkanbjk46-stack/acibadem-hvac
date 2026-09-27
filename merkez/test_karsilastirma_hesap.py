@@ -69,6 +69,33 @@ c("bos veri cokmez", d_bos["toplam"] == 0 and d_bos["kalemler"] == [])
 d_nan = KH.sistem_dagilimi([{"Toplam_Hastane_Tuketim_kWh": float("nan"), "Chiller1_kWh": None}])
 c("NaN/None degerler cokmez", d_nan["toplam"] == 0)
 
+# ── 2b) Trafolar (TRDP) — SEBEKENIN kirilimi, ayri tuketim kalemi DEGIL ──
+# Maslak'ta sayaclardan otomatik geliyor; diger lokasyonlarda kac trafo
+# oldugu bilinmedigi icin HICBIR SEY uydurulmaz.
+c("trafo kolonu olmayan lokasyonda liste bos", d["trafo"] == [], d["trafo"])
+c("trafo kolonu yoksa kapsama None (uydurma oran yok)", d["trafo_kapsama"] is None)
+
+d_tr = KH.sistem_dagilimi([
+    {"Toplam_Hastane_Tuketim_kWh": 1000, "Sebeke_Tuketim_kWh": 800, "Chiller_Tuketim_kWh": 200,
+     "TRDP1_kWh": 300, "TRDP2_kWh": 0, "TRDP3_kWh": 250, "TRDP4_kWh": 50},
+])
+c("trafolar TRDP-N olarak listelenir",
+  d_tr["trafo"] == [("TRDP-1", 300), ("TRDP-3", 250), ("TRDP-4", 50)], d_tr["trafo"])
+c("degeri sifir olan trafo (bagli degil) listelenmez",
+  "TRDP-2" not in [a for a, _ in d_tr["trafo"]])
+c("trafo toplami 600", d_tr["trafo_toplam"] == 600, d_tr["trafo_toplam"])
+c("kapsama = trafo toplami / sebeke (%75)", abs(d_tr["trafo_kapsama"] - 75.0) < 1e-9,
+  d_tr["trafo_kapsama"])
+c("trafolar tuketim kalemlerine EKLENMEZ (cift sayim olmaz)",
+  not any("TRDP" in a or "rafo" in a for a, *_ in d_tr["kalemler"]),
+  [a for a, *_ in d_tr["kalemler"]])
+c("trafo eklenince olculen oran degismez (sadece chiller sayilir)",
+  abs(d_tr["olculen_oran"] - 20.0) < 1e-9, d_tr["olculen_oran"])
+_d_tam = KH.sistem_dagilimi([{"Sebeke_Tuketim_kWh": 500, "TRDP1_kWh": 200, "TRDP2_kWh": 300}])
+c("tum trafolar bagliysa kapsama %100", abs(_d_tam["trafo_kapsama"] - 100.0) < 1e-9)
+c("sebeke 0 iken kapsama None (sifira bolme yok)",
+  KH.sistem_dagilimi([{"TRDP1_kWh": 10}])["trafo_kapsama"] is None)
+
 d_cakisma = KH.sistem_dagilimi([{"Toplam_Hastane_Tuketim_kWh": 100, "Chiller_Tuketim_kWh": 80,
                                  "MCC_Tuketim_kWh": 60}])
 c("olculenler toplami asarsa oran >100 raporlanir", d_cakisma["olculen_oran"] > 105)

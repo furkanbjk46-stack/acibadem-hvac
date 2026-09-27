@@ -220,6 +220,11 @@ def veri_uret():
         ch_agirlik = [0.7 + 0.6 * rk.random() for _ in range(n_ch)]
         kule_agirlik = [0.8 + 0.4 * rk.random() for _ in range(n_kule)]
         mcc_agirlik = [0.6 + 0.8 * rk.random() for _ in range(4)]
+        # Trafo dagitim panolari (TRDP). Canlida yalnizca sayaci bagli
+        # lokasyonda dolu; SUNUM icin her hastaneye ornek adet/deger uretilir.
+        # Adet binaya gore degisir, degerler sebekeyi tam boler.
+        n_trafo = 2 if lok_m2 < 8000 else 3 if lok_m2 < 14000 else 4 if lok_m2 < 20000 else 5
+        trafo_agirlik = [0.7 + 0.6 * rk.random() for _ in range(n_trafo)]
         kule_orani = 0.08 + 0.05 * rk.random()          # kule tuketimi / chiller
         for i in range(GECMIS_GUN):
             gun = bugun - timedelta(days=i)
@@ -278,6 +283,8 @@ def veri_uret():
                 satir_kirilim["Kule%d_kWh" % _i] = _v
             for _i, _v in enumerate(_bol(mcc, mcc_agirlik), 1):
                 satir_kirilim["MCC%d_kWh" % _i] = _v
+            for _i, _v in enumerate(_bol(sebeke, trafo_agirlik), 1):
+                satir_kirilim["TRDP%d_kWh" % _i] = _v
 
             energy.append({
                 "lokasyon_id": lok_id,
@@ -299,8 +306,6 @@ def veri_uret():
                 "Dis_Hava_Sicakligi_C": dis_hava,
                 "Chiller_Set_Temp_C": ch_set,
                 "Chiller_Load_Percent": max(0, min(100, ch_yuk)),
-                "TRDP1_kWh": round(sebeke * 0.42), "TRDP2_kWh": round(sebeke * 0.12),
-                "TRDP3_kWh": round(sebeke * 0.16), "TRDP4_kWh": round(sebeke * 0.12),
             })
 
         # ── bakim_kartlari ──

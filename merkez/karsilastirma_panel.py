@@ -175,6 +175,16 @@ def panel_govde(st, r, dag, ld, ctx):
             h2 += ilerleme("Şebeke", dag["sebeke"], dag["sebeke"] / kay * 100, "#a855f7")
             if dag["kojen"] > 0:        # kojen tesisi olmayan hastanede satır gösterilmez
                 h2 += ilerleme("Kojen", dag["kojen"], dag["kojen"] / kay * 100, "#10b981")
+        # Trafolar şebekenin KIRILIMIDIR, ayrı bir tüketim kalemi değil.
+        # Yalnızca sayacı bağlı lokasyonda (bugün Maslak) dolu gelir;
+        # diğerlerinde liste boş olduğu için hiçbir şey çizilmez.
+        if dag.get("trafo"):
+            h2 += mini_liste("TRAFOLAR (ŞEBEKE KIRILIMI)", dag["trafo"], "#a855f7")
+            kapsama = dag.get("trafo_kapsama")
+            if kapsama is not None and kapsama < 98:
+                h2 += (f"<div style='font-size:9px;color:rgba(245,158,11,0.75);margin-top:2px;'>"
+                       f"Şebekenin %{kapsama:.0f}'i trafo sayaçlarıyla ölçülü — "
+                       f"kalan trafo(lar) henüz bağlı değil.</div>")
         h2 += ("<div style='font-size:10px;letter-spacing:1px;color:rgba(56,189,248,0.7);"
                "margin:14px 0 4px;'>SİSTEM DURUMU</div>")
         for et, dg in (("Bağlantı", ld["baglanti"]), ("Oto-set", ld["oto_metin"]),

@@ -138,6 +138,23 @@ c("sicak sehirde set daha dusuk (oto-set mantigi)",
   set_degerler["adana"] <= set_degerler["kayseri"],
   (set_degerler["adana"], set_degerler["kayseri"]))
 
+# ── Trafolar (TRDP) — SUNUM icin her lokasyona ornek adet/deger ──────────
+# Canlida yalnizca sayaci bagli lokasyonda (Maslak) dolu; simulasyon sunum
+# amacli oldugu icin tum hastanelere ornek trafo uretilir.
+_trdp_adet = {l: len([k for k in son_gun[l] if k.startswith("TRDP") and son_gun[l][k]])
+              for l in son_gun}
+c("her lokasyonda trafo verisi var", all(v >= 2 for v in _trdp_adet.values()),
+  {k: v for k, v in _trdp_adet.items() if v < 2})
+c("trafo adedi 2-5 arasi", all(2 <= v <= 5 for v in _trdp_adet.values()), _trdp_adet)
+c("trafo adedi lokasyona gore degisiyor (hepsi ayni degil)",
+  len(set(_trdp_adet.values())) > 1, sorted(set(_trdp_adet.values())))
+c("buyuk hastanede daha cok trafo", _trdp_adet["maslak"] >= _trdp_adet["adana_ortopedia"],
+  (_trdp_adet["maslak"], _trdp_adet["adana_ortopedia"]))
+for _l, _r in son_gun.items():
+    _t = sum(v for k, v in _r.items() if k.startswith("TRDP") and isinstance(v, (int, float)))
+    c("[%s] trafo toplami sebekeyi verir" % _l,
+      abs(_t - _r["Sebeke_Tuketim_kWh"]) <= 2, (_t, _r["Sebeke_Tuketim_kWh"]))
+
 # ── Lokasyonlar arasi farklilasma (karsilastirma sayfasi icin) ────────────
 # Bu katsayilar olmadan sogutma payi ve kojen karsilama orani 21 hastanede
 # birebir ayni cikiyor ve karsilastirma sayfasi "hepsi esit" gosteriyordu.

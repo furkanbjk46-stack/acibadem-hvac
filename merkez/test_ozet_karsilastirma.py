@@ -243,6 +243,16 @@ c("mini_liste en buyuk kalemi tam genislikte cizer", "width:100%" in _ml)
 c("mini_liste yarisini yarim cizer", "width:50%" in _ml)
 c("kutu verilen rengi kullanir", "#ef4444" in KP.kutu("x", "B", "1", "alt", "#ef4444"))
 
+# ── Trafolar pencerede: yalnizca sayaci bagli lokasyonda ──────────────────
+_panel_metin = open(os.path.join(KOK, "merkez", "karsilastirma_panel.py"),
+                    encoding="utf-8").read()
+c("pencere trafo kirilimini cizer", 'mini_liste("TRAFOLAR' in _panel_metin)
+c("trafo cizimi veri VARSA yapilir (bos lokasyonda hic gosterilmez)",
+  'if dag.get("trafo"):' in _panel_metin)
+c("trafo kirilimi ENERJI KAYNAGI bolumunde (tuketim kalemi degil)",
+  _panel_metin.index("ENERJİ KAYNAĞI") < _panel_metin.index('mini_liste("TRAFOLAR'))
+c("eksik trafo kapsamasi kullaniciya soylenir", "trafo_kapsama" in _panel_metin)
+
 # ── Sayfa sozdizimi ───────────────────────────────────────────────────────
 for _ad, _metin in (("canli sayfa", _sayfa_metin), ("demo sayfa", _demo_metin),
                     ("panel modulu", open(os.path.join(KOK, "merkez",

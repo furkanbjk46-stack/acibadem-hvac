@@ -28,6 +28,10 @@ KALEM_RENK = {
 _CHILLER_RE = re.compile(r"^Chiller(\d+)_kWh$")
 _KULE_RE = re.compile(r"^Kule(\d+)_kWh$")
 _MCC_RE = re.compile(r"^MCC(?:\d+|_[A-Z0-9_]+)_kWh$")
+# Trafo dağıtım panoları. Şebeke beslemesinin SAYACIDIR — tüketim kalemi
+# DEĞİL; kalemlere eklenirse chiller/MCC ile çift sayılır. Bu yüzden
+# "Enerji kaynağı" bölümünde şebekenin kırılımı olarak gösterilir.
+_TRDP_RE = re.compile(r"^TRDP(\d+)_kWh$")
 
 
 def _say(v):
@@ -82,12 +86,18 @@ def sistem_dagilimi(satirlar):
                     ad = "CH-%s" % m.group(1)
                 elif onek == "KULE":
                     ad = "Kule-%s" % m.group(1)
+                elif onek == "TRDP":
+                    ad = "TRDP-%s" % m.group(1)
                 cikti.append((ad, v))
         return cikti
 
     ch_detay = detay(_CHILLER_RE, "CH")
     kule_detay = detay(_KULE_RE, "KULE")
     mcc_detay = detay(_MCC_RE, "MCC")
+    # Trafolar yalnızca sayacı bağlı lokasyonda doludur (bugün: Maslak).
+    # Kolonu olmayan/sıfır olan lokasyonda liste boş döner ve ekranda
+    # hiçbir şey gösterilmez — kaç trafo olduğunu varsaymayız.
+    trafo_detay = detay(_TRDP_RE, "TRDP")
 
     chiller = _kolon_toplam(satirlar, "Chiller_Tuketim_kWh") or sum(v for _, v in ch_detay)
     kule = sum(v for _, v in kule_detay)
@@ -103,13 +113,20 @@ def sistem_dagilimi(satirlar):
         if v > 0:
             kalemler.append((ad, v, (v / toplam * 100) if toplam else 0.0, KALEM_RENK[ad]))
 
+    sebeke = _kolon_toplam(satirlar, "Sebeke_Tuketim_kWh")
+    trafo_toplam = sum(v for _, v in trafo_detay)
     return {
         "toplam": toplam,
         "kalemler": kalemler,
         "chiller": ch_detay,
         "kule": kule_detay,
         "mcc": mcc_detay,
-        "sebeke": _kolon_toplam(satirlar, "Sebeke_Tuketim_kWh"),
+        "trafo": trafo_detay,
+        "trafo_toplam": trafo_toplam,
+        # Şebekenin yüzde kaçı trafo sayaçlarıyla ölçülü. Maslak'ta TRDP-2
+        # henüz bağlı değil; bu oran eksikliği gizlemek yerine gösterir.
+        "trafo_kapsama": (trafo_toplam / sebeke * 100) if (sebeke and trafo_detay) else None,
+        "sebeke": sebeke,
         "kojen": _kolon_toplam(satirlar, "Kojen_Uretim_kWh"),
         # Ölçülen kalemlerin toplamı hastane toplamını aşıyorsa sayaçlar
         # çakışıyor olabilir (ör. kule MCC'nin içinde de sayılıyor).
