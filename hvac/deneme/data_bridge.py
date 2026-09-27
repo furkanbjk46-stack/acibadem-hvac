@@ -343,14 +343,17 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     # TRDP-4: Siemens PAC4200 (172.17.91.123) — 21.09.2026'dan itibaren otomatik.
     # Ilk gun referans olmadigi icin bos kalir; ertesi gunden itibaren dolar.
     trdp4 = daily_kwh.get("TRDP-4", "") if daily_kwh else ""
-    # TRDP-2 henuz bagli degil. Sebeke hesabi IKISINI birden ister (asagida):
-    # yalniz TRDP-4 dolu iken MCC+Chiller fallback'i korunur, cunku alt sayac
-    # toplami iki mekanik trafoyu birlikte temsil eder — tek birinin yerine konamaz.
+    # TRDP-2 henuz bagli degil; baglanana kadar sebeke bu trafo kadar EKSIK
+    # olculur (asagidaki aciklamaya bakiniz). Portalda elle de girilebilir.
     trdp2 = ""
 
-    # --- Sebeke fallback hesabi ---
-    # TRDP-2/4 bos ise: Sebeke = TRDP-1 + TRDP-3 + MCC + Chiller
-    # TRDP-2/4 dolu ise: Sebeke = TRDP-1 + TRDP-2 + TRDP-3 + TRDP-4
+    # --- Sebeke hesabi: YALNIZCA TRDP sayaclarinin toplami ---
+    # Eskiden TRDP-2/4 bosken "MCC + Chiller" yedegi kullaniliyordu. O yedek
+    # CIFT SAYIM uretiyordu: MCC/Chiller analizorleri kaynaga bakmadan tuketimi
+    # olcer, kojen calisirken o yukleri kojen besler; yedek bunu "sebekeden
+    # cekildi" sayip ustune kojen eklenince ayni enerji iki kez toplaniyordu
+    # (Agustos 2026: gunde ~16.000 kWh fazla). Artik kac trafo olculuyorsa
+    # onlarin toplami yazilir; eksik trafo varsa deger DUSUK kalir.
     def _to_num(v):
         try:
             return float(v) if v != "" else 0.0
@@ -361,14 +364,9 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     _t2 = _to_num(trdp2)
     _t3 = _to_num(trdp3)
     _t4 = _to_num(trdp4)
-    _mcc = _to_num(mcc_kwh)
-    _ch  = _to_num(chiller_kwh)
 
-    if (_t1 > 0 or _t3 > 0):
-        if (_t2 > 0 and _t4 > 0):
-            sebeke_kwh = round(_t1 + _t2 + _t3 + _t4, 1)  # Tam TRDP
-        else:
-            sebeke_kwh = round(_t1 + _t3 + _mcc + _ch, 1)  # Fallback: MCC+Chiller
+    if (_t1 > 0 or _t2 > 0 or _t3 > 0 or _t4 > 0):
+        sebeke_kwh = round(_t1 + _t2 + _t3 + _t4, 1)   # Olculen trafolarin toplami
     else:
         sebeke_kwh = ""  # TRDP verisi yok, bos birak
 

@@ -61,11 +61,29 @@ _ch = sum(100.0 for n in db.CHILLER_ANALYZERS)
 r = db.build_daily_row("2026-09-21", {}, _gun)
 c("TRDP4_kWh sütunu dolar", r["TRDP4_kWh"] == 3000.0, r["TRDP4_kWh"])
 c("TRDP-2 hâlâ boş (bağlı değil)", r["TRDP2_kWh"] == "", r["TRDP2_kWh"])
-c("yalnız TRDP-4 doluyken şebeke ALT SAYAÇ yedeğiyle hesaplanır",
-  r["Sebeke_Tuketim_kWh"] == round(5000 + 4000 + _mcc + _ch, 1),
-  (r["Sebeke_Tuketim_kWh"], 5000 + 4000 + _mcc + _ch))
-c("TRDP-4 şebekeye ayrıca EKLENMEZ (yedek zaten mekanik yükü içeriyor)",
-  r["Sebeke_Tuketim_kWh"] != round(5000 + 4000 + _mcc + _ch + 3000, 1))
+c("şebeke = ÖLÇÜLEN trafoların toplamı (alt sayaç yedeği YOK)",
+  r["Sebeke_Tuketim_kWh"] == round(5000 + 4000 + 3000, 1),
+  (r["Sebeke_Tuketim_kWh"], 5000 + 4000 + 3000))
+# Çift sayım koruması: MCC/Chiller analizörleri kaynağa bakmadan tüketimi
+# ölçer; kojen çalışırken o yükleri kojen besler. Şebekeye eklenirlerse
+# kojen bir kez orada, bir kez "Kojen Üretim" olarak sayılıyordu.
+c("MCC/Chiller şebekeye KARIŞMAZ (kojen çift sayılmasın)",
+  r["Sebeke_Tuketim_kWh"] != round(5000 + 4000 + _mcc + _ch, 1)
+  and r["Sebeke_Tuketim_kWh"] != round(5000 + 4000 + 3000 + _mcc + _ch, 1))
+c("eksik trafo şebekeyi ŞİŞİRMEZ, eksik bırakır (TRDP-2 yok)",
+  r["Sebeke_Tuketim_kWh"] < round(5000 + 4000 + 3000 + _mcc + _ch, 1))
+
+# Tek trafo bile gelse o trafo şebekeye yazılır (kullanıcı kuralı).
+_tek = db.build_daily_row("2026-09-21", {}, {"TRDP-3": 4200.0})
+c("tek trafo doluysa şebeke o trafodur", _tek["Sebeke_Tuketim_kWh"] == 4200.0,
+  _tek["Sebeke_Tuketim_kWh"])
+_dort = db.build_daily_row("2026-09-21", {},
+                           {"TRDP-1": 1000.0, "TRDP-3": 2000.0, "TRDP-4": 3000.0})
+c("dört trafodan üçü doluysa toplamı yazılır",
+  _dort["Sebeke_Tuketim_kWh"] == 6000.0, _dort["Sebeke_Tuketim_kWh"])
+_yok = db.build_daily_row("2026-09-21", {}, {n: 100.0 for n in db.ALL_ANALYZERS})
+c("hiç trafo yoksa şebeke BOŞ bırakılır (uydurma toplam yok)",
+  _yok["Sebeke_Tuketim_kWh"] == "", _yok["Sebeke_Tuketim_kWh"])
 c("MCC toplamı TRDP-4 eklenmeden önceki ile aynı", r["MCC_Tuketim_kWh"] == round(_mcc, 1),
   (r["MCC_Tuketim_kWh"], _mcc))
 

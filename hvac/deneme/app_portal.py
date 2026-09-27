@@ -1462,19 +1462,23 @@ def recalc(df: pd.DataFrame) -> pd.DataFrame:
     df["Toplam_Sogutma_Tuketim_kWh"] = (
         df["Chiller_Tuketim_kWh"].fillna(0) + df["VRF_Split_Tuketim_kWh"].fillna(0)
     )
-    # Şebeke Hesabı:
-    # TRDP-2 ve TRDP-4 doluysa → TRDP-1+2+3+4 toplamı
-    # TRDP-2 ve TRDP-4 boşsa  → TRDP-1+3 + MCC + Chiller (mekanik fallback)
+    # Şebeke Hesabı — YALNIZCA TRDP sayaçlarının toplamı.
+    #
+    # Eskiden TRDP-2/4 boşken "MCC + Chiller" yedeği kullanılıyordu. Bu yedek
+    # ÇİFT SAYIM üretiyordu: MCC ve Chiller analizörleri kaynağa bakmadan
+    # tüketimi ölçer; kojen çalışırken o yükleri kojen besler. Yedek bunu
+    # "şebekeden çekildi" sayıp üstüne kojeni ekleyince aynı enerji iki kez
+    # toplanıyordu (Ağustos 2026'da günde ~16.000 kWh fazla).
+    #
+    # Yeni kural: kaç trafo ölçülüyorsa onların toplamı yazılır. Eksik trafo
+    # varsa şebeke DÜŞÜK çıkar — uydurma yedekle şişirmek yerine ölçülenle
+    # kalınır; TRDP-2 bağlanınca değer kendiliğinden tamamlanır.
     trdp1 = df["TRDP1_kWh"].fillna(0)
     trdp2 = df["TRDP2_kWh"].fillna(0)
     trdp3 = df["TRDP3_kWh"].fillna(0)
     trdp4 = df["TRDP4_kWh"].fillna(0)
-    mekanik_gercek = (trdp2 > 0) & (trdp4 > 0)  # TRDP-2 ve TRDP-4 her ikisi de dolu
-    trdp_tam = trdp1 + trdp2 + trdp3 + trdp4
-    mekanik_fallback = df["MCC_Tuketim_kWh"].fillna(0) + df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
-    trdp_fallback = trdp1 + trdp3 + mekanik_fallback
-    trdp_toplam = trdp_tam.where(mekanik_gercek, trdp_fallback)
-    trdp_girildi = (trdp1 > 0) | (trdp3 > 0)  # En az TRDP-1 veya TRDP-3 girilmişse uygula
+    trdp_toplam = trdp1 + trdp2 + trdp3 + trdp4
+    trdp_girildi = (trdp1 > 0) | (trdp2 > 0) | (trdp3 > 0) | (trdp4 > 0)
     df["Sebeke_Tuketim_kWh"] = trdp_toplam.where(trdp_girildi, df["Sebeke_Tuketim_kWh"].fillna(0))
     # Toplam Hastane = Şebeke (TRDP toplamı) + Kojen
     sebeke = df["Sebeke_Tuketim_kWh"].fillna(0)
@@ -3073,7 +3077,7 @@ tab_diyagram, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(TAB_NAMES)
 # ══════════════════════════════════════════════════════════════════
 # ENERJİ DİYAGRAMI — lokasyona özgü enerji topolojisi (şimdilik Maslak)
 # Toplam değerler recalc() ile aynı mantık:
-#   Toplam Şebeke      = TRDP1+TRDP2+TRDP3+TRDP4 (TRDP-2/4 yoksa alt sayaç toplamı)
+#   Toplam Şebeke      = ölçülen TRDP'lerin toplamı (alt sayaç yedeği YOK)
 #   Hastane Genel Top. = Şebeke + Kojen Üretim
 #   Çip %'leri Hastane Genel Toplam üzerinden hesaplanır.
 # ══════════════════════════════════════════════════════════════════
@@ -3203,12 +3207,11 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
     bina_genel = sum((_ed_val(row, c) or 0) for _, c in topo["genel"])
     trdp2 = _ed_val(row, "TRDP2_kWh") or 0
     trdp4 = _ed_val(row, "TRDP4_kWh") or 0
-    mekanik_alt = sum(
-        (_ed_val(row, c) or 0)
-        for _, _ik, chips in topo["kumeler"] for _, c in chips
-    )
-    # TRDP-2/4 doluysa ölçülen değer, boşsa alt sayaç toplamı
-    bina_mekanik = (trdp2 + trdp4) if (trdp2 > 0 and trdp4 > 0) else mekanik_alt
+    # Mekanik taraf YALNIZCA kendi trafolarından okunur. Alt sayaç (MCC/Chiller)
+    # toplamı yedek olarak KULLANILMAZ: o sayaçlar kaynağa bakmadan tüketimi
+    # ölçer, kojen çalışırken yükü kojen besler; şebekeye eklenip üstüne kojen
+    # de toplanınca aynı enerji iki kez sayılıyordu (recalc() açıklaması).
+    bina_mekanik = trdp2 + trdp4
     sebeke = bina_genel + bina_mekanik
     kojen = _ed_val(row, "Kojen_Uretim_kWh") or 0
     hastane_genel = sebeke + kojen
@@ -3554,13 +3557,13 @@ with tab1:
         preview_bina_yuk = trdp1 + trdp3
         preview_mekanik = trdp2 + trdp4
         preview_total_cool = ch_kwh + vrf_kwh
-        # Şebeke: TRDP-2/4 doluysa gerçek, yoksa fallback
-        if trdp2 > 0 and trdp4 > 0:
-            sebeke = trdp1 + trdp2 + trdp3 + trdp4
-            mekanik_not = ""
-        else:
-            sebeke = trdp1 + trdp3 + mcc_kwh + ch_kwh
-            mekanik_not = " (TRDP-2/4 yok → MCC+Chiller fallback)"
+        # Şebeke = girilen TRDP'lerin toplamı (MCC/Chiller yedeği YOK — çift
+        # sayım üretiyordu, recalc() açıklamasına bakınız).
+        sebeke = trdp1 + trdp2 + trdp3 + trdp4
+        _eksik = [a for a, v in (("TRDP-1", trdp1), ("TRDP-2", trdp2),
+                                 ("TRDP-3", trdp3), ("TRDP-4", trdp4)) if v <= 0]
+        mekanik_not = (" ⚠️ %s girilmedi — şebeke eksik ölçülüyor" % ", ".join(_eksik)) \
+            if _eksik else ""
         preview_total_h = sebeke + koj
         preview_other = max(0.0, preview_mekanik - (ch_kwh + mcc_kwh))
         st.info(
