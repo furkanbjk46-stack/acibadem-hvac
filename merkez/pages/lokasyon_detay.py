@@ -2,7 +2,7 @@
 # Lokasyon Detay Sayfası — Sadece Okuma & Grafik
 
 from __future__ import annotations
-import os, sys, json
+import os, sys, json, re
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -571,6 +571,23 @@ with tab1:
             "🥧 Enerji Kırılımı":       "enerji_kirilim",
         }
 
+        # Trafolar (TRDP) — yalnızca sayacı bağlı lokasyonda seçeneğe eklenir.
+        # Bugün bu yalnızca Maslak; diğer lokasyonlarda kaç trafo olduğu
+        # bilinmediği için boş bir grafik açacak ölü seçenek gösterilmez.
+        # Sayaç bağlandıkça seçenek kendiliğinden belirir.
+        _trafo_kolonlar = sorted(
+            [c for c in df.columns if re.fullmatch(r"TRDP\d+_kWh", str(c))
+             and pd.to_numeric(df[c], errors="coerce").fillna(0).sum() > 0],
+            key=lambda c: int(re.findall(r"\d+", c)[0]))
+        if _trafo_kolonlar:
+            grafik_secenekler["🔻 Trafolar (TRDP)"] = "trafo"
+
+        # Lokasyon değişince önceki seçim bu listede olmayabilir (ör. Maslak'ta
+        # trafo grafiği seçiliyken trafosuz lokasyona geçmek); Streamlit böyle
+        # bir durumda hata veriyor.
+        if st.session_state.get("grafik_sec") not in grafik_secenekler:
+            st.session_state.pop("grafik_sec", None)
+
         # ── Grafik seçici + Tarih aralığı (yan yana) ──
         _gc1, _gc2, _gc3 = st.columns([3, 1.5, 1.5])
         with _gc1:
@@ -760,6 +777,50 @@ with tab1:
                 st.plotly_chart(fig_sb, use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Şebeke tüketim verisi bulunamadı.")
+
+        # ── Trafolar (TRDP) — şebekenin trafo bazında kırılımı ──
+        elif grafik_tip == "trafo":
+            if _trafo_kolonlar and not secili_df.empty:
+                st.caption(tarih_aralik_str)
+                _tr_renk = ["#a855f7", "#06b6d4", "#f59e0b", "#10b981", "#ef4444", "#3b82f6"]
+                _g = secili_df.groupby(secili_df["Tarih"].dt.date)
+                fig_tr = go.Figure()
+                for _i, _c in enumerate(_trafo_kolonlar):
+                    _s = _g[_c].sum()
+                    fig_tr.add_trace(go.Bar(
+                        x=list(_s.index), y=list(_s.values),
+                        name="TRDP-%s" % re.findall(r"\d+", _c)[0],
+                        marker=dict(color=_tr_renk[_i % len(_tr_renk)]),
+                        hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra>%{fullData.name}</extra>",
+                    ))
+                fig_tr.update_layout(
+                    barmode="stack",
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    margin=dict(t=10, b=20, l=50, r=10), height=370,
+                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+                               title=dict(text="kWh", font=dict(size=10))),
+                    legend=dict(orientation="h", y=1.08, x=0, font=dict(size=10),
+                                bgcolor="rgba(0,0,0,0)"),
+                )
+                st.plotly_chart(fig_tr, use_container_width=True, config={"displayModeBar": False})
+
+                # Trafo toplamı şebekeyi karşılıyor mu — eksik sayaç gizlenmesin.
+                _tr_top = sum(pd.to_numeric(secili_df[c], errors="coerce").fillna(0).sum()
+                              for c in _trafo_kolonlar)
+                _sb_top = (pd.to_numeric(secili_df.get("Sebeke_Tuketim_kWh"), errors="coerce")
+                           .fillna(0).sum() if "Sebeke_Tuketim_kWh" in secili_df.columns else 0)
+                _ozet = "Dönem toplamı: %s kWh · %d trafo" % (f"{_tr_top:,.0f}".replace(",", "."),
+                                                              len(_trafo_kolonlar))
+                if _sb_top:
+                    _kaps = _tr_top / _sb_top * 100
+                    _ozet += " · şebekenin %%%.0f'i ölçülü" % _kaps
+                    if _kaps < 98:
+                        _ozet += " (kalan trafo(lar) henüz bağlı değil)"
+                st.caption(_ozet)
+            else:
+                st.info("Trafo (TRDP) verisi bulunamadı.")
 
         # ── MCC Tüketimi ──
         elif grafik_tip == "mcc":
