@@ -18,6 +18,7 @@ from datetime import date
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
+import enerji_hesap as _enerji_hesap
 import plotly.express as px
 
 from fpdf import FPDF
@@ -1456,45 +1457,15 @@ def coerce_types(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def recalc(df: pd.DataFrame) -> pd.DataFrame:
+    """Türetilmiş enerji sütunlarını yeniden hesaplar.
+
+    Kural enerji_hesap.py'de TEK YERDE durur; cloud_sync de buluta
+    göndermeden önce aynı modülü kullanır (portal hiç açılmasa bile
+    Synapse doğru değeri görsün diye).
+    """
     if df.empty:
         return df
-    # Soğutma = CH analizörleri + VRF
-    df["Toplam_Sogutma_Tuketim_kWh"] = (
-        df["Chiller_Tuketim_kWh"].fillna(0) + df["VRF_Split_Tuketim_kWh"].fillna(0)
-    )
-    # Şebeke Hesabı — YALNIZCA TRDP sayaçlarının toplamı.
-    #
-    # Eskiden TRDP-2/4 boşken "MCC + Chiller" yedeği kullanılıyordu. Bu yedek
-    # ÇİFT SAYIM üretiyordu: MCC ve Chiller analizörleri kaynağa bakmadan
-    # tüketimi ölçer; kojen çalışırken o yükleri kojen besler. Yedek bunu
-    # "şebekeden çekildi" sayıp üstüne kojeni ekleyince aynı enerji iki kez
-    # toplanıyordu (Ağustos 2026'da günde ~16.000 kWh fazla).
-    #
-    # Yeni kural: kaç trafo ölçülüyorsa onların toplamı yazılır. Eksik trafo
-    # varsa şebeke DÜŞÜK çıkar — uydurma yedekle şişirmek yerine ölçülenle
-    # kalınır; TRDP-2 bağlanınca değer kendiliğinden tamamlanır.
-    trdp1 = df["TRDP1_kWh"].fillna(0)
-    trdp2 = df["TRDP2_kWh"].fillna(0)
-    trdp3 = df["TRDP3_kWh"].fillna(0)
-    trdp4 = df["TRDP4_kWh"].fillna(0)
-    trdp_toplam = trdp1 + trdp2 + trdp3 + trdp4
-    trdp_girildi = (trdp1 > 0) | (trdp2 > 0) | (trdp3 > 0) | (trdp4 > 0)
-    df["Sebeke_Tuketim_kWh"] = trdp_toplam.where(trdp_girildi, df["Sebeke_Tuketim_kWh"].fillna(0))
-    # Toplam Hastane = Şebeke (TRDP toplamı) + Kojen
-    sebeke = df["Sebeke_Tuketim_kWh"].fillna(0)
-    kojen  = df["Kojen_Uretim_kWh"].fillna(0)
-    mcc_sogutma = df["MCC_Tuketim_kWh"].fillna(0) + df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
-    # E-1 fix: Kojen her durumda toplama dahil (eskiden şebeke boşken kojen>0 olsa bile
-    # toplam dışı kalıyordu → toplam hastane eksik görünüyordu)
-    df["Toplam_Hastane_Tuketim_kWh"] = sebeke.where(sebeke > 0, mcc_sogutma) + kojen
-    # Diğer = Toplam - MCC - Soğutma
-    other = (
-        df["Toplam_Hastane_Tuketim_kWh"].fillna(0)
-        - df["MCC_Tuketim_kWh"].fillna(0)
-        - df["Toplam_Sogutma_Tuketim_kWh"].fillna(0)
-    )
-    df["Diger_Yuk_kWh"] = other.clip(lower=0)
-    return df
+    return _enerji_hesap.yeniden_hesapla(df)
 
 
 @st.cache_data(show_spinner=False, ttl=300)

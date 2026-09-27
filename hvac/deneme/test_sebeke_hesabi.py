@@ -30,7 +30,9 @@ _agac = ast.parse(KAYNAK)
 _fn = next((d for d in _agac.body
             if isinstance(d, ast.FunctionDef) and d.name == "recalc"), None)
 c("recalc() fonksiyonu bulundu", _fn is not None)
-_ns = {"pd": pd}
+import enerji_hesap
+
+_ns = {"pd": pd, "_enerji_hesap": enerji_hesap}
 exec(compile(ast.Module(body=[_fn], type_ignores=[]), "recalc", "exec"), _ns)
 recalc = _ns["recalc"]
 
@@ -107,6 +109,36 @@ c("diğer yük negatif olmaz",
 c("app_portal'da MCC+Chiller şebeke yedeği kaldırıldı",
   "mekanik_fallback" not in KAYNAK and "trdp_fallback" not in KAYNAK)
 c("giriş ekranı eksik trafoyu uyarır", "şebeke eksik ölçülüyor" in KAYNAK)
+
+# ── 7) Hesap TEK YERDE: cloud_sync portala bağlı kalmasın ────────────────
+# Eskiden türetilmiş sütunlar yalnızca portal açılınca hesaplanıyordu;
+# portal açılmazsa eski (yanlış) değerler buluta gidiyordu.
+c("app_portal hesabı ortak modüle devreder", "_enerji_hesap.yeniden_hesapla" in KAYNAK)
+c("app_portal kuralı KENDİ içinde tekrar etmiyor",
+  "trdp_toplam = trdp1 + trdp2" not in KAYNAK)
+_CS = open(os.path.join(BURASI, "cloud_sync.py"), encoding="utf-8").read()
+c("cloud_sync göndermeden önce aynı hesabı uygular",
+  "enerji_hesap" in _CS and "yeniden_hesapla" in _CS)
+c("hesap, gönderim hattında tarih/JSON temizliğinden ÖNCE çalışır",
+  _CS.index("yeniden_hesapla") < _CS.index('df.to_dict(orient="records")'))
+c("hesap patlarsa sync iptal olmaz (ham veri gider)",
+  "ham değerler gönderiliyor" in _CS)
+
+# Ortak modül doğrudan da doğrulanır (portal olmadan)
+_ham = pd.DataFrame([{"TRDP1_kWh": 19783, "TRDP3_kWh": 8139, "MCC_Tuketim_kWh": 13603,
+                      "Chiller_Tuketim_kWh": 10635, "Kojen_Uretim_kWh": 44411}])
+_hes = enerji_hesap.yeniden_hesapla(_ham.copy()).iloc[0]
+c("ortak modül eksik sütunlarla çökmez (VRF/Şebeke yok)",
+  _hes["Toplam_Hastane_Tuketim_kWh"] == 19783 + 8139 + 44411,
+  _hes["Toplam_Hastane_Tuketim_kWh"])
+c("ortak modül ile recalc AYNI sonucu verir",
+  _hes["Toplam_Hastane_Tuketim_kWh"] == ag["Toplam_Hastane_Tuketim_kWh"])
+c("eksik trafolar isimleriyle bildirilir",
+  enerji_hesap.eksik_trafolar({"TRDP1_kWh": 100, "TRDP2_kWh": 0, "TRDP3_kWh": 50,
+                               "TRDP4_kWh": None}) == ["TRDP-2", "TRDP-4"],
+  enerji_hesap.eksik_trafolar({"TRDP1_kWh": 100, "TRDP2_kWh": 0, "TRDP3_kWh": 50,
+                               "TRDP4_kWh": None}))
+c("boş veri çökmez", enerji_hesap.yeniden_hesapla(pd.DataFrame()) is not None)
 
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))

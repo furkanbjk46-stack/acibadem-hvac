@@ -80,6 +80,18 @@ def sync_energy_data(client, lokasyon_id: str):
             logger.info("energy_data.csv boş.")
             return 0
 
+        # Türetilmiş sütunları GÖNDERMEDEN ÖNCE yeniden hesapla.
+        # Eskiden bu yalnızca Enerji portalı açıldığında oluyordu; portal
+        # açılmazsa eski (yanlış) değerler buluta gidiyordu. Kural
+        # enerji_hesap.py'de, app_portal.recalc() ile aynı yerde.
+        try:
+            import enerji_hesap
+            df = enerji_hesap.yeniden_hesapla(df)
+            logger.info("🧮 Türetilmiş enerji sütunları gönderim öncesi yeniden hesaplandı")
+        except Exception as _he:
+            # Hesap başarısızsa ham CSV gönderilir — sync hiç yapılmamasından iyidir.
+            logger.error("Enerji hesabı uygulanamadı, ham değerler gönderiliyor: %s", _he)
+
         # Tarih sütununu string'e çevir
         if "Tarih" in df.columns:
             df["Tarih"] = pd.to_datetime(df["Tarih"], errors="coerce").dt.strftime("%Y-%m-%d")
