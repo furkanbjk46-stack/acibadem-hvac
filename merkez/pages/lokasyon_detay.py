@@ -1344,10 +1344,34 @@ with tab1:
                 "<div style='font-size:12px;color:#6ee7b7;'>Tum HVAC sistemleri normal</div>"
                 "</div>"
             )
+        # Arızalı/Bakımdaki kartlarıyla aynı davranış: kapalı gelir, sayıya
+        # tıklayınca liste açılır. Onlarca AHU listelendiğinde sayfa uzuyordu.
+        _hv_kritik = len(hvac_kritik) if (hvac_kritik or hvac_uyari) else len(arizali_list)
+        _hv_uyari = len(hvac_uyari) if (hvac_kritik or hvac_uyari) else 0
+        _hv_sorun = _hv_kritik + _hv_uyari
+        _hv_renk = "#ef4444" if _hv_kritik else ("#f59e0b" if _hv_uyari else "#10b981")
+        _hv_ozet = []
+        if _hv_kritik:
+            _hv_ozet.append("%d kritik" % _hv_kritik)
+        if _hv_uyari:
+            _hv_ozet.append("%d uyarı" % _hv_uyari)
+        if hvac_normal:
+            _hv_ozet.append("%d normal" % len(hvac_normal))
         st.markdown(
-            "<div style='" + KART + "'>"
+            "<details style='" + KART + "border:1px solid rgba(" +
+            ("239,68,68" if _hv_kritik else "245,158,11" if _hv_uyari else "16,185,129") +
+            ",0.25);cursor:pointer;'>"
+            "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>HVAC ANALIZ DURUMU</div>"
-            + hv_rows + "</div>",
+            "<div style='font-family:Orbitron,sans-serif;font-size:28px;font-weight:900;"
+            "color:" + _hv_renk + ";margin-bottom:4px;'>" + str(_hv_sorun) + "</div>"
+            "<div style='font-size:10px;color:rgba(150,210,255,0.55);margin-bottom:2px;'>"
+            + (" · ".join(_hv_ozet) if _hv_ozet else "Tüm HVAC sistemleri normal") + "</div>"
+            "<div style='font-size:9px;color:rgba(150,210,255,0.4);margin-bottom:4px;'>"
+            "▼ detay için tıkla</div>"
+            "</summary>"
+            "<div style='margin-top:8px;'>" + hv_rows + "</div>"
+            "</details>",
             unsafe_allow_html=True
         )
 

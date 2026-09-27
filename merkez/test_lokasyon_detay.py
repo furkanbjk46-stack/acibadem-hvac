@@ -67,6 +67,17 @@ c("dolu trafolar numara sirasinda",
 c("bagli olmayan trafo (bos kolon) listeye girmez",
   trafo_kolonlari(pd.DataFrame([{"TRDP1_kWh": 5, "TRDP2_kWh": 0}])) == ["TRDP1_kWh"])
 
+# ── HVAC analiz karti da acilir/kapanir olmali ────────────────────────────
+# Onlarca AHU listelenince sayfa uzuyordu; arizali/bakimdaki kartlariyla
+# ayni davranis: kapali gelir, tiklayinca acilir.
+_hv_blok = _metin.split("HVAC ANALIZ DURUMU")[1][:1200]
+c("HVAC analiz karti <details> ile acilir", "<details" in
+  _metin.split("Sütun 3: HVAC Analiz")[1][:3000])
+c("HVAC kartinda 'detay icin tikla' var", "detay için tıkla" in _hv_blok)
+c("HVAC kartinda sorun sayisi ozeti var", "_hv_sorun" in _metin and "_hv_ozet" in _metin)
+c("uc kartin ucu de acilir-kapanir", _metin.count("▼ detay için tıkla") == 3,
+  _metin.count("▼ detay için tıkla"))
+
 # ── KOJEN & KAYNAK kartlari ───────────────────────────────────────────────
 # Maslak'in 4 trafosu bilindigi icin sabit listede kalir (TRDP-2 bagli degil,
 # "—" gosterilir). Diger lokasyonlarda kart YALNIZCA dolu sayactan uretilir.
