@@ -28,14 +28,12 @@ giris.giris_kapisi()
 # ── CSS ──────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Playfair+Display:wght@400;700&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
-
 /* ── ARKA PLAN — app_merkez ile aynı ── */
 html, body, [data-testid="stAppViewContainer"],
 [data-testid="stAppViewContainer"] > div:first-child,
 [data-testid="stAppViewContainer"] > div:first-child > div:first-child {
-    background-color: #060b14 !important;
-    background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%) !important;
+    background-color: #ffffff !important;
+    background-image: radial-gradient(circle at 50% 0%, #f3f6fb 0%, #ffffff 100%) !important;
 }
 [data-testid="stHeader"]          { background: transparent !important; }
 [data-testid="stToolbar"]         { display: none !important; }
@@ -48,54 +46,54 @@ button[kind="header"],
 header[data-testid="stHeader"] button { display: none !important; visibility: hidden !important; }
 
 /* ── GENEL YAZI ── */
-* { font-family: 'Plus Jakarta Sans', 'Inter', sans-serif; }
+* { font-family: system-ui,-apple-system,Roboto,sans-serif, 'Inter', sans-serif; }
 span[data-testid="stIconMaterial"],
 [data-testid="stExpanderToggleIcon"] span,
 button span[data-testid="stIconMaterial"] {
     font-family: 'Material Symbols Rounded' !important;
 }
-p, li, span, div { color: rgba(200,225,255,0.85); }
+p, li, span, div { color: #4a5873; }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: #0f172a; }
-::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 3px; }
+::-webkit-scrollbar-track { background: #f3f6fb; }
+::-webkit-scrollbar-thumb { background: rgba(19,50,115,0.3); border-radius: 3px; }
 
 /* ── BÖLÜM BAŞLIĞI ── */
 .sec {
-    font-family: 'Playfair Display', 'Plus Jakarta Sans', serif;
+    font-family: system-ui,-apple-system,Roboto,sans-serif;
     font-size: 10px; font-weight: 700;
-    color: rgba(56,189,248,0.7);
+    color: rgba(19,50,115,0.7);
     letter-spacing: 2px; text-transform: uppercase;
     padding: 4px 0 8px; margin-top: 16px;
-    border-bottom: 1px solid rgba(56,189,248,0.15);
+    border-bottom: 1px solid rgba(19,50,115,0.15);
 }
 
 /* ── METRIC KART ── */
 .metric-card {
-    background: rgba(15,23,42,0.4);
-    border: 1px solid rgba(255,255,255,0.05);
+    background: #ffffff;
+    border: 1px solid rgba(19,50,115,0.11);
     border-radius: 12px;
     padding: 16px;
     text-align: center;
-    backdrop-filter: blur(8px);
+    box-shadow: 0 1px 2px rgba(19,50,115,.04),0 10px 26px -14px rgba(19,50,115,.18);
 }
 [data-testid="stMetricValue"]  {
-    color: #38bdf8 !important;
+    color: #2a78d6 !important;
     font-size: 22px !important;
     font-weight: 800 !important;
-    font-family: 'Playfair Display','Plus Jakarta Sans',serif !important;
-    text-shadow: 0 0 15px rgba(56,189,248,0.5) !important;
+    font-family: system-ui,-apple-system,Roboto,sans-serif !important;
+    
 }
 [data-testid="stMetricLabel"]  {
-    color: rgba(150,210,255,0.7) !important;
+    color: rgba(107,122,147,0.7) !important;
     font-size: 10px !important;
     letter-spacing: 1px !important;
     text-transform: uppercase !important;
 }
 [data-testid="metric-container"] {
-    background: rgba(15,23,42,0.4) !important;
-    border: 1px solid rgba(255,255,255,0.05) !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(19,50,115,0.05) !important;
     border-radius: 12px !important;
     padding: 14px !important;
     backdrop-filter: blur(8px) !important;
@@ -104,7 +102,7 @@ p, li, span, div { color: rgba(200,225,255,0.85); }
 /* ── TABS ── */
 [data-testid="stTabs"] [data-baseweb="tab-list"] {
     background: transparent;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(19,50,115,0.05);
     gap: 0;
 }
 [data-testid="stTabs"] [data-baseweb="tab"] {
@@ -117,84 +115,84 @@ p, li, span, div { color: rgba(200,225,255,0.85); }
     transition: color 0.2s;
 }
 [data-testid="stTabs"] [data-baseweb="tab"]:hover {
-    color: rgba(56,189,248,0.85);
+    color: rgba(19,50,115,0.85);
 }
 [data-testid="stTabs"] [aria-selected="true"] {
     background: transparent !important;
-    color: #38bdf8 !important;
-    box-shadow: inset 0 -2px 0 #38bdf8, 0 2px 8px rgba(56,189,248,0.3) !important;
+    color: #2a78d6 !important;
+    box-shadow: inset 0 -2px 0 #2a78d6, 0 2px 8px rgba(19,50,115,0.3) !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
-    background-color: #38bdf8 !important;
-    box-shadow: 0 -2px 8px rgba(56,189,248,0.5) !important;
+    background-color: #2a78d6 !important;
+    box-shadow: 0 -2px 8px rgba(19,50,115,0.5) !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] {
-    background: rgba(15,23,42,0.4);
+    background: rgba(243,246,251,0.4);
     border-radius: 0 0 12px 12px;
     padding: 20px;
-    border: 1px solid rgba(255,255,255,0.05);
+    border: 1px solid rgba(19,50,115,0.05);
     border-top: none;
     backdrop-filter: blur(8px);
 }
 
 /* ── BUTONLAR ── */
 .stButton > button {
-    background: rgba(14,165,233,0.15) !important;
-    color: #38bdf8 !important;
-    border: 1px solid rgba(14,165,233,0.3) !important;
+    background: #ffffff !important;
+    color: #133273 !important;
+    border: 1px solid rgba(19,50,115,0.22) !important;
     border-radius: 10px !important;
     font-weight: 600 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-family: system-ui,-apple-system,Roboto,sans-serif !important;
     transition: all 0.2s !important;
 }
 .stButton > button:hover {
-    background: rgba(14,165,233,0.25) !important;
-    border-color: rgba(14,165,233,0.5) !important;
+    background: #f3f6fb !important;
+    border-color: #133273 !important;
 }
 
 /* ── DATAFRAME ── */
 .stDataFrame thead tr th {
-    background: rgba(15,23,42,0.9) !important;
-    color: #38bdf8 !important;
+    background: rgba(243,246,251,0.9) !important;
+    color: #2a78d6 !important;
     font-weight: 700 !important;
-    border-bottom: 2px solid rgba(56,189,248,0.3) !important;
+    border-bottom: 2px solid rgba(19,50,115,0.3) !important;
 }
 .stDataFrame tbody tr td {
-    background: rgba(15,23,42,0.4) !important;
-    color: rgba(200,225,255,0.85) !important;
-    border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+    background: #ffffff !important;
+    color: #0f1f3d !important;
+    border-bottom: 1px solid rgba(19,50,115,0.04) !important;
 }
 .stDataFrame tbody tr:hover td {
-    background: rgba(56,189,248,0.06) !important;
+    background: rgba(19,50,115,0.06) !important;
 }
 
 /* ── SELECT / INPUT ── */
 [data-testid="stSelectbox"] > div > div,
 [data-testid="stDateInput"] input,
 [data-testid="stNumberInput"] input {
-    background: rgba(15,23,42,0.6) !important;
-    color: rgba(200,225,255,0.9) !important;
-    border: 1px solid rgba(56,189,248,0.2) !important;
+    background: #ffffff !important;
+    color: #0f1f3d !important;
+    border: 1px solid rgba(19,50,115,0.2) !important;
     border-radius: 8px !important;
 }
 
 /* ── EXPANDER ── */
 [data-testid="stExpander"] {
-    background: rgba(15,23,42,0.4) !important;
-    border: 1px solid rgba(255,255,255,0.05) !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(19,50,115,0.05) !important;
     border-radius: 10px !important;
 }
-[data-testid="stExpanderToggleIcon"] { color: rgba(56,189,248,0.6) !important; }
+[data-testid="stExpanderToggleIcon"] { color: rgba(19,50,115,0.6) !important; }
 
 /* ── AYIRICI ── */
-hr { border-color: rgba(56,189,248,0.1) !important; }
+hr { border-color: rgba(19,50,115,0.1) !important; }
 
 /* ── UYARI / INFO KUTUSU ── */
 [data-testid="stAlert"] {
-    background: rgba(15,23,42,0.5) !important;
-    border: 1px solid rgba(56,189,248,0.2) !important;
+    background: rgba(243,246,251,0.5) !important;
+    border: 1px solid rgba(19,50,115,0.2) !important;
     border-radius: 10px !important;
-    color: rgba(200,225,255,0.85) !important;
+    color: #0f1f3d !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -203,33 +201,33 @@ hr { border-color: rgba(56,189,248,0.1) !important; }
 # ── Lokasyon bilgileri (app_merkez.py ile senkron) ───────
 HASTANELER = {
     # ── İstanbul ──
-    "maslak":        {"isim": "Acıbadem Maslak",         "kisa": "MASLAK",       "m2": 15000, "renk": "#00d4ff"},
-    "altunizade":    {"isim": "Acıbadem Altunizade",     "kisa": "ALTUNİZADE",   "m2": 10000, "renk": "#f59e0b"},
-    "kozyatagi":     {"isim": "Acıbadem Kozyatağı",      "kisa": "KOZYATAĞİ",   "m2": 12000, "renk": "#10b981"},
-    "taksim":        {"isim": "Acıbadem Taksim",         "kisa": "TAKSİM",       "m2":  8000, "renk": "#a855f7"},
-    "atakent":       {"isim": "Acıbadem Atakent",        "kisa": "ATAKENT",      "m2": 20000, "renk": "#f97316"},
-    "atasehir":      {"isim": "Acıbadem Ataşehir",       "kisa": "ATAŞEHİR",     "m2": 14000, "renk": "#06b6d4"},
+    "maslak":        {"isim": "Acıbadem Maslak",         "kisa": "MASLAK",       "m2": 15000, "renk": "#2a78d6"},
+    "altunizade":    {"isim": "Acıbadem Altunizade",     "kisa": "ALTUNİZADE",   "m2": 10000, "renk": "#c98500"},
+    "kozyatagi":     {"isim": "Acıbadem Kozyatağı",      "kisa": "KOZYATAĞİ",   "m2": 12000, "renk": "#0ca30c"},
+    "taksim":        {"isim": "Acıbadem Taksim",         "kisa": "TAKSİM",       "m2":  8000, "renk": "#4a3aa7"},
+    "atakent":       {"isim": "Acıbadem Atakent",        "kisa": "ATAKENT",      "m2": 20000, "renk": "#eb6834"},
+    "atasehir":      {"isim": "Acıbadem Ataşehir",       "kisa": "ATAŞEHİR",     "m2": 14000, "renk": "#256abf"},
     "bakirkoy":      {"isim": "Acıbadem Bakırköy",       "kisa": "BAKIRKÖY",     "m2": 12000, "renk": "#84cc16"},
-    "fulya":         {"isim": "Acıbadem Fulya",          "kisa": "FULYA",        "m2":  9000, "renk": "#e879f9"},
+    "fulya":         {"isim": "Acıbadem Fulya",          "kisa": "FULYA",        "m2":  9000, "renk": "#e87ba4"},
     "international": {"isim": "Acıbadem International",  "kisa": "INTERNAT.",    "m2": 18000, "renk": "#14b8a6"},
     "kadikoy":       {"isim": "Acıbadem Kadıköy",        "kisa": "KADİKÖY",      "m2":  8000, "renk": "#ec4899"},
-    "kartal":        {"isim": "Acıbadem Kartal",         "kisa": "KARTAL",       "m2": 11000, "renk": "#ef4444"},
+    "kartal":        {"isim": "Acıbadem Kartal",         "kisa": "KARTAL",       "m2": 11000, "renk": "#d03b3b"},
     # ── Ankara ──
     "ankara":          {"isim": "Acıbadem Ankara",           "kisa": "ANKARA",      "m2": 16000, "renk": "#fb7185"},
     "bayindir":        {"isim": "Acıbadem Bayındır Söğütözü", "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
     # ── Bursa ──
-    "bursa":           {"isim": "Acıbadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#fbbf24"},
+    "bursa":           {"isim": "Acıbadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#c98500"},
     # ── Kocaeli ──
-    "kocaeli":         {"isim": "Acıbadem Kocaeli",           "kisa": "KOCAELİ",     "m2": 10000, "renk": "#34d399"},
+    "kocaeli":         {"isim": "Acıbadem Kocaeli",           "kisa": "KOCAELİ",     "m2": 10000, "renk": "#0ca30c"},
     # ── Eskişehir ──
     "eskisehir":       {"isim": "Acıbadem Eskişehir",         "kisa": "ESKİŞEHİR",   "m2":  9000, "renk": "#818cf8"},
     # ── İzmir ──
-    "izmir":           {"isim": "Acıbadem İzmir Kent",        "kisa": "İZMİR",       "m2": 15000, "renk": "#38bdf8"},
+    "izmir":           {"isim": "Acıbadem İzmir Kent",        "kisa": "İZMİR",       "m2": 15000, "renk": "#2a78d6"},
     # ── Kayseri ──
     "kayseri":         {"isim": "Acıbadem Kayseri",           "kisa": "KAYSERİ",     "m2": 11000, "renk": "#a78bfa"},
     # ── Adana ──
     "adana":           {"isim": "Acıbadem Adana",             "kisa": "ADANA",       "m2": 12000, "renk": "#f472b6"},
-    "adana_ortopedia": {"isim": "Acıbadem Adana Ortopedia",   "kisa": "ADANA ORT.",  "m2":  5000, "renk": "#e879f9"},
+    "adana_ortopedia": {"isim": "Acıbadem Adana Ortopedia",   "kisa": "ADANA ORT.",  "m2":  5000, "renk": "#e87ba4"},
     # ── Bodrum ──
     "bodrum":          {"isim": "Acıbadem Bodrum",            "kisa": "BODRUM",      "m2":  7000, "renk": "#2dd4bf"},
 }
@@ -421,11 +419,11 @@ else:
 # ── Header ───────────────────────────────────────────
 _bagli = not df.empty
 _bagli_html = (
-    f"<span style='background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.35);"
-    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#10b981;font-weight:600;'>🟢 Bağlı</span>"
+    f"<span style='background:rgba(12,163,12,0.15);border:1px solid rgba(12,163,12,0.35);"
+    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#0ca30c;font-weight:600;'>🟢 Bağlı</span>"
     if _bagli else
-    f"<span style='background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.35);"
-    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#ef4444;font-weight:600;'>🔴 Veri Yok</span>"
+    f"<span style='background:rgba(208,59,59,0.15);border:1px solid rgba(208,59,59,0.35);"
+    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#d03b3b;font-weight:600;'>🔴 Veri Yok</span>"
 )
 _son_tarih_goster = son_tarih_str if _bagli else "—"
 _m2_goster = f"{m2:,.0f}".replace(",", ".")
@@ -439,9 +437,9 @@ with col_baslik:
     st.markdown(
         f"""<div style='display:flex;align-items:center;justify-content:space-between;padding:8px 0;flex-wrap:wrap;gap:8px;'>
           <div>
-            <div style='font-family:Orbitron,sans-serif;font-size:8px;color:rgba(0,212,255,0.45);
+            <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;color:rgba(42,120,214,0.45);
                         letter-spacing:5px;text-transform:uppercase;'>ACIBADEM SAĞLIK GRUBU — LOKASYON DETAY</div>
-            <div style='font-family:Orbitron,sans-serif;font-size:22px;font-weight:900;
+            <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:22px;font-weight:900;
                         color:{renk};text-shadow:0 0 25px rgba({rr},{rg},{rb},0.8);
                         letter-spacing:3px;'>{lok_info["isim"].upper()}</div>
           </div>
@@ -450,8 +448,8 @@ with col_baslik:
                          border-radius:6px;padding:2px 10px;font-size:10px;color:{renk};font-weight:600;'>
               📐 {_m2_goster} m²
             </span>
-            <span style='background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);
-                         border-radius:6px;padding:2px 10px;font-size:10px;color:rgba(0,212,255,0.7);font-weight:600;'>
+            <span style='background:rgba(42,120,214,0.08);border:1px solid rgba(42,120,214,0.2);
+                         border-radius:6px;padding:2px 10px;font-size:10px;color:rgba(42,120,214,0.7);font-weight:600;'>
               📅 Son: {_son_tarih_goster}
             </span>
             {_bagli_html}
@@ -460,7 +458,7 @@ with col_baslik:
         unsafe_allow_html=True
     )
 
-st.markdown("<div style='height:1px;background:rgba(56,189,248,0.1);margin:8px 0 16px;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height:1px;background:rgba(19,50,115,0.1);margin:8px 0 16px;'></div>", unsafe_allow_html=True)
 
 if df.empty:
     st.warning("Bu lokasyon için veri bulunamadı.")
@@ -516,40 +514,40 @@ with tab1:
         def metric_card_v(ikon, baslik, deger, birim, renk_hex, alt_bilgi=""):
             r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
             alt_html = (
-                f"<div style='font-size:8px;color:rgba(150,210,255,0.4);margin-top:5px;"
+                f"<div style='font-size:8px;color:rgba(107,122,147,0.4);margin-top:5px;"
                 f"letter-spacing:0.5px;'>{alt_bilgi}</div>"
             ) if alt_bilgi else ""
             st.markdown(
                 f"""<div class="metric-card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;text-align:left;">
                 <div style='font-size:20px;flex-shrink:0;'>{ikon}</div>
                 <div style='min-width:0;'>
-                  <div style='font-size:8px;color:rgba(150,210,255,0.5);letter-spacing:1px;
+                  <div style='font-size:8px;color:rgba(107,122,147,0.5);letter-spacing:1px;
                               text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>
-                  <div style='font-family:Orbitron,sans-serif;font-size:16px;font-weight:900;
+                  <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:16px;font-weight:900;
                               color:{renk_hex};text-shadow:0 0 10px rgba({r2},{g2},{b2},0.6);line-height:1.2;'>
-                      {deger}<span style='font-size:8px;color:rgba(150,210,255,0.5);margin-left:3px;'>{birim}</span>
+                      {deger}<span style='font-size:8px;color:rgba(107,122,147,0.5);margin-left:3px;'>{birim}</span>
                   </div>{alt_html}
                 </div></div>""",
                 unsafe_allow_html=True
             )
 
-        metric_card_v("⚡", f"Tüketim ({son_tarih_str})", f"{kwh_dun:,.0f}", "kWh", "#00d4ff")
-        metric_card_v("📐", "kWh/m²",     f"{verim_dun:.2f}", "kWh/m²", "#f59e0b")
+        metric_card_v("⚡", f"Tüketim ({son_tarih_str})", f"{kwh_dun:,.0f}", "kWh", "#2a78d6")
+        metric_card_v("📐", "kWh/m²",     f"{verim_dun:.2f}", "kWh/m²", "#c98500")
         metric_card_v(
             "📅", f"{ay_adi} Toplam",
-            f"{kwh_bu_ay:,.0f}", "kWh", "#10b981",
+            f"{kwh_bu_ay:,.0f}", "kWh", "#0ca30c",
             alt_bilgi=f"{ay_bas_str} → {ay_bit_str}  ({ay_gun_sayi} gün)"
         )
-        metric_card_v("❄️", "Chiller Set", f"{ch_set:.1f}" if ch_set else "—", "°C", "#a855f7")
+        metric_card_v("❄️", "Chiller Set", f"{ch_set:.1f}" if ch_set else "—", "°C", "#4a3aa7")
 
         # Soğutma tüketimi
         if sog_tuk is not None and sog_tuk > 0:
-            metric_card_v("🧊", "Soğutma Tüketimi", f"{sog_tuk:,.0f}", "kWh", "#38bdf8")
+            metric_card_v("🧊", "Soğutma Tüketimi", f"{sog_tuk:,.0f}", "kWh", "#2a78d6")
 
         # Kojen öz tüketim oranı
         if kojen_urt and kwh_dun and kwh_dun > 0:
             kojen_oran = min(kojen_urt / kwh_dun * 100, 100)
-            metric_card_v("⚙️", "Kojen Karşılama", f"{kojen_oran:.1f}", "%", "#10b981")
+            metric_card_v("⚙️", "Kojen Karşılama", f"{kojen_oran:.1f}", "%", "#0ca30c")
 
 
     # ──────────── SÜTUN 2: Grafik seçici + dinamik grafik ────────────
@@ -638,10 +636,10 @@ with tab1:
             ))
             fig.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                 margin=dict(t=4, b=20, l=50, r=10), height=355,
-                xaxis=dict(gridcolor="rgba(56,189,248,0.07)", showgrid=True),
-                yaxis=dict(gridcolor="rgba(56,189,248,0.07)", showgrid=True,
+                xaxis=dict(gridcolor="rgba(19,50,115,0.07)", showgrid=True),
+                yaxis=dict(gridcolor="rgba(19,50,115,0.07)", showgrid=True,
                            title=dict(text="kWh", font=dict(size=10))),
             )
             st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
@@ -660,7 +658,7 @@ with tab1:
             gec_val = gec_df[col].sum()
             fark = (bugun_val - gec_val) / gec_val * 100
             rgb  = "239,68,68" if fark > 0 else "16,185,129"
-            renk_b = "#ef4444" if fark > 0 else "#10b981"
+            renk_b = "#d03b3b" if fark > 0 else "#0ca30c"
             yon  = "▲" if fark > 0 else "▼"
             etiket = f"+%{abs(fark):.1f}" if fark > 0 else f"-%{abs(fark):.1f}"
             return (
@@ -672,7 +670,7 @@ with tab1:
         # ── Tüketim ──
         if grafik_tip == "tuketim":
             _badge = _yoy_badge("Toplam_Hastane_Tuketim_kWh", secili_df, df, tarih_bas, tarih_bit)
-            st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
             _bar_chart(secili_df)
 
         # ── Chiller Set Trendi ──
@@ -683,7 +681,7 @@ with tab1:
                 if "Dis_Hava_Sicakligi_C" in secili_df.columns:
                     fig_ch.add_trace(go.Scatter(
                         x=secili_df["Tarih"], y=secili_df["Dis_Hava_Sicakligi_C"],
-                        name="Dış Hava", line=dict(color="#f59e0b", width=1.5, dash="dot"),
+                        name="Dış Hava", line=dict(color="#c98500", width=1.5, dash="dot"),
                         yaxis="y2",
                     ))
                 fig_ch.add_trace(go.Scatter(
@@ -693,11 +691,11 @@ with tab1:
                 ))
                 fig_ch.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=50), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(title=dict(text="Set °C", font=dict(size=10)),
-                               gridcolor="rgba(56,189,248,0.07)"),
+                               gridcolor="rgba(19,50,115,0.07)"),
                     yaxis2=dict(title=dict(text="Dış Hava °C", font=dict(size=10)),
                                 overlaying="y", side="right"),
                     legend=dict(orientation="h", y=1.12, font=dict(size=10)),
@@ -721,10 +719,10 @@ with tab1:
                 ))
                 fig_v.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh/m²", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_v, use_container_width=True, config={"displayModeBar": False})
@@ -735,20 +733,20 @@ with tab1:
         elif grafik_tip == "su":
             if "Su_Tuketimi_m3" in secili_df.columns and not secili_df.empty:
                 _badge = _yoy_badge("Su_Tuketimi_m3", secili_df, df, tarih_bas, tarih_bit)
-                st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 su_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Su_Tuketimi_m3"].sum().reset_index()
                 su_df.columns = ["Tarih", "m3"]
                 fig_su = go.Figure(go.Bar(
                     x=su_df["Tarih"], y=su_df["m3"],
-                    marker=dict(color="rgba(56,189,248,0.75)"),
+                    marker=dict(color="rgba(19,50,115,0.75)"),
                     hovertemplate="<b>%{x}</b><br>%{y:,.1f} m³<extra></extra>",
                 ))
                 fig_su.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="m³", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_su, use_container_width=True, config={"displayModeBar": False})
@@ -763,15 +761,15 @@ with tab1:
                 sb_df.columns = ["Tarih", "kWh"]
                 fig_sb = go.Figure(go.Bar(
                     x=sb_df["Tarih"], y=sb_df["kWh"],
-                    marker=dict(color="rgba(168,85,247,0.75)"),
+                    marker=dict(color="rgba(74,58,167,0.75)"),
                     hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
                 ))
                 fig_sb.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_sb, use_container_width=True, config={"displayModeBar": False})
@@ -782,7 +780,7 @@ with tab1:
         elif grafik_tip == "trafo":
             if _trafo_kolonlar and not secili_df.empty:
                 st.caption(tarih_aralik_str)
-                _tr_renk = ["#a855f7", "#06b6d4", "#f59e0b", "#10b981", "#ef4444", "#3b82f6"]
+                _tr_renk = ["#4a3aa7", "#256abf", "#c98500", "#0ca30c", "#d03b3b", "#6da7ec"]
                 _g = secili_df.groupby(secili_df["Tarih"].dt.date)
                 fig_tr = go.Figure()
                 for _i, _c in enumerate(_trafo_kolonlar):
@@ -796,10 +794,10 @@ with tab1:
                 fig_tr.update_layout(
                     barmode="stack",
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=10, b=20, l=50, r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                     legend=dict(orientation="h", y=1.08, x=0, font=dict(size=10),
                                 bgcolor="rgba(0,0,0,0)"),
@@ -826,20 +824,20 @@ with tab1:
         elif grafik_tip == "mcc":
             if "MCC_Tuketim_kWh" in secili_df.columns and not secili_df.empty:
                 _badge = _yoy_badge("MCC_Tuketim_kWh", secili_df, df, tarih_bas, tarih_bit)
-                st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 mcc_df = secili_df.groupby(secili_df["Tarih"].dt.date)["MCC_Tuketim_kWh"].sum().reset_index()
                 mcc_df.columns = ["Tarih", "kWh"]
                 fig_mcc = go.Figure(go.Bar(
                     x=mcc_df["Tarih"], y=mcc_df["kWh"],
-                    marker=dict(color="rgba(249,115,22,0.75)"),
+                    marker=dict(color="rgba(235,104,52,0.75)"),
                     hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
                 ))
                 fig_mcc.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_mcc, use_container_width=True, config={"displayModeBar": False})
@@ -852,20 +850,20 @@ with tab1:
                     else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in secili_df.columns else None)
             if col_s and not secili_df.empty:
                 _badge = _yoy_badge(col_s, secili_df, df, tarih_bas, tarih_bit)
-                st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 sog_df = secili_df.groupby(secili_df["Tarih"].dt.date)[col_s].sum().reset_index()
                 sog_df.columns = ["Tarih", "kWh"]
                 fig_sog = go.Figure(go.Bar(
                     x=sog_df["Tarih"], y=sog_df["kWh"],
-                    marker=dict(color="rgba(56,189,248,0.75)"),
+                    marker=dict(color="rgba(19,50,115,0.75)"),
                     hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
                 ))
                 fig_sog.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_sog, use_container_width=True, config={"displayModeBar": False})
@@ -876,20 +874,20 @@ with tab1:
         elif grafik_tip == "kazan":
             if "Kazan_Dogalgaz_m3" in secili_df.columns and not secili_df.empty:
                 _badge = _yoy_badge("Kazan_Dogalgaz_m3", secili_df, df, tarih_bas, tarih_bit)
-                st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 kaz_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Kazan_Dogalgaz_m3"].sum().reset_index()
                 kaz_df.columns = ["Tarih", "m3"]
                 fig_kaz = go.Figure(go.Bar(
                     x=kaz_df["Tarih"], y=kaz_df["m3"],
-                    marker=dict(color="rgba(239,68,68,0.75)"),
+                    marker=dict(color="rgba(208,59,59,0.75)"),
                     hovertemplate="<b>%{x}</b><br>%{y:,.1f} m³<extra></extra>",
                 ))
                 fig_kaz.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="m³", font=dict(size=10))),
                 )
                 st.plotly_chart(fig_kaz, use_container_width=True, config={"displayModeBar": False})
@@ -921,10 +919,10 @@ with tab1:
                 ))
                 fig_ay.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=30,b=20,l=50,r=10), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)", title="Gün"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)", title=dict(text="kWh", font=dict(size=10))),
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)", title="Gün"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)", title=dict(text="kWh", font=dict(size=10))),
                     barmode="group",
                     legend=dict(orientation="h", y=1.1, font=dict(size=10)),
                 )
@@ -935,7 +933,7 @@ with tab1:
                 gec_top = gec_kiyas.sum()
                 if gec_top > 0:
                     fark_pct = (bu_top - gec_top) / gec_top * 100
-                    fark_renk = "#ef4444" if fark_pct > 0 else "#10b981"
+                    fark_renk = "#d03b3b" if fark_pct > 0 else "#0ca30c"
                     fark_yon  = "▲" if fark_pct > 0 else "▼"
                     st.markdown(
                         f"<div style='text-align:center;font-size:11px;color:{fark_renk};margin-bottom:4px;'>"
@@ -957,30 +955,30 @@ with tab1:
             _kd = secili_df  # KPI için seçilen tarih aralığı
             _etiket = tarih_aralik_str
             if "Toplam_Hastane_Tuketim_kWh" in _kd.columns:
-                kpi_rows.append((f"⚡ Elektrik Tüketimi ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum():,.0f} kWh", "#00d4ff"))
+                kpi_rows.append((f"⚡ Elektrik Tüketimi ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum():,.0f} kWh", "#2a78d6"))
             if "Kojen_Uretim_kWh" in _kd.columns:
-                kpi_rows.append((f"⚙️ Kojen Üretimi ({_etiket})", f"{_kd['Kojen_Uretim_kWh'].sum():,.0f} kWh", "#10b981"))
+                kpi_rows.append((f"⚙️ Kojen Üretimi ({_etiket})", f"{_kd['Kojen_Uretim_kWh'].sum():,.0f} kWh", "#0ca30c"))
             if "Kojen_Uretim_kWh" in _kd.columns and "Toplam_Hastane_Tuketim_kWh" in _kd.columns:
                 top = _kd["Toplam_Hastane_Tuketim_kWh"].sum()
                 ko  = _kd["Kojen_Uretim_kWh"].sum()
                 if top > 0:
-                    kpi_rows.append(("⚙️ Kojen Karşılama Oranı", f"%{ko/top*100:.1f}", "#10b981"))
+                    kpi_rows.append(("⚙️ Kojen Karşılama Oranı", f"%{ko/top*100:.1f}", "#0ca30c"))
             if "Kojen_Dogalgaz_m3" in _kd.columns:
-                kpi_rows.append((f"🔥 Kojen Doğalgaz ({_etiket})", f"{_kd['Kojen_Dogalgaz_m3'].sum():,.1f} m³", "#f97316"))
+                kpi_rows.append((f"🔥 Kojen Doğalgaz ({_etiket})", f"{_kd['Kojen_Dogalgaz_m3'].sum():,.1f} m³", "#eb6834"))
             if "Kazan_Dogalgaz_m3" in _kd.columns:
-                kpi_rows.append((f"🏭 Kazan Doğalgaz ({_etiket})", f"{_kd['Kazan_Dogalgaz_m3'].sum():,.1f} m³", "#ef4444"))
+                kpi_rows.append((f"🏭 Kazan Doğalgaz ({_etiket})", f"{_kd['Kazan_Dogalgaz_m3'].sum():,.1f} m³", "#d03b3b"))
             if "Su_Tuketimi_m3" in _kd.columns:
-                kpi_rows.append((f"💧 Su Tüketimi ({_etiket})", f"{_kd['Su_Tuketimi_m3'].sum():,.1f} m³", "#38bdf8"))
+                kpi_rows.append((f"💧 Su Tüketimi ({_etiket})", f"{_kd['Su_Tuketimi_m3'].sum():,.1f} m³", "#2a78d6"))
             if "Sebeke_Tuketim_kWh" in _kd.columns:
-                kpi_rows.append((f"🔌 Şebeke Tüketimi ({_etiket})", f"{_kd['Sebeke_Tuketim_kWh'].sum():,.0f} kWh", "#a855f7"))
+                kpi_rows.append((f"🔌 Şebeke Tüketimi ({_etiket})", f"{_kd['Sebeke_Tuketim_kWh'].sum():,.0f} kWh", "#4a3aa7"))
             if "MCC_Tuketim_kWh" in _kd.columns:
-                kpi_rows.append((f"🏗️ MCC Tüketimi ({_etiket})", f"{_kd['MCC_Tuketim_kWh'].sum():,.0f} kWh", "#f59e0b"))
+                kpi_rows.append((f"🏗️ MCC Tüketimi ({_etiket})", f"{_kd['MCC_Tuketim_kWh'].sum():,.0f} kWh", "#c98500"))
             _sog_col_kpi = ("Toplam_Sogutma_Tuketim_kWh" if "Toplam_Sogutma_Tuketim_kWh" in _kd.columns
                             else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in _kd.columns else None))
             if _sog_col_kpi:
-                kpi_rows.append((f"❄️ Soğutma Tüketimi ({_etiket})", f"{_kd[_sog_col_kpi].sum():,.0f} kWh", "#38bdf8"))
+                kpi_rows.append((f"❄️ Soğutma Tüketimi ({_etiket})", f"{_kd[_sog_col_kpi].sum():,.0f} kWh", "#2a78d6"))
             if m2 and "Toplam_Hastane_Tuketim_kWh" in _kd.columns and _kd["Toplam_Hastane_Tuketim_kWh"].sum() > 0:
-                kpi_rows.append((f"📐 kWh/m² ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum()/m2:.2f}", "#f59e0b"))
+                kpi_rows.append((f"📐 kWh/m² ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum()/m2:.2f}", "#c98500"))
 
             if kpi_rows:
                 rows_html = ""
@@ -988,14 +986,14 @@ with tab1:
                     r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
                     rows_html += (
                         f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                        f"padding:10px 14px;border-bottom:1px solid rgba(0,212,255,0.07);'>"
-                        f"<span style='font-size:12px;color:rgba(180,220,255,0.8);'>{baslik}</span>"
-                        f"<span style='font-family:Orbitron,sans-serif;font-size:13px;font-weight:700;"
+                        f"padding:10px 14px;border-bottom:1px solid rgba(42,120,214,0.07);'>"
+                        f"<span style='font-size:12px;color:rgba(107,122,147,0.8);'>{baslik}</span>"
+                        f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:13px;font-weight:700;"
                         f"color:{renk_hex};text-shadow:0 0 8px rgba({r2},{g2},{b2},0.5);'>{deger}</span>"
                         f"</div>"
                     )
                 st.markdown(
-                    f"<div style='background:rgba(15,23,42,0.4);border:1px solid rgba(56,189,248,0.15);"
+                    f"<div style='background:rgba(243,246,251,0.4);border:1px solid rgba(19,50,115,0.15);"
                     f"border-radius:12px;overflow:hidden;backdrop-filter:blur(8px);'>{rows_html}</div>",
                     unsafe_allow_html=True
                 )
@@ -1039,36 +1037,36 @@ with tab1:
                     ))
                     fig.update_layout(
                         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                        font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                        font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                         margin=dict(t=52, b=28, l=10, r=10), height=360,
                         showlegend=False,
                         annotations=[dict(
                             text=f"<b>{center_val:,.0f}</b><br><span style='font-size:9px'>{center_label}</span>",
-                            x=0.5, y=0.5, font_size=12, font_color="#00d4ff", showarrow=False,
+                            x=0.5, y=0.5, font_size=12, font_color="#2a78d6", showarrow=False,
                         )],
                     )
                     return fig
 
                 with _c1:
-                    st.markdown("<div style='text-align:center;font-size:11px;color:rgba(150,210,255,0.6);margin-bottom:4px;'>⚡ KAYNAK KIRILIMLARI</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align:center;font-size:11px;color:rgba(107,122,147,0.6);margin-bottom:4px;'>⚡ KAYNAK KIRILIMLARI</div>", unsafe_allow_html=True)
                     _kaynak_labels = []
                     _kaynak_values = []
                     _kaynak_colors = []
-                    if _kojen  > 0: _kaynak_labels.append("Kojen");  _kaynak_values.append(_kojen);  _kaynak_colors.append("#10b981")
-                    if _sebeke > 0: _kaynak_labels.append("Şebeke"); _kaynak_values.append(_sebeke); _kaynak_colors.append("#a855f7")
-                    if _diger_k > 0: _kaynak_labels.append("Diğer"); _kaynak_values.append(_diger_k); _kaynak_colors.append("#64748b")
+                    if _kojen  > 0: _kaynak_labels.append("Kojen");  _kaynak_values.append(_kojen);  _kaynak_colors.append("#0ca30c")
+                    if _sebeke > 0: _kaynak_labels.append("Şebeke"); _kaynak_values.append(_sebeke); _kaynak_colors.append("#4a3aa7")
+                    if _diger_k > 0: _kaynak_labels.append("Diğer"); _kaynak_values.append(_diger_k); _kaynak_colors.append("#6b7a93")
                     if _kaynak_labels:
                         st.plotly_chart(_donut_fig(_kaynak_labels, _kaynak_values, _kaynak_colors, _toplam, "kWh toplam"),
                                         use_container_width=True, config={"displayModeBar": False})
 
                 with _c2:
-                    st.markdown("<div style='text-align:center;font-size:11px;color:rgba(150,210,255,0.6);margin-bottom:4px;'>🏭 TÜKETİM KIRILIMLARI</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align:center;font-size:11px;color:rgba(107,122,147,0.6);margin-bottom:4px;'>🏭 TÜKETİM KIRILIMLARI</div>", unsafe_allow_html=True)
                     _tuk_labels = []
                     _tuk_values = []
                     _tuk_colors = []
-                    if _sogutma > 0: _tuk_labels.append("Soğutma"); _tuk_values.append(_sogutma); _tuk_colors.append("#38bdf8")
-                    if _mcc     > 0: _tuk_labels.append("MCC");     _tuk_values.append(_mcc);     _tuk_colors.append("#f59e0b")
-                    if _diger_t > 0: _tuk_labels.append("Diğer");   _tuk_values.append(_diger_t); _tuk_colors.append("#64748b")
+                    if _sogutma > 0: _tuk_labels.append("Soğutma"); _tuk_values.append(_sogutma); _tuk_colors.append("#2a78d6")
+                    if _mcc     > 0: _tuk_labels.append("MCC");     _tuk_values.append(_mcc);     _tuk_colors.append("#c98500")
+                    if _diger_t > 0: _tuk_labels.append("Diğer");   _tuk_values.append(_diger_t); _tuk_colors.append("#6b7a93")
                     if _tuk_labels:
                         st.plotly_chart(_donut_fig(_tuk_labels, _tuk_values, _tuk_colors, _toplam, "kWh toplam"),
                                         use_container_width=True, config={"displayModeBar": False})
@@ -1086,7 +1084,7 @@ with tab1:
                     kj_df.columns = ["Tarih", "kWh"]
                     fig_kj.add_trace(go.Bar(
                         x=kj_df["Tarih"], y=kj_df["kWh"],
-                        name="Kojen Üretim", marker=dict(color="rgba(16,185,129,0.75)"),
+                        name="Kojen Üretim", marker=dict(color="rgba(12,163,12,0.75)"),
                         hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>",
                     ))
                 if "Kojen_Dogalgaz_m3" in secili_df.columns:
@@ -1094,16 +1092,16 @@ with tab1:
                     kg_df.columns = ["Tarih", "m3"]
                     fig_kj.add_trace(go.Scatter(
                         x=kg_df["Tarih"], y=kg_df["m3"],
-                        name="Doğalgaz (m³)", line=dict(color="#f59e0b", width=2),
+                        name="Doğalgaz (m³)", line=dict(color="#c98500", width=2),
                         yaxis="y2",
                         hovertemplate="<b>%{x}</b><br>%{y:,.1f} m³<extra></extra>",
                     ))
                 fig_kj.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+                    font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=50), height=370,
-                    xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-                    yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                     yaxis2=dict(title=dict(text="m³", font=dict(size=10)),
                                 overlaying="y", side="right"),
@@ -1125,15 +1123,15 @@ with tab1:
     def _kaynak_item(ikon, baslik, deger, birim, renk_hex):
         r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
         return (
-            f"<div style='background:rgba(15,23,42,0.4);border:1px solid rgba(255,255,255,0.06);"
+            f"<div style='background:rgba(243,246,251,0.4);border:1px solid rgba(19,50,115,0.06);"
             f"border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;backdrop-filter:blur(8px);'>"
             f"<div style='font-size:18px;flex-shrink:0;'>{ikon}</div>"
             f"<div>"
-            f"<div style='font-size:8px;color:rgba(150,210,255,0.5);letter-spacing:1px;"
+            f"<div style='font-size:8px;color:rgba(107,122,147,0.5);letter-spacing:1px;"
             f"text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>"
-            f"<div style='font-family:Orbitron,sans-serif;font-size:14px;font-weight:900;"
+            f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:14px;font-weight:900;"
             f"color:{renk_hex};text-shadow:0 0 8px rgba({r2},{g2},{b2},0.5);line-height:1.2;'>"
-            f"{deger}<span style='font-size:8px;color:rgba(150,210,255,0.4);margin-left:3px;'>{birim}</span>"
+            f"{deger}<span style='font-size:8px;color:rgba(107,122,147,0.4);margin-left:3px;'>{birim}</span>"
             f"</div></div></div>"
         )
 
@@ -1147,18 +1145,18 @@ with tab1:
         trdp4_val = son_df["TRDP4_kWh"].sum() if "TRDP4_kWh" in son_df.columns else None
         _kaynak_items = [
             # Satır 1
-            _kaynak_item("🔥", "Kojen Doğalgaz", kgaz_str, "m³",  "#f97316"),
-            _kaynak_item("⚙️", "Kojen Üretim",   kurt_str, "kWh", "#10b981"),
-            _kaynak_item("🔹", "TRDP-1 (Bina)", f"{trdp1_val:,.0f}" if trdp1_val else "—", "kWh", "#06b6d4"),
-            _kaynak_item("🔸", "TRDP-2 (Mek.)", f"{trdp2_val:,.0f}" if trdp2_val else "—", "kWh", "#f59e0b"),
+            _kaynak_item("🔥", "Kojen Doğalgaz", kgaz_str, "m³",  "#eb6834"),
+            _kaynak_item("⚙️", "Kojen Üretim",   kurt_str, "kWh", "#0ca30c"),
+            _kaynak_item("🔹", "TRDP-1 (Bina)", f"{trdp1_val:,.0f}" if trdp1_val else "—", "kWh", "#256abf"),
+            _kaynak_item("🔸", "TRDP-2 (Mek.)", f"{trdp2_val:,.0f}" if trdp2_val else "—", "kWh", "#c98500"),
             # Satır 2
-            _kaynak_item("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#a855f7"),
-            _kaynak_item("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#f59e0b"),
-            _kaynak_item("🔹", "TRDP-3 (Bina)", f"{trdp3_val:,.0f}" if trdp3_val else "—", "kWh", "#06b6d4"),
-            _kaynak_item("🔸", "TRDP-4 (Mek.)", f"{trdp4_val:,.0f}" if trdp4_val else "—", "kWh", "#f59e0b"),
+            _kaynak_item("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#4a3aa7"),
+            _kaynak_item("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#c98500"),
+            _kaynak_item("🔹", "TRDP-3 (Bina)", f"{trdp3_val:,.0f}" if trdp3_val else "—", "kWh", "#256abf"),
+            _kaynak_item("🔸", "TRDP-4 (Mek.)", f"{trdp4_val:,.0f}" if trdp4_val else "—", "kWh", "#c98500"),
             # Satır 3
-            _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str, "m³", "#ef4444"),
-            _kaynak_item("💧", "Su Tüketimi",    su_str,   "m³", "#38bdf8"),
+            _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str, "m³", "#d03b3b"),
+            _kaynak_item("💧", "Su Tüketimi",    su_str,   "m³", "#2a78d6"),
         ]
     else:
         # Maslak DIŞI lokasyonlar: trafo kartları yalnızca sayacı dolu olanlar
@@ -1175,14 +1173,14 @@ with tab1:
             _trdp_kart.append(_kaynak_item(
                 "🔹" if int(_no) % 2 else "🔸", f"TRDP-{_no}",
                 f"{_v:,.0f}" if _v else "—", "kWh",
-                "#06b6d4" if int(_no) % 2 else "#f59e0b"))
+                "#256abf" if int(_no) % 2 else "#c98500"))
         _kaynak_items = [
-            _kaynak_item("🔥", "Kojen Doğalgaz", kgaz_str,   "m³",  "#f97316"),
-            _kaynak_item("⚙️", "Kojen Üretim",   kurt_str,   "kWh", "#10b981"),
-            _kaynak_item("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#a855f7"),
-            _kaynak_item("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#f59e0b"),
-            _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str,   "m³",  "#ef4444"),
-            _kaynak_item("💧", "Su Tüketimi",    su_str,     "m³",  "#38bdf8"),
+            _kaynak_item("🔥", "Kojen Doğalgaz", kgaz_str,   "m³",  "#eb6834"),
+            _kaynak_item("⚙️", "Kojen Üretim",   kurt_str,   "kWh", "#0ca30c"),
+            _kaynak_item("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#4a3aa7"),
+            _kaynak_item("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#c98500"),
+            _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str,   "m³",  "#d03b3b"),
+            _kaynak_item("💧", "Su Tüketimi",    su_str,     "m³",  "#2a78d6"),
         ] + _trdp_kart
 
     _cols_count = 4 if (lok_id == "maslak" or len(_kaynak_items) > 6) else 3
@@ -1207,8 +1205,8 @@ with tab1:
     hvac_uyari   = hvac_ozet.get("uyari",  [])
     hvac_normal  = hvac_ozet.get("normal", [])
 
-    KART  = "background:rgba(15,23,42,0.4);border:1px solid rgba(255,255,255,0.05);backdrop-filter:blur(8px);border-radius:12px;padding:14px;"
-    LBL   = ("font-size:8px;color:rgba(150,210,255,0.5);letter-spacing:1.5px;"
+    KART  = "background:rgba(243,246,251,0.4);border:1px solid rgba(19,50,115,0.05);backdrop-filter:blur(8px);border-radius:12px;padding:14px;"
+    LBL   = ("font-size:8px;color:rgba(107,122,147,0.5);letter-spacing:1.5px;"
              "text-transform:uppercase;margin-bottom:8px;font-weight:700;")
 
     def cihaz_html(cihaz, bg, border, text_renk):
@@ -1223,8 +1221,8 @@ with tab1:
         badge_html = ""
         if bilesenler:
             badges = "".join(
-                f"<span style='display:inline-block;background:rgba(245,158,11,0.15);"
-                f"border:1px solid rgba(245,158,11,0.35);border-radius:4px;"
+                f"<span style='display:inline-block;background:rgba(250,178,25,0.15);"
+                f"border:1px solid rgba(250,178,25,0.35);border-radius:4px;"
                 f"padding:2px 7px;margin:3px 3px 0 0;font-size:9px;"
                 f"color:rgba(253,211,77,0.9);letter-spacing:0.3px;'>{b}</span>"
                 for b in bilesenler
@@ -1233,7 +1231,7 @@ with tab1:
 
         # Not
         not_html = (
-            f"<div style='font-size:10px;color:rgba(200,220,255,0.45);"
+            f"<div style='font-size:10px;color:#6b7a93;"
             f"margin-top:5px;padding-left:14px;font-style:italic;'>💬 {not_metni}</div>"
         ) if not_metni else ""
 
@@ -1253,7 +1251,7 @@ with tab1:
         else:
             ad, det = str(cihaz), ""
         det_part = (
-            "<div style='font-size:10px;color:rgba(255,255,255,0.4);"
+            "<div style='font-size:10px;color:rgba(19,50,115,0.4);"
             "margin-top:3px;'>" + det + "</div>"
         ) if det else ""
         return (
@@ -1270,20 +1268,20 @@ with tab1:
 
     # ── Sütun 1: Arızalı ──────────────────────────
     with col_ar:
-        ar_renk = "#ef4444" if toplam_ariza > 0 else "#10b981"
+        ar_renk = "#d03b3b" if toplam_ariza > 0 else "#0ca30c"
         rows = "".join(
-            cihaz_html(c, "rgba(239,68,68,0.10)", "#ef4444", "#fca5a5")
+            cihaz_html(c, "rgba(208,59,59,0.10)", "#d03b3b", "#b42525")
             for c in arizali_list
         ) if arizali_list else (
-            "<div style='font-size:11px;color:#6ee7b7;padding:4px 0;'>Ariza yok</div>"
+            "<div style='font-size:11px;color:#006300;padding:4px 0;'>Ariza yok</div>"
         )
         st.markdown(
-            "<details style='" + KART + "border:1px solid rgba(239,68,68,0.25);cursor:pointer;'>"
+            "<details style='" + KART + "border:1px solid rgba(208,59,59,0.25);cursor:pointer;'>"
             "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>ARIZALI CIHAZLAR</div>"
-            "<div style='font-family:Orbitron,sans-serif;font-size:28px;font-weight:900;"
+            "<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:28px;font-weight:900;"
             "color:" + ar_renk + ";margin-bottom:4px;'>" + str(toplam_ariza) + "</div>"
-            "<div style='font-size:9px;color:rgba(150,210,255,0.4);margin-bottom:4px;'>▼ detay için tıkla</div>"
+            "<div style='font-size:9px;color:rgba(107,122,147,0.4);margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
             "<div style='margin-top:8px;'>" + rows + "</div>"
             "</details>",
@@ -1292,20 +1290,20 @@ with tab1:
 
     # ── Sütun 2: Bakımda ──────────────────────────
     with col_bk:
-        bk_renk = "#f59e0b" if toplam_bakim > 0 else "#10b981"
+        bk_renk = "#c98500" if toplam_bakim > 0 else "#0ca30c"
         rows = "".join(
-            cihaz_html(c, "rgba(245,158,11,0.10)", "#f59e0b", "#fcd34d")
+            cihaz_html(c, "rgba(250,178,25,0.10)", "#c98500", "#8a5a00")
             for c in bakim_list
         ) if bakim_list else (
-            "<div style='font-size:11px;color:rgba(150,210,255,0.5);padding:4px 0;'>Cihaz listesi girilmemiş</div>"
+            "<div style='font-size:11px;color:rgba(107,122,147,0.5);padding:4px 0;'>Cihaz listesi girilmemiş</div>"
         )
         st.markdown(
-            "<details style='" + KART + "border:1px solid rgba(245,158,11,0.25);cursor:pointer;'>"
+            "<details style='" + KART + "border:1px solid rgba(250,178,25,0.25);cursor:pointer;'>"
             "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>BAKIMDAKI CIHAZLAR</div>"
-            "<div style='font-family:Orbitron,sans-serif;font-size:28px;font-weight:900;"
+            "<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:28px;font-weight:900;"
             "color:" + bk_renk + ";margin-bottom:4px;'>" + str(toplam_bakim) + "</div>"
-            "<div style='font-size:9px;color:rgba(150,210,255,0.4);margin-bottom:4px;'>▼ detay için tıkla</div>"
+            "<div style='font-size:9px;color:rgba(107,122,147,0.4);margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
             "<div style='margin-top:8px;'>" + rows + "</div>"
             "</details>",
@@ -1316,32 +1314,32 @@ with tab1:
     with col_hv:
         if hvac_kritik or hvac_uyari:
             hv_rows = "".join(
-                hvac_satir_html(c, "rgba(239,68,68,0.08)", "rgba(239,68,68,0.35)",
-                                "#ef4444", "KRITIK", "#fca5a5")
+                hvac_satir_html(c, "rgba(208,59,59,0.08)", "rgba(208,59,59,0.35)",
+                                "#d03b3b", "KRITIK", "#b42525")
                 for c in hvac_kritik
             ) + "".join(
-                hvac_satir_html(c, "rgba(245,158,11,0.08)", "rgba(245,158,11,0.30)",
-                                "#f59e0b", "UYARI", "#fcd34d")
+                hvac_satir_html(c, "rgba(250,178,25,0.08)", "rgba(250,178,25,0.30)",
+                                "#c98500", "UYARI", "#8a5a00")
                 for c in hvac_uyari
             )
             if hvac_normal:
                 hv_rows += (
-                    "<div style='font-size:11px;color:#6ee7b7;padding:4px 0;'>"
+                    "<div style='font-size:11px;color:#006300;padding:4px 0;'>"
                     + str(len(hvac_normal)) + " cihaz normal</div>"
                 )
         elif arizali_list:
             hv_rows = "".join(
-                hvac_satir_html(c, "rgba(239,68,68,0.08)", "rgba(239,68,68,0.35)",
-                                "#ef4444", "KRITIK", "#fca5a5")
+                hvac_satir_html(c, "rgba(208,59,59,0.08)", "rgba(208,59,59,0.35)",
+                                "#d03b3b", "KRITIK", "#b42525")
                 for c in arizali_list
             )
         else:
             hv_rows = (
-                "<div style='background:rgba(16,185,129,0.08);"
-                "border:1px solid rgba(16,185,129,0.2);"
+                "<div style='background:rgba(12,163,12,0.08);"
+                "border:1px solid rgba(12,163,12,0.2);"
                 "border-radius:8px;padding:14px;text-align:center;'>"
                 "<div style='font-size:18px;margin-bottom:4px;'>&#10003;</div>"
-                "<div style='font-size:12px;color:#6ee7b7;'>Tum HVAC sistemleri normal</div>"
+                "<div style='font-size:12px;color:#006300;'>Tum HVAC sistemleri normal</div>"
                 "</div>"
             )
         # Arızalı/Bakımdaki kartlarıyla aynı davranış: kapalı gelir, sayıya
@@ -1349,7 +1347,7 @@ with tab1:
         _hv_kritik = len(hvac_kritik) if (hvac_kritik or hvac_uyari) else len(arizali_list)
         _hv_uyari = len(hvac_uyari) if (hvac_kritik or hvac_uyari) else 0
         _hv_sorun = _hv_kritik + _hv_uyari
-        _hv_renk = "#ef4444" if _hv_kritik else ("#f59e0b" if _hv_uyari else "#10b981")
+        _hv_renk = "#d03b3b" if _hv_kritik else ("#c98500" if _hv_uyari else "#0ca30c")
         _hv_ozet = []
         if _hv_kritik:
             _hv_ozet.append("%d kritik" % _hv_kritik)
@@ -1363,11 +1361,11 @@ with tab1:
             ",0.25);cursor:pointer;'>"
             "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>HVAC ANALIZ DURUMU</div>"
-            "<div style='font-family:Orbitron,sans-serif;font-size:28px;font-weight:900;"
+            "<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:28px;font-weight:900;"
             "color:" + _hv_renk + ";margin-bottom:4px;'>" + str(_hv_sorun) + "</div>"
-            "<div style='font-size:10px;color:rgba(150,210,255,0.55);margin-bottom:2px;'>"
+            "<div style='font-size:10px;color:rgba(107,122,147,0.55);margin-bottom:2px;'>"
             + (" · ".join(_hv_ozet) if _hv_ozet else "Tüm HVAC sistemleri normal") + "</div>"
-            "<div style='font-size:9px;color:rgba(150,210,255,0.4);margin-bottom:4px;'>"
+            "<div style='font-size:9px;color:rgba(107,122,147,0.4);margin-bottom:4px;'>"
             "▼ detay için tıkla</div>"
             "</summary>"
             "<div style='margin-top:8px;'>" + hv_rows + "</div>"
@@ -1395,12 +1393,12 @@ with tab1:
             if _oto:
                 _sonuc = str(_oto.get("sonuc", ""))
                 _iyi = _sonuc in ("yazildi", "gecis_yok", "kapali", "mesgul")
-                _renk = "#10b981" if _iyi else "#ef4444"
+                _renk = "#0ca30c" if _iyi else "#d03b3b"
                 _zaman = str(_oto.get("zaman") or "")[11:16]
                 _govde = (
                     f"<div style='font-size:13px;color:{_renk};font-weight:700;'>"
                     f"{'✓' if _iyi else '✗'} {_oto.get('metin') or _sonuc or '—'}</div>"
-                    + (f"<div style='font-size:10px;color:rgba(150,210,255,0.45);"
+                    + (f"<div style='font-size:10px;color:rgba(107,122,147,0.45);"
                        f"margin-top:4px;'>son tur {_zaman}</div>" if _zaman else "")
                 )
                 # Son geçişin sahadaki sonucu: gönderilen setler birkaç dakika
@@ -1410,16 +1408,16 @@ with tab1:
                 if _dg == "uygulanmadi":
                     _uy = ", ".join(str(x).replace("_REM_SET", "").replace("_SET", "")
                                     for x in (_dgd.get("uymayan") or [])[:4])
-                    _govde += ("<div style='font-size:10px;color:#ef4444;margin-top:4px;'>"
+                    _govde += ("<div style='font-size:10px;color:#d03b3b;margin-top:4px;'>"
                                "Set cihazda UYGULANMADI" + (f": {_uy}" if _uy else "") + "</div>")
                 elif _dg == "bekliyor":
-                    _govde += ("<div style='font-size:10px;color:#f59e0b;margin-top:4px;'>"
+                    _govde += ("<div style='font-size:10px;color:#c98500;margin-top:4px;'>"
                                "Setler gönderildi — cihazdan doğrulama bekleniyor</div>")
                 elif _dg == "uygulandi":
-                    _govde += ("<div style='font-size:10px;color:#10b981;margin-top:4px;'>"
+                    _govde += ("<div style='font-size:10px;color:#0ca30c;margin-top:4px;'>"
                                "Son geçişteki tüm setler cihazda doğrulandı</div>")
             else:
-                _govde = ("<div style='font-size:12px;color:rgba(180,220,255,0.4);'>"
+                _govde = ("<div style='font-size:12px;color:rgba(107,122,147,0.4);'>"
                           "Bildirim gelmedi</div>")
             st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>OTO-SET</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
@@ -1428,20 +1426,20 @@ with tab1:
         with sc2:
             if _oz_test:
                 _gecti = _oz_test.get("durum") == "GECTI"
-                _renk = "#10b981" if _gecti else "#ef4444"
+                _renk = "#0ca30c" if _gecti else "#d03b3b"
                 _kalan = ", ".join(str(d).replace("test_", "").replace(".py", "")
                                    for d in (_oz_test.get("kalan_dosyalar") or [])[:2])
                 _govde = (
                     f"<div style='font-size:13px;color:{_renk};font-weight:700;'>"
                     f"{'✓' if _gecti else '✗'} {_oz_test.get('gecen')}/{_oz_test.get('toplam')} "
                     f"{'geçti' if _gecti else 'KALDI'}</div>"
-                    + (f"<div style='font-size:10px;color:#ef4444;margin-top:4px;'>{_kalan}</div>"
+                    + (f"<div style='font-size:10px;color:#d03b3b;margin-top:4px;'>{_kalan}</div>"
                        if _kalan else "")
-                    + f"<div style='font-size:10px;color:rgba(150,210,255,0.45);margin-top:4px;'>"
+                    + f"<div style='font-size:10px;color:rgba(107,122,147,0.45);margin-top:4px;'>"
                       f"{str(_oz_test.get('zaman') or '')[:16].replace('T', ' ')}</div>"
                 )
             else:
-                _govde = ("<div style='font-size:12px;color:rgba(180,220,255,0.4);'>"
+                _govde = ("<div style='font-size:12px;color:rgba(107,122,147,0.4);'>"
                           "Henüz çalışmadı</div>")
             st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>MEKANİK ZEKA ÖZ TESTİ</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
@@ -1451,25 +1449,25 @@ with tab1:
             if _geri_bld:
                 _hazir = _geri_bld.get("ogrenmeye_hazir_kural") or []
                 _govde = (
-                    f"<div style='font-size:13px;color:rgba(200,230,255,0.85);font-weight:700;'>"
+                    f"<div style='font-size:13px;color:rgba(74,88,115,0.85);font-weight:700;'>"
                     f"{_geri_bld.get('geri_bildirim', 0)} geri bildirim "
-                    f"<span style='color:#10b981;'>✓{_geri_bld.get('uygulandi', 0)}</span> "
-                    f"<span style='color:#f59e0b;'>✗{_geri_bld.get('uygulanmadi', 0)}</span></div>"
-                    f"<div style='font-size:10px;color:rgba(150,210,255,0.45);margin-top:4px;'>"
+                    f"<span style='color:#0ca30c;'>✓{_geri_bld.get('uygulandi', 0)}</span> "
+                    f"<span style='color:#c98500;'>✗{_geri_bld.get('uygulanmadi', 0)}</span></div>"
+                    f"<div style='font-size:10px;color:rgba(107,122,147,0.45);margin-top:4px;'>"
                     f"{_geri_bld.get('kayit', 0)} öneri kaydı</div>"
                 )
                 if _hazir:
-                    _govde += (f"<div style='font-size:10px;color:#10b981;margin-top:4px;'>"
+                    _govde += (f"<div style='font-size:10px;color:#0ca30c;margin-top:4px;'>"
                                f"öğrenmeye hazır: {', '.join(_hazir[:2])}</div>")
                 else:
-                    _govde += ("<div style='font-size:10px;color:rgba(180,220,255,0.4);"
+                    _govde += ("<div style='font-size:10px;color:rgba(107,122,147,0.4);"
                                "margin-top:4px;'>öğrenme beklemede (kural başına 5 gerekli)</div>")
                 _red = _geri_bld.get("en_cok_red") or []
                 if _red:
-                    _govde += (f"<div style='font-size:10px;color:#f59e0b;margin-top:4px;'>"
+                    _govde += (f"<div style='font-size:10px;color:#c98500;margin-top:4px;'>"
                                f"en çok reddedilen: {_red[0].get('kural')} ({_red[0].get('adet')})</div>")
             else:
-                _govde = ("<div style='font-size:12px;color:rgba(180,220,255,0.4);'>"
+                _govde = ("<div style='font-size:12px;color:rgba(107,122,147,0.4);'>"
                           "Bildirim gelmedi</div>")
             st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>ÖNERİ GERİ BİLDİRİMİ</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
@@ -1497,11 +1495,11 @@ with tab2:
             ))
         fig_tr.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+            font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
             margin=dict(t=10,b=30,l=60,r=10), height=300,
-            xaxis=dict(gridcolor="rgba(56,189,248,0.07)", tickvals=list(range(1,13)),
+            xaxis=dict(gridcolor="rgba(19,50,115,0.07)", tickvals=list(range(1,13)),
                        ticktext=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"]),
-            yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+            yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                        title=dict(text="kWh", font=dict(size=10))),
             legend=dict(orientation="h", y=1.1, font=dict(size=11)),
         )
@@ -1523,10 +1521,10 @@ with tab2:
         ))
         fig_v.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#a0c8ff", family="Plus Jakarta Sans, Inter"),
+            font=dict(color="#4a5873", family="system-ui,-apple-system,Roboto,sans-serif"),
             margin=dict(t=10,b=30,l=50,r=10), height=220,
-            xaxis=dict(gridcolor="rgba(56,189,248,0.07)"),
-            yaxis=dict(gridcolor="rgba(56,189,248,0.07)",
+            xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+            yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                        title=dict(text="kWh/m²", font=dict(size=10))),
         )
         st.plotly_chart(fig_v, use_container_width=True, config={"displayModeBar": False})
@@ -1553,7 +1551,7 @@ with tab3:
         "Kazan_Dogalgaz_m3","Su_Tuketimi_m3",
     ] if c in filtre.columns]
 
-    st.markdown(f"<div style='font-size:11px;color:rgba(150,210,255,0.5);margin-bottom:8px;'>{len(filtre)} kayıt</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:8px;'>{len(filtre)} kayıt</div>", unsafe_allow_html=True)
     st.dataframe(filtre[goster_cols].sort_values("Tarih", ascending=False),
                  use_container_width=True, hide_index=True, height=450)
 
@@ -1562,12 +1560,12 @@ with tab4:
     st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
     st.markdown(
         f"""<div style='text-align:center;padding:30px 40px 20px;
-            background:rgba(15,23,42,0.4);border:1px solid rgba(56,189,248,0.15);
+            background:rgba(243,246,251,0.4);border:1px solid rgba(19,50,115,0.15);
             backdrop-filter:blur(8px);border-radius:16px;max-width:560px;margin:0 auto;'>
             <div style='font-size:40px;margin-bottom:12px;'>📄</div>
-            <div style='font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;
+            <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:14px;font-weight:700;
                 color:{renk};letter-spacing:2px;margin-bottom:6px;'>RAPOR OLUŞTUR</div>
-            <div style='font-size:12px;color:rgba(150,210,255,0.6);margin-bottom:0;'>
+            <div style='font-size:12px;color:rgba(107,122,147,0.6);margin-bottom:0;'>
                 {lok_info["isim"]} için tarih aralıklı enerji raporu
             </div>
         </div>""",
@@ -1584,7 +1582,7 @@ with tab4:
         _rp_min    = df["Tarih"].min().date() if not df.empty else _rp_ay_bas
 
         st.markdown(
-            "<div style='font-size:10px;color:rgba(0,212,255,0.5);letter-spacing:1px;"
+            "<div style='font-size:10px;color:rgba(42,120,214,0.5);letter-spacing:1px;"
             "text-transform:uppercase;margin-bottom:6px;'>📅 Tarih Aralığı</div>",
             unsafe_allow_html=True
         )
@@ -1601,7 +1599,7 @@ with tab4:
 
         _rp_gun = (_rp_bit - _rp_bas).days + 1
         st.markdown(
-            f"<div style='font-size:10px;color:rgba(150,210,255,0.4);margin:4px 0 12px;'>"
+            f"<div style='font-size:10px;color:rgba(107,122,147,0.4);margin:4px 0 12px;'>"
             f"📆 {_rp_bas.strftime('%d.%m.%Y')} → {_rp_bit.strftime('%d.%m.%Y')}  ({_rp_gun} gün)</div>",
             unsafe_allow_html=True
         )

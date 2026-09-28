@@ -40,27 +40,27 @@ METRIKLER = {
     "enerji": {
         "ad": "TOPLAM ENERJİ", "ikon": "⚡",
         "kolonlar": ["Toplam_Hastane_Tuketim_kWh"],
-        "birim": "kWh", "renk": "#38bdf8",
+        "birim": "kWh", "renk": "#2a78d6",
         "artis_iyi": False, "ikinci": "yogunluk",
     },
     "dogalgaz": {
         "ad": "DOĞALGAZ", "ikon": "🔥",
         "kolonlar": ["Kazan_Dogalgaz_m3", "Kojen_Dogalgaz_m3"],
-        "birim": "m³", "renk": "#f97316",
+        "birim": "m³", "renk": "#eb6834",
         "artis_iyi": False, "ikinci": "yogunluk",
         # Kırılım: toplam doğalgazın ne kadarı ısıtma (kazan), ne kadarı
         # elektrik üretimi (kojen). Kojeni olan hastane toplamda yüksek
         # çıkıyor ve "verimsiz" gibi okunuyordu — oysa o gaz elektriğe
         # dönüyor. Bu yüzden VERİMLİLİK yalnızca KAZAN gazına bakar.
-        "kirilim": [("Kazan (ısıtma)", ["Kazan_Dogalgaz_m3"], "#ef4444"),
-                    ("Kojen (elektrik)", ["Kojen_Dogalgaz_m3"], "#10b981")],
+        "kirilim": [("Kazan (ısıtma)", ["Kazan_Dogalgaz_m3"], "#d03b3b"),
+                    ("Kojen (elektrik)", ["Kojen_Dogalgaz_m3"], "#0ca30c")],
         "ik_kolonlar": ["Kazan_Dogalgaz_m3"],
         "ik_birim": "m³/m²/gün (kazan)", "ik_sutun": "KAZAN m³/M²/GÜN",
     },
     "sogutma": {
         "ad": "SOĞUTMA", "ikon": "❄️",
         "kolonlar": ["Toplam_Sogutma_Tuketim_kWh"],
-        "birim": "kWh", "renk": "#06b6d4",
+        "birim": "kWh", "renk": "#256abf",
         "artis_iyi": False, "ikinci": "oran",
         "oran_ad": "Soğutmanın toplam tüketimdeki payı",
         "ik_sutun": "SOĞUTMA PAYI",
@@ -68,7 +68,7 @@ METRIKLER = {
     "su": {
         "ad": "SU", "ikon": "💧",
         "kolonlar": ["Su_Tuketimi_m3"],
-        "birim": "m³", "renk": "#38bdf8",
+        "birim": "m³", "renk": "#2a78d6",
         "artis_iyi": False, "ikinci": "yogunluk",
         # m³/m²/gün ~0,0009 çıkıyor ve tabloda her satır 0.00 görünüyordu.
         # Litreye çevrilince (×1000) hastaneler arası fark okunur hale gelir.
@@ -77,7 +77,7 @@ METRIKLER = {
     "kojen": {
         "ad": "KOJEN ÜRETİM", "ikon": "⚙️",
         "kolonlar": ["Kojen_Uretim_kWh"],
-        "birim": "kWh", "renk": "#10b981",
+        "birim": "kWh", "renk": "#0ca30c",
         "artis_iyi": True, "ikinci": "oran",
         "oran_ad": "Kojen karşılama oranı (üretim / tüketim)",
         "ik_sutun": "KARŞILAMA",
@@ -96,11 +96,11 @@ if st.button("⬅ Geri", key="ozet_karsilastirma_geri"):
 
 st.markdown(
     f"<div style='text-align:center;margin:2px 0 14px;'>"
-    f"<div style='font-size:9px;color:rgba(120,170,220,0.55);letter-spacing:5px;"
+    f"<div style='font-size:9px;color:rgba(107,122,147,0.55);letter-spacing:5px;"
     f"text-transform:uppercase;'>ACIBADEM SAĞLIK GRUBU — LOKASYON KARŞILAŞTIRMA</div>"
-    f"<div style='font-family:Playfair Display,serif;font-size:30px;font-weight:600;"
-    f"color:#f8fafc;margin-top:4px;'>{_M['ikon']} {_M['ad']}</div>"
-    f"<div style='font-size:10px;color:rgba(120,170,220,0.45);margin-top:2px;'>"
+    f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:30px;font-weight:600;"
+    f"color:#0f1f3d;margin-top:4px;'>{_M['ikon']} {_M['ad']}</div>"
+    f"<div style='font-size:10px;color:rgba(107,122,147,0.45);margin-top:2px;'>"
     f"Detay için çubuğa ya da tablo satırına tıklayın</div></div>",
     unsafe_allow_html=True)
 
@@ -311,16 +311,16 @@ if _veri_olan < len(_satirlar):
 _kutular = _kutu("Σ", "TOPLAM", f"{_tr(_toplam)} {_M['birim']}", _alt_metin)
 if _en_iyi:
     _kutular += _kutu("🏆", "EN İYİ", _ik_metin(_en_iyi["ikinci"]),
-                      f"{_en_iyi['ad']} · {_IK_BIRIM}", "#10b981")
+                      f"{_en_iyi['ad']} · {_IK_BIRIM}", "#0ca30c")
 if _en_kotu:
     _kutular += _kutu("⚠️", "EN ZAYIF", _ik_metin(_en_kotu["ikinci"]),
-                      f"{_en_kotu['ad']} · {_IK_BIRIM}", "#f59e0b")
+                      f"{_en_kotu['ad']} · {_IK_BIRIM}", "#c98500")
 if _ort_ikinci is not None:
     _kutular += _kutu("⌀", "ORTALAMA", _ik_metin(_ort_ikinci), _IK_BIRIM)
 if _ESIK is not None:
     _kutular += _kutu("🎯", "HEDEF", ("≥ " if _M["artis_iyi"] else "≤ ") + _ik_metin(_ESIK),
                       f"{_esik_disi} lokasyon hedef dışı",
-                      "#ef4444" if _esik_disi else "#10b981")
+                      "#d03b3b" if _esik_disi else "#0ca30c")
 
 st.markdown(f"<div style='display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;'>"
             f"{_kutular}</div>", unsafe_allow_html=True)
@@ -336,21 +336,21 @@ def _bar(baslik, veriler, etiketler, renkler, metin, eksen_basligi, esik=None):
         x=veriler, y=etiketler, orientation="h",
         marker=dict(color=renkler, line=dict(width=0)),
         text=metin, textposition="outside",
-        textfont=dict(size=10, color="rgba(200,230,255,0.75)"),
+        textfont=dict(size=10, color="rgba(74,88,115,0.75)"),
         hovertemplate="%{y}: %{x:,.4g} — detay için tıklayın<extra></extra>",
     ))
     if esik is not None:
-        f.add_vline(x=esik, line_width=1.5, line_dash="dash", line_color="#ef4444",
+        f.add_vline(x=esik, line_width=1.5, line_dash="dash", line_color="#d03b3b",
                     annotation_text="hedef", annotation_position="top",
-                    annotation_font=dict(size=9, color="#ef4444"))
+                    annotation_font=dict(size=9, color="#d03b3b"))
     f.update_layout(
-        title=dict(text=baslik, font=dict(size=12, color="rgba(150,210,255,0.75)")),
+        title=dict(text=baslik, font=dict(size=12, color="rgba(107,122,147,0.75)")),
         height=max(320, 22 * len(etiketler) + 90),
         margin=dict(l=8, r=60, t=40, b=30),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="rgba(200,230,255,0.7)", size=10),
-        xaxis=dict(title=eksen_basligi, gridcolor="rgba(56,189,248,0.08)",
-                   zerolinecolor="rgba(56,189,248,0.15)"),
+        font=dict(color="rgba(74,88,115,0.7)", size=10),
+        xaxis=dict(title=eksen_basligi, gridcolor="rgba(19,50,115,0.08)",
+                   zerolinecolor="rgba(19,50,115,0.15)"),
         yaxis=dict(autorange="reversed"),
         showlegend=False, clickmode="event+select",
     )
@@ -374,13 +374,13 @@ with _sol:
         _f.update_layout(
             barmode="stack",
             title=dict(text=f"Toplam tüketim ({_M['birim']}) — kırılım",
-                       font=dict(size=12, color="rgba(150,210,255,0.75)")),
+                       font=dict(size=12, color="rgba(107,122,147,0.75)")),
             height=max(320, 22 * len(_satirlar) + 110),
             margin=dict(l=8, r=30, t=40, b=30),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="rgba(200,230,255,0.7)", size=10),
-            xaxis=dict(title=_M["birim"], gridcolor="rgba(56,189,248,0.08)",
-                       zerolinecolor="rgba(56,189,248,0.15)"),
+            font=dict(color="rgba(74,88,115,0.7)", size=10),
+            xaxis=dict(title=_M["birim"], gridcolor="rgba(19,50,115,0.08)",
+                       zerolinecolor="rgba(19,50,115,0.15)"),
             yaxis=dict(autorange="reversed"),
             legend=dict(orientation="h", y=1.06, x=0,
                         font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
@@ -409,11 +409,11 @@ with _sag:
         _iyi_renk = []
         for r in _ys:
             if r["kotu"] is not None:        # hedef eşiği tanımlıysa ona göre renklenir
-                _iyi_renk.append("#f97316" if r["kotu"] else "#10b981")
+                _iyi_renk.append("#eb6834" if r["kotu"] else "#0ca30c")
                 continue
             _iyi = (r["ikinci"] <= (_ort_ikinci or 0)) if _DUSUK_IYI \
                 else (r["ikinci"] >= (_ort_ikinci or 0))
-            _iyi_renk.append("#10b981" if _iyi else "#f59e0b")
+            _iyi_renk.append("#0ca30c" if _iyi else "#c98500")
         _olay2 = st.plotly_chart(
             _bar(_IK_BASLIK,
                  [r["ikinci"] for r in _ys],
@@ -432,8 +432,8 @@ with _sag:
 # HTML tablo tıklama olayı üretemediği için st.dataframe kullanılır; renkli
 # gösterim "Durum" sütununda korunur.
 st.markdown("<div style='font-size:10px;letter-spacing:2px;"
-            "color:rgba(56,189,248,0.6);margin:6px 0 4px;'>DETAY TABLOSU "
-            "<span style='letter-spacing:0;color:rgba(120,170,220,0.45);'>"
+            "color:rgba(19,50,115,0.6);margin:6px 0 4px;'>DETAY TABLOSU "
+            "<span style='letter-spacing:0;color:rgba(107,122,147,0.45);'>"
             "— satıra tıklayın</span></div>",
             unsafe_allow_html=True)
 

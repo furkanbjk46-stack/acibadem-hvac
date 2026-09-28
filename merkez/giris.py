@@ -329,12 +329,11 @@ def _stil():
     arka = ("background-image:url('%s') !important;" % uri) if uri else ""
     st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-
-/* Arka plan görseli — koyulaştırma + vinyet ile metin okunurluğu korunur.
-   (Görsel cyan baskın olduğu için doygunluğa dokunulmaz.) */
+/* Açık tema zemini: beyaz, çok hafif mavi ışıltılar. Koyu fotoğraf
+   arka plan kaldırıldı — lacivert metin üzerinde okunmuyordu. */
 [data-testid="stAppViewContainer"]{
   %s
+  background-color:#ffffff !important;
   background-size:cover !important;
   background-position:center !important;
   background-attachment:fixed !important;
@@ -342,8 +341,9 @@ def _stil():
 [data-testid="stAppViewContainer"]::before{
   content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
   background:
-    radial-gradient(ellipse at 50%% 50%%, rgba(2,6,23,0.34) 0%%, rgba(2,6,23,0.76) 100%%),
-    linear-gradient(180deg, rgba(2,6,23,0.45) 0%%, transparent 30%%, rgba(2,6,23,0.58) 100%%);
+    radial-gradient(ellipse at 18%% 12%%, rgba(58,160,224,0.10) 0%%, transparent 55%%),
+    radial-gradient(ellipse at 82%% 78%%, rgba(19,50,115,0.08) 0%%, transparent 55%%),
+    linear-gradient(180deg, #ffffff 0%%, #f7f9fd 100%%);
 }
 [data-testid="stHeader"], [data-testid="stToolbar"]{background:transparent !important;}
 [data-testid="stDecoration"]{display:none !important;}   /* ustteki renkli serit */
@@ -360,20 +360,18 @@ footer, #MainMenu{visibility:hidden;}
 .st-key-giris_panel{
   max-width:780px !important;
   margin:0 auto !important;
-  background:rgba(15,23,42,0.40) !important;
-  backdrop-filter:blur(22px) saturate(140%%) !important;
-  -webkit-backdrop-filter:blur(22px) saturate(140%%) !important;
-  border:1px solid rgba(56,189,248,0.22) !important;
+  background:#ffffff !important;
+  border:1px solid rgba(19,50,115,0.11) !important;
   border-radius:18px !important;
   padding:40px 38px !important;
-  box-shadow:0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+  box-shadow:0 1px 2px rgba(19,50,115,.04),0 24px 60px -28px rgba(19,50,115,.35) !important;
 }
 .st-key-giris_panel [data-testid="stVerticalBlock"]{gap:0.35rem;}
 
 /* Iki yariyi ayiran dikey cizgi (tasarimdaki bolunmus ekran gorunumu) */
 .st-key-giris_panel [data-testid="stHorizontalBlock"]{align-items:stretch;}
 .st-key-giris_panel [data-testid="stColumn"]:first-of-type{
-  border-right:1px solid rgba(56,189,248,0.16);
+  border-right:1px solid rgba(19,50,115,0.16);
   padding-right:34px !important;
 }
 .st-key-giris_panel [data-testid="stColumn"]:last-of-type{
@@ -383,56 +381,62 @@ footer, #MainMenu{visibility:hidden;}
 /* Sol yari: marka ustte, istatistikler altta */
 .g-sol{display:flex;flex-direction:column;justify-content:space-between;min-height:236px;}
 
-.g-ust{font-family:'Plus Jakarta Sans',sans-serif;font-size:8.5px;letter-spacing:3.4px;
-       color:#94a3b8;text-transform:uppercase;}
-.g-mrk{font-family:'Playfair Display',serif;font-size:31px;color:#f8fafc;font-weight:600;
-       letter-spacing:1px;line-height:1.15;margin-top:5px;text-shadow:0 2px 22px rgba(0,0,0,0.55);}
-.g-alt{font-family:'Plus Jakarta Sans',sans-serif;font-size:9.5px;letter-spacing:2.6px;
-       color:#38bdf8;text-transform:uppercase;margin-top:7px;}
+.g-ust{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8.5px;letter-spacing:3.4px;
+       color:#6b7a93;text-transform:uppercase;}
+.g-mrk{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:31px;color:#0f1f3d;font-weight:600;
+       letter-spacing:1px;line-height:1.15;margin-top:5px;}
+.g-alt{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:9.5px;letter-spacing:2.6px;
+       color:#2a78d6;text-transform:uppercase;margin-top:7px;}
 .g-istat{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;
-         border-bottom:1px solid rgba(56,189,248,0.14);font-size:10.5px;color:#cbd5e1;
-         font-family:'Plus Jakarta Sans',sans-serif;}
+         border-bottom:1px solid rgba(19,50,115,0.14);font-size:10.5px;color:#4a5873;
+         font-family:system-ui,-apple-system,Roboto,sans-serif;}
 .g-istat:last-child{border:none;}
-.g-istat b{font-family:'Playfair Display',serif;font-size:15px;color:#38bdf8;font-weight:700;
-           text-shadow:0 0 15px rgba(56,189,248,0.45);}
-.g-nokta{display:inline-block;width:6px;height:6px;border-radius:50%%;background:#10b981;
-         margin-right:7px;box-shadow:0 0 9px #10b981;}
-.g-kucuk{font-size:9.5px;color:#64748b;text-align:center;margin-top:12px;
-         font-family:'Plus Jakarta Sans',sans-serif;}
+.g-istat b{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:15px;color:#2a78d6;font-weight:700;
+           }
+.g-nokta{display:inline-block;width:6px;height:6px;border-radius:50%%;background:#0ca30c;
+         margin-right:7px;}
+.g-kucuk{font-size:9.5px;color:#6b7a93;text-align:center;margin-top:12px;
+         font-family:system-ui,-apple-system,Roboto,sans-serif;}
 
 /* ── Streamlit girdilerini tasarıma uydur ── */
 .st-key-giris_panel [data-testid="stTextInput"] input{
-  background:rgba(2,6,23,0.42) !important;
-  border:1px solid rgba(56,189,248,0.22) !important;
-  border-radius:9px !important;color:#e2e8f0 !important;
-  font-family:'Plus Jakarta Sans',sans-serif !important;font-size:13px !important;
+  background:#f7f9fd !important;
+  border:1px solid rgba(19,50,115,0.16) !important;
+  border-radius:9px !important;color:#0f1f3d !important;
+  font-family:system-ui,-apple-system,Roboto,sans-serif !important;font-size:13px !important;
   padding:11px 13px !important;
 }
 .st-key-giris_panel [data-testid="stTextInput"] input:focus{
-  border-color:rgba(56,189,248,0.65) !important;
-  box-shadow:0 0 0 3px rgba(56,189,248,0.13) !important;
+  border-color:rgba(19,50,115,0.65) !important;
+  box-shadow:0 0 0 3px rgba(19,50,115,0.13) !important;
 }
 .st-key-giris_panel [data-testid="stTextInput"] label p{
   font-size:9px !important;letter-spacing:1.8px !important;text-transform:uppercase !important;
-  color:#94a3b8 !important;font-family:'Plus Jakarta Sans',sans-serif !important;
+  color:#6b7a93 !important;font-family:system-ui,-apple-system,Roboto,sans-serif !important;
 }
 /* Buton — form icindeki gonder butonu .stButton DEGIL,
    [data-testid="stFormSubmitButton"] altindadir; ikisi de hedeflenir. */
 .st-key-giris_panel .stButton button,
 .st-key-giris_panel [data-testid="stFormSubmitButton"] button{
   width:100%% !important;border-radius:9px !important;padding:11px !important;
-  border:1px solid rgba(56,189,248,0.45) !important;
-  background:linear-gradient(180deg, rgba(14,165,233,0.30), rgba(14,165,233,0.16)) !important;
-  color:#e0f2fe !important;font-size:11.5px !important;letter-spacing:2.4px !important;
+  border:1px solid #133273 !important;
+  background:linear-gradient(180deg,#1d4f9c,#133273) !important;
+  color:#ffffff !important;font-size:11.5px !important;letter-spacing:2.4px !important;
   text-transform:uppercase !important;font-weight:600 !important;
-  font-family:'Plus Jakarta Sans',sans-serif !important;
-  box-shadow:0 6px 22px rgba(14,165,233,0.18) !important;
+  font-family:system-ui,-apple-system,Roboto,sans-serif !important;
+  box-shadow:0 8px 22px -10px rgba(19,50,115,0.55) !important;
   transition:background .18s ease, border-color .18s ease !important;
+}
+.st-key-giris_panel .stButton button p,
+.st-key-giris_panel [data-testid="stFormSubmitButton"] button p,
+.st-key-giris_panel .stButton button div,
+.st-key-giris_panel [data-testid="stFormSubmitButton"] button div{
+  color:#ffffff !important;
 }
 .st-key-giris_panel .stButton button:hover,
 .st-key-giris_panel [data-testid="stFormSubmitButton"] button:hover{
-  background:linear-gradient(180deg, rgba(14,165,233,0.42), rgba(14,165,233,0.24)) !important;
-  border-color:rgba(56,189,248,0.75) !important;
+  background:linear-gradient(180deg,#245ab3,#16295c) !important;
+  border-color:#0f2a5e !important;
 }
 /* Form kabini gorunmez olsun — panel zaten cam kutuyu cizer */
 .st-key-giris_panel [data-testid="stForm"]{
@@ -596,15 +600,15 @@ def _bekleme_ekrani():
       .g-bekle{display:flex;flex-direction:column;align-items:center;
                justify-content:center;min-height:52vh;text-align:center;}
       .g-bekle .halka{width:34px;height:34px;margin-bottom:20px;border-radius:50%;
-        border:2px solid rgba(56,189,248,0.22);border-top-color:#38bdf8;
+        border:2px solid rgba(19,50,115,0.22);border-top-color:#2a78d6;
         animation:gDon 0.9s linear infinite;}
       @keyframes gDon{to{transform:rotate(360deg);}}
-      .g-bekle .yazi{font-family:'Plus Jakarta Sans',sans-serif;font-size:10px;
-        letter-spacing:2.6px;text-transform:uppercase;color:#94a3b8;margin-top:10px;}
+      .g-bekle .yazi{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:10px;
+        letter-spacing:2.6px;text-transform:uppercase;color:#6b7a93;margin-top:10px;}
     </style>
     <div class="g-bekle">
       <div class="halka"></div>
-      <div style="font-family:'Playfair Display',serif;font-size:30px;color:#f8fafc;
+      <div style="font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:30px;color:#0f1f3d;
                   font-weight:600;letter-spacing:1px;">SYNAPSE</div>
       <div class="yazi">Oturum doğrulanıyor</div>
     </div>
@@ -681,11 +685,11 @@ def _tani_ekrani(parola_hash: str):
     import streamlit.components.v1 as components
     components.html("""
     <div style="font-family:ui-monospace,Consolas,monospace;font-size:12px;
-                color:#cbd5e1;background:#0b1220;border:1px solid #1e3a5f;
+                color:#4a5873;background:#ffffff;border:1px solid #1e3a5f;
                 border-radius:8px;padding:12px;line-height:1.75">
     <script>
       function yaz(k, v){
-        document.write('<div><b style="color:#38bdf8">' + k + ':</b> ' + v + '</div>');
+        document.write('<div><b style="color:#2a78d6">' + k + ':</b> ' + v + '</div>');
       }
       var adlar = document.cookie.split(';').map(function(c){
         return c.trim().split('=')[0];

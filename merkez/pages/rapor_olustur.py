@@ -27,7 +27,6 @@ giris.giris_kapisi()
 # ── CSS ──────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap');
 html, body, [data-testid="stAppViewContainer"] { background: #162d47 !important; }
 [data-testid="stAppViewContainer"] { background: radial-gradient(ellipse at 50% 40%, #1a3555 0%, #162d47 70%) !important; }
 [data-testid="stHeader"] { background: transparent !important; }
@@ -36,38 +35,38 @@ html, body, [data-testid="stAppViewContainer"] { background: #162d47 !important;
 #MainMenu { display: none !important; }
 * { font-family: 'Inter', sans-serif; }
 .sec {
-    font-family: 'Orbitron', sans-serif;
+    font-family: system-ui,-apple-system,Roboto,sans-serif, sans-serif;
     font-size: 9px; font-weight: 700;
-    color: rgba(0,212,255,0.5);
+    color: rgba(42,120,214,0.5);
     letter-spacing: 3px; text-transform: uppercase;
     padding: 4px 0 10px; margin-top: 20px;
-    border-bottom: 1px solid rgba(0,212,255,0.12);
+    border-bottom: 1px solid rgba(42,120,214,0.12);
 }
 [data-testid="stRadio"] label {
     background: rgba(14,42,85,0.65) !important;
-    border: 1px solid rgba(0,212,255,0.30) !important;
+    border: 1px solid rgba(42,120,214,0.30) !important;
     border-radius: 12px !important;
     padding: 14px 28px !important;
-    color: #a0c8ff !important;
+    color: #4a5873 !important;
     font-weight: 600 !important;
     font-size: 14px !important;
     min-width: 150px;
     text-align: center;
 }
 .stButton > button {
-    background: rgba(0,212,255,0.1) !important;
-    color: #00d4ff !important;
-    border: 1px solid rgba(0,212,255,0.35) !important;
+    background: rgba(42,120,214,0.1) !important;
+    color: #2a78d6 !important;
+    border: 1px solid rgba(42,120,214,0.35) !important;
     border-radius: 12px !important;
     font-weight: 700 !important;
     font-size: 15px !important;
     padding: 12px 32px !important;
 }
-.stButton > button:hover { background: rgba(0,212,255,0.22) !important; }
+.stButton > button:hover { background: rgba(42,120,214,0.22) !important; }
 .stDownloadButton > button {
-    background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(0,212,255,0.15)) !important;
-    color: #10b981 !important;
-    border: 1px solid rgba(16,185,129,0.45) !important;
+    background: linear-gradient(135deg, rgba(12,163,12,0.2), rgba(42,120,214,0.15)) !important;
+    color: #0ca30c !important;
+    border: 1px solid rgba(12,163,12,0.45) !important;
     border-radius: 12px !important;
     font-weight: 700 !important;
     font-size: 16px !important;
@@ -80,33 +79,33 @@ html, body, [data-testid="stAppViewContainer"] { background: #162d47 !important;
 # ── Lokasyon tanımları (app_merkez.py ile senkron) ────────
 HASTANELER = {
     # ── İstanbul ──
-    "maslak":        {"isim": "Acibadem Maslak",         "kisa": "MASLAK",      "m2": 15000, "renk": "#00d4ff"},
-    "altunizade":    {"isim": "Acibadem Altunizade",     "kisa": "ALTUNIZADE",  "m2": 10000, "renk": "#f59e0b"},
-    "kozyatagi":     {"isim": "Acibadem Kozyatagi",      "kisa": "KOZYATAGI",   "m2": 12000, "renk": "#10b981"},
-    "taksim":        {"isim": "Acibadem Taksim",         "kisa": "TAKSIM",      "m2":  8000, "renk": "#a855f7"},
-    "atakent":       {"isim": "Acibadem Atakent",        "kisa": "ATAKENT",     "m2": 20000, "renk": "#f97316"},
-    "atasehir":      {"isim": "Acibadem Atasehir",       "kisa": "ATASEHIR",    "m2": 14000, "renk": "#06b6d4"},
+    "maslak":        {"isim": "Acibadem Maslak",         "kisa": "MASLAK",      "m2": 15000, "renk": "#2a78d6"},
+    "altunizade":    {"isim": "Acibadem Altunizade",     "kisa": "ALTUNIZADE",  "m2": 10000, "renk": "#c98500"},
+    "kozyatagi":     {"isim": "Acibadem Kozyatagi",      "kisa": "KOZYATAGI",   "m2": 12000, "renk": "#0ca30c"},
+    "taksim":        {"isim": "Acibadem Taksim",         "kisa": "TAKSIM",      "m2":  8000, "renk": "#4a3aa7"},
+    "atakent":       {"isim": "Acibadem Atakent",        "kisa": "ATAKENT",     "m2": 20000, "renk": "#eb6834"},
+    "atasehir":      {"isim": "Acibadem Atasehir",       "kisa": "ATASEHIR",    "m2": 14000, "renk": "#256abf"},
     "bakirkoy":      {"isim": "Acibadem Bakirkoy",       "kisa": "BAKIRKOY",    "m2": 12000, "renk": "#84cc16"},
-    "fulya":         {"isim": "Acibadem Fulya",          "kisa": "FULYA",       "m2":  9000, "renk": "#e879f9"},
+    "fulya":         {"isim": "Acibadem Fulya",          "kisa": "FULYA",       "m2":  9000, "renk": "#e87ba4"},
     "international": {"isim": "Acibadem International",  "kisa": "INTERNAT.",   "m2": 18000, "renk": "#14b8a6"},
     "kadikoy":       {"isim": "Acibadem Kadikoy",        "kisa": "KADIKOY",     "m2":  8000, "renk": "#ec4899"},
-    "kartal":        {"isim": "Acibadem Kartal",         "kisa": "KARTAL",      "m2": 11000, "renk": "#ef4444"},
+    "kartal":        {"isim": "Acibadem Kartal",         "kisa": "KARTAL",      "m2": 11000, "renk": "#d03b3b"},
     # ── Ankara ──
     "ankara":          {"isim": "Acibadem Ankara",           "kisa": "ANKARA",      "m2": 16000, "renk": "#fb7185"},
     "bayindir":        {"isim": "Acibadem Bayindir Sogutozu", "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
     # ── Bursa ──
-    "bursa":           {"isim": "Acibadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#fbbf24"},
+    "bursa":           {"isim": "Acibadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#c98500"},
     # ── Kocaeli ──
-    "kocaeli":         {"isim": "Acibadem Kocaeli",           "kisa": "KOCAELI",     "m2": 10000, "renk": "#34d399"},
+    "kocaeli":         {"isim": "Acibadem Kocaeli",           "kisa": "KOCAELI",     "m2": 10000, "renk": "#0ca30c"},
     # ── Eskişehir ──
     "eskisehir":       {"isim": "Acibadem Eskisehir",         "kisa": "ESKISEHIR",   "m2":  9000, "renk": "#818cf8"},
     # ── İzmir ──
-    "izmir":           {"isim": "Acibadem Izmir Kent",        "kisa": "IZMIR",       "m2": 15000, "renk": "#38bdf8"},
+    "izmir":           {"isim": "Acibadem Izmir Kent",        "kisa": "IZMIR",       "m2": 15000, "renk": "#2a78d6"},
     # ── Kayseri ──
     "kayseri":         {"isim": "Acibadem Kayseri",           "kisa": "KAYSERI",     "m2": 11000, "renk": "#a78bfa"},
     # ── Adana ──
     "adana":           {"isim": "Acibadem Adana",             "kisa": "ADANA",       "m2": 12000, "renk": "#f472b6"},
-    "adana_ortopedia": {"isim": "Acibadem Adana Ortopedia",   "kisa": "ADANA ORT.",  "m2":  5000, "renk": "#e879f9"},
+    "adana_ortopedia": {"isim": "Acibadem Adana Ortopedia",   "kisa": "ADANA ORT.",  "m2":  5000, "renk": "#e87ba4"},
     # ── Bodrum ──
     "bodrum":          {"isim": "Acibadem Bodrum",            "kisa": "BODRUM",      "m2":  7000, "renk": "#2dd4bf"},
 }
@@ -215,9 +214,9 @@ with col_geri:
 with col_baslik:
     st.markdown(
         f"""<div style='padding:8px 0;'>
-        <div style='font-family:Orbitron,sans-serif;font-size:8px;color:rgba(0,212,255,0.45);
+        <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;color:rgba(42,120,214,0.45);
                     letter-spacing:5px;text-transform:uppercase;'>ACIBADEM SAGLIK GRUBU - RAPOR SISTEMI</div>
-        <div style='font-family:Orbitron,sans-serif;font-size:22px;font-weight:900;
+        <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:22px;font-weight:900;
                     color:{renk};text-shadow:0 0 25px rgba({rr},{rg},{rb},0.8);
                     letter-spacing:3px;'>{lok_info["isim"].upper()}</div>
         </div>""",
@@ -249,11 +248,11 @@ if _ss_bas and _ss_bit:
     period_str  = f"{bas.strftime('%d.%m.%Y')} → {bitis.strftime('%d.%m.%Y')}"
 
     st.markdown(
-        f"<div style='background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.25);"
+        f"<div style='background:rgba(42,120,214,0.07);border:1px solid rgba(42,120,214,0.25);"
         f"border-radius:10px;padding:10px 16px;margin-bottom:10px;"
-        f"font-size:12px;color:rgba(150,210,255,0.85);'>"
-        f"📅 <b style='color:#00d4ff;'>Seçilen Aralık:</b> {period_str}  "
-        f"<span style='color:rgba(150,210,255,0.5);'>({gun_fark} gün)</span>"
+        f"font-size:12px;color:rgba(107,122,147,0.85);'>"
+        f"📅 <b style='color:#2a78d6;'>Seçilen Aralık:</b> {period_str}  "
+        f"<span style='color:rgba(107,122,147,0.5);'>({gun_fark} gün)</span>"
         f"</div>",
         unsafe_allow_html=True
     )
@@ -296,10 +295,10 @@ else:
     period_df = df[(df["Tarih"] >= bas) & (df["Tarih"] <= bitis)].copy()
 
 st.markdown(
-    f"""<div style='background:rgba(0,20,50,0.5);border:1px solid rgba(0,212,255,0.12);
+    f"""<div style='background:#ffffff;border:1px solid rgba(42,120,214,0.12);
                    border-radius:10px;padding:12px 18px;margin:14px 0;
-                   font-size:12px;color:rgba(150,210,255,0.7);'>
-        <span style='color:rgba(0,212,255,0.8);font-weight:700;'>{period_type}</span>
+                   font-size:12px;color:rgba(107,122,147,0.7);'>
+        <span style='color:rgba(42,120,214,0.8);font-weight:700;'>{period_type}</span>
         &nbsp;·&nbsp; {period_str}
         &nbsp;·&nbsp; {len(period_df)} gunluk veri
     </div>""",
@@ -437,8 +436,8 @@ def _mpl_bar(period_df, lok_renk) -> Optional[bytes]:
                .sum().reset_index())
         gun.columns = ["Tarih", "kWh"]
 
-        BG    = "#0f172a"
-        GRID  = "#1e293b"
+        BG    = "#f3f6fb"
+        GRID  = "#e8edf4"
         rc    = _hex_to_rgb(lok_renk)
 
         fig, ax = plt.subplots(figsize=(8, 3.6), facecolor=BG)
@@ -448,11 +447,11 @@ def _mpl_bar(period_df, lok_renk) -> Optional[bytes]:
                       color=[rc] * len(gun), width=0.7, zorder=3)
         # Son bar vurgulu
         if bars:
-            bars[-1].set_color(_hex_to_rgb("#00d4ff"))
+            bars[-1].set_color(_hex_to_rgb("#2a78d6"))
 
         ax.set_title("Gunluk Tuketim (kWh)", color="white", fontsize=11, pad=8)
-        ax.set_ylabel("kWh", color="#94a3b8", fontsize=9)
-        ax.tick_params(colors="#94a3b8", labelsize=7)
+        ax.set_ylabel("kWh", color="#6b7a93", fontsize=9)
+        ax.tick_params(colors="#6b7a93", labelsize=7)
         ax.set_xticklabels([str(d) for d in gun["Tarih"]],
                             rotation=35, ha="right", fontsize=7)
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(
@@ -486,7 +485,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
         return None
 
     try:
-        BG = "#0f172a"
+        BG = "#f3f6fb"
 
         toplam = period_df["Toplam_Hastane_Tuketim_kWh"].sum() if "Toplam_Hastane_Tuketim_kWh" in period_df.columns else 0
         kojen  = period_df["Kojen_Uretim_kWh"].sum()   if "Kojen_Uretim_kWh"   in period_df.columns else 0
@@ -523,7 +522,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
                 at.set_fontsize(5)
                 at.set_color("white")
             ax.text(0, 0, center_text, ha="center", va="center",
-                    color="#00d4ff", fontsize=5.5, fontweight="bold",
+                    color="#2a78d6", fontsize=5.5, fontweight="bold",
                     multialignment="center")
             ax.set_title(title, color="white", fontsize=7, pad=4)
 
@@ -531,7 +530,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
             ax1,
             ["Kojen", "Sebeke", "Diger"],
             [kojen, sebeke, diger_k],
-            ["#10b981", "#a855f7", "#64748b"],
+            ["#0ca30c", "#4a3aa7", "#6b7a93"],
             f"{toplam:,.0f}\nkWh",
             "Kaynak Kirilimi",
         )
@@ -539,7 +538,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
             ax2,
             ["Sogutma", "MCC", "Diger"],
             [sogutma, mcc, diger_t],
-            ["#38bdf8", "#f59e0b", "#64748b"],
+            ["#2a78d6", "#c98500", "#6b7a93"],
             f"{toplam:,.0f}\nkWh",
             "Tuketim Kirilimi",
         )

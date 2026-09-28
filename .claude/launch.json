@@ -26,6 +26,12 @@
       "port": 8507
     },
     {
+      "name": "Tema Onizleme",
+      "runtimeExecutable": "streamlit",
+      "runtimeArgs": ["run", "merkez/_tema_onizleme.py", "--server.port=8508", "--server.headless=true"],
+      "port": 8508
+    },
+    {
       "name": "GM Merkez",
       "runtimeExecutable": "streamlit",
       "runtimeArgs": ["run", "merkez/app_merkez.py", "--server.port=8505", "--server.headless=true"],

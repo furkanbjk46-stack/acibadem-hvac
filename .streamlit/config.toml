@@ -1,0 +1,17 @@
+# Streamlit yapılandırması — ÇALIŞMA DİZİNİNDEN okunur.
+# Uygulamalar depo kökünden başlatıldığı için (SUNUM_BASLAT.bat, Streamlit
+# Cloud, launch.json) dosya burada olmalıdır; merkez/.streamlit okunmuyordu.
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+# Açık (beyaz) tema — Elektrik Analiz Paneli referansı.
+# Streamlit'in kendi bileşenleri (selectbox, tablo, radio, tarih seçici) de
+# bu paleti kullansın diye burada tanımlı; kart/grafik renkleri tema.py'de.
+base = "light"
+primaryColor = "#133273"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f3f6fb"
+textColor = "#0f1f3d"
+font = "sans serif"

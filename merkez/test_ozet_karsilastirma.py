@@ -215,10 +215,13 @@ import karsilastirma_panel as KP
 
 c("tr: binlik ayraci nokta", KP.tr(1234567) == "1.234.567", KP.tr(1234567))
 c("tr: ondalik virgul", KP.tr(12.34, 2) == "12,34", KP.tr(12.34, 2))
-c("durum_stil esik ustunu uyari rengiyle verir", "#f59e0b" in KP.durum_stil("Eşik üstü"))
-c("durum_stil hedef altini da uyari sayar", "#f59e0b" in KP.durum_stil("Hedef altı"))
-c("durum_stil normali yesil verir", "#10b981" in KP.durum_stil("Normal"))
-c("durum_stil bilinmeyeni sonuk verir", "rgba" in KP.durum_stil("—"))
+# Renkler tema.py'den gelir; sabit yazilirsa tema degisince test yaniltir.
+import tema as TEMA
+
+c("durum_stil esik ustunu uyari rengiyle verir", TEMA.UYARI_YAZI in KP.durum_stil("Eşik üstü"))
+c("durum_stil hedef altini da uyari sayar", TEMA.UYARI_YAZI in KP.durum_stil("Hedef altı"))
+c("durum_stil normali yesil verir", TEMA.IYI_YAZI in KP.durum_stil("Normal"))
+c("durum_stil bilinmeyeni sonuk verir", TEMA.SOLUK in KP.durum_stil("—"))
 
 _ad2id = {"Maslak": "maslak", "Altunizade": "altunizade"}
 c("grafik secimi y ekseninden lokasyon bulur",
