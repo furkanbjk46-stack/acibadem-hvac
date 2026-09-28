@@ -91,7 +91,7 @@ st.markdown(
     f"<div style='text-align:center;margin:2px 0 14px;'>"
     f"<div style='font-size:9px;color:#46536b;letter-spacing:5px;"
     f"text-transform:uppercase;'>ACIBADEM SAĞLIK GRUBU — LOKASYON KARŞILAŞTIRMA</div>"
-    f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:30px;font-weight:600;"
+    f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:30px;font-weight:600;"
     f"color:#0f1f3d;margin-top:4px;'>{_M['ikon']} {_M['ad']}</div>"
     f"<div style='font-size:10px;color:#46536b;margin-top:2px;'>"
     f"Detay için çubuğa ya da tablo satırına tıklayın</div></div>",

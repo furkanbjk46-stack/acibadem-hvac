@@ -28,6 +28,9 @@ giris.giris_kapisi()
 # ── CSS ──────────────────────────────────────────────
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+* { font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif; }
+body, .stApp { font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
 /* ── ARKA PLAN — app_merkez ile aynı ── */
 html, body, [data-testid="stAppViewContainer"],
 [data-testid="stAppViewContainer"] > div:first-child,
@@ -46,7 +49,7 @@ button[kind="header"],
 header[data-testid="stHeader"] button { display: none !important; visibility: hidden !important; }
 
 /* ── GENEL YAZI ── */
-* { font-family: system-ui,-apple-system,Roboto,sans-serif, 'Inter', sans-serif; }
+* { font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif, 'Inter', sans-serif; }
 span[data-testid="stIconMaterial"],
 [data-testid="stExpanderToggleIcon"] span,
 button span[data-testid="stIconMaterial"] {
@@ -61,7 +64,7 @@ p, li, span, div { color: #0f1f3d; }
 
 /* ── BÖLÜM BAŞLIĞI ── */
 .sec {
-    font-family: system-ui,-apple-system,Roboto,sans-serif;
+    font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif;
     font-size: 10px; font-weight: 700;
     color: #133273;
     letter-spacing: 2px; text-transform: uppercase;
@@ -82,7 +85,7 @@ p, li, span, div { color: #0f1f3d; }
     color: #2a78d6 !important;
     font-size: 22px !important;
     font-weight: 800 !important;
-    font-family: system-ui,-apple-system,Roboto,sans-serif !important;
+    font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important;
     
 }
 [data-testid="stMetricLabel"]  {
@@ -141,7 +144,7 @@ p, li, span, div { color: #0f1f3d; }
     border: 1px solid rgba(19,50,115,0.22) !important;
     border-radius: 10px !important;
     font-weight: 600 !important;
-    font-family: system-ui,-apple-system,Roboto,sans-serif !important;
+    font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important;
     transition: all 0.2s !important;
 }
 .stButton > button:hover {
@@ -436,9 +439,9 @@ with col_baslik:
     st.markdown(
         f"""<div style='display:flex;align-items:center;justify-content:space-between;padding:8px 0;flex-wrap:wrap;gap:8px;'>
           <div>
-            <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;color:#2a78d6;
+            <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#2a78d6;
                         letter-spacing:5px;text-transform:uppercase;'>ACIBADEM SAĞLIK GRUBU — LOKASYON DETAY</div>
-            <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:22px;font-weight:900;
+            <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:22px;font-weight:900;
                         color:{renk};text-shadow:0 0 25px rgba({rr},{rg},{rb},0.8);
                         letter-spacing:3px;'>{lok_info["isim"].upper()}</div>
           </div>
@@ -522,7 +525,7 @@ with tab1:
                 <div style='min-width:0;'>
                   <div style='font-size:8px;color:#46536b;letter-spacing:1px;
                               text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>
-                  <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:16px;font-weight:900;
+                  <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:16px;font-weight:900;
                               color:{renk_hex};text-shadow:0 0 10px rgba({r2},{g2},{b2},0.6);line-height:1.2;'>
                       {deger}<span style='font-size:8px;color:#46536b;margin-left:3px;'>{birim}</span>
                   </div>{alt_html}
@@ -635,7 +638,7 @@ with tab1:
             ))
             fig.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                 margin=dict(t=4, b=20, l=50, r=10), height=355,
                 xaxis=dict(gridcolor="rgba(19,50,115,0.07)", showgrid=True),
                 yaxis=dict(gridcolor="rgba(19,50,115,0.07)", showgrid=True,
@@ -690,7 +693,7 @@ with tab1:
                 ))
                 fig_ch.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=50), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(title=dict(text="Set °C", font=dict(size=10)),
@@ -718,7 +721,7 @@ with tab1:
                 ))
                 fig_v.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
@@ -742,7 +745,7 @@ with tab1:
                 ))
                 fig_su.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
@@ -765,7 +768,7 @@ with tab1:
                 ))
                 fig_sb.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
@@ -793,7 +796,7 @@ with tab1:
                 fig_tr.update_layout(
                     barmode="stack",
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10, b=20, l=50, r=10), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
@@ -833,7 +836,7 @@ with tab1:
                 ))
                 fig_mcc.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
@@ -859,7 +862,7 @@ with tab1:
                 ))
                 fig_sog.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
@@ -883,7 +886,7 @@ with tab1:
                 ))
                 fig_kaz.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=10), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
@@ -918,7 +921,7 @@ with tab1:
                 ))
                 fig_ay.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=30,b=20,l=50,r=10), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)", title="Gün"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)", title=dict(text="kWh", font=dict(size=10))),
@@ -987,7 +990,7 @@ with tab1:
                         f"<div style='display:flex;justify-content:space-between;align-items:center;"
                         f"padding:10px 14px;border-bottom:1px solid rgba(42,120,214,0.07);'>"
                         f"<span style='font-size:12px;color:#46536b;'>{baslik}</span>"
-                        f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:13px;font-weight:700;"
+                        f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:13px;font-weight:700;"
                         f"color:{renk_hex};text-shadow:0 0 8px rgba({r2},{g2},{b2},0.5);'>{deger}</span>"
                         f"</div>"
                     )
@@ -1036,7 +1039,7 @@ with tab1:
                     ))
                     fig.update_layout(
                         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                        font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                        font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                         margin=dict(t=52, b=28, l=10, r=10), height=360,
                         showlegend=False,
                         annotations=[dict(
@@ -1097,7 +1100,7 @@ with tab1:
                     ))
                 fig_kj.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                    font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10,b=20,l=50,r=50), height=370,
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
@@ -1128,7 +1131,7 @@ with tab1:
             f"<div>"
             f"<div style='font-size:8px;color:#46536b;letter-spacing:1px;"
             f"text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>"
-            f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:14px;font-weight:900;"
+            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;font-weight:900;"
             f"color:{renk_hex};text-shadow:0 0 8px rgba({r2},{g2},{b2},0.5);line-height:1.2;'>"
             f"{deger}<span style='font-size:8px;color:#46536b;margin-left:3px;'>{birim}</span>"
             f"</div></div></div>"
@@ -1279,7 +1282,7 @@ with tab1:
             "<details style='" + KART + "border:1px solid rgba(208,59,59,0.25);cursor:pointer;'>"
             "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>ARIZALI CIHAZLAR</div>"
-            "<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:28px;font-weight:900;"
+            "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:28px;font-weight:900;"
             "color:" + ar_renk + ";margin-bottom:4px;'>" + str(toplam_ariza) + "</div>"
             "<div style='font-size:9px;color:#46536b;margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
@@ -1301,7 +1304,7 @@ with tab1:
             "<details style='" + KART + "border:1px solid rgba(250,178,25,0.25);cursor:pointer;'>"
             "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>BAKIMDAKI CIHAZLAR</div>"
-            "<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:28px;font-weight:900;"
+            "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:28px;font-weight:900;"
             "color:" + bk_renk + ";margin-bottom:4px;'>" + str(toplam_bakim) + "</div>"
             "<div style='font-size:9px;color:#46536b;margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
@@ -1361,7 +1364,7 @@ with tab1:
             ",0.25);cursor:pointer;'>"
             "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>HVAC ANALIZ DURUMU</div>"
-            "<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:28px;font-weight:900;"
+            "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:28px;font-weight:900;"
             "color:" + _hv_renk + ";margin-bottom:4px;'>" + str(_hv_sorun) + "</div>"
             "<div style='font-size:10px;color:#46536b;margin-bottom:2px;'>"
             + (" · ".join(_hv_ozet) if _hv_ozet else "Tüm HVAC sistemleri normal") + "</div>"
@@ -1495,7 +1498,7 @@ with tab2:
             ))
         fig_tr.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+            font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
             margin=dict(t=10,b=30,l=60,r=10), height=300,
             xaxis=dict(gridcolor="rgba(19,50,115,0.07)", tickvals=list(range(1,13)),
                        ticktext=["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"]),
@@ -1521,7 +1524,7 @@ with tab2:
         ))
         fig_v.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#24324d", family="system-ui,-apple-system,Roboto,sans-serif"),
+            font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
             margin=dict(t=10,b=30,l=50,r=10), height=220,
             xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
             yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
@@ -1563,7 +1566,7 @@ with tab4:
             background:#ffffff;border:1px solid rgba(19,50,115,0.15);
             border-radius:16px;max-width:560px;margin:0 auto;'>
             <div style='font-size:40px;margin-bottom:12px;'>📄</div>
-            <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:14px;font-weight:700;
+            <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;font-weight:700;
                 color:{renk};letter-spacing:2px;margin-bottom:6px;'>RAPOR OLUŞTUR</div>
             <div style='font-size:12px;color:#46536b;margin-bottom:0;'>
                 {lok_info["isim"]} için tarih aralıklı enerji raporu

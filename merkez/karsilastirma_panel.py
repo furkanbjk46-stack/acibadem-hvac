@@ -29,7 +29,7 @@ def kutu(ikon, baslik, deger, alt, renk="#2a78d6"):
         f"border:1px solid rgba(19,50,115,0.22);border-radius:10px;padding:10px 12px;box-shadow:0 1px 2px rgba(19,50,115,.07),0 10px 24px -12px rgba(19,50,115,.28);'>"
         f"<div style='font-size:9px;color:#46536b;letter-spacing:1px;'>"
         f"{ikon} {baslik}</div>"
-        f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:20px;font-weight:700;"
+        f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:20px;font-weight:700;"
         f"color:{renk};margin-top:2px;'>{deger}</div>"
         f"<div style='font-size:9px;color:#46536b;'>{alt}</div></div>"
     )
@@ -123,7 +123,7 @@ def panel_govde(st, r, dag, ld, ctx):
     on = ctx.get("anahtar", "ozet_panel")
 
     st.markdown(
-        f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:22px;color:#0f1f3d;'>"
+        f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:22px;color:#0f1f3d;'>"
         f"{r.get('isim', r['ad'])}</div>"
         f"<div style='font-size:10px;color:#46536b;'>{M['ad']} · {ctx['secim']} · "
         f"{ctx['bas'].strftime('%d.%m.%Y')} → {ctx['bit'].strftime('%d.%m.%Y')}</div>",

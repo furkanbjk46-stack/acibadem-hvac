@@ -11,7 +11,7 @@ Yazı tipi: system-ui yığını (Windows'ta Segoe UI). Referansta harici font
 yoktur — Google Fonts çağrısı kaldırıldı, sayfa daha hızlı açılır.
 """
 
-FONT = 'system-ui,-apple-system,Roboto,sans-serif'
+FONT = 'Inter,system-ui,-apple-system,Segoe UI,sans-serif'
 
 # ── Yüzeyler ve metin ────────────────────────────────────────────────────
 SAYFA      = "#ffffff"

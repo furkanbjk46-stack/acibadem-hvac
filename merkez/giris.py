@@ -329,6 +329,9 @@ def _stil():
     arka = ("background-image:url('%s') !important;" % uri) if uri else ""
     st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+* { font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif; }
+body, .stApp { font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
 /* Açık tema zemini: beyaz, çok hafif mavi ışıltılar. Koyu fotoğraf
    arka plan kaldırıldı — lacivert metin üzerinde okunmuyordu. */
 [data-testid="stAppViewContainer"]{
@@ -381,29 +384,29 @@ footer, #MainMenu{visibility:hidden;}
 /* Sol yari: marka ustte, istatistikler altta */
 .g-sol{display:flex;flex-direction:column;justify-content:space-between;min-height:236px;}
 
-.g-ust{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8.5px;letter-spacing:3.4px;
+.g-ust{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8.5px;letter-spacing:3.4px;
        color:#46536b;text-transform:uppercase;}
-.g-mrk{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:31px;color:#0f1f3d;font-weight:600;
+.g-mrk{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:31px;color:#0f1f3d;font-weight:600;
        letter-spacing:1px;line-height:1.15;margin-top:5px;}
-.g-alt{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:9.5px;letter-spacing:2.6px;
+.g-alt{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:9.5px;letter-spacing:2.6px;
        color:#2a78d6;text-transform:uppercase;margin-top:7px;}
 .g-istat{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;
          border-bottom:1px solid rgba(19,50,115,0.14);font-size:10.5px;color:#24324d;
-         font-family:system-ui,-apple-system,Roboto,sans-serif;}
+         font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;}
 .g-istat:last-child{border:none;}
-.g-istat b{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:15px;color:#2a78d6;font-weight:700;
+.g-istat b{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;color:#2a78d6;font-weight:700;
            }
 .g-nokta{display:inline-block;width:6px;height:6px;border-radius:50%%;background:#0ca30c;
          margin-right:7px;}
 .g-kucuk{font-size:9.5px;color:#46536b;text-align:center;margin-top:12px;
-         font-family:system-ui,-apple-system,Roboto,sans-serif;}
+         font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;}
 
 /* ── Streamlit girdilerini tasarıma uydur ── */
 .st-key-giris_panel [data-testid="stTextInput"] input{
   background:#f7f9fd !important;
   border:1px solid rgba(19,50,115,0.16) !important;
   border-radius:9px !important;color:#0f1f3d !important;
-  font-family:system-ui,-apple-system,Roboto,sans-serif !important;font-size:13px !important;
+  font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif !important;font-size:13px !important;
   padding:11px 13px !important;
 }
 .st-key-giris_panel [data-testid="stTextInput"] input:focus{
@@ -412,7 +415,7 @@ footer, #MainMenu{visibility:hidden;}
 }
 .st-key-giris_panel [data-testid="stTextInput"] label p{
   font-size:9px !important;letter-spacing:1.8px !important;text-transform:uppercase !important;
-  color:#46536b !important;font-family:system-ui,-apple-system,Roboto,sans-serif !important;
+  color:#46536b !important;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif !important;
 }
 /* Buton — form icindeki gonder butonu .stButton DEGIL,
    [data-testid="stFormSubmitButton"] altindadir; ikisi de hedeflenir. */
@@ -423,7 +426,7 @@ footer, #MainMenu{visibility:hidden;}
   background:linear-gradient(180deg,#1d4f9c,#133273) !important;
   color:#ffffff !important;font-size:11.5px !important;letter-spacing:2.4px !important;
   text-transform:uppercase !important;font-weight:600 !important;
-  font-family:system-ui,-apple-system,Roboto,sans-serif !important;
+  font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif !important;
   box-shadow:0 8px 22px -10px rgba(19,50,115,0.55) !important;
   transition:background .18s ease, border-color .18s ease !important;
 }
@@ -603,12 +606,12 @@ def _bekleme_ekrani():
         border:2px solid rgba(19,50,115,0.22);border-top-color:#2a78d6;
         animation:gDon 0.9s linear infinite;}
       @keyframes gDon{to{transform:rotate(360deg);}}
-      .g-bekle .yazi{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:10px;
+      .g-bekle .yazi{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:10px;
         letter-spacing:2.6px;text-transform:uppercase;color:#46536b;margin-top:10px;}
     </style>
     <div class="g-bekle">
       <div class="halka"></div>
-      <div style="font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:30px;color:#0f1f3d;
+      <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:30px;color:#0f1f3d;
                   font-weight:600;letter-spacing:1px;">SYNAPSE</div>
       <div class="yazi">Oturum doğrulanıyor</div>
     </div>

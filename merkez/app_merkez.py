@@ -34,6 +34,18 @@ if ("bakim" not in st.query_params and st.session_state.get("giris_ok")
 # ============ CSS ============
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── TİPOGRAFİ ──
+   Kurumsal tek aile: Inter. Rakamlar tabular (tnum) — tablolarda ve
+   kartlarda alt alta hizalanır, para/kWh değerleri zıplamaz. */
+html, body, [data-testid="stAppViewContainer"], .stApp, button, input, select, textarea {
+    font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important;
+    font-feature-settings: "tnum" 1, "cv05" 1;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+h1,h2,h3,h4,h5,h6 { letter-spacing:-0.02em !important; font-weight:650 !important; }
 
 html, body, [data-testid="stAppViewContainer"] {
     background-color: #ffffff !important;
@@ -64,8 +76,8 @@ header[data-testid="stHeader"] button    { display: none !important; }
 }
 
 /* Tüm yazılar — lokasyon detay sayfası (st.container(key="detay_gecis_katmani") içinde inline exec ile çalışıyor) kendi renklerini korusun */
-h1:not(.st-key-detay_gecis_katmani *),h2:not(.st-key-detay_gecis_katmani *),h3:not(.st-key-detay_gecis_katmani *),h4:not(.st-key-detay_gecis_katmani *),h5:not(.st-key-detay_gecis_katmani *),h6:not(.st-key-detay_gecis_katmani *) { color: #0f1f3d !important; font-family: system-ui,-apple-system,Roboto,sans-serif !important; font-weight: 650 !important; }
-p:not(.st-key-detay_gecis_katmani *), span:not(.st-key-detay_gecis_katmani *), div:not(.st-key-detay_gecis_katmani *), label:not(.st-key-detay_gecis_katmani *) { color: #0f1f3d !important; font-family: system-ui,-apple-system,Roboto,sans-serif !important; }
+h1:not(.st-key-detay_gecis_katmani *),h2:not(.st-key-detay_gecis_katmani *),h3:not(.st-key-detay_gecis_katmani *),h4:not(.st-key-detay_gecis_katmani *),h5:not(.st-key-detay_gecis_katmani *),h6:not(.st-key-detay_gecis_katmani *) { color: #0f1f3d !important; font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important; font-weight: 650 !important; }
+p:not(.st-key-detay_gecis_katmani *), span:not(.st-key-detay_gecis_katmani *), div:not(.st-key-detay_gecis_katmani *), label:not(.st-key-detay_gecis_katmani *) { color: #0f1f3d !important; font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important; }
 
 /* Streamlit Material ikon istisnası — _arrow_right gibi ikonların bozulmaması için */
 span[data-testid="stIconMaterial"],
@@ -76,7 +88,7 @@ button span[data-testid="stIconMaterial"] {
 }
 
 /* Metrik */
-[data-testid="stMetricValue"]  { color: #2a78d6 !important; font-size: 22px !important; font-weight: 800 !important; font-family: system-ui,-apple-system,Roboto,sans-serif !important;  }
+[data-testid="stMetricValue"]  { color: #2a78d6 !important; font-size: 22px !important; font-weight: 800 !important; font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important;  }
 [data-testid="stMetricLabel"]  { color:#46536b !important; font-size: 10px !important; letter-spacing: 1px !important; text-transform: uppercase !important; }
 [data-testid="stMetricDelta"]  { color: #0ca30c !important; }
 [data-testid="metric-container"] {
@@ -130,7 +142,7 @@ button span[data-testid="stIconMaterial"] {
 .lok-scroll::-webkit-scrollbar-thumb { background: rgba(19,50,115,0.28); border-radius: 2px; }
 .lok-scroll::-webkit-scrollbar-thumb:hover { background: rgba(19,50,115,0.55); }
 
-.sec { font-family:system-ui,-apple-system,Roboto,sans-serif,system-ui,-apple-system,Roboto,sans-serif,serif; font-size:10px; color:#133273;
+.sec { font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif; font-size:10px; color:#133273;
        letter-spacing:2px; text-transform:uppercase; border-bottom:1px solid rgba(19,50,115,0.22);
        padding-bottom:5px; margin-bottom:10px; }
 
@@ -173,14 +185,14 @@ button span[data-testid="stIconMaterial"] {
 }
 @keyframes neon-breathe-sub {
   0%, 100% { opacity: 0.35; letter-spacing: 4px; }
-  50%       { opacity: 0.65; letter-spacing: 5px; }
+  50%       { opacity: 0.65; letter-spacing: 3.2px; }
 }
 
 .btn-refresh button {
     background: rgba(14, 165, 233, 0.15) !important;
     color: #2a78d6 !important; border: 1px solid rgba(14, 165, 233, 0.3) !important;
     border-radius: 6px !important; font-size: 11px !important;
-    padding: 4px 12px !important; font-family:system-ui,-apple-system,Roboto,sans-serif,sans-serif !important;
+    padding: 4px 12px !important; font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif,sans-serif !important;
 }
 .btn-refresh button:hover {
     background: rgba(14, 165, 233, 0.25) !important;
@@ -899,7 +911,7 @@ def _qr_bakim_sayfasi():
     st.markdown(f"""
     <div style="text-align:center; padding:8px 0 4px;">
       <div style="font-size:10px; color:#46536b; letter-spacing:2px;">ACIBADEM SYNAPSE — SAHA</div>
-      <div style="font-family:system-ui,-apple-system,Roboto,sans-serif; font-size:26px; font-weight:600; color:#0f1f3d;">
+      <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif; font-size:26px; font-weight:600; color:#0f1f3d;">
         🔧 Dijital Bakım Kartı
       </div>
     </div>
@@ -1040,15 +1052,15 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 # ============ HEADER ============
 st.markdown("""
 <div style="text-align:center; padding:12px 0 8px;">
-  <div style="font-family:system-ui,-apple-system,Roboto,sans-serif,sans-serif; font-size:11px; color:#46536b;
+  <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif,sans-serif; font-size:11px; color:#46536b;
               letter-spacing:3px; text-transform:uppercase;">
     ACIBADEM SAĞLIK GRUBU
   </div>
-  <div style="font-family:system-ui,-apple-system,Roboto,sans-serif,system-ui,-apple-system,Roboto,sans-serif,serif; font-size:34px; font-weight:600; color:#0f1f3d;
+  <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif; font-size:34px; font-weight:600; color:#0f1f3d;
               letter-spacing:1px; line-height:1.3;">
     SYNAPSE // Merkezi Veri Bağlantısı
   </div>
-  <div style="font-family:system-ui,-apple-system,Roboto,sans-serif,sans-serif; font-size:11px; color:#2a78d6;
+  <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif,sans-serif; font-size:11px; color:#2a78d6;
               letter-spacing:2px; margin-top:6px; text-transform:uppercase;">
     Operasyonel Zeka
   </div>
@@ -1094,7 +1106,7 @@ st.markdown("""
     background:rgba(243,246,251,0.55) !important;
     border:1px solid rgba(19,50,115,0.28) !important;
     color:#24324d !important;
-    font-family:system-ui,-apple-system,Roboto,sans-serif,sans-serif !important;
+    font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif,sans-serif !important;
     /* Simge butonu: kare oranli, ortalanmis */
     font-size:15px !important; line-height:1 !important;
     padding:0 !important; border-radius:9px !important;
@@ -1128,7 +1140,7 @@ if "127.0.0.1" in url or "localhost" in url:
         "background:rgba(250,178,25,0.16);border:1px solid rgba(250,178,25,0.55);"
         "color:#8a5a00;border-radius:8px;padding:5px 12px;font-size:10px;"
         "letter-spacing:1.6px;text-transform:uppercase;font-weight:700;"
-        "font-family:system-ui,-apple-system,Roboto,sans-serif;'>"
+        "font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;'>"
         "● Simülasyon — Örnek Veri</div>",
         unsafe_allow_html=True)
 
@@ -1353,7 +1365,7 @@ with sol:
         kwh_str   = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
         m2_lok    = lok_info.get("m2", 10000)
         verim_str = f"{kwh/m2_lok:.2f}".replace(".", ",") if kwh else "—"
-        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;color:#46536b;font-weight:700;">#{i+1}</span>' if i < 4 else ""
+        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#46536b;font-weight:700;">#{i+1}</span>' if i < 4 else ""
 
         # % değişim hesapla (dün vs önceki gün)
         onceki_kwh = onceki_gun_kwh(lok_id)
@@ -1392,12 +1404,12 @@ with sol:
             f'"></div>'
             f'</div>'
             f'<div style="flex:1;min-width:0;">'
-            f'<div style="font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:10px;font-weight:700;'
+            f'<div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:10px;font-weight:700;'
             f'color:{renk};letter-spacing:1.5px;'
             f'margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{lok_info["kisa"]}</div>'
             f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:5px;">{durum_lbl}</div>'
             f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">'
-            f'<span style="font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:16px;font-weight:900;'
+            f'<span style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:16px;font-weight:900;'
             f'color:{renk};line-height:1;">{kwh_str}</span>'
             f'<span style="font-size:8px;color:#46536b;">kWh</span>'
             f'<span style="margin-left:4px;">{degisim_html}</span>'
@@ -1406,7 +1418,7 @@ with sol:
             f'background:rgba(19,50,115,0.05);border-radius:5px;padding:3px 8px;'
             f'border:1px solid rgba(19,50,115,0.10);">'
             f'<span style="font-size:7px;color:#46536b;text-transform:uppercase;letter-spacing:1px;">kWh/m²/gün</span>'
-            f'<span style="font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:11px;color:#2a78d6;font-weight:700;">{verim_str}</span>'
+            f'<span style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:11px;color:#2a78d6;font-weight:700;">{verim_str}</span>'
             f'</div>'
             f'</div></div></a>'
         )
@@ -1566,7 +1578,7 @@ with sol:
                     ' <span style="font-size:9px;color:#133273;">›</span>'
                     if _ozet_key else ''}</span>
                 <span style="font-size:12px; font-weight:700; color:#2a78d6;
-                             font-family:system-ui,-apple-system,Roboto,sans-serif,system-ui,-apple-system,Roboto,sans-serif,serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _gk, _artis_iyi)}</span>
+                             font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _gk, _artis_iyi)}</span>
               </div>
               {_trend_html}"""
             _stil = ("padding:7px 10px; margin:3px 0; background:#ffffff;"
@@ -1679,7 +1691,7 @@ with merkez:
 * {{ margin:0; padding:0; box-sizing:border-box; }}
 body {{ background:#ffffff; }}
 #map {{ width:100%; height:100vh; background:#ffffff; }}
-.leaflet-container {{ background:#ffffff !important; font-family:system-ui,-apple-system,Roboto,sans-serif,sans-serif; }}
+.leaflet-container {{ background:#ffffff !important; font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif,sans-serif; }}
 .leaflet-popup-content-wrapper {{
     background:#ffffff !important;
     !important;
@@ -1826,7 +1838,7 @@ hospitals.forEach(function(h) {{
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="color:#0f1f3d;font-size:8px;font-family:system-ui,-apple-system,Roboto,sans-serif;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 3px rgba(255,255,255,0.95),0 0 6px rgba(255,255,255,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+'</div>',
+            html:'<div style="color:#0f1f3d;font-size:8px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-weight:700;white-space:nowrap;letter-spacing:1.5px;text-shadow:0 1px 3px rgba(255,255,255,0.95),0 0 6px rgba(255,255,255,0.9);padding-left:4px;padding-top:2px;">'+h.kisa+'</div>',
             iconSize:[100,16], iconAnchor:[-hs-2, hs-2]
         }}),
         interactive:false, zIndexOffset:300
@@ -1838,7 +1850,7 @@ hospitals.forEach(function(h) {{
         : '';
     dot.bindPopup(
         '<div style="padding:14px 16px;min-width:170px;">' +
-        '<div style="font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
+        '<div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
         '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
         '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
         '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
@@ -2329,7 +2341,7 @@ with sag:
         # ── Satır 1: Başlık ──
         f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
         f"<div>"
-        f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:9px;font-weight:700;"
+        f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:9px;font-weight:700;"
         f"color:#133273;letter-spacing:2px;margin-bottom:2px;'>🤖 OTO SET</div>"
         f"<div style='font-size:11px;font-weight:700;color:{_st_renk};'>{_st_txt}"
         f"<span style='font-size:9px;font-weight:400;color:#46536b;margin-left:6px;'>{_alt_txt}</span></div>"
@@ -2351,7 +2363,7 @@ with sag:
         # ── Satır 2: Sıcaklık + zaman ──
         f"<div style='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;'>"
         f"<div style='display:flex;align-items:baseline;gap:6px;'>"
-        f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:18px;font-weight:900;"
+        f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:18px;font-weight:900;"
         f"color:#2a78d6;text-shadow:0 0 12px rgba(19,50,115,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
         f"<span style='font-size:9px;color:#46536b;'>"
         f"bugün max:{_os_max} · yarın min:{_os_min}</span>"
@@ -2468,7 +2480,7 @@ with sag:
     if dis_hava_val is not None:
         _ch_ic += (
             f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:8px;'>"
-            f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:18px;font-weight:900;"
+            f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:18px;font-weight:900;"
             f"color:#c98500;text-shadow:0 0 12px rgba(250,178,25,0.5);'>"
             f"🌡️ {dis_hava_val:.1f}°C</span>"
             f"<span style='font-size:9px;color:#46536b;'>Dış Hava İstanbul"
@@ -2480,14 +2492,14 @@ with sag:
         _rozet_ic += (
             f"<div style='background:rgba(19,50,115,0.08);border:1px solid rgba(19,50,115,0.2);"
             f"border-radius:6px;padding:3px 10px;font-size:9px;color:#24324d;'>"
-            f"❄️ Min &nbsp;<b style='color:#2a78d6;font-family:system-ui,-apple-system,Roboto,sans-serif;'>{min_val:.1f}°C</b>"
+            f"❄️ Min &nbsp;<b style='color:#2a78d6;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;'>{min_val:.1f}°C</b>"
             f"&nbsp;<span style='color:{min_renk};'>{min_isim}</span></div>"
         )
     if max_val is not None and max_isim != min_isim:
         _rozet_ic += (
             f"<div style='background:rgba(208,59,59,0.08);border:1px solid rgba(208,59,59,0.2);"
             f"border-radius:6px;padding:3px 10px;font-size:9px;color:#24324d;'>"
-            f"🔥 Max &nbsp;<b style='color:#d03b3b;font-family:system-ui,-apple-system,Roboto,sans-serif;'>{max_val:.1f}°C</b>"
+            f"🔥 Max &nbsp;<b style='color:#d03b3b;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;'>{max_val:.1f}°C</b>"
             f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
         )
     # ── Lokasyon lokasyon liste ──
@@ -2521,7 +2533,7 @@ with sag:
                 f"<span style='font-size:9px;color:#46536b;"
                 f"min-width:34px;text-align:right;'>{_d}</span>"
                 f"<span style='font-size:10px;font-weight:700;color:{_s_renk};"
-                f"font-family:system-ui,-apple-system,Roboto,sans-serif;"
+                f"font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;"
                 f"min-width:34px;text-align:right;'>{_s}</span>"
                 f"</div>"
             )
@@ -2540,7 +2552,7 @@ with sag:
         st.markdown(
             f"<div style='background:#ffffff;"
             f"border:1px solid rgba(19,50,115,0.22);border-radius:8px;padding:14px 16px;'>"
-            f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;font-weight:700;"
+            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;font-weight:700;"
             f"color:#133273;letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
             f"{_ch_ic}"
             f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
@@ -2648,7 +2660,7 @@ with sag:
                 f"padding:5px 0;border-bottom:1px solid rgba(19,50,115,0.22);'>"
                 f"<span style='font-size:10px;font-weight:600;color:#24324d;'>"
                 f"{_mv['isim']}{_flag}</span>"
-                f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:10px;color:{_ez_renk};'>"
+                f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:10px;color:{_ez_renk};'>"
                 f"{_mv['kwh_m2']} kWh/m²/gün</span>"
                 f"</div>"
             )
@@ -2664,7 +2676,7 @@ with sag:
         st.markdown(
             f"<div style='background:#ffffff;"
             f"border:1px solid rgba(19,50,115,0.22);border-radius:8px;padding:14px 16px;'>"
-            f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;font-weight:700;"
+            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;font-weight:700;"
             f"color:#133273;letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
             f"{_ez_satirlar}"
             f"{_anormal_html}"
@@ -2972,7 +2984,7 @@ with sag:
                     f"border:1px solid rgba(19,50,115,0.22);border-radius:8px;margin-top:6px;overflow:hidden;'>"
                     f"<div style='display:flex;justify-content:space-between;align-items:center;"
                     f"padding:10px 14px;border-bottom:1px solid rgba(19,50,115,0.22);'>"
-                    f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;font-weight:700;"
+                    f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;font-weight:700;"
                     f"color:#133273;letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
                     f"<span style='font-size:8px;color:#46536b;'>🕐 {_ai_zaman_str}</span>"
                     f"</div>"
@@ -3003,7 +3015,7 @@ with sag:
 # ============ FOOTER ============
 st.markdown(f"""
 <div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(19,50,115,0.22); margin-top:10px;">
-  <span style="font-family:system-ui,-apple-system,Roboto,sans-serif,system-ui,-apple-system,Roboto,sans-serif,serif; font-size:9px; color:#133273; letter-spacing:2px;">
+  <span style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif; font-size:9px; color:#133273; letter-spacing:2px;">
     ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; {now_display.strftime('%d.%m.%Y %H:%M')}
   </span>
 </div>

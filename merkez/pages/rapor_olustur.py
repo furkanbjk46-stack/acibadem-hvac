@@ -27,6 +27,9 @@ giris.giris_kapisi()
 # ── CSS ──────────────────────────────────────────────────
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+* { font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif; }
+body, .stApp { font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
 html, body, [data-testid="stAppViewContainer"] { background: #162d47 !important; }
 [data-testid="stAppViewContainer"] { background: radial-gradient(ellipse at 50% 40%, #1a3555 0%, #162d47 70%) !important; }
 [data-testid="stHeader"] { background: transparent !important; }
@@ -35,7 +38,7 @@ html, body, [data-testid="stAppViewContainer"] { background: #162d47 !important;
 #MainMenu { display: none !important; }
 * { font-family: 'Inter', sans-serif; }
 .sec {
-    font-family: system-ui,-apple-system,Roboto,sans-serif, sans-serif;
+    font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif, sans-serif;
     font-size: 9px; font-weight: 700;
     color:#2a78d6;
     letter-spacing: 3px; text-transform: uppercase;
@@ -214,9 +217,9 @@ with col_geri:
 with col_baslik:
     st.markdown(
         f"""<div style='padding:8px 0;'>
-        <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;color:#2a78d6;
+        <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#2a78d6;
                     letter-spacing:5px;text-transform:uppercase;'>ACIBADEM SAGLIK GRUBU - RAPOR SISTEMI</div>
-        <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:22px;font-weight:900;
+        <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:22px;font-weight:900;
                     color:{renk};text-shadow:0 0 25px rgba({rr},{rg},{rb},0.8);
                     letter-spacing:3px;'>{lok_info["isim"].upper()}</div>
         </div>""",
