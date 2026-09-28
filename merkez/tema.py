@@ -18,12 +18,12 @@ SAYFA      = "#ffffff"
 YUZEY      = "#ffffff"
 YUZEY_2    = "#f3f6fb"
 MUREKKEP   = "#0f1f3d"      # ana metin
-MUREKKEP_2 = "#4a5873"      # ikincil metin
-SOLUK      = "#6b7a93"      # etiket / açıklama
+MUREKKEP_2 = "#24324d"      # ikincil metin
+SOLUK      = "#46536b"      # etiket / açıklama
 IZGARA     = "#e8edf4"      # grafik ızgarası, ayraç
 EKSEN      = "#c9d2e0"
-CERCEVE    = "rgba(19,50,115,.11)"
-GOLGE      = "0 1px 2px rgba(19,50,115,.04),0 10px 26px -14px rgba(19,50,115,.18)"
+CERCEVE    = "rgba(19,50,115,.22)"
+GOLGE      = "0 1px 2px rgba(19,50,115,.07),0 10px 24px -12px rgba(19,50,115,.28)"
 
 # ── Vurgu ────────────────────────────────────────────────────────────────
 LACIVERT   = "#133273"      # başlıklar, ana vurgu

@@ -37,7 +37,7 @@ html, body, [data-testid="stAppViewContainer"] { background: #162d47 !important;
 .sec {
     font-family: system-ui,-apple-system,Roboto,sans-serif, sans-serif;
     font-size: 9px; font-weight: 700;
-    color: rgba(42,120,214,0.5);
+    color:#2a78d6;
     letter-spacing: 3px; text-transform: uppercase;
     padding: 4px 0 10px; margin-top: 20px;
     border-bottom: 1px solid rgba(42,120,214,0.12);
@@ -47,7 +47,7 @@ html, body, [data-testid="stAppViewContainer"] { background: #162d47 !important;
     border: 1px solid rgba(42,120,214,0.30) !important;
     border-radius: 12px !important;
     padding: 14px 28px !important;
-    color: #4a5873 !important;
+    color: #24324d !important;
     font-weight: 600 !important;
     font-size: 14px !important;
     min-width: 150px;
@@ -214,7 +214,7 @@ with col_geri:
 with col_baslik:
     st.markdown(
         f"""<div style='padding:8px 0;'>
-        <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;color:rgba(42,120,214,0.45);
+        <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;color:#2a78d6;
                     letter-spacing:5px;text-transform:uppercase;'>ACIBADEM SAGLIK GRUBU - RAPOR SISTEMI</div>
         <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:22px;font-weight:900;
                     color:{renk};text-shadow:0 0 25px rgba({rr},{rg},{rb},0.8);
@@ -250,9 +250,9 @@ if _ss_bas and _ss_bit:
     st.markdown(
         f"<div style='background:rgba(42,120,214,0.07);border:1px solid rgba(42,120,214,0.25);"
         f"border-radius:10px;padding:10px 16px;margin-bottom:10px;"
-        f"font-size:12px;color:rgba(107,122,147,0.85);'>"
+        f"font-size:12px;color:#46536b;'>"
         f"📅 <b style='color:#2a78d6;'>Seçilen Aralık:</b> {period_str}  "
-        f"<span style='color:#6b7a93;'>({gun_fark} gün)</span>"
+        f"<span style='color:#46536b;'>({gun_fark} gün)</span>"
         f"</div>",
         unsafe_allow_html=True
     )
@@ -297,8 +297,8 @@ else:
 st.markdown(
     f"""<div style='background:#ffffff;border:1px solid rgba(42,120,214,0.12);
                    border-radius:10px;padding:12px 18px;margin:14px 0;
-                   font-size:12px;color:rgba(107,122,147,0.7);'>
-        <span style='color:rgba(42,120,214,0.8);font-weight:700;'>{period_type}</span>
+                   font-size:12px;color:#46536b;'>
+        <span style='color:#2a78d6;font-weight:700;'>{period_type}</span>
         &nbsp;·&nbsp; {period_str}
         &nbsp;·&nbsp; {len(period_df)} gunluk veri
     </div>""",
@@ -450,8 +450,8 @@ def _mpl_bar(period_df, lok_renk) -> Optional[bytes]:
             bars[-1].set_color(_hex_to_rgb("#2a78d6"))
 
         ax.set_title("Gunluk Tuketim (kWh)", color="white", fontsize=11, pad=8)
-        ax.set_ylabel("kWh", color="#6b7a93", fontsize=9)
-        ax.tick_params(colors="#6b7a93", labelsize=7)
+        ax.set_ylabel("kWh", color="#46536b", fontsize=9)
+        ax.tick_params(colors="#46536b", labelsize=7)
         ax.set_xticklabels([str(d) for d in gun["Tarih"]],
                             rotation=35, ha="right", fontsize=7)
         ax.yaxis.set_major_formatter(mticker.FuncFormatter(
@@ -530,7 +530,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
             ax1,
             ["Kojen", "Sebeke", "Diger"],
             [kojen, sebeke, diger_k],
-            ["#0ca30c", "#4a3aa7", "#6b7a93"],
+            ["#0ca30c", "#4a3aa7", "#46536b"],
             f"{toplam:,.0f}\nkWh",
             "Kaynak Kirilimi",
         )
@@ -538,7 +538,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
             ax2,
             ["Sogutma", "MCC", "Diger"],
             [sogutma, mcc, diger_t],
-            ["#2a78d6", "#c98500", "#6b7a93"],
+            ["#2a78d6", "#c98500", "#46536b"],
             f"{toplam:,.0f}\nkWh",
             "Tuketim Kirilimi",
         )

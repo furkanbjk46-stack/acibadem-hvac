@@ -96,11 +96,11 @@ if st.button("⬅ Geri", key="ozet_karsilastirma_geri"):
 
 st.markdown(
     f"<div style='text-align:center;margin:2px 0 14px;'>"
-    f"<div style='font-size:9px;color:#6b7a93;letter-spacing:5px;"
+    f"<div style='font-size:9px;color:#46536b;letter-spacing:5px;"
     f"text-transform:uppercase;'>ACIBADEM SAĞLIK GRUBU — LOKASYON KARŞILAŞTIRMA</div>"
     f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:30px;font-weight:600;"
     f"color:#0f1f3d;margin-top:4px;'>{_M['ikon']} {_M['ad']}</div>"
-    f"<div style='font-size:10px;color:#6b7a93;margin-top:2px;'>"
+    f"<div style='font-size:10px;color:#46536b;margin-top:2px;'>"
     f"Detay için çubuğa ya da tablo satırına tıklayın</div></div>",
     unsafe_allow_html=True)
 
@@ -336,7 +336,7 @@ def _bar(baslik, veriler, etiketler, renkler, metin, eksen_basligi, esik=None):
         x=veriler, y=etiketler, orientation="h",
         marker=dict(color=renkler, line=dict(width=0)),
         text=metin, textposition="outside",
-        textfont=dict(size=10, color="#4a5873"),
+        textfont=dict(size=10, color="#24324d"),
         hovertemplate="%{y}: %{x:,.4g} — detay için tıklayın<extra></extra>",
     ))
     if esik is not None:
@@ -348,7 +348,7 @@ def _bar(baslik, veriler, etiketler, renkler, metin, eksen_basligi, esik=None):
         height=max(320, 22 * len(etiketler) + 90),
         margin=dict(l=8, r=60, t=40, b=30),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#4a5873", size=10),
+        font=dict(color="#24324d", size=10),
         xaxis=dict(title=eksen_basligi, gridcolor="rgba(19,50,115,0.08)",
                    zerolinecolor="rgba(19,50,115,0.15)"),
         yaxis=dict(autorange="reversed"),
@@ -378,7 +378,7 @@ with _sol:
             height=max(320, 22 * len(_satirlar) + 110),
             margin=dict(l=8, r=30, t=40, b=30),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#4a5873", size=10),
+            font=dict(color="#24324d", size=10),
             xaxis=dict(title=_M["birim"], gridcolor="rgba(19,50,115,0.08)",
                        zerolinecolor="rgba(19,50,115,0.15)"),
             yaxis=dict(autorange="reversed"),
@@ -432,8 +432,8 @@ with _sag:
 # HTML tablo tıklama olayı üretemediği için st.dataframe kullanılır; renkli
 # gösterim "Durum" sütununda korunur.
 st.markdown("<div style='font-size:10px;letter-spacing:2px;"
-            "color:rgba(19,50,115,0.6);margin:6px 0 4px;'>DETAY TABLOSU "
-            "<span style='letter-spacing:0;color:#6b7a93;'>"
+            "color:#133273;margin:6px 0 4px;'>DETAY TABLOSU "
+            "<span style='letter-spacing:0;color:#46536b;'>"
             "— satıra tıklayın</span></div>",
             unsafe_allow_html=True)
 

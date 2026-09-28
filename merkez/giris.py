@@ -361,10 +361,10 @@ footer, #MainMenu{visibility:hidden;}
   max-width:780px !important;
   margin:0 auto !important;
   background:#ffffff !important;
-  border:1px solid rgba(19,50,115,0.11) !important;
+  border:1px solid rgba(19,50,115,0.22) !important;
   border-radius:18px !important;
   padding:40px 38px !important;
-  box-shadow:0 1px 2px rgba(19,50,115,.04),0 24px 60px -28px rgba(19,50,115,.35) !important;
+  box-shadow:0 1px 2px rgba(19,50,115,.07),0 24px 60px -28px rgba(19,50,115,.35) !important;
 }
 .st-key-giris_panel [data-testid="stVerticalBlock"]{gap:0.35rem;}
 
@@ -382,20 +382,20 @@ footer, #MainMenu{visibility:hidden;}
 .g-sol{display:flex;flex-direction:column;justify-content:space-between;min-height:236px;}
 
 .g-ust{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8.5px;letter-spacing:3.4px;
-       color:#6b7a93;text-transform:uppercase;}
+       color:#46536b;text-transform:uppercase;}
 .g-mrk{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:31px;color:#0f1f3d;font-weight:600;
        letter-spacing:1px;line-height:1.15;margin-top:5px;}
 .g-alt{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:9.5px;letter-spacing:2.6px;
        color:#2a78d6;text-transform:uppercase;margin-top:7px;}
 .g-istat{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;
-         border-bottom:1px solid rgba(19,50,115,0.14);font-size:10.5px;color:#4a5873;
+         border-bottom:1px solid rgba(19,50,115,0.14);font-size:10.5px;color:#24324d;
          font-family:system-ui,-apple-system,Roboto,sans-serif;}
 .g-istat:last-child{border:none;}
 .g-istat b{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:15px;color:#2a78d6;font-weight:700;
            }
 .g-nokta{display:inline-block;width:6px;height:6px;border-radius:50%%;background:#0ca30c;
          margin-right:7px;}
-.g-kucuk{font-size:9.5px;color:#6b7a93;text-align:center;margin-top:12px;
+.g-kucuk{font-size:9.5px;color:#46536b;text-align:center;margin-top:12px;
          font-family:system-ui,-apple-system,Roboto,sans-serif;}
 
 /* ── Streamlit girdilerini tasarıma uydur ── */
@@ -407,12 +407,12 @@ footer, #MainMenu{visibility:hidden;}
   padding:11px 13px !important;
 }
 .st-key-giris_panel [data-testid="stTextInput"] input:focus{
-  border-color:rgba(19,50,115,0.65) !important;
+  border-color:#133273 !important;
   box-shadow:0 0 0 3px rgba(19,50,115,0.13) !important;
 }
 .st-key-giris_panel [data-testid="stTextInput"] label p{
   font-size:9px !important;letter-spacing:1.8px !important;text-transform:uppercase !important;
-  color:#6b7a93 !important;font-family:system-ui,-apple-system,Roboto,sans-serif !important;
+  color:#46536b !important;font-family:system-ui,-apple-system,Roboto,sans-serif !important;
 }
 /* Buton — form icindeki gonder butonu .stButton DEGIL,
    [data-testid="stFormSubmitButton"] altindadir; ikisi de hedeflenir. */
@@ -604,7 +604,7 @@ def _bekleme_ekrani():
         animation:gDon 0.9s linear infinite;}
       @keyframes gDon{to{transform:rotate(360deg);}}
       .g-bekle .yazi{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:10px;
-        letter-spacing:2.6px;text-transform:uppercase;color:#6b7a93;margin-top:10px;}
+        letter-spacing:2.6px;text-transform:uppercase;color:#46536b;margin-top:10px;}
     </style>
     <div class="g-bekle">
       <div class="halka"></div>
@@ -685,7 +685,7 @@ def _tani_ekrani(parola_hash: str):
     import streamlit.components.v1 as components
     components.html("""
     <div style="font-family:ui-monospace,Consolas,monospace;font-size:12px;
-                color:#4a5873;background:#ffffff;border:1px solid #1e3a5f;
+                color:#24324d;background:#ffffff;border:1px solid #1e3a5f;
                 border-radius:8px;padding:12px;line-height:1.75">
     <script>
       function yaz(k, v){
