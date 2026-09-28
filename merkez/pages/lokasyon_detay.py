@@ -93,10 +93,10 @@ p, li, span, div { color: #4a5873; }
 }
 [data-testid="metric-container"] {
     background: #ffffff !important;
-    border: 1px solid rgba(19,50,115,0.05) !important;
+    border: 1px solid rgba(19,50,115,0.11) !important;
     border-radius: 12px !important;
     padding: 14px !important;
-    backdrop-filter: blur(8px) !important;
+    !important;
 }
 
 /* ── TABS ── */
@@ -127,13 +127,12 @@ p, li, span, div { color: #4a5873; }
     box-shadow: 0 -2px 8px rgba(19,50,115,0.5) !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] {
-    background: rgba(243,246,251,0.4);
+    background:#ffffff;
     border-radius: 0 0 12px 12px;
     padding: 20px;
-    border: 1px solid rgba(19,50,115,0.05);
+    border: 1px solid rgba(19,50,115,0.11);
     border-top: none;
-    backdrop-filter: blur(8px);
-}
+    }
 
 /* ── BUTONLAR ── */
 .stButton > button {
@@ -179,7 +178,7 @@ p, li, span, div { color: #4a5873; }
 /* ── EXPANDER ── */
 [data-testid="stExpander"] {
     background: #ffffff !important;
-    border: 1px solid rgba(19,50,115,0.05) !important;
+    border: 1px solid rgba(19,50,115,0.11) !important;
     border-radius: 10px !important;
 }
 [data-testid="stExpanderToggleIcon"] { color: rgba(19,50,115,0.6) !important; }
@@ -514,18 +513,18 @@ with tab1:
         def metric_card_v(ikon, baslik, deger, birim, renk_hex, alt_bilgi=""):
             r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
             alt_html = (
-                f"<div style='font-size:8px;color:rgba(107,122,147,0.4);margin-top:5px;"
+                f"<div style='font-size:8px;color:#6b7a93;margin-top:5px;"
                 f"letter-spacing:0.5px;'>{alt_bilgi}</div>"
             ) if alt_bilgi else ""
             st.markdown(
                 f"""<div class="metric-card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;text-align:left;">
                 <div style='font-size:20px;flex-shrink:0;'>{ikon}</div>
                 <div style='min-width:0;'>
-                  <div style='font-size:8px;color:rgba(107,122,147,0.5);letter-spacing:1px;
+                  <div style='font-size:8px;color:#6b7a93;letter-spacing:1px;
                               text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>
                   <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:16px;font-weight:900;
                               color:{renk_hex};text-shadow:0 0 10px rgba({r2},{g2},{b2},0.6);line-height:1.2;'>
-                      {deger}<span style='font-size:8px;color:rgba(107,122,147,0.5);margin-left:3px;'>{birim}</span>
+                      {deger}<span style='font-size:8px;color:#6b7a93;margin-left:3px;'>{birim}</span>
                   </div>{alt_html}
                 </div></div>""",
                 unsafe_allow_html=True
@@ -670,7 +669,7 @@ with tab1:
         # ── Tüketim ──
         if grafik_tip == "tuketim":
             _badge = _yoy_badge("Toplam_Hastane_Tuketim_kWh", secili_df, df, tarih_bas, tarih_bit)
-            st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='font-size:11px;color:#6b7a93;margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
             _bar_chart(secili_df)
 
         # ── Chiller Set Trendi ──
@@ -733,7 +732,7 @@ with tab1:
         elif grafik_tip == "su":
             if "Su_Tuketimi_m3" in secili_df.columns and not secili_df.empty:
                 _badge = _yoy_badge("Su_Tuketimi_m3", secili_df, df, tarih_bas, tarih_bit)
-                st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:11px;color:#6b7a93;margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 su_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Su_Tuketimi_m3"].sum().reset_index()
                 su_df.columns = ["Tarih", "m3"]
                 fig_su = go.Figure(go.Bar(
@@ -824,7 +823,7 @@ with tab1:
         elif grafik_tip == "mcc":
             if "MCC_Tuketim_kWh" in secili_df.columns and not secili_df.empty:
                 _badge = _yoy_badge("MCC_Tuketim_kWh", secili_df, df, tarih_bas, tarih_bit)
-                st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:11px;color:#6b7a93;margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 mcc_df = secili_df.groupby(secili_df["Tarih"].dt.date)["MCC_Tuketim_kWh"].sum().reset_index()
                 mcc_df.columns = ["Tarih", "kWh"]
                 fig_mcc = go.Figure(go.Bar(
@@ -850,7 +849,7 @@ with tab1:
                     else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in secili_df.columns else None)
             if col_s and not secili_df.empty:
                 _badge = _yoy_badge(col_s, secili_df, df, tarih_bas, tarih_bit)
-                st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:11px;color:#6b7a93;margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 sog_df = secili_df.groupby(secili_df["Tarih"].dt.date)[col_s].sum().reset_index()
                 sog_df.columns = ["Tarih", "kWh"]
                 fig_sog = go.Figure(go.Bar(
@@ -874,7 +873,7 @@ with tab1:
         elif grafik_tip == "kazan":
             if "Kazan_Dogalgaz_m3" in secili_df.columns and not secili_df.empty:
                 _badge = _yoy_badge("Kazan_Dogalgaz_m3", secili_df, df, tarih_bas, tarih_bit)
-                st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='font-size:11px;color:#6b7a93;margin-bottom:4px;'>{tarih_aralik_str} {_badge}</div>", unsafe_allow_html=True)
                 kaz_df = secili_df.groupby(secili_df["Tarih"].dt.date)["Kazan_Dogalgaz_m3"].sum().reset_index()
                 kaz_df.columns = ["Tarih", "m3"]
                 fig_kaz = go.Figure(go.Bar(
@@ -993,8 +992,8 @@ with tab1:
                         f"</div>"
                     )
                 st.markdown(
-                    f"<div style='background:rgba(243,246,251,0.4);border:1px solid rgba(19,50,115,0.15);"
-                    f"border-radius:12px;overflow:hidden;backdrop-filter:blur(8px);'>{rows_html}</div>",
+                    f"<div style='background:#ffffff;border:1px solid rgba(19,50,115,0.15);"
+                    f"border-radius:12px;overflow:hidden;'>{rows_html}</div>",
                     unsafe_allow_html=True
                 )
             else:
@@ -1048,7 +1047,7 @@ with tab1:
                     return fig
 
                 with _c1:
-                    st.markdown("<div style='text-align:center;font-size:11px;color:rgba(107,122,147,0.6);margin-bottom:4px;'>⚡ KAYNAK KIRILIMLARI</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align:center;font-size:11px;color:#6b7a93;margin-bottom:4px;'>⚡ KAYNAK KIRILIMLARI</div>", unsafe_allow_html=True)
                     _kaynak_labels = []
                     _kaynak_values = []
                     _kaynak_colors = []
@@ -1060,7 +1059,7 @@ with tab1:
                                         use_container_width=True, config={"displayModeBar": False})
 
                 with _c2:
-                    st.markdown("<div style='text-align:center;font-size:11px;color:rgba(107,122,147,0.6);margin-bottom:4px;'>🏭 TÜKETİM KIRILIMLARI</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='text-align:center;font-size:11px;color:#6b7a93;margin-bottom:4px;'>🏭 TÜKETİM KIRILIMLARI</div>", unsafe_allow_html=True)
                     _tuk_labels = []
                     _tuk_values = []
                     _tuk_colors = []
@@ -1123,15 +1122,15 @@ with tab1:
     def _kaynak_item(ikon, baslik, deger, birim, renk_hex):
         r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
         return (
-            f"<div style='background:rgba(243,246,251,0.4);border:1px solid rgba(19,50,115,0.06);"
-            f"border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;backdrop-filter:blur(8px);'>"
+            f"<div style='background:#ffffff;border:1px solid rgba(19,50,115,0.11);"
+            f"border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;'>"
             f"<div style='font-size:18px;flex-shrink:0;'>{ikon}</div>"
             f"<div>"
-            f"<div style='font-size:8px;color:rgba(107,122,147,0.5);letter-spacing:1px;"
+            f"<div style='font-size:8px;color:#6b7a93;letter-spacing:1px;"
             f"text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>"
             f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:14px;font-weight:900;"
             f"color:{renk_hex};text-shadow:0 0 8px rgba({r2},{g2},{b2},0.5);line-height:1.2;'>"
-            f"{deger}<span style='font-size:8px;color:rgba(107,122,147,0.4);margin-left:3px;'>{birim}</span>"
+            f"{deger}<span style='font-size:8px;color:#6b7a93;margin-left:3px;'>{birim}</span>"
             f"</div></div></div>"
         )
 
@@ -1205,8 +1204,9 @@ with tab1:
     hvac_uyari   = hvac_ozet.get("uyari",  [])
     hvac_normal  = hvac_ozet.get("normal", [])
 
-    KART  = "background:rgba(243,246,251,0.4);border:1px solid rgba(19,50,115,0.05);backdrop-filter:blur(8px);border-radius:12px;padding:14px;"
-    LBL   = ("font-size:8px;color:rgba(107,122,147,0.5);letter-spacing:1.5px;"
+    KART  = ("background:#ffffff;border:1px solid rgba(19,50,115,0.11);border-radius:12px;"
+             "padding:14px;box-shadow:0 1px 2px rgba(19,50,115,.04),0 10px 26px -14px rgba(19,50,115,.18);")
+    LBL   = ("font-size:8px;color:#6b7a93;letter-spacing:1.5px;"
              "text-transform:uppercase;margin-bottom:8px;font-weight:700;")
 
     def cihaz_html(cihaz, bg, border, text_renk):
@@ -1281,7 +1281,7 @@ with tab1:
             "<div style='" + LBL + "'>ARIZALI CIHAZLAR</div>"
             "<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:28px;font-weight:900;"
             "color:" + ar_renk + ";margin-bottom:4px;'>" + str(toplam_ariza) + "</div>"
-            "<div style='font-size:9px;color:rgba(107,122,147,0.4);margin-bottom:4px;'>▼ detay için tıkla</div>"
+            "<div style='font-size:9px;color:#6b7a93;margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
             "<div style='margin-top:8px;'>" + rows + "</div>"
             "</details>",
@@ -1295,7 +1295,7 @@ with tab1:
             cihaz_html(c, "rgba(250,178,25,0.10)", "#c98500", "#8a5a00")
             for c in bakim_list
         ) if bakim_list else (
-            "<div style='font-size:11px;color:rgba(107,122,147,0.5);padding:4px 0;'>Cihaz listesi girilmemiş</div>"
+            "<div style='font-size:11px;color:#6b7a93;padding:4px 0;'>Cihaz listesi girilmemiş</div>"
         )
         st.markdown(
             "<details style='" + KART + "border:1px solid rgba(250,178,25,0.25);cursor:pointer;'>"
@@ -1303,7 +1303,7 @@ with tab1:
             "<div style='" + LBL + "'>BAKIMDAKI CIHAZLAR</div>"
             "<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:28px;font-weight:900;"
             "color:" + bk_renk + ";margin-bottom:4px;'>" + str(toplam_bakim) + "</div>"
-            "<div style='font-size:9px;color:rgba(107,122,147,0.4);margin-bottom:4px;'>▼ detay için tıkla</div>"
+            "<div style='font-size:9px;color:#6b7a93;margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
             "<div style='margin-top:8px;'>" + rows + "</div>"
             "</details>",
@@ -1363,9 +1363,9 @@ with tab1:
             "<div style='" + LBL + "'>HVAC ANALIZ DURUMU</div>"
             "<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:28px;font-weight:900;"
             "color:" + _hv_renk + ";margin-bottom:4px;'>" + str(_hv_sorun) + "</div>"
-            "<div style='font-size:10px;color:rgba(107,122,147,0.55);margin-bottom:2px;'>"
+            "<div style='font-size:10px;color:#6b7a93;margin-bottom:2px;'>"
             + (" · ".join(_hv_ozet) if _hv_ozet else "Tüm HVAC sistemleri normal") + "</div>"
-            "<div style='font-size:9px;color:rgba(107,122,147,0.4);margin-bottom:4px;'>"
+            "<div style='font-size:9px;color:#6b7a93;margin-bottom:4px;'>"
             "▼ detay için tıkla</div>"
             "</summary>"
             "<div style='margin-top:8px;'>" + hv_rows + "</div>"
@@ -1398,7 +1398,7 @@ with tab1:
                 _govde = (
                     f"<div style='font-size:13px;color:{_renk};font-weight:700;'>"
                     f"{'✓' if _iyi else '✗'} {_oto.get('metin') or _sonuc or '—'}</div>"
-                    + (f"<div style='font-size:10px;color:rgba(107,122,147,0.45);"
+                    + (f"<div style='font-size:10px;color:#6b7a93;"
                        f"margin-top:4px;'>son tur {_zaman}</div>" if _zaman else "")
                 )
                 # Son geçişin sahadaki sonucu: gönderilen setler birkaç dakika
@@ -1417,7 +1417,7 @@ with tab1:
                     _govde += ("<div style='font-size:10px;color:#0ca30c;margin-top:4px;'>"
                                "Son geçişteki tüm setler cihazda doğrulandı</div>")
             else:
-                _govde = ("<div style='font-size:12px;color:rgba(107,122,147,0.4);'>"
+                _govde = ("<div style='font-size:12px;color:#6b7a93;'>"
                           "Bildirim gelmedi</div>")
             st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>OTO-SET</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
@@ -1435,11 +1435,11 @@ with tab1:
                     f"{'geçti' if _gecti else 'KALDI'}</div>"
                     + (f"<div style='font-size:10px;color:#d03b3b;margin-top:4px;'>{_kalan}</div>"
                        if _kalan else "")
-                    + f"<div style='font-size:10px;color:rgba(107,122,147,0.45);margin-top:4px;'>"
+                    + f"<div style='font-size:10px;color:#6b7a93;margin-top:4px;'>"
                       f"{str(_oz_test.get('zaman') or '')[:16].replace('T', ' ')}</div>"
                 )
             else:
-                _govde = ("<div style='font-size:12px;color:rgba(107,122,147,0.4);'>"
+                _govde = ("<div style='font-size:12px;color:#6b7a93;'>"
                           "Henüz çalışmadı</div>")
             st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>MEKANİK ZEKA ÖZ TESTİ</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
@@ -1449,25 +1449,25 @@ with tab1:
             if _geri_bld:
                 _hazir = _geri_bld.get("ogrenmeye_hazir_kural") or []
                 _govde = (
-                    f"<div style='font-size:13px;color:rgba(74,88,115,0.85);font-weight:700;'>"
+                    f"<div style='font-size:13px;color:#4a5873;font-weight:700;'>"
                     f"{_geri_bld.get('geri_bildirim', 0)} geri bildirim "
                     f"<span style='color:#0ca30c;'>✓{_geri_bld.get('uygulandi', 0)}</span> "
                     f"<span style='color:#c98500;'>✗{_geri_bld.get('uygulanmadi', 0)}</span></div>"
-                    f"<div style='font-size:10px;color:rgba(107,122,147,0.45);margin-top:4px;'>"
+                    f"<div style='font-size:10px;color:#6b7a93;margin-top:4px;'>"
                     f"{_geri_bld.get('kayit', 0)} öneri kaydı</div>"
                 )
                 if _hazir:
                     _govde += (f"<div style='font-size:10px;color:#0ca30c;margin-top:4px;'>"
                                f"öğrenmeye hazır: {', '.join(_hazir[:2])}</div>")
                 else:
-                    _govde += ("<div style='font-size:10px;color:rgba(107,122,147,0.4);"
+                    _govde += ("<div style='font-size:10px;color:#6b7a93;"
                                "margin-top:4px;'>öğrenme beklemede (kural başına 5 gerekli)</div>")
                 _red = _geri_bld.get("en_cok_red") or []
                 if _red:
                     _govde += (f"<div style='font-size:10px;color:#c98500;margin-top:4px;'>"
                                f"en çok reddedilen: {_red[0].get('kural')} ({_red[0].get('adet')})</div>")
             else:
-                _govde = ("<div style='font-size:12px;color:rgba(107,122,147,0.4);'>"
+                _govde = ("<div style='font-size:12px;color:#6b7a93;'>"
                           "Bildirim gelmedi</div>")
             st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>ÖNERİ GERİ BİLDİRİMİ</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
@@ -1551,7 +1551,7 @@ with tab3:
         "Kazan_Dogalgaz_m3","Su_Tuketimi_m3",
     ] if c in filtre.columns]
 
-    st.markdown(f"<div style='font-size:11px;color:rgba(107,122,147,0.5);margin-bottom:8px;'>{len(filtre)} kayıt</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='font-size:11px;color:#6b7a93;margin-bottom:8px;'>{len(filtre)} kayıt</div>", unsafe_allow_html=True)
     st.dataframe(filtre[goster_cols].sort_values("Tarih", ascending=False),
                  use_container_width=True, hide_index=True, height=450)
 
@@ -1560,12 +1560,12 @@ with tab4:
     st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
     st.markdown(
         f"""<div style='text-align:center;padding:30px 40px 20px;
-            background:rgba(243,246,251,0.4);border:1px solid rgba(19,50,115,0.15);
-            backdrop-filter:blur(8px);border-radius:16px;max-width:560px;margin:0 auto;'>
+            background:#ffffff;border:1px solid rgba(19,50,115,0.15);
+            border-radius:16px;max-width:560px;margin:0 auto;'>
             <div style='font-size:40px;margin-bottom:12px;'>📄</div>
             <div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:14px;font-weight:700;
                 color:{renk};letter-spacing:2px;margin-bottom:6px;'>RAPOR OLUŞTUR</div>
-            <div style='font-size:12px;color:rgba(107,122,147,0.6);margin-bottom:0;'>
+            <div style='font-size:12px;color:#6b7a93;margin-bottom:0;'>
                 {lok_info["isim"]} için tarih aralıklı enerji raporu
             </div>
         </div>""",
@@ -1599,7 +1599,7 @@ with tab4:
 
         _rp_gun = (_rp_bit - _rp_bas).days + 1
         st.markdown(
-            f"<div style='font-size:10px;color:rgba(107,122,147,0.4);margin:4px 0 12px;'>"
+            f"<div style='font-size:10px;color:#6b7a93;margin:4px 0 12px;'>"
             f"📆 {_rp_bas.strftime('%d.%m.%Y')} → {_rp_bit.strftime('%d.%m.%Y')}  ({_rp_gun} gün)</div>",
             unsafe_allow_html=True
         )

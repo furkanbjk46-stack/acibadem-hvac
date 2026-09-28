@@ -80,9 +80,9 @@ button span[data-testid="stIconMaterial"] {
 [data-testid="stMetricLabel"]  { color: rgba(107,122,147,0.7) !important; font-size: 10px !important; letter-spacing: 1px !important; text-transform: uppercase !important; }
 [data-testid="stMetricDelta"]  { color: #0ca30c !important; }
 [data-testid="metric-container"] {
-    background: rgba(243,246,251, 0.4) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(19,50,115, 0.05) !important;
+    background:#ffffff !important;
+    !important;
+    border: 1px solid rgba(19,50,115,0.11) !important;
     border-radius: 8px !important;
     padding: 12px !important;
     box-shadow: none !important;
@@ -104,7 +104,7 @@ button span[data-testid="stIconMaterial"] {
 }
 .nk-green { border-color: rgba(12,163,12,0.35) !important; }
 .nk-red   { border-color: rgba(208,59,59,0.35) !important; }
-.nk-gray  { border-color: rgba(19,50,115,0.08) !important; opacity: 0.65; }
+.nk-gray  { border-color: rgba(19,50,115,0.11) !important; opacity: 0.65; }
 .nk {
     display: block !important;
     text-decoration: none !important;
@@ -189,8 +189,8 @@ button span[data-testid="stIconMaterial"] {
 
 /* Alarm expander */
 [data-testid="stExpander"] {
-    background: rgba(243,246,251, 0.4) !important;
-    border: 1px solid rgba(19,50,115, 0.05) !important;
+    background:#ffffff !important;
+    border: 1px solid rgba(19,50,115,0.11) !important;
     border-radius: 8px !important;
     margin-bottom: 5px !important;
 }
@@ -215,7 +215,7 @@ button span[data-testid="stIconMaterial"] {
 }
 .alarm-detay-kart {
     background: rgba(0,0,0,0.25);
-    border: 1px solid rgba(19,50,115,0.05);
+    border: 1px solid rgba(19,50,115,0.11);
     border-radius: 8px; padding: 10px 14px; margin-top: 8px;
 }
 .btn-goto button {
@@ -1100,7 +1100,7 @@ st.markdown("""
     padding:0 !important; border-radius:9px !important;
     width:34px !important; height:34px !important;
     display:flex !important; align-items:center !important; justify-content:center !important;
-    backdrop-filter:blur(10px) !important; -webkit-backdrop-filter:blur(10px) !important;
+    !important; -webkit-!important;
     box-shadow:0 10px 26px -14px rgba(19,50,115,.18) !important;
     transition:background .18s ease, border-color .18s ease, color .18s ease !important;
 }
@@ -1128,7 +1128,7 @@ if "127.0.0.1" in url or "localhost" in url:
         "background:rgba(250,178,25,0.16);border:1px solid rgba(250,178,25,0.55);"
         "color:#8a5a00;border-radius:8px;padding:5px 12px;font-size:10px;"
         "letter-spacing:1.6px;text-transform:uppercase;font-weight:700;"
-        "font-family:system-ui,-apple-system,Roboto,sans-serif;backdrop-filter:blur(10px);'>"
+        "font-family:system-ui,-apple-system,Roboto,sans-serif;'>"
         "● Simülasyon — Örnek Veri</div>",
         unsafe_allow_html=True)
 
@@ -1353,7 +1353,7 @@ with sol:
         kwh_str   = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
         m2_lok    = lok_info.get("m2", 10000)
         verim_str = f"{kwh/m2_lok:.2f}".replace(".", ",") if kwh else "—"
-        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;color:rgba(107,122,147,0.35);font-weight:700;">#{i+1}</span>' if i < 4 else ""
+        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;color:#6b7a93;font-weight:700;">#{i+1}</span>' if i < 4 else ""
 
         # % değişim hesapla (dün vs önceki gün)
         onceki_kwh = onceki_gun_kwh(lok_id)
@@ -1399,13 +1399,13 @@ with sol:
             f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">'
             f'<span style="font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:16px;font-weight:900;'
             f'color:{renk};line-height:1;">{kwh_str}</span>'
-            f'<span style="font-size:8px;color:rgba(107,122,147,0.5);">kWh</span>'
+            f'<span style="font-size:8px;color:#6b7a93;">kWh</span>'
             f'<span style="margin-left:4px;">{degisim_html}</span>'
             f'</div>'
             f'<div style="display:inline-flex;align-items:center;gap:5px;'
             f'background:rgba(19,50,115,0.05);border-radius:5px;padding:3px 8px;'
             f'border:1px solid rgba(19,50,115,0.10);">'
-            f'<span style="font-size:7px;color:rgba(107,122,147,0.4);text-transform:uppercase;letter-spacing:1px;">kWh/m²/gün</span>'
+            f'<span style="font-size:7px;color:#6b7a93;text-transform:uppercase;letter-spacing:1px;">kWh/m²/gün</span>'
             f'<span style="font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:11px;color:#2a78d6;font-weight:700;">{verim_str}</span>'
             f'</div>'
             f'</div></div></a>'
@@ -1553,7 +1553,7 @@ with sol:
             if _by > 0: _trend_parts.append(f"{_bu_yil} YTD: {tr(_by)} {_birim}")
             if _gy > 0: _trend_parts.append(f"{_bu_yil-1}: {tr(_gy)} {_birim}")
             _trend_html = (
-                f'<div style="font-size:9px;color:rgba(107,122,147,0.5);margin-top:2px;">'
+                f'<div style="font-size:9px;color:#6b7a93;margin-top:2px;">'
                 + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
             ) if _trend_parts else ""
 
@@ -1682,7 +1682,7 @@ body {{ background:#ffffff; }}
 .leaflet-container {{ background:#ffffff !important; font-family:system-ui,-apple-system,Roboto,sans-serif,sans-serif; }}
 .leaflet-popup-content-wrapper {{
     background:#ffffff !important;
-    backdrop-filter: blur(12px) !important;
+    !important;
     border:1px solid rgba(19,50,115,0.11) !important;
     border-radius:10px !important;
     box-shadow:0 1px 2px rgba(19,50,115,.04),0 10px 26px -14px rgba(19,50,115,.18) !important;
@@ -1707,7 +1707,7 @@ body {{ background:#ffffff; }}
 /* Veri OpenStreetMap kaynaklı — lisans atıf zorunlu kılar, küçük gösterilir. */
 .leaflet-control-attribution {{
     background:rgba(2,6,23,0.55) !important;
-    color:rgba(107,122,147,0.45) !important;
+    color:#6b7a93 !important;
     font-size:8px !important;
     padding:1px 5px !important;
     border-radius:4px 0 0 0 !important;
@@ -1994,7 +1994,7 @@ with sag:
                 f"<details style='background:{kart_bg};border:1px solid {kart_br};"
                 f"border-radius:8px;padding:6px 10px;margin-bottom:5px;cursor:pointer;'>"
                 f"<summary style='list-style:none;display:flex;align-items:center;gap:6px;"
-                f"font-size:11px;font-weight:600;color:rgba(74,88,115,0.85);'>"
+                f"font-size:11px;font-weight:600;color:#4a5873;'>"
                 f"<span style='width:7px;height:7px;border-radius:50%;background:{dot_renk};"
                 f"box-shadow:0 0 5px {dot_renk};flex-shrink:0;display:inline-block;'></span>"
                 f"{isim} — {len(uyarilar)} uyarı"
@@ -2192,19 +2192,19 @@ with sag:
                    "ilimli":"☀️ 7.0°C","sicak":"🔥 6.5°C"}.get(_os_ch, _os_ch)
     _dig_label  = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
     _cnt_html   = (f"<span style='color:#c98500;font-weight:700;'>⚡ {_os_cnt} komut gönderildi</span>"
-                   ) if _os_cnt > 0 else "<span style='color:rgba(107,122,147,0.3);'>Mod değişmedi</span>"
+                   ) if _os_cnt > 0 else "<span style='color:#6b7a93;'>Mod değişmedi</span>"
 
     # Lokasyon sağlık satırları: her lokasyonun son turda ne yaptığı.
     # Normal bekleme yeşil/soluk, gerçek bir engel (tahmin yok, kural
     # okunamadı, BACnet hatası) turuncu-kırmızı gösterilir.
     _SAGLIK_RENK = {
-        "yazildi": "#0ca30c", "gecis_yok": "rgba(107,122,147,0.35)",
+        "yazildi": "#0ca30c", "gecis_yok": "#6b7a93",
         "tahmin_yok": "#c98500", "kural_okunamadi": "#d03b3b",
         "yazma_hatasi": "#d03b3b", "hata": "#d03b3b",
-        "nokta_yok": "#c98500", "kapali": "rgba(107,122,147,0.35)",
+        "nokta_yok": "#c98500", "kapali": "#6b7a93",
         "henuz_calismadi": "#c98500", "modul_yok": "#d03b3b",
         "sahada_farkli": "#d03b3b", "dogrulanamadi": "#c98500",
-        "uygulanmadi": "#d03b3b", "mesgul": "rgba(107,122,147,0.35)",
+        "uygulanmadi": "#d03b3b", "mesgul": "#6b7a93",
     }
 
     # Bir lokasyonun GERÇEK sorunu: anlık tur sonucu normal olsa bile (her
@@ -2247,8 +2247,8 @@ with sag:
         _saglik_html += (
             f"<div style='font-size:9px;padding:2px 0;'>"
             f"<span style='color:{_rk};'>●</span> "
-            f"<b style='color:rgba(74,88,115,0.7);'>{_ad}</b> "
-            f"<span style='color:rgba(107,122,147,0.3);'>{_zm}</span><br>"
+            f"<b style='color:#4a5873;'>{_ad}</b> "
+            f"<span style='color:#6b7a93;'>{_zm}</span><br>"
             f"<span style='color:{_rk};'>{_mt}</span></div>"
         )
     if _oto_saglik:
@@ -2257,7 +2257,7 @@ with sag:
             f"✓ {_normal_sayi} lokasyon normal</div>" if _normal_sayi else ""
         )
         _saglik_html = (
-            f"<div style='border-top:1px solid rgba(19,50,115,0.08);"
+            f"<div style='border-top:1px solid rgba(19,50,115,0.11);"
             f"margin-top:6px;padding-top:6px;max-height:150px;overflow-y:auto;'>"
             f"<div style='font-size:7px;letter-spacing:1px;"
             f"color:rgba(19,50,115,0.45);padding-bottom:3px;'>SAHA DURUMU</div>"
@@ -2267,7 +2267,7 @@ with sag:
         # Hiç lokasyon bildirim yapmıyorsa bu da bir bilgidir: ya yama
         # inmemiştir ya da süreç çalışmıyordur. Sessiz kalmak yanıltır.
         _saglik_html = (
-            f"<div style='border-top:1px solid rgba(19,50,115,0.08);"
+            f"<div style='border-top:1px solid rgba(19,50,115,0.11);"
             f"margin-top:6px;padding-top:6px;font-size:9px;color:#c98500;'>"
             f"⚠ Lokasyonlardan oto-set durumu gelmiyor</div>"
         )
@@ -2285,7 +2285,7 @@ with sag:
             _saglik_html += (
                 f"<div style='font-size:9px;padding:2px 0;'>"
                 f"<span style='color:#d03b3b;'>●</span> "
-                f"<b style='color:rgba(74,88,115,0.7);'>{_ad}</b> "
+                f"<b style='color:#4a5873;'>{_ad}</b> "
                 f"<span style='color:#d03b3b;'>Mekanik Zeka öz testi KALDI "
                 f"({_o.get('gecen')}/{_o.get('toplam')}) — detay sayfasına bakın</span></div>"
             )
@@ -2314,65 +2314,65 @@ with sag:
         try: _son_ok = _eski_yeni_ikon(_ml_son["eski_mod"], _ml_son["yeni_mod"])
         except: _son_ok = "↔️"
         _son_gecis_html = (
-            f"<div style='font-size:9px;border-top:1px solid rgba(19,50,115,0.08);"
-            f"padding-top:6px;margin-top:6px;color:rgba(107,122,147,0.5);'>"
+            f"<div style='font-size:9px;border-top:1px solid rgba(19,50,115,0.11);"
+            f"padding-top:6px;margin-top:6px;color:#6b7a93;'>"
             f"Son geçiş: {_son_tip} &nbsp;{_son_ok}&nbsp; "
-            f"<b style='color:rgba(74,88,115,0.75);'>{_ml_son['eski_mod']}</b> → "
+            f"<b style='color:#4a5873;'>{_ml_son['eski_mod']}</b> → "
             f"<b style='color:#2a78d6;'>{_ml_son['yeni_mod']}</b> &nbsp;·&nbsp; "
             f"<span style='color:#c98500;'>{_ml_son['tahmin_ort']}°C</span></div>"
         )
 
     # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
     st.markdown(
-        f"<div style='background:rgba(243,246,251, 0.4);backdrop-filter:blur(12px);"
-        f"border:1px solid rgba(19,50,115,0.05);border-radius:8px;padding:14px 16px;'>"
+        f"<div style='background:#ffffff;"
+        f"border:1px solid rgba(19,50,115,0.11);border-radius:10px;padding:14px 16px;box-shadow:0 1px 2px rgba(19,50,115,.04),0 10px 26px -14px rgba(19,50,115,.18);'>"
         # ── Satır 1: Başlık ──
         f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
         f"<div>"
         f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:9px;font-weight:700;"
         f"color:rgba(19,50,115,0.7);letter-spacing:2px;margin-bottom:2px;'>🤖 OTO SET</div>"
         f"<div style='font-size:11px;font-weight:700;color:{_st_renk};'>{_st_txt}"
-        f"<span style='font-size:9px;font-weight:400;color:rgba(107,122,147,0.4);margin-left:6px;'>{_alt_txt}</span></div>"
+        f"<span style='font-size:9px;font-weight:400;color:#6b7a93;margin-left:6px;'>{_alt_txt}</span></div>"
         f"</div>"
         # ── ANLIK DÖNEM rozeti (sistem şu an hangi durumda) ──
         f"<div style='text-align:right;'>"
         f"<div style='background:rgba(19,50,115,0.04);border:1px solid {_sd_renk}55;"
         f"border-radius:6px;padding:4px 10px;'>"
         f"<div style='font-size:11px;font-weight:700;color:{_sd_renk};'>{_sd_ikon} {_sd_ad}</div>"
-        f"<div style='font-size:8px;color:rgba(107,122,147,0.45);margin-top:1px;'>"
+        f"<div style='font-size:8px;color:#6b7a93;margin-top:1px;'>"
         f"{_g_saat:02d}:00 gündüz · {_ge_saat:02d}:00 gece</div>"
         f"</div>"
-        f"<div style='font-size:8px;color:rgba(107,122,147,0.35);margin-top:3px;'>"
+        f"<div style='font-size:8px;color:#6b7a93;margin-top:3px;'>"
         f"sıradaki geçiş {_sonraki}</div>"
         f"</div>"
         f"</div>"
         # ── Ayırıcı ──
-        f"<div style='border-top:1px solid rgba(19,50,115,0.08);margin-bottom:10px;'></div>"
+        f"<div style='border-top:1px solid rgba(19,50,115,0.11);margin-bottom:10px;'></div>"
         # ── Satır 2: Sıcaklık + zaman ──
         f"<div style='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;'>"
         f"<div style='display:flex;align-items:baseline;gap:6px;'>"
         f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:18px;font-weight:900;"
         f"color:#2a78d6;text-shadow:0 0 12px rgba(19,50,115,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
-        f"<span style='font-size:9px;color:rgba(107,122,147,0.4);'>"
+        f"<span style='font-size:9px;color:#6b7a93;'>"
         f"bugün max:{_os_max} · yarın min:{_os_min}</span>"
         f"</div>"
-        f"<span style='font-size:8px;color:rgba(107,122,147,0.3);'>{_os_zaman}</span>"
+        f"<span style='font-size:8px;color:#6b7a93;'>{_os_zaman}</span>"
         f"</div>"
         # ── Satır 3: Rozetler ──
         f"<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;'>"
         f"<div style='background:rgba(19,50,115,0.08);border:1px solid rgba(19,50,115,0.2);"
-        f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(74,88,115,0.8);'>"
+        f"border-radius:6px;padding:3px 8px;font-size:9px;color:#4a5873;'>"
         f"❄️ Chiller &nbsp;<b style='color:#2a78d6;'>{_ch_label}</b></div>"
         f"<div style='background:rgba(19,50,115,0.08);border:1px solid rgba(19,50,115,0.2);"
-        f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(74,88,115,0.8);'>"
+        f"border-radius:6px;padding:3px 8px;font-size:9px;color:#4a5873;'>"
         f"🌀 KOL/FCU &nbsp;<b style='color:#2a78d6;'>{_dig_label}</b></div>"
         f"<div style='background:rgba(19,50,115,0.08);border:1px solid rgba(19,50,115,0.2);"
-        f"border-radius:6px;padding:3px 8px;font-size:9px;color:rgba(74,88,115,0.8);'>"
+        f"border-radius:6px;padding:3px 8px;font-size:9px;color:#4a5873;'>"
         f"🧊 {len(_ml_ch)} &nbsp;·&nbsp; 🌀 {len(_ml_dig)} &nbsp;·&nbsp; "
         f"<span style='color:#c98500;'>Σ {_ml_top}</span></div>"
         f"</div>"
         # ── Satır 4: Komut + son geçiş ──
-        f"<div style='font-size:9px;border-top:1px solid rgba(19,50,115,0.08);padding-top:6px;'>"
+        f"<div style='font-size:9px;border-top:1px solid rgba(19,50,115,0.11);padding-top:6px;'>"
         f"{_cnt_html}</div>"
         f"{_saglik_html}"
         f"{_son_gecis_html}"
@@ -2436,7 +2436,7 @@ with sag:
                 _mk_tip = str(_mk.get("tip", ""))
                 _mk_ti  = "🧊" if _mk_tip.startswith("chiller") else "🌀"
                 # Mod değişmeyen (dönem geçişi) kayıtlar ayırt edilsin
-                _mk_et  = " <span style='color:rgba(107,122,147,0.35);'>· yenileme</span>" \
+                _mk_et  = " <span style='color:#6b7a93;'>· yenileme</span>" \
                           if _mk_tip.endswith("_yenileme") else ""
                 try:
                     _mk_ok = _eski_yeni_ikon(_mk["eski_mod"], _mk["yeni_mod"])
@@ -2444,10 +2444,10 @@ with sag:
                     _mk_ok = "↔️"
                 _gecis_satirlari += (
                     f"<div style='font-size:10px;padding:4px 0;"
-                    f"border-bottom:1px solid rgba(19,50,115,0.06);'>"
-                    f"<span style='color:rgba(107,122,147,0.35);'>{_mk_z}</span>"
+                    f"border-bottom:1px solid rgba(19,50,115,0.11);'>"
+                    f"<span style='color:#6b7a93;'>{_mk_z}</span>"
                     f" &nbsp;{_mk_ti} {_mk_ok}&nbsp; "
-                    f"<b style='color:rgba(74,88,115,0.7);'>{_mk['eski_mod']}</b>"
+                    f"<b style='color:#4a5873;'>{_mk['eski_mod']}</b>"
                     f" → <b style='color:#2a78d6;'>{_mk['yeni_mod']}</b>"
                     f" &nbsp;<span style='color:#c98500;'>{_mk['tahmin_ort']}°C</span>"
                     f" &nbsp;<span style='color:rgba(12,163,12,0.7);'>{_mk['komut_sayisi']} komut</span>"
@@ -2455,7 +2455,7 @@ with sag:
                     f"</div>"
                 )
             st.markdown(
-                f"<div style='background:rgba(0,0,0,0.25);border:1px solid rgba(19,50,115,0.05);"
+                f"<div style='background:#ffffff;border:1px solid rgba(19,50,115,0.11);"
                 f"border-radius:10px;padding:8px 12px;margin-bottom:5px;'>"
                 f"{_gecis_satirlari}</div>",
                 unsafe_allow_html=True
@@ -2471,7 +2471,7 @@ with sag:
             f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:18px;font-weight:900;"
             f"color:#c98500;text-shadow:0 0 12px rgba(250,178,25,0.5);'>"
             f"🌡️ {dis_hava_val:.1f}°C</span>"
-            f"<span style='font-size:9px;color:rgba(107,122,147,0.4);'>Dış Hava İstanbul"
+            f"<span style='font-size:9px;color:#6b7a93;'>Dış Hava İstanbul"
             f" &nbsp;·&nbsp; {_dis_hava_kaynak}</span>"
             f"</div>"
         )
@@ -2479,14 +2479,14 @@ with sag:
     if min_val is not None:
         _rozet_ic += (
             f"<div style='background:rgba(19,50,115,0.08);border:1px solid rgba(19,50,115,0.2);"
-            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(74,88,115,0.8);'>"
+            f"border-radius:6px;padding:3px 10px;font-size:9px;color:#4a5873;'>"
             f"❄️ Min &nbsp;<b style='color:#2a78d6;font-family:system-ui,-apple-system,Roboto,sans-serif;'>{min_val:.1f}°C</b>"
             f"&nbsp;<span style='color:{min_renk};'>{min_isim}</span></div>"
         )
     if max_val is not None and max_isim != min_isim:
         _rozet_ic += (
             f"<div style='background:rgba(208,59,59,0.08);border:1px solid rgba(208,59,59,0.2);"
-            f"border-radius:6px;padding:3px 10px;font-size:9px;color:rgba(74,88,115,0.8);'>"
+            f"border-radius:6px;padding:3px 10px;font-size:9px;color:#4a5873;'>"
             f"🔥 Max &nbsp;<b style='color:#d03b3b;font-family:system-ui,-apple-system,Roboto,sans-serif;'>{max_val:.1f}°C</b>"
             f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
         )
@@ -2515,10 +2515,10 @@ with sag:
             _liste_ic += (
                 f"<div style='display:grid;grid-template-columns:1fr auto auto;"
                 f"align-items:center;column-gap:6px;padding:3px 0;white-space:nowrap;"
-                f"border-bottom:1px solid rgba(19,50,115,0.06);'>"
+                f"border-bottom:1px solid rgba(19,50,115,0.11);'>"
                 f"<span style='font-size:9px;color:{_rk};overflow:hidden;"
                 f"text-overflow:ellipsis;'>{_ad}</span>"
-                f"<span style='font-size:9px;color:rgba(107,122,147,0.45);"
+                f"<span style='font-size:9px;color:#6b7a93;"
                 f"min-width:34px;text-align:right;'>{_d}</span>"
                 f"<span style='font-size:10px;font-weight:700;color:{_s_renk};"
                 f"font-family:system-ui,-apple-system,Roboto,sans-serif;"
@@ -2538,8 +2538,8 @@ with sag:
 
     if dis_hava_val is not None or min_val is not None or _liste_ic:
         st.markdown(
-            f"<div style='background:rgba(243,246,251, 0.4);backdrop-filter:blur(12px);"
-            f"border:1px solid rgba(19,50,115,0.05);border-radius:8px;padding:14px 16px;'>"
+            f"<div style='background:#ffffff;"
+            f"border:1px solid rgba(19,50,115,0.11);border-radius:8px;padding:14px 16px;'>"
             f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;font-weight:700;"
             f"color:rgba(19,50,115,0.6);letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
             f"{_ch_ic}"
@@ -2645,8 +2645,8 @@ with sag:
             _flag    = " ⚠️" if _mv["anormal"] else ""
             _ez_satirlar += (
                 f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                f"padding:5px 0;border-bottom:1px solid rgba(19,50,115,0.06);'>"
-                f"<span style='font-size:10px;font-weight:600;color:rgba(74,88,115,0.8);'>"
+                f"padding:5px 0;border-bottom:1px solid rgba(19,50,115,0.11);'>"
+                f"<span style='font-size:10px;font-weight:600;color:#4a5873;'>"
                 f"{_mv['isim']}{_flag}</span>"
                 f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:10px;color:{_ez_renk};'>"
                 f"{_mv['kwh_m2']} kWh/m²/gün</span>"
@@ -2662,8 +2662,8 @@ with sag:
             )
 
         st.markdown(
-            f"<div style='background:rgba(243,246,251, 0.4);backdrop-filter:blur(12px);"
-            f"border:1px solid rgba(19,50,115,0.05);border-radius:8px;padding:14px 16px;'>"
+            f"<div style='background:#ffffff;"
+            f"border:1px solid rgba(19,50,115,0.11);border-radius:8px;padding:14px 16px;'>"
             f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;font-weight:700;"
             f"color:rgba(19,50,115,0.6);letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
             f"{_ez_satirlar}"
@@ -2968,20 +2968,20 @@ with sag:
 
                 # Kart dış çerçevesi — üst kısım
                 st.markdown(
-                    f"<div style='background:rgba(243,246,251, 0.4);backdrop-filter:blur(12px);"
-                    f"border:1px solid rgba(19,50,115,0.05);border-radius:8px;margin-top:6px;overflow:hidden;'>"
+                    f"<div style='background:#ffffff;"
+                    f"border:1px solid rgba(19,50,115,0.11);border-radius:8px;margin-top:6px;overflow:hidden;'>"
                     f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                    f"padding:10px 14px;border-bottom:1px solid rgba(19,50,115,0.08);'>"
+                    f"padding:10px 14px;border-bottom:1px solid rgba(19,50,115,0.11);'>"
                     f"<span style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:8px;font-weight:700;"
                     f"color:rgba(19,50,115,0.6);letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
-                    f"<span style='font-size:8px;color:rgba(107,122,147,0.3);'>🕐 {_ai_zaman_str}</span>"
+                    f"<span style='font-size:8px;color:#6b7a93;'>🕐 {_ai_zaman_str}</span>"
                     f"</div>"
-                    f"<div style='padding:12px 14px;font-size:11px;color:rgba(74,88,115,0.85);"
+                    f"<div style='padding:12px 14px;font-size:11px;color:#4a5873;"
                     f"line-height:1.7;max-height:220px;overflow-y:auto;"
                     f"scrollbar-width:thin;scrollbar-color:rgba(19,50,115,0.3) transparent;'>"
                     + _ai_temiz.replace("\n", "<br>") +
                     f"</div>"
-                    f"<div style='padding:6px 14px 10px;border-top:1px solid rgba(19,50,115,0.08);'></div>"
+                    f"<div style='padding:6px 14px 10px;border-top:1px solid rgba(19,50,115,0.11);'></div>"
                     f"</div>",
                     unsafe_allow_html=True)
 
@@ -3002,7 +3002,7 @@ with sag:
 
 # ============ FOOTER ============
 st.markdown(f"""
-<div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(19,50,115,0.08); margin-top:10px;">
+<div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(19,50,115,0.11); margin-top:10px;">
   <span style="font-family:system-ui,-apple-system,Roboto,sans-serif,system-ui,-apple-system,Roboto,sans-serif,serif; font-size:9px; color:rgba(19,50,115,0.25); letter-spacing:2px;">
     ACIBADEM ENERJİ YÖNETİM SİSTEMİ &nbsp;·&nbsp; {now_display.strftime('%d.%m.%Y %H:%M')}
   </span>
@@ -3048,10 +3048,10 @@ with st.expander("⚙️  Ayarlar", expanded=False):
             <div style="padding:7px 10px; margin:3px 0; background:#ffffff;
                         border-radius:8px; border-left:3px solid {dr};">
               <div style="font-size:12px; color:#e0f2fe; font-weight:600;">{di} {r['versiyon']}
-                <span style="color:rgba(107,122,147,0.5); font-size:11px;">→ {r['hedef']}</span>
+                <span style="color:#6b7a93; font-size:11px;">→ {r['hedef']}</span>
               </div>
               <div style="font-size:10px; color:{dr};">{r['durum'].upper()} &nbsp;·&nbsp;
-                <span style="color:rgba(107,122,147,0.35);">{tarih}</span>
+                <span style="color:#6b7a93;">{tarih}</span>
               </div>
             </div>
             """, unsafe_allow_html=True)
@@ -3070,7 +3070,7 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                             border-radius:8px; border:1px solid rgba(19,50,115,0.1);
                             display:flex; justify-content:space-between; align-items:center;">
                   <span style="font-size:12px; color:#e0f2fe; font-weight:600;">🏥 {isim}</span>
-                  <span style="font-size:10px; color:rgba(107,122,147,0.45);">Son ping: {ping}</span>
+                  <span style="font-size:10px; color:#6b7a93;">Son ping: {ping}</span>
                 </div>
                 """, unsafe_allow_html=True)
 

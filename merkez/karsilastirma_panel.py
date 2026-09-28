@@ -26,12 +26,12 @@ def tr(sayi, ondalik=0):
 def kutu(ikon, baslik, deger, alt, renk="#2a78d6"):
     return (
         f"<div style='flex:1;min-width:120px;background:#ffffff;"
-        f"border:1px solid rgba(19,50,115,0.12);border-radius:10px;padding:10px 12px;'>"
-        f"<div style='font-size:9px;color:rgba(107,122,147,0.55);letter-spacing:1px;'>"
+        f"border:1px solid rgba(19,50,115,0.11);border-radius:10px;padding:10px 12px;box-shadow:0 1px 2px rgba(19,50,115,.04),0 10px 26px -14px rgba(19,50,115,.18);'>"
+        f"<div style='font-size:9px;color:#6b7a93;letter-spacing:1px;'>"
         f"{ikon} {baslik}</div>"
         f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:20px;font-weight:700;"
         f"color:{renk};margin-top:2px;'>{deger}</div>"
-        f"<div style='font-size:9px;color:rgba(107,122,147,0.5);'>{alt}</div></div>"
+        f"<div style='font-size:9px;color:#6b7a93;'>{alt}</div></div>"
     )
 
 
@@ -39,7 +39,7 @@ def ilerleme(ad, kwh, yuzde, renk):
     return (
         f"<div style='margin:6px 0;'>"
         f"<div style='display:flex;justify-content:space-between;font-size:11px;"
-        f"color:rgba(74,88,115,0.8);'><span>{ad}</span>"
+        f"color:#4a5873;'><span>{ad}</span>"
         f"<span style='color:{renk};font-family:monospace;'>%{yuzde:.1f} · {tr(kwh)} kWh</span></div>"
         f"<div style='background:rgba(232,237,244,0.9);height:7px;border-radius:4px;overflow:hidden;'>"
         f"<div style='width:{min(100, yuzde):.1f}%;height:100%;background:{renk};'></div></div></div>"
@@ -52,10 +52,10 @@ def mini_liste(baslik, kalemler, renk):
     en_buyuk = max(k for _, k in kalemler) or 1
     satirlar = "".join(
         f"<div style='display:grid;grid-template-columns:90px 1fr 90px;gap:8px;align-items:center;"
-        f"font-size:10px;margin:3px 0;'><span style='color:rgba(74,88,115,0.75);'>{ad}</span>"
+        f"font-size:10px;margin:3px 0;'><span style='color:#4a5873;'>{ad}</span>"
         f"<div style='background:rgba(232,237,244,0.9);height:6px;border-radius:3px;overflow:hidden;'>"
         f"<div style='width:{k / en_buyuk * 100:.0f}%;height:100%;background:{renk};'></div></div>"
-        f"<span style='text-align:right;font-family:monospace;color:rgba(74,88,115,0.6);'>"
+        f"<span style='text-align:right;font-family:monospace;color:#4a5873;'>"
         f"{tr(k)} kWh</span></div>" for ad, k in kalemler)
     return (f"<div style='margin-top:10px;'><div style='font-size:9px;letter-spacing:1px;"
             f"color:rgba(19,50,115,0.6);margin-bottom:2px;'>{baslik}</div>{satirlar}</div>")
@@ -125,7 +125,7 @@ def panel_govde(st, r, dag, ld, ctx):
     st.markdown(
         f"<div style='font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:22px;color:#0f1f3d;'>"
         f"{r.get('isim', r['ad'])}</div>"
-        f"<div style='font-size:10px;color:rgba(107,122,147,0.55);'>{M['ad']} · {ctx['secim']} · "
+        f"<div style='font-size:10px;color:#6b7a93;'>{M['ad']} · {ctx['secim']} · "
         f"{ctx['bas'].strftime('%d.%m.%Y')} → {ctx['bit'].strftime('%d.%m.%Y')}</div>",
         unsafe_allow_html=True)
 
@@ -148,7 +148,7 @@ def panel_govde(st, r, dag, ld, ctx):
         f"<div style='border:1px solid {renk[0]}55;background:{renk[1]};border-radius:10px;"
         f"padding:10px 14px;margin:6px 0 12px;'>"
         f"<div style='color:{renk[0]};font-weight:700;font-size:12px;'>{renk[2]} {baslik}</div>"
-        + "".join(f"<div style='font-size:11px;color:rgba(74,88,115,0.8);margin-top:4px;'>• {m}</div>"
+        + "".join(f"<div style='font-size:11px;color:#4a5873;margin-top:4px;'>• {m}</div>"
                   for m in maddeler)
         + "</div>", unsafe_allow_html=True)
 
@@ -157,12 +157,12 @@ def panel_govde(st, r, dag, ld, ctx):
     with s1:
         h = ("<div style='font-size:10px;letter-spacing:1px;color:rgba(19,50,115,0.7);'>"
              "SİSTEM BAZLI ELEKTRİK DAĞILIMI</div>"
-             "<div style='font-size:9px;color:rgba(107,122,147,0.45);margin-bottom:4px;'>"
+             "<div style='font-size:9px;color:#6b7a93;margin-bottom:4px;'>"
              "Sayaç verisi · ölçülmeyen yükler ayrı gösterilir</div>")
         if dag["kalemler"]:
             h += "".join(ilerleme(a, kw, y, rn) for a, kw, y, rn in dag["kalemler"])
         else:
-            h += ("<div style='font-size:11px;color:rgba(107,122,147,0.5);'>"
+            h += ("<div style='font-size:11px;color:#6b7a93;'>"
                   "Bu dönem için sistem kırılımı yok.</div>")
         h += mini_liste("CHILLER BAZINDA", dag["chiller"], "#256abf")
         h += mini_liste("SOĞUTMA KULELERİ", dag["kule"], "#2a78d6")
@@ -194,9 +194,9 @@ def panel_govde(st, r, dag, ld, ctx):
                        ("Ort. chiller yükü", "—" if r.get("ort_chiller_yuk") is None
                         else f"%{r['ort_chiller_yuk']:.0f}")):
             h2 += (f"<div style='display:flex;justify-content:space-between;gap:8px;font-size:10px;"
-                   f"padding:4px 0;border-bottom:1px solid rgba(19,50,115,0.07);'>"
-                   f"<span style='color:rgba(107,122,147,0.55);'>{et}</span>"
-                   f"<span style='color:rgba(74,88,115,0.85);text-align:right;'>{dg}</span></div>")
+                   f"padding:4px 0;border-bottom:1px solid rgba(19,50,115,0.11);'>"
+                   f"<span style='color:#6b7a93;'>{et}</span>"
+                   f"<span style='color:#4a5873;text-align:right;'>{dg}</span></div>")
         st.markdown(h2, unsafe_allow_html=True)
 
     b1, b2, b3 = st.columns(3)

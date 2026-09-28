@@ -252,7 +252,7 @@ if _ss_bas and _ss_bit:
         f"border-radius:10px;padding:10px 16px;margin-bottom:10px;"
         f"font-size:12px;color:rgba(107,122,147,0.85);'>"
         f"📅 <b style='color:#2a78d6;'>Seçilen Aralık:</b> {period_str}  "
-        f"<span style='color:rgba(107,122,147,0.5);'>({gun_fark} gün)</span>"
+        f"<span style='color:#6b7a93;'>({gun_fark} gün)</span>"
         f"</div>",
         unsafe_allow_html=True
     )
