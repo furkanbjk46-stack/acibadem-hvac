@@ -53,7 +53,7 @@ CHILLER_ANALYZERS = {
 }
 
 ALL_ANALYZERS = {
-    "MCC-1", "MCC-2", "MCC-3", "MCC-4", "MCC-6", "MCC-7",
+    "MCC-1", "MCC-2", "MCC-3", "MCC-4", "MCC-5", "MCC-6", "MCC-7",
     "CHILLER-1", "CHILLER-2", "CHILLER-3", "CHILLER-4", "CHILLER-5",
     "KULE-1", "KULE-2", "KULE-3",
     "2BK-MCC-D01", "2BK-MCC-D02",
@@ -111,7 +111,7 @@ ENERGY_SCHEMA = [
     # --- Soğutma kırılımı (Chiller bazında) ---
     "Chiller1_kWh", "Chiller2_kWh", "Chiller3_kWh", "Chiller4_kWh", "Chiller5_kWh",
     # --- MCC kırılımı (analizör bazında) ---
-    "MCC1_kWh", "MCC2_kWh", "MCC3_kWh", "MCC4_kWh", "MCC6_kWh", "MCC7_kWh",
+    "MCC1_kWh", "MCC2_kWh", "MCC3_kWh", "MCC4_kWh", "MCC5_kWh", "MCC6_kWh", "MCC7_kWh",
     "Kule1_kWh", "Kule2_kWh", "Kule3_kWh",
     "MCC_2BK_D01_kWh", "MCC_2BK_D02_kWh",
     "MCC_4BK_E01_kWh", "MCC_4BK_E02_kWh", "MCC_4BK_F01_kWh",
@@ -343,9 +343,9 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     # TRDP-4: Siemens PAC4200 (172.17.91.123) — 21.09.2026'dan itibaren otomatik.
     # Ilk gun referans olmadigi icin bos kalir; ertesi gunden itibaren dolar.
     trdp4 = daily_kwh.get("TRDP-4", "") if daily_kwh else ""
-    # TRDP-2 henuz bagli degil; baglanana kadar sebeke bu trafo kadar EKSIK
-    # olculur (asagidaki aciklamaya bakiniz). Portalda elle de girilebilir.
-    trdp2 = ""
+    # TRDP-2 (Janitza, 172.17.91.119) — 29.09.2026'da baglandi. Dort trafo da
+    # otomatik okundugu icin sebeke artik eksiksiz olculuyor.
+    trdp2 = daily_kwh.get("TRDP-2", "") if daily_kwh else ""
 
     # --- Sebeke hesabi: YALNIZCA TRDP sayaclarinin toplami ---
     # Eskiden TRDP-2/4 bosken "MCC + Chiller" yedegi kullaniliyordu. O yedek
@@ -414,6 +414,7 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "MCC2_kWh":                   daily_kwh.get("MCC-2", "") if daily_kwh else "",
         "MCC3_kWh":                   daily_kwh.get("MCC-3", "") if daily_kwh else "",
         "MCC4_kWh":                   daily_kwh.get("MCC-4", "") if daily_kwh else "",
+        "MCC5_kWh":                   daily_kwh.get("MCC-5", "") if daily_kwh else "",
         "MCC6_kWh":                   daily_kwh.get("MCC-6", "") if daily_kwh else "",
         "MCC7_kWh":                   daily_kwh.get("MCC-7", "") if daily_kwh else "",
         "Kule1_kWh":                  daily_kwh.get("KULE-1", "") if daily_kwh else "",

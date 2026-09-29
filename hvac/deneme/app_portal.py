@@ -1237,6 +1237,7 @@ SCHEMA = [
     "MCC2_kWh",
     "MCC3_kWh",
     "MCC4_kWh",
+    "MCC5_kWh",
     "MCC6_kWh",
     "MCC7_kWh",
     "Kule1_kWh",
@@ -1284,6 +1285,7 @@ NUMERIC_COLS = [
     "MCC2_kWh",
     "MCC3_kWh",
     "MCC4_kWh",
+    "MCC5_kWh",
     "MCC6_kWh",
     "MCC7_kWh",
     "Kule1_kWh",
@@ -3065,7 +3067,8 @@ ENERJI_TOPOLOJI = {
             ]),
             ("MCC PANOLARI (JANITZA)", "▣", [
                 ("MCC-1", "MCC1_kWh"), ("MCC-2", "MCC2_kWh"), ("MCC-3", "MCC3_kWh"),
-                ("MCC-4", "MCC4_kWh"), ("MCC-6", "MCC6_kWh"), ("MCC-7", "MCC7_kWh"),
+                ("MCC-4", "MCC4_kWh"), ("MCC-5", "MCC5_kWh"), ("MCC-6", "MCC6_kWh"),
+                ("MCC-7", "MCC7_kWh"),
             ]),
             ("SOĞUTMA KULELERİ", "❄", [
                 ("KULE-01", "Kule1_kWh"), ("KULE-02", "Kule2_kWh"), ("KULE-03", "Kule3_kWh"),

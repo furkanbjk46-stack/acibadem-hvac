@@ -34,6 +34,22 @@ def c(ad, kosul, detay=""):
 # ── 1) Toplayıcı yapılandırması ──────────────────────────────────────────
 _ad = {a["name"]: a for a in dc.ANALYZERS}
 c("TRDP-4 toplayıcıda tanımlı", "TRDP-4" in _ad)
+# 29.09.2026: TRDP-2 ve MCC-5 sahada devreye alındı.
+c("TRDP-2 toplayıcıda tanımlı", "TRDP-2" in _ad)
+c("TRDP-2 doğru adreste (172.17.91.119)", _ad.get("TRDP-2", {}).get("ip") == "172.17.91.119",
+  _ad.get("TRDP-2"))
+c("TRDP-2 Janitza okuyucusuyla okunur", _ad.get("TRDP-2", {}).get("brand") == "janitza")
+c("MCC-5 toplayıcıda tanımlı", "MCC-5" in _ad)
+c("MCC-5 doğru adreste (172.17.91.104)", _ad.get("MCC-5", {}).get("ip") == "172.17.91.104",
+  _ad.get("MCC-5"))
+c("MCC-5 Janitza okuyucusuyla okunur", _ad.get("MCC-5", {}).get("brand") == "janitza")
+c("MCC-5 alt sayaç toplamına GİRER (tüketim kalemi)", "MCC-5" in db.ALL_ANALYZERS)
+c("MCC-5 chiller sayılmaz", "MCC-5" not in db.CHILLER_ANALYZERS)
+c("MCC-5 MCC grubunda", "MCC-5" in db.MCC_ONLY_ANALYZERS)
+c("MCC5_kWh şemada var", "MCC5_kWh" in db.ENERGY_SCHEMA)
+c("MCC1-7 arası hiçbir pano atlanmadı",
+  all("MCC%d_kWh" % i in db.ENERGY_SCHEMA for i in range(1, 8)),
+  [i for i in range(1, 8) if "MCC%d_kWh" % i not in db.ENERGY_SCHEMA])
 c("TRDP-4 doğru adreste (172.17.91.123)", _ad.get("TRDP-4", {}).get("ip") == "172.17.91.123",
   _ad.get("TRDP-4"))
 c("TRDP-4 Siemens okuyucusuyla okunur (PAC4200)", _ad.get("TRDP-4", {}).get("brand") == "siemens")
@@ -60,7 +76,15 @@ _ch = sum(100.0 for n in db.CHILLER_ANALYZERS)
 
 r = db.build_daily_row("2026-09-21", {}, _gun)
 c("TRDP4_kWh sütunu dolar", r["TRDP4_kWh"] == 3000.0, r["TRDP4_kWh"])
-c("TRDP-2 hâlâ boş (bağlı değil)", r["TRDP2_kWh"] == "", r["TRDP2_kWh"])
+c("TRDP-2 okunamadıysa boş kalır (0 yazılmaz)", r["TRDP2_kWh"] == "", r["TRDP2_kWh"])
+_dort_trafo = db.build_daily_row("2026-09-29", {}, {
+    "TRDP-1": 5000.0, "TRDP-2": 6000.0, "TRDP-3": 4000.0, "TRDP-4": 3000.0})
+c("dört trafo da okunuyor", [_dort_trafo["TRDP%d_kWh" % i] for i in (1, 2, 3, 4)]
+  == [5000.0, 6000.0, 4000.0, 3000.0])
+c("şebeke DÖRT trafonun toplamı (eksik ölçüm bitti)",
+  _dort_trafo["Sebeke_Tuketim_kWh"] == 18000.0, _dort_trafo["Sebeke_Tuketim_kWh"])
+c("MCC-5 günlük satıra yazılır",
+  db.build_daily_row("2026-09-29", {}, {"MCC-5": 777.0})["MCC5_kWh"] == 777.0)
 c("şebeke = ÖLÇÜLEN trafoların toplamı (alt sayaç yedeği YOK)",
   r["Sebeke_Tuketim_kWh"] == round(5000 + 4000 + 3000, 1),
   (r["Sebeke_Tuketim_kWh"], 5000 + 4000 + 3000))

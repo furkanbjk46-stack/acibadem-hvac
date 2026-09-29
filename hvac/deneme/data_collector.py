@@ -33,10 +33,15 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # ================================================================
 ANALYZERS = [
     {"ip": "172.17.91.121", "name": "TRDP-1",       "brand": "janitza"},
+    # TRDP-2 (mekanik trafo) — 29.09.2026'da baglandi; dort trafo da artik
+    # otomatik okunuyor, sebeke hesabi eksiksiz. ALL_ANALYZERS'a EKLENMEZ.
+    {"ip": "172.17.91.119", "name": "TRDP-2",       "brand": "janitza"},
     {"ip": "172.17.91.100", "name": "MCC-1",        "brand": "janitza"},
     {"ip": "172.17.91.101", "name": "MCC-2",        "brand": "janitza"},
     {"ip": "172.17.91.102", "name": "MCC-3",        "brand": "janitza"},
     {"ip": "172.17.91.103", "name": "MCC-4",        "brand": "janitza"},
+    # MCC-5 — 29.09.2026'da sahada devreye alindi, MCC kirilimi artik tam.
+    {"ip": "172.17.91.104", "name": "MCC-5",        "brand": "janitza"},
     {"ip": "172.17.91.105", "name": "MCC-6",        "brand": "janitza"},
     {"ip": "172.17.91.106", "name": "MCC-7",        "brand": "janitza"},
     {"ip": "172.17.91.107", "name": "CHILLER-1",    "brand": "janitza"},
