@@ -1,0 +1,25 @@
+{
+  "_aciklama": "Şema/izleme ekranının alarm eşikleri. sema_diyagram_uret.py okur.",
+
+  "plan_disk_gb": 8,
+  "_plan_disk_gb": "Supabase planının disk kotası (Free 0.5, Pro 8). Toplam veritabanı boyutu bunun yüzdesiyle kıyaslanır.",
+
+  "disk_dikkat_yuzde": 70,
+  "disk_kritik_yuzde": 85,
+
+  "tablo_dikkat_mb": 100,
+  "tablo_kritik_mb": 400,
+  "_tablo": "Tek bir tablo bu boyutu aşarsa işaretlenir.",
+
+  "indeks_oran_dikkat": 1.5,
+  "_indeks_oran": "İndeks boyutu / veri boyutu. 1.5 üstü = tabloda gereğinden fazla indeks olabilir.",
+
+  "onbellek_isabet_dikkat": 95,
+  "_onbellek": "Önbellek isabet oranı (%). Bunun altı = disk okuması artmış, sorgular yavaşlar.",
+
+  "baglanti_dikkat_yuzde": 70,
+  "_baglanti": "Aktif bağlantı / azami bağlantı oranı.",
+
+  "buyume_uyari_tablolari": ["guncellemeler", "komutlar", "ai_analizler"],
+  "_buyume": "Dosya içeriği ya da log biriktiren tablolar; boyut eşiğinde ayrıca 'temizlenebilir' notu düşülür."
+}
