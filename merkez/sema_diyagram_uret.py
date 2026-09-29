@@ -20,6 +20,8 @@ import json
 import os
 import urllib.error
 import urllib.request
+
+import izleme
 from datetime import datetime, timedelta, timezone
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
@@ -65,6 +67,11 @@ GRUPLAR = [
 ]
 
 
+def _anahtar():
+    return json.load(open(os.path.join(KOK, "hvac", "deneme", "supabase_secret.json"),
+                          encoding="utf-8"))["service_role_key"]
+
+
 def _istek(yol, basliklar=None, yontem="GET"):
     key = json.load(open(os.path.join(KOK, "hvac", "deneme", "supabase_secret.json"),
                          encoding="utf-8"))["service_role_key"]
@@ -77,89 +84,6 @@ def _istek(yol, basliklar=None, yontem="GET"):
 def sema_oku():
     with _istek("/rest/v1/", {"Accept": "application/openapi+json"}) as c:
         return json.load(c)["definitions"]
-
-
-def limitler():
-    yol = os.path.join(BURASI, "configs", "izleme_limitleri.json")
-    with open(yol, encoding="utf-8") as f:
-        return {k: v for k, v in json.load(f).items() if not k.startswith("_")}
-
-
-def kullanim_oku():
-    """synapse_kullanim() RPC'si — kurulmamışsa None döner (sayfa yine üretilir)."""
-    try:
-        with _istek("/rest/v1/rpc/synapse_kullanim",
-                    {"Content-Type": "application/json"}, "POST") as c:
-            return json.load(c)
-    except urllib.error.HTTPError as e:
-        if e.code in (404, 400):
-            return None
-        raise
-    except urllib.error.URLError:
-        return None
-
-
-def _boyut(bayt):
-    if bayt is None:
-        return "—"
-    b = float(bayt)
-    for birim in ("B", "KB", "MB", "GB", "TB"):
-        if b < 1024 or birim == "TB":
-            return ("%.0f %s" if birim in ("B", "KB") else "%.1f %s") % (b, birim)
-        b /= 1024
-
-
-def alarmlar(kullanim, lim):
-    """(seviye, baslik, aciklama) listesi. Seviye: kritik | dikkat | iyi."""
-    cikti = []
-    if not kullanim:
-        return cikti
-    kota = lim["plan_disk_gb"] * 1024 ** 3
-    top = kullanim.get("veritabani_bayt") or 0
-    oran = top / kota * 100 if kota else 0
-    if oran >= lim["disk_kritik_yuzde"]:
-        cikti.append(("kritik", "Disk kotası %.0f%% dolu" % oran,
-                      "Kota dolduğunda Supabase istekleri reddeder: lokasyon "
-                      "senkronu ve Synapse veri alamaz. Acil temizlik gerekir."))
-    elif oran >= lim["disk_dikkat_yuzde"]:
-        cikti.append(("dikkat", "Disk kotası %.0f%% dolu" % oran,
-                      "Büyüme hızını izleyin; biriken tabloları temizleyin."))
-
-    for t in kullanim.get("tablolar", []):
-        mb = (t.get("toplam_bayt") or 0) / 1024 ** 2
-        ad = t.get("tablo")
-        ek = (" Bu tablo içerik/log biriktirir, eski kayıtlar silinebilir."
-              if ad in lim.get("buyume_uyari_tablolari", []) else "")
-        if mb >= lim["tablo_kritik_mb"]:
-            cikti.append(("kritik", "%s tablosu %s" % (ad, _boyut(t["toplam_bayt"])),
-                          "Eşik %d MB." % lim["tablo_kritik_mb"] + ek))
-        elif mb >= lim["tablo_dikkat_mb"]:
-            cikti.append(("dikkat", "%s tablosu %s" % (ad, _boyut(t["toplam_bayt"])),
-                          "Eşik %d MB." % lim["tablo_dikkat_mb"] + ek))
-        veri = t.get("veri_bayt") or 0
-        indeks = t.get("indeks_bayt") or 0
-        if veri > 5 * 1024 ** 2 and indeks > veri * lim["indeks_oran_dikkat"]:
-            cikti.append(("dikkat", "%s indeksleri veriden büyük" % ad,
-                          "İndeks %s / veri %s — kullanılmayan indeks olabilir."
-                          % (_boyut(indeks), _boyut(veri))))
-
-    s = kullanim.get("saglik") or {}
-    isabet = s.get("onbellek_isabet_yuzde")
-    if isabet is not None and float(isabet) < lim["onbellek_isabet_dikkat"]:
-        cikti.append(("dikkat", "Önbellek isabeti %%%.1f" % float(isabet),
-                      "Eşik %%%d. Sorgular diskten okuyor, yavaşlama beklenir."
-                      % lim["onbellek_isabet_dikkat"]))
-    aktif, azami = s.get("aktif_baglanti"), s.get("azami_baglanti")
-    if aktif and azami and aktif / azami * 100 >= lim["baglanti_dikkat_yuzde"]:
-        cikti.append(("dikkat", "Bağlantı %d/%d" % (aktif, azami),
-                      "Bağlantı havuzu doluyor."))
-    if s.get("kilitlenme"):
-        cikti.append(("dikkat", "%s kilitlenme (deadlock)" % s["kilitlenme"],
-                      "Eşzamanlı yazımlar çakışıyor olabilir."))
-    if not cikti:
-        cikti.append(("iyi", "Tüm eşikler normal",
-                      "Disk, tablo boyutları, önbellek ve bağlantılar sınırların altında."))
-    return cikti
 
 
 def izleme_html(kullanim, lim):
@@ -181,7 +105,7 @@ def izleme_html(kullanim, lim):
     uyarilar = "".join(
         "<div class='alarm %s'><b>%s</b><span>%s</span></div>"
         % (sev, html.escape(bas), html.escape(ack))
-        for sev, bas, ack in alarmlar(kullanim, lim))
+        for sev, bas, ack in izleme.alarmlar(kullanim, lim))
 
     satirlar = []
     for t in kullanim.get("tablolar", []):
@@ -191,14 +115,14 @@ def izleme_html(kullanim, lim):
             "<tr><td class='k'>%s</td><td class='t'>%s</td><td class='t'>%s</td>"
             "<td class='t'>%s</td><td class='t'>%s</td>"
             "<td><div class='mini'><i style='width:%.1f%%'></i></div></td></tr>"
-            % (html.escape(t.get("tablo", "?")), _boyut(toplam),
-               _boyut(t.get("veri_bayt")), _boyut(t.get("indeks_bayt")),
+            % (html.escape(t.get("tablo", "?")), izleme.boyut(toplam),
+               izleme.boyut(t.get("veri_bayt")), izleme.boyut(t.get("indeks_bayt")),
                format(int(t.get("satir_tahmin") or 0), ",d").replace(",", "."),
                pay))
 
     s = kullanim.get("saglik") or {}
     kutular = [
-        ("Veritabanı", _boyut(top), "%d GB kotanın %%%.1f'i" % (lim["plan_disk_gb"], oran)),
+        ("Veritabanı", izleme.boyut(top), "%d GB kotanın %%%.1f'i" % (lim["plan_disk_gb"], oran)),
         ("Önbellek isabeti", "%%%s" % (s.get("onbellek_isabet_yuzde") or "—"),
          "yüksek olan iyi"),
         ("Aktif bağlantı", "%s / %s" % (s.get("aktif_baglanti", "—"),
@@ -413,13 +337,13 @@ ara.addEventListener('input', () => {
 def main():
     tablolar = sema_oku()
     sayilar = {t: satir_sayisi(t) for t in tablolar}
-    lim = limitler()
-    kullanim = kullanim_oku()
+    lim = izleme.limitler()
+    kullanim = izleme.kullanim_oku(URL, _anahtar())
     if kullanim is None:
         print("NOT: synapse_kullanim() yok - once merkez/izleme_kurulum.sql calistirilmali.")
     with open(CIKTI, "w", encoding="utf-8") as f:
         f.write(html_uret(tablolar, sayilar, izleme_html(kullanim, lim)))
-    for sev, bas, _a in alarmlar(kullanim, lim):
+    for sev, bas, _a in izleme.alarmlar(kullanim, lim):
         print("  [%s] %s" % (sev.upper(), bas))
     print("yazildi: %s (%d tablo)" % (CIKTI, len(tablolar)))
     for t in sorted(tablolar):

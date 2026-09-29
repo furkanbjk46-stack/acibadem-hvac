@@ -60,3 +60,25 @@ GRANT EXECUTE ON FUNCTION public.synapse_kullanim() TO service_role;
 
 -- Doğrulama — tek satır JSON dönmeli:
 SELECT jsonb_pretty(public.synapse_kullanim());
+
+-- ============================================================
+-- İSTEĞE BAĞLI — CANLI YÖNETİM EKRANI İÇİN
+-- ============================================================
+-- Synapse portalı Supabase'e ANON anahtarla bağlanır. Yukarıdaki yetki
+-- yalnızca service_role'a verildiği için canlı Yönetim ekranı ölçümü
+-- okuyamaz. İki seçenekten BİRİNİ uygulayın:
+--
+--   A) (Kolay) Fonksiyonu anon'a da açın. Fonksiyon yalnızca TOPLAM
+--      boyut/sağlık döndürür; hiçbir satır verisi sızmaz. Anon anahtar
+--      lokasyon PC'lerinde de bulunduğu için, o anahtarı ele geçiren biri
+--      tablo adlarını ve boyutlarını görebilir — veriyi göremez.
+--
+--        GRANT EXECUTE ON FUNCTION public.synapse_kullanim() TO anon;
+--
+--   B) (Sıkı) Streamlit Cloud → App settings → Secrets içine service_role
+--      anahtarını ekleyin; yalnızca Yönetim ekranı kullanır:
+--
+--        [supabase]
+--        service_key = "eyJ..."
+--
+-- B daha güvenlidir; A daha pratiktir. Seçim sizin.

@@ -1080,6 +1080,7 @@ st.markdown("""
    pointer-events:none -> gorunmez serit altindaki sayfayi tiklamayi engellemesin;
    butonda tekrar acilir. */
 .st-key-cikis_kutusu{
+    min-width:96px !important;
     position:fixed !important; top:10px !important;
     left:0 !important; right:0 !important; width:100% !important;
     /* Streamlit'in kendi ust seridi (stHeader) z-index:999990 ve fixed;
@@ -1126,9 +1127,16 @@ st.markdown("""
 
 with st.container(key="cikis_kutusu"):
     # Yalnizca simge — metin yok. Ne ise yaradigi help balonunda yazili.
-    if st.button("⏻", key="cikis_btn", help="Oturumu kapat"):
-        giris.cikis_yap()
-        st.rerun()
+    _yb, _cb = st.columns(2)
+    with _yb:
+        if st.button("⚙", key="yonetim_btn",
+                     help="Yönetim — sunucu ve veri durumu (canlı)"):
+            st.session_state["yonetim"] = True
+            st.rerun()
+    with _cb:
+        if st.button("⏻", key="cikis_btn", help="Oturumu kapat"):
+            giris.cikis_yap()
+            st.rerun()
 
 # ── SUNUM/DEMO UYARISI ──
 # Simülasyon sunucusuna bağlıyken ekranda görünür bir işaret durur; böylece
@@ -1163,6 +1171,20 @@ if "ozet" in st.query_params:
         st.session_state["detay_ozet"] = _oz
         st.query_params.clear()
         st.rerun()
+
+# ── Yönetim ekranı (canlı sunucu/veri durumu) ──
+if "yonetim" in st.query_params:
+    st.session_state["yonetim"] = True
+    st.query_params.clear()
+    st.rerun()
+
+if st.session_state.get("yonetim"):
+    with st.container(key="yonetim_katmani"):
+        _yon_dosya = os.path.join(os.path.dirname(__file__), "pages", "yonetim.py")
+        with open(_yon_dosya, "r", encoding="utf-8") as _f:
+            _yon_kaynak = _f.read()
+        exec(compile(_yon_kaynak, _yon_dosya, "exec"), globals())
+    st.stop()
 
 if st.session_state.get("detay_ozet"):
     with st.container(key="ozet_gecis_katmani"):
