@@ -147,7 +147,7 @@ st.markdown(f"<div style='font-size:11px;font-weight:700;letter-spacing:2.2px;"
             f"🖥️ Sunucu ve veritabanı</div>", unsafe_allow_html=True)
 
 _k = _kullanim(url, _anahtar)
-if not isinstance(_k, dict):
+if not isinstance(_k, dict) or "veritabani_bayt" not in _k:
     st.warning(
         "Veritabanı ölçümü okunamadı. İki sebebi olabilir: (1) `merkez/izleme_kurulum.sql` "
         "henüz çalıştırılmadı, (2) fonksiyon yalnızca service_role'a açık ve portal anon "

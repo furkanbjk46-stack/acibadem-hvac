@@ -1087,12 +1087,11 @@ st.markdown("""
        daha dusuk bir deger verilirse buton GORUNUR ama tiklama seride gider
        ve buton olu kalir. Bu yuzden onun uzerine cikilir. */
     z-index:999999 !important;
-    /* DIKKAT: Bu kapsayici DIKEY bir flex (stVerticalBlock). Dolayisiyla
-       yatay hizalama justify-content ile DEGIL align-items ile yapilir;
-       justify-content burada butonu saga degil ASAGI yaslar. */
-    display:flex !important; flex-direction:column !important;
-    align-items:flex-end !important;
-    padding:0 72px 0 0 !important; gap:0 !important;
+    /* Simgeler YAN YANA ve sagda: kapsayici satir flex'e cevrilir.
+       (Dikey flex'te justify-content butonu asagi yaslardi.) */
+    display:flex !important; flex-direction:row !important;
+    justify-content:flex-end !important; align-items:center !important;
+    padding:0 72px 0 0 !important; gap:8px !important;
     pointer-events:none !important;   /* alttaki sayfa tiklanabilir kalsin */
 }
 /* Ara katmanlar tam genislikte kaliyor; daraltilmazsa hizalama ise yaramaz */
@@ -1113,30 +1112,28 @@ st.markdown("""
     padding:0 !important; border-radius:9px !important;
     width:34px !important; height:34px !important;
     display:flex !important; align-items:center !important; justify-content:center !important;
-    !important; -webkit-!important;
     box-shadow:0 10px 24px -12px rgba(19,50,115,.28) !important;
     transition:background .18s ease, border-color .18s ease, color .18s ease !important;
 }
 .st-key-cikis_kutusu .stButton button:hover{
-    background:rgba(14,165,233,0.20) !important;
+    background:#133273 !important;
     border-color:#133273 !important;
-    color:#e0f2fe !important;
+    color:#ffffff !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
 with st.container(key="cikis_kutusu"):
     # Yalnizca simge — metin yok. Ne ise yaradigi help balonunda yazili.
-    _yb, _cb = st.columns(2)
-    with _yb:
-        if st.button("⚙", key="yonetim_btn",
-                     help="Yönetim — sunucu ve veri durumu (canlı)"):
-            st.session_state["yonetim"] = True
-            st.rerun()
-    with _cb:
-        if st.button("⏻", key="cikis_btn", help="Oturumu kapat"):
-            giris.cikis_yap()
-            st.rerun()
+    # DIKKAT: burada st.columns KULLANILMAZ; kapsayici sabit konumlu bir
+    # seritdir, sutun eklenince butonlar sayfa genisligine yayiliyor.
+    # Yan yana dizilim CSS'te (flex-direction:row) yapilir.
+    if st.button("⚙", key="yonetim_btn", help="Yönetim — sunucu ve veri durumu"):
+        st.session_state["yonetim"] = True
+        st.rerun()
+    if st.button("⏻", key="cikis_btn", help="Oturumu kapat"):
+        giris.cikis_yap()
+        st.rerun()
 
 # ── SUNUM/DEMO UYARISI ──
 # Simülasyon sunucusuna bağlıyken ekranda görünür bir işaret durur; böylece

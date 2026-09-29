@@ -43,7 +43,10 @@ def kullanim_oku(url, key, zaman_asimi=30):
     # sunucusu ise tanimadigi yola bos liste verir.
     if isinstance(veri, list):
         veri = veri[0] if veri and isinstance(veri[0], dict) else None
-    return veri if isinstance(veri, dict) else None
+    # Icerigi anlamsizsa (bos sozluk, beklenen alan yok) olculemedi sayilir.
+    if not isinstance(veri, dict) or "veritabani_bayt" not in veri:
+        return None
+    return veri
 
 
 def boyut(bayt):

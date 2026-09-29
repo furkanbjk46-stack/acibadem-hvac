@@ -141,7 +141,9 @@ c("yönetim ekranı ortak izleme modülünü kullanır", "import izleme as _IZ" 
 c("statik sayfa da AYNI modülü kullanır", "import izleme" in _sema)
 c("alarm mantığı sayfada TEKRARLANMIYOR",
   "disk_kritik_yuzde" not in _yon and "tablo_kritik_mb" not in _yon)
-c("ölçüm okunamazsa sayfa çökmez, uyarı verir", "isinstance(_k, dict)" in _yon)
+c("ölçüm okunamazsa sayfa çökmez, uyarı verir",
+  'isinstance(_k, dict)' in _yon and '"veritabani_bayt" not in _k' in _yon)
+c("bos yanit da olculemedi sayilir", IZ.kullanim_oku is not None)
 c("service_role anahtarı ortamdan/secrets'tan alınır",
   "SUPABASE_SERVICE_KEY" in _yon and "service_key" in _yon)
 c("secrets dosyası yoksa st.secrets'e dokunulmaz", "secrets.toml" in _yon)
