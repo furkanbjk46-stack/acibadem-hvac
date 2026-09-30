@@ -35,8 +35,8 @@ body, .stApp { font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialia
 html, body, [data-testid="stAppViewContainer"],
 [data-testid="stAppViewContainer"] > div:first-child,
 [data-testid="stAppViewContainer"] > div:first-child > div:first-child {
-    background-color: #ffffff !important;
-    background-image: radial-gradient(circle at 50% 0%, #f3f6fb 0%, #ffffff 100%) !important;
+    background-color: #ecebe8 !important;
+    background-image: none !important;
 }
 [data-testid="stHeader"]          { background: transparent !important; }
 [data-testid="stToolbar"]         { display: none !important; }
@@ -59,7 +59,7 @@ p, li, span, div { color: #0f1f3d; }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: #f3f6fb; }
+::-webkit-scrollbar-track { background: #f1f0ed; }
 ::-webkit-scrollbar-thumb { background: rgba(19,50,115,0.3); border-radius: 3px; }
 
 /* ── BÖLÜM BAŞLIĞI ── */
@@ -69,17 +69,17 @@ p, li, span, div { color: #0f1f3d; }
     color: #133273;
     letter-spacing: 2px; text-transform: uppercase;
     padding: 4px 0 8px; margin-top: 16px;
-    border-bottom: 1px solid rgba(19,50,115,0.22);
+    border-bottom: 1px solid rgba(24,26,30,0.10);
 }
 
 /* ── METRIC KART ── */
 .metric-card {
-    background: #ffffff;
-    border: 1px solid rgba(19,50,115,0.22);
+    background: #fafaf8;
+    border: 1px solid rgba(24,26,30,0.10);
     border-radius: 12px;
     padding: 16px;
     text-align: center;
-    box-shadow: 0 1px 2px rgba(19,50,115,.07),0 10px 24px -12px rgba(19,50,115,.28);
+    box-shadow: 0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);
 }
 [data-testid="stMetricValue"]  {
     color: #2a78d6 !important;
@@ -95,8 +95,8 @@ p, li, span, div { color: #0f1f3d; }
     text-transform: uppercase !important;
 }
 [data-testid="metric-container"] {
-    background: #ffffff !important;
-    border: 1px solid rgba(19,50,115,0.22) !important;
+    background: #fafaf8 !important;
+    border: 1px solid rgba(24,26,30,0.10) !important;
     border-radius: 12px !important;
     padding: 14px !important;
     !important;
@@ -130,25 +130,25 @@ p, li, span, div { color: #0f1f3d; }
     box-shadow: 0 -2px 8px rgba(19,50,115,0.5) !important;
 }
 [data-testid="stTabs"] [data-baseweb="tab-panel"] {
-    background:#ffffff;
+    background:#fafaf8;
     border-radius: 0 0 12px 12px;
     padding: 20px;
-    border: 1px solid rgba(19,50,115,0.22);
+    border: 1px solid rgba(24,26,30,0.10);
     border-top: none;
     }
 
 /* ── BUTONLAR ── */
 .stButton > button {
-    background: #ffffff !important;
+    background: #fafaf8 !important;
     color: #133273 !important;
-    border: 1px solid rgba(19,50,115,0.22) !important;
-    border-radius: 10px !important;
+    border: 1px solid rgba(24,26,30,0.10) !important;
+    border-radius: 14px !important;
     font-weight: 600 !important;
     font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important;
     transition: all 0.2s !important;
 }
 .stButton > button:hover {
-    background: #f3f6fb !important;
+    background: #f1f0ed !important;
     border-color: #133273 !important;
 }
 
@@ -160,7 +160,7 @@ p, li, span, div { color: #0f1f3d; }
     border-bottom: 2px solid rgba(19,50,115,0.3) !important;
 }
 .stDataFrame tbody tr td {
-    background: #ffffff !important;
+    background: #fafaf8 !important;
     color: #0f1f3d !important;
     border-bottom: 1px solid rgba(19,50,115,0.04) !important;
 }
@@ -172,7 +172,7 @@ p, li, span, div { color: #0f1f3d; }
 [data-testid="stSelectbox"] > div > div,
 [data-testid="stDateInput"] input,
 [data-testid="stNumberInput"] input {
-    background: #ffffff !important;
+    background: #fafaf8 !important;
     color: #0f1f3d !important;
     border: 1px solid rgba(19,50,115,0.2) !important;
     border-radius: 8px !important;
@@ -180,9 +180,9 @@ p, li, span, div { color: #0f1f3d; }
 
 /* ── EXPANDER ── */
 [data-testid="stExpander"] {
-    background: #ffffff !important;
-    border: 1px solid rgba(19,50,115,0.22) !important;
-    border-radius: 10px !important;
+    background: #fafaf8 !important;
+    border: 1px solid rgba(24,26,30,0.10) !important;
+    border-radius: 14px !important;
 }
 [data-testid="stExpanderToggleIcon"] { color:#133273 !important; }
 
@@ -193,7 +193,7 @@ hr { border-color:#133273 !important; }
 [data-testid="stAlert"] {
     background: rgba(243,246,251,0.5) !important;
     border: 1px solid rgba(19,50,115,0.2) !important;
-    border-radius: 10px !important;
+    border-radius: 14px !important;
     color: #0f1f3d !important;
 }
 </style>
@@ -995,8 +995,8 @@ with tab1:
                         f"</div>"
                     )
                 st.markdown(
-                    f"<div style='background:#ffffff;border:1px solid rgba(19,50,115,0.15);"
-                    f"border-radius:12px;overflow:hidden;'>{rows_html}</div>",
+                    f"<div style='background:#fafaf8;border:1px solid rgba(19,50,115,0.15);"
+                    f"border-radius:14px;overflow:hidden;'>{rows_html}</div>",
                     unsafe_allow_html=True
                 )
             else:
@@ -1125,8 +1125,8 @@ with tab1:
     def _kaynak_item(ikon, baslik, deger, birim, renk_hex):
         r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
         return (
-            f"<div style='background:#ffffff;border:1px solid rgba(19,50,115,0.22);"
-            f"border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;'>"
+            f"<div style='background:#fafaf8;border:1px solid rgba(24,26,30,0.10);"
+            f"border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;'>"
             f"<div style='font-size:18px;flex-shrink:0;'>{ikon}</div>"
             f"<div>"
             f"<div style='font-size:8px;color:#46536b;letter-spacing:1px;"
@@ -1207,8 +1207,8 @@ with tab1:
     hvac_uyari   = hvac_ozet.get("uyari",  [])
     hvac_normal  = hvac_ozet.get("normal", [])
 
-    KART  = ("background:#ffffff;border:1px solid rgba(19,50,115,0.22);border-radius:12px;"
-             "padding:14px;box-shadow:0 1px 2px rgba(19,50,115,.07),0 10px 24px -12px rgba(19,50,115,.28);")
+    KART  = ("background:#fafaf8;border:1px solid rgba(24,26,30,0.10);border-radius:14px;"
+             "padding:14px;box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);")
     LBL   = ("font-size:8px;color:#46536b;letter-spacing:1.5px;"
              "text-transform:uppercase;margin-bottom:8px;font-weight:700;")
 
@@ -1563,7 +1563,7 @@ with tab4:
     st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
     st.markdown(
         f"""<div style='text-align:center;padding:30px 40px 20px;
-            background:#ffffff;border:1px solid rgba(19,50,115,0.15);
+            background:#fafaf8;border:1px solid rgba(19,50,115,0.15);
             border-radius:16px;max-width:560px;margin:0 auto;'>
             <div style='font-size:40px;margin-bottom:12px;'>📄</div>
             <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;font-weight:700;

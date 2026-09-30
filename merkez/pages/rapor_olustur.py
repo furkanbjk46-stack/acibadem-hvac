@@ -252,7 +252,7 @@ if _ss_bas and _ss_bit:
 
     st.markdown(
         f"<div style='background:rgba(42,120,214,0.07);border:1px solid rgba(42,120,214,0.25);"
-        f"border-radius:10px;padding:10px 16px;margin-bottom:10px;"
+        f"border-radius:14px;padding:10px 16px;margin-bottom:10px;"
         f"font-size:12px;color:#46536b;'>"
         f"📅 <b style='color:#2a78d6;'>Seçilen Aralık:</b> {period_str}  "
         f"<span style='color:#46536b;'>({gun_fark} gün)</span>"
@@ -298,8 +298,8 @@ else:
     period_df = df[(df["Tarih"] >= bas) & (df["Tarih"] <= bitis)].copy()
 
 st.markdown(
-    f"""<div style='background:#ffffff;border:1px solid rgba(42,120,214,0.12);
-                   border-radius:10px;padding:12px 18px;margin:14px 0;
+    f"""<div style='background:#fafaf8;border:1px solid rgba(42,120,214,0.12);
+                   border-radius:14px;padding:12px 18px;margin:14px 0;
                    font-size:12px;color:#46536b;'>
         <span style='color:#2a78d6;font-weight:700;'>{period_type}</span>
         &nbsp;·&nbsp; {period_str}
@@ -439,7 +439,7 @@ def _mpl_bar(period_df, lok_renk) -> Optional[bytes]:
                .sum().reset_index())
         gun.columns = ["Tarih", "kWh"]
 
-        BG    = "#f3f6fb"
+        BG    = "#f1f0ed"
         GRID  = "#e8edf4"
         rc    = _hex_to_rgb(lok_renk)
 
@@ -488,7 +488,7 @@ def _mpl_donut_kirilim(period_df) -> Optional[bytes]:
         return None
 
     try:
-        BG = "#f3f6fb"
+        BG = "#f1f0ed"
 
         toplam = period_df["Toplam_Hastane_Tuketim_kWh"].sum() if "Toplam_Hastane_Tuketim_kWh" in period_df.columns else 0
         kojen  = period_df["Kojen_Uretim_kWh"].sum()   if "Kojen_Uretim_kWh"   in period_df.columns else 0

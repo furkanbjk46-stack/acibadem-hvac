@@ -344,9 +344,9 @@ body, .stApp { font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialia
 [data-testid="stAppViewContainer"]::before{
   content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
   background:
-    radial-gradient(ellipse at 18%% 12%%, rgba(58,160,224,0.10) 0%%, transparent 55%%),
-    radial-gradient(ellipse at 82%% 78%%, rgba(19,50,115,0.08) 0%%, transparent 55%%),
-    linear-gradient(180deg, #ffffff 0%%, #f7f9fd 100%%);
+    radial-gradient(ellipse at 18%% 12%%, rgba(255,255,255,0.75) 0%%, transparent 58%%),
+    radial-gradient(ellipse at 82%% 80%%, rgba(20,22,26,0.05) 0%%, transparent 55%%),
+    linear-gradient(180deg, #efeeeb 0%%, #e7e6e2 100%%);
 }
 [data-testid="stHeader"], [data-testid="stToolbar"]{background:transparent !important;}
 [data-testid="stDecoration"]{display:none !important;}   /* ustteki renkli serit */
@@ -363,11 +363,11 @@ footer, #MainMenu{visibility:hidden;}
 .st-key-giris_panel{
   max-width:780px !important;
   margin:0 auto !important;
-  background:#ffffff !important;
-  border:1px solid rgba(19,50,115,0.22) !important;
+  background:#fafaf8 !important;
+  border:1px solid rgba(24,26,30,0.10) !important;
   border-radius:18px !important;
   padding:40px 38px !important;
-  box-shadow:0 1px 2px rgba(19,50,115,.07),0 24px 60px -28px rgba(19,50,115,.35) !important;
+  box-shadow:0 1px 1px rgba(20,22,26,.05),0 24px 60px -28px rgba(19,50,115,.35) !important;
 }
 .st-key-giris_panel [data-testid="stVerticalBlock"]{gap:0.35rem;}
 
@@ -603,7 +603,7 @@ def _bekleme_ekrani():
       .g-bekle{display:flex;flex-direction:column;align-items:center;
                justify-content:center;min-height:52vh;text-align:center;}
       .g-bekle .halka{width:34px;height:34px;margin-bottom:20px;border-radius:50%;
-        border:2px solid rgba(19,50,115,0.22);border-top-color:#2a78d6;
+        border:2px solid rgba(24,26,30,0.10);border-top-color:#2a78d6;
         animation:gDon 0.9s linear infinite;}
       @keyframes gDon{to{transform:rotate(360deg);}}
       .g-bekle .yazi{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:10px;
@@ -688,7 +688,7 @@ def _tani_ekrani(parola_hash: str):
     import streamlit.components.v1 as components
     components.html("""
     <div style="font-family:ui-monospace,Consolas,monospace;font-size:12px;
-                color:#24324d;background:#ffffff;border:1px solid #1e3a5f;
+                color:#24324d;background:#fafaf8;border:1px solid #1e3a5f;
                 border-radius:8px;padding:12px;line-height:1.75">
     <script>
       function yaz(k, v){

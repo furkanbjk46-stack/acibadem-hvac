@@ -25,8 +25,8 @@ def tr(sayi, ondalik=0):
 
 def kutu(ikon, baslik, deger, alt, renk="#2a78d6"):
     return (
-        f"<div style='flex:1;min-width:120px;background:#ffffff;"
-        f"border:1px solid rgba(19,50,115,0.22);border-radius:10px;padding:10px 12px;box-shadow:0 1px 2px rgba(19,50,115,.07),0 10px 24px -12px rgba(19,50,115,.28);'>"
+        f"<div style='flex:1;min-width:120px;background:#fafaf8;"
+        f"border:1px solid rgba(24,26,30,0.10);border-radius:14px;padding:10px 12px;box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);'>"
         f"<div style='font-size:9px;color:#46536b;letter-spacing:1px;'>"
         f"{ikon} {baslik}</div>"
         f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:20px;font-weight:700;"
@@ -145,7 +145,7 @@ def panel_govde(st, r, dag, ld, ctx):
             "normal": ("#0ca30c", "rgba(12,163,12,0.08)", "✓"),
             "bilgi": ("#2a78d6", "rgba(19,50,115,0.06)", "ℹ️")}[sev]
     st.markdown(
-        f"<div style='border:1px solid {renk[0]}55;background:{renk[1]};border-radius:10px;"
+        f"<div style='border:1px solid {renk[0]}55;background:{renk[1]};border-radius:14px;"
         f"padding:10px 14px;margin:6px 0 12px;'>"
         f"<div style='color:{renk[0]};font-weight:700;font-size:12px;'>{renk[2]} {baslik}</div>"
         + "".join(f"<div style='font-size:11px;color:#24324d;margin-top:4px;'>• {m}</div>"
@@ -194,7 +194,7 @@ def panel_govde(st, r, dag, ld, ctx):
                        ("Ort. chiller yükü", "—" if r.get("ort_chiller_yuk") is None
                         else f"%{r['ort_chiller_yuk']:.0f}")):
             h2 += (f"<div style='display:flex;justify-content:space-between;gap:8px;font-size:10px;"
-                   f"padding:4px 0;border-bottom:1px solid rgba(19,50,115,0.22);'>"
+                   f"padding:4px 0;border-bottom:1px solid rgba(24,26,30,0.10);'>"
                    f"<span style='color:#46536b;'>{et}</span>"
                    f"<span style='color:#24324d;text-align:right;'>{dg}</span></div>")
         st.markdown(h2, unsafe_allow_html=True)

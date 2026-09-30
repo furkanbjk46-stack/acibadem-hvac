@@ -6,12 +6,12 @@
 gatherUsageStats = false
 
 [theme]
-# Açık (beyaz) tema — Elektrik Analiz Paneli referansı.
+# Mat plastik beyaz tema — sayfa ılık açık gri, yüzeyler kırık beyaz.
 # Streamlit'in kendi bileşenleri (selectbox, tablo, radio, tarih seçici) de
 # bu paleti kullansın diye burada tanımlı; kart/grafik renkleri tema.py'de.
 base = "light"
 primaryColor = "#133273"
-backgroundColor = "#ffffff"
-secondaryBackgroundColor = "#f3f6fb"
+backgroundColor = "#ecebe8"
+secondaryBackgroundColor = "#f1f0ed"
 textColor = "#0f1f3d"
 font = "sans serif"

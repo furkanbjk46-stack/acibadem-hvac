@@ -3,7 +3,9 @@
 SYNAPSE TEMA — AÇIK (BEYAZ) TEMA TOKENLARI
 ==========================================
 
-Renkler ve yazı tipi, Elektrik Analiz Paneli referansından alınmıştır.
+Palet: MAT PLASTİK BEYAZ. Sayfa ılık açık gri bir gövde, kartlar kırık
+beyaz mat kapaklar; derinlik keskin kenarlıktan değil yumuşak gölge ve üst
+kenardaki ince ışık çizgisinden gelir.
 Kod içinde renk sabiti yazmak yerine buradaki tokenlar kullanılır; tema
 değişirse tek dosya düzenlenir.
 
@@ -16,14 +18,14 @@ FONT = 'Inter,system-ui,-apple-system,Segoe UI,sans-serif'
 # ── Yüzeyler ve metin ────────────────────────────────────────────────────
 SAYFA      = "#ffffff"
 YUZEY      = "#ffffff"
-YUZEY_2    = "#f3f6fb"
+YUZEY_2    = "#f1f0ed"
 MUREKKEP   = "#0f1f3d"      # ana metin
 MUREKKEP_2 = "#24324d"      # ikincil metin
 SOLUK      = "#46536b"      # etiket / açıklama
 IZGARA     = "#e8edf4"      # grafik ızgarası, ayraç
 EKSEN      = "#c9d2e0"
-CERCEVE    = "rgba(19,50,115,.22)"
-GOLGE      = "0 1px 2px rgba(19,50,115,.07),0 10px 24px -12px rgba(19,50,115,.28)"
+CERCEVE    = "rgba(24,26,30,0.10)"
+GOLGE      = "0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95)"
 
 # ── Vurgu ────────────────────────────────────────────────────────────────
 LACIVERT   = "#133273"      # başlıklar, ana vurgu
@@ -60,7 +62,7 @@ OLCULMEYEN = SOLUK
 
 def kart(dolgu="14px"):
     """Standart kart kutusu (inline style metni)."""
-    return (f"background:{YUZEY};border:1px solid {CERCEVE};border-radius:10px;"
+    return (f"background:{YUZEY};border:1px solid {CERCEVE};border-radius:14px;"
             f"padding:{dolgu};box-shadow:{GOLGE};")
 
 

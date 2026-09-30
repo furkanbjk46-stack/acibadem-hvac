@@ -91,7 +91,7 @@ def _kullanim(_url, _key):
 
 def _kutu(baslik, deger, alt, renk=None):
     return (f"<div style='flex:1;min-width:150px;background:{_T.YUZEY};"
-            f"border:1px solid {_T.CERCEVE};border-radius:10px;padding:11px 13px;"
+            f"border:1px solid {_T.CERCEVE};border-radius:14px;padding:11px 13px;"
             f"box-shadow:{_T.GOLGE};'>"
             f"<div style='font-size:9px;letter-spacing:1.4px;text-transform:uppercase;"
             f"color:{_T.SOLUK};'>{baslik}</div>"
