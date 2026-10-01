@@ -466,39 +466,17 @@ def save_m2_supabase(url, key, m2_dict):
     }).execute()
 
 # ═══════════════════════════════════════════════════════════════
-# OTOMATİK SET KONTROLÜ — 3 günlük tahmin + histerezis
+# HAVA TAHMİNİ — yalnızca GÖSTERİM için
 # ═══════════════════════════════════════════════════════════════
-
-# Chiller: 4 bölge, ±2°C histerezis
-_CH_SINIRLAR = [7.0, 23.0, 26.0]
-_CH_MODLAR   = ["koc_soguk", "serin", "ilimli", "sicak"]
-_CH_SET      = {"koc_soguk": 8.0, "serin": 7.5, "ilimli": 7.0, "sicak": 6.5}
-_CH_H        = 2.0
-
-# Kollektor / FCU / AHU: tek eşik 15°C, ±3°C histerezis
-# 01.10.2026: eşik 23 -> 15, kollektör setleri +2, FCU/AHU moddan
-# BAĞIMSIZ sabit (FCU 14, AHU 10). oto_set.py ile birebir aynı olmalı.
-_DIG_ESIK = 15.0
-_DIG_H    = 3.0
-_DIG_SET  = {
-    "sogutma": {
-        "GUNDUZ_KOLLEKTOR_SET":    10.0,
-        "GECE_KOLLEKTOR_SET":      12.0,
-        "A_BLOK_FCU_SET":          14.0,
-        "B_BLOK_FCU_SET":          14.0,
-        "ZON1_KLIMA_SANTRALI_SET": 10.0,
-        "ZON2_KLIMA_SANTRALI_SET": 10.0,
-    },
-    "isitma": {
-        "GUNDUZ_KOLLEKTOR_SET":    12.0,
-        "GECE_KOLLEKTOR_SET":      14.0,
-        "A_BLOK_FCU_SET":          14.0,
-        "B_BLOK_FCU_SET":          14.0,
-        "ZON1_KLIMA_SANTRALI_SET": 10.0,
-        "ZON2_KLIMA_SANTRALI_SET": 10.0,
-    },
-}
-_CH_NOKTALAR = ["CH1_REM_SET","CH2_REM_SET","CH3_REM_SET","CH4_REM_SET","CH5_REM_SET"]
+# Oto-set KURAL TABLOSU burada DEĞİLDİR. Eşikler, histerezis ve set
+# değerleri yalnızca hvac/deneme/oto_set.py içinde durur; kararı lokasyon
+# PC'si verir ve BACnet ile doğrudan yazar. Merkez yalnızca kuralı yayınlar
+# (geçiş saatleri, açık/kapalı) ve durumu gösterir.
+#
+# 01.10.2026: Buradaki kopya (_CH_SET/_DIG_SET/_DIG_ESIK ve komut gönderen
+# _oto_set_kontrol) SİLİNDİ. Çalışmıyordu ama iki kaynak olması tehlikeliydi:
+# biri yorumu kaldırıp thread'i başlatsa komutlar ÇİFT gidecekti ve iki tablo
+# zamanla ayrışırsa portal başka, saha başka değer gösterecekti.
 
 
 def _fetch_tahmin() -> dict | None:
@@ -535,45 +513,9 @@ def _fetch_tahmin() -> dict | None:
         return None
 
 
-def _hedef_bolge(ort: float) -> str:
-    """Sıcaklığın düştüğü bölgeyi doğrudan döner (histerezissiz)."""
-    for i, sinir in enumerate(_CH_SINIRLAR):
-        if ort < sinir:
-            return _CH_MODLAR[i]
-    return _CH_MODLAR[-1]
-
-
-def _ch_modu_hesapla(ort: float, mevcut: str) -> str:
-    """4 bölgeli chiller modu — ±2°C histerezis, KADEMESİZ geçiş.
-
-    Histerezis korunur: mevcut bölgeden çıkmak için sınırın _CH_H kadar ötesine
-    geçilmelidir (sınırda gidip gelmeyi önler). Ancak çıkış koşulu sağlandığında
-    hedef bölgeye DOĞRUDAN gidilir.
-
-    ÖNCEKİ DAVRANIŞ: her kontrolde en fazla bir bölge ilerleniyordu; sıcaklık iki
-    bölge birden atladığında setpoint 6.5 → 7.0 → 7.5 diye iki adımda gidiyordu.
-    Bu hem hedefe geç varıyor hem iki kat komut/log üretiyordu.
-    """
-    if mevcut in _CH_MODLAR:
-        idx = _CH_MODLAR.index(mevcut)
-        ust = _CH_SINIRLAR[idx]     if idx < len(_CH_SINIRLAR) else None  # yukarı çıkış sınırı
-        alt = _CH_SINIRLAR[idx - 1] if idx > 0                  else None  # aşağı iniş sınırı
-        cikis_var = ((ust is not None and ort > ust + _CH_H) or
-                     (alt is not None and ort < alt - _CH_H))
-        if not cikis_var:
-            return mevcut           # bölgede kal
-    return _hedef_bolge(ort)        # çıkış koşulu sağlandı → doğrudan hedefe
-
-
-def _dig_modu_hesapla(ort: float, mevcut: str) -> str:
-    """Kollektor/FCU/AHU ikili mod — ±3°C histerezis (_DIG_H)."""
-    if mevcut == "sogutma":
-        return "isitma" if ort < _DIG_ESIK - _DIG_H else "sogutma"
-    if mevcut == "isitma":
-        return "sogutma" if ort > _DIG_ESIK + _DIG_H else "isitma"
-    return "sogutma" if ort >= _DIG_ESIK else "isitma"
-
-
+# Geçiş saati varsayılanları — YALNIZCA GÖSTERİM içindir. Ayarlar tablosunda
+# değer yoksa ekranda bu saatler görünür; sahaya set gönderen karar lokasyonda
+# ve orada varsayılan saat bilerek YOKTUR (kural okunamazsa hiçbir şey yapılmaz).
 _OTO_GUNDUZ_VARSAYILAN = 5    # gündüz setleri bu saatte gider
 _OTO_GECE_VARSAYILAN   = 22   # gece setleri bu saatte gider
 
@@ -586,237 +528,6 @@ def _donem_hesapla(saat: int, gunduz_saat: int, gece_saat: int) -> str:
         return "gunduz" if gunduz_saat <= saat < gece_saat else "gece"
     return "gunduz" if (saat >= gunduz_saat or saat < gece_saat) else "gece"
 
-
-def _oto_set_kontrol(sb_url: str, sb_key: str):
-    """
-    Yarınki gündüz/gece tahminlerine göre dönem bazlı set kontrolü.
-    06:00–19:00 → yarın max (gündüz seti) / 19:00–06:00 → yarın min (gece seti)
-    Dönem geçişinde (06:00 / 19:00) her zaman komut gönderilir.
-    """
-    import urllib.request as _ur2, json as _jj2
-    from datetime import datetime as _dtt, timezone as _tz, timedelta as _td
-
-    _IST = _tz(_td(hours=3))  # Türkiye UTC+3 (sabit, DST yok)
-
-    # YARIŞ KORUMASI: Aynı anda birden fazla çalıştırma olmamalı.
-    # Loglarda görülen tablo buydu: dönem geçişinde aynı saniye içinde AYNI 11
-    # komut iki kez gönderilmiş, 10 adet log kaydı düşmüştü. Sebep, eşzamanlı
-    # çalışan kontrollerin hepsinin "dönem değişmiş" görüp, hiçbiri henüz
-    # oto_donem'i yazmadan komut göndermesiydi.
-    if not _OTO_KONTROL_LOCK.acquire(blocking=False):
-        logging.getLogger(__name__).info("oto_set_kontrol: zaten çalışıyor, atlanıyor.")
-        return
-    try:
-        # ── OTO SET aktif mi kontrol et ──
-        _aktif_req = _ur2.Request(
-            sb_url + "/rest/v1/ayarlar?key=eq.oto_set_aktif&select=value",
-            headers={"apikey": sb_key, "Authorization": "Bearer " + sb_key}
-        )
-        with _ur2.urlopen(_aktif_req, timeout=4) as _ar:
-            _aktif_data = _jj2.loads(_ar.read())
-        _oto_aktif = (_aktif_data[0]["value"] == "true") if _aktif_data else True
-        if not _oto_aktif:
-            logging.getLogger(__name__).info("oto_set_kontrol: devre disi, atlanıyor.")
-            return
-
-        tahmin = _fetch_tahmin()
-        if tahmin is None:
-            return
-
-        def _sb_ayar_oku(k):
-            _q = _ur2.Request(
-                sb_url + f"/rest/v1/ayarlar?key=eq.{k}&select=value",
-                headers={"apikey": sb_key, "Authorization": "Bearer " + sb_key}
-            )
-            with _ur2.urlopen(_q, timeout=6) as _r:
-                _d = _jj2.loads(_r.read())
-            return _d[0]["value"] if _d else ""
-
-        def _sb_ayar_yaz(k, v):
-            _p = _jj2.dumps({"key": k, "value": v}).encode()
-            _q = _ur2.Request(
-                sb_url + "/rest/v1/ayarlar",
-                data=_p,
-                headers={
-                    "apikey": sb_key, "Authorization": "Bearer " + sb_key,
-                    "Content-Type": "application/json",
-                    "Prefer": "resolution=merge-duplicates,return=minimal",
-                },
-                method="POST"
-            )
-            _ur2.urlopen(_q, timeout=6)
-
-        # ── DÖNEM: kullanıcının belirlediği saatlere göre ──
-        # Saatler Synapse kumanda panelinden değiştirilebilir; burada okunur.
-        def _saat_oku(k, varsayilan):
-            try:
-                s = int(float(_sb_ayar_oku(k)))
-                return s if 0 <= s <= 23 else varsayilan
-            except (TypeError, ValueError):
-                return varsayilan
-
-        _gunduz_saat = _saat_oku("oto_gunduz_saat", _OTO_GUNDUZ_VARSAYILAN)
-        _gece_saat   = _saat_oku("oto_gece_saat",   _OTO_GECE_VARSAYILAN)
-
-        _saat   = _dtt.now(_IST).hour
-        _donem  = _donem_hesapla(_saat, _gunduz_saat, _gece_saat)
-        _gunduz = _donem == "gunduz"
-        # Gündüz → BUGÜNÜN max'ı, gece → YARININ min'i (gerekçe: _fetch_tahmin)
-        _ref    = tahmin["bugun_max"] if _gunduz else tahmin["yarin_min"]
-
-        mevcut_ch    = _sb_ayar_oku("oto_mod_chiller")
-        mevcut_dig   = _sb_ayar_oku("oto_mod_diger")
-        mevcut_donem = _sb_ayar_oku("oto_donem")  # son uygulanan dönem
-
-        yeni_ch  = _ch_modu_hesapla(_ref, mevcut_ch)
-        yeni_dig = _dig_modu_hesapla(_ref, mevcut_dig)
-
-        ch_degisti    = yeni_ch  != mevcut_ch
-        dig_degisti   = yeni_dig != mevcut_dig
-        donem_degisti = _donem   != mevcut_donem
-
-        # KOMUT YALNIZCA DÖNEM GEÇİŞİNDE GİDER.
-        #
-        # Kullanıcı kararı: setler yalnızca belirlenen saatlerde (varsayılan
-        # 05:00 gündüz / 22:00 gece) gönderilir. Gün ortasında hava tahmini
-        # değişse bile komut gitmez; bir sonraki geçişte uygulanır. Böylece
-        # sahaya ne zaman komut gideceği öngörülebilir olur.
-        #
-        # Geçişte, mod değişmemiş olsa bile setler yeniden yazılır — sahada
-        # elle değiştirilmiş bir setpoint günde iki kez düzeltilmiş olur.
-        # (Bu, önceki "günlük yenileme" mekanizmasının yerini alır; o mekanizma
-        # rastgele bir saatte — süreç ilk başladığında — tetikleniyordu.)
-        if not donem_degisti:
-            _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
-                "zaman": _dtt.now(_IST).isoformat(),
-                "donem": _donem, "ref_sicaklik": _ref,
-                "bugun_max": tahmin["bugun_max"], "yarin_min": tahmin["yarin_min"],
-                "chiller_mod": mevcut_ch or yeni_ch,
-                "diger_mod": mevcut_dig or yeni_dig,
-                "komut_sayisi": 0,
-                "gunduz_saat": _gunduz_saat, "gece_saat": _gece_saat,
-            }))
-            return
-
-        # Aktif lokasyonları lokasyon_noktalar'dan çek
-        _lq = _ur2.Request(
-            sb_url + "/rest/v1/lokasyon_noktalar?select=lokasyon",
-            headers={"apikey": sb_key, "Authorization": "Bearer " + sb_key}
-        )
-        with _ur2.urlopen(_lq, timeout=6) as _r:
-            _loks = list({x["lokasyon"] for x in _jj2.loads(_r.read())})
-
-        komutlar = []
-        # SADECE gerçekten modu değişen grup gönderilir.
-        #
-        # Önceden dönem geçişinde (06:00/19:00) mod aynı olsa bile HER İKİ grup
-        # yeniden gönderiliyordu; loglardaki "sogutma → sogutma" (36 kez) ve
-        # "ilimli → ilimli" (35 kez) kayıtları bundandı. Dönem değişiminin
-        # setpoint'lere doğrudan etkisi yok: dönem yalnızca hangi tahminin
-        # (gündüz max / gece min) referans alınacağını belirler; bu da zaten
-        # mod hesabına girer. Mod gerçekten değişmişse ch_degisti/dig_degisti
-        # true olur ve komut gider.
-        #
-        # Buraya yalnızca dönem geçişinde gelinir; her iki grup da yazılır.
-        _ch_gonder  = True
-        _dig_gonder = True
-
-        for lok in _loks:
-            if _ch_gonder:
-                for nokta in _CH_NOKTALAR:
-                    komutlar.append({
-                        "lokasyon": lok, "nokta_adi": nokta,
-                        "hedef_deger": _CH_SET[yeni_ch], "durum": "bekliyor"
-                    })
-            if _dig_gonder:
-                for nokta, deger in _DIG_SET[yeni_dig].items():
-                    komutlar.append({
-                        "lokasyon": lok, "nokta_adi": nokta,
-                        "hedef_deger": deger, "durum": "bekliyor"
-                    })
-
-        if komutlar:
-            _ins = _jj2.dumps(komutlar).encode()
-            _ir = _ur2.Request(
-                sb_url + "/rest/v1/komutlar",
-                data=_ins,
-                headers={
-                    "apikey": sb_key, "Authorization": "Bearer " + sb_key,
-                    "Content-Type": "application/json", "Prefer": "return=minimal"
-                },
-                method="POST"
-            )
-            _ur2.urlopen(_ir, timeout=10)
-
-        if _ch_gonder:
-            _sb_ayar_yaz("oto_mod_chiller", yeni_ch)
-        if _dig_gonder:
-            _sb_ayar_yaz("oto_mod_diger", yeni_dig)
-        _sb_ayar_yaz("oto_donem", _donem)
-        _sb_ayar_yaz("oto_set_son_kontrol", _jj2.dumps({
-            "zaman": _dtt.now(_IST).isoformat(),
-            "donem": _donem, "ref_sicaklik": _ref,
-            "bugun_max": tahmin["bugun_max"], "yarin_min": tahmin["yarin_min"],
-            "chiller_mod": yeni_ch, "diger_mod": yeni_dig,
-            "komut_sayisi": len(komutlar), "lokasyonlar": _loks,
-        }))
-
-        # Log
-        _lok_str = ", ".join(_loks)
-        _log_kayitlar = []
-        # tip: gerçek mod geçişi "chiller"/"diger"; günlük yeniden gönderim ise
-        # "*_yenileme". Ayrı tutulmasının sebebi, arayüzün "son geçiş" satırında
-        # "ilimli → ilimli" gibi geçiş olmayan kayıtları göstermemesi.
-        if _ch_gonder:
-            _log_kayitlar.append({
-                "tip": "chiller" if ch_degisti else "chiller_yenileme",
-                "eski_mod": mevcut_ch, "yeni_mod": yeni_ch,
-                "tahmin_ort": _ref,
-                "komut_sayisi": sum(1 for k in komutlar if k["nokta_adi"] in _CH_NOKTALAR),
-                "lokasyonlar": _lok_str,
-            })
-        if _dig_gonder:
-            _log_kayitlar.append({
-                "tip": "diger" if dig_degisti else "diger_yenileme",
-                "eski_mod": mevcut_dig, "yeni_mod": yeni_dig,
-                "tahmin_ort": _ref,
-                "komut_sayisi": sum(1 for k in komutlar if k["nokta_adi"] not in _CH_NOKTALAR),
-                "lokasyonlar": _lok_str,
-            })
-        if _log_kayitlar:
-            _lr = _ur2.Request(
-                sb_url + "/rest/v1/oto_mod_log",
-                data=_jj2.dumps(_log_kayitlar).encode(),
-                headers={
-                    "apikey": sb_key, "Authorization": "Bearer " + sb_key,
-                    "Content-Type": "application/json", "Prefer": "return=minimal"
-                },
-                method="POST"
-            )
-            _ur2.urlopen(_lr, timeout=6)
-
-    except Exception as _oe:
-        logging.getLogger(__name__).warning(f"oto_set_kontrol hata: {_oe}")
-    finally:
-        _OTO_KONTROL_LOCK.release()
-
-
-# ─── Arka plan thread: her 5 dakikada bir otomatik set kontrolü ───────────────
-import threading as _threading
-
-_OTO_KONTROL_LOCK = _threading.Lock()   # eşzamanlı kontrolü engeller
-
-
-def _oto_set_loop(sb_url: str, sb_key: str):
-    import time as _time
-    while True:
-        try:
-            _oto_set_kontrol(sb_url, sb_key)   # ilk kontrol hemen, sonra 5 dk'da bir
-        except Exception as _le:
-            logging.getLogger(__name__).warning(f"oto_set_loop hata: {_le}")
-        _time.sleep(300)   # 5 dakika
-
-# ═══════════════════════════════════════════════════════════════
 
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_guncellemeler(url, key):
@@ -833,42 +544,14 @@ url  = config.get("supabase_url","")
 key  = config.get("supabase_key","")
 bagli = bool(url and "BURAYA" not in url)
 
-# ─── Otomatik set arka plan thread'i — SÜREÇ GENELİNDE TEK KEZ ───────────────
-#
-# ÖNCEKİ HATA: Bayrak modül düzeyinde `_OTO_THREAD_STARTED = False` olarak
-# tutuluyordu. Streamlit ana dosyayı HER YENİDEN ÇALIŞTIRMADA baştan işlediği
-# için bu satır da her seferinde yeniden çalışıyor, bayrak False'a dönüyor ve
-# YENİ BİR THREAD ÇİFTİ başlıyordu. Portal 10 saniyede bir kendini yenilediği
-# için thread'ler birikiyordu; dönem geçişinde hepsi aynı anda uyanıp aynı
-# komutları defalarca gönderiyordu (loglarda 2 günde 72 kayıt).
-#
-# st.cache_resource rerun'lardan ve oturumlardan etkilenmez; süreçte tek kez
-# çalışır. Böylece tek bir döngü thread'i olur.
-@st.cache_resource(show_spinner=False)
-def _oto_thread_baslat(sb_url: str, sb_key: str):
-    t = _threading.Thread(
-        target=_oto_set_loop, args=(sb_url, sb_key), daemon=True, name="oto-set"
-    )
-    t.start()
-    return {"baslatildi": True}
 
+# NOT: Oto-set kontrolü ve onu çalıştıran arka plan thread'i buradan
+# kaldırıldı (01.10.2026). Sebep, Streamlit Cloud uygulamayı kimse açmayınca
+# uyutuyordu; setler belirlenen saatte değil biri portalı açtığında gidiyordu
+# (ayar 08:00/23:00 iken sahadan ölçülenler: 31.08 00:32, 30.08 08:56,
+# 29.08 11:35). Karar 7/24 çalışan lokasyon PC'sine taşındı:
+# hvac/deneme/oto_set.py — cloud_sync döngüsünden dakikada bir çağrılır.
 
-# ARTIK BAŞLATILMIYOR — oto-set kararı LOKASYON tarafına taşındı.
-#
-# NEDEN: Streamlit Cloud, kimse kullanmayınca uygulamayı uyutuyor; bu thread de
-# onunla birlikte duruyordu. Setler belirlenen saatte değil, biri portalı
-# açtığında gidiyordu. Sahadan ölçülen örnekler (ayar 08:00/23:00):
-#     31.08 00:32  <- 23:00 olmalıydı
-#     30.08 08:56  <- 08:00 olmalıydı
-#     29.08 11:35  <- hiçbir geçiş saati değil
-#
-# Karar artık hvac/deneme/oto_set.py içinde, lokasyon PC'sinin 7/24 çalışan
-# döngüsünde veriliyor. Merkez yalnızca KURALI yayınlar (saatler, açık/kapalı)
-# ve durumu gösterir. İkisi birden çalışırsa komutlar çift gider; bu yüzden
-# buradaki başlatma bilerek kaldırıldı.
-#
-# if bagli:
-#     _oto_thread_baslat(url, key)
 
 # m² değerlerini Supabase'den yükle (yoksa config/default kullan)
 m2_config = {}

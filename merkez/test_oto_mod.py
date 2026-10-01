@@ -1,21 +1,25 @@
 # -*- coding: utf-8 -*-
 """OTO-MOD mod hesabi testleri — kademesiz gecis + histerezis.
    python merkez/test_oto_mod.py
-Streamlit gerektirmez: fonksiyonlar app_merkez.py'den metin olarak alinir."""
+
+Kaynak: hvac/deneme/oto_set.py — yani SAHAYA SET GONDEREN kodun kendisi.
+(01.10.2026'ya kadar app_merkez.py'deki kopyadan okunuyordu; o kopya
+silindi, kural artik tek yerde.)"""
 import os
 import re
 import sys
 
-_KAYNAK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app_merkez.py")
+_KAYNAK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                       "hvac", "deneme", "oto_set.py")
 _metin = open(_KAYNAK, encoding="utf-8").read()
 
 # Sadece ilgili sabitleri ve saf fonksiyonlari calistir (Streamlit import etmeden)
 _ns = {}
 for _desen in [
-    r"_CH_SINIRLAR\s*=.*?\n", r"_CH_MODLAR\s*=.*?\n", r"_CH_SET\s*=.*?\n",
-    r"_CH_H\s*=.*?\n", r"_DIG_ESIK\s*=.*?\n", r"_DIG_H\s*=.*?\n",
-    r"def _hedef_bolge.*?(?=\ndef )", r"def _ch_modu_hesapla.*?(?=\ndef )",
-    r"def _dig_modu_hesapla.*?(?=\ndef )",
+    r"CH_SINIRLAR\s*=.*?\n", r"CH_MODLAR\s*=.*?\n", r"CH_SET\s*=.*?\n",
+    r"CH_H\s*=.*?\n", r"DIG_ESIK\s*=.*?\n", r"DIG_H\s*=.*?\n",
+    r"def _hedef_bolge.*?(?=\ndef )", r"def ch_modu_hesapla.*?(?=\ndef )",
+    r"def dig_modu_hesapla.*?(?=\ndef )",
 ]:
     m = re.search(_desen, _metin, re.DOTALL)
     if not m:
@@ -23,9 +27,9 @@ for _desen in [
         sys.exit(1)
     exec(m.group(0), _ns)
 
-ch = _ns["_ch_modu_hesapla"]
-dig = _ns["_dig_modu_hesapla"]
-SET = _ns["_CH_SET"]
+ch = _ns["ch_modu_hesapla"]
+dig = _ns["dig_modu_hesapla"]
+SET = _ns["CH_SET"]
 
 T = []
 def c(ad, kosul, detay=""):
@@ -75,8 +79,8 @@ c("hedefe varinca sabit kalir (tekrar komut yok)", m1 == m2 == "serin", "%s -> %
 c("sogutma, 21C -> sogutma (histerezis)", dig(21.0, "sogutma") == "sogutma")
 # Beklentiler ESIKTEN turetilir; esik degisince (23 -> 15 gibi) test kirmizi
 # yanmasin, kuralin KENDISI dogrulansin.
-_E = _ns["_DIG_ESIK"]
-_H = _ns["_DIG_H"]
+_E = _ns["DIG_ESIK"]
+_H = _ns["DIG_H"]
 c("sogutma, esik-1 -> hala sogutma (histerezis tutuyor)",
   dig(_E - 1, "sogutma") == "sogutma")
 c("sogutma, esik-H-1 -> isitma", dig(_E - _H - 1, "sogutma") == "isitma")
