@@ -741,9 +741,9 @@
         }
 
         .instruction-modal-header {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3));
-            padding: 28px 32px;
-            border-bottom: 1px solid #46536b;
+            background: #f1f0ed;
+            padding: 24px 28px;
+            border-bottom: 1px solid rgba(24,26,30,0.10);
         }
 
         .instruction-title-row {
@@ -754,11 +754,9 @@
         }
 
         .instruction-modal-header h2 {
-            font-weight: 700;
-            background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-weight: 650;
+            color: #0f1f3d;
+            letter-spacing: -0.02em;
             display: flex;
             align-items: center;
             gap: 12px;
@@ -813,21 +811,21 @@
         }
 
         .severity-critical {
-            background: linear-gradient(135deg, #dc2626, #991b1b);
-            color: #0f1f3d;
-            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
+            background: #d03b3b;
+            color: #ffffff;
+            box-shadow: none;
         }
 
         .severity-warning {
-            background: linear-gradient(135deg, #c98500, #d97706);
-            color: #0f1f3d;
-            box-shadow: 0 2px 8px rgba(250,178,25, 0.4);
+            background: #c98500;
+            color: #ffffff;
+            box-shadow: none;
         }
 
         .severity-optimal {
-            background: linear-gradient(135deg, #0ca30c, #059669);
-            color: #0f1f3d;
-            box-shadow: 0 2px 8px rgba(12,163,12, 0.4);
+            background: #0ca30c;
+            color: #ffffff;
+            box-shadow: none;
         }
 
         .instruction-score-badge {
@@ -905,8 +903,8 @@
 
         /* Instruction Button */
         .instruction-btn {
-            background: linear-gradient(135deg, var(--acibadem-blue), #1a4a9e);
-            color: #0f1f3d;
+            background: var(--acibadem-blue);
+            color: #ffffff;
             border: none;
             padding: 8px 14px;
             border-radius: 8px;
@@ -1331,13 +1329,13 @@
     <div id="settingsModal" class="instruction-modal">
         <div class="instruction-modal-content" style="max-width: 700px;">
             <div class="instruction-modal-header"
-                style="background: linear-gradient(135deg, rgba(109,167,236, 0.3), rgba(12,163,12, 0.3));">
+                style="background:#f1f0ed;">
                 <div class="instruction-title-row">
                     <h2><i class="fas fa-cog"></i> Sistem Ayarları</h2>
                     <button class="instruction-close" onclick="closeSettingsModal()">&times;</button>
                 </div>
                 <div class="instruction-badges">
-                    <span class="severity-badge" style="background: rgba(109,167,236, 0.3);">Tolerans Değerleri</span>
+                    <span class="severity-badge" style="background:#ffffff;border:1px solid rgba(24,26,30,0.10);color:#24324d;">Tolerans Değerleri</span>
                 </div>
             </div>
             <div class="instruction-modal-body" style="max-height: 60vh; overflow-y: auto;">
@@ -1603,13 +1601,13 @@
     <div id="maintenanceModal" class="instruction-modal">
         <div class="instruction-modal-content" style="max-width: 900px;">
             <div class="instruction-modal-header"
-                style="background: linear-gradient(135deg, rgba(250,178,25, 0.3), rgba(208,59,59, 0.3));">
+                style="background:#f1f0ed;">
                 <div class="instruction-title-row">
                     <h2><i class="fas fa-wrench"></i> Dijital Bakım Kartları (Santraller)</h2>
                     <button class="instruction-close" onclick="closeMaintenanceModal()">&times;</button>
                 </div>
                 <div class="instruction-badges">
-                    <span class="severity-badge" style="background: rgba(250,178,25, 0.3);">Santral Bileşen
+                    <span class="severity-badge" style="background:#ffffff;border:1px solid rgba(24,26,30,0.10);color:#24324d;">Santral Bileşen
                         Durumları</span>
                     <span id="maintenanceLastUpdate" class="severity-badge"
                         style="background: rgba(109,167,236, 0.3);">Son güncelleme: -</span>
@@ -2420,8 +2418,8 @@
                         legend: { display: true, position: 'top', labels: { color: 'white', font: { family: 'Inter', size: 11 } } }
                     },
                     scales: {
-                        x: { ticks: { color: '#24324d', maxTicksLimit: 12 }, grid: { color: '#46536b' } },
-                        y: { ticks: { color: '#24324d' }, grid: { color: '#46536b' }, title: { display: true, text: 'kW', color: '#24324d' } }
+                        x: { ticks: { color: '#24324d', maxTicksLimit: 12 }, grid: { color: '#e8e7e3' } },
+                        y: { ticks: { color: '#24324d' }, grid: { color: '#e8e7e3' }, title: { display: true, text: 'kW', color: '#24324d' } }
                     }
                 }
             });
@@ -2559,13 +2557,13 @@
                     },
                     scales: {
                         x: {
-                            grid: { color: '#46536b' },
+                            grid: { color: '#e8e7e3' },
                             ticks: { color: 'white', font: { family: 'Inter' } }
                         },
                         y: {
                             beginAtZero: true,
                             ticks: { stepSize: 1, color: 'white', font: { family: 'Inter' } },
-                            grid: { color: '#46536b' }
+                            grid: { color: '#e8e7e3' }
                         }
                     }
                 }
@@ -3697,11 +3695,11 @@
                 const hasMaint = components.some(c => card[c] === 'MAINTENANCE');
                 const borderColor = hasFaulty ? '#d03b3b' : hasMaint ? '#c98500' : '#0ca30c';
 
-                html += `<div id="maintCard_${eqName}" style="background: rgba(20,30,48,1); border: 1px solid ${borderColor}; border-radius: 12px; padding: 16px; margin-bottom: 12px;">`;
+                html += `<div id="maintCard_${eqName}" style="background: #ffffff; box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22); border: 1px solid ${borderColor}; border-radius: 12px; padding: 16px; margin-bottom: 12px;">`;
                 html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">`;
                 html += `<h4 style="margin: 0; font-size: 16px;"><i class="fas fa-fan" style="color: ${borderColor};"></i> ${eqName}</h4>`;
                 html += `<div style="display:flex; gap:6px;">`;
-                html += `<button class="btn btn-secondary" onclick="removeMaintenanceCard('${eqName}')" style="padding: 4px 10px; font-size: 12px; background: rgba(208,59,59,0.2); border-color: rgba(208,59,59,0.5);">`;
+                html += `<button class="btn btn-secondary" onclick="removeMaintenanceCard('${eqName}')" style="padding: 4px 10px; font-size: 12px; background: #ffffff; border-color: rgba(208,59,59,0.45); color: #b42525;">`;
                 html += `<i class="fas fa-trash"></i></button></div></div>`;
 
                 html += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">`;

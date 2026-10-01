@@ -2788,7 +2788,7 @@ if _daily_auto_ready or _monthly_auto_ready:
     st.markdown("""
     <style>
     .auto-report-ready {
-        background: linear-gradient(135deg, #059669, #0ca30c) !important;
+        background: #0ca30c !important;
         border: 1px solid #0ca30c !important;
         border-radius: 8px;
         padding: 10px 14px;
