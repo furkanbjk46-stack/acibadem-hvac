@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Synapse SET Akışı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--sayfa:#ecebe8;--yuzey:#fafaf8;--inset:#f1f0ed;--murekkep:#0f1f3d;
+      --ikincil:#24324d;--soluk:#46536b;--kenar:rgba(24,26,30,.10);
+      --lacivert:#133273;--iyi:#0ca30c;--uyari:#fab219;--kritik:#d03b3b;
+      --golge:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22),
+              inset 0 1px 0 rgba(255,255,255,.95);}
+*{box-sizing:border-box}
+body{margin:0;background:var(--sayfa);color:var(--murekkep);
+     font:14px/1.55 Inter,system-ui,-apple-system,Segoe UI,sans-serif;
+     font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased;}
+header{padding:26px 30px 16px}
+.ust{font-size:9px;letter-spacing:3.2px;text-transform:uppercase;color:var(--soluk)}
+h1{margin:4px 0 0;font-size:23px;font-weight:650;letter-spacing:-.02em}
+.alt{font-size:12px;color:var(--soluk);margin-top:4px}
+main{padding:0 30px 46px;max-width:1180px}
+h2{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:700;
+   letter-spacing:2.2px;text-transform:uppercase;color:var(--lacivert);
+   padding-bottom:8px;border-bottom:2px solid var(--lacivert);margin:30px 0 14px}
+.kutu{background:var(--yuzey);border:1px solid var(--kenar);border-radius:14px;
+      box-shadow:var(--golge);padding:13px 16px;margin-bottom:10px}
+.kutu .bas{font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.kutu .ack{font-size:12px;color:var(--ikincil);margin-top:3px}
+.rozet{font-size:9px;font-weight:700;letter-spacing:.6px;padding:2px 7px;
+       border-radius:20px;background:var(--inset);color:var(--soluk);
+       border:1px solid var(--kenar);white-space:nowrap}
+.rozet.dosya{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:500}
+.ok{text-align:center;color:var(--soluk);font-size:17px;line-height:1;margin:-4px 0 6px}
+.adim{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start}
+.no{width:26px;height:26px;border-radius:50%;background:var(--lacivert);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:650}
+.ikili{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:12px}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+th{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--soluk);
+   text-align:left;padding:7px 10px;border-bottom:1px solid var(--kenar)}
+td{padding:7px 10px;border-top:1px solid rgba(24,26,30,.07)}
+td.s{text-align:right;font-weight:600}
+.koruma{border-left:3px solid var(--uyari)}
+.koruma .bas{color:#8a5a00}
+.not{font-size:11.5px;color:var(--soluk);margin-top:6px}
+code{background:var(--inset);padding:1px 5px;border-radius:5px;font-size:11.5px;
+     font-family:ui-monospace,Menlo,Consolas,monospace}
+.sr{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+</style></head><body>
+
+<header>
+  <div class="ust">Acıbadem Sağlık Grubu — Synapse</div>
+  <h1>SET Akışı — Oto-set ve komut zinciri</h1>
+  <div class="alt">Koddan çıkarıldı: <code>oto_set.py</code>, <code>bacnet_writer.py</code>,
+     <code>cloud_sync.py</code>, <code>configs/geri_okuma.json</code></div>
+</header>
+
+<main>
+
+<h2>① Otomatik set — karar zinciri</h2>
+
+<div class="kutu"><div class="adim"><div class="no">1</div><div>
+  <div class="bas">Her dakika tetik <span class="rozet dosya">cloud_sync._heartbeat_loop</span></div>
+  <div class="ack"><code>oto_set.kontrol()</code> dakikada bir çağrılır. Karar vermek
+     için değil, <b>geçiş saati geldi mi</b> diye bakmak için.</div>
+</div></div></div>
+<div class="ok">↓</div>
+
+<div class="kutu koruma"><div class="adim"><div class="no">2</div><div>
+  <div class="bas">Kilit <span class="rozet">kisa_kilit("oto_set")</span></div>
+  <div class="ack">Kilit başkasındaysa tur <b>atlanır</b> (“meşgul”). Aynı geçiş
+     saniyeler arayla 2–3 kez uygulanıp sahaya üst üste set gidiyordu.</div>
+</div></div></div>
+<div class="ok">↓</div>
+
+<div class="kutu koruma"><div class="adim"><div class="no">3</div><div>
+  <div class="bas">Kural okuması <span class="rozet">Supabase · ayarlar</span></div>
+  <div class="ack"><code>oto_set_aktif</code>, <code>oto_gunduz_saat</code>,
+     <code>oto_gece_saat</code>. <b>Okunamazsa hiçbir şey yapılmaz.</b> Varsayılan
+     saat bilerek yok: 12.09'da anlık ağ hatasında gece geçişi 22:41'de yapılmıştı.</div>
+</div></div></div>
+<div class="ok">↓</div>
+
+<div class="kutu"><div class="adim"><div class="no">4</div><div>
+  <div class="bas">Dönem <span class="rozet">donem_hesapla()</span></div>
+  <div class="ack">Saat → <b>gündüz</b> / <b>gece</b>. Gece yarısını aşan aralıklar da
+     çalışır. <b>Dönem değişmediyse</b> set gönderilmez; yalnızca bekleyen doğrulama
+     ilerletilir ve çıkılır.</div>
+</div></div></div>
+<div class="ok">↓ &nbsp;<span style="font-size:11.5px;color:var(--soluk)">yalnızca dönem DEĞİŞTİYSE</span></div>
+
+<div class="kutu"><div class="adim"><div class="no">5</div><div>
+  <div class="bas">Hava tahmini <span class="rozet">Open-Meteo · 30 dk önbellek</span></div>
+  <div class="ack">Gündüz geçişi <b>bugünün max</b> sıcaklığına, gece geçişi
+     <b>yarının min</b> sıcaklığına bakar. Tahmin alınamazsa geçiş ertelenir.</div>
+</div></div></div>
+<div class="ok">↓</div>
+
+<div class="kutu"><div class="adim"><div class="no">6</div><div>
+  <div class="bas">Mod ve set seçimi <span class="rozet">histerezisli</span></div>
+  <div class="ikili" style="margin-top:8px">
+    <div>
+      <table>
+        <tr><th colspan="3">Chiller — 4 bölge · ±2 °C histerezis</th></tr>
+        <tr><th>Mod</th><th>Referans sıcaklık</th><th style="text-align:right">Set</th></tr>
+        <tr><td>koç soğuk</td><td>&lt; 7 °C</td><td class="s">8,0 °C</td></tr>
+        <tr><td>serin</td><td>7 – 23 °C</td><td class="s">7,5 °C</td></tr>
+        <tr><td>ılımlı</td><td>23 – 26 °C</td><td class="s">7,0 °C</td></tr>
+        <tr><td>sıcak</td><td>&gt; 26 °C</td><td class="s">6,5 °C</td></tr>
+      </table>
+      <div class="not">Histerezis: moddan çıkmak için sınırı <b>2 °C</b> aşmak gerekir —
+         sınır etrafında gidip gelme olmaz. Geçiş kademesiz.</div>
+    </div>
+    <div>
+      <table>
+        <tr><th colspan="3">Kollektör / FCU / AHU — ±3 °C histerezis</th></tr>
+        <tr><th>Nokta</th><th style="text-align:right">Soğutma</th><th style="text-align:right">Isıtma</th></tr>
+        <tr><td>Gündüz kollektör</td><td class="s">8,0</td><td class="s">10,0</td></tr>
+        <tr><td>Gece kollektör</td><td class="s">10,0</td><td class="s">12,0</td></tr>
+        <tr><td>A blok FCU</td><td class="s">12,0</td><td class="s">14,0</td></tr>
+        <tr><td>B blok FCU</td><td class="s">12,0</td><td class="s">14,0</td></tr>
+        <tr><td>Zon-1 klima santrali</td><td class="s">8,0</td><td class="s">10,0</td></tr>
+        <tr><td>Zon-2 klima santrali</td><td class="s">8,0</td><td class="s">10,0</td></tr>
+      </table>
+      <div class="not">Eşik <b>23 °C</b>; soğutma↔ısıtma geçişi için 3 °C aşım gerekir.</div>
+    </div>
+  </div>
+</div></div></div>
+<div class="ok">↓</div>
+
+<div class="kutu"><div class="adim"><div class="no">7</div><div>
+  <div class="bas">Sahaya yazma <span class="rozet">BACnet WriteProperty</span>
+      <span class="rozet">11 nokta</span></div>
+  <div class="ack">Nokta adresleri Supabase <code>lokasyon_noktalar</code> tablosundan
+     (gateway IP, dnet, MAC, obj type/instance). <code>yaz_dogrula_toplu()</code> yazar,
+     cihazın <b>SimpleACK</b>'i “yazıldı” sayılır.</div>
+  <div class="sr">
+    <span class="rozet">CH1…CH5_REM_SET</span>
+    <span class="rozet">GUNDUZ/GECE_KOLLEKTOR_SET</span>
+    <span class="rozet">A/B_BLOK_FCU_SET</span>
+    <span class="rozet">ZON1/ZON2_KLIMA_SANTRALI_SET</span>
+  </div>
+</div></div></div>
+<div class="ok">↓</div>
+
+<div class="kutu"><div class="adim"><div class="no">8</div><div>
+  <div class="bas">Gecikmeli doğrulama <span class="rozet">3 dk → 15 dk</span></div>
+  <div class="ack">Yazdıktan <b>hemen sonra okumak yanıltıyordu</b>: cihaz değeri
+     işlemeden eski değer okunuyor, “uygulamadı” sanılıyordu. Artık ilk geri okuma
+     <b>3. dakikada</b>, ardından <b>15 dakika</b> boyunca izleme.</div>
+  <div class="ack" style="margin-top:5px">Chiller'da yazılan nokta değil
+     <b>gerçekleşen</b> nokta okunur: <code>CH-n REM SET</code> yazılır,
+     <code>CH-n IC SET</code> okunur (<code>configs/geri_okuma.json</code>).
+     Chiller uzaktan seti uygulamazsa Synapse'te <b>UYGULAMADI</b> görünür.</div>
+  <div class="ack" style="margin-top:5px">Komut kaydı Supabase'e <b>ancak doğrulama
+     bitince</b> yazılır — böylece log “gitti” deyip sahada uygulanmamış olmaz.</div>
+</div></div></div>
+
+<h2>② Elle komut — merkezden sahaya</h2>
+<div class="ikili">
+  <div class="kutu"><div class="bas">1 · Synapse komut yazar</div>
+    <div class="ack">Merkez portal <code>komutlar</code> tablosuna satır ekler
+       (nokta, değer, lokasyon). RLS: anon yalnızca sınırlı durum geçişi yapabilir.</div></div>
+  <div class="kutu"><div class="bas">2 · Lokasyon çeker <span class="rozet">her 1 dk</span></div>
+    <div class="ack"><code>bacnet_writer.komutlari_isle()</code> bekleyen kayıtları alır.</div></div>
+  <div class="kutu koruma"><div class="bas">3 · Değer kapısı</div>
+    <div class="ack">Sayı değilse, NaN/sonsuzsa ya da <b>5–40 °C</b> dışındaysa komut
+       uygulanmaz, reddedilir.</div></div>
+  <div class="kutu koruma"><div class="bas">4 · Süre aşımı <span class="rozet">30 dk</span></div>
+    <div class="ack">30 dakikadan eski komut uygulanmaz — program kapalıyken birikmiş
+       eski setler saatler sonra sahaya gitmesin diye. Zaman okunamazsa komut taze sayılır.</div></div>
+  <div class="kutu"><div class="bas">5 · Yaz → geri oku → durumu güncelle</div>
+    <div class="ack">Aynı BACnet yolu; sonuç <code>komutlar.durum</code> alanına işlenir.</div></div>
+  <div class="kutu"><div class="bas">6 · Okuma komutları ayrılır</div>
+    <div class="ack"><code>OKUMA:</code> ön ekli kayıtlar yazma yoluna girmez;
+       <code>anlik_okuma.py</code> ilgili analizörü okur (izinli nokta listesi).</div></div>
+</div>
+
+<h2>③ Sistemin durduğu yerler</h2>
+<div class="ikili">
+  <div class="kutu koruma"><div class="bas">Kural okunamıyor</div>
+    <div class="ack">Supabase'e ulaşılamazsa <b>hiçbir set gönderilmez</b>.</div></div>
+  <div class="kutu koruma"><div class="bas">Tahmin alınamıyor</div>
+    <div class="ack">Hava tahmini yoksa geçiş <b>ertelenir</b>, eski mod korunur.</div></div>
+  <div class="kutu koruma"><div class="bas">Nokta tanımlı değil</div>
+    <div class="ack">Lokasyonda nokta yoksa tur sessizce biter; “yazıldı” denmez.</div></div>
+  <div class="kutu koruma"><div class="bas">Oto-set kapalı</div>
+    <div class="ack"><code>oto_set_aktif = false</code> ise tur hiç başlamaz.</div></div>
+</div>
+
+<h2>④ Zamanlama özeti</h2>
+<div class="kutu">
+  <table>
+    <tr><th>Olay</th><th>Sıklık / süre</th><th>Nerede</th></tr>
+    <tr><td>Oto-set kontrolü</td><td class="s">1 dakika</td><td>cloud_sync heartbeat</td></tr>
+    <tr><td>Elle komut işleme</td><td class="s">1 dakika</td><td>bacnet_writer.komutlari_isle</td></tr>
+    <tr><td>Hava tahmini önbelleği</td><td class="s">30 dakika</td><td>oto_set.tahmin_al</td></tr>
+    <tr><td>İlk geri okuma</td><td class="s">3 dakika</td><td>ILK_DOGRULAMA_DK</td></tr>
+    <tr><td>Doğrulama izleme penceresi</td><td class="s">15 dakika</td><td>IC_IZLEME_DK</td></tr>
+    <tr><td>Komut ömrü</td><td class="s">30 dakika</td><td>KOMUT_OMUR_DK</td></tr>
+    <tr><td>Set değeri izinli aralık</td><td class="s">5 – 40 °C</td><td>KOMUT_DEGER_MIN/MAX</td></tr>
+    <tr><td>Geçiş saatleri</td><td class="s">ayarlardan</td><td>oto_gunduz_saat / oto_gece_saat</td></tr>
+  </table>
+</div>
+
+</main>
+</body></html>
