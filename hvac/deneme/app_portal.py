@@ -32,16 +32,16 @@ try:
     if not _lis["gecerli"]:
         st.markdown("""
         <div style='display:flex;align-items:center;justify-content:center;height:80vh;'>
-        <div style='text-align:center;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);
+        <div style='text-align:center;background:rgba(208,59,59,0.1);border:1px solid rgba(208,59,59,0.4);
                     border-radius:16px;padding:48px 64px;'>
             <div style='font-size:48px;margin-bottom:16px;'>🔒</div>
-            <div style='font-size:22px;font-weight:700;color:#ef4444;margin-bottom:12px;'>
+            <div style='font-size:22px;font-weight:700;color:#d03b3b;margin-bottom:12px;'>
                 Lisanssiz Erisim
             </div>
-            <div style='font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:24px;'>
+            <div style='font-size:14px;color:#24324d;margin-bottom:24px;'>
                 Bu cihaz icin gecerli bir lisans bulunamadi.
             </div>
-            <div style='font-size:12px;color:rgba(255,255,255,0.4);'>
+            <div style='font-size:12px;color:#46536b;'>
                 Yetkili: Acibadem Genel Merkez Enerji Yonetimi
             </div>
         </div></div>
@@ -77,13 +77,13 @@ def _get_forecast_engine():
 # Custom Dark Theme CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-    /* Synergy koyu tema - sabit arka plan */
+    /* Mat plastik beyaz — duz govde, parlama yok */
     .stApp {
-        background-color: #060b14;
-        background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
-        font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+        background-color: #ecebe8;
+        background-image: none;
+        font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
     }
 
     /* Tam genişlik - kenar boşluklarını azalt */
@@ -95,23 +95,22 @@ st.markdown("""
 
     /* Glassmorphism for containers */
     .stTabs [data-baseweb="tab-panel"] {
-        background: rgba(15, 23, 42, 0.4);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: #fafaf8;
+        -webkit-
         border-radius: 8px;
         padding: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(24,26,30,0.10);
     }
 
     /* Metrics styling */
     [data-testid="stMetricValue"] {
-        color: #ffffff !important;
+        color: #0f1f3d !important;
         font-size: 28px !important;
         font-weight: 300 !important;
     }
 
     [data-testid="stMetricLabel"] {
-        color: #94a3b8 !important;
+        color: #46536b !important;
         font-weight: 600 !important;
         text-transform: uppercase !important;
         letter-spacing: 1px !important;
@@ -119,23 +118,23 @@ st.markdown("""
     }
 
     [data-testid="stMetricDelta"] {
-        color: rgba(255, 255, 255, 0.9) !important;
+        color: #0f1f3d !important;
     }
 
     /* Headers */
     h1, h2, h3 {
-        color: #f8fafc !important;
-        font-family: 'Playfair Display', 'Plus Jakarta Sans', serif !important;
+        color: #0f1f3d !important;
+        font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif !important;
         font-weight: 400 !important;
     }
     h4, h5, h6 {
-        color: #f8fafc !important;
-        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        color: #0f1f3d !important;
+        font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif !important;
     }
 
     /* Genel metin rengi — tüm uygulama genelinde beyaz/açık */
     p, span, div {
-        color: #cbd5e1 !important;
+        color: #24324d !important;
     }
 
     /* Markdown tabloları (st.markdown tablolar — Tahmin, Özet vb.) */
@@ -143,26 +142,26 @@ st.markdown("""
     .stMarkdown table th,
     [data-testid="stMarkdown"] table td,
     [data-testid="stMarkdown"] table th {
-        color: rgba(255, 255, 255, 0.92) !important;
+        color: #0f1f3d !important;
         background-color: transparent !important;
     }
     .stMarkdown table th {
-        color: #ffffff !important;
+        color: #0f1f3d !important;
         font-weight: 700 !important;
-        border-bottom: 1px solid rgba(56, 189, 248, 0.3) !important;
+        border-bottom: 1px solid rgba(42,120,214, 0.3) !important;
     }
     
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         background: transparent;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid rgba(24,26,30,0.10);
         gap: 24px;
         padding: 0;
     }
 
     .stTabs [data-baseweb="tab"] {
         background: transparent;
-        color: #64748b !important;
+        color: #46536b !important;
         border-radius: 0;
         font-weight: 500;
         font-size: 11px;
@@ -180,24 +179,24 @@ st.markdown("""
     }
 
     .stTabs [data-baseweb="tab"]:hover {
-        color: #cbd5e1 !important;
+        color: #24324d !important;
     }
 
     .stTabs [aria-selected="true"] {
         background: transparent !important;
-        color: #38bdf8 !important;
-        box-shadow: inset 0 -2px 0 #38bdf8, 0 2px 8px rgba(56, 189, 248, 0.3) !important;
+        color: #2a78d6 !important;
+        box-shadow: inset 0 -2px 0 #2a78d6, 0 2px 8px rgba(42,120,214, 0.3) !important;
     }
 
     .stTabs [data-baseweb="tab-highlight"] {
-        background-color: #38bdf8 !important;
-        box-shadow: 0 -2px 8px rgba(56, 189, 248, 0.5) !important;
+        background-color: #2a78d6 !important;
+        box-shadow: 0 -2px 8px rgba(42,120,214, 0.5) !important;
     }
     
     /* Normal butonlar */
     .stButton > button {
         background: rgba(14, 165, 233, 0.15) !important;
-        color: #38bdf8 !important;
+        color: #2a78d6 !important;
         border: 1px solid rgba(14, 165, 233, 0.3) !important;
         border-radius: 6px !important;
         font-weight: 500 !important;
@@ -207,7 +206,7 @@ st.markdown("""
     .stButton > button:hover {
         background: rgba(14, 165, 233, 0.25) !important;
         border-color: rgba(14, 165, 233, 0.4) !important;
-        color: #ffffff !important;
+        color: #0f1f3d !important;
         transform: none;
         box-shadow: none !important;
     }
@@ -216,7 +215,7 @@ st.markdown("""
     [data-testid="stFormSubmitButton"] button,
     .stFormSubmitButton button {
         background: rgba(14, 165, 233, 0.15) !important;
-        color: #38bdf8 !important;
+        color: #2a78d6 !important;
         border: 1px solid rgba(14, 165, 233, 0.3) !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
@@ -229,7 +228,7 @@ st.markdown("""
     [data-testid="stFormSubmitButton"] button:hover,
     .stFormSubmitButton button:hover {
         background: rgba(14, 165, 233, 0.25) !important;
-        color: #ffffff !important;
+        color: #0f1f3d !important;
         box-shadow: none !important;
         transform: none;
     }
@@ -246,9 +245,9 @@ st.markdown("""
     [data-baseweb="base-input"] input,
     input[type="number"],
     input[type="text"] {
-        background: rgba(0, 0, 0, 0.85) !important;
-        color: #e2e8f0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        background: #ffffff !important;
+        color: #24324d !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
         padding: 8px 12px !important;
         transition: border 0.2s, box-shadow 0.2s;
@@ -257,8 +256,8 @@ st.markdown("""
     [data-testid="stTextInput"] input:focus,
     [data-testid="stNumberInputField"]:focus,
     input:focus {
-        border: 1px solid rgba(56, 189, 248, 0.6) !important;
-        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+        border: 1px solid rgba(42,120,214, 0.6) !important;
+        box-shadow: 0 0 0 3px rgba(42,120,214, 0.2) !important;
         outline: none !important;
     }
 
@@ -266,10 +265,10 @@ st.markdown("""
     [data-testid="stNumberInput"] > div,
     [data-baseweb="input"],
     [data-baseweb="base-input"] {
-        background: rgba(0, 0, 0, 0.85) !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        background: #ffffff !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+        box-shadow: 0 1px 4px rgba(20,22,26,0.2) !important;
     }
 
     /* Number input içindeki tüm span/div metin elementleri — görünürlük garantisi */
@@ -279,41 +278,41 @@ st.markdown("""
     [data-baseweb="input"] div,
     [data-baseweb="base-input"] span,
     [data-baseweb="base-input"] div {
-        color: #e2e8f0 !important;
+        color: #24324d !important;
     }
 
     /* Number input +/- butonları */
     [data-testid="stNumberInput"] button {
         background: rgba(10, 25, 55, 0.9) !important;
-        color: #38bdf8 !important;
+        color: #2a78d6 !important;
         border: none !important;
         border-radius: 6px !important;
     }
     [data-testid="stNumberInput"] button:hover {
-        background: rgba(56, 189, 248, 0.5) !important;
-        color: #ffffff !important;
+        background: rgba(42,120,214, 0.5) !important;
+        color: #0f1f3d !important;
     }
 
     /* Selectbox dropdown */
     div[data-baseweb="select"] > div {
-        background: rgba(0, 0, 0, 0.85) !important;
-        color: #e2e8f0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        background: #ffffff !important;
+        color: #24324d !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+        box-shadow: 0 1px 4px rgba(20,22,26,0.2) !important;
     }
 
     /* Dropdown menu */
     ul[data-baseweb="menu"] {
-        background: rgba(0, 0, 0, 0.98) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        background: #ffffff !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
     }
     ul[data-baseweb="menu"] li {
-        color: #e2e8f0 !important;
+        color: #24324d !important;
     }
     ul[data-baseweb="menu"] li:hover {
-        background: rgba(56, 189, 248, 0.4) !important;
+        background: rgba(42,120,214, 0.4) !important;
     }
 
     /* Input labels — daha okunabilir */
@@ -323,11 +322,11 @@ st.markdown("""
     [data-testid="stDateInput"] label,
     [data-testid="stRadio"] > label,
     [data-testid="stCheckbox"] > label {
-        color: #94a3b8 !important;
+        color: #46536b !important;
         font-size: 13px !important;
         font-weight: 600 !important;
         letter-spacing: 0.3px !important;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.5) !important;
+        text-shadow: 0 1px 3px rgba(20,22,26,0.5) !important;
     }
 
     /* Placeholder */
@@ -337,10 +336,9 @@ st.markdown("""
     
     /* Dataframe - Enhanced for readability */
     .stDataFrame {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(20px);
+        background: #fafaf8;
         border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(24,26,30,0.10);
     }
     
     /* Dataframe table styling - Yumuşak beyaz yazılar */
@@ -355,12 +353,12 @@ st.markdown("""
     .stDataFrame thead tr th,
     div[data-testid="stDataFrame"] thead tr th,
     .dataframe thead tr th {
-        background-color: rgba(15, 23, 42, 0.9) !important;
-        color: #ffffff !important;
+        background-color: rgba(250,250,248, 0.9) !important;
+        color: #0f1f3d !important;
         font-weight: 700 !important;
         font-size: 13px !important;
         padding: 12px 8px !important;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
+        border-bottom: 2px solid rgba(24,26,30,0.10) !important;
         text-align: left !important;
         min-width: 100px !important;
     }
@@ -369,10 +367,10 @@ st.markdown("""
     .stDataFrame tbody tr td,
     div[data-testid="stDataFrame"] tbody tr td,
     .dataframe tbody tr td {
-        color: #1a1a1a !important;
-        background-color: #ffffff !important;
+        color: #0f1f3d !important;
+        background-color: #fafaf8 !important;
         padding: 10px 8px !important;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+        border-bottom: 1px solid rgba(20,22,26, 0.1) !important;
         font-size: 13px !important;
         min-width: 100px !important;
     }
@@ -381,7 +379,7 @@ st.markdown("""
     .stDataFrame tbody tr td *,
     div[data-testid="stDataFrame"] tbody tr td *,
     .dataframe tbody tr td * {
-        color: #1a1a1a !important;
+        color: #0f1f3d !important;
     }
     
     /* GÜÇLÜ OVERRIDE - Tüm data elements */
@@ -392,22 +390,22 @@ st.markdown("""
     .dvn-scroller td,
     .glideDataEditor td,
     [data-testid="glide-data-grid-canvas"] {
-        color: #1a1a1a !important;
-        background-color: #ffffff !important;
+        color: #0f1f3d !important;
+        background-color: #fafaf8 !important;
     }
     
     /* Data grid text */
     .dvn-cell,
     .dvn-cell span,
     .gdg-cell {
-        color: #1a1a1a !important;
+        color: #0f1f3d !important;
     }
     
     /* Dataframe row hover */
     .stDataFrame tbody tr:hover,
     div[data-testid="stDataFrame"] tbody tr:hover,
     .dataframe tbody tr:hover {
-        background-color: rgba(255, 255, 255, 0.1) !important;
+        background-color: #fafaf8 !important;
     }
     
     /* Dataframe scrollbar */
@@ -417,30 +415,29 @@ st.markdown("""
     }
     
     .stDataFrame ::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.05);
+        background: #ffffff;
         border-radius: 5px;
     }
     
     .stDataFrame ::-webkit-scrollbar-thumb {
-        background: rgba(15, 23, 42, 0.6);
+        background: rgba(250,250,248, 0.6);
         border-radius: 5px;
     }
     
     .stDataFrame ::-webkit-scrollbar-thumb:hover {
-        background: rgba(15, 23, 42, 0.8);
+        background: rgba(250,250,248, 0.8);
     }
     
     /* Sidebar */
     [data-testid="stSidebar"] {
-        background: rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(12px);
-        border-right: 1px solid rgba(255, 255, 255, 0.05);
+        background: #ffffff;
+        border-right: 1px solid rgba(24,26,30,0.10);
     }
     
     /* File uploader alan */
     [data-testid="stFileUploader"] {
-        background: rgba(0, 0, 0, 0.7) !important;
-        border: 2px dashed rgba(255, 255, 255, 0.4) !important;
+        background: #ffffff !important;
+        border: 2px dashed rgba(24,26,30,0.10) !important;
         border-radius: 12px !important;
         padding: 16px !important;
     }
@@ -450,10 +447,10 @@ st.markdown("""
     [data-testid="stFileUploaderDropzone"] span,
     [data-testid="stFileUploaderDropzone"] p,
     [data-testid="stFileUploaderDropzone"] small {
-        color: #94a3b8 !important;
+        color: #46536b !important;
     }
     [data-testid="stFileUploaderDropzone"] {
-        background: rgba(0, 0, 0, 0.5) !important;
+        background: #ffffff !important;
         border-radius: 10px !important;
     }
 
@@ -462,7 +459,7 @@ st.markdown("""
     [data-testid="stFileUploader"] button,
     [data-testid="stFileUploaderDropzoneInput"] + div button {
         background: rgba(14, 165, 233, 0.15) !important;
-        color: #38bdf8 !important;
+        color: #2a78d6 !important;
         border: 1px solid rgba(14, 165, 233, 0.3) !important;
         border-radius: 6px !important;
         font-weight: 500 !important;
@@ -472,7 +469,7 @@ st.markdown("""
     }
     [data-testid="stFileUploaderDropzone"] button:hover {
         background: rgba(14, 165, 233, 0.25) !important;
-        color: #ffffff !important;
+        color: #0f1f3d !important;
         box-shadow: none !important;
     }
 
@@ -480,7 +477,7 @@ st.markdown("""
     [data-testid="stDownloadButton"] button,
     .stDownloadButton button {
         background: rgba(14, 165, 233, 0.15) !important;
-        color: #38bdf8 !important;
+        color: #2a78d6 !important;
         border: 1px solid rgba(14, 165, 233, 0.3) !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
@@ -492,7 +489,7 @@ st.markdown("""
     [data-testid="stDownloadButton"] button:hover,
     .stDownloadButton button:hover {
         background: rgba(14, 165, 233, 0.25) !important;
-        color: #ffffff !important;
+        color: #0f1f3d !important;
         box-shadow: none !important;
         transform: none;
     }
@@ -500,28 +497,28 @@ st.markdown("""
     /* Divider / çizgiler — daha belirgin */
     hr {
         border: none !important;
-        border-top: 2px solid rgba(56, 189, 248, 0.60) !important;
+        border-top: 2px solid rgba(42,120,214, 0.60) !important;
         margin: 22px 0 !important;
         opacity: 1 !important;
-        box-shadow: 0 0 8px rgba(56, 189, 248, 0.25) !important;
+        box-shadow: 0 0 8px rgba(42,120,214, 0.25) !important;
     }
     [data-testid="stDivider"] > div {
-        border-top: 2px solid rgba(56, 189, 248, 0.60) !important;
-        box-shadow: 0 0 8px rgba(56, 189, 248, 0.25) !important;
+        border-top: 2px solid rgba(42,120,214, 0.60) !important;
+        box-shadow: 0 0 8px rgba(42,120,214, 0.25) !important;
     }
 
     /* Dataframe / tablolar - koyu arka plan, görünür çizgilerle */
     .stDataFrame {
-        background: rgba(0, 0, 0, 0.8) !important;
+        background: #ffffff !important;
         border-radius: 12px !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         overflow: hidden !important;
     }
     .stDataFrame table,
     div[data-testid="stDataFrame"] table,
     .dataframe {
         font-size: 13px !important;
-        color: #e2e8f0 !important;
+        color: #24324d !important;
         border-collapse: collapse !important;
         width: 100% !important;
     }
@@ -529,13 +526,13 @@ st.markdown("""
     .stDataFrame thead tr th,
     div[data-testid="stDataFrame"] thead tr th,
     .dataframe thead tr th {
-        background: rgba(15, 23, 42, 0.95) !important;
-        color: #ffffff !important;
+        background: rgba(250,250,248, 0.95) !important;
+        color: #0f1f3d !important;
         font-weight: 700 !important;
         font-size: 12px !important;
         padding: 10px 10px !important;
-        border-bottom: 2px solid rgba(56, 189, 248, 0.4) !important;
-        border-right: 1px solid rgba(56, 189, 248, 0.15) !important;
+        border-bottom: 2px solid rgba(42,120,214, 0.4) !important;
+        border-right: 1px solid rgba(42,120,214, 0.15) !important;
         text-align: left !important;
         letter-spacing: 0.3px !important;
     }
@@ -543,21 +540,21 @@ st.markdown("""
     .stDataFrame tbody tr td,
     div[data-testid="stDataFrame"] tbody tr td,
     .dataframe tbody tr td {
-        color: #e2e8f0 !important;
-        background-color: rgba(0, 0, 0, 0.7) !important;
+        color: #24324d !important;
+        background-color: #ffffff !important;
         padding: 8px 10px !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-bottom: 1px solid rgba(24,26,30,0.10) !important;
+        border-right: 1px solid rgba(24,26,30,0.10) !important;
         font-size: 13px !important;
     }
     .stDataFrame tbody tr td *,
     div[data-testid="stDataFrame"] tbody tr td * {
-        color: #e2e8f0 !important;
+        color: #24324d !important;
     }
     /* Satır hover */
     .stDataFrame tbody tr:hover td,
     div[data-testid="stDataFrame"] tbody tr:hover td {
-        background-color: rgba(56, 189, 248, 0.3) !important;
+        background-color: rgba(42,120,214, 0.3) !important;
     }
     /* Çift satır rengi */
     .stDataFrame tbody tr:nth-child(even) td,
@@ -569,20 +566,20 @@ st.markdown("""
     [data-testid="stDataFrame"] td span,
     [data-testid="stDataFrame"] td div,
     .dvn-cell, .dvn-cell span, .gdg-cell {
-        color: #e2e8f0 !important;
-        background-color: rgba(0, 0, 0, 0.7) !important;
+        color: #24324d !important;
+        background-color: #ffffff !important;
     }
     /* render_styled_table (unsafe_allow_html tablo) — satır değerleri her zaman görünür */
     table.dataframe td,
     table[id^="T_"] td,
     table[id^="T_"] tbody td {
-        color: #e2e8f0 !important;
-        background-color: rgba(0, 0, 0, 0.75) !important;
+        color: #24324d !important;
+        background-color: #ffffff !important;
     }
     table.dataframe th,
     table[id^="T_"] th {
-        color: #ffffff !important;
-        background-color: rgba(15, 23, 42, 0.9) !important;
+        color: #0f1f3d !important;
+        background-color: rgba(250,250,248, 0.9) !important;
     }
     /* Scrollbar */
     .stDataFrame ::-webkit-scrollbar { height: 8px; width: 8px; }
@@ -594,51 +591,50 @@ st.markdown("""
     .stTable table {
         border-collapse: collapse !important;
         width: 100% !important;
-        background: rgba(0, 0, 0, 0.8) !important;
+        background: #ffffff !important;
         border-radius: 10px !important;
         overflow: hidden !important;
     }
     .stTable th {
-        background: rgba(15, 23, 42, 0.95) !important;
-        color: #ffffff !important;
+        background: rgba(250,250,248, 0.95) !important;
+        color: #0f1f3d !important;
         font-weight: 700 !important;
         padding: 10px 12px !important;
-        border-bottom: 2px solid rgba(56, 189, 248, 0.4) !important;
+        border-bottom: 2px solid rgba(42,120,214, 0.4) !important;
         font-size: 12px !important;
     }
     .stTable td {
-        color: #e2e8f0 !important;
-        background: rgba(0, 0, 0, 0.7) !important;
+        color: #24324d !important;
+        background: #ffffff !important;
         padding: 8px 12px !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+        border-bottom: 1px solid rgba(24,26,30,0.10) !important;
         font-size: 13px !important;
     }
 
     /* Subheader ve section başlıkları */
     [data-testid="stSubheader"],
     .stSubheader {
-        color: #e2e8f0 !important;
+        color: #24324d !important;
     }
 
     /* Info / success / warning / error kutuları */
     [data-testid="stAlert"] {
         border-radius: 10px !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
     }
 
     /* ════════ EXPANDER — standart koyu tema ════════ */
     [data-testid="stExpander"] {
-        border: 1px solid rgba(255, 255, 255, 0.30) !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
         overflow: hidden !important;
-        background: rgba(0, 0, 0, 0.6) !important;
+        background: #ffffff !important;
     }
     .streamlit-expanderHeader,
     [data-testid="stExpander"] summary {
-        background: rgba(0, 0, 0, 0.85) !important;
-        backdrop-filter: blur(10px) !important;
+        background: #ffffff !important;
         border-radius: 10px !important;
-        color: #e2e8f0 !important;
+        color: #24324d !important;
         font-weight: 600 !important;
         padding: 10px 14px !important;
     }
@@ -648,23 +644,23 @@ st.markdown("""
     [data-testid="stExpander"] summary p,
     [data-testid="stExpander"] summary span,
     [data-testid="stExpander"] summary div {
-        color: #e2e8f0 !important;
+        color: #24324d !important;
     }
     /* Expander içeriği */
     [data-testid="stExpander"] > div > div {
         background: rgba(8, 18, 45, 0.55) !important;
-        border-top: 1px solid rgba(255, 255, 255, 0.18) !important;
+        border-top: 1px solid rgba(24,26,30,0.10) !important;
         padding: 12px 14px !important;
     }
 
     /* Checkbox */
     [data-testid="stCheckbox"] label {
-        color: #94a3b8 !important;
+        color: #46536b !important;
     }
 
     /* Radio butonları */
     [data-testid="stRadio"] label {
-        color: #94a3b8 !important;
+        color: #46536b !important;
         font-weight: 600 !important;
     }
 
@@ -673,8 +669,8 @@ st.markdown("""
     [data-testid="stDateInput"] > div,
     [data-testid="stDateInput"] [data-baseweb="input"],
     [data-testid="stDateInput"] [data-baseweb="base-input"] {
-        background: rgba(0, 0, 0, 0.85) !important;
-        border: 1px solid rgba(255, 255, 255, 0.28) !important;
+        background: #ffffff !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
     }
     /* Tarih alanı giriş metni ve format (YYYY/MM/DD) */
@@ -682,67 +678,67 @@ st.markdown("""
     [data-testid="stDateInputField"]:focus,
     input[data-testid="stDateInputField"] {
         background: transparent !important;
-        color: #e2e8f0 !important;
-        caret-color: #38bdf8 !important;
+        color: #24324d !important;
+        caret-color: #2a78d6 !important;
     }
     /* Format placeholder rengi — daha belirgin */
     [data-testid="stDateInputField"]::placeholder {
-        color: rgba(56, 189, 248, 0.55) !important;
+        color: rgba(42,120,214, 0.55) !important;
         font-style: italic !important;
     }
     /* Tarih alanı ikon/ok rengi */
     [data-testid="stDateInput"] svg {
-        fill: rgba(56, 189, 248, 0.7) !important;
+        fill: rgba(42,120,214, 0.7) !important;
     }
 
     /* ════════ SELECTBOX — kapsamlı koyu tema ════════ */
     /* Container */
     [data-baseweb="select"],
     div[data-baseweb="select"] {
-        background: rgba(0, 0, 0, 0.85) !important;
+        background: #ffffff !important;
         border-radius: 10px !important;
     }
     div[data-baseweb="select"] > div,
     [data-baseweb="select"] > div {
-        background: rgba(0, 0, 0, 0.85) !important;
-        color: #e2e8f0 !important;
-        border: 1px solid rgba(255, 255, 255, 0.28) !important;
+        background: #ffffff !important;
+        color: #24324d !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.2) !important;
+        box-shadow: 0 1px 4px rgba(20,22,26,0.2) !important;
     }
     div[data-baseweb="select"] > div:hover {
-        border-color: rgba(56, 189, 248, 0.55) !important;
+        border-color: rgba(42,120,214, 0.55) !important;
     }
     /* Seçili değer metni */
     [data-baseweb="select"] [data-testid="stSelectboxVirtualDropdown"],
     [data-baseweb="select"] span,
     [data-baseweb="select"] input,
     [data-baseweb="select"] input[readonly] {
-        color: #e2e8f0 !important;
+        color: #24324d !important;
         background: transparent !important;
     }
     /* Ok simgesi */
     [data-baseweb="select"] svg {
-        fill: rgba(56, 189, 248, 0.8) !important;
+        fill: rgba(42,120,214, 0.8) !important;
     }
     /* Dropdown açılır liste */
     [data-baseweb="popover"] ul[data-baseweb="menu"],
     ul[data-baseweb="menu"] {
         background: rgba(2, 6, 23, 0.98) !important;
-        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+        box-shadow: 0 8px 24px rgba(20,22,26,0.5) !important;
     }
     ul[data-baseweb="menu"] li,
     ul[data-baseweb="menu"] [role="option"] {
-        color: #e2e8f0 !important;
+        color: #24324d !important;
         background: transparent !important;
     }
     ul[data-baseweb="menu"] li:hover,
     ul[data-baseweb="menu"] [aria-selected="true"],
     ul[data-baseweb="menu"] [role="option"]:hover {
-        background: rgba(56, 189, 248, 0.45) !important;
-        color: #ffffff !important;
+        background: rgba(42,120,214, 0.45) !important;
+        color: #0f1f3d !important;
     }
 
     /* ════════ MULTİSELECT — chip/tag standart stili ════════ */
@@ -754,41 +750,40 @@ st.markdown("""
     [data-baseweb="tag"] span,
     [data-baseweb="tag"] [data-testid="stMultiSelectItem"],
     [data-baseweb="tag"] > span {
-        color: #cbd5e1 !important;
+        color: #24324d !important;
         font-weight: 600 !important;
     }
     /* Chip silme (X) butonu */
     [data-baseweb="tag"] button,
     [data-baseweb="tag"] [role="button"] {
-        color: rgba(150, 200, 255, 0.7) !important;
+        color: #46536b !important;
         background: transparent !important;
     }
     [data-baseweb="tag"] button:hover {
-        color: #ffffff !important;
+        color: #0f1f3d !important;
         background: rgba(200, 80, 80, 0.3) !important;
     }
     /* Multiselect container */
     [data-baseweb="multi-select"] {
-        background: rgba(0, 0, 0, 0.85) !important;
-        border: 1px solid rgba(255, 255, 255, 0.28) !important;
+        background: #ffffff !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
     }
     [data-baseweb="multi-select"] input {
-        color: #e2e8f0 !important;
+        color: #24324d !important;
         background: transparent !important;
     }
     [data-baseweb="multi-select"] input::placeholder {
-        color: rgba(56, 189, 248, 0.45) !important;
+        color: rgba(42,120,214, 0.45) !important;
     }
 
     /* ════════ TAKVIM (Date Picker) FİX — Soft Glassmorphism ════════ */
 
     /* Ana kutu — eski soft hissi korunuyor */
     [data-baseweb="calendar"] {
-        background: rgba(0, 0, 0, 0.88) !important;
-        backdrop-filter: blur(18px) !important;
-        -webkit-backdrop-filter: blur(18px) !important;
-        border: 1px solid rgba(56, 189, 248, 0.35) !important;
+        background: #ffffff !important;
+        -webkit-
+        border: 1px solid rgba(42,120,214, 0.35) !important;
         border-radius: 16px !important;
         box-shadow:
             0 8px 32px rgba(0, 10, 40, 0.55),
@@ -807,34 +802,34 @@ st.markdown("""
     [data-baseweb="calendar"] [role="gridcell"],
     [data-baseweb="calendar"] [role="columnheader"] {
         background-color: transparent !important;
-        color: #e2e8f0 !important;
+        color: #24324d !important;
     }
 
     /* Butonlar — saydam, soft hover */
     [data-baseweb="calendar"] button {
         background-color: transparent !important;
-        color: #cbd5e1 !important;
+        color: #24324d !important;
         border: none !important;
         border-radius: 8px !important;
         transition: background 0.15s ease !important;
     }
     [data-baseweb="calendar"] button:hover {
-        background-color: rgba(56, 189, 248, 0.3) !important;
-        color: #ffffff !important;
+        background-color: rgba(42,120,214, 0.3) !important;
+        color: #0f1f3d !important;
     }
 
     /* Seçili gün — mavi daire */
     [data-baseweb="calendar"] [aria-selected="true"] button,
     [data-baseweb="calendar"] button[aria-selected="true"] {
-        background-color: rgba(56, 189, 248, 0.85) !important;
-        color: #ffffff !important;
+        background-color: rgba(42,120,214, 0.85) !important;
+        color: #0f1f3d !important;
         border-radius: 50% !important;
-        box-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
+        box-shadow: 0 0 8px rgba(42,120,214, 0.5) !important;
     }
 
     /* Bugün — ince mavi kenarlık */
     [data-baseweb="calendar"] button[aria-current="date"] {
-        border: 1px solid rgba(56, 189, 248, 0.55) !important;
+        border: 1px solid rgba(42,120,214, 0.55) !important;
         border-radius: 50% !important;
     }
 
@@ -858,11 +853,11 @@ st.markdown("""
     [data-baseweb="calendar"] [data-baseweb="select"] span,
     [data-baseweb="calendar"] [data-baseweb="select"] input {
         background-color: rgba(15, 30, 70, 0.7) !important;
-        color: #e2e8f0 !important;
-        border-color: rgba(255, 255, 255, 0.25) !important;
+        color: #24324d !important;
+        border-color: rgba(24,26,30,0.10) !important;
     }
     [data-baseweb="calendar"] [data-baseweb="select"] svg {
-        fill: rgba(56, 189, 248, 0.7) !important;
+        fill: rgba(42,120,214, 0.7) !important;
     }
 
     /* ════ Ay/Yıl açılır liste (tıklayınca çıkan seçenekler) ════
@@ -872,10 +867,9 @@ st.markdown("""
     ul[data-baseweb="menu"],
     [data-baseweb="menu"] {
         background: rgba(2, 6, 23, 0.97) !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 10px !important;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.55) !important;
-        backdrop-filter: blur(12px) !important;
+        box-shadow: 0 8px 24px rgba(20,22,26,0.55) !important;
     }
     ul[data-baseweb="menu"] li,
     ul[data-baseweb="menu"] [role="option"],
@@ -883,7 +877,7 @@ st.markdown("""
     [data-baseweb="menu"] [role="option"],
     [data-baseweb="menu-item"],
     [role="listbox"] [role="option"] {
-        color: #cbd5e1 !important;
+        color: #24324d !important;
         background-color: transparent !important;
         font-size: 13px !important;
     }
@@ -893,8 +887,8 @@ st.markdown("""
     [role="listbox"] [role="option"]:hover,
     ul[data-baseweb="menu"] [aria-selected="true"],
     [role="listbox"] [aria-selected="true"] {
-        background-color: rgba(56, 189, 248, 0.4) !important;
-        color: #ffffff !important;
+        background-color: rgba(42,120,214, 0.4) !important;
+        color: #0f1f3d !important;
     }
     /* Liste içindeki tüm span/div metinleri */
     ul[data-baseweb="menu"] li span,
@@ -902,49 +896,49 @@ st.markdown("""
     ul[data-baseweb="menu"] [role="option"] span,
     [data-baseweb="menu-item"] span,
     [data-baseweb="menu-item"] div {
-        color: #cbd5e1 !important;
+        color: #24324d !important;
         background-color: transparent !important;
     }
 
     /* Takvim içi ay/yıl listesi — role=option LI elemanları */
     [data-baseweb="calendar"] [role="option"],
     [data-baseweb="calendar"] li[role="option"] {
-        color: #cbd5e1 !important;
+        color: #24324d !important;
         background-color: transparent !important;
         border-radius: 8px !important;
         padding: 4px 10px !important;
     }
     [data-baseweb="calendar"] [role="option"]:hover {
-        background-color: rgba(56, 189, 248, 0.35) !important;
-        color: #ffffff !important;
+        background-color: rgba(42,120,214, 0.35) !important;
+        color: #0f1f3d !important;
     }
     [data-baseweb="calendar"] [role="option"][aria-selected="true"],
     [data-baseweb="calendar"] li[role="option"][aria-selected="true"] {
-        background-color: rgba(56, 189, 248, 0.55) !important;
-        color: #ffffff !important;
+        background-color: rgba(42,120,214, 0.55) !important;
+        color: #0f1f3d !important;
         font-weight: 600 !important;
     }
 
     /* ════════ SLIDER — standart ════════ */
     [data-testid="stSlider"] [data-baseweb="slider"] [role="slider"] {
-        background: #38bdf8 !important;
-        border: 2px solid rgba(56, 189, 248, 0.7) !important;
+        background: #2a78d6 !important;
+        border: 2px solid rgba(42,120,214, 0.7) !important;
     }
     [data-testid="stSlider"] [data-baseweb="slider"] div[class*="Track"] {
-        background: rgba(56, 189, 248, 0.4) !important;
+        background: rgba(42,120,214, 0.4) !important;
     }
 
     /* ════════ GENEL METİN OKUNABİLİRLİK FİX ════════ */
     .stMarkdown h1, .stMarkdown h2, .stMarkdown h3,
     .stMarkdown h4, .stMarkdown h5, .stMarkdown h6 {
-        color: #ffffff !important;
+        color: #0f1f3d !important;
         font-weight: 700 !important;
         padding-bottom: 6px !important;
-        border-bottom: 1px solid rgba(56, 189, 248, 0.35) !important;
+        border-bottom: 1px solid rgba(42,120,214, 0.35) !important;
         margin-bottom: 12px !important;
     }
     .stMarkdown p, .stMarkdown li {
-        color: rgba(220, 235, 255, 0.92) !important;
+        color: #24324d !important;
         line-height: 1.65 !important;
         font-size: 14px !important;
     }
@@ -954,11 +948,11 @@ st.markdown("""
         font-weight: 700 !important;
     }
     .stCaption, [data-testid="stCaptionContainer"] p {
-        color: rgba(160, 200, 255, 0.70) !important;
+        color: #46536b !important;
         font-size: 12px !important;
     }
     strong, b {
-        color: #ffffff !important;
+        color: #0f1f3d !important;
         font-weight: 700 !important;
     }
 </style>
@@ -980,7 +974,7 @@ st.markdown("""
         el.style.setProperty('background-color', 'transparent', 'important');
         if (el.getAttribute('aria-selected') === 'true') {
             el.style.setProperty('background-color', SEL_BG, 'important');
-            el.style.setProperty('color', '#ffffff', 'important');
+            el.style.setProperty('color', '#0f1f3d', 'important');
         }
         el.querySelectorAll('span, div, p').forEach(function(c) {
             c.style.setProperty('color', TEXT_CLR, 'important');
@@ -991,9 +985,9 @@ st.markdown("""
             el.addEventListener('mouseenter', function() {
                 if (el.getAttribute('aria-selected') !== 'true') {
                     el.style.setProperty('background-color', HOVER_BG, 'important');
-                    el.style.setProperty('color', '#ffffff', 'important');
+                    el.style.setProperty('color', '#0f1f3d', 'important');
                     el.querySelectorAll('span, div, p').forEach(function(c) {
-                        c.style.setProperty('color', '#ffffff', 'important');
+                        c.style.setProperty('color', '#0f1f3d', 'important');
                     });
                 }
             });
@@ -1015,7 +1009,7 @@ st.markdown("""
             el.style.setProperty('background-color', DARK_BG, 'important');
             el.style.setProperty('border', BORDER, 'important');
             el.style.setProperty('border-radius', RADIUS, 'important');
-            el.style.setProperty('box-shadow', '0 8px 24px rgba(0,0,0,0.55)', 'important');
+            el.style.setProperty('box-shadow', '0 8px 24px rgba(20,22,26,0.55)', 'important');
         });
 
         // Menu wrapper varsa (eski Streamlit versiyonları)
@@ -1094,7 +1088,7 @@ components.html("""
         el.style.setProperty('background-color', 'transparent', 'important');
         if (el.getAttribute('aria-selected') === 'true') {
             el.style.setProperty('background-color', SEL_BG, 'important');
-            el.style.setProperty('color', '#ffffff', 'important');
+            el.style.setProperty('color', '#0f1f3d', 'important');
         }
         el.querySelectorAll('span, div, p').forEach(function(c) {
             c.style.setProperty('color', TEXT_CLR, 'important');
@@ -1105,8 +1099,8 @@ components.html("""
             el.addEventListener('mouseenter', function() {
                 if (el.getAttribute('aria-selected') !== 'true') {
                     el.style.setProperty('background-color', HOVER_BG, 'important');
-                    el.style.setProperty('color', '#ffffff', 'important');
-                    el.querySelectorAll('span,div,p').forEach(function(c){ c.style.setProperty('color','#ffffff','important'); });
+                    el.style.setProperty('color', '#0f1f3d', 'important');
+                    el.querySelectorAll('span,div,p').forEach(function(c){ c.style.setProperty('color','#0f1f3d','important'); });
                 }
             });
             el.addEventListener('mouseleave', function() {
@@ -1124,7 +1118,7 @@ components.html("""
             el.style.setProperty('background-color', DARK_BG, 'important');
             el.style.setProperty('border', BORDER, 'important');
             el.style.setProperty('border-radius', RADIUS, 'important');
-            el.style.setProperty('box-shadow', '0 8px 24px rgba(0,0,0,0.55)', 'important');
+            el.style.setProperty('box-shadow', '0 8px 24px rgba(20,22,26,0.55)', 'important');
         });
         root.querySelectorAll('[data-baseweb="popover"] ul,[data-baseweb="menu"]').forEach(function(el) {
             el.style.setProperty('background-color', DARK_BG, 'important');
@@ -1179,8 +1173,8 @@ _loc_config = _loc_mgr.get_location_config()
 st.markdown(
     f"""
     <div style='display:flex; justify-content:space-between; align-items:center; gap:12px; margin: 0 0 10px 0;'>
-      <div style='font-weight:800; font-size:14px; letter-spacing:0.4px; color:#ffffff; text-transform:uppercase;'>{_loc_config.get('name', 'ACIBADEM MASLAK HASTANESİ')}</div>
-      <a href='{PORTAL_URL}' target='_top' style='text-decoration:none; font-weight:800; color:#ffffff;'>⬅ Ana Sayfa</a>
+      <div style='font-weight:800; font-size:14px; letter-spacing:0.4px; color:#0f1f3d; text-transform:uppercase;'>{_loc_config.get('name', 'ACIBADEM MASLAK HASTANESİ')}</div>
+      <a href='{PORTAL_URL}' target='_top' style='text-decoration:none; font-weight:800; color:#0f1f3d;'>⬅ Ana Sayfa</a>
     </div>
     """,
     unsafe_allow_html=True,
@@ -1933,8 +1927,8 @@ def render_styled_table(df: pd.DataFrame, max_height: int = 400, max_rows: int =
     
     # Styled HTML tablo
     styled_df = df_page.style.set_properties(**{
-        'background-color': '#ffffff',
-        'color': '#1a1a1a',
+        'background-color': '#fafaf8',
+        'color': '#0f1f3d',
         'border': '1px solid #e0e0e0',
         'padding': '4px 6px',
         'font-size': '11px',
@@ -1942,7 +1936,7 @@ def render_styled_table(df: pd.DataFrame, max_height: int = 400, max_rows: int =
     }).set_table_styles([
         {'selector': 'th', 'props': [
             ('background-color', '#012D75'),
-            ('color', '#ffffff'),
+            ('color', '#0f1f3d'),
             ('font-weight', 'bold'),
             ('padding', '6px 8px'),
             ('font-size', '11px'),
@@ -1981,10 +1975,10 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlü
         y=d["Toplam_Hastane_Tuketim_kWh"],
         mode='lines+markers',
         name='Toplam Tüketim',
-        line=dict(color='#3b82f6', width=3, shape='spline'),
-        marker=dict(size=10, color='#3b82f6', line=dict(color='white', width=2)),
+        line=dict(color='#6da7ec', width=3, shape='spline'),
+        marker=dict(size=10, color='#6da7ec', line=dict(color='white', width=2)),
         fill='tozeroy',
-        fillcolor='rgba(59, 130, 246, 0.15)',
+        fillcolor='rgba(109,167,236, 0.15)',
         hovertemplate=f'<b>%{{x|{xfmt}}}</b><br>Tüketim: %{{y:,.0f}} kWh<extra></extra>'
     ))
 
@@ -1995,8 +1989,8 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlü
         mode='lines+markers',
         name='Dış Hava (°C)',
         yaxis='y2',
-        line=dict(color='#f59e0b', width=3, dash='dot', shape='spline'),
-        marker=dict(size=8, color='#f59e0b', symbol='diamond', line=dict(color='white', width=2)),
+        line=dict(color='#c98500', width=3, dash='dot', shape='spline'),
+        marker=dict(size=8, color='#c98500', symbol='diamond', line=dict(color='white', width=2)),
         hovertemplate=f'<b>%{{x|{xfmt}}}</b><br>Sıcaklık: %{{y:.1f}}°C<extra></extra>'
     ))
 
@@ -2004,29 +1998,29 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlü
     fig.update_layout(
         title=dict(
             text='<b>📊 Günlük Tüketim & Dış Hava Sıcaklığı</b>',
-            font=dict(size=20, color='#ffffff', family="Inter, sans-serif"),
+            font=dict(size=20, color='#0f1f3d', family="Inter, sans-serif"),
             x=0.02,
             xanchor='left'
         ),
-        font=dict(family="Inter, sans-serif", size=13, color='#e2e8f0'),
-        plot_bgcolor='rgba(15, 23, 42, 0.98)',
-        paper_bgcolor='rgba(15, 23, 42, 0.98)',
+        font=dict(family="Inter, sans-serif", size=13, color='#24324d'),
+        plot_bgcolor='rgba(250,250,248, 0.98)',
+        paper_bgcolor='rgba(250,250,248, 0.98)',
         yaxis=dict(
-            title=dict(text="Toplam Tüketim (kWh)", font=dict(color='#3b82f6')),
-            gridcolor='rgba(59, 130, 246, 0.1)',
+            title=dict(text="Toplam Tüketim (kWh)", font=dict(color='#6da7ec')),
+            gridcolor='rgba(109,167,236, 0.1)',
             showgrid=True,
             zeroline=False,
             tickformat=',d'
         ),
         yaxis2=dict(
-            title=dict(text="Dış Hava (°C)", font=dict(color='#f59e0b')),
+            title=dict(text="Dış Hava (°C)", font=dict(color='#c98500')),
             overlaying="y",
             side="right",
             showgrid=False,
             zeroline=False
         ),
         xaxis=dict(
-            gridcolor='rgba(255, 255, 255, 0.05)',
+            gridcolor='rgba(24,26,30,0.10)',
             showgrid=True,
             tickformat=xfmt
         ),
@@ -2036,19 +2030,19 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlü
             y=1.02,
             xanchor="right",
             x=1,
-            bgcolor='rgba(30, 41, 59, 0.9)',
-            bordercolor='rgba(255,255,255,0.1)',
+            bgcolor='rgba(241,240,237, 0.9)',
+            bordercolor='rgba(24,26,30,0.10)',
             borderwidth=1,
             font=dict(color='white')
         ),
         margin=dict(l=10, r=10, t=80, b=10),
         hovermode='x unified',
         hoverlabel=dict(
-            bgcolor="rgba(30, 41, 59, 0.95)",
+            bgcolor="rgba(241,240,237, 0.95)",
             font_size=13,
             font_family="Inter, sans-serif",
             font_color="white",
-            bordercolor='rgba(255,255,255,0.2)'
+            bordercolor='rgba(24,26,30,0.10)'
         )
     )
     return fig
@@ -2070,9 +2064,9 @@ def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"
     
     # Premium gradyan renk paleti
     colors = {
-        '❄️ Chiller': '#06b6d4',      # Cyan
+        '❄️ Chiller': '#256abf',      # Cyan
         '⚡ MCC': '#8b5cf6',            # Violet
-        '💡 Aydınlatma/Diğer': '#f59e0b'  # Amber
+        '💡 Aydınlatma/Diğer': '#c98500'  # Amber
     }
     
     fig = px.bar(
@@ -2084,22 +2078,22 @@ def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"
     
     # Premium koyu tema layout
     fig.update_layout(
-        font=dict(family="Inter, sans-serif", size=13, color='#e2e8f0'),
-        plot_bgcolor='rgba(15, 23, 42, 0.98)',
-        paper_bgcolor='rgba(15, 23, 42, 0.98)',
+        font=dict(family="Inter, sans-serif", size=13, color='#24324d'),
+        plot_bgcolor='rgba(250,250,248, 0.98)',
+        paper_bgcolor='rgba(250,250,248, 0.98)',
         title=dict(
-            font=dict(size=20, color='#ffffff', family="Inter, sans-serif"),
+            font=dict(size=20, color='#0f1f3d', family="Inter, sans-serif"),
             x=0.02,
             xanchor='left'
         ),
         yaxis=dict(
-            gridcolor='rgba(255, 255, 255, 0.05)',
+            gridcolor='rgba(24,26,30,0.10)',
             showgrid=True,
             zeroline=False,
             tickformat=',d'
         ),
         xaxis=dict(
-            gridcolor='rgba(255, 255, 255, 0.03)',
+            gridcolor='rgba(24,26,30,0.10)',
             showgrid=False,
             tickformat=xfmt
         ),
@@ -2109,8 +2103,8 @@ def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"
             y=1.02,
             xanchor="right",
             x=1,
-            bgcolor='rgba(30, 41, 59, 0.9)',
-            bordercolor='rgba(255,255,255,0.1)',
+            bgcolor='rgba(241,240,237, 0.9)',
+            bordercolor='rgba(24,26,30,0.10)',
             borderwidth=1,
             font=dict(color='white'),
             title=None
@@ -2118,11 +2112,11 @@ def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"
         margin=dict(l=10, r=10, t=80, b=10),
         hovermode='x unified',
         hoverlabel=dict(
-            bgcolor="rgba(30, 41, 59, 0.95)",
+            bgcolor="rgba(241,240,237, 0.95)",
             font_size=13,
             font_family="Inter, sans-serif",
             font_color="white",
-            bordercolor='rgba(255,255,255,0.2)'
+            bordercolor='rgba(24,26,30,0.10)'
         ),
         bargap=0.2
     )
@@ -2130,7 +2124,7 @@ def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"
     # Yuvarlatılmış bar köşeleri ve gölge efekti
     fig.update_traces(
         marker=dict(
-            line=dict(color='rgba(255,255,255,0.1)', width=1)
+            line=dict(color='rgba(24,26,30,0.10)', width=1)
         ),
         hovertemplate=f'<b>%{{x|{xfmt}}}</b><br>%{{y:,.0f}} kWh<extra></extra>'
     )
@@ -2159,7 +2153,7 @@ def chart_month_vs_last_year(yoy_info: dict):
     
     # Premium renk paleti - Bu yıl vs Geçen yıl
     colors = {
-        cur_start.strftime("%Y-%m"): '#10b981',   # Emerald (Bu yıl)
+        cur_start.strftime("%Y-%m"): '#0ca30c',   # Emerald (Bu yıl)
         prev_start.strftime("%Y-%m"): '#6366f1'   # Indigo (Geçen yıl)
     }
     
@@ -2172,22 +2166,22 @@ def chart_month_vs_last_year(yoy_info: dict):
     
     # Premium koyu tema layout
     fig.update_layout(
-        font=dict(family="Inter, sans-serif", size=13, color='#e2e8f0'),
-        plot_bgcolor='rgba(15, 23, 42, 0.98)',
-        paper_bgcolor='rgba(15, 23, 42, 0.98)',
+        font=dict(family="Inter, sans-serif", size=13, color='#24324d'),
+        plot_bgcolor='rgba(250,250,248, 0.98)',
+        paper_bgcolor='rgba(250,250,248, 0.98)',
         title=dict(
-            font=dict(size=20, color='#ffffff', family="Inter, sans-serif"),
+            font=dict(size=20, color='#0f1f3d', family="Inter, sans-serif"),
             x=0.02,
             xanchor='left'
         ),
         yaxis=dict(
-            gridcolor='rgba(255, 255, 255, 0.05)',
+            gridcolor='rgba(24,26,30,0.10)',
             showgrid=True,
             zeroline=False,
             tickformat=',d'
         ),
         xaxis=dict(
-            gridcolor='rgba(255, 255, 255, 0.03)',
+            gridcolor='rgba(24,26,30,0.10)',
             showgrid=False
         ),
         legend=dict(
@@ -2196,8 +2190,8 @@ def chart_month_vs_last_year(yoy_info: dict):
             y=1.02,
             xanchor="right",
             x=1,
-            bgcolor='rgba(30, 41, 59, 0.9)',
-            bordercolor='rgba(255,255,255,0.1)',
+            bgcolor='rgba(241,240,237, 0.9)',
+            bordercolor='rgba(24,26,30,0.10)',
             borderwidth=1,
             font=dict(color='white'),
             title=None
@@ -2205,11 +2199,11 @@ def chart_month_vs_last_year(yoy_info: dict):
         margin=dict(l=10, r=10, t=80, b=10),
         hovermode='x unified',
         hoverlabel=dict(
-            bgcolor="rgba(30, 41, 59, 0.95)",
+            bgcolor="rgba(241,240,237, 0.95)",
             font_size=13,
             font_family="Inter, sans-serif",
             font_color="white",
-            bordercolor='rgba(255,255,255,0.2)'
+            bordercolor='rgba(24,26,30,0.10)'
         ),
         bargap=0.25,
         bargroupgap=0.15
@@ -2218,7 +2212,7 @@ def chart_month_vs_last_year(yoy_info: dict):
     # Premium bar styling
     fig.update_traces(
         marker=dict(
-            line=dict(color='rgba(255,255,255,0.15)', width=1)
+            line=dict(color='rgba(24,26,30,0.10)', width=1)
         ),
         hovertemplate='<b>%{x}</b><br>%{y:,.0f} kWh<extra></extra>'
     )
@@ -2273,11 +2267,11 @@ def fig_to_png_bytes(fig) -> bytes:
         import io as _io
 
         BG = "#0f1729"
-        COLORS = ["#3b82f6", "#f59e0b", "#10b981", "#a855f7", "#f97316", "#ef4444"]
+        COLORS = ["#6da7ec", "#c98500", "#0ca30c", "#4a3aa7", "#eb6834", "#d03b3b"]
 
         fig_mpl, ax = plt.subplots(figsize=(14, 7), facecolor=BG)
         ax.set_facecolor(BG)
-        ax.tick_params(colors="#94a3b8")
+        ax.tick_params(colors="#46536b")
         for spine in ax.spines.values():
             spine.set_edgecolor("#334155")
 
@@ -2318,10 +2312,10 @@ def fig_to_png_bytes(fig) -> bytes:
                     ax.set_facecolor(BG)
                     ax.pie(vals, labels=labs, autopct="%1.0f%%",
                            colors=COLORS[:len(vals)],
-                           textprops={"color": "#94a3b8", "fontsize": 10})
+                           textprops={"color": "#46536b", "fontsize": 10})
 
         if ax.get_lines() or ax.patches:
-            legend = ax.legend(facecolor="#1e293b", labelcolor="#94a3b8",
+            legend = ax.legend(facecolor="#f1f0ed", labelcolor="#46536b",
                                edgecolor="#334155", fontsize=9)
 
         buf = _io.BytesIO()
@@ -2794,16 +2788,16 @@ if _daily_auto_ready or _monthly_auto_ready:
     st.markdown("""
     <style>
     .auto-report-ready {
-        background: linear-gradient(135deg, #059669, #10b981) !important;
-        border: 1px solid #34d399 !important;
+        background: linear-gradient(135deg, #059669, #0ca30c) !important;
+        border: 1px solid #0ca30c !important;
         border-radius: 8px;
         padding: 10px 14px;
         margin: 4px 0;
         animation: pulse-green 2s ease-in-out infinite;
     }
     @keyframes pulse-green {
-        0%, 100% { box-shadow: 0 0 5px rgba(16,185,129,0.3); }
-        50% { box-shadow: 0 0 15px rgba(16,185,129,0.6); }
+        0%, 100% { box-shadow: 0 0 5px rgba(12,163,12,0.3); }
+        50% { box-shadow: 0 0 15px rgba(12,163,12,0.6); }
     }
     </style>
     """, unsafe_allow_html=True)
@@ -2968,8 +2962,8 @@ def _bildirim_panel():
         return
 
     # Renk haritası
-    _renk  = {"bilgi": "#3b82f6", "uyari": "#f59e0b", "acil": "#ef4444"}
-    _bg    = {"bilgi": "rgba(59,130,246,0.15)", "uyari": "rgba(245,158,11,0.15)", "acil": "rgba(239,68,68,0.18)"}
+    _renk  = {"bilgi": "#6da7ec", "uyari": "#c98500", "acil": "#d03b3b"}
+    _bg    = {"bilgi": "rgba(109,167,236,0.15)", "uyari": "rgba(250,178,25,0.15)", "acil": "rgba(208,59,59,0.18)"}
     _icon  = {"bilgi": "ℹ️", "uyari": "⚠️", "acil": "🚨"}
     _etiket = {"bilgi": "BİLGİ", "uyari": "UYARI", "acil": "ACİL"}
 
@@ -2986,16 +2980,16 @@ def _bildirim_panel():
         with _col1:
             st.markdown(f"""
 <div style="
-    background:{_bg.get(_onc,'rgba(59,130,246,0.15)')};
-    border-left:4px solid {_renk.get(_onc,'#3b82f6')};
+    background:{_bg.get(_onc,'rgba(109,167,236,0.15)')};
+    border-left:4px solid {_renk.get(_onc,'#6da7ec')};
     border-radius:8px;
     padding:10px 16px;
     margin-bottom:4px;
 ">
-  <span style="color:{_renk.get(_onc,'#3b82f6')};font-weight:700;font-size:12px;">
+  <span style="color:{_renk.get(_onc,'#6da7ec')};font-weight:700;font-size:12px;">
     {_icon.get(_onc,'ℹ️')} {_etiket.get(_onc,'BİLGİ')} &nbsp;·&nbsp; {_gon} &nbsp;·&nbsp; {_zaman}
   </span><br>
-  <span style="color:rgba(255,255,255,0.95);font-size:14px;">{_msj}</span>
+  <span style="color:#0f1f3d;font-size:14px;">{_msj}</span>
 </div>""", unsafe_allow_html=True)
         with _col2:
             if st.button("✓ Okundu", key=f"_okundu_{_bid}", use_container_width=True):
@@ -3118,11 +3112,11 @@ def _ed_chip(ad, deger, hastane_genel, genislik=None):
         pct_txt = f"%{pct:.1f}".replace(".", ",")
     _w = f"width:{genislik};" if genislik else ""
     return (
-        f"<div style='{_w}background:rgba(15,23,42,0.85);border:1px solid rgba(56,189,248,0.25);"
+        f"<div style='{_w}background:rgba(250,250,248,0.85);border:1px solid rgba(42,120,214,0.25);"
         f"border-radius:8px;padding:9px 4px 7px;text-align:center;'>"
         f"<div class='nm' style='font-size:11px;font-weight:700;margin-bottom:4px;letter-spacing:0.3px;"
         f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{ad}</div>"
-        f"<div class='{vcls}' style='font-family:\"Playfair Display\",sans-serif;font-size:17px;line-height:1.05;'>{val_txt}</div>"
+        f"<div class='{vcls}' style='font-family:Inter,system-ui,sans-serif;font-size:17px;line-height:1.05;'>{val_txt}</div>"
         f"<div class='pc' style='font-size:11px;margin-top:3px;height:12px;'>{pct_txt}</div>"
         f"</div>"
     )
@@ -3131,7 +3125,7 @@ def _ed_chip(ad, deger, hastane_genel, genislik=None):
 # Sabit-genişlik uniform çip ızgarası (esneyip iç içe geçmez)
 _ED_CHIP_GRID = "display:grid;grid-template-columns:repeat(auto-fill,100px);gap:8px;justify-content:center;"
 # Ağaç bağlantı çizgisi rengi
-_ED_LINE = "rgba(56,189,248,0.35)"
+_ED_LINE = "rgba(42,120,214,0.35)"
 
 
 def _ed_split_connector():
@@ -3195,53 +3189,53 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
 
     _dis_hava = _ed_val(row, "Dis_Hava_Sicakligi_C")
     _hava_html = (
-        f"<span style='background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.4);"
-        f"border-radius:13px;padding:4px 12px;font-size:11px;color:#fcd34d;font-weight:600;'>"
+        f"<span style='background:rgba(250,178,25,0.10);border:1px solid rgba(250,178,25,0.4);"
+        f"border-radius:13px;padding:4px 12px;font-size:11px;color:#8a5a00;font-weight:600;'>"
         f"🌡 {_dis_hava:.1f}°C</span>" if _dis_hava is not None else ""
     )
 
     # ── Glassmorphism stil bloğu: global 'p,span,div{color:!important}' kuralını ID-scoped sınıflar yener ──
     _style = (
         "<style>"
-        "#ed-root{position:relative;overflow:hidden;border-radius:20px;background:#020617;"
-        "padding:22px;border:1px solid rgba(255,255,255,0.06);}"
-        "#ed-root .blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:0.30;z-index:0;}"
-        "#ed-root .b1{width:420px;height:420px;background:#0ea5e9;top:-14%;left:4%;}"
-        "#ed-root .b2{width:360px;height:360px;background:#10b981;bottom:-12%;right:6%;}"
+        "#ed-root{position:relative;overflow:hidden;border-radius:16px;background:#f1f0ed;"
+        "padding:22px;border:1px solid rgba(24,26,30,0.10);}"
+        "#ed-root .blob{display:none;}"
+        "#ed-root .b1{width:420px;height:420px;background:#256abf;top:-14%;left:4%;}"
+        "#ed-root .b2{width:360px;height:360px;background:#0ca30c;bottom:-12%;right:6%;}"
         "#ed-root .b3{width:300px;height:300px;background:#6366f1;top:38%;left:44%;}"
         "#ed-root .layer{position:relative;z-index:1;}"
-        "#ed-root .gcard{background:rgba(15,23,42,0.45);backdrop-filter:blur(18px);"
-        "-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);"
-        "border-top:1px solid rgba(255,255,255,0.15);border-radius:18px;"
-        "box-shadow:0 20px 40px rgba(0,0,0,0.35);padding:20px;}"
-        "#ed-root .hbrand{color:#fff!important;font-weight:700;letter-spacing:4px;font-size:14px;}"
-        "#ed-root .hsub{color:#94a3b8!important;font-weight:400;letter-spacing:2px;}"
-        "#ed-root .badge{color:#34d399!important;background:rgba(16,185,129,0.15);"
-        "border:1px solid rgba(16,185,129,0.3);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;}"
-        "#ed-root .hmut{color:#cbd5e1!important;font-size:12px;}"
-        "#ed-root .chead{color:#94a3b8!important;font-size:11px;font-weight:600;letter-spacing:2px;}"
-        "#ed-root .mainv{color:#fff!important;font-weight:300;font-size:46px;line-height:1;letter-spacing:-1px;}"
-        "#ed-root .mainv .u{color:#64748b!important;font-size:15px;font-weight:400;}"
-        "#ed-root .bdlbl{color:#94a3b8!important;font-size:11px;}"
-        "#ed-root .vblue{color:#38bdf8!important;}"
-        "#ed-root .vemr{color:#34d399!important;}"
-        "#ed-root .sectitle{color:#fff!important;font-size:18px;font-weight:400;}"
-        "#ed-root .secval{color:#fff!important;font-size:22px;font-weight:300;}"
-        "#ed-root .secval .u{color:#64748b!important;font-size:13px;}"
-        "#ed-root .pcblue{color:#38bdf8!important;font-weight:600;}"
-        "#ed-root .pcamber{color:#fbbf24!important;font-weight:600;}"
-        "#ed-root .trdplbl{color:#94a3b8!important;font-size:12px;font-weight:600;}"
-        "#ed-root .trdpval{color:#fff!important;font-size:19px;font-weight:600;}"
-        "#ed-root .ptitle{color:#cbd5e1!important;font-size:12px;font-weight:600;letter-spacing:1px;}"
+        "#ed-root .gcard{background:#ffffff;"
+        "-webkit-border:1px solid rgba(24,26,30,0.10);"
+        "border-top:1px solid rgba(24,26,30,0.10);border-radius:18px;"
+        "box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22),inset 0 1px 0 #24324d;padding:20px;}"
+        "#ed-root .hbrand{color:#0f1f3d!important;font-weight:700;letter-spacing:4px;font-size:14px;}"
+        "#ed-root .hsub{color:#46536b!important;font-weight:400;letter-spacing:2px;}"
+        "#ed-root .badge{color:#0ca30c!important;background:rgba(12,163,12,0.15);"
+        "border:1px solid rgba(12,163,12,0.3);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;}"
+        "#ed-root .hmut{color:#24324d!important;font-size:12px;}"
+        "#ed-root .chead{color:#46536b!important;font-size:11px;font-weight:600;letter-spacing:2px;}"
+        "#ed-root .mainv{color:#0f1f3d!important;font-weight:300;font-size:46px;line-height:1;letter-spacing:-1px;}"
+        "#ed-root .mainv .u{color:#46536b!important;font-size:15px;font-weight:400;}"
+        "#ed-root .bdlbl{color:#46536b!important;font-size:11px;}"
+        "#ed-root .vblue{color:#2a78d6!important;}"
+        "#ed-root .vemr{color:#0ca30c!important;}"
+        "#ed-root .sectitle{color:#0f1f3d!important;font-size:18px;font-weight:400;}"
+        "#ed-root .secval{color:#0f1f3d!important;font-size:22px;font-weight:300;}"
+        "#ed-root .secval .u{color:#46536b!important;font-size:13px;}"
+        "#ed-root .pcblue{color:#2a78d6!important;font-weight:600;}"
+        "#ed-root .pcamber{color:#c98500!important;font-weight:600;}"
+        "#ed-root .trdplbl{color:#46536b!important;font-size:12px;font-weight:600;}"
+        "#ed-root .trdpval{color:#0f1f3d!important;font-size:19px;font-weight:600;}"
+        "#ed-root .ptitle{color:#24324d!important;font-size:12px;font-weight:600;letter-spacing:1px;}"
         "#ed-root .bar{display:inline-block;width:4px;height:12px;border-radius:2px;"
         "vertical-align:middle;margin-right:8px;}"
-        "#ed-root .bblue{background:#38bdf8;}#ed-root .bamber{background:#fbbf24;}"
-        "#ed-root .cid{color:#64748b!important;font-size:11px;font-weight:600;}"
-        "#ed-root .cval{color:#fff!important;font-size:15px;font-weight:500;}"
-        "#ed-root .cval .u{color:#64748b!important;font-size:9px;}"
-        "#ed-root .cpct{color:#fbbf24!important;font-weight:600;}"
+        "#ed-root .bblue{background:#2a78d6;}#ed-root .bamber{background:#c98500;}"
+        "#ed-root .cid{color:#46536b!important;font-size:11px;font-weight:600;}"
+        "#ed-root .cval{color:#0f1f3d!important;font-size:15px;font-weight:500;}"
+        "#ed-root .cval .u{color:#46536b!important;font-size:9px;}"
+        "#ed-root .cpct{color:#c98500!important;font-weight:600;}"
         "#ed-root .cempty{opacity:0.55;}"
-        "#ed-root .cempty .cval{color:#64748b!important;font-style:italic;font-size:11px;font-weight:400;}"
+        "#ed-root .cempty .cval{color:#46536b!important;font-style:italic;font-size:11px;font-weight:400;}"
         "</style>"
     )
 
@@ -3249,11 +3243,11 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
     def _cell(ad, col):
         d = _ed_val(row, col)
         if d is None:
-            return ("<div class='cempty' style='background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);"
+            return ("<div class='cempty' style='background:#ffffff;border:1px solid rgba(24,26,30,0.10);"
                     f"border-radius:10px;padding:11px;'><div class='cid'>{ad}</div>"
                     "<div class='cval'>veri yok</div></div>")
         pct_txt = "%0" if d <= 0 else f"%{(d/hastane_genel*100):.1f}".replace(".", ",") if hastane_genel > 0 else "—"
-        return ("<div style='background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.04);"
+        return ("<div style='background:#ffffff;border:1px solid rgba(24,26,30,0.10);"
                 f"border-radius:10px;padding:11px;'><div class='cid'>{ad}</div>"
                 f"<div class='cval'>{_ed_num(d)} <span class='u'>kWh</span></div>"
                 f"<div class='cpct' style='font-size:11px;margin-top:2px;'>{pct_txt}</div></div>")
@@ -3268,7 +3262,7 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         else:
             val_txt = _ed_num(d)
             pct_txt = f"%{(d/hastane_genel*100):.1f}".replace(".", ",") if hastane_genel > 0 else "—"
-        return ("<div style='flex:1;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);"
+        return ("<div style='flex:1;background:#f1f0ed;border:1px solid rgba(24,26,30,0.10);"
                 "border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;'>"
                 f"<div><div class='trdplbl'>{ad}</div>"
                 f"<div class='{pccls}' style='font-size:11px;margin-top:4px;'>{pct_txt}</div></div>"
@@ -3319,7 +3313,7 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         "<div class='gcard' style='width:460px;text-align:center;'>"
         "<div class='chead'>HASTANE GENEL TOPLAM · GÜNLÜK</div>"
         f"<div class='mainv' style='margin:12px 0 18px;'>{_ed_num(hastane_genel)} <span class='u'>kWh</span></div>"
-        "<div style='display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.06);padding-top:16px;'>"
+        "<div style='display:flex;justify-content:space-between;border-top:1px solid rgba(24,26,30,0.10);padding-top:16px;'>"
         "<div style='text-align:left;'><div class='bdlbl'>Şebeke (TRDP 1-4)</div>"
         f"<div class='vblue' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(sebeke)} "
         f"<span style='font-size:11px;'>{_pct(sebeke)}</span></div></div>"
@@ -3880,8 +3874,8 @@ with tab2:
         st.markdown("""
         <style>
         .dash-section {
-            background: linear-gradient(135deg, rgba(15,23,42,0.7), rgba(30,41,59,0.5));
-            border: 1px solid rgba(59,130,246,0.25);
+            background: #fafaf8;
+            border: 1px solid rgba(109,167,236,0.25);
             border-radius: 12px;
             padding: 16px 20px 12px 20px;
             margin-bottom: 12px;
@@ -3889,10 +3883,10 @@ with tab2:
         .dash-section-title {
             font-size: 17px;
             font-weight: 700;
-            color: #e2e8f0;
+            color: #24324d;
             margin-bottom: 10px;
             padding-bottom: 6px;
-            border-bottom: 2px solid rgba(59,130,246,0.3);
+            border-bottom: 2px solid rgba(109,167,236,0.3);
         }
         .dash-section.m2-section {
             border-color: rgba(139,92,246,0.35);
@@ -3901,10 +3895,10 @@ with tab2:
             border-bottom-color: rgba(139,92,246,0.4);
         }
         .dash-section.cost-section {
-            border-color: rgba(245,158,11,0.35);
+            border-color: rgba(250,178,25,0.35);
         }
         .dash-section.cost-section .dash-section-title {
-            border-bottom-color: rgba(245,158,11,0.4);
+            border-bottom-color: rgba(250,178,25,0.4);
         }
         </style>
         """, unsafe_allow_html=True)
@@ -4608,7 +4602,7 @@ with tab5:
                         
                         if sum(values) > 0:
                             fig_pie = px.pie(names=labels, values=values, hole=0.4,
-                                           color_discrete_sequence=['#3b82f6', '#f59e0b', '#10b981', '#94a3b8'])
+                                           color_discrete_sequence=['#6da7ec', '#c98500', '#0ca30c', '#46536b'])
                             fig_pie.update_layout(
                                 title="Enerji Tüketim Dağılımı",
                                 template="plotly_white",
@@ -4636,14 +4630,14 @@ with tab5:
                             fig_trend.add_trace(go.Bar(
                                 x=daily_df["Gün"], y=daily_df["Tüketim"],
                                 name="Tüketim (kWh)",
-                                marker_color='rgba(59, 130, 246, 0.7)'
+                                marker_color='rgba(109,167,236, 0.7)'
                             ))
                             # Sıcaklık (Çizgi - 2. Eksen)
                             fig_trend.add_trace(go.Scatter(
                                 x=daily_df["Gün"], y=daily_df["Sıcaklık"],
                                 name="Dış Hava (°C)",
                                 yaxis="y2",
-                                line=dict(color='#ef4444', width=3)
+                                line=dict(color='#d03b3b', width=3)
                             ))
                             
                             fig_trend.update_layout(
@@ -4671,7 +4665,7 @@ with tab5:
                         fig_yoy = go.Figure()
                         fig_yoy.add_trace(go.Bar(
                             name="Bu Yıl", x=display_names, y=curr_vals,
-                            marker_color='#10b981'
+                            marker_color='#0ca30c'
                         ))
                         fig_yoy.add_trace(go.Bar(
                             name="Geçen Yıl", x=display_names, y=prev_vals,
@@ -4733,11 +4727,11 @@ with tab5:
             
             with _ai_col1:
                 if _ai_score >= 80:
-                    _ring_color = "#10b981"
+                    _ring_color = "#0ca30c"
                 elif _ai_score >= 60:
-                    _ring_color = "#3b82f6"
+                    _ring_color = "#6da7ec"
                 elif _ai_score >= 40:
-                    _ring_color = "#f59e0b"
+                    _ring_color = "#c98500"
                 elif _ai_score >= 20:
                     _ring_color = "#8b5cf6"
                 else:

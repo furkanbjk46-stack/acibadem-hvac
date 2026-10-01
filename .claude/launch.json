@@ -2,39 +2,80 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "Mekanik Zeka (API)",
+      "runtimeExecutable": "E:\\Program Files\\Python313\\python.exe",
+      "runtimeArgs": [
+        "hvac/deneme/main_portal.py"
+      ],
+      "port": 8005
+    },
+    {
       "name": "Maslak Portal",
       "runtimeExecutable": "streamlit",
-      "runtimeArgs": ["run", "hvac/deneme/app_portal.py", "--server.port=8502", "--server.headless=true"],
+      "runtimeArgs": [
+        "run",
+        "hvac/deneme/app_portal.py",
+        "--server.port=8502",
+        "--server.headless=true"
+      ],
       "port": 8502
     },
     {
       "name": "HVAC Static Preview",
       "runtimeExecutable": "py",
-      "runtimeArgs": ["-3", "-m", "http.server", "8010", "--directory", "hvac/deneme/static"],
+      "runtimeArgs": [
+        "-3",
+        "-m",
+        "http.server",
+        "8010",
+        "--directory",
+        "hvac/deneme/static"
+      ],
       "port": 8010
     },
     {
       "name": "Mekanik Zeka Arayuz",
       "runtimeExecutable": "E:\\Program Files\\Python313\\python.exe",
-      "runtimeArgs": ["-m", "http.server", "8011", "--directory", "hvac/deneme"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8011",
+        "--directory",
+        "hvac/deneme"
+      ],
       "port": 8011
     },
     {
       "name": "Synapse Demo",
       "runtimeExecutable": "streamlit",
-      "runtimeArgs": ["run", "merkez/app_demo.py", "--server.port=8507", "--server.headless=true"],
+      "runtimeArgs": [
+        "run",
+        "merkez/app_demo.py",
+        "--server.port=8507",
+        "--server.headless=true"
+      ],
       "port": 8507
     },
     {
       "name": "Tema Onizleme",
       "runtimeExecutable": "streamlit",
-      "runtimeArgs": ["run", "merkez/_tema_onizleme.py", "--server.port=8508", "--server.headless=true"],
+      "runtimeArgs": [
+        "run",
+        "merkez/_tema_onizleme.py",
+        "--server.port=8508",
+        "--server.headless=true"
+      ],
       "port": 8508
     },
     {
       "name": "GM Merkez",
       "runtimeExecutable": "streamlit",
-      "runtimeArgs": ["run", "merkez/app_merkez.py", "--server.port=8505", "--server.headless=true"],
+      "runtimeArgs": [
+        "run",
+        "merkez/app_merkez.py",
+        "--server.port=8505",
+        "--server.headless=true"
+      ],
       "port": 8505
     }
   ]

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <!-- SheetJS for XLSX generation -->
@@ -25,23 +25,23 @@
         :root {
             --acibadem-blue: #012D75;
             --acibadem-light: #1a4a9e;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --info: #3b82f6;
-            --bg-primary: rgba(255, 255, 255, 0.05);
-            --bg-secondary: rgba(255, 255, 255, 0.1);
-            --text-primary: #ffffff;
-            --text-secondary: rgba(255, 255, 255, 0.7);
-            --border: rgba(255, 255, 255, 0.15);
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.5);
+            --success: #0ca30c;
+            --warning: #c98500;
+            --danger: #d03b3b;
+            --info: #6da7ec;
+            --bg-primary: #fafaf8;
+            --bg-secondary: #f1f0ed;
+            --text-primary: #0f1f3d;
+            --text-secondary: #24324d;
+            --border: rgba(24,26,30,0.10);
+            --shadow-sm: 0 1px 1px rgba(20,22,26,.05);
+            --shadow-md: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22);
+            --shadow-lg: 0 1px 1px rgba(20,22,26,.05),0 14px 28px -14px rgba(20,22,26,.26),inset 0 1px 0 #24324d;
             /* Synergy (Mekanik Zeka) tema değişkenleri */
-            --syn-bg: #060b14;
-            --syn-card: rgba(15, 23, 42, 0.4);
-            --syn-card-strong: rgba(15, 23, 42, 0.6);
-            --syn-border: rgba(255, 255, 255, 0.05);
+            --syn-bg: #ecebe8;
+            --syn-card: #fafaf8;
+            --syn-card-strong: #ffffff;
+            --syn-border: rgba(24,26,30,0.10);
         }
 
         * {
@@ -51,9 +51,9 @@
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
             background-color: var(--syn-bg);
-            background-image: radial-gradient(circle at 50% 0%, #0f172a 0%, #020617 100%);
+            background-image: none;
             color: var(--text-primary);
             line-height: 1.6;
             min-height: 100vh;
@@ -68,9 +68,8 @@
         /* Header (Synergy hero card) */
         .header {
             background: var(--syn-card-strong);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            color: white;
+            -webkit-
+            color: #0f1f3d;
             padding: 24px 32px;
             border-radius: 8px;
             margin-bottom: 24px;
@@ -85,7 +84,7 @@
         }
 
         .header h1 {
-            font-family: 'Playfair Display', 'Inter', serif;
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
             font-size: 28px;
             font-weight: 400;
             margin-bottom: 4px;
@@ -100,7 +99,7 @@
             font-weight: 400;
             text-transform: uppercase;
             letter-spacing: 2px;
-            color: #94a3b8;
+            color: #46536b;
         }
 
         .status-bar {
@@ -109,7 +108,7 @@
             align-items: center;
             margin-top: 20px;
             padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid #46536b;
         }
 
         .status-indicator {
@@ -140,9 +139,9 @@
         }
 
         .engine-select {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
+            background: #fafaf8;
+            border: 1px solid rgba(24,26,30,0.10);
+            color: #0f1f3d;
             padding: 10px 16px;
             border-radius: 10px;
             font-weight: 600;
@@ -151,7 +150,7 @@
         }
 
         .engine-select:hover {
-            background: rgba(255, 255, 255, 0.25);
+            background: #fafaf8;
         }
 
         /* KPI Cards */
@@ -164,8 +163,7 @@
 
         .kpi-card {
             background: var(--syn-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            -webkit-
             padding: 16px;
             border-radius: 8px;
             border: 1px solid var(--syn-border);
@@ -220,14 +218,14 @@
         .kpi-value {
             font-size: 28px;
             font-weight: 300;
-            color: #fff;
+            color: #0f1f3d;
             line-height: 1;
             margin-bottom: 4px;
         }
 
         .kpi-desc {
             font-size: 10px;
-            color: #64748b;
+            color: #46536b;
         }
 
         /* Main Layout */
@@ -247,8 +245,7 @@
         /* Control Panel */
         .control-panel {
             background: var(--syn-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            -webkit-
             padding: 16px;
             border-radius: 8px;
             border: 1px solid var(--syn-border);
@@ -269,14 +266,14 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 12px;
-            color: #f8fafc;
+            color: #0f1f3d;
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
         .control-section h3 i {
-            color: #38bdf8;
+            color: #2a78d6;
         }
 
         .form-group {
@@ -289,7 +286,7 @@
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            color: #94a3b8;
+            color: #46536b;
             margin-bottom: 6px;
         }
 
@@ -302,22 +299,22 @@
             font-size: 12px;
             font-family: inherit;
             transition: border 0.2s;
-            background: rgba(0, 0, 0, 0.3);
-            color: #fff;
+            background: #ffffff;
+            color: #0f1f3d;
         }
 
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #38bdf8;
-            background: rgba(0, 0, 0, 0.3);
+            border-color: #2a78d6;
+            background: #ffffff;
             box-shadow: none;
         }
 
         .btn {
             width: 100%;
             padding: 8px 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(24,26,30,0.10);
             border-radius: 6px;
             font-weight: 500;
             font-size: 11px;
@@ -333,7 +330,7 @@
         .btn-primary {
             background: rgba(14, 165, 233, 0.15);
             border-color: rgba(14, 165, 233, 0.3);
-            color: #38bdf8;
+            color: #2a78d6;
         }
 
         .btn-primary:hover {
@@ -341,25 +338,25 @@
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.05);
-            color: #e2e8f0;
+            background: #f1f0ed;
+            color: #24324d;
             margin-bottom: 10px;
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-            color: #fff;
+            background: #fafaf8;
+            border-color: rgba(24,26,30,0.10);
+            color: #0f1f3d;
         }
 
         .btn-warning {
-            background: rgba(245, 158, 11, 0.15);
-            border-color: rgba(245, 158, 11, 0.3);
-            color: #fcd34d;
+            background: rgba(250,178,25, 0.15);
+            border-color: rgba(250,178,25, 0.3);
+            color: #8a5a00;
         }
 
         .btn-warning:hover {
-            background: rgba(245, 158, 11, 0.25);
+            background: rgba(250,178,25, 0.25);
         }
 
         .file-upload {
@@ -377,27 +374,26 @@
             justify-content: center;
             gap: 8px;
             padding: 24px 16px;
-            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border: 1px dashed rgba(24,26,30,0.10);
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
-            background: rgba(255, 255, 255, 0.02);
-            color: #64748b;
+            background: #f1f0ed;
+            color: #46536b;
             font-weight: 500;
             font-size: 11px;
         }
 
         .file-upload-label:hover {
-            border-color: rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.05);
-            color: #e2e8f0;
+            border-color: rgba(24,26,30,0.10);
+            background: #f1f0ed;
+            color: #24324d;
         }
 
         /* Results Section */
         .results-section {
             background: var(--syn-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            -webkit-
             padding: 16px;
             border-radius: 8px;
             border: 1px solid var(--syn-border);
@@ -418,7 +414,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            color: #f8fafc;
+            color: #0f1f3d;
         }
 
         .results-actions {
@@ -435,40 +431,40 @@
 
         /* Filter Buttons */
         .filter-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #e2e8f0;
+            background: #f1f0ed;
+            border: 1px solid rgba(24,26,30,0.10);
+            color: #24324d;
             transition: all 0.2s;
         }
 
         .filter-btn.active {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-            color: #fff;
+            background: #fafaf8;
+            border-color: rgba(24,26,30,0.10);
+            color: #0f1f3d;
         }
 
         .filter-btn:hover:not(.active) {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-            color: #fff;
+            background: #fafaf8;
+            border-color: rgba(24,26,30,0.10);
+            color: #0f1f3d;
         }
 
         .filter-critical.active {
-            background: rgba(239, 68, 68, 0.15);
-            border-color: rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
+            background: rgba(208,59,59, 0.15);
+            border-color: rgba(208,59,59, 0.3);
+            color: #b42525;
         }
 
         .filter-warning.active {
-            background: rgba(245, 158, 11, 0.15);
-            border-color: rgba(245, 158, 11, 0.3);
-            color: #fcd34d;
+            background: rgba(250,178,25, 0.15);
+            border-color: rgba(250,178,25, 0.3);
+            color: #8a5a00;
         }
 
         .filter-optimal.active {
-            background: rgba(16, 185, 129, 0.15);
-            border-color: rgba(16, 185, 129, 0.3);
-            color: #6ee7b7;
+            background: rgba(12,163,12, 0.15);
+            border-color: rgba(12,163,12, 0.3);
+            color: #006300;
         }
 
         /* Table */
@@ -481,18 +477,18 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            background: rgba(0, 0, 0, 0.2);
+            background: #ffffff;
         }
 
         th {
-            background: rgba(255, 255, 255, 0.02);
+            background: #f1f0ed;
             padding: 10px 12px;
             text-align: left;
             font-weight: 600;
             font-size: 9px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #94a3b8;
+            color: #46536b;
             border-bottom: 1px solid var(--syn-border);
             white-space: nowrap;
         }
@@ -501,11 +497,11 @@
             padding: 12px;
             border-bottom: 1px solid var(--syn-border);
             font-size: 13px;
-            color: #e2e8f0;
+            color: #24324d;
         }
 
         tr:hover {
-            background: rgba(255, 255, 255, 0.03);
+            background: #f1f0ed;
         }
 
         .badge {
@@ -519,30 +515,29 @@
         }
 
         .badge-critical {
-            background: rgba(239, 68, 68, 0.15);
-            color: #fca5a5;
+            background: rgba(208,59,59, 0.15);
+            color: #b42525;
         }
 
         .badge-warning {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fcd34d;
+            background: rgba(250,178,25, 0.15);
+            color: #8a5a00;
         }
 
         .badge-optimal {
-            background: rgba(16, 185, 129, 0.15);
-            color: #6ee7b7;
+            background: rgba(12,163,12, 0.15);
+            color: #006300;
         }
 
         .badge-missing {
-            background: rgba(255, 255, 255, 0.08);
-            color: #94a3b8;
+            background: #fafaf8;
+            color: #46536b;
         }
 
         /* Charts */
         .chart-section {
             background: var(--syn-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            -webkit-
             padding: 16px;
             border-radius: 8px;
             border: 1px solid var(--syn-border);
@@ -556,7 +551,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            color: #f8fafc;
+            color: #0f1f3d;
         }
 
         .chart-container {
@@ -603,34 +598,33 @@
         }
 
         .alert-info {
-            background: rgba(59, 130, 246, 0.1);
+            background: rgba(109,167,236, 0.1);
             color: #93c5fd;
-            border: 1px solid rgba(59, 130, 246, 0.25);
+            border: 1px solid rgba(109,167,236, 0.25);
         }
 
         .alert-success {
-            background: rgba(16, 185, 129, 0.1);
-            color: #6ee7b7;
-            border: 1px solid rgba(16, 185, 129, 0.25);
+            background: rgba(12,163,12, 0.1);
+            color: #006300;
+            border: 1px solid rgba(12,163,12, 0.25);
         }
 
         .alert-warning {
-            background: rgba(245, 158, 11, 0.1);
-            color: #fcd34d;
-            border: 1px solid rgba(245, 158, 11, 0.25);
+            background: rgba(250,178,25, 0.1);
+            color: #8a5a00;
+            border: 1px solid rgba(250,178,25, 0.25);
         }
 
         .alert-danger {
-            background: rgba(239, 68, 68, 0.1);
-            color: #fca5a5;
-            border: 1px solid rgba(239, 68, 68, 0.25);
+            background: rgba(208,59,59, 0.1);
+            color: #b42525;
+            border: 1px solid rgba(208,59,59, 0.25);
         }
 
         /* Manual Entry */
         .manual-section {
             background: var(--syn-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
+            -webkit-
             padding: 16px;
             border-radius: 8px;
             border: 1px solid var(--syn-border);
@@ -644,7 +638,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            color: #f8fafc;
+            color: #0f1f3d;
         }
 
         .manual-table-container {
@@ -673,7 +667,7 @@
             border: 1px solid var(--border);
             border-radius: 6px;
             font-size: 13px;
-            background: rgba(255, 255, 255, 0.05);
+            background: #f1f0ed;
             color: var(--text-primary);
         }
 
@@ -704,8 +698,7 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
+            background: #ffffff;
             align-items: center;
             justify-content: center;
             animation: fadeIn 0.3s ease;
@@ -734,24 +727,23 @@
         }
 
         .instruction-modal-content {
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
+            background: #fafaf8;
+            -webkit-
             border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(24,26,30,0.10);
             padding: 0;
             max-width: 700px;
             width: 90%;
             max-height: 85vh;
             overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(20,22,26, 0.5);
             animation: modalSlideIn 0.3s ease-out;
         }
 
         .instruction-modal-header {
             background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.3));
             padding: 28px 32px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid #46536b;
         }
 
         .instruction-title-row {
@@ -787,7 +779,7 @@
             background: none;
             border: none;
             font-size: 32px;
-            color: #ffffff;
+            color: #0f1f3d;
             cursor: pointer;
             padding: 0;
             width: 36px;
@@ -800,7 +792,7 @@
         }
 
         .instruction-close:hover {
-            background: rgba(255, 255, 255, 0.1);
+            background: #fafaf8;
             transform: rotate(90deg);
         }
 
@@ -822,25 +814,25 @@
 
         .severity-critical {
             background: linear-gradient(135deg, #dc2626, #991b1b);
-            color: white;
+            color: #0f1f3d;
             box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
         }
 
         .severity-warning {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: white;
-            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+            background: linear-gradient(135deg, #c98500, #d97706);
+            color: #0f1f3d;
+            box-shadow: 0 2px 8px rgba(250,178,25, 0.4);
         }
 
         .severity-optimal {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+            background: linear-gradient(135deg, #0ca30c, #059669);
+            color: #0f1f3d;
+            box-shadow: 0 2px 8px rgba(12,163,12, 0.4);
         }
 
         .instruction-score-badge {
-            background: rgba(255, 255, 255, 0.2);
-            color: #ffffff;
+            background: #fafaf8;
+            color: #0f1f3d;
         }
 
         .instruction-modal-body {
@@ -859,7 +851,7 @@
             margin: 0 0 12px 0;
             font-size: 18px;
             font-weight: 600;
-            color: #f1f5f9;
+            color: #0f1f3d;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -868,7 +860,7 @@
         .instruction-section h4 {
             font-size: 16px;
             font-weight: 700;
-            color: #f1f5f9;
+            color: #0f1f3d;
             margin-bottom: 12px;
             display: flex;
             align-items: center;
@@ -876,20 +868,20 @@
         }
 
         .instruction-section h4 i {
-            color: #60a5fa;
+            color: #6da7ec;
         }
 
         .instruction-section p {
             margin: 0;
             line-height: 1.7;
-            color: #cbd5e1;
+            color: #24324d;
         }
 
         .instruction-section ol,
         .instruction-section ul {
             margin: 0;
             padding-left: 24px;
-            color: #e2e8f0;
+            color: #24324d;
         }
 
         .instruction-section li {
@@ -905,16 +897,16 @@
             background: rgba(96, 165, 250, 0.15);
             padding: 12px 16px;
             border-radius: 10px;
-            border-left: 4px solid #60a5fa;
+            border-left: 4px solid #6da7ec;
             font-family: 'Courier New', monospace;
             font-size: 14px;
-            color: #e2e8f0;
+            color: #24324d;
         }
 
         /* Instruction Button */
         .instruction-btn {
             background: linear-gradient(135deg, var(--acibadem-blue), #1a4a9e);
-            color: white;
+            color: #0f1f3d;
             border: none;
             padding: 8px 14px;
             border-radius: 8px;
@@ -958,16 +950,16 @@
 
         .setting-item label {
             font-size: 13px;
-            color: rgba(255, 255, 255, 0.8);
+            color: #24324d;
             font-weight: 500;
         }
 
         .setting-item input {
             padding: 10px 12px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(24,26,30,0.10);
             border-radius: 8px;
-            background: rgba(0, 0, 0, 0.3);
-            color: white;
+            background: #ffffff;
+            color: #0f1f3d;
             font-size: 14px;
             transition: all 0.2s ease;
         }
@@ -979,7 +971,7 @@
         }
 
         .setting-item input:hover {
-            border-color: rgba(255, 255, 255, 0.4);
+            border-color: rgba(24,26,30,0.10);
         }
     </style>
 </head>
@@ -1009,7 +1001,7 @@
                         <i class="fas fa-cog"></i> Ayarlar
                     </button>
                     <button class="btn btn-secondary" onclick="openMaintenanceModal()"
-                        style="margin-left: 10px; padding: 8px 16px; background: rgba(245, 158, 11, 0.2); border-color: rgba(245, 158, 11, 0.5);">
+                        style="margin-left: 10px; padding: 8px 16px; background: rgba(250,178,25, 0.2); border-color: rgba(250,178,25, 0.5);">
                         <i class="fas fa-wrench"></i> Bakım Kartları
                     </button>
                 </div>
@@ -1071,7 +1063,7 @@
                 <!-- Otomatik Analiz Butonu -->
                 <div class="control-section" id="autoAnalysisSection">
                     <h3><i class="fas fa-robot"></i> Otomatik Analiz</h3>
-                    <div id="autoAnalysisBanner" style="display:none; background:rgba(16,185,129,0.15); border:1px solid #10b981; border-radius:8px; padding:10px; margin-bottom:10px; font-size:12px; color:#10b981;">
+                    <div id="autoAnalysisBanner" style="display:none; background:rgba(12,163,12,0.15); border:1px solid #0ca30c; border-radius:8px; padding:10px; margin-bottom:10px; font-size:12px; color:#0ca30c;">
                         <i class="fas fa-check-circle"></i> <span id="autoAnalysisInfo">Yükleniyor...</span>
                     </div>
                     <button class="btn btn-success" onclick="loadAutoAnalysis()" id="autoLoadBtn">
@@ -1119,7 +1111,7 @@
             <!-- Results Section -->
             <div class="results-section">
                 <!-- Üretilen / Talep Edilen Soğutma kW - canlı çizgi grafik -->
-                <div id="uretimTuketimChartContainer" style="display:none; margin-bottom: 16px; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 16px;">
+                <div id="uretimTuketimChartContainer" style="display:none; margin-bottom: 16px; border:1px solid rgba(24,26,30,0.10); border-radius:10px; padding:12px 16px;">
                     <div style="font-size:13px; opacity:0.8; margin-bottom:8px;">
                         <i class="fas fa-wave-square"></i> Üretilen / Talep Edilen Soğutma (kW) — Canlı
                     </div>
@@ -1172,7 +1164,7 @@
                             CSV İndir
                         </button>
                         <button id="onayBtn" class="btn btn-sm" onclick="onayVer()"
-                                style="display:none; background:#10b981; color:#fff; border:none;">
+                                style="display:none; background:#0ca30c; color: #0f1f3d; border:none;">
                             <i class="fas fa-check-double"></i>
                             ✅ Kontrol Edildi &amp; Excel İndir
                         </button>
@@ -1187,11 +1179,11 @@
 
                 <!-- AHU Kapasite Durumu (anlik) -->
                 <div id="capacityStatusContainer" style="display:none; gap: 12px; margin-bottom: 14px;" class="capacity-row">
-                    <div id="coolingCapacityCard" style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(255,255,255,0.1);">
+                    <div id="coolingCapacityCard" style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
                         <div style="font-size:12px; opacity:0.7;">❄️ Soğutma Kapasitesi (AHU Ort. Vana)</div>
                         <div id="coolingCapacityValue" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
                     </div>
-                    <div id="heatingCapacityCard" style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(255,255,255,0.1);">
+                    <div id="heatingCapacityCard" style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
                         <div style="font-size:12px; opacity:0.7;">🔥 Isıtma Kapasitesi (AHU Ort. Vana)</div>
                         <div id="heatingCapacityValue" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
                     </div>
@@ -1199,11 +1191,11 @@
 
                 <!-- Soğutma kW Talep / Üretim (anlik) -->
                 <div id="coolingKwContainer" style="display:none; gap: 12px; margin-bottom: 14px;" class="capacity-row">
-                    <div style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(255,255,255,0.1);">
+                    <div style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
                         <div style="font-size:12px; opacity:0.7;">📥 Talep Edilen Soğutma (kW)</div>
                         <div id="cool_kw_talep" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
                     </div>
-                    <div style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(255,255,255,0.1);">
+                    <div style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
                         <div style="font-size:12px; opacity:0.7;">📤 Üretilen Soğutma (kW)</div>
                         <div id="cool_kw_uretim" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
                     </div>
@@ -1339,13 +1331,13 @@
     <div id="settingsModal" class="instruction-modal">
         <div class="instruction-modal-content" style="max-width: 700px;">
             <div class="instruction-modal-header"
-                style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.3));">
+                style="background: linear-gradient(135deg, rgba(109,167,236, 0.3), rgba(12,163,12, 0.3));">
                 <div class="instruction-title-row">
                     <h2><i class="fas fa-cog"></i> Sistem Ayarları</h2>
                     <button class="instruction-close" onclick="closeSettingsModal()">&times;</button>
                 </div>
                 <div class="instruction-badges">
-                    <span class="severity-badge" style="background: rgba(59, 130, 246, 0.3);">Tolerans Değerleri</span>
+                    <span class="severity-badge" style="background: rgba(109,167,236, 0.3);">Tolerans Değerleri</span>
                 </div>
             </div>
             <div class="instruction-modal-body" style="max-height: 60vh; overflow-y: auto;">
@@ -1469,7 +1461,7 @@
                             <input type="number" id="set_BUILDING_AREA_M2" step="100" min="0" max="500000">
                         </div>
                         <div class="setting-item">
-                            <label style="font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 8px;">m² değeri
+                            <label style="font-size: 10px; color: #46536b; margin-top: 8px;">m² değeri
                                 girildiğinde Dashboard'da kWh/m² metrikleri gösterilir</label>
                         </div>
                     </div>
@@ -1493,7 +1485,7 @@
                         </div>
                     </div>
                     <div style="margin-top: 6px;">
-                        <label style="font-size: 10px; color: rgba(255,255,255,0.5);">Birim fiyat girildiğinde Dashboard
+                        <label style="font-size: 10px; color: #46536b;">Birim fiyat girildiğinde Dashboard
                             ve PDF raporlarda maliyet hesapları gösterilir. 0 ise gizlenir.</label>
                     </div>
                 </div>
@@ -1536,7 +1528,7 @@
                         </div>
                     </div>
                     <div style="margin-top: 6px;">
-                        <label style="font-size: 10px; color: rgba(255,255,255,0.5);">Bu değerler AHU kW talep/üretim
+                        <label style="font-size: 10px; color: #46536b;">Bu değerler AHU kW talep/üretim
                             kartlarının hesabında kullanılır.</label>
                     </div>
                 </div>
@@ -1564,39 +1556,39 @@
                     </div>
                     <div style="margin-top: 12px;">
                         <div id="schedulerStatusBox"
-                            style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 8px; padding: 12px; font-size: 12px;">
+                            style="background: rgba(109,167,236, 0.1); border: 1px solid rgba(109,167,236, 0.3); border-radius: 8px; padding: 12px; font-size: 12px;">
                             <div
-                                style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-weight: 600; color: #3b82f6;">
+                                style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-weight: 600; color: #6da7ec;">
                                 <i class="fas fa-clock"></i> Zamanlayıcı Durumu
                                 <span id="schedulerSystemTime"
-                                    style="margin-left: auto; color: rgba(255,255,255,0.7); font-weight: 400;"></span>
+                                    style="margin-left: auto; color: #24324d; font-weight: 400;"></span>
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;">
-                                    <div style="color: rgba(255,255,255,0.5); font-size: 10px;">📋 Günlük Rapor</div>
+                                <div style="background: #f1f0ed; padding: 8px; border-radius: 6px;">
+                                    <div style="color: #46536b; font-size: 10px;">📋 Günlük Rapor</div>
                                     <div id="schedulerDailyStatus"
-                                        style="color: #10b981; font-weight: 500; margin-top: 2px;">—</div>
+                                        style="color: #0ca30c; font-weight: 500; margin-top: 2px;">—</div>
                                     <div id="schedulerDailyNext"
-                                        style="color: rgba(255,255,255,0.4); font-size: 10px; margin-top: 2px;">—</div>
+                                        style="color: #46536b; font-size: 10px; margin-top: 2px;">—</div>
                                 </div>
-                                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;">
-                                    <div style="color: rgba(255,255,255,0.5); font-size: 10px;">📊 Aylık Rapor</div>
+                                <div style="background: #f1f0ed; padding: 8px; border-radius: 6px;">
+                                    <div style="color: #46536b; font-size: 10px;">📊 Aylık Rapor</div>
                                     <div id="schedulerMonthlyStatus"
-                                        style="color: #10b981; font-weight: 500; margin-top: 2px;">—</div>
+                                        style="color: #0ca30c; font-weight: 500; margin-top: 2px;">—</div>
                                     <div id="schedulerMonthlyNext"
-                                        style="color: rgba(255,255,255,0.4); font-size: 10px; margin-top: 2px;">—</div>
+                                        style="color: #46536b; font-size: 10px; margin-top: 2px;">—</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div style="margin-top: 6px;">
-                        <label style="font-size: 10px; color: rgba(255,255,255,0.5);">Değişiklikler sunucu yeniden
+                        <label style="font-size: 10px; color: #46536b;">Değişiklikler sunucu yeniden
                             başlatıldığında aktif olur.</label>
                     </div>
                 </div>
             </div>
             <div
-                style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between;">
+                style="padding: 20px; border-top: 1px solid rgba(24,26,30,0.10); display: flex; justify-content: space-between;">
                 <button class="btn btn-secondary" onclick="resetSettingsToDefault()">
                     <i class="fas fa-undo"></i> Varsayılana Dön
                 </button>
@@ -1611,28 +1603,28 @@
     <div id="maintenanceModal" class="instruction-modal">
         <div class="instruction-modal-content" style="max-width: 900px;">
             <div class="instruction-modal-header"
-                style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(239, 68, 68, 0.3));">
+                style="background: linear-gradient(135deg, rgba(250,178,25, 0.3), rgba(208,59,59, 0.3));">
                 <div class="instruction-title-row">
                     <h2><i class="fas fa-wrench"></i> Dijital Bakım Kartları (Santraller)</h2>
                     <button class="instruction-close" onclick="closeMaintenanceModal()">&times;</button>
                 </div>
                 <div class="instruction-badges">
-                    <span class="severity-badge" style="background: rgba(245, 158, 11, 0.3);">Santral Bileşen
+                    <span class="severity-badge" style="background: rgba(250,178,25, 0.3);">Santral Bileşen
                         Durumları</span>
                     <span id="maintenanceLastUpdate" class="severity-badge"
-                        style="background: rgba(59, 130, 246, 0.3);">Son güncelleme: -</span>
+                        style="background: rgba(109,167,236, 0.3);">Son güncelleme: -</span>
                 </div>
             </div>
             <div class="instruction-modal-body" style="max-height: 65vh; overflow-y: auto;">
                 <!-- Aylık Bakım İşareti -->
                 <div class="instruction-section" id="monthlyMaintPanel"
-                    style="border:1px solid rgba(16,185,129,0.35); border-radius:10px; padding:14px; margin-bottom:14px;">
+                    style="border:1px solid rgba(12,163,12,0.35); border-radius:10px; padding:14px; margin-bottom:14px;">
                     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
                         <div style="min-width:260px;">
-                            <div style="font-size:14px; font-weight:700; color:#fff;">
+                            <div style="font-size:14px; font-weight:700; color: #0f1f3d;">
                                 <i class="fas fa-calendar-check"></i> Aylık Santral Bakımı
                             </div>
-                            <div id="monthlyMaintStatus" style="font-size:12px; margin-top:4px; color:rgba(255,255,255,0.7);">
+                            <div id="monthlyMaintStatus" style="font-size:12px; margin-top:4px; color:#24324d;">
                                 Yükleniyor...
                             </div>
                         </div>
@@ -1642,7 +1634,7 @@
                         </button>
                     </div>
                     <div id="monthlyMaintWarn" style="display:none; margin-top:10px; padding:8px 12px; border-radius:8px;
-                        background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); color:#fca5a5; font-size:12px;">
+                        background:rgba(208,59,59,0.15); border:1px solid rgba(208,59,59,0.4); color:#b42525; font-size:12px;">
                         ⚠ Bu ayın santral bakımı henüz işaretlenmedi — ayın 25'inden itibaren Synapse ve Enerji
                         portalına uyarı düşer, raporlara "bakım yapılmamıştır" notu eklenir.
                     </div>
@@ -1654,7 +1646,7 @@
                         <div class="setting-item" style="flex: 1; min-width: 150px;">
                             <label>Cihaz Adı</label>
                             <input type="text" id="maint_equipment_name" placeholder="Örn: AHU-6"
-                                style="width: 100%; padding: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white;">
+                                style="width: 100%; padding: 8px; background: #fafaf8; border: 1px solid rgba(24,26,30,0.10); border-radius: 8px; color: #0f1f3d;">
                         </div>
                         <button class="btn btn-primary" onclick="addMaintenanceCard()"
                             style="padding: 8px 16px; white-space: nowrap;">
@@ -1670,12 +1662,12 @@
                     <div style="margin-bottom: 12px; display:flex; gap:10px; flex-wrap:wrap;">
                         <input type="text" id="maintenanceSearch" placeholder="🔍 Santral ara (ör: AHU-6)..."
                             oninput="filterMaintenanceCards()"
-                            style="flex:1; min-width:200px; padding: 10px 14px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: white; font-size: 14px; outline: none;">
-                        <select id="maintPdfFilter" style="padding:10px 14px; background: rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:white; font-size:13px;">
-                            <option value="ALL" style="background:#1a2332;">📋 Tümü</option>
-                            <option value="FAULTY" style="background:#1a2332;">❌ Sadece Arızalı</option>
-                            <option value="MAINTENANCE" style="background:#1a2332;">🔧 Sadece Bakımda</option>
-                            <option value="FAULTY_MAINT" style="background:#1a2332;">⚠️ Arızalı + Bakımda</option>
+                            style="flex:1; min-width:200px; padding: 10px 14px; background: #fafaf8; border: 1px solid rgba(24,26,30,0.10); border-radius: 8px; color: #0f1f3d; font-size: 14px; outline: none;">
+                        <select id="maintPdfFilter" style="padding:10px 14px; background: #fafaf8; border:1px solid rgba(24,26,30,0.10); border-radius:8px; color: #0f1f3d; font-size:13px;">
+                            <option value="ALL" style="background:#fafaf8;">📋 Tümü</option>
+                            <option value="FAULTY" style="background:#fafaf8;">❌ Sadece Arızalı</option>
+                            <option value="MAINTENANCE" style="background:#fafaf8;">🔧 Sadece Bakımda</option>
+                            <option value="FAULTY_MAINT" style="background:#fafaf8;">⚠️ Arızalı + Bakımda</option>
                         </select>
                         <button class="btn btn-secondary" onclick="exportMaintenanceReportPDF()"
                             style="padding:10px 16px; font-size:13px; background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.4); white-space:nowrap;">
@@ -1688,17 +1680,17 @@
                     </div>
                     <!-- QR Etiket Paneli (saha etiketleri) -->
                     <div id="qrLabelPanel" style="display:none; margin-bottom:12px; padding:14px; background: rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.35); border-radius:10px;">
-                        <div style="font-size:13px; color:rgba(255,255,255,0.85); margin-bottom:10px;">
+                        <div style="font-size:13px; color:#0f1f3d; margin-bottom:10px;">
                             <i class="fas fa-info-circle"></i> Her santral için QR etiketi üretilir. Telefon QR'ı okutunca
                             <b>merkez portalda cihazın dijital bakım kartı doğrudan açılır</b> — internet olan her yerden
                             çalışır, aynı ağ gerekmez. Sahadan yapılan değişiklikler birkaç dakika içinde bu portala yansır.
                         </div>
                         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
                             <div style="flex:1; min-width:220px;">
-                                <label style="font-size:11px; color:rgba(255,255,255,0.6);">Merkez portal adresi (QR içine yazılır)</label>
+                                <label style="font-size:11px; color:#24324d;">Merkez portal adresi (QR içine yazılır)</label>
                                 <input type="text" id="qrBaseUrl" placeholder="https://acibadem-synapse.streamlit.app"
                                     onchange="localStorage.setItem('qrBaseUrl', this.value.trim())"
-                                    style="width:100%; padding:8px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:white; font-size:13px; margin-top:4px;">
+                                    style="width:100%; padding:8px 12px; background:#fafaf8; border:1px solid rgba(24,26,30,0.10); border-radius:8px; color: #0f1f3d; font-size:13px; margin-top:4px;">
                             </div>
                             <button class="btn btn-primary" onclick="exportQrLabelsPDF()" style="padding:9px 16px; font-size:13px; white-space:nowrap;">
                                 <i class="fas fa-print"></i> Etiket PDF'i Üret
@@ -1706,14 +1698,14 @@
                         </div>
                     </div>
                     <div id="maintenanceCardsList"></div>
-                    <div id="maintenanceEmpty" style="text-align: center; padding: 30px; color: rgba(255,255,255,0.5);">
+                    <div id="maintenanceEmpty" style="text-align: center; padding: 30px; color: #46536b;">
                         <i class="fas fa-tools" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
                         Henüz bakım kartı eklenmemiş. Yukarıdan santral ekleyin.
                     </div>
                 </div>
             </div>
             <div
-                style="padding: 20px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: flex-end; gap: 10px;">
+                style="padding: 20px; border-top: 1px solid rgba(24,26,30,0.10); display: flex; justify-content: flex-end; gap: 10px;">
                 <button class="btn btn-primary" onclick="saveMaintenanceCards()">
                     <i class="fas fa-save"></i> Tüm Kartları Kaydet
                 </button>
@@ -2402,8 +2394,8 @@
                         {
                             label: 'Üretilen Soğutma (kW)',
                             data: [],
-                            borderColor: 'rgb(59, 130, 246)',
-                            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                            borderColor: 'rgb(109,167,236)',
+                            backgroundColor: 'rgba(109,167,236, 0.15)',
                             tension: 0.3,
                             fill: true,
                             pointRadius: 0,
@@ -2411,8 +2403,8 @@
                         {
                             label: 'Talep Edilen Soğutma (kW)',
                             data: [],
-                            borderColor: 'rgb(245, 158, 11)',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            borderColor: 'rgb(250,178,25)',
+                            backgroundColor: 'rgba(250,178,25, 0.1)',
                             tension: 0.3,
                             fill: true,
                             pointRadius: 0,
@@ -2428,8 +2420,8 @@
                         legend: { display: true, position: 'top', labels: { color: 'white', font: { family: 'Inter', size: 11 } } }
                     },
                     scales: {
-                        x: { ticks: { color: 'rgba(255,255,255,0.6)', maxTicksLimit: 12 }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                        y: { ticks: { color: 'rgba(255,255,255,0.6)' }, grid: { color: 'rgba(255,255,255,0.05)' }, title: { display: true, text: 'kW', color: 'rgba(255,255,255,0.6)' } }
+                        x: { ticks: { color: '#24324d', maxTicksLimit: 12 }, grid: { color: '#46536b' } },
+                        y: { ticks: { color: '#24324d' }, grid: { color: '#46536b' }, title: { display: true, text: 'kW', color: '#24324d' } }
                     }
                 }
             });
@@ -2522,17 +2514,17 @@
                         label: 'Ekipman Sayısı',
                         data: [0, 0, 0, 0, 0],
                         backgroundColor: [
-                            'rgba(16, 185, 129, 0.8)',    // 0-3: Green (OPTIMAL)
-                            'rgba(245, 158, 11, 0.8)',    // 3-5: Orange (WARNING)
+                            'rgba(12,163,12, 0.8)',    // 0-3: Green (OPTIMAL)
+                            'rgba(250,178,25, 0.8)',    // 3-5: Orange (WARNING)
                             'rgba(249, 115, 22, 0.8)',    // 5-7: Orange-Red (WARNING)
-                            'rgba(239, 68, 68, 0.8)',     // 7-9: Red (CRITICAL)
+                            'rgba(208,59,59, 0.8)',     // 7-9: Red (CRITICAL)
                             'rgba(220, 38, 38, 0.8)'      // 9-10: Dark Red (CRITICAL)
                         ],
                         borderColor: [
-                            'rgb(16, 185, 129)',
-                            'rgb(245, 158, 11)',
+                            'rgb(12,163,12)',
+                            'rgb(250,178,25)',
                             'rgb(249, 115, 22)',
-                            'rgb(239, 68, 68)',
+                            'rgb(208,59,59)',
                             'rgb(220, 38, 38)'
                         ],
                         borderWidth: 2
@@ -2567,13 +2559,13 @@
                     },
                     scales: {
                         x: {
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            grid: { color: '#46536b' },
                             ticks: { color: 'white', font: { family: 'Inter' } }
                         },
                         y: {
                             beginAtZero: true,
                             ticks: { stepSize: 1, color: 'white', font: { family: 'Inter' } },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                            grid: { color: '#46536b' }
                         }
                     }
                 }
@@ -2891,7 +2883,7 @@
                     <td>${row['Approach_Return (°C)'] || ''}</td>
                     <td><small>${row['DT Source'] || ''}</small></td>
                     <td>${row['Onay'] || ''}</td>
-                    <td>${(row['Atlama Nedeni'] && row['Atlama Nedeni'].includes('ESKALASYON')) ? '<span style="color:#ef4444;font-weight:700;">'+row['Atlama Nedeni']+'</span>' : (row['Atlama Nedeni'] || '')}</td>
+                    <td>${(row['Atlama Nedeni'] && row['Atlama Nedeni'].includes('ESKALASYON')) ? '<span style="color:#d03b3b;font-weight:700;">'+row['Atlama Nedeni']+'</span>' : (row['Atlama Nedeni'] || '')}</td>
                     <td><small>${row.Rule || ''}</small></td>
                     <td><button class="instruction-btn" onclick="showInstructions('${row.Rule || ''}')" >ℹ️ Talimat</button></td>
                     <td>${row['Tekrar (Bu Ay)'] || ''}</td>
@@ -2915,7 +2907,7 @@
             const _tsSpan = document.getElementById('tutarsizSayi');
             if (_tsSpan) _tsSpan.textContent = _tsCount > 0 ? `(${_tsCount})` : '';
             const _tsBtn = document.getElementById('tutarsizBtn');
-            if (_tsBtn) _tsBtn.style.color = _tsCount > 0 ? '#ef4444' : '';
+            if (_tsBtn) _tsBtn.style.color = _tsCount > 0 ? '#d03b3b' : '';
         }
 
         // Talep edilen / üretilen soğutma kW (AHU bazlı)
@@ -2988,10 +2980,10 @@
         // AHU Kapasite Durumu (Soğutma/Isıtma) - ortalama vana açıklığına göre
         function evaluateCapacity(avgValve) {
             if (avgValve === null) return { label: 'VERİ YOK', color: '#9ca3af', emoji: '⚪' };
-            if (avgValve < 50) return { label: 'YETERLI', color: '#10b981', emoji: '🟢' };
-            if (avgValve < 70) return { label: 'NORMAL', color: '#3b82f6', emoji: '🟡' };
-            if (avgValve < 85) return { label: 'DIKKAT', color: '#f59e0b', emoji: '🟠' };
-            return { label: 'YETERSIZ', color: '#ef4444', emoji: '🔴' };
+            if (avgValve < 50) return { label: 'YETERLI', color: '#0ca30c', emoji: '🟢' };
+            if (avgValve < 70) return { label: 'NORMAL', color: '#6da7ec', emoji: '🟡' };
+            if (avgValve < 85) return { label: 'DIKKAT', color: '#c98500', emoji: '🟠' };
+            return { label: 'YETERSIZ', color: '#d03b3b', emoji: '🔴' };
         }
 
         function updateCapacityStatus(rows) {
@@ -3632,13 +3624,13 @@
 
                     const ds = document.getElementById('schedulerDailyStatus');
                     ds.textContent = data.daily.status;
-                    ds.style.color = data.daily.generated_today ? '#10b981' : '#f59e0b';
+                    ds.style.color = data.daily.generated_today ? '#0ca30c' : '#c98500';
                     document.getElementById('schedulerDailyNext').textContent =
                         'Hedef: ' + data.daily.target_time + ' | Sonraki: ' + data.daily.next_run;
 
                     const ms = document.getElementById('schedulerMonthlyStatus');
                     ms.textContent = data.monthly.status;
-                    ms.style.color = data.monthly.generated_this_month ? '#10b981' : '#f59e0b';
+                    ms.style.color = data.monthly.generated_this_month ? '#0ca30c' : '#c98500';
                     document.getElementById('schedulerMonthlyNext').textContent =
                         'Gün: ' + data.monthly.target_day + ' Saat: ' + data.monthly.target_hour +
                         ' | Sonraki: ' + data.monthly.next_run;
@@ -3697,19 +3689,19 @@
             emptyMsg.style.display = 'none';
 
             const statusIcons = { 'OK': '✅', 'FAULTY': '❌', 'MAINTENANCE': '🔧', 'N/A': '⚪' };
-            const statusColors = { 'OK': '#10b981', 'FAULTY': '#ef4444', 'MAINTENANCE': '#f59e0b', 'N/A': '#6b7280' };
+            const statusColors = { 'OK': '#0ca30c', 'FAULTY': '#d03b3b', 'MAINTENANCE': '#c98500', 'N/A': '#6b7280' };
 
             let html = '';
             for (const [eqName, card] of Object.entries(cards)) {
                 const hasFaulty = components.some(c => card[c] === 'FAULTY');
                 const hasMaint = components.some(c => card[c] === 'MAINTENANCE');
-                const borderColor = hasFaulty ? '#ef4444' : hasMaint ? '#f59e0b' : '#10b981';
+                const borderColor = hasFaulty ? '#d03b3b' : hasMaint ? '#c98500' : '#0ca30c';
 
                 html += `<div id="maintCard_${eqName}" style="background: rgba(20,30,48,1); border: 1px solid ${borderColor}; border-radius: 12px; padding: 16px; margin-bottom: 12px;">`;
                 html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">`;
                 html += `<h4 style="margin: 0; font-size: 16px;"><i class="fas fa-fan" style="color: ${borderColor};"></i> ${eqName}</h4>`;
                 html += `<div style="display:flex; gap:6px;">`;
-                html += `<button class="btn btn-secondary" onclick="removeMaintenanceCard('${eqName}')" style="padding: 4px 10px; font-size: 12px; background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5);">`;
+                html += `<button class="btn btn-secondary" onclick="removeMaintenanceCard('${eqName}')" style="padding: 4px 10px; font-size: 12px; background: rgba(208,59,59,0.2); border-color: rgba(208,59,59,0.5);">`;
                 html += `<i class="fas fa-trash"></i></button></div></div>`;
 
                 html += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">`;
@@ -3719,9 +3711,9 @@
                     html += `<div class="setting-item">`;
                     html += `<label style="font-size: 11px;">${statusIcons[val] || ''} ${label}</label>`;
                     html += `<select id="maint_${eqName}_${comp}" onchange="onMaintenanceChange('${eqName}', '${comp}', this.value)" `;
-                    html += `style="width:100%; padding:6px; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:6px; color:white; font-size:12px;">`;
+                    html += `style="width:100%; padding:6px; background:#fafaf8; border:1px solid rgba(24,26,30,0.10); border-radius:6px; color: #0f1f3d; font-size:12px;">`;
                     for (const st of statuses) {
-                        html += `<option value="${st}" ${val === st ? 'selected' : ''} style="background:#1a2332;">${statusIcons[st]} ${st}</option>`;
+                        html += `<option value="${st}" ${val === st ? 'selected' : ''} style="background:#fafaf8;">${statusIcons[st]} ${st}</option>`;
                     }
                     html += `</select></div>`;
                 }
@@ -3729,9 +3721,9 @@
 
                 // Not alanı
                 const notes = card.notes || '';
-                html += `<div style="margin-top: 10px;"><label style="font-size: 11px; color: rgba(255,255,255,0.6);">📝 Not:</label>`;
+                html += `<div style="margin-top: 10px;"><label style="font-size: 11px; color: #24324d;">📝 Not:</label>`;
                 html += `<input type="text" id="maint_${eqName}_notes" value="${notes}" placeholder="Opsiyonel not..." `;
-                html += `style="width:100%; padding:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:white; font-size:12px; margin-top:4px;"></div>`;
+                html += `style="width:100%; padding:6px; background:#f1f0ed; border:1px solid rgba(24,26,30,0.10); border-radius:6px; color: #0f1f3d; font-size:12px; margin-top:4px;"></div>`;
                 html += `</div>`;
             }
             container.innerHTML = html;
@@ -4317,17 +4309,17 @@
                 const warn = document.getElementById('monthlyMaintWarn');
                 const panel = document.getElementById('monthlyMaintPanel');
                 if (monthlyMaintDone) {
-                    st.innerHTML = `✅ <b style="color:#6ee7b7;">${d.bu_ay.ay} bakımı YAPILDI</b> — ${d.bu_ay.tarih} (${d.bu_ay.isaretleyen})`;
+                    st.innerHTML = `✅ <b style="color:#006300;">${d.bu_ay.ay} bakımı YAPILDI</b> — ${d.bu_ay.tarih} (${d.bu_ay.isaretleyen})`;
                     btn.innerHTML = '<i class="fas fa-undo"></i> İşareti Geri Al';
                     btn.style.background = 'rgba(107,114,128,0.3)';
                     warn.style.display = 'none';
-                    panel.style.borderColor = 'rgba(16,185,129,0.5)';
+                    panel.style.borderColor = 'rgba(12,163,12,0.5)';
                 } else {
-                    st.innerHTML = `⏳ <b style="color:#fcd34d;">${d.bu_ay.ay} bakımı henüz işaretlenmedi</b> (uyarı eşiği: ayın ${d.uyari_gunu}'i)`;
+                    st.innerHTML = `⏳ <b style="color:#8a5a00;">${d.bu_ay.ay} bakımı henüz işaretlenmedi</b> (uyarı eşiği: ayın ${d.uyari_gunu}'i)`;
                     btn.innerHTML = '<i class="fas fa-check"></i> Bu Ayın Bakımı Yapıldı';
                     btn.style.background = '';
                     warn.style.display = d.uyari ? 'block' : 'none';
-                    panel.style.borderColor = d.uyari ? 'rgba(239,68,68,0.5)' : 'rgba(245,158,11,0.4)';
+                    panel.style.borderColor = d.uyari ? 'rgba(208,59,59,0.5)' : 'rgba(250,178,25,0.4)';
                 }
             } catch (e) { console.error('Aylık bakım durumu alınamadı:', e); }
         }
