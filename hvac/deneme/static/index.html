@@ -68,14 +68,14 @@
         /* Header (Synergy hero card) */
         .header {
             background: var(--syn-card-strong);
-            -webkit-
             color: #0f1f3d;
             padding: 24px 32px;
-            border-radius: 8px;
+            border-radius: 14px;
             margin-bottom: 24px;
             border: 1px solid var(--syn-border);
             position: relative;
             overflow: hidden;
+            box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);
         }
 
         .header-content {
@@ -143,7 +143,7 @@
             border: 1px solid rgba(24,26,30,0.10);
             color: #0f1f3d;
             padding: 10px 16px;
-            border-radius: 10px;
+            border-radius: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
@@ -163,13 +163,13 @@
 
         .kpi-card {
             background: var(--syn-card);
-            -webkit-
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 14px;
             border: 1px solid var(--syn-border);
             transition: transform 0.3s;
             position: relative;
             overflow: hidden;
+            box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);
         }
 
         .kpi-card::before {
@@ -245,15 +245,16 @@
         /* Control Panel */
         .control-panel {
             background: var(--syn-card);
-            -webkit-
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 14px;
             border: 1px solid var(--syn-border);
             height: fit-content;
+            box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);
         }
 
         .control-section {
             margin-bottom: 20px;
+            box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);
         }
 
         .control-section:last-child {
@@ -295,7 +296,7 @@
             width: 100%;
             padding: 8px 10px;
             border: 1px solid var(--syn-border);
-            border-radius: 4px;
+            border-radius: 8px;
             font-size: 12px;
             font-family: inherit;
             transition: border 0.2s;
@@ -315,7 +316,7 @@
             width: 100%;
             padding: 8px 12px;
             border: 1px solid rgba(24,26,30,0.10);
-            border-radius: 6px;
+            border-radius: 10px;
             font-weight: 500;
             font-size: 11px;
             cursor: pointer;
@@ -375,7 +376,7 @@
             gap: 8px;
             padding: 24px 16px;
             border: 1px dashed rgba(24,26,30,0.10);
-            border-radius: 6px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s;
             background: #f1f0ed;
@@ -393,10 +394,10 @@
         /* Results Section */
         .results-section {
             background: var(--syn-card);
-            -webkit-
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 14px;
             border: 1px solid var(--syn-border);
+            box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);
         }
 
         .results-header {
@@ -470,8 +471,9 @@
         /* Table */
         .table-container {
             overflow-x: auto;
-            border-radius: 6px;
+            border-radius: 10px;
             border: 1px solid var(--syn-border);
+            box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);
         }
 
         table {
@@ -537,9 +539,8 @@
         /* Charts */
         .chart-section {
             background: var(--syn-card);
-            -webkit-
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 14px;
             border: 1px solid var(--syn-border);
             margin-bottom: 24px;
         }
@@ -557,6 +558,7 @@
         .chart-container {
             position: relative;
             height: 300px;
+            box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);
         }
 
         /* Loading */
@@ -589,7 +591,7 @@
         /* Alert */
         .alert {
             padding: 16px 20px;
-            border-radius: 10px;
+            border-radius: 14px;
             margin-bottom: 20px;
             display: flex;
             align-items: center;
@@ -624,9 +626,8 @@
         /* Manual Entry */
         .manual-section {
             background: var(--syn-card);
-            -webkit-
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 14px;
             border: 1px solid var(--syn-border);
             margin-bottom: 24px;
         }
@@ -665,7 +666,7 @@
             width: 100%;
             padding: 8px;
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 10px;
             font-size: 13px;
             background: #f1f0ed;
             color: var(--text-primary);
@@ -728,7 +729,6 @@
 
         .instruction-modal-content {
             background: #fafaf8;
-            -webkit-
             border-radius: 24px;
             border: 1px solid rgba(24,26,30,0.10);
             padding: 0;
@@ -767,7 +767,7 @@
             margin-top: 8px;
             padding: 6px 16px;
             background: rgba(99, 102, 241, 0.3);
-            border-radius: 12px;
+            border-radius: 16px;
             font-size: 14px;
             font-weight: 600;
             color: #e0e7ff;
@@ -785,7 +785,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: 14px;
             transition: all 0.2s;
         }
 
@@ -894,7 +894,7 @@
         .setpoint-chain {
             background: rgba(96, 165, 250, 0.15);
             padding: 12px 16px;
-            border-radius: 10px;
+            border-radius: 14px;
             border-left: 4px solid #6da7ec;
             font-family: 'Courier New', monospace;
             font-size: 14px;
@@ -907,7 +907,7 @@
             color: #ffffff;
             border: none;
             padding: 8px 14px;
-            border-radius: 8px;
+            border-radius: 14px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
@@ -955,7 +955,7 @@
         .setting-item input {
             padding: 10px 12px;
             border: 1px solid rgba(24,26,30,0.10);
-            border-radius: 8px;
+            border-radius: 14px;
             background: #ffffff;
             color: #0f1f3d;
             font-size: 14px;
@@ -1061,7 +1061,7 @@
                 <!-- Otomatik Analiz Butonu -->
                 <div class="control-section" id="autoAnalysisSection">
                     <h3><i class="fas fa-robot"></i> Otomatik Analiz</h3>
-                    <div id="autoAnalysisBanner" style="display:none; background:rgba(12,163,12,0.15); border:1px solid #0ca30c; border-radius:8px; padding:10px; margin-bottom:10px; font-size:12px; color:#0ca30c;">
+                    <div id="autoAnalysisBanner" style="display:none; background:rgba(12,163,12,0.15); border:1px solid #0ca30c; border-radius: 14px; padding:10px; margin-bottom:10px; font-size:12px; color:#0ca30c;">
                         <i class="fas fa-check-circle"></i> <span id="autoAnalysisInfo">Yükleniyor...</span>
                     </div>
                     <button class="btn btn-success" onclick="loadAutoAnalysis()" id="autoLoadBtn">
@@ -1109,7 +1109,7 @@
             <!-- Results Section -->
             <div class="results-section">
                 <!-- Üretilen / Talep Edilen Soğutma kW - canlı çizgi grafik -->
-                <div id="uretimTuketimChartContainer" style="display:none; margin-bottom: 16px; border:1px solid rgba(24,26,30,0.10); border-radius:10px; padding:12px 16px;">
+                <div id="uretimTuketimChartContainer" style="display:none; margin-bottom: 16px; border:1px solid rgba(24,26,30,0.10); border-radius: 14px; padding:12px 16px;">
                     <div style="font-size:13px; opacity:0.8; margin-bottom:8px;">
                         <i class="fas fa-wave-square"></i> Üretilen / Talep Edilen Soğutma (kW) — Canlı
                     </div>
@@ -1177,11 +1177,11 @@
 
                 <!-- AHU Kapasite Durumu (anlik) -->
                 <div id="capacityStatusContainer" style="display:none; gap: 12px; margin-bottom: 14px;" class="capacity-row">
-                    <div id="coolingCapacityCard" style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
+                    <div id="coolingCapacityCard" style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
                         <div style="font-size:12px; opacity:0.7;">❄️ Soğutma Kapasitesi (AHU Ort. Vana)</div>
                         <div id="coolingCapacityValue" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
                     </div>
-                    <div id="heatingCapacityCard" style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
+                    <div id="heatingCapacityCard" style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
                         <div style="font-size:12px; opacity:0.7;">🔥 Isıtma Kapasitesi (AHU Ort. Vana)</div>
                         <div id="heatingCapacityValue" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
                     </div>
@@ -1189,11 +1189,11 @@
 
                 <!-- Soğutma kW Talep / Üretim (anlik) -->
                 <div id="coolingKwContainer" style="display:none; gap: 12px; margin-bottom: 14px;" class="capacity-row">
-                    <div style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
+                    <div style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
                         <div style="font-size:12px; opacity:0.7;">📥 Talep Edilen Soğutma (kW)</div>
                         <div id="cool_kw_talep" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
                     </div>
-                    <div style="flex:1; border-radius:10px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
+                    <div style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
                         <div style="font-size:12px; opacity:0.7;">📤 Üretilen Soğutma (kW)</div>
                         <div id="cool_kw_uretim" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
                     </div>
@@ -1554,7 +1554,7 @@
                     </div>
                     <div style="margin-top: 12px;">
                         <div id="schedulerStatusBox"
-                            style="background: rgba(109,167,236, 0.1); border: 1px solid rgba(109,167,236, 0.3); border-radius: 8px; padding: 12px; font-size: 12px;">
+                            style="background: rgba(109,167,236, 0.1); border: 1px solid rgba(109,167,236, 0.3); border-radius: 14px; padding: 12px; font-size: 12px;">
                             <div
                                 style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-weight: 600; color: #6da7ec;">
                                 <i class="fas fa-clock"></i> Zamanlayıcı Durumu
@@ -1562,14 +1562,14 @@
                                     style="margin-left: auto; color: #24324d; font-weight: 400;"></span>
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                                <div style="background: #f1f0ed; padding: 8px; border-radius: 6px;">
+                                <div style="background: #f1f0ed; padding: 8px; border-radius: 10px;">
                                     <div style="color: #46536b; font-size: 10px;">📋 Günlük Rapor</div>
                                     <div id="schedulerDailyStatus"
                                         style="color: #0ca30c; font-weight: 500; margin-top: 2px;">—</div>
                                     <div id="schedulerDailyNext"
                                         style="color: #46536b; font-size: 10px; margin-top: 2px;">—</div>
                                 </div>
-                                <div style="background: #f1f0ed; padding: 8px; border-radius: 6px;">
+                                <div style="background: #f1f0ed; padding: 8px; border-radius: 10px;">
                                     <div style="color: #46536b; font-size: 10px;">📊 Aylık Rapor</div>
                                     <div id="schedulerMonthlyStatus"
                                         style="color: #0ca30c; font-weight: 500; margin-top: 2px;">—</div>
@@ -1616,7 +1616,7 @@
             <div class="instruction-modal-body" style="max-height: 65vh; overflow-y: auto;">
                 <!-- Aylık Bakım İşareti -->
                 <div class="instruction-section" id="monthlyMaintPanel"
-                    style="border:1px solid rgba(12,163,12,0.35); border-radius:10px; padding:14px; margin-bottom:14px;">
+                    style="border:1px solid rgba(12,163,12,0.35); border-radius: 14px; padding:14px; margin-bottom:14px;">
                     <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; justify-content:space-between;">
                         <div style="min-width:260px;">
                             <div style="font-size:14px; font-weight:700; color: #0f1f3d;">
@@ -1631,7 +1631,7 @@
                             <i class="fas fa-check"></i> Bu Ayın Bakımı Yapıldı
                         </button>
                     </div>
-                    <div id="monthlyMaintWarn" style="display:none; margin-top:10px; padding:8px 12px; border-radius:8px;
+                    <div id="monthlyMaintWarn" style="display:none; margin-top:10px; padding:8px 12px; border-radius: 14px;
                         background:rgba(208,59,59,0.15); border:1px solid rgba(208,59,59,0.4); color:#b42525; font-size:12px;">
                         ⚠ Bu ayın santral bakımı henüz işaretlenmedi — ayın 25'inden itibaren Synapse ve Enerji
                         portalına uyarı düşer, raporlara "bakım yapılmamıştır" notu eklenir.
@@ -1644,7 +1644,7 @@
                         <div class="setting-item" style="flex: 1; min-width: 150px;">
                             <label>Cihaz Adı</label>
                             <input type="text" id="maint_equipment_name" placeholder="Örn: AHU-6"
-                                style="width: 100%; padding: 8px; background: #fafaf8; border: 1px solid rgba(24,26,30,0.10); border-radius: 8px; color: #0f1f3d;">
+                                style="width: 100%; padding: 8px; background: #fafaf8; border: 1px solid rgba(24,26,30,0.10); border-radius: 14px; color: #0f1f3d;">
                         </div>
                         <button class="btn btn-primary" onclick="addMaintenanceCard()"
                             style="padding: 8px 16px; white-space: nowrap;">
@@ -1660,8 +1660,8 @@
                     <div style="margin-bottom: 12px; display:flex; gap:10px; flex-wrap:wrap;">
                         <input type="text" id="maintenanceSearch" placeholder="🔍 Santral ara (ör: AHU-6)..."
                             oninput="filterMaintenanceCards()"
-                            style="flex:1; min-width:200px; padding: 10px 14px; background: #fafaf8; border: 1px solid rgba(24,26,30,0.10); border-radius: 8px; color: #0f1f3d; font-size: 14px; outline: none;">
-                        <select id="maintPdfFilter" style="padding:10px 14px; background: #fafaf8; border:1px solid rgba(24,26,30,0.10); border-radius:8px; color: #0f1f3d; font-size:13px;">
+                            style="flex:1; min-width:200px; padding: 10px 14px; background: #fafaf8; border: 1px solid rgba(24,26,30,0.10); border-radius: 14px; color: #0f1f3d; font-size: 14px; outline: none;">
+                        <select id="maintPdfFilter" style="padding:10px 14px; background: #fafaf8; border:1px solid rgba(24,26,30,0.10); border-radius: 14px; color: #0f1f3d; font-size:13px;">
                             <option value="ALL" style="background:#fafaf8;">📋 Tümü</option>
                             <option value="FAULTY" style="background:#fafaf8;">❌ Sadece Arızalı</option>
                             <option value="MAINTENANCE" style="background:#fafaf8;">🔧 Sadece Bakımda</option>
@@ -1677,7 +1677,7 @@
                         </button>
                     </div>
                     <!-- QR Etiket Paneli (saha etiketleri) -->
-                    <div id="qrLabelPanel" style="display:none; margin-bottom:12px; padding:14px; background: rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.35); border-radius:10px;">
+                    <div id="qrLabelPanel" style="display:none; margin-bottom:12px; padding:14px; background: rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.35); border-radius: 14px;">
                         <div style="font-size:13px; color:#0f1f3d; margin-bottom:10px;">
                             <i class="fas fa-info-circle"></i> Her santral için QR etiketi üretilir. Telefon QR'ı okutunca
                             <b>merkez portalda cihazın dijital bakım kartı doğrudan açılır</b> — internet olan her yerden
@@ -1688,7 +1688,7 @@
                                 <label style="font-size:11px; color:#24324d;">Merkez portal adresi (QR içine yazılır)</label>
                                 <input type="text" id="qrBaseUrl" placeholder="https://acibadem-synapse.streamlit.app"
                                     onchange="localStorage.setItem('qrBaseUrl', this.value.trim())"
-                                    style="width:100%; padding:8px 12px; background:#fafaf8; border:1px solid rgba(24,26,30,0.10); border-radius:8px; color: #0f1f3d; font-size:13px; margin-top:4px;">
+                                    style="width:100%; padding:8px 12px; background:#fafaf8; border:1px solid rgba(24,26,30,0.10); border-radius: 14px; color: #0f1f3d; font-size:13px; margin-top:4px;">
                             </div>
                             <button class="btn btn-primary" onclick="exportQrLabelsPDF()" style="padding:9px 16px; font-size:13px; white-space:nowrap;">
                                 <i class="fas fa-print"></i> Etiket PDF'i Üret
@@ -3695,7 +3695,7 @@
                 const hasMaint = components.some(c => card[c] === 'MAINTENANCE');
                 const borderColor = hasFaulty ? '#d03b3b' : hasMaint ? '#c98500' : '#0ca30c';
 
-                html += `<div id="maintCard_${eqName}" style="background: #ffffff; box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22); border: 1px solid ${borderColor}; border-radius: 12px; padding: 16px; margin-bottom: 12px;">`;
+                html += `<div id="maintCard_${eqName}" style="background: #ffffff; box-shadow: 0 1px 1px rgba(20,22,26,.05),0 8px 18px -10px rgba(20,22,26,.22); border: 1px solid ${borderColor}; border-radius: 16px; padding: 16px; margin-bottom: 12px;">`;
                 html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">`;
                 html += `<h4 style="margin: 0; font-size: 16px;"><i class="fas fa-fan" style="color: ${borderColor};"></i> ${eqName}</h4>`;
                 html += `<div style="display:flex; gap:6px;">`;
@@ -3709,7 +3709,7 @@
                     html += `<div class="setting-item">`;
                     html += `<label style="font-size: 11px;">${statusIcons[val] || ''} ${label}</label>`;
                     html += `<select id="maint_${eqName}_${comp}" onchange="onMaintenanceChange('${eqName}', '${comp}', this.value)" `;
-                    html += `style="width:100%; padding:6px; background:#fafaf8; border:1px solid rgba(24,26,30,0.10); border-radius:6px; color: #0f1f3d; font-size:12px;">`;
+                    html += `style="width:100%; padding:6px; background:#fafaf8; border:1px solid rgba(24,26,30,0.10); border-radius: 10px; color: #0f1f3d; font-size:12px;">`;
                     for (const st of statuses) {
                         html += `<option value="${st}" ${val === st ? 'selected' : ''} style="background:#fafaf8;">${statusIcons[st]} ${st}</option>`;
                     }
@@ -3721,7 +3721,7 @@
                 const notes = card.notes || '';
                 html += `<div style="margin-top: 10px;"><label style="font-size: 11px; color: #24324d;">📝 Not:</label>`;
                 html += `<input type="text" id="maint_${eqName}_notes" value="${notes}" placeholder="Opsiyonel not..." `;
-                html += `style="width:100%; padding:6px; background:#f1f0ed; border:1px solid rgba(24,26,30,0.10); border-radius:6px; color: #0f1f3d; font-size:12px; margin-top:4px;"></div>`;
+                html += `style="width:100%; padding:6px; background:#f1f0ed; border:1px solid rgba(24,26,30,0.10); border-radius: 10px; color: #0f1f3d; font-size:12px; margin-top:4px;"></div>`;
                 html += `</div>`;
             }
             container.innerHTML = html;

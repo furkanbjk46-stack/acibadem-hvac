@@ -96,7 +96,6 @@ st.markdown("""
     /* Glassmorphism for containers */
     .stTabs [data-baseweb="tab-panel"] {
         background: #fafaf8;
-        -webkit-
         border-radius: 8px;
         padding: 24px;
         border: 1px solid rgba(24,26,30,0.10);
@@ -312,7 +311,7 @@ st.markdown("""
         color: #24324d !important;
     }
     ul[data-baseweb="menu"] li:hover {
-        background: rgba(42,120,214, 0.4) !important;
+        background: #eef2f9 !important;
     }
 
     /* Input labels — daha okunabilir */
@@ -724,10 +723,10 @@ st.markdown("""
     /* Dropdown açılır liste */
     [data-baseweb="popover"] ul[data-baseweb="menu"],
     ul[data-baseweb="menu"] {
-        background: rgba(2, 6, 23, 0.98) !important;
+        background: #ffffff !important;
         border: 1px solid rgba(24,26,30,0.10) !important;
-        border-radius: 10px !important;
-        box-shadow: 0 8px 24px rgba(20,22,26,0.5) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.26) !important;
     }
     ul[data-baseweb="menu"] li,
     ul[data-baseweb="menu"] [role="option"] {
@@ -737,8 +736,8 @@ st.markdown("""
     ul[data-baseweb="menu"] li:hover,
     ul[data-baseweb="menu"] [aria-selected="true"],
     ul[data-baseweb="menu"] [role="option"]:hover {
-        background: rgba(42,120,214, 0.45) !important;
-        color: #0f1f3d !important;
+        background: #eef2f9 !important;
+        color: #133273 !important;
     }
 
     /* ════════ MULTİSELECT — chip/tag standart stili ════════ */
@@ -782,12 +781,11 @@ st.markdown("""
     /* Ana kutu — eski soft hissi korunuyor */
     [data-baseweb="calendar"] {
         background: #ffffff !important;
-        -webkit-
-        border: 1px solid rgba(42,120,214, 0.35) !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
         border-radius: 16px !important;
         box-shadow:
-            0 8px 32px rgba(0, 10, 40, 0.55),
-            0 0 0 1px rgba(80, 130, 255, 0.12) !important;
+            0 1px 1px rgba(20,22,26,.05),
+            0 12px 26px -12px rgba(20,22,26,.26) !important;
         overflow: hidden !important;
     }
 
@@ -821,27 +819,27 @@ st.markdown("""
     /* Seçili gün — mavi daire */
     [data-baseweb="calendar"] [aria-selected="true"] button,
     [data-baseweb="calendar"] button[aria-selected="true"] {
-        background-color: rgba(42,120,214, 0.85) !important;
-        color: #0f1f3d !important;
+        background-color: #133273 !important;
+        color: #ffffff !important;
         border-radius: 50% !important;
-        box-shadow: 0 0 8px rgba(42,120,214, 0.5) !important;
+        box-shadow: none !important;
     }
 
     /* Bugün — ince mavi kenarlık */
     [data-baseweb="calendar"] button[aria-current="date"] {
-        border: 1px solid rgba(42,120,214, 0.55) !important;
+        border: 1px solid #133273 !important;
         border-radius: 50% !important;
     }
 
     /* Devre dışı günler */
     [data-baseweb="calendar"] button:disabled {
-        color: rgba(80, 120, 180, 0.28) !important;
+        color: #a9a8a3 !important;
         background-color: transparent !important;
     }
 
     /* Haftanın günleri başlık (Mo Tu We...) */
     [data-baseweb="calendar"] [role="columnheader"] {
-        color: rgba(120, 170, 255, 0.6) !important;
+        color: #46536b !important;
         font-size: 11px !important;
         font-weight: 700 !important;
         letter-spacing: 0.5px !important;
@@ -925,7 +923,7 @@ st.markdown("""
         border: 2px solid rgba(42,120,214, 0.7) !important;
     }
     [data-testid="stSlider"] [data-baseweb="slider"] div[class*="Track"] {
-        background: rgba(42,120,214, 0.4) !important;
+        background: #eef2f9 !important;
     }
 
     /* ════════ GENEL METİN OKUNABİLİRLİK FİX ════════ */
@@ -961,12 +959,12 @@ st.markdown("""
 // Gerçek DOM yapısı: [data-baseweb="popover"] > div > div > ul > div > li[role="option"]
 // Yani menu wrapper YOK — role="option" direkt hedeflenir.
 (function() {
-    var DARK_BG  = 'rgba(8,18,52,0.97)';
-    var TEXT_CLR = 'rgb(204,228,255)';
-    var HOVER_BG = 'rgba(37,99,235,0.40)';
-    var SEL_BG   = 'rgba(37,99,235,0.65)';
-    var BORDER   = '1px solid rgba(80,130,220,0.30)';
-    var RADIUS   = '10px';
+    var DARK_BG  = '#ffffff';
+    var TEXT_CLR = '#24324d';
+    var HOVER_BG = '#f1f0ed';
+    var SEL_BG   = '#eef2f9';
+    var BORDER   = '1px solid rgba(24,26,30,0.10)';
+    var RADIUS   = '12px';
 
     // Tek bir [role="option"] öğesini stillendir
     function styleOption(el) {
@@ -974,7 +972,7 @@ st.markdown("""
         el.style.setProperty('background-color', 'transparent', 'important');
         if (el.getAttribute('aria-selected') === 'true') {
             el.style.setProperty('background-color', SEL_BG, 'important');
-            el.style.setProperty('color', '#0f1f3d', 'important');
+            el.style.setProperty('color', '#133273', 'important');
         }
         el.querySelectorAll('span, div, p').forEach(function(c) {
             c.style.setProperty('color', TEXT_CLR, 'important');
@@ -1076,19 +1074,19 @@ st.markdown("""
 components.html("""
 <script>
 (function() {
-    var DARK_BG  = 'rgba(8,18,52,0.97)';
-    var TEXT_CLR = 'rgb(204,228,255)';
-    var HOVER_BG = 'rgba(37,99,235,0.40)';
-    var SEL_BG   = 'rgba(37,99,235,0.65)';
-    var BORDER   = '1px solid rgba(80,130,220,0.30)';
-    var RADIUS   = '10px';
+    var DARK_BG  = '#ffffff';
+    var TEXT_CLR = '#24324d';
+    var HOVER_BG = '#f1f0ed';
+    var SEL_BG   = '#eef2f9';
+    var BORDER   = '1px solid rgba(24,26,30,0.10)';
+    var RADIUS   = '12px';
 
     function styleOption(el) {
         el.style.setProperty('color', TEXT_CLR, 'important');
         el.style.setProperty('background-color', 'transparent', 'important');
         if (el.getAttribute('aria-selected') === 'true') {
             el.style.setProperty('background-color', SEL_BG, 'important');
-            el.style.setProperty('color', '#0f1f3d', 'important');
+            el.style.setProperty('color', '#133273', 'important');
         }
         el.querySelectorAll('span, div, p').forEach(function(c) {
             c.style.setProperty('color', TEXT_CLR, 'important');
