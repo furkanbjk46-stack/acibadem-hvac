@@ -73,9 +73,18 @@ c("hedefe varinca sabit kalir (tekrar komut yok)", m1 == m2 == "serin", "%s -> %
 
 # ── DIGER (kollektor/FCU/AHU) — esik 23, histerezis 3 ──
 c("sogutma, 21C -> sogutma (histerezis)", dig(21.0, "sogutma") == "sogutma")
-c("sogutma, 19C -> isitma", dig(19.0, "sogutma") == "isitma")
-c("isitma, 25C -> isitma (histerezis)", dig(25.0, "isitma") == "isitma")
-c("isitma, 27C -> sogutma", dig(27.0, "isitma") == "sogutma")
+# Beklentiler ESIKTEN turetilir; esik degisince (23 -> 15 gibi) test kirmizi
+# yanmasin, kuralin KENDISI dogrulansin.
+_E = _ns["_DIG_ESIK"]
+_H = _ns["_DIG_H"]
+c("sogutma, esik-1 -> hala sogutma (histerezis tutuyor)",
+  dig(_E - 1, "sogutma") == "sogutma")
+c("sogutma, esik-H-1 -> isitma", dig(_E - _H - 1, "sogutma") == "isitma")
+c("isitma, esik+1 -> hala isitma (histerezis tutuyor)",
+  dig(_E + 1, "isitma") == "isitma")
+c("isitma, esik+H+1 -> sogutma", dig(_E + _H + 1, "isitma") == "sogutma")
+c("mod yokken esik ustu sogutma", dig(_E + 0.5, None) == "sogutma")
+c("mod yokken esik alti isitma", dig(_E - 0.5, None) == "isitma")
 
 hata = sum(1 for _, ok, _ in T if not ok)
 print()

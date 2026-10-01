@@ -113,16 +113,18 @@ code{background:var(--inset);padding:1px 5px;border-radius:5px;font-size:11.5px;
     </div>
     <div>
       <table>
-        <tr><th colspan="3">Kollektör / FCU / AHU — ±3 °C histerezis</th></tr>
-        <tr><th>Nokta</th><th style="text-align:right">Soğutma</th><th style="text-align:right">Isıtma</th></tr>
-        <tr><td>Gündüz kollektör</td><td class="s">8,0</td><td class="s">10,0</td></tr>
-        <tr><td>Gece kollektör</td><td class="s">10,0</td><td class="s">12,0</td></tr>
-        <tr><td>A blok FCU</td><td class="s">12,0</td><td class="s">14,0</td></tr>
-        <tr><td>B blok FCU</td><td class="s">12,0</td><td class="s">14,0</td></tr>
-        <tr><td>Zon-1 klima santrali</td><td class="s">8,0</td><td class="s">10,0</td></tr>
-        <tr><td>Zon-2 klima santrali</td><td class="s">8,0</td><td class="s">10,0</td></tr>
+        <tr><th colspan="3">Kollektör / FCU / AHU — eşik 15 °C · ±3 °C histerezis</th></tr>
+        <tr><th>Nokta</th><th style="text-align:right">15 üstü</th><th style="text-align:right">15 altı</th></tr>
+        <tr><td>Gündüz kollektör</td><td class="s">10,0</td><td class="s">12,0</td></tr>
+        <tr><td>Gece kollektör</td><td class="s">12,0</td><td class="s">14,0</td></tr>
+        <tr><td>A blok FCU</td><td class="s">14,0</td><td class="s">14,0</td></tr>
+        <tr><td>B blok FCU</td><td class="s">14,0</td><td class="s">14,0</td></tr>
+        <tr><td>Zon-1 klima santrali (AHU)</td><td class="s">10,0</td><td class="s">10,0</td></tr>
+        <tr><td>Zon-2 klima santrali (AHU)</td><td class="s">10,0</td><td class="s">10,0</td></tr>
       </table>
-      <div class="not">Eşik <b>23 °C</b>; soğutma↔ısıtma geçişi için 3 °C aşım gerekir.</div>
+      <div class="not">Eşik <b>15 °C</b>; mod değiştirmek için 3 °C aşım gerekir.
+         <b>FCU ve AHU moda göre değişmez</b> — yalnızca kollektör seti kayar.
+         (01.10.2026 işletme tablosu; önceki kural eşik 23 °C idi.)</div>
     </div>
   </div>
 </div></div></div>

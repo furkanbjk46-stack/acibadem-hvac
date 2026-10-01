@@ -48,13 +48,15 @@ CH_MODLAR   = ["koc_soguk", "serin", "ilimli", "sicak"]
 CH_SET      = {"koc_soguk": 8.0, "serin": 7.5, "ilimli": 7.0, "sicak": 6.5}
 CH_H        = 2.0
 
-DIG_ESIK = 23.0
+# 01.10.2026: esik 23 -> 15 C, kollektor setleri +2, FCU/AHU artik
+# moddan BAGIMSIZ sabit (FCU 14, AHU 10). Kaynak: isletme tablosu.
+DIG_ESIK = 15.0
 DIG_H    = 3.0
 DIG_SET  = {
-    "sogutma": {"GUNDUZ_KOLLEKTOR_SET": 8.0, "GECE_KOLLEKTOR_SET": 10.0,
-                "A_BLOK_FCU_SET": 12.0, "B_BLOK_FCU_SET": 12.0,
-                "ZON1_KLIMA_SANTRALI_SET": 8.0, "ZON2_KLIMA_SANTRALI_SET": 8.0},
-    "isitma":  {"GUNDUZ_KOLLEKTOR_SET": 10.0, "GECE_KOLLEKTOR_SET": 12.0,
+    "sogutma": {"GUNDUZ_KOLLEKTOR_SET": 10.0, "GECE_KOLLEKTOR_SET": 12.0,
+                "A_BLOK_FCU_SET": 14.0, "B_BLOK_FCU_SET": 14.0,
+                "ZON1_KLIMA_SANTRALI_SET": 10.0, "ZON2_KLIMA_SANTRALI_SET": 10.0},
+    "isitma":  {"GUNDUZ_KOLLEKTOR_SET": 12.0, "GECE_KOLLEKTOR_SET": 14.0,
                 "A_BLOK_FCU_SET": 14.0, "B_BLOK_FCU_SET": 14.0,
                 "ZON1_KLIMA_SANTRALI_SET": 10.0, "ZON2_KLIMA_SANTRALI_SET": 10.0},
 }

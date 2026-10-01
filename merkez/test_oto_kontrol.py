@@ -209,7 +209,84 @@ c("es zamanli ikinci calisma komut GONDERMEZ (yaris korumasi)",
 
 hata = sum(1 for _, ok, _ in T if not ok)
 print()
+# ── SAHA ile MERKEZ birebir ayni mi? ─────────────────────────────────────
+# Merkez yalnizca ONIZLEME yapar ("gecisleri goster"); sahaya seti oto_set.py
+# gonderir. Ikisi ayrisirsa portal baska deger gosterir, sahaya baska deger
+# gider ve kimse fark etmez. 01.10.2026'da esik 23 -> 15 degisirken eklendi.
+import ast as _ast
+
+_SAHA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                     "hvac", "deneme", "oto_set.py")
+_saha_metin = open(_SAHA, encoding="utf-8").read()
+
+
+def _sozluk(metin, ad):
+    """Sozlugu parantez dengeleyerek al.
+
+    CH_SET tek satirda, DIG_SET cok satirda yazili; tek bir duzenli ifade
+    ikisini birden dogru yakalayamiyor (tek satirlik olanda bir sonraki
+    bloga tasiyordu).
+    """
+    m = re.search(ad + r"\s*=\s*\{", metin)
+    if not m:
+        return None
+    bas = metin.index("{", m.start())
+    derinlik = 0
+    for i in range(bas, len(metin)):
+        if metin[i] == "{":
+            derinlik += 1
+        elif metin[i] == "}":
+            derinlik -= 1
+            if derinlik == 0:
+                return _ast.literal_eval(metin[bas:i + 1])
+    return None
+
+
+def _sayi(metin, ad):
+    m = re.search(ad + r"\s*=\s*([\d.]+)", metin)
+    return float(m.group(1)) if m else None
+
+
+def _liste(metin, ad):
+    m = re.search(ad + r"\s*=\s*(\[[^\]]*\])", metin, re.S)
+    return _ast.literal_eval(m.group(1)) if m else None
+
+
+c("chiller esikleri saha ile ayni",
+  _liste(_saha_metin, "CH_SINIRLAR") == _liste(_metin, "_CH_SINIRLAR"),
+  (_liste(_saha_metin, "CH_SINIRLAR"), _liste(_metin, "_CH_SINIRLAR")))
+c("chiller setleri saha ile ayni",
+  _sozluk(_saha_metin, "CH_SET") == _sozluk(_metin, "_CH_SET"),
+  (_sozluk(_saha_metin, "CH_SET"), _sozluk(_metin, "_CH_SET")))
+c("chiller histerezisi saha ile ayni",
+  _sayi(_saha_metin, "CH_H") == _sayi(_metin, "_CH_H"))
+c("kollektor esigi saha ile ayni",
+  _sayi(_saha_metin, "DIG_ESIK") == _sayi(_metin, "_DIG_ESIK"),
+  (_sayi(_saha_metin, "DIG_ESIK"), _sayi(_metin, "_DIG_ESIK")))
+c("kollektor histerezisi saha ile ayni",
+  _sayi(_saha_metin, "DIG_H") == _sayi(_metin, "_DIG_H"))
+c("kollektor/FCU/AHU set tablosu saha ile ayni",
+  _sozluk(_saha_metin, "DIG_SET") == _sozluk(_metin, "_DIG_SET"),
+  (_sozluk(_saha_metin, "DIG_SET"), _sozluk(_metin, "_DIG_SET")))
+c("chiller nokta listesi saha ile ayni",
+  _liste(_saha_metin, "CH_NOKTALAR") == _liste(_metin, "_CH_NOKTALAR"))
+
+# Isletme tablosu (01.10.2026) — degerler yanlislikla kaymasin
+_ds = _sozluk(_saha_metin, "DIG_SET")
+c("esik 15 C", _sayi(_saha_metin, "DIG_ESIK") == 15.0)
+c("sogutma kollektor 10/12",
+  (_ds["sogutma"]["GUNDUZ_KOLLEKTOR_SET"], _ds["sogutma"]["GECE_KOLLEKTOR_SET"]) == (10.0, 12.0))
+c("isitma kollektor 12/14",
+  (_ds["isitma"]["GUNDUZ_KOLLEKTOR_SET"], _ds["isitma"]["GECE_KOLLEKTOR_SET"]) == (12.0, 14.0))
+c("FCU her iki modda 14",
+  all(_ds[m][n] == 14.0 for m in ("sogutma", "isitma")
+      for n in ("A_BLOK_FCU_SET", "B_BLOK_FCU_SET")))
+c("AHU (zon klima santrali) her iki modda 10",
+  all(_ds[m][n] == 10.0 for m in ("sogutma", "isitma")
+      for n in ("ZON1_KLIMA_SANTRALI_SET", "ZON2_KLIMA_SANTRALI_SET")))
+
 for ad, ok, d in T:
     print(("PASS " if ok else "FAIL ") + ad + (("   [%s]" % d) if (d and not ok) else ""))
+
 print("\n%d/%d PASS" % (len(T) - hata, len(T)))
 sys.exit(1 if hata else 0)
