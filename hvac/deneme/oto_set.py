@@ -190,6 +190,20 @@ def _sonuc_yaz(sonuc, aciklama=""):
     return _SON_SONUC
 
 
+def _guncel_setler(d):
+    """Mevcut modlara karşılık gelen set değerleri (merkez paneli için)."""
+    ch_mod, dig_mod = d.get("chiller_mod"), d.get("diger_mod")
+    setler = {}
+    if ch_mod in CH_SET:
+        setler["chiller"] = CH_SET[ch_mod]
+    if dig_mod in DIG_SET:
+        for nokta, deger in DIG_SET[dig_mod].items():
+            setler[nokta] = deger
+    setler["esikler"] = {"chiller_sinir": CH_SINIRLAR, "chiller_h": CH_H,
+                         "dig_esik": DIG_ESIK, "dig_h": DIG_H}
+    return setler
+
+
 def durum_ozet():
     """Heartbeat'in Supabase'e taşıyacağı küçük özet."""
     d = durum_oku()
@@ -201,6 +215,11 @@ def durum_ozet():
         "donem": d.get("donem"),
         "chiller_mod": d.get("chiller_mod"),
         "diger_mod": d.get("diger_mod"),
+        # Yürürlükteki SET DEĞERLERİ. Merkez bunları kendi tablosundan
+        # türetmesin diye buradan bildirilir: kural tek yerde (bu dosyada),
+        # Synapse yalnızca sahanın bildirdiğini gösterir. Kopya tutulursa
+        # tablo değişince portal eski değeri göstermeye devam eder.
+        "setler": _guncel_setler(d),
         "son_yazim": d.get("zaman"),
         # Son geçişin sahadaki sonucu — "sonuc" her dakika "gecis_yok" ile
         # güncellendiği için geçişteki sorun burada KALICI tutulur.

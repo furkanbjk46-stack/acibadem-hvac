@@ -681,6 +681,13 @@ if _metin:
           not _re2.search(r"^%s\s*=" % _ad, _metin, _re2.M))
     c("merkezde komut gonderen oto-set kontrolu yok",
       not _re2.search(r"^def _oto_set_kontrol", _metin, _re2.M))
+    # Panelde set DEGERI gomulu olmamali: Synapse yalnizca sahanin
+    # bildirdigini gosterir (bakim_ozet.oto.setler). 01.10'da saha tablosu
+    # degistiginde paneldeki elle yazili "7.5°C" eski degeri gostermeye
+    # devam ediyordu.
+    _gomulu = [v for v in ("8.0°C", "7.5°C", "7.0°C", "6.5°C") if v in _metin]
+    c("merkez panelinde gomulu set degeri yok", not _gomulu, _gomulu)
+    c("merkez setleri sahadan okur", '_saha_setleri' in _metin)
 
 hata = sum(1 for _, ok, _ in T if not ok)
 print()

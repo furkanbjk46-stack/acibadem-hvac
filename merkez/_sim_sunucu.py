@@ -174,6 +174,14 @@ def veri_uret():
                 "sonuc": _oto_sonuc[0], "metin": _oto_sonuc[1], "aciklama": "",
                 "donem": "gunduz" if 5 <= datetime.now(IST).hour < 22 else "gece",
                 "chiller_mod": "serin", "diger_mod": "sogutma",
+                # Yururlukteki setler sahadan bildirilir (oto_set.durum_ozet);
+                # sunumda da ayni yapiyi uretelim ki panel gercekte nasil
+                # gorunuyorsa oyle gorunsun.
+                "setler": {"chiller": 7.5,
+                           "GUNDUZ_KOLLEKTOR_SET": 10.0, "GECE_KOLLEKTOR_SET": 12.0,
+                           "A_BLOK_FCU_SET": 14.0, "B_BLOK_FCU_SET": 14.0,
+                           "ZON1_KLIMA_SANTRALI_SET": 10.0,
+                           "ZON2_KLIMA_SANTRALI_SET": 10.0},
             }
 
         lokasyonlar.append({

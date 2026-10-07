@@ -1866,6 +1866,7 @@ with sag:
     # boyunca hiç komut gitmediği hâlde kimsenin fark etmemesinin sebebi
     # böyle bir göstergenin olmamasıydı.
     _oto_saglik = []
+    _saha_setleri = {}          # lokasyonun bildirdiği güncel set değerleri
     _oz_test_saglik = []
     _geri_bildirim_saglik = []
     try:
@@ -1882,6 +1883,10 @@ with sag:
                 _o = (_bo or {}).get("oto")
                 if isinstance(_o, dict):
                     _oto_saglik.append((_lr["lokasyon_id"], _o))
+                    # Yürürlükteki set değerleri SAHADAN gelir; merkez kendi
+                    # tablosunu tutmaz (kural yalnızca oto_set.py'de).
+                    if isinstance(_o.get("setler"), dict) and not _saha_setleri:
+                        _saha_setleri.update(_o["setler"])
                 # Mekanik Zeka öz testi: lokasyon KENDİ ayarlarıyla testleri
                 # koşar (oz_test.py). Aynı kod farklı ayarla farklı karar verir;
                 # "bende yeşildi" yetmez, sahada da yeşil olmalı.
@@ -1918,8 +1923,18 @@ with sag:
     _sd_ad       = "GÜNDÜZ" if _simdi_donem == "gunduz" else "GECE"
     _sd_renk     = "#c98500" if _simdi_donem == "gunduz" else "#818cf8"
     _sonraki     = ("%02d:00" % _ge_saat) if _simdi_donem == "gunduz" else ("%02d:00" % _g_saat)
-    _ch_label   = {"koc_soguk":"❄️ 8.0°C","serin":"🌤️ 7.5°C",
-                   "ilimli":"☀️ 7.0°C","sicak":"🔥 6.5°C"}.get(_os_ch, _os_ch)
+    # Mod adları; SET DEĞERLERİ sahadan gelir (_saha_setleri). Burada sabit
+    # set tablosu TUTULMAZ: 01.10'da saha tablosu değiştiğinde buradaki kopya
+    # eski değeri göstermeye devam ederdi.
+    # Mod adı ayarlar/log'dan gelmiyorsa (ilk kurulum, eski kayıt) sahanın
+    # heartbeat'te bildirdiği moda düş — panelde "—" kalmasın.
+    if _os_ch in ("", "—", None) and _oto_saglik:
+        _os_ch = (_oto_saglik[0][1] or {}).get("chiller_mod") or _os_ch
+    if _os_dig in ("", "—", None) and _oto_saglik:
+        _os_dig = (_oto_saglik[0][1] or {}).get("diger_mod") or _os_dig
+    _CH_IKON = {"koc_soguk": "❄️", "serin": "🌤️", "ilimli": "☀️", "sicak": "🔥"}
+    _ch_label   = "%s %s" % (_CH_IKON.get(_os_ch, ""), {"koc_soguk": "Koç soğuk",
+                  "serin": "Serin", "ilimli": "Ilımlı", "sicak": "Sıcak"}.get(_os_ch, _os_ch))
     _dig_label  = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
     _cnt_html   = (f"<span style='color:#c98500;font-weight:700;'>⚡ {_os_cnt} komut gönderildi</span>"
                    ) if _os_cnt > 0 else "<span style='color:#46536b;'>Mod değişmedi</span>"
@@ -2052,6 +2067,45 @@ with sag:
             f"<span style='color:#c98500;'>{_ml_son['tahmin_ort']}°C</span></div>"
         )
 
+    # ── Yürürlükteki set değerleri ──────────────────────────────────────
+    # Değerler lokasyonun heartbeat'inden gelir (bakim_ozet.oto.setler).
+    # Merkezde kural tablosu YOK; saha bildirmediyse yalnızca mod yazılır.
+    def _set_metin(anahtar, birim="°C"):
+        _d = _saha_setleri.get(anahtar)
+        return ("%g%s" % (_d, birim)) if isinstance(_d, (int, float)) else "—"
+
+    def _set_kutu(etiket, deger, alt=""):
+        return (f"<div style='flex:1;min-width:92px;background:#ffffff;"
+                f"border:1px solid rgba(24,26,30,0.10);border-radius:10px;padding:6px 9px;'>"
+                f"<div style='font-size:8px;letter-spacing:1px;text-transform:uppercase;"
+                f"color:#46536b;'>{etiket}</div>"
+                f"<div style='font-size:14px;font-weight:650;color:#133273;'>{deger}</div>"
+                + (f"<div style='font-size:8px;color:#46536b;'>{alt}</div>" if alt else "")
+                + "</div>")
+
+    _fcu = _saha_setleri.get("A_BLOK_FCU_SET", _saha_setleri.get("B_BLOK_FCU_SET"))
+    _ahu = _saha_setleri.get("ZON1_KLIMA_SANTRALI_SET",
+                             _saha_setleri.get("ZON2_KLIMA_SANTRALI_SET"))
+    _fcu_m = ("%g°C" % _fcu) if isinstance(_fcu, (int, float)) else "—"
+    _ahu_m = ("%g°C" % _ahu) if isinstance(_ahu, (int, float)) else "—"
+
+    _set_html = (
+        "<div style='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;'>"
+        + _set_kutu("❄️ Chiller", _set_metin("chiller"), _ch_label)
+        + _set_kutu("🌀 Kollektör",
+                    "%s / %s" % (_set_metin("GUNDUZ_KOLLEKTOR_SET"),
+                                 _set_metin("GECE_KOLLEKTOR_SET")),
+                    "gündüz / gece · %s" % _dig_label)
+        + _set_kutu("🧊 FCU", _fcu_m, "A/B blok")
+        + _set_kutu("🏢 AHU", _ahu_m, "Zon-1/2 santral")
+        + "</div>"
+        + ("<div style='display:flex;justify-content:space-between;gap:8px;"
+           "font-size:8px;color:#46536b;margin:-4px 0 8px;'>"
+           "<span>Setler lokasyondan bildirilir</span>"
+           f"<span>Son geçişler: 🧊 {len(_ml_ch)} chiller · 🌀 {len(_ml_dig)} kol/FCU</span>"
+           "</div>")
+    )
+
     # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
     st.markdown(
         f"<div style='background:#fafaf8;"
@@ -2088,19 +2142,8 @@ with sag:
         f"</div>"
         f"<span style='font-size:8px;color:#46536b;'>{_os_zaman}</span>"
         f"</div>"
-        # ── Satır 3: Rozetler ──
-        f"<div style='display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;'>"
-        f"<div style='background:rgba(19,50,115,0.08);border:1px solid rgba(19,50,115,0.2);"
-        f"border-radius:6px;padding:3px 8px;font-size:9px;color:#24324d;'>"
-        f"❄️ Chiller &nbsp;<b style='color:#2a78d6;'>{_ch_label}</b></div>"
-        f"<div style='background:rgba(19,50,115,0.08);border:1px solid rgba(19,50,115,0.2);"
-        f"border-radius:6px;padding:3px 8px;font-size:9px;color:#24324d;'>"
-        f"🌀 KOL/FCU &nbsp;<b style='color:#2a78d6;'>{_dig_label}</b></div>"
-        f"<div style='background:rgba(19,50,115,0.08);border:1px solid rgba(19,50,115,0.2);"
-        f"border-radius:6px;padding:3px 8px;font-size:9px;color:#24324d;'>"
-        f"🧊 {len(_ml_ch)} &nbsp;·&nbsp; 🌀 {len(_ml_dig)} &nbsp;·&nbsp; "
-        f"<span style='color:#c98500;'>Σ {_ml_top}</span></div>"
-        f"</div>"
+        # ── Satır 3: Yürürlükteki setler (değerler SAHADAN gelir) ──
+        f"{_set_html}"
         # ── Satır 4: Komut + son geçiş ──
         f"<div style='font-size:9px;border-top:1px solid rgba(24,26,30,0.10);padding-top:6px;'>"
         f"{_cnt_html}</div>"
