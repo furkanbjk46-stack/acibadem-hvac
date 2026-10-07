@@ -1638,6 +1638,20 @@ with sag:
             lok_uyari_map[lok_id].append(("r", f"🔴 {isim}: {ariza} ARIZALI bileşen — {arizali}"))
         if bakim > 0:
             lok_uyari_map[lok_id].append(("y", f"🟡 {isim}: {bakim} bileşen bakımda"))
+        # Veri toplama alarmları (lokasyon heartbeat'i: bakim_ozet.veri_alarm)
+        # Analizör bağlantı hatası ya da boş günlük veri. Lokasyondaki Enerji
+        # portalının bildirim çubuğuyla AYNI listedir (veri_alarm.py üretir).
+        _va = ozet.get("veri_alarm") or {}
+        if _va.get("toplam"):
+            _kritik = _va.get("kritik", 0)
+            for _m in (_va.get("mesajlar") or [])[:2]:
+                lok_uyari_map[lok_id].append(
+                    ("r" if _kritik else "y", f"{'🔌' if _kritik else '📉'} {isim}: {_m}"))
+            _kalan = _va["toplam"] - len(_va.get("mesajlar") or [])
+            if _kalan > 0:
+                lok_uyari_map[lok_id].append(
+                    ("y", f"📉 {isim}: {_kalan} analizör uyarısı daha"))
+
         # Aylık bakım işareti uyarısı (ayın 25'inden itibaren, lokasyon heartbeat'inden gelir)
         aylik = ozet.get("aylik_bakim") or {}
         if aylik.get("uyari"):

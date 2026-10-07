@@ -662,34 +662,25 @@ c("[geri uyum] eski biçimdeki doğrulama kaydı yeni biçime çevrilip tamamlan
   (oto_set.durum_ozet().get("dogrulama") or {}).get("sonuc") == "uygulandi",
   oto_set.durum_ozet().get("dogrulama"))
 
-# ── 12) Merkez ile kural esitligi (sapma olmasin) ──
+# ── 12) Merkezde IKINCI BIR KURAL KOPYASI OLMAMALI ──
+# 01.10.2026'ya kadar app_merkez.py ayni esik/set tablosunu tasiyordu ve bu
+# test ikisinin esitligini kontrol ediyordu. Kopya silindi (iki kaynak
+# tehlikeliydi: biri komut gonderen thread'i acsa komutlar cift gider,
+# tablolar ayrissa portal baska saha baska deger gosterirdi). Artik test
+# tersini korur: kural YALNIZCA burada olmali.
+_mk = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))), "merkez", "app_merkez.py")
 try:
-    _mk = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-        os.path.abspath(__file__)))), "merkez", "app_merkez.py")
     _metin = open(_mk, encoding="utf-8").read()
-    _ns = {}
-    for _d2 in [r"_CH_SINIRLAR\s*=.*?\n", r"_CH_MODLAR\s*=.*?\n", r"_CH_SET\s*=.*?\n",
-                r"_CH_H\s*=.*?\n", r"_DIG_ESIK\s*=.*?\n", r"_DIG_H\s*=.*?\n",
-                r"_DIG_SET\s*=\s*\{.*?\n\}\n",
-                r"def _hedef_bolge.*?(?=\ndef )", r"def _ch_modu_hesapla.*?(?=\ndef )",
-                r"def _dig_modu_hesapla.*?(?=\n_OTO_GUNDUZ)",
-                r"def _donem_hesapla.*?(?=\ndef )"]:
-        _m = re.search(_d2, _metin, re.DOTALL)
-        if _m:
-            exec(_m.group(0), _ns)
-    _fark = [(t, m) for t in [-5, 0, 5, 6.9, 7.1, 15, 22.9, 23.1, 25, 26.1, 30, 35]
-             for m in ["", "koc_soguk", "serin", "ilimli", "sicak"]
-             if _ns["_ch_modu_hesapla"](t, m) != oto_set.ch_modu_hesapla(t, m)]
-    c("chiller kurallari merkez ile AYNI", not _fark, str(_fark[:4]))
-    c("setpoint tablosu merkez ile AYNI", _ns["_CH_SET"] == oto_set.CH_SET)
-    c("sinirlar/histerezis merkez ile AYNI",
-      _ns["_CH_SINIRLAR"] == oto_set.CH_SINIRLAR and _ns["_CH_H"] == oto_set.CH_H)
-    c("kollektor/FCU tablosu merkez ile AYNI", _ns["_DIG_SET"] == oto_set.DIG_SET)
-    _fark2 = [(s, g, ge) for s in range(24) for g, ge in [(5, 22), (8, 23), (22, 5)]
-              if _ns["_donem_hesapla"](s, g, ge) != oto_set.donem_hesapla(s, g, ge)]
-    c("donem hesabi merkez ile AYNI", not _fark2, str(_fark2[:4]))
-except Exception as e:
-    c("merkez karsilastirmasi", False, "yapilamadi: %s" % e)
+except OSError:
+    _metin = ""
+if _metin:
+    import re as _re2
+    for _ad in ("_CH_SET", "_DIG_SET", "_CH_SINIRLAR", "_DIG_ESIK"):
+        c("merkezde %s TANIMI yok (tek kaynak)" % _ad,
+          not _re2.search(r"^%s\s*=" % _ad, _metin, _re2.M))
+    c("merkezde komut gonderen oto-set kontrolu yok",
+      not _re2.search(r"^def _oto_set_kontrol", _metin, _re2.M))
 
 hata = sum(1 for _, ok, _ in T if not ok)
 print()

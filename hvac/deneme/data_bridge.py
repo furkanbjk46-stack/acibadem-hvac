@@ -482,6 +482,32 @@ def run_daily_snapshot():
                 row.get("Chiller_Tuketim_kWh") or 0,
                 row.get("Dis_Hava_Sicakligi_C") or 0)
     logger.info("Manuel tamamlanacak (portal): Sebeke, Kojen, Dogalgaz, Su")
+
+    # 7. Veri toplama alarmlari: baglanti hatasi / bos gunluk veri
+    #    Tespit veri_alarm.py'de (tek kaynak); buradan yalnizca tetiklenir.
+    #    Sonuc configs/veri_alarmlari.json'a yazilir -> portal bildirim cubugu
+    #    ve heartbeat uzerinden Synapse canli uyarilari ayni listeyi gosterir.
+    try:
+        import veri_alarm
+        _cfg = {}
+        try:
+            with open(os.path.join(BASE_DIR, "supabase_config.json"), encoding="utf-8") as _f:
+                _cfg = json.load(_f)
+        except Exception:
+            pass
+        _ozet = veri_alarm.kontrol_et(
+            modbus_data, yesterday_str,
+            sb_url=_cfg.get("supabase_url"), sb_key=_cfg.get("supabase_key"),
+            lokasyon_id=_cfg.get("lokasyon_id"))
+        if _ozet.get("toplam"):
+            logger.warning("Veri alarmi: %d uyari (%d kritik) — %s",
+                           _ozet.get("toplam"), _ozet.get("kritik"),
+                           "; ".join(_ozet.get("mesajlar", [])[:2]))
+        else:
+            logger.info("Veri alarmi yok: tum analizorler okundu.")
+    except Exception as _e:
+        logger.error("Veri alarm kontrolu yapilamadi: %s", _e)
+
     logger.info("=== Snapshot tamamlandi: %s ===", yesterday_str)
 
 

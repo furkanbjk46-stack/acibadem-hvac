@@ -2903,114 +2903,139 @@ if st.session_state.get("monthly_report_ready"):
                 key="monthly_report_download"
             )
 
-# ─── BİLDİRİM PANELİ ──────────────────────────────────────────────────────
-# GM portaldan gelen mesajları Supabase bildirimler tablosundan çek ve göster
+# ─── BİLDİRİM ÇUBUĞU ──────────────────────────────────────────────────────
+# Tek şerit, iki kaynak:
+#   1) Supabase `bildirimler` — GM merkezden gelen mesajlar, HVAC analiz özeti
+#   2) veri_alarm.py          — analizör bağlantı hatası / boş günlük veri
+# Aynı alarm listesi heartbeat ile Synapse'teki CANLI UYARILAR'a da düşer.
 def _bildirim_panel():
     import json as _bj
     import urllib.request
-
-    # supabase_config.json'dan bağlantı bilgilerini al
-    _cfg_path = os.path.join(os.path.dirname(__file__), "supabase_config.json")
-    if not os.path.exists(_cfg_path):
-        return  # geliştirme ortamı — sessizce atla
-
-    try:
-        with open(_cfg_path, "r", encoding="utf-8") as _f:
-            _cfg = _bj.load(_f)
-    except Exception:
-        return
-
-    _url = _cfg.get("supabase_url", "")
-    _key = _cfg.get("supabase_key", "")
-    _lok = _cfg.get("lokasyon_id", "")
-
-    if not _url or not _key or not _lok or "BURAYA" in _url:
-        return
-
-    # 5 dakikada bir yenile (session_state cache)
     from datetime import datetime as _dt2
-    _now_ts = _dt2.now().timestamp()
-    _last_check = st.session_state.get("_bildirim_last_check", 0)
-    _cached = st.session_state.get("_bildirimler_cache", None)
 
-    if _cached is None or (_now_ts - _last_check) > 300:
+    _ONEM_SIRA = {"acil": 0, "kritik": 0, "uyari": 1, "yuksek": 1, "normal": 2, "bilgi": 2}
+    _RENK = {"acil": ("#b42525", "rgba(208,59,59,.08)", "rgba(208,59,59,.45)", "🚨", "KRİTİK"),
+             "uyari": ("#8a5a00", "rgba(250,178,25,.10)", "rgba(250,178,25,.50)", "⚠️", "UYARI"),
+             "bilgi": ("#133273", "rgba(19,50,115,.06)", "rgba(24,26,30,.12)", "ℹ️", "BİLGİ")}
+
+    def _sinif(onem):
+        o = (onem or "bilgi").lower()
+        if o in ("acil", "kritik"):
+            return "acil"
+        if o in ("uyari", "yuksek"):
+            return "uyari"
+        return "bilgi"
+
+    # ── 1) Veri toplama alarmları (yerel dosya — Supabase'e gerek yok) ──
+    _kayitlar = []
+    try:
+        import veri_alarm
+        for _a in (veri_alarm.oku().get("alarmlar") or []):
+            _kayitlar.append({
+                "kaynak": "veri",
+                "sinif": _sinif(_a.get("onem")),
+                "mesaj": _a.get("mesaj", ""),
+                "gonderen": "Veri Toplama",
+                "zaman": _a.get("tarih", ""),
+                "id": None,
+            })
+    except Exception:
+        pass
+
+    # ── 2) Supabase bildirimleri ──
+    _cfg_path = os.path.join(os.path.dirname(__file__), "supabase_config.json")
+    _url = _key = _lok = ""
+    if os.path.exists(_cfg_path):
         try:
-            _query = (
-                f"/rest/v1/bildirimler"
-                f"?or=(lokasyon.eq.{_lok},lokasyon.eq.all)"
-                f"&okundu=eq.false"
-                f"&order=created_at.asc"
-            )
-            _req = urllib.request.Request(
-                _url + _query,
-                headers={
-                    "apikey": _key,
-                    "Authorization": "Bearer " + _key,
-                    "Content-Type": "application/json",
-                }
-            )
-            with urllib.request.urlopen(_req, timeout=5) as _resp:
-                _cached = _bj.loads(_resp.read().decode())
-            st.session_state["_bildirimler_cache"] = _cached
-            st.session_state["_bildirim_last_check"] = _now_ts
+            with open(_cfg_path, "r", encoding="utf-8") as _f:
+                _cfg = _bj.load(_f)
+            _url, _key, _lok = (_cfg.get("supabase_url", ""), _cfg.get("supabase_key", ""),
+                                _cfg.get("lokasyon_id", ""))
         except Exception:
-            _cached = st.session_state.get("_bildirimler_cache", [])
+            pass
 
-    if not _cached:
+    if _url and _key and _lok and "BURAYA" not in _url:
+        _now_ts = _dt2.now().timestamp()
+        _cached = st.session_state.get("_bildirimler_cache", None)
+        if _cached is None or (_now_ts - st.session_state.get("_bildirim_last_check", 0)) > 300:
+            try:
+                _req = urllib.request.Request(
+                    _url + (f"/rest/v1/bildirimler?or=(lokasyon.eq.{_lok},lokasyon.eq.all)"
+                            f"&okundu=eq.false&order=created_at.asc"),
+                    headers={"apikey": _key, "Authorization": "Bearer " + _key,
+                             "Content-Type": "application/json"})
+                with urllib.request.urlopen(_req, timeout=5) as _resp:
+                    _cached = _bj.loads(_resp.read().decode())
+                st.session_state["_bildirimler_cache"] = _cached
+                st.session_state["_bildirim_last_check"] = _now_ts
+            except Exception:
+                _cached = st.session_state.get("_bildirimler_cache", [])
+        for _b in (_cached or []):
+            _kayitlar.append({
+                "kaynak": "mesaj",
+                "sinif": _sinif(_b.get("oncelik")),
+                "mesaj": _b.get("mesaj", ""),
+                "gonderen": _b.get("gonderen", "GM Merkez"),
+                "zaman": (_b.get("created_at", "") or "")[:16].replace("T", " "),
+                "id": _b.get("id", ""),
+            })
+
+    if not _kayitlar:
         return
 
-    # Renk haritası
-    _renk  = {"bilgi": "#6da7ec", "uyari": "#c98500", "acil": "#d03b3b"}
-    _bg    = {"bilgi": "rgba(109,167,236,0.15)", "uyari": "rgba(250,178,25,0.15)", "acil": "rgba(208,59,59,0.18)"}
-    _icon  = {"bilgi": "ℹ️", "uyari": "⚠️", "acil": "🚨"}
-    _etiket = {"bilgi": "BİLGİ", "uyari": "UYARI", "acil": "ACİL"}
+    _kayitlar.sort(key=lambda k: _ONEM_SIRA.get(k["sinif"], 3))
+    _say = {s: sum(1 for k in _kayitlar if k["sinif"] == s) for s in ("acil", "uyari", "bilgi")}
+    _en_agir = _kayitlar[0]["sinif"]
+    _yazi, _zemin, _kenar, _ikon, _etiket = _RENK[_en_agir]
 
-    st.markdown("---")
-    for _b in _cached:
-        _bid   = _b.get("id", "")
-        _onc   = _b.get("oncelik", "bilgi")
-        _msj   = _b.get("mesaj", "")
-        _gon   = _b.get("gonderen", "GM Merkez")
-        _zaman = (_b.get("created_at", "")[:16].replace("T", " ")
-                  if _b.get("created_at") else "")
+    # ── Şerit: tek satır özet (rozet + en önemli mesajın ilk satırı) ──
+    _rozet = " ".join(
+        f"<span style='background:{_RENK[s][1]};border:1px solid {_RENK[s][2]};color:{_RENK[s][0]};"
+        f"border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin-right:6px;'>"
+        f"{_RENK[s][3]} {_say[s]} {_RENK[s][4]}</span>"
+        for s in ("acil", "uyari", "bilgi") if _say[s])
+    _ilk = _kayitlar[0]["mesaj"].splitlines()[0] if _kayitlar[0]["mesaj"] else ""
+    st.markdown(
+        f"<div style='background:{_zemin};border:1px solid {_kenar};border-left:4px solid {_yazi};"
+        f"border-radius:12px;padding:10px 14px;margin:6px 0 2px;'>"
+        f"<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>{_rozet}"
+        f"<span style='color:{_yazi};font-size:13px;font-weight:600;'>{_ilk}</span></div></div>",
+        unsafe_allow_html=True)
 
-        _col1, _col2 = st.columns([9, 1])
-        with _col1:
-            st.markdown(f"""
-<div style="
-    background:{_bg.get(_onc,'rgba(109,167,236,0.15)')};
-    border-left:4px solid {_renk.get(_onc,'#6da7ec')};
-    border-radius:8px;
-    padding:10px 16px;
-    margin-bottom:4px;
-">
-  <span style="color:{_renk.get(_onc,'#6da7ec')};font-weight:700;font-size:12px;">
-    {_icon.get(_onc,'ℹ️')} {_etiket.get(_onc,'BİLGİ')} &nbsp;·&nbsp; {_gon} &nbsp;·&nbsp; {_zaman}
-  </span><br>
-  <span style="color:#0f1f3d;font-size:14px;">{_msj}</span>
-</div>""", unsafe_allow_html=True)
-        with _col2:
-            if st.button("✓ Okundu", key=f"_okundu_{_bid}", use_container_width=True):
-                try:
-                    import json as _bj2
-                    _patch = _bj2.dumps({"okundu": True}).encode()
-                    _pr = urllib.request.Request(
-                        _url + f"/rest/v1/bildirimler?id=eq.{_bid}",
-                        data=_patch,
-                        headers={
-                            "apikey": _key,
-                            "Authorization": "Bearer " + _key,
-                            "Content-Type": "application/json",
-                            "Prefer": "return=minimal",
-                        },
-                        method="PATCH"
-                    )
-                    urllib.request.urlopen(_pr, timeout=5)
-                except Exception:
-                    pass
-                # Cache'i temizle → bir sonraki render'da bildirim listesini yenile
-                st.session_state.pop("_bildirimler_cache", None)
-                st.rerun()
+    # ── Ayrıntı: tek tek kayıtlar, mesajlar için "okundu" ──
+    with st.expander(f"Bildirimler ({len(_kayitlar)})", expanded=(_en_agir == "acil")):
+        for _i, _k in enumerate(_kayitlar):
+            _y, _z, _c, _ik, _et = _RENK[_k["sinif"]]
+            _c1, _c2 = st.columns([9, 1])
+            with _c1:
+                st.markdown(
+                    f"<div style='background:{_z};border:1px solid {_c};border-left:4px solid {_y};"
+                    f"border-radius:10px;padding:9px 14px;margin-bottom:4px;'>"
+                    f"<span style='color:{_y};font-weight:700;font-size:11px;'>"
+                    f"{_ik} {_et} · {_k['gonderen']}" + (f" · {_k['zaman']}" if _k["zaman"] else "")
+                    + "</span><br>"
+                    f"<span style='color:#0f1f3d;font-size:13.5px;white-space:pre-line;'>"
+                    f"{_k['mesaj']}</span></div>", unsafe_allow_html=True)
+            with _c2:
+                if _k["kaynak"] == "mesaj" and _k["id"]:
+                    if st.button("✓ Okundu", key=f"_okundu_{_k['id']}", use_container_width=True):
+                        try:
+                            _pr = urllib.request.Request(
+                                _url + f"/rest/v1/bildirimler?id=eq.{_k['id']}",
+                                data=_bj.dumps({"okundu": True}).encode(),
+                                headers={"apikey": _key, "Authorization": "Bearer " + _key,
+                                         "Content-Type": "application/json",
+                                         "Prefer": "return=minimal"},
+                                method="PATCH")
+                            urllib.request.urlopen(_pr, timeout=5)
+                        except Exception:
+                            pass
+                        st.session_state.pop("_bildirimler_cache", None)
+                        st.rerun()
+                else:
+                    # Veri alarmları elle kapatılmaz: sayaç okunmaya başlayınca
+                    # bir sonraki günlük turda kendiliğinden düşer.
+                    st.caption("otomatik")
 
 _bildirim_panel()
 # ───────────────────────────────────────────────────────────────────────────

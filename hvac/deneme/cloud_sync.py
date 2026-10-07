@@ -625,6 +625,21 @@ def _oz_test_ozet() -> dict:
         return {}
 
 
+def _veri_alarm_ozet() -> dict:
+    """Veri toplama alarmlarinin KUCUK ozeti (veri_alarm.py).
+
+    Synapse'teki CANLI UYARILAR bu ozeti okur; alarm yoksa bos sozluk doner
+    ve heartbeat'i bosuna sismez. Kendi icinde kapali: modul okunamazsa
+    heartbeat kesilmez.
+    """
+    try:
+        import veri_alarm
+        return veri_alarm.son_ozet()
+    except Exception as e:
+        logger.debug(f"Veri alarm ozeti okunamadi: {e}")
+        return {}
+
+
 def send_heartbeat(client, lokasyon_id: str):
     """Supabase'e kısa heartbeat gönder (her 2 dakikada bir çağrılır)"""
     try:
@@ -632,6 +647,7 @@ def send_heartbeat(client, lokasyon_id: str):
         _ozet["oto"] = _oto_durum_topla()
         _ozet["oz_test"] = _oz_test_ozet()
         _ozet["geri_bildirim"] = _geri_bildirim_ozet()
+        _ozet["veri_alarm"] = _veri_alarm_ozet()
 
         payload = {
             "lokasyon_id": lokasyon_id,
