@@ -177,11 +177,20 @@ def veri_uret():
                 # Yururlukteki setler sahadan bildirilir (oto_set.durum_ozet);
                 # sunumda da ayni yapiyi uretelim ki panel gercekte nasil
                 # gorunuyorsa oyle gorunsun.
-                "setler": {"chiller": 7.5,
-                           "GUNDUZ_KOLLEKTOR_SET": 10.0, "GECE_KOLLEKTOR_SET": 12.0,
-                           "A_BLOK_FCU_SET": 14.0, "B_BLOK_FCU_SET": 14.0,
-                           "ZON1_KLIMA_SANTRALI_SET": 10.0,
-                           "ZON2_KLIMA_SANTRALI_SET": 10.0},
+                # Lokasyonlarin cogu ayni isletme tablosunu kullanir; birkaci
+                # kendi degerleriyle calisir. Panel "cogunluk + N farkli"
+                # davranisini sunumda da gostersin diye bilerek ayristirildi.
+                "setler": ({"chiller": 7.0,
+                            "GUNDUZ_KOLLEKTOR_SET": 9.0, "GECE_KOLLEKTOR_SET": 11.0,
+                            "A_BLOK_FCU_SET": 13.0, "B_BLOK_FCU_SET": 13.0,
+                            "ZON1_KLIMA_SANTRALI_SET": 9.0,
+                            "ZON2_KLIMA_SANTRALI_SET": 9.0}
+                           if lok_id in ("adana", "izmir") else
+                           {"chiller": 7.5,
+                            "GUNDUZ_KOLLEKTOR_SET": 10.0, "GECE_KOLLEKTOR_SET": 12.0,
+                            "A_BLOK_FCU_SET": 14.0, "B_BLOK_FCU_SET": 14.0,
+                            "ZON1_KLIMA_SANTRALI_SET": 10.0,
+                            "ZON2_KLIMA_SANTRALI_SET": 10.0}),
             }
 
         lokasyonlar.append({

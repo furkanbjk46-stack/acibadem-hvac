@@ -1866,7 +1866,8 @@ with sag:
     # boyunca hiç komut gitmediği hâlde kimsenin fark etmemesinin sebebi
     # böyle bir göstergenin olmamasıydı.
     _oto_saglik = []
-    _saha_setleri = {}          # lokasyonun bildirdiği güncel set değerleri
+    _saha_setleri = {}          # çoğunluk (panelde gösterilen) set değerleri
+    _setler_lok = {}            # {lokasyon_id: setler} — lokasyon başına
     _oz_test_saglik = []
     _geri_bildirim_saglik = []
     try:
@@ -1885,8 +1886,11 @@ with sag:
                     _oto_saglik.append((_lr["lokasyon_id"], _o))
                     # Yürürlükteki set değerleri SAHADAN gelir; merkez kendi
                     # tablosunu tutmaz (kural yalnızca oto_set.py'de).
-                    if isinstance(_o.get("setler"), dict) and not _saha_setleri:
-                        _saha_setleri.update(_o["setler"])
+                    # LOKASYON BAŞINA saklanır: setler hastaneye göre değişir
+                    # (farklı blok/zon yapısı, farklı işletme tablosu). Tek bir
+                    # lokasyonunkini hepsiymiş gibi göstermek yanıltırdı.
+                    if isinstance(_o.get("setler"), dict) and _o["setler"]:
+                        _setler_lok[_lr["lokasyon_id"]] = _o["setler"]
                 # Mekanik Zeka öz testi: lokasyon KENDİ ayarlarıyla testleri
                 # koşar (oz_test.py). Aynı kod farklı ayarla farklı karar verir;
                 # "bende yeşildi" yetmez, sahada da yeşil olmalı.
@@ -1928,14 +1932,23 @@ with sag:
     # eski değeri göstermeye devam ederdi.
     # Mod adı ayarlar/log'dan gelmiyorsa (ilk kurulum, eski kayıt) sahanın
     # heartbeat'te bildirdiği moda düş — panelde "—" kalmasın.
-    if _os_ch in ("", "—", None) and _oto_saglik:
-        _os_ch = (_oto_saglik[0][1] or {}).get("chiller_mod") or _os_ch
-    if _os_dig in ("", "—", None) and _oto_saglik:
-        _os_dig = (_oto_saglik[0][1] or {}).get("diger_mod") or _os_dig
+    # Mod da tek lokasyondan alınmaz: lokasyonlar farklı modda olabilir.
+    # Hepsi aynıysa o mod yazılır, değilse "farklı" denir.
+    if _os_ch in ("", "—", None) or _os_dig in ("", "—", None):
+        _modlar_ch = {(_o or {}).get("chiller_mod") for _l, _o in _oto_saglik
+                      if (_o or {}).get("chiller_mod")}
+        _modlar_dig = {(_o or {}).get("diger_mod") for _l, _o in _oto_saglik
+                       if (_o or {}).get("diger_mod")}
+        if _os_ch in ("", "—", None) and _modlar_ch:
+            _os_ch = _modlar_ch.pop() if len(_modlar_ch) == 1 else "farkli"
+        if _os_dig in ("", "—", None) and _modlar_dig:
+            _os_dig = _modlar_dig.pop() if len(_modlar_dig) == 1 else "farkli"
     _CH_IKON = {"koc_soguk": "❄️", "serin": "🌤️", "ilimli": "☀️", "sicak": "🔥"}
     _ch_label   = "%s %s" % (_CH_IKON.get(_os_ch, ""), {"koc_soguk": "Koç soğuk",
-                  "serin": "Serin", "ilimli": "Ilımlı", "sicak": "Sıcak"}.get(_os_ch, _os_ch))
-    _dig_label  = {"sogutma":"☀️ Soğutma","isitma":"❄️ Isıtma"}.get(_os_dig, _os_dig)
+                  "serin": "Serin", "ilimli": "Ilımlı", "sicak": "Sıcak",
+                  "farkli": "lokasyona göre farklı"}.get(_os_ch, _os_ch))
+    _dig_label  = {"sogutma": "☀️ Soğutma", "isitma": "❄️ Isıtma",
+                   "farkli": "lokasyona göre farklı"}.get(_os_dig, _os_dig)
     _cnt_html   = (f"<span style='color:#c98500;font-weight:700;'>⚡ {_os_cnt} komut gönderildi</span>"
                    ) if _os_cnt > 0 else "<span style='color:#46536b;'>Mod değişmedi</span>"
 
@@ -2068,8 +2081,33 @@ with sag:
         )
 
     # ── Yürürlükteki set değerleri ──────────────────────────────────────
-    # Değerler lokasyonun heartbeat'inden gelir (bakim_ozet.oto.setler).
-    # Merkezde kural tablosu YOK; saha bildirmediyse yalnızca mod yazılır.
+    # Değerler lokasyonların heartbeat'inden gelir (bakim_ozet.oto.setler);
+    # merkezde kural tablosu YOK.
+    #
+    # ÇOK LOKASYON: setler hastaneye göre değişebilir. Panel ÖZET kart
+    # olduğu için en yaygın değer gösterilir; farklı bildiren lokasyon
+    # varsa sayısı yazılır ve ayrıntı listesi açılır. Tek lokasyonunkini
+    # hepsiymiş gibi göstermek, ikinci hastane açıldığı gün sessizce
+    # yanlış değer göstermek demekti.
+    _ANAHTARLAR = ("chiller", "GUNDUZ_KOLLEKTOR_SET", "GECE_KOLLEKTOR_SET",
+                   "A_BLOK_FCU_SET", "B_BLOK_FCU_SET",
+                   "ZON1_KLIMA_SANTRALI_SET", "ZON2_KLIMA_SANTRALI_SET")
+
+    def _kiyas_anahtari(setler):
+        return tuple(setler.get(a) for a in _ANAHTARLAR)
+
+    _gruplar = {}
+    for _lid, _st in _setler_lok.items():
+        _gruplar.setdefault(_kiyas_anahtari(_st), []).append(_lid)
+    if _gruplar:
+        # En çok lokasyonun bildirdiği değer kümesi panelde gösterilir
+        _cogunluk = max(_gruplar.items(), key=lambda kv: len(kv[1]))
+        _saha_setleri = dict(_setler_lok[_cogunluk[1][0]])
+        _ayni_sayi = len(_cogunluk[1])
+        _farkli_lok = [l for k, ls in _gruplar.items() if k != _cogunluk[0] for l in ls]
+    else:
+        _ayni_sayi, _farkli_lok = 0, []
+
     def _set_metin(anahtar, birim="°C"):
         _d = _saha_setleri.get(anahtar)
         return ("%g%s" % (_d, birim)) if isinstance(_d, (int, float)) else "—"
@@ -2089,6 +2127,22 @@ with sag:
     _fcu_m = ("%g°C" % _fcu) if isinstance(_fcu, (int, float)) else "—"
     _ahu_m = ("%g°C" % _ahu) if isinstance(_ahu, (int, float)) else "—"
 
+    if not _setler_lok:
+        _kapsam_metin = "Setler lokasyondan bildirilir — henüz gelmedi"
+        _farkli_html = ""
+    elif _farkli_lok:
+        _kapsam_metin = f"{_ayni_sayi} lokasyonda bu değerler"
+        _farkli_html = (
+            "<div style='background:rgba(250,178,25,.10);border:1px solid rgba(250,178,25,.5);"
+            "border-radius:8px;padding:4px 9px;margin:-4px 0 8px;font-size:9px;color:#8a5a00;'>"
+            f"⚠️ {len(_farkli_lok)} lokasyonda farklı set: "
+            + ", ".join(HASTANELER.get(l, {}).get("kisa", l) for l in _farkli_lok[:4])
+            + ("…" if len(_farkli_lok) > 4 else "") + "</div>")
+    else:
+        _kapsam_metin = (f"{_ayni_sayi} lokasyonun tümünde aynı"
+                         if _ayni_sayi > 1 else "Setler lokasyondan bildirilir")
+        _farkli_html = ""
+
     _set_html = (
         "<div style='display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;'>"
         + _set_kutu("❄️ Chiller", _set_metin("chiller"), _ch_label)
@@ -2099,9 +2153,10 @@ with sag:
         + _set_kutu("🧊 FCU", _fcu_m, "A/B blok")
         + _set_kutu("🏢 AHU", _ahu_m, "Zon-1/2 santral")
         + "</div>"
+        + _farkli_html
         + ("<div style='display:flex;justify-content:space-between;gap:8px;"
            "font-size:8px;color:#46536b;margin:-4px 0 8px;'>"
-           "<span>Setler lokasyondan bildirilir</span>"
+           f"<span>{_kapsam_metin}</span>"
            f"<span>Son geçişler: 🧊 {len(_ml_ch)} chiller · 🌀 {len(_ml_dig)} kol/FCU</span>"
            "</div>")
     )
@@ -2152,6 +2207,30 @@ with sag:
         f"</div>",
         unsafe_allow_html=True
     )
+
+
+    # Setler lokasyona göre ayrışıyorsa ayrıntı: hangi hastanede ne var.
+    # Özet kart tek değer gösterir; farkı görmek isteyen buradan bakar.
+    if _farkli_lok:
+        with st.expander(f"Lokasyon bazında setler ({len(_setler_lok)})", expanded=False):
+            _satirlar = []
+            for _lid, _st in sorted(_setler_lok.items()):
+                def _g(a):
+                    _v = _st.get(a)
+                    return ("%g" % _v) if isinstance(_v, (int, float)) else "—"
+                _satirlar.append({
+                    "Lokasyon": HASTANELER.get(_lid, {}).get("kisa", _lid),
+                    "Chiller": _g("chiller"),
+                    "Kollektör G/Ge": "%s / %s" % (_g("GUNDUZ_KOLLEKTOR_SET"),
+                                                   _g("GECE_KOLLEKTOR_SET")),
+                    "FCU": _g("A_BLOK_FCU_SET"),
+                    "AHU": _g("ZON1_KLIMA_SANTRALI_SET"),
+                })
+            st.dataframe(pd.DataFrame(_satirlar), hide_index=True,
+                         use_container_width=True)
+            st.caption("Değerler lokasyonların bildirdiği güncel setlerdir "
+                       "(°C). Kural tablosu her lokasyonun kendi oto_set.py "
+                       "dosyasındadır.")
 
     # Senaryo açma/kapama butonu (st.toggle/checkbox CSS tarafından gizleniyordu)
     _btn_lbl = "🟢 Senaryo AKTİF — Kapat" if _oto_aktif_su else "🔴 Senaryo KAPALI — Aç"
