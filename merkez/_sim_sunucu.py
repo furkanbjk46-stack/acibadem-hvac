@@ -225,6 +225,14 @@ def veri_uret():
                 # Son gecisin dayandigi dis hava (lokasyonun kendi tahmini).
                 # Guneydeki hastane daha sicak referansla calisir; sunumda da
                 # oyle gorunsun.
+                # Yururlukteki kural (gecis saatleri). Cogu lokasyon genel
+                # kuralla calisir; birkaci kendi saatini kullanir ("ozel"
+                # dolu gelir) — merkez ikisini ayirt edebilmeli.
+                "kural": ({"aktif": True, "gunduz_saat": 7, "gece_saat": 21,
+                           "ozel": ["oto_gunduz_saat", "oto_gece_saat"]}
+                          if lok_id in ("ankara", "izmir") else
+                          {"aktif": True, "gunduz_saat": 5, "gece_saat": 22,
+                           "ozel": []}),
                 "tahmin": ({"ref": 29.4, "bugun_max": 29.4, "yarin_min": 19.8}
                            if lok_id in ("adana", "adana_ortopedia", "izmir",
                                          "bodrum") else

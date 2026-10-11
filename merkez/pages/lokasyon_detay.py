@@ -1465,6 +1465,87 @@ with tab1:
         elif _hv:
             st.caption("🌤️ " + " · ".join(_hv))
 
+        # ── BU LOKASYONUN GEÇİŞ SAATLERİ ─────────────────────────────
+        # 11.10.2026'ya kadar saat anahtarları TEK takımdı; bir hastanenin
+        # saatini değiştirmek bütün hastaneleri değiştiriyordu. Artık
+        # `oto_gunduz_saat_<lokasyon>` tanımlanabilir; tanımlı değilse genel
+        # kural geçerlidir. Değeri BOŞALTMAK genel kurala döndürür (satır
+        # silmek RLS'e takılabiliyor, boş değer "tanımsız" sayılır).
+        _krl = (_oto or {}).get("kural") or {}
+        _ozel_anahtarlar = _krl.get("ozel") or []
+        _kg, _kge = _krl.get("gunduz_saat"), _krl.get("gece_saat")
+        if isinstance(_kg, int) and isinstance(_kge, int):
+            _saat_bas = ("🕐 Geçiş saatleri — gündüz %02d:00 · gece %02d:00  ·  %s"
+                         % (_kg, _kge, "bu lokasyona özel" if _ozel_anahtarlar
+                            else "genel kural"))
+        else:
+            _saat_bas = "🕐 Geçiş saatleri — lokasyon henüz bildirmedi"
+
+        with st.expander(_saat_bas):
+            # Sunum modunda kontroller GÖRÜNÜR ama pasiftir: paneli göstermek
+            # için demo'yu kapatmak gerekmesin, örnek veriye de yazılmasın.
+            _demo = _demo_modu()
+            if _demo:
+                st.caption("Sunum modu — ayar yazılmaz.")
+            if not isinstance(_kg, int) or not isinstance(_kge, int):
+                st.caption("Lokasyon yürürlükteki kuralı henüz bildirmedi "
+                           "(güncelleme uygulanınca ilk heartbeat'te gelir).")
+            else:
+                _s1, _s2 = st.columns(2)
+                with _s1:
+                    _yg = st.number_input("Gündüz başlangıcı", min_value=0,
+                                          max_value=23, value=int(_kg), step=1,
+                                          key="lok_gunduz_saat_%s" % lok_id,
+                                          disabled=_demo)
+                with _s2:
+                    _yge = st.number_input("Gece başlangıcı", min_value=0,
+                                           max_value=23, value=int(_kge), step=1,
+                                           key="lok_gece_saat_%s" % lok_id,
+                                           disabled=_demo)
+
+                def _ayar_yaz(anahtar, deger):
+                    import urllib.request as _u2, json as _j2
+                    _u2.urlopen(_u2.Request(
+                        url + "/rest/v1/ayarlar",
+                        data=_j2.dumps({"key": anahtar, "value": deger}).encode(),
+                        method="POST",
+                        headers={"apikey": key, "Authorization": "Bearer " + key,
+                                 "Content-Type": "application/json",
+                                 "Prefer": "resolution=merge-duplicates"}), timeout=5)
+
+                _b1, _b2 = st.columns(2)
+                with _b1:
+                    _kayit = st.button("Bu lokasyona özel kaydet",
+                                       key="lok_saat_kaydet_%s" % lok_id,
+                                       use_container_width=True,
+                                       disabled=(_demo or _yg == _yge))
+                with _b2:
+                    _geri = st.button("Genel kurala dön",
+                                      key="lok_saat_sifirla_%s" % lok_id,
+                                      use_container_width=True,
+                                      disabled=(_demo or not _ozel_anahtarlar))
+                if _yg == _yge:
+                    st.warning("Gündüz ve gece saati aynı olamaz.")
+                if _kayit:
+                    try:
+                        _ayar_yaz("oto_gunduz_saat_%s" % lok_id, str(int(_yg)))
+                        _ayar_yaz("oto_gece_saat_%s" % lok_id, str(int(_yge)))
+                        st.success("Kaydedildi — %s için gündüz %02d:00, gece "
+                                   "%02d:00. Lokasyon bir sonraki turda uygular."
+                                   % (lok_info["kisa"], int(_yg), int(_yge)))
+                    except Exception as _e:
+                        st.error("Ayar yazılamadı: %s" % _e)
+                if _geri:
+                    try:
+                        _ayar_yaz("oto_gunduz_saat_%s" % lok_id, "")
+                        _ayar_yaz("oto_gece_saat_%s" % lok_id, "")
+                        st.success("%s genel kurala döndü." % lok_info["kisa"])
+                    except Exception as _e:
+                        st.error("Ayar yazılamadı: %s" % _e)
+            st.caption("Setler yalnızca bu saatlerde gönderilir. Burada "
+                       "yapılan değişiklik YALNIZCA bu lokasyonu etkiler; "
+                       "genel saat ana ekrandaki OTO SET panelindedir.")
+
     # ══════════════════════════════════════════════════════
     # SİSTEM SAĞLIĞI (lokasyona özgü)
     # ══════════════════════════════════════════════════════

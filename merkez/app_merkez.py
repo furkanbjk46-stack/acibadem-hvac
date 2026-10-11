@@ -1868,6 +1868,7 @@ with sag:
     _oto_saglik = []
     _setler_lok = {}            # {lokasyon_id: setler} — lokasyon başına
     _varsayilan_konum = []      # profili girilmemiş (İstanbul'a düşen) lokasyonlar
+    _ozel_saatli = []           # genel kural yerine kendi geçiş saatiyle çalışanlar
     _oz_test_saglik = []
     _geri_bildirim_saglik = []
     try:
@@ -1897,6 +1898,11 @@ with sag:
                     # tarafta kalır), bu yüzden ana ekranda sayılır.
                     if (_o.get("konum") or {}).get("kaynak") == "varsayilan":
                         _varsayilan_konum.append(_lr["lokasyon_id"])
+                    # Geçiş saatleri lokasyona özel olabilir (ayarlar tablosunda
+                    # `oto_gunduz_saat_<lokasyon>` gibi). Hangi hastanenin genel
+                    # kuraldan ayrıldığını sahanın bildirdiği kuraldan öğreniriz.
+                    if (_o.get("kural") or {}).get("ozel"):
+                        _ozel_saatli.append(_lr["lokasyon_id"])
                 # Mekanik Zeka öz testi: lokasyon KENDİ ayarlarıyla testleri
                 # koşar (oz_test.py). Aynı kod farklı ayarla farklı karar verir;
                 # "bende yeşildi" yetmez, sahada da yeşil olmalı.
@@ -2217,9 +2223,21 @@ with sag:
                      "Content-Type":"application/json","Prefer":"resolution=merge-duplicates"}), timeout=4)
         st.rerun()
 
-    # ── Geçiş saatleri ayarı ──
+    # ── Geçiş saatleri ayarı (GENEL kural) ──
     # Setler yalnızca bu saatlerde gönderilir; buradan değiştirilebilir.
-    with st.expander(f"🕐 Geçiş saatleri — gündüz {_g_saat:02d}:00 · gece {_ge_saat:02d}:00"):
+    # Bir hastane farklı saatle çalışacaksa kendi lokasyon detayından
+    # ayarlanır — buradaki değer o lokasyonu etkilemez.
+    _saat_baslik = (f"🕐 Geçiş saatleri (genel) — gündüz {_g_saat:02d}:00 · "
+                    f"gece {_ge_saat:02d}:00")
+    if _ozel_saatli:
+        _saat_baslik += "  ·  %d lokasyon kendi saatiyle" % len(_ozel_saatli)
+    with st.expander(_saat_baslik):
+        if _ozel_saatli:
+            st.info("Kendi geçiş saatiyle çalışan lokasyonlar: %s — bu "
+                    "lokasyonlar aşağıdaki genel saatten ETKİLENMEZ, saatleri "
+                    "kendi lokasyon detaylarından değiştirilir."
+                    % ", ".join(HASTANELER.get(l, {}).get("kisa", l)
+                                for l in _ozel_saatli))
         _sc1, _sc2 = st.columns(2)
         with _sc1:
             _yeni_g = st.number_input("Gündüz başlangıcı", min_value=0, max_value=23,

@@ -98,31 +98,58 @@ def _istek(url, key, yol, veri=None, method="GET", timeout=10):
         return json.loads(govde) if govde.strip() else []
 
 
-def _kural_oku(url, key):
+def _kural_oku(url, key, lokasyon_id=None):
     """Merkezdeki oto-set kuralını TEK istekte okur. (kural | None, sebep) döner.
 
     Önceki sürüm önce "erişilebiliyor mu" diye bir istek atıyor, sonra her
     ayarı ayrı istekle okuyordu; ilk istek geçip sonrakilerden biri anlık
     ağ hatasına düşerse o ayar SESSİZCE varsayılana (05:00/22:00) dönüyordu.
     Artık üç ayar birlikte gelir; biri eksik ya da bozuksa kural YOK sayılır.
+
+    LOKASYONA ÖZEL KURAL (11.10.2026):
+    Anahtarlar tek takımdı; bir hastanenin geçiş saatini değiştirmek BÜTÜN
+    hastaneleri değiştiriyordu (poliklinik 07:00'de, yoğun bakım ağırlıklı
+    bina 05:00'te açılabilir). Artık önce `<anahtar>_<lokasyon>` aranır,
+    yoksa genel anahtara düşülür. Lokasyona özel anahtar VARSA ama bozuksa
+    genel değere düşülmez: yanlış saatte set göndermektense o tur beklenir.
     """
     try:
         d = _istek(url, key, "/rest/v1/ayarlar?key=like.oto_*&select=key,value")
     except Exception as e:
         return None, "ağ/izin hatası: %s" % e
     ayar = {r.get("key"): r.get("value") for r in (d or []) if isinstance(r, dict)}
-    eksik = [k for k in KURAL_ANAHTARLARI if ayar.get(k) in (None, "")]
+
+    ozel = []                      # bu lokasyon için ayrıca tanımlanmış anahtarlar
+
+    def al(anahtar):
+        if lokasyon_id:
+            o = "%s_%s" % (anahtar, lokasyon_id)
+            if ayar.get(o) not in (None, ""):
+                ozel.append(anahtar)
+                return ayar[o], o
+        return ayar.get(anahtar), anahtar
+
+    degerler, kaynaklar = {}, {}
+    for k in KURAL_ANAHTARLARI:
+        degerler[k], kaynaklar[k] = al(k)
+
+    eksik = [kaynaklar[k] for k in KURAL_ANAHTARLARI if degerler[k] in (None, "")]
     if eksik:
         return None, "eksik ayar: %s" % ", ".join(eksik)
     try:
-        gunduz = int(float(ayar["oto_gunduz_saat"]))
-        gece = int(float(ayar["oto_gece_saat"]))
+        gunduz = int(float(degerler["oto_gunduz_saat"]))
+        gece = int(float(degerler["oto_gece_saat"]))
     except (TypeError, ValueError):
-        return None, "saat ayarı sayı değil"
+        return None, "saat ayarı sayı değil (%s / %s)" % (
+            kaynaklar["oto_gunduz_saat"], kaynaklar["oto_gece_saat"])
     if not (0 <= gunduz <= 23 and 0 <= gece <= 23):
-        return None, "saat ayarı 0-23 dışında"
-    return {"aktif": str(ayar["oto_set_aktif"]).strip().lower() == "true",
-            "gunduz_saat": gunduz, "gece_saat": gece}, ""
+        return None, "saat ayarı 0-23 dışında (%s / %s)" % (
+            kaynaklar["oto_gunduz_saat"], kaynaklar["oto_gece_saat"])
+    return {"aktif": str(degerler["oto_set_aktif"]).strip().lower() == "true",
+            "gunduz_saat": gunduz, "gece_saat": gece,
+            # Hangi anahtarlar lokasyona özeldi — heartbeat'te bildirilir,
+            # merkez "bu hastane kendi saatiyle çalışıyor" diyebilsin.
+            "ozel": sorted(ozel)}, ""
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -158,6 +185,11 @@ def durum_yaz(d):
 # yazma yetkisi zaten var.
 # ══════════════════════════════════════════════════════════════════════════
 _SON_SONUC = {"zaman": None, "sonuc": "henuz_calismadi", "aciklama": ""}
+
+# Bu lokasyonun YÜRÜRLÜKTEKİ kuralı (son turda okunan). Heartbeat'te
+# bildirilir: geçiş saatleri artık lokasyona özel olabildiği için merkez
+# "hangi hastane hangi saatle çalışıyor" sorusunu ancak sahadan öğrenir.
+_SON_KURAL = {}
 
 # Kullanıcıya gösterilecek metinler
 SONUC_METIN = {
@@ -250,6 +282,14 @@ def durum_ozet():
         # hastanede KENDİ koordinatının tahminiyle verilir.
         "tahmin": {"ref": d.get("ref_sicaklik"), "bugun_max": d.get("bugun_max"),
                    "yarin_min": d.get("yarin_min")},
+        # Yürürlükteki kural (son turda okunan). "ozel", bu lokasyon için
+        # ayrıca tanımlanmış anahtarları listeler — merkez genel saatle mi
+        # kendi saatiyle mi çalıştığını buradan görür.
+        "kural": ({"aktif": _SON_KURAL.get("aktif"),
+                   "gunduz_saat": _SON_KURAL.get("gunduz_saat"),
+                   "gece_saat": _SON_KURAL.get("gece_saat"),
+                   "ozel": _SON_KURAL.get("ozel") or []}
+                  if _SON_KURAL else None),
         "son_yazim": d.get("zaman"),
         # Son geçişin sahadaki sonucu — "sonuc" her dakika "gecis_yok" ile
         # güncellendiği için geçişteki sorun burada KALICI tutulur.
@@ -551,10 +591,16 @@ def _kontrol_kilitsiz(sb_url, sb_key, lokasyon_id):
         # Kural okunamıyorsa (RLS izni yok / ağ yok / ayar eksik) hiçbir şey
         # yapılmaz. Varsayılan saatlerle çalışıp yanlış saatte set göndermektense
         # beklemek güvenlidir — bu fonksiyonun tek tetikleyicisi merkezdeki kuraldır.
-        kural, sebep = _kural_oku(sb_url, sb_key)
+        kural, sebep = _kural_oku(sb_url, sb_key, lokasyon_id)
         if kural is None:
+            _SON_KURAL.clear()
             _sonuc_yaz("kural_okunamadi", sebep)
             return
+
+        # Yürürlükteki kural her turda heartbeat'e taşınır: lokasyona özel
+        # saat tanımlıysa merkez bunu ancak sahadan öğrenebilir.
+        _SON_KURAL.clear()
+        _SON_KURAL.update(kural)
 
         if not kural["aktif"]:
             _sonuc_yaz("kapali")

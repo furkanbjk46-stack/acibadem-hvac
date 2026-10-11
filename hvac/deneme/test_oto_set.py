@@ -374,6 +374,87 @@ c("[kural] ag hatasinin sebebi aciklamada",
 c("[kural] kodda varsayilan saat sabiti KALMADI",
   not hasattr(oto_set, "GUNDUZ_VARSAYILAN") and not hasattr(oto_set, "GECE_VARSAYILAN"))
 
+# ── 11a2) LOKASYONA OZEL GECIS SAATLERI ──
+# 11.10.2026'ya kadar anahtarlar TEK takimdi: bir hastanenin saatini
+# degistirmek butun hastaneleri degistiriyordu. Artik once
+# `<anahtar>_<lokasyon>` aranir, yoksa genel anahtara dusulur.
+_ozel_ayar = dict(TEMEL, oto_gunduz_saat_maslak="7", oto_gece_saat_maslak="21")
+
+
+def kural_ile(ayarlar, lokasyon=None):
+    sb = Sahte(ayarlar)
+    _asil = oto_set._istek
+    oto_set._istek = sb.istek
+    try:
+        return oto_set._kural_oku("u", "k", lokasyon)
+    finally:
+        oto_set._istek = _asil
+
+
+_k, _s = kural_ile(_ozel_ayar, "maslak")
+c("[lok-saat] lokasyona ozel saat genel saatin YERINE gecer",
+  _k and (_k["gunduz_saat"], _k["gece_saat"]) == (7, 21), (_k, _s))
+c("[lok-saat] hangi anahtarin ozel oldugu bildirilir",
+  _k and _k["ozel"] == ["oto_gece_saat", "oto_gunduz_saat"], _k)
+_k, _s = kural_ile(_ozel_ayar, "altunizade")
+c("[lok-saat] baska lokasyon GENEL saatle calisir (ayrisma yok)",
+  _k and (_k["gunduz_saat"], _k["gece_saat"]) == (8, 23) and _k["ozel"] == [], (_k, _s))
+_k, _s = kural_ile(_ozel_ayar, None)
+c("[lok-saat] lokasyon verilmezse genel kural okunur",
+  _k and (_k["gunduz_saat"], _k["gece_saat"]) == (8, 23), (_k, _s))
+
+# Yalnizca BIR anahtar ozel olabilir; digeri genelden gelir
+_k, _s = kural_ile(dict(TEMEL, oto_gece_saat_maslak="21"), "maslak")
+c("[lok-saat] tek anahtar ozel olabilir (digeri genelden)",
+  _k and (_k["gunduz_saat"], _k["gece_saat"]) == (8, 21) and
+  _k["ozel"] == ["oto_gece_saat"], (_k, _s))
+
+# Bos deger = "tanimsiz" -> genel kurala doner (merkez boyle sifirliyor;
+# satir silmek RLS'e takilabiliyor)
+_k, _s = kural_ile(dict(TEMEL, oto_gunduz_saat_maslak="", oto_gece_saat_maslak=""),
+                   "maslak")
+c("[lok-saat] bos ozel deger genel kurala dondurur",
+  _k and (_k["gunduz_saat"], _k["gece_saat"]) == (8, 23) and _k["ozel"] == [], (_k, _s))
+
+# Ozel anahtar BOZUKSA genel degere SESSIZCE dusulmez — yanlis saatte set
+# gondermektense o tur beklenir (12.09 dersinin lokasyon basina hali).
+_k, _s = kural_ile(dict(TEMEL, oto_gece_saat_maslak="yirmi bir"), "maslak")
+c("[lok-saat] bozuk ozel saat genel degere DUSMEZ", _k is None, (_k, _s))
+c("[lok-saat] hata mesajinda hangi anahtar oldugu yazar",
+  "oto_gece_saat_maslak" in _s, _s)
+_k, _s = kural_ile(dict(TEMEL, oto_gunduz_saat_maslak="30"), "maslak")
+c("[lok-saat] aralik disi ozel saat kabul edilmez", _k is None, (_k, _s))
+
+# Lokasyona ozel ACIK/KAPALI
+_k, _s = kural_ile(dict(TEMEL, oto_set_aktif_maslak="false"), "maslak")
+c("[lok-saat] lokasyona ozel kapatma mumkun", _k and _k["aktif"] is False, (_k, _s))
+c("[lok-saat] genel acik kalir (diger lokasyon etkilenmez)",
+  kural_ile(dict(TEMEL, oto_set_aktif_maslak="false"), "izmir")[0]["aktif"] is True)
+
+# Gecis gercekten ozel saate gore yapilmali
+durum_sifirla()
+sb = Sahte(_ozel_ayar)
+calistir(sb, saat=7, lokasyon="maslak")
+c("[lok-saat] ozel saatte gecis YAPILIR (07:00)", len(sb.yazilan) == 11, len(sb.yazilan))
+durum_sifirla()
+sb = Sahte(_ozel_ayar)
+calistir(sb, saat=7, lokasyon="altunizade")
+c("[lok-saat] genel saatli lokasyon 07:00'de GECE kalir (gunduz 08:00)",
+  oto_set.durum_oku().get("donem") == "gece", oto_set.durum_oku().get("donem"))
+
+# Heartbeat yururlukteki kurali tasir
+durum_sifirla()
+calistir(Sahte(_ozel_ayar), saat=12, lokasyon="maslak")
+_hb = oto_set.durum_ozet().get("kural") or {}
+c("[lok-saat] heartbeat yururlukteki saatleri bildirir",
+  (_hb.get("gunduz_saat"), _hb.get("gece_saat")) == (7, 21), _hb)
+c("[lok-saat] heartbeat ozel anahtarlari bildirir", _hb.get("ozel"), _hb)
+durum_sifirla()
+calistir(Sahte(TEMEL), saat=12, lokasyon="altunizade")
+c("[lok-saat] genel kuralla calisan lokasyonda 'ozel' BOS",
+  (oto_set.durum_ozet().get("kural") or {}).get("ozel") == [],
+  oto_set.durum_ozet().get("kural"))
+
 # ── 11b2) KILIT: ayni anda ikinci tur hicbir sey yapmaz ──
 import kilit as _kilit
 durum_sifirla()

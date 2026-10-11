@@ -160,6 +160,34 @@ c("simulasyonda konumlar lokasyona gore farkli",
   len({(k["enlem"], k["boylam"]) for k in _konumlu.values()}))
 c("simulasyonda profili girilmemis bir kurulum da var (uyari gorunsun)",
   any(k.get("kaynak") == "varsayilan" for k in _konumlu.values()))
+# ── Lokasyona ozel gecis saatleri ────────────────────────────────────────
+# Saat anahtarlari tek takimdi; bir hastanenin saatini degistirmek hepsini
+# degistiriyordu. Artik lokasyon detayindan `oto_*_<lokasyon>` yazilir, bos
+# deger genel kurala dondurur.
+c("lokasyonun kendi saat ayari var",
+  '"oto_gunduz_saat_%s" % lok_id' in _metin and '"oto_gece_saat_%s" % lok_id' in _metin)
+c("genel kurala donus BOS deger yazar (satir silinmez, RLS)",
+  '_ayar_yaz("oto_gunduz_saat_%s" % lok_id, "")' in _metin)
+c("ozel saat mi genel kural mi oldugu yazar",
+  "bu lokasyona özel" in _metin and "genel kural" in _metin)
+c("sunum modunda kontroller pasif (ornek veriye yazilmaz)",
+  "Sunum modu — ayar yazılmaz" in _metin and "disabled=_demo" in _metin)
+c("ayni saat secilirse kaydedilemez", "_yg == _yge" in _metin)
+
+_mrk = open(os.path.join(BURASI, "app_merkez.py"), encoding="utf-8").read()
+c("ana ekran genel saati 'genel' diye isaretler",
+  "Geçiş saatleri (genel)" in _mrk)
+c("ana ekran kendi saatiyle calisan lokasyonlari sayar",
+  "_ozel_saatli" in _mrk and "kendi saatiyle" in _mrk)
+
+_kurallar = {k: (v.get("kural") or {}) for k, v in _lok_ozet.items() if v}
+c("simulasyonda lokasyonlar yururlukteki kurali bildirir",
+  all(isinstance(k.get("gunduz_saat"), int) for k in _kurallar.values()), _kurallar)
+c("simulasyonda kendi saatiyle calisan lokasyon var",
+  any(k.get("ozel") for k in _kurallar.values()))
+c("simulasyonda cogu lokasyon genel kuralda",
+  sum(1 for k in _kurallar.values() if not k.get("ozel")) > 10)
+
 c("simulasyonda tahmin referansi bildirilir",
   all(isinstance((v.get("tahmin") or {}).get("ref"), (int, float))
       for v in _lok_ozet.values() if v))
