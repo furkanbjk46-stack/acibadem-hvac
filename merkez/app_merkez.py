@@ -2596,6 +2596,11 @@ with sag:
     def _col_mean(df, col):
         return df[col].dropna().mean() if col in df.columns else float("nan")
 
+    # Eksik veri / sıfır ayrımı ve mekanik özet TEK KAYNAKTA: ai_veri.py
+    # (testi merkez/test_ai_analiz.py). Burada ikinci bir kopya tutulmaz.
+    import ai_veri as _aiv
+    _col_var = _aiv.kalem_var
+
     if not df_all.empty:
         _son30 = df_all[df_all["Tarih"] >= (pd.Timestamp.now() - pd.Timedelta(days=30))]
         for _lok_id, _info in HASTANELER.items():
@@ -2776,12 +2781,40 @@ with sag:
                         (df_all["Tarih"].dt.date == _dun_dt.date())
                     ]
 
+                def _mekanik_blok(lid, tam=True):
+                    """Lokasyonun MEKANİK/SAHA durumu (heartbeat: bakim_ozet).
+
+                    Enerji sayıları tek başına yanıltıcı: 'kojen verisi yok'
+                    ile 'kojen analizörü bağlantı hatası' aynı tabloda yan
+                    yana durunca kök neden görünür hale geliyor.
+                    """
+                    _ld = lok_dict.get(lid, {})
+                    _oz = _ld.get("bakim_ozet") or {}
+                    if isinstance(_oz, str):
+                        try:
+                            _oz = json.loads(_oz)
+                        except Exception:
+                            _oz = {}
+                    return "    Mekanik : " + " | ".join(
+                        _aiv.mekanik_ozet(_oz, tam=tam)) + "\n"
+
                 def _dun_blok_tam(lid, mv):
-                    """TIER 1 — tam detay bloğu."""
+                    """TIER 1 — tam detay bloğu.
+
+                    Kalem GİRİLMEMİŞSE "veri girilmedi" yazılır; satır sessizce
+                    atlanmaz. Atlandığında AI eksik veriyi "üretim durdu" diye
+                    okuyup arıza yorumu yapıyordu.
+                    """
                     _ddf = _dun_verisi(lid)
                     _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
                     b = f"【{mv['isim']}】{' ⚠️ANORMAL' if mv['anormal'] else ''}\n"
                     if not _ddf.empty:
+                        _v_kwh = _col_var(_ddf, "Toplam_Hastane_Tuketim_kWh")
+                        _v_koj = _col_var(_ddf, "Kojen_Uretim_kWh")
+                        _v_kgz = _col_var(_ddf, "Kojen_Dogalgaz_m3")
+                        _v_kaz = _col_var(_ddf, "Kazan_Dogalgaz_m3")
+                        _v_seb = _col_var(_ddf, "Sebeke_Tuketim_kWh")
+                        _v_su  = _col_var(_ddf, "Su_Tuketimi_m3")
                         dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
                         dkojgaz = _col_sum(_ddf, "Kojen_Dogalgaz_m3")
                         dgaz = _col_sum(_ddf, "Kazan_Dogalgaz_m3") + dkojgaz
@@ -2790,26 +2823,53 @@ with sag:
                         dsu  = _col_sum(_ddf, "Su_Tuketimi_m3")
                         dcs  = _col_mean(_ddf, "Chiller_Set_Temp_C")
                         dcl  = _col_mean(_ddf, "Chiller_Load_Percent")
+                        _eksik = []
                         b += f"  ▶ Dün ({_dun_str}):\n"
-                        if dkwh > 0:
+                        if _v_kwh:
                             b += f"    Elektrik : {dkwh:,.0f} kWh  ({round(dkwh/_m2v,2)} kWh/m²/gün)\n"
-                        if dkoj > 0:
+                        else:
+                            _eksik.append("elektrik")
+                        if _v_koj:
                             b += f"    Kojen    : {dkoj:,.0f} kWh"
-                            if dkojgaz > 0: b += f"  |  Verim: {round(dkoj/dkojgaz,2)} kWh/m³ (≥3.5)"
+                            if _v_kgz and dkojgaz > 0:
+                                b += f"  |  Verim: {round(dkoj/dkojgaz,2)} kWh/m³ (≥3.5)"
+                            elif not _v_kgz:
+                                b += "  |  kojen gazı girilmedi, verim hesaplanamadı"
                             b += "\n"
-                        if (dseb + dkoj) > 0:
+                        else:
+                            _eksik.append("kojen üretimi")
+                        # Şebeke oranı YALNIZCA iki kalem de girilmişse hesaplanır.
+                        # Kojen boşken payda=şebeke olup oran %100 çıkıyor ve
+                        # "kojen devre dışı" gibi okunuyordu.
+                        if _v_seb and _v_koj and (dseb + dkoj) > 0:
                             b += f"    Şebeke bağ.: %{round(dseb/(dseb+dkoj)*100,1)}  (<%30 ideal)\n"
-                        if dgaz > 0:
+                        elif _v_seb and not _v_koj:
+                            b += (f"    Şebeke    : {dseb:,.0f} kWh  "
+                                  f"(kojen verisi girilmediği için oran HESAPLANMADI)\n")
+                        elif not _v_seb:
+                            _eksik.append("şebeke tüketimi")
+                        if _v_kgz or _v_kaz:
                             b += f"    Doğalgaz : {dgaz:,.0f} m³"
-                            if dkwh > 0: b += f"  |  Genel verim: {round(dkwh/dgaz,2)} kWh/m³"
+                            if _v_kwh and dgaz > 0:
+                                b += f"  |  Genel verim: {round(dkwh/dgaz,2)} kWh/m³"
                             b += "\n"
-                        if dsu  > 0: b += f"    Su       : {dsu:,.0f} m³\n"
+                        else:
+                            _eksik.append("doğalgaz")
+                        if _v_su:
+                            b += f"    Su       : {dsu:,.0f} m³\n"
+                        else:
+                            _eksik.append("su")
                         if not np.isnan(dcs):
                             b += f"    Chiller  : {round(dcs,1)}°C"
-                            if not np.isnan(dcl): b += f"  |  Yük %{round(dcl,0):.0f}"
+                            if not np.isnan(dcl):
+                                b += f"  |  Yük %{round(dcl,0):.0f}"
                             b += "\n"
+                        if _eksik:
+                            b += ("    ⓘ VERİ GİRİLMEMİŞ KALEMLER: " + ", ".join(_eksik)
+                                  + " — bunlar SIFIR DEĞİL, veri yok.\n")
                     else:
-                        b += f"  ▶ Dün: veri yok\n"
+                        b += f"  ▶ Dün: bu güne ait hiç veri girilmemiş (arıza göstergesi DEĞİL)\n"
+                    b += _mekanik_blok(lid)
                     b += f"  ▷ 30g ort: {mv['kwh_m2']} kWh/m²/gün"
                     if mv["kojen_verim"]: b += f"  |  Kojen: {mv['kojen_verim']} kWh/m³"
                     if mv["sebeke_bag"]:  b += f"  |  Şebeke: %{mv['sebeke_bag']}"
@@ -2821,17 +2881,29 @@ with sag:
                     _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
                     flag = " ⚠️" if mv["anormal"] else ""
                     if not _ddf.empty:
+                        # "yok" = veri girilmedi, "-" = hesaplanamadı. İkisi de
+                        # SIFIR değildir; AI bunları arıza sanmamalı.
+                        _v_koj = _col_var(_ddf, "Kojen_Uretim_kWh")
+                        _v_seb = _col_var(_ddf, "Sebeke_Tuketim_kWh")
+                        _v_kwh = _col_var(_ddf, "Toplam_Hastane_Tuketim_kWh")
+                        _v_kgz = _col_var(_ddf, "Kojen_Dogalgaz_m3")
                         dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
                         dkojgaz = _col_sum(_ddf, "Kojen_Dogalgaz_m3")
                         dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
                         dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
-                        kv   = round(dkoj/dkojgaz,2) if dkojgaz>0 and dkoj>0 else "-"
-                        sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
-                        yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
+                        kv   = (round(dkoj/dkojgaz, 2) if (_v_koj and _v_kgz and dkojgaz > 0)
+                                else ("veri yok" if not (_v_koj and _v_kgz) else "-"))
+                        sb   = (f"%{round(dseb/(dseb+dkoj)*100,1)}"
+                                if (_v_seb and _v_koj and (dseb+dkoj) > 0)
+                                else ("kojen verisi yok" if _v_seb else "veri yok"))
+                        yo   = round(dkwh/_m2v, 2) if _v_kwh else "veri yok"
                         return (f"  {mv['isim']}{flag}: {yo} kWh/m²/gün  |  "
-                                f"Kojen verim {kv}  |  Şebeke {sb}  |  30g ort {mv['kwh_m2']}\n")
+                                f"Kojen verim {kv}  |  Şebeke {sb}  |  30g ort {mv['kwh_m2']}\n"
+                                + _mekanik_blok(lid, tam=False))
                     else:
-                        return f"  {mv['isim']}{flag}: veri yok  |  30g ort {mv['kwh_m2']} kWh/m²/gün\n"
+                        return (f"  {mv['isim']}{flag}: güne ait veri girilmemiş  |  "
+                                f"30g ort {mv['kwh_m2']} kWh/m²/gün\n"
+                                + _mekanik_blok(lid, tam=False))
 
                 def _dun_blok_mini(lid, mv):
                     """TIER 3 — minimal, sadece anahtar değerler."""
@@ -2839,33 +2911,52 @@ with sag:
                     _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
                     flag = "⚠️" if mv["anormal"] else "✓"
                     if not _ddf.empty:
+                        _v_koj = _col_var(_ddf, "Kojen_Uretim_kWh")
+                        _v_seb = _col_var(_ddf, "Sebeke_Tuketim_kWh")
+                        _v_kwh = _col_var(_ddf, "Toplam_Hastane_Tuketim_kWh")
+                        _v_kgz = _col_var(_ddf, "Kojen_Dogalgaz_m3")
                         dkwh = _col_sum(_ddf, "Toplam_Hastane_Tuketim_kWh")
                         dkojgaz = _col_sum(_ddf, "Kojen_Dogalgaz_m3")
                         dkoj = _col_sum(_ddf, "Kojen_Uretim_kWh")
                         dseb = _col_sum(_ddf, "Sebeke_Tuketim_kWh")
-                        kv   = round(dkoj/dkojgaz,2) if dkojgaz>0 and dkoj>0 else "-"
-                        sb   = f"%{round(dseb/(dseb+dkoj)*100,1)}" if (dseb+dkoj)>0 else "-"
-                        yo   = round(dkwh/_m2v,2) if dkwh>0 else "-"
-                        return f"  [{flag}] {mv['isim']}: {yo} kWh/m²  Koj:{kv}  Şeb:{sb}\n"
+                        # "vy" = veri yok (sıfır DEĞİL)
+                        kv   = (round(dkoj/dkojgaz, 2)
+                                if (_v_koj and _v_kgz and dkojgaz > 0) else "vy")
+                        sb   = (f"%{round(dseb/(dseb+dkoj)*100,1)}"
+                                if (_v_seb and _v_koj and (dseb+dkoj) > 0) else "vy")
+                        yo   = round(dkwh/_m2v, 2) if _v_kwh else "vy"
+                        _mek = _mekanik_blok(lid, tam=False).strip()
+                        _mek = _mek.replace("Mekanik :", "").strip()
+                        return (f"  [{flag}] {mv['isim']}: {yo} kWh/m²  Koj:{kv}  Şeb:{sb}"
+                                f"  — {_mek}\n")
                     else:
-                        return f"  [?] {mv['isim']}: veri yok\n"
+                        return f"  [?] {mv['isim']}: güne ait veri girilmemiş\n"
 
                 # ── Referans satırı (tüm tier'larda ortak) ──
                 _ref = (
                     "Referans: Yoğunluk 0.5–1.5 kWh/m²/gün | "
-                    "Kojen ≥3.5 kWh/m³ | Şebeke <%30 | Gaz verimi ≥5.0 kWh/m³\n\n"
+                    "Kojen ≥3.5 kWh/m³ | Şebeke <%30 | Gaz verimi ≥5.0 kWh/m³\n"
+                    # 11.10.2026: kojen verisi girilmediği gün model "kojen
+                    # arızalı, derhal kontrol edin" dedi. Eksik veri bir arıza
+                    # kanıtı değildir; arıza bilgisi MEKANİK satırından gelir.
+                    "VERİ KURALI: 'veri yok / veri girilmedi / vy' yazan kalem SIFIR DEĞİLDİR, "
+                    "ölçüm girilmemiştir. Bu kalemler için arıza, duruş ya da bakım yorumu YAPMA; "
+                    "yalnızca 'veri girişi eksik, kontrol edilsin' de. Arıza/bakım/bağlantı "
+                    "iddiasını SADECE 'Mekanik' satırındaki bilgilere dayandır.\n\n"
                 )
 
                 # ════════════════ TIER 1: 1-3 lokasyon ════════════════
                 if _lok_n <= 3:
                     _lok_bloklari = [_dun_blok_tam(lid, mv) for lid, mv in _sirali]
-                    _max_tok = 500
+                    _max_tok = 600
                     _yonerge = (
                         "Türkçe, mühendis dilinde:\n"
-                        "1. Dünün enerji dengesi — kojen/şebeke/gaz üçgeni\n"
-                        "2. En kritik anomali ve kök nedeni\n"
+                        "1. Dünün enerji dengesi — kojen/şebeke/gaz üçgeni "
+                        "(eksik kalem varsa önce onu söyle)\n"
+                        "2. En kritik anomali ve kök nedeni — enerji sayısıyla "
+                        "mekanik durumu (arıza, veri alarmı, oto-set) BİRLİKTE yorumla\n"
                         "3. Bugün yapılacak 1 somut aksiyon\n"
-                        "Maksimum 180 kelime."
+                        "Maksimum 200 kelime."
                     )
 
                 # ════════════════ TIER 2: 4-7 lokasyon ════════════════
