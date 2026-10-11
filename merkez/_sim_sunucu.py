@@ -402,6 +402,28 @@ def veri_uret():
         {"key": "m2_degerler", "value": json.dumps({l: m for l, _, m in LOKASYONLAR})},
     ]
 
+    # ── Oto-set gecis kayitlari ──
+    # Sahada lokasyon her donem gecisinde buraya yazar; panel "son gecisler"
+    # sayisini ve gecis kayitlari penceresini bundan uretir. Sunumda bos
+    # kalinca pencere hic gorunmuyordu.
+    oto_log = []
+    _simdi = datetime.now(IST)
+    for _g in range(5):
+        _gun = _simdi - timedelta(days=_g)
+        for _tip, _eski, _yeni, _sayi in (
+                ("chiller", "sicak", "serin", 5),
+                ("diger", "isitma", "sogutma", 6)):
+            oto_log.append({
+                "tip": _tip if _g % 2 == 0 else _tip + "_yenileme",
+                "eski_mod": _eski, "yeni_mod": _yeni,
+                "tahmin_ort": round(24.0 - _g * 1.4, 1),
+                "komut_sayisi": _sayi,
+                "lokasyonlar": "maslak",
+                "created_at": _gun.replace(hour=5, minute=0, second=0,
+                                           microsecond=0).isoformat(),
+            })
+    oto_log.sort(key=lambda k: k["created_at"], reverse=True)
+
     return {
         "lokasyonlar": lokasyonlar,
         "energy_data": energy,
@@ -409,7 +431,7 @@ def veri_uret():
         "lokasyon_noktalar": noktalar,
         "bildirimler": bildirimler,
         "ayarlar": ayarlar,
-        "oto_mod_log": [],
+        "oto_mod_log": oto_log,
         "komutlar": [],
         "guncellemeler": [],
         "hvac_summary": [],

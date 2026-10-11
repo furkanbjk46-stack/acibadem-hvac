@@ -178,7 +178,19 @@ _mrk = open(os.path.join(BURASI, "app_merkez.py"), encoding="utf-8").read()
 c("ana ekran genel saati 'genel' diye isaretler",
   "Geçiş saatleri (genel)" in _mrk)
 c("ana ekran kendi saatiyle calisan lokasyonlari sayar",
-  "_ozel_saatli" in _mrk and "kendi saatiyle" in _mrk)
+  "_ozel_saatli" in _mrk and "%d özel" in _mrk
+  and "Kendi geçiş saatiyle çalışan lokasyonlar" in _mrk)
+# Gecis saatleri ve gecis kayitlari asagi dogru liste acmak yerine modal
+# pencerede acilir: kart boyu sabit kalsin, yanindaki kartlarla hizasi bozulmasin.
+c("gecis saatleri pop-up olarak acilir", "@st.dialog" in _mrk
+  and "_oto_saat_popup" in _mrk)
+c("gecis kayitlari da pop-up", "_oto_liste_popup" in _mrk)
+c("pop-up acikken otomatik yenileme durur",
+  'not st.session_state.get("_oto_popup")' in _mrk)
+c("senaryo anahtari Apple tarzi (acik yesil / kapali kirmizi)",
+  "st-key-oto_switch_on" in _mrk and "#30d158" in _mrk and "#ff453a" in _mrk)
+c("kart basliginin altindaki durum metni kaldirildi (bilgi anahtarin renginde)",
+  "_alt_txt" not in _mrk and "_st_txt" not in _mrk)
 
 _kurallar = {k: (v.get("kural") or {}) for k, v in _lok_ozet.items() if v}
 c("simulasyonda lokasyonlar yururlukteki kurali bildirir",

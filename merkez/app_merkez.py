@@ -27,8 +27,12 @@ from streamlit_autorefresh import st_autorefresh
 #   - Karşılaştırma sayfasında (demo VE canlı): detay penceresi açıkken 10 sn'lik
 #     yenileme pencereyi kapatıyordu. Sayfa dönem toplamlarını gösteriyor,
 #     10 saniyede bir tazelenmesine zaten gerek yok.
+#   - OTO SET pop-up'ı açıkken: modal pencere yenilemede kapanıyor, saat
+#     girilirken kullanıcının elinden kayıyordu. Pop-up açıkken yenileme
+#     durur (kapatınca tekrar başlar).
 if ("bakim" not in st.query_params and st.session_state.get("giris_ok")
-        and not st.session_state.get("detay_ozet")):
+        and not st.session_state.get("detay_ozet")
+        and not st.session_state.get("_oto_popup")):
     st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
 # ============ CSS ============
@@ -1767,6 +1771,10 @@ with sag:
             d = _oajson.loads(r.read())
             _oto_aktif_su = (d[0]["value"] == "true") if d else True
     except Exception: pass
+    # Sunumda örnek veri sunucusuna yazılmaz; anahtarın yine de çalıştığı
+    # görülsün diye durum oturumda tutulur.
+    if _demo_modu() and "_demo_oto_aktif" in st.session_state:
+        _oto_aktif_su = bool(st.session_state["_demo_oto_aktif"])
     # DURUM ARTIK LOKASYONDAN GELİYOR.
     # Oto-set kararı lokasyon PC'sinde veriliyor ve durumu lokasyon bazlı
     # anahtara yazıyor: oto_set_son_kontrol_<lokasyon>. En güncel olanı
@@ -1843,10 +1851,10 @@ with sag:
     except Exception: pass
 
     # Toggle değerleri
-    _sw_cls  = "on" if _oto_aktif_su else "off"
-    _st_renk = "#0ca30c" if _oto_aktif_su else "#d03b3b"
-    _st_txt  = "AKTİF" if _oto_aktif_su else "DEVRE DIŞI"
-    _alt_txt = "Senaryo çalışıyor" if _oto_aktif_su else "BACnet komut gönderilmiyor"
+    # Durum metni kartın başlığından kaldırıldı (bilgi anahtarın renginde);
+    # yalnızca anahtarın ipucu metni için tutulur.
+    _sw_ipucu = ("Senaryo AKTİF — kapatmak için tıkla" if _oto_aktif_su
+                 else "Senaryo KAPALI — BACnet komut gönderilmiyor, açmak için tıkla")
 
     # OTO SET durum değerleri
     _os_zaman   = _os.get("zaman","")[:16].replace("T"," ")
@@ -2199,24 +2207,65 @@ with sag:
         width:100% !important;
         max-width:100%;
     }
-    /* Kabın içindeki expander kendi kartını çizmesin — tek çerçeve kalsın */
-    .st-key-oto_set_karti div[data-testid="stExpander"] details {
-        background:#f1f0ed;
-        border:1px solid rgba(24,26,30,0.10);
-        border-radius:10px;
-        box-shadow:none;
-    }
-    .st-key-oto_set_karti div[data-testid="stExpander"] summary {
-        font-size:11px;
-    }
-    /* Düğmeler eşit yükseklikte ve aynı hizada */
-    .st-key-oto_set_karti .stButton > button {
-        border-radius:10px;
-        min-height:34px;
-        font-size:11px;
-        padding:4px 10px;
-    }
     .st-key-oto_set_karti [data-testid="stVerticalBlock"] { gap:8px; }
+    /* Kart dar bir sütunda duruyor (≈300 px): Streamlit bu genişlikte
+       sütunları alt alta yığıyor ve anahtar rozetin yanından kayıyordu.
+       Yan yana kalsınlar. */
+    .st-key-oto_set_karti [data-testid="stHorizontalBlock"] {
+        flex-wrap:nowrap !important;
+        gap:6px !important;
+    }
+    .st-key-oto_set_karti [data-testid="stHorizontalBlock"] > div {
+        min-width:0 !important;
+    }
+
+    /* ── Senaryo anahtarı (Apple tarzı) ──
+       Açıkken yeşil, kapalıyken kırmızı; topuz tarafa kayar. Durum iki ayrı
+       key ile ayrılır (st-key-...on / ...off), böylece renk ve topuz konumu
+       CSS'te kalır, metin gerektirmez. */
+    .st-key-oto_switch_on button, .st-key-oto_switch_off button {
+        width:54px !important; min-width:54px !important;
+        height:30px !important; min-height:30px !important;
+        border-radius:999px !important; border:none !important;
+        padding:0 !important; position:relative; overflow:hidden;
+        box-shadow:inset 0 1px 3px rgba(20,22,26,.25) !important;
+        transition:background .2s ease;
+    }
+    .st-key-oto_switch_on button  { background:#30d158 !important; }
+    .st-key-oto_switch_off button { background:#ff453a !important; }
+    .st-key-oto_switch_on button *, .st-key-oto_switch_off button * {
+        font-size:0 !important; opacity:0;
+    }
+    .st-key-oto_switch_on button::after, .st-key-oto_switch_off button::after {
+        content:""; position:absolute; top:3px; width:24px; height:24px;
+        border-radius:50%; background:#fff;
+        box-shadow:0 1px 3px rgba(20,22,26,.35);
+        transition:left .2s ease;
+    }
+    .st-key-oto_switch_on button::after  { left:27px; }
+    .st-key-oto_switch_off button::after { left:3px; }
+    .st-key-oto_switch_on button:hover, .st-key-oto_switch_off button:hover {
+        filter:brightness(1.06);
+    }
+
+    /* ── Rozet görünümlü düğmeler (GÜNDÜZ kartıyla aynı ölçü) ── */
+    .st-key-oto_saat_kart button, .st-key-oto_liste_kart button {
+        width:100% !important;
+        height:44px !important; min-height:44px !important;
+        overflow:hidden;
+        border-radius:8px !important;
+        border:1px solid rgba(24,26,30,0.18) !important;
+        background:rgba(19,50,115,0.04) !important;
+        padding:4px 10px !important;
+        line-height:1.3;
+    }
+    .st-key-oto_saat_kart button p, .st-key-oto_liste_kart button p {
+        font-size:11px; font-weight:700; color:#133273; margin:0;
+    }
+    .st-key-oto_saat_kart button:hover, .st-key-oto_liste_kart button:hover {
+        border-color:rgba(19,50,115,0.45) !important;
+        background:rgba(19,50,115,0.07) !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -2226,30 +2275,81 @@ with sag:
         st.markdown(
             f"<div>"
             # ── Satır 1: Başlık ──
-            # flex-wrap: dar sütunda rozet satır sonuna sarkıp kırpılmasın
-            f"<div style='display:flex;align-items:center;justify-content:space-between;"
-            f"flex-wrap:wrap;gap:6px;margin-bottom:10px;'>"
-            f"<div>"
-            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:9px;font-weight:700;"
-            f"color:#133273;letter-spacing:2px;margin-bottom:2px;'>🤖 OTO SET</div>"
-            f"<div style='font-size:11px;font-weight:700;color:{_st_renk};'>{_st_txt}"
-            f"<span style='font-size:9px;font-weight:400;color:#46536b;margin-left:6px;'>{_alt_txt}</span></div>"
-            f"</div>"
-            # ── ANLIK DÖNEM rozeti (sistem şu an hangi durumda) ──
-            f"<div style='text-align:right;'>"
-            f"<div style='background:rgba(19,50,115,0.04);border:1px solid {_sd_renk}55;"
-            f"border-radius:6px;padding:4px 10px;'>"
-            f"<div style='font-size:11px;font-weight:700;color:{_sd_renk};'>{_sd_ikon} {_sd_ad}</div>"
-            f"<div style='font-size:8px;color:#46536b;margin-top:1px;'>"
-            f"{_g_saat:02d}:00 gündüz · {_ge_saat:02d}:00 gece</div>"
-            f"</div>"
-            f"<div style='font-size:8px;color:#46536b;margin-top:3px;'>"
-            f"sıradaki geçiş {_sonraki}</div>"
-            f"</div>"
-            f"</div>"
+            # ── Satır 1: KART BAŞLIĞI (yalnız başlık) ──
+            # Durum metni ("AKTİF · Senaryo çalışıyor") kaldırıldı: aynı bilgiyi
+            # başlığın altındaki anahtar rengiyle veriyoruz.
+            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;"
+            f"font-size:15px;font-weight:800;color:#133273;letter-spacing:1.5px;"
+            f"margin-bottom:10px;'>🤖 OTO SET</div>"
             # ── Ayırıcı ──
-            f"<div style='border-top:1px solid rgba(24,26,30,0.10);margin-bottom:10px;'></div>"
-            # ── Satır 2: Sıcaklık + zaman ──
+            f"<div style='border-top:1px solid rgba(24,26,30,0.10);'></div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+        # ── Satır 2: Anahtar + dönem rozeti + iki kart düğme ──────────────
+        # Senaryo anahtarı GÜNDÜZ rozetinin yanında duruyor (durumu okurken
+        # aynı yerde açıp kapatmak için). Geçiş saatleri ve geçiş listesi de
+        # aynı ölçüde kart düğmelerdir; aşağı doğru liste açmak yerine
+        # POP-UP (st.dialog) açarlar — kart boyu sabit kalır.
+        _k_sw, _k_rozet = st.columns([0.5, 1.5], vertical_alignment="center")
+
+        with _k_sw:
+            _sw_key = "oto_switch_on" if _oto_aktif_su else "oto_switch_off"
+            if st.button(" ", key=_sw_key, help=_sw_ipucu):
+                _yeni_deger = "false" if _oto_aktif_su else "true"
+                if _demo_modu():
+                    # Sunumda örnek veri sunucusuna yazılmaz; anahtar yine de
+                    # çalışsın diye durum oturumda tutulur.
+                    st.session_state["_demo_oto_aktif"] = (_yeni_deger == "true")
+                else:
+                    try:
+                        _pay = _oajson.dumps({"key": "oto_set_aktif",
+                                              "value": _yeni_deger}).encode()
+                        _oaur.urlopen(_oaur.Request(
+                            url+"/rest/v1/ayarlar", data=_pay, method="POST",
+                            headers={"apikey": key, "Authorization": "Bearer "+key,
+                                     "Content-Type": "application/json",
+                                     "Prefer": "resolution=merge-duplicates"}), timeout=4)
+                    except Exception as _e:
+                        st.session_state["_oto_switch_hata"] = str(_e)
+                st.rerun()
+
+        with _k_rozet:
+            st.markdown(
+                f"<div style='background:rgba(19,50,115,0.04);border:1px solid {_sd_renk}55;"
+                f"border-radius:8px;padding:5px 10px;min-height:44px;box-sizing:border-box;'>"
+                f"<div style='font-size:11px;font-weight:700;color:{_sd_renk};'>"
+                f"{_sd_ikon} {_sd_ad}</div>"
+                f"<div style='font-size:9px;color:#46536b;margin-top:1px;'>"
+                f"sıradaki geçiş {_sonraki}</div>"
+                f"</div>", unsafe_allow_html=True)
+
+        # Rozetle AYNI ölçüdeki iki kart düğme, hemen altında yan yana.
+        _k_saat, _k_liste = st.columns(2)
+
+        with _k_saat:
+            # Kısa tutulur: düğme rozetle aynı yükseklikte kalmalı
+            _saat_alt = "%02d:00 · %02d:00" % (_g_saat, _ge_saat)
+            if _ozel_saatli:
+                _saat_alt += " · %d özel" % len(_ozel_saatli)
+            if st.button("🕐 Geçiş saatleri  \n%s" % _saat_alt, key="oto_saat_kart"):
+                st.session_state["_oto_popup"] = "saat"
+                st.rerun()
+
+        with _k_liste:
+            if st.button("📋 Geçiş kayıtları  \n%s" % ("%d kayıt" % len(_ml_data)
+                                                      if _ml_data else "kayıt yok"),
+                         key="oto_liste_kart", disabled=not _ml_data):
+                st.session_state["_oto_popup"] = "liste"
+                st.rerun()
+
+        if st.session_state.pop("_oto_switch_hata", None):
+            st.error("Senaryo anahtarı yazılamadı — ağ/izin hatası.")
+
+        st.markdown(
+            f"<div>"
+            # ── Satır 3: Sıcaklık + zaman ──
             f"<div style='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;'>"
             f"<div style='display:flex;align-items:baseline;gap:6px;'>"
             f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:18px;font-weight:900;"
@@ -2271,50 +2371,35 @@ with sag:
             unsafe_allow_html=True
         )
 
-        # ── Kumanda satırları ──
-        # Kart dar bir sütunda (≈270 px) duruyor: düğmeler yan yana
-        # konulduğunda etiketler iki-üç satıra kırılıyor. Bu yüzden alt alta
-        # ve TAM GENİŞLİKTE dururlar; simetriyi ortak kenar boşluğu, eşit
-        # yükseklik ve aynı köşe yarıçapı sağlar.
-        _btn_lbl = "🟢 Senaryo AKTİF — Kapat" if _oto_aktif_su else "🔴 Senaryo KAPALI — Aç"
-        _btn_type = "secondary" if _oto_aktif_su else "primary"
-        if st.button(_btn_lbl, key="oto_set_toggle_btn",
-                     use_container_width=True, type=_btn_type):
-            _yeni_deger = "false" if _oto_aktif_su else "true"
-            _pay = _oajson.dumps({"key": "oto_set_aktif", "value": _yeni_deger}).encode()
-            _oaur.urlopen(_oaur.Request(url+"/rest/v1/ayarlar", data=_pay, method="POST",
-                headers={"apikey": key, "Authorization": "Bearer "+key,
-                         "Content-Type": "application/json",
-                         "Prefer": "resolution=merge-duplicates"}), timeout=4)
-            st.rerun()
-
-        # ── Geçiş saatleri ayarı (GENEL kural) ──
-        # Setler yalnızca bu saatlerde gönderilir; buradan değiştirilebilir.
-        # Bir hastane farklı saatle çalışacaksa kendi lokasyon detayından
-        # ayarlanır — buradaki değer o lokasyonu etkilemez.
-        _saat_baslik = (f"🕐 Geçiş saatleri (genel) — gündüz {_g_saat:02d}:00 · "
-                        f"gece {_ge_saat:02d}:00")
+    # ── POP-UP'LAR ───────────────────────────────────────────────────────
+    # Geçiş saatleri ve geçiş kayıtları kartın altında aşağı doğru açılıyordu;
+    # liste uzadıkça kart büyüyor ve yanındaki kartlarla hizası bozuluyordu.
+    # Artık ikisi de modal pencerede açılır, kart boyu sabit kalır.
+    @st.dialog("🕐 Geçiş saatleri (genel)")
+    def _oto_saat_popup():
         if _ozel_saatli:
-            _saat_baslik += "  ·  %d lokasyon kendi saatiyle" % len(_ozel_saatli)
-        with st.expander(_saat_baslik):
-            if _ozel_saatli:
-                st.info("Kendi geçiş saatiyle çalışan lokasyonlar: %s — bu "
-                        "lokasyonlar aşağıdaki genel saatten ETKİLENMEZ, saatleri "
-                        "kendi lokasyon detaylarından değiştirilir."
-                        % ", ".join(HASTANELER.get(l, {}).get("kisa", l)
-                                    for l in _ozel_saatli))
-            _sc1, _sc2 = st.columns(2)
-            with _sc1:
-                _yeni_g = st.number_input("Gündüz başlangıcı", min_value=0, max_value=23,
-                                          value=int(_g_saat), step=1, key="oto_gunduz_saat_in",
-                                          help="Gündüz setleri bu saatte gönderilir")
-            with _sc2:
-                _yeni_ge = st.number_input("Gece başlangıcı", min_value=0, max_value=23,
-                                           value=int(_ge_saat), step=1, key="oto_gece_saat_in",
-                                           help="Gece setleri bu saatte gönderilir")
-            if _yeni_g == _yeni_ge:
-                st.warning("Gündüz ve gece saati aynı olamaz.")
-            elif st.button("Saatleri Kaydet", key="oto_saat_kaydet", use_container_width=True):
+            st.info("Kendi geçiş saatiyle çalışan lokasyonlar: %s — bu "
+                    "lokasyonlar aşağıdaki genel saatten ETKİLENMEZ, saatleri "
+                    "kendi lokasyon detaylarından değiştirilir."
+                    % ", ".join(HASTANELER.get(l, {}).get("kisa", l)
+                                for l in _ozel_saatli))
+        _sc1, _sc2 = st.columns(2)
+        with _sc1:
+            _yeni_g = st.number_input("Gündüz başlangıcı", min_value=0, max_value=23,
+                                      value=int(_g_saat), step=1, key="oto_gunduz_saat_in",
+                                      help="Gündüz setleri bu saatte gönderilir")
+        with _sc2:
+            _yeni_ge = st.number_input("Gece başlangıcı", min_value=0, max_value=23,
+                                       value=int(_ge_saat), step=1, key="oto_gece_saat_in",
+                                       help="Gece setleri bu saatte gönderilir")
+        st.caption("Setler yalnızca bu saatlerde gönderilir. Gün ortasında hava "
+                   "tahmini değişse bile komut gitmez, bir sonraki geçişte uygulanır.")
+        if _yeni_g == _yeni_ge:
+            st.warning("Gündüz ve gece saati aynı olamaz.")
+        _p1, _p2 = st.columns(2)
+        with _p1:
+            if st.button("Kaydet", key="oto_saat_kaydet", use_container_width=True,
+                         type="primary", disabled=(_yeni_g == _yeni_ge or _demo_modu())):
                 for _k, _v in (("oto_gunduz_saat", _yeni_g), ("oto_gece_saat", _yeni_ge)):
                     _oaur.urlopen(_oaur.Request(
                         url + "/rest/v1/ayarlar",
@@ -2323,52 +2408,51 @@ with sag:
                         headers={"apikey": key, "Authorization": "Bearer " + key,
                                  "Content-Type": "application/json",
                                  "Prefer": "resolution=merge-duplicates"}), timeout=4)
-                st.success(f"Kaydedildi — gündüz {int(_yeni_g):02d}:00, gece {int(_yeni_ge):02d}:00")
+                st.session_state["_oto_popup"] = None
                 st.rerun()
-            st.caption("Setler yalnızca bu saatlerde gönderilir. Gün ortasında hava "
-                       "tahmini değişse bile komut gitmez, bir sonraki geçişte uygulanır.")
-
-        # ── Geçiş listesi (aynı kartın içinde, gömme panel) ──
-        # Detay listesi session_state ile açılır (autorefresh'e dayanıklı).
-        if _ml_data:
-            _liste_acik = st.session_state.get("gecis_listesi_acik", False)
-            if st.button("🔼 Geçişleri gizle" if _liste_acik
-                         else "📋 Tüm geçişleri göster",
-                         key="gecis_toggle_btn", use_container_width=True):
-                st.session_state["gecis_listesi_acik"] = not _liste_acik
+        with _p2:
+            if st.button("Kapat", key="oto_saat_kapat", use_container_width=True):
+                st.session_state["_oto_popup"] = None
                 st.rerun()
+        if _demo_modu():
+            st.caption("Sunum modu — ayar yazılmaz.")
 
-        if _ml_data and st.session_state.get("gecis_listesi_acik"):
-            _gecis_satirlari = ""
-            for _mk in _ml_data[:20]:
-                _mk_z  = _mk["created_at"][:16].replace("T", " ")
-                _mk_tip = str(_mk.get("tip", ""))
-                _mk_ti  = "🧊" if _mk_tip.startswith("chiller") else "🌀"
-                # Mod değişmeyen (dönem geçişi) kayıtlar ayırt edilsin
-                _mk_et  = " <span style='color:#46536b;'>· yenileme</span>" \
-                          if _mk_tip.endswith("_yenileme") else ""
-                try:
-                    _mk_ok = _eski_yeni_ikon(_mk["eski_mod"], _mk["yeni_mod"])
-                except Exception:
-                    _mk_ok = "↔️"
-                _gecis_satirlari += (
-                    f"<div style='font-size:10px;padding:4px 0;"
-                    f"border-bottom:1px solid rgba(24,26,30,0.10);'>"
-                    f"<span style='color:#46536b;'>{_mk_z}</span>"
-                    f" &nbsp;{_mk_ti} {_mk_ok}&nbsp; "
-                    f"<b style='color:#24324d;'>{_mk['eski_mod']}</b>"
-                    f" → <b style='color:#2a78d6;'>{_mk['yeni_mod']}</b>"
-                    f" &nbsp;<span style='color:#c98500;'>{_mk['tahmin_ort']}°C</span>"
-                    f" &nbsp;<span style='color:rgb(12,163,12);'>{_mk['komut_sayisi']} komut</span>"
-                    f"{_mk_et}"
-                    f"</div>"
-                )
-            st.markdown(
-                f"<div style='background:#f1f0ed;border:1px solid rgba(24,26,30,0.10);"
-                f"border-radius:10px;padding:6px 12px;'>"
-                f"{_gecis_satirlari}</div>",
-                unsafe_allow_html=True
+    @st.dialog("📋 Geçiş kayıtları", width="large")
+    def _oto_liste_popup():
+        _gecis_satirlari = ""
+        for _mk in _ml_data[:20]:
+            _mk_z  = _mk["created_at"][:16].replace("T", " ")
+            _mk_tip = str(_mk.get("tip", ""))
+            _mk_ti  = "🧊" if _mk_tip.startswith("chiller") else "🌀"
+            # Mod değişmeyen (dönem geçişi) kayıtlar ayırt edilsin
+            _mk_et  = " <span style='color:#46536b;'>· yenileme</span>" \
+                      if _mk_tip.endswith("_yenileme") else ""
+            try:
+                _mk_ok = _eski_yeni_ikon(_mk["eski_mod"], _mk["yeni_mod"])
+            except Exception:
+                _mk_ok = "↔️"
+            _gecis_satirlari += (
+                f"<div style='font-size:11px;padding:5px 0;"
+                f"border-bottom:1px solid rgba(24,26,30,0.10);'>"
+                f"<span style='color:#46536b;'>{_mk_z}</span>"
+                f" &nbsp;{_mk_ti} {_mk_ok}&nbsp; "
+                f"<b style='color:#24324d;'>{_mk['eski_mod']}</b>"
+                f" → <b style='color:#2a78d6;'>{_mk['yeni_mod']}</b>"
+                f" &nbsp;<span style='color:#c98500;'>{_mk['tahmin_ort']}°C</span>"
+                f" &nbsp;<span style='color:rgb(12,163,12);'>{_mk['komut_sayisi']} komut</span>"
+                f"{_mk_et}"
+                f"</div>"
             )
+        st.markdown(_gecis_satirlari or "<i>Kayıt yok</i>", unsafe_allow_html=True)
+        if st.button("Kapat", key="oto_liste_kapat", use_container_width=True):
+            st.session_state["_oto_popup"] = None
+            st.rerun()
+
+    _acik_popup = st.session_state.get("_oto_popup")
+    if _acik_popup == "saat":
+        _oto_saat_popup()
+    elif _acik_popup == "liste" and _ml_data:
+        _oto_liste_popup()
 
     # ── Chiller Set & Dış Hava Kartı ──
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
