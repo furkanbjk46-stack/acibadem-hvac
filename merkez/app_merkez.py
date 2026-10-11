@@ -71,32 +71,12 @@ header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
 .block-container { padding: 0.5rem 1.5rem 1rem 1.5rem !important; max-width: 100% !important; }
 
-/* Harita iframe tam ekran (masaüstü).
-   Seçici ARTIK sütun sırasına bağlı değil: telefonda Streamlit sütunları alt
-   alta yığıyor, "nth-child(2)" tutmuyor ve harita 300 px'lik varsayılan
-   iframe genişliğinde, sayfanın altında kaybolmuş halde kalıyordu
-   (sahada "harita mobilde açılmıyor" olarak görüldü). */
-.st-key-harita_kabi iframe {
+/* Harita iframe tam ekran */
+[data-testid="column"]:nth-child(2) iframe {
     position: fixed !important;
     top: 0 !important; left: 0 !important;
     width: 100vw !important; height: 100vh !important;
     z-index: 1 !important; border: none !important;
-}
-/* Telefon/tablet: harita tam ekran DEĞİL, akışın içinde normal bir blok */
-@media (max-width: 900px) {
-    .st-key-harita_kabi iframe {
-        position: static !important;
-        /* Sütun telefonda ekrandan geniş kalabiliyor; harita yine de EKRANA
-           sığsın, yatay kaydırma gerektirmesin. */
-        width: calc(100vw - 32px) !important;
-        max-width: 100% !important;
-        height: 46vh !important;
-        min-height: 300px !important;
-        z-index: auto !important;
-        border-radius: 14px !important;
-        border: 1px solid rgba(24,26,30,0.10) !important;
-    }
-    .st-key-harita_kabi { margin-bottom: 12px; }
 }
 
 /* Tüm yazılar — lokasyon detay sayfası (st.container(key="detay_gecis_katmani") içinde inline exec ile çalışıyor) kendi renklerini korusun */
@@ -1594,10 +1574,7 @@ hospitals.forEach(function(h) {{
     st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
     import base64, streamlit.components.v1 as _cv1
     _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
-    # Kaba isim verilir: biçimlendirme sütun sırasına değil bu kaba bağlanır
-    # (telefonda sütunlar yığılınca seçici tutmuyordu — bkz. CSS).
-    with st.container(key="harita_kabi"):
-        _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
+    _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
@@ -2319,15 +2296,10 @@ with sag:
     /* Kart dar bir sütunda duruyor (≈300 px): Streamlit bu genişlikte
        sütunları alt alta yığıyor ve anahtar rozetin yanından kayıyordu.
        Yan yana kalsınlar. */
-    /* Yan yana duruş yalnızca geniş ekranda zorlanır: telefonda nowrap,
-       satırın en az ~700 px olmasını dayatıp BÜTÜN sayfayı ekrandan taşırıyor
-       ve harita dahil her şey yatay kaydırmaya düşüyordu. */
-    @media (min-width: 901px) {
-        .st-key-oto_set_karti [data-testid="stHorizontalBlock"] {
-            flex-wrap:nowrap !important;
-        }
+    .st-key-oto_set_karti [data-testid="stHorizontalBlock"] {
+        flex-wrap:nowrap !important;
+        gap:6px !important;
     }
-    .st-key-oto_set_karti [data-testid="stHorizontalBlock"] { gap:6px !important; }
     .st-key-oto_set_karti [data-testid="stHorizontalBlock"] > div {
         min-width:0 !important;
         /* Sütunların içerik yükseklikleri farklı (rozet 52, saat kartı
