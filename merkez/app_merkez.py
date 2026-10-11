@@ -2179,6 +2179,22 @@ with sag:
         f"<div style='{_saha_kaydir}'>" + "".join(_saha_satirlar) + "</div></div>"
     )
 
+    # Sağ kolon kartlarının ORTAK başlığı — tek kaynak. Dört kart aynı
+    # punto, aynı renk, aynı ayırıcı çizgiyi kullanır; her kart kendi
+    # başlığını yazdığında puntolar (8 px / 15 px) tutmuyordu.
+    def _kart_basligi(metin, sag=""):
+        return (
+            "<div style='display:flex;align-items:center;"
+            "justify-content:space-between;gap:8px;margin-bottom:10px;'>"
+            "<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;"
+            "font-size:15px;font-weight:800;color:#133273;letter-spacing:1.5px;'>"
+            + metin + "</span>"
+            + (f"<span style='font-size:9px;color:#46536b;white-space:nowrap;'>{sag}</span>"
+               if sag else "")
+            + "</div>"
+            "<div style='border-top:1px solid rgba(24,26,30,0.10);'></div>"
+        )
+
     # ── OTO SET — TEK KART ───────────────────────────────────────────────
     # Panel üç ayrı parçaya dağılmıştı: HTML kart, altında serbest duran
     # düğme, altında expander, altında bir düğme daha. Her biri kendi
@@ -2187,32 +2203,76 @@ with sag:
     # çerçevesizdir ve düğmeler eşit iki sütunda simetrik durur.
     st.markdown("""
     <style>
-    .st-key-oto_set_karti {
+    /* ── SYNAPSE KART KALIBI ──
+       Sağ kolondaki dört kart (oto set, dış hava, enerji zekası, sabah
+       analizi) AYNI kalıbı kullanır: çerçeve kabın kendisindedir, içerik
+       çerçevesizdir. Her kart kendi HTML'inde ayrı kutu çizdiğinde
+       kenarlıklar, köşe yarıçapları ve başlık boyutları tutmuyordu. */
+    .st-key-oto_set_karti,
+    .st-key-dis_hava_karti,
+    .st-key-enerji_zekasi_karti,
+    .st-key-sabah_analiz_karti {
         background:#fafaf8;
         border:1px solid rgba(24,26,30,0.10);
         border-radius:14px;
         padding:0;
         overflow:hidden;
+        margin-bottom:10px;
         box-shadow:0 1px 1px rgba(20,22,26,.05),
                    0 10px 22px -12px rgba(20,22,26,.22),
                    inset 0 1px 0 rgba(255,255,255,.95);
     }
     /* Streamlit öğe kapsayıcıları genişliği parent'tan MİRAS alıyor; kaba
        padding verilirse içerik taşıyor. Bu yüzden boşluk çocuklara verilir. */
-    .st-key-oto_set_karti > div {
+    .st-key-oto_set_karti > div,
+    .st-key-dis_hava_karti > div,
+    .st-key-enerji_zekasi_karti > div,
+    .st-key-sabah_analiz_karti > div {
         box-sizing:border-box;
         padding-left:16px;
         padding-right:16px;
     }
-    .st-key-oto_set_karti > div:first-child { padding-top:14px; }
-    .st-key-oto_set_karti > div:last-child  { padding-bottom:12px; }
+    .st-key-oto_set_karti > div:first-child,
+    .st-key-dis_hava_karti > div:first-child,
+    .st-key-enerji_zekasi_karti > div:first-child,
+    .st-key-sabah_analiz_karti > div:first-child { padding-top:14px; }
+    .st-key-oto_set_karti > div:last-child,
+    .st-key-dis_hava_karti > div:last-child,
+    .st-key-enerji_zekasi_karti > div:last-child { padding-bottom:12px; }
+    .st-key-sabah_analiz_karti > div:last-child  { padding-bottom:14px; }
     /* İç öğeler de genişliği miras aldığı için padding'in içinde kalmaz;
        %100'e sabitlenince kutunun içine oturur (sağ kenar taşması gider). */
     .st-key-oto_set_karti > div > *,
     .st-key-oto_set_karti [data-testid="stMarkdown"],
-    .st-key-oto_set_karti [data-testid="stMarkdownContainer"] {
+    .st-key-oto_set_karti [data-testid="stMarkdownContainer"],
+    .st-key-dis_hava_karti > div > *,
+    .st-key-dis_hava_karti [data-testid="stMarkdown"],
+    .st-key-dis_hava_karti [data-testid="stMarkdownContainer"],
+    .st-key-enerji_zekasi_karti > div > *,
+    .st-key-enerji_zekasi_karti [data-testid="stMarkdown"],
+    .st-key-enerji_zekasi_karti [data-testid="stMarkdownContainer"],
+    .st-key-sabah_analiz_karti > div > *,
+    .st-key-sabah_analiz_karti [data-testid="stMarkdown"],
+    .st-key-sabah_analiz_karti [data-testid="stMarkdownContainer"] {
         width:100% !important;
         max-width:100%;
+    }
+    /* Kart içindeki düğmeler: OTO SET'teki ölçüyle aynı */
+    .st-key-sabah_analiz_karti .stButton { display:flex; line-height:0; }
+    .st-key-sabah_analiz_karti .stButton > button {
+        display:flex !important;
+        width:100% !important;
+        min-height:34px !important;
+        border-radius:10px !important;
+        border:1px solid rgba(24,26,30,0.18) !important;
+        background:rgba(19,50,115,0.04) !important;
+    }
+    .st-key-sabah_analiz_karti .stButton > button p {
+        font-size:11px; font-weight:700; color:#133273; margin:0;
+    }
+    .st-key-sabah_analiz_karti .stButton > button:hover {
+        border-color:rgba(19,50,115,0.45) !important;
+        background:rgba(19,50,115,0.07) !important;
     }
     .st-key-oto_set_karti [data-testid="stVerticalBlock"] { gap:8px; }
     /* Kart dar bir sütunda duruyor (≈300 px): Streamlit bu genişlikte
@@ -2305,14 +2365,10 @@ with sag:
         st.markdown(
             f"<div>"
             # ── Satır 1: Başlık ──
-            # ── Satır 1: KART BAŞLIĞI (yalnız başlık) ──
+            # ── Satır 1: KART BAŞLIĞI (ortak kalıp) ──
             # Durum metni ("AKTİF · Senaryo çalışıyor") kaldırıldı: aynı bilgiyi
             # başlığın altındaki anahtar rengiyle veriyoruz.
-            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;"
-            f"font-size:15px;font-weight:800;color:#133273;letter-spacing:1.5px;"
-            f"margin-bottom:10px;'>🤖 OTO SET</div>"
-            # ── Ayırıcı ──
-            f"<div style='border-top:1px solid rgba(24,26,30,0.10);'></div>"
+            + _kart_basligi("🤖 OTO SET") +
             f"</div>",
             unsafe_allow_html=True
         )
@@ -2567,21 +2623,19 @@ with sag:
         )
 
     if dis_hava_val is not None or min_val is not None or _liste_ic:
-        st.markdown(
-            f"<div style='background:#fafaf8;"
-            f"border:1px solid rgba(24,26,30,0.10);border-radius:8px;padding:14px 16px;'>"
-            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;font-weight:700;"
-            f"color:#133273;letter-spacing:2px;margin-bottom:10px;'>🌡️ DIŞ HAVA & CHİLLER SET</div>"
-            f"{_ch_ic}"
-            f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
-            f"{_liste_ic}"
-            f"</div>",
-            unsafe_allow_html=True
-        )
+        with st.container(key="dis_hava_karti"):
+            st.markdown(
+                "<div>"
+                + _kart_basligi("🌡️ DIŞ HAVA & CHİLLER SET")
+                + "<div style='margin-top:10px;'></div>"
+                + _ch_ic
+                + f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
+                + _liste_ic
+                + "</div>",
+                unsafe_allow_html=True
+            )
     else:
         st.markdown("<div class='alrt-y'>⚠️ Chiller set verisi bulunamadı</div>", unsafe_allow_html=True)
-
-    st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
     # ════════════════════════════════
     # 🤖 ENERJİ ZEKASI — AI Modülü
@@ -2696,16 +2750,16 @@ with sag:
                 f"⚡ {_anormal_n} lokasyon normal dışı: {_anormal_isimler}</div>"
             )
 
-        st.markdown(
-            f"<div style='background:#fafaf8;"
-            f"border:1px solid rgba(24,26,30,0.10);border-radius:8px;padding:14px 16px;'>"
-            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;font-weight:700;"
-            f"color:#133273;letter-spacing:2px;margin-bottom:10px;'>🤖 ENERJİ ZEKASI</div>"
-            f"{_ez_satirlar}"
-            f"{_anormal_html}"
-            f"</div>",
-            unsafe_allow_html=True
-        )
+        with st.container(key="enerji_zekasi_karti"):
+            st.markdown(
+                "<div>"
+                + _kart_basligi("🤖 ENERJİ ZEKASI")
+                + "<div style='margin-top:6px;'></div>"
+                + _ez_satirlar
+                + _anormal_html
+                + "</div>",
+                unsafe_allow_html=True
+            )
 
         # ── AI yetki kontrolü ──
         _api_key = _gizli_oku("anthropic", "api_key")
@@ -3141,52 +3195,28 @@ with sag:
                 _ai_temiz = _re.sub(r"^---+$", "", _ai_temiz, flags=_re.MULTILINE)
                 _ai_temiz = _ai_temiz.strip()
 
-                # Kart başlığı — sol başlık sağ buton
-                st.markdown("""<style>
-                div[data-testid="stButton"] > button[kind="secondary"] {
-                    background: rgba(19,50,115,0.06) !important;
-                    border: 1px solid rgba(19,50,115,0.2) !important;
-                    color:#133273 !important;
-                    font-size: 9px !important;
-                    padding: 2px 10px !important;
-                    border-radius: 6px !important;
-                    font-family: 'Inter', sans-serif !important;
-                    letter-spacing: 0.5px !important;
-                    height: 26px !important;
-                    line-height: 1 !important;
-                }
-                div[data-testid="stButton"] > button[kind="secondary"]:hover {
-                    background: rgba(19,50,115,0.12) !important;
-                    border-color:#133273 !important;
-                    color: #2a78d6 !important;
-                }
-                </style>""", unsafe_allow_html=True)
-
-                # Kart dış çerçevesi — üst kısım
-                st.markdown(
-                    f"<div style='background:#fafaf8;"
-                    f"border:1px solid rgba(24,26,30,0.10);border-radius:8px;margin-top:6px;overflow:hidden;'>"
-                    f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                    f"padding:10px 14px;border-bottom:1px solid rgba(24,26,30,0.10);'>"
-                    f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;font-weight:700;"
-                    f"color:#133273;letter-spacing:2px;'>🤖 OTOMATİK SABAH ANALİZİ</span>"
-                    f"<span style='font-size:8px;color:#46536b;'>🕐 {_ai_zaman_str}</span>"
-                    f"</div>"
-                    f"<div style='padding:12px 14px;font-size:11px;color:#24324d;"
-                    f"line-height:1.7;max-height:220px;overflow-y:auto;"
-                    f"scrollbar-width:thin;scrollbar-color:#133273 transparent;'>"
-                    + _ai_temiz.replace("\n", "<br>") +
-                    f"</div>"
-                    f"<div style='padding:6px 14px 10px;border-top:1px solid rgba(24,26,30,0.10);'></div>"
-                    f"</div>",
-                    unsafe_allow_html=True)
-
-                # Buton kartın altındaki boşluğa yerleşiyor — negatif margin ile karta yapışır
-                st.markdown("<div style='margin-top:-32px;padding:0 14px 10px;'>", unsafe_allow_html=True)
-                if st.button("🔄 Yeniden Analiz Et", key="btn_ai_yenile", use_container_width=True):
-                    _sb_metin = None
-                    st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
+                # Diğer kartlarla AYNI kalıp: çerçeve kabın kendisinde,
+                # başlık ortak biçimde, düğme kartın İÇİNDE. Önceden kart
+                # kendi kutusunu çiziyor, düğme negatif margin ile dışarıdan
+                # yapıştırılıyordu.
+                with st.container(key="sabah_analiz_karti"):
+                    st.markdown(
+                        "<div>"
+                        + _kart_basligi("🤖 OTOMATİK SABAH ANALİZİ",
+                                        ("🕐 " + _ai_zaman_str) if _ai_zaman_str else "")
+                        + "<div style='margin-top:10px;font-size:11px;color:#24324d;"
+                          "line-height:1.7;max-height:220px;overflow-y:auto;"
+                          "scrollbar-width:thin;scrollbar-color:#133273 transparent;'>"
+                        + _ai_temiz.replace("\n", "<br>")
+                        + "</div>"
+                          "<div style='border-top:1px solid rgba(24,26,30,0.10);"
+                          "margin:10px 0 2px;'></div>"
+                          "</div>",
+                        unsafe_allow_html=True)
+                    if st.button("🔄 Yeniden Analiz Et", key="btn_ai_yenile",
+                                 use_container_width=True):
+                        _sb_metin = None
+                        st.rerun()
 
     else:
         st.markdown(
