@@ -216,6 +216,22 @@ c("kartlar ayri kutu cizmiyor (eski 8 px cerceve kalmadi)",
   "border-radius:8px;padding:14px 16px" not in _mrk)
 c("yeniden analiz dugmesi kartin icinde (negatif margin hilesi yok)",
   "margin-top:-32px" not in _mrk)
+c("kartlarin son satiri dibe yapismasin (alt bosluk)",
+  "padding-bottom:18px" in _mrk and "_KART_ALT" in _mrk)
+
+# ── Mobil ──
+# Harita bicimlendirmesi SUTUN SIRASINA bagliydi; telefonda sutunlar
+# yigilinca secici tutmuyor, harita 300 px'lik varsayilan iframe genisliginde
+# sayfanin altinda kayboluyordu ("harita mobilden acilmiyor").
+c("harita kendi kabinda (sutun sirasina bagli degil)",
+  'st.container(key="harita_kabi")' in _mrk and ".st-key-harita_kabi iframe" in _mrk)
+c("eski nth-child secicisi kaldirildi",
+  '[data-testid="column"]:nth-child(2) iframe' not in _mrk)
+c("telefonda harita akis icinde ve ekrana sigar",
+  "@media (max-width: 900px)" in _mrk and "calc(100vw - 32px)" in _mrk)
+c("yan yana diziliş yalnizca genis ekranda zorlanir (telefonda sayfa tasmasin)",
+  "@media (min-width: 901px)" in _mrk
+  and "flex-wrap:nowrap" in _mrk.split("@media (min-width: 901px)")[1][:260])
 
 c("zaman damgasi gecis saatleri kartinin altinda",
   "_os_zaman" in _mrk.split('key="oto_saat_kart"')[1][:600])

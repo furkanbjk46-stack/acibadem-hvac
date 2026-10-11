@@ -71,12 +71,32 @@ header[data-testid="stHeader"] button    { display: none !important; }
 [data-testid="stToolbar"]      { display: none !important; }
 .block-container { padding: 0.5rem 1.5rem 1rem 1.5rem !important; max-width: 100% !important; }
 
-/* Harita iframe tam ekran */
-[data-testid="column"]:nth-child(2) iframe {
+/* Harita iframe tam ekran (masaüstü).
+   Seçici ARTIK sütun sırasına bağlı değil: telefonda Streamlit sütunları alt
+   alta yığıyor, "nth-child(2)" tutmuyor ve harita 300 px'lik varsayılan
+   iframe genişliğinde, sayfanın altında kaybolmuş halde kalıyordu
+   (sahada "harita mobilde açılmıyor" olarak görüldü). */
+.st-key-harita_kabi iframe {
     position: fixed !important;
     top: 0 !important; left: 0 !important;
     width: 100vw !important; height: 100vh !important;
     z-index: 1 !important; border: none !important;
+}
+/* Telefon/tablet: harita tam ekran DEĞİL, akışın içinde normal bir blok */
+@media (max-width: 900px) {
+    .st-key-harita_kabi iframe {
+        position: static !important;
+        /* Sütun telefonda ekrandan geniş kalabiliyor; harita yine de EKRANA
+           sığsın, yatay kaydırma gerektirmesin. */
+        width: calc(100vw - 32px) !important;
+        max-width: 100% !important;
+        height: 46vh !important;
+        min-height: 300px !important;
+        z-index: auto !important;
+        border-radius: 14px !important;
+        border: 1px solid rgba(24,26,30,0.10) !important;
+    }
+    .st-key-harita_kabi { margin-bottom: 12px; }
 }
 
 /* Tüm yazılar — lokasyon detay sayfası (st.container(key="detay_gecis_katmani") içinde inline exec ile çalışıyor) kendi renklerini korusun */
@@ -1574,7 +1594,10 @@ hospitals.forEach(function(h) {{
     st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
     import base64, streamlit.components.v1 as _cv1
     _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
-    _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
+    # Kaba isim verilir: biçimlendirme sütun sırasına değil bu kaba bağlanır
+    # (telefonda sütunlar yığılınca seçici tutmuyordu — bkz. CSS).
+    with st.container(key="harita_kabi"):
+        _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
@@ -2182,6 +2205,11 @@ with sag:
     # Sağ kolon kartlarının ORTAK başlığı — tek kaynak. Dört kart aynı
     # punto, aynı renk, aynı ayırıcı çizgiyi kullanır; her kart kendi
     # başlığını yazdığında puntolar (8 px / 15 px) tutmuyordu.
+    # Kartın SON satırı alt kenara yapışıyordu: Streamlit öğe kapsayıcısının
+    # yüksekliği içindeki markdown'dan küçük hesaplanıyor ve kabın
+    # padding-bottom'u yutuluyor. Boşluk içeriğin sonuna açıkça eklenir.
+    _KART_ALT = "<div style='height:10px;'></div>"
+
     def _kart_basligi(metin, sag=""):
         return (
             "<div style='display:flex;align-items:center;"
@@ -2216,8 +2244,13 @@ with sag:
         border:1px solid rgba(24,26,30,0.10);
         border-radius:14px;
         padding:0;
-        overflow:hidden;
-        margin-bottom:10px;
+        margin-bottom:12px;
+        /* overflow:hidden YOK: Streamlit kaba ve öğe kapsayıcısına hesaplanmış
+           yükseklik veriyor, verdiğimiz alt boşluk bu yüksekliğin dışında
+           kalıyor ve kırpılıyordu — son satır kart dibine yapışık görünürdü.
+           Köşeler zaten kabın kendi arka planıyla yuvarlanıyor. */
+        height:auto !important;
+        min-height:fit-content !important;
         box-shadow:0 1px 1px rgba(20,22,26,.05),
                    0 10px 22px -12px rgba(20,22,26,.22),
                    inset 0 1px 0 rgba(255,255,255,.95);
@@ -2231,6 +2264,12 @@ with sag:
         box-sizing:border-box;
         padding-left:16px;
         padding-right:16px;
+        /* Kap flex sütun: çocuk FLEX ITEM olduğu için kabın hesaplanmış
+           yüksekliğine SIKIŞIYOR (shrink) ve verdiğimiz alt boşluk eksiliyordu
+           — son satır kart dibine yapışık görünürdü. Çocuk küçülmesin, kap da
+           içeriğe göre büyüsün. */
+        height:auto !important;
+        flex-shrink:0 !important;
     }
     .st-key-oto_set_karti > div:first-child,
     .st-key-dis_hava_karti > div:first-child,
@@ -2238,8 +2277,8 @@ with sag:
     .st-key-sabah_analiz_karti > div:first-child { padding-top:14px; }
     .st-key-oto_set_karti > div:last-child,
     .st-key-dis_hava_karti > div:last-child,
-    .st-key-enerji_zekasi_karti > div:last-child { padding-bottom:12px; }
-    .st-key-sabah_analiz_karti > div:last-child  { padding-bottom:14px; }
+    .st-key-enerji_zekasi_karti > div:last-child,
+    .st-key-sabah_analiz_karti > div:last-child { padding-bottom:18px; }
     /* İç öğeler de genişliği miras aldığı için padding'in içinde kalmaz;
        %100'e sabitlenince kutunun içine oturur (sağ kenar taşması gider). */
     .st-key-oto_set_karti > div > *,
@@ -2258,7 +2297,9 @@ with sag:
         max-width:100%;
     }
     /* Kart içindeki düğmeler: OTO SET'teki ölçüyle aynı */
-    .st-key-sabah_analiz_karti .stButton { display:flex; line-height:0; }
+    .st-key-sabah_analiz_karti .stButton {
+        display:flex; line-height:0; margin-bottom:8px;
+    }
     .st-key-sabah_analiz_karti .stButton > button {
         display:flex !important;
         width:100% !important;
@@ -2278,10 +2319,15 @@ with sag:
     /* Kart dar bir sütunda duruyor (≈300 px): Streamlit bu genişlikte
        sütunları alt alta yığıyor ve anahtar rozetin yanından kayıyordu.
        Yan yana kalsınlar. */
-    .st-key-oto_set_karti [data-testid="stHorizontalBlock"] {
-        flex-wrap:nowrap !important;
-        gap:6px !important;
+    /* Yan yana duruş yalnızca geniş ekranda zorlanır: telefonda nowrap,
+       satırın en az ~700 px olmasını dayatıp BÜTÜN sayfayı ekrandan taşırıyor
+       ve harita dahil her şey yatay kaydırmaya düşüyordu. */
+    @media (min-width: 901px) {
+        .st-key-oto_set_karti [data-testid="stHorizontalBlock"] {
+            flex-wrap:nowrap !important;
+        }
     }
+    .st-key-oto_set_karti [data-testid="stHorizontalBlock"] { gap:6px !important; }
     .st-key-oto_set_karti [data-testid="stHorizontalBlock"] > div {
         min-width:0 !important;
         /* Sütunların içerik yükseklikleri farklı (rozet 52, saat kartı
@@ -2460,6 +2506,7 @@ with sag:
             # ── Satır 4: Saha durumu kartı + son geçiş ──
             f"{_saglik_html}"
             f"{_son_gecis_html}"
+            + _KART_ALT +
             f"</div>",
             unsafe_allow_html=True
         )
@@ -2631,6 +2678,7 @@ with sag:
                 + _ch_ic
                 + f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
                 + _liste_ic
+                + _KART_ALT
                 + "</div>",
                 unsafe_allow_html=True
             )
@@ -2757,6 +2805,7 @@ with sag:
                 + "<div style='margin-top:6px;'></div>"
                 + _ez_satirlar
                 + _anormal_html
+                + _KART_ALT
                 + "</div>",
                 unsafe_allow_html=True
             )
