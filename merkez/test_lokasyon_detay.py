@@ -191,6 +191,20 @@ c("senaryo anahtari Apple tarzi (acik yesil / kapali kirmizi)",
   "st-key-oto_switch_on" in _mrk and "#30d158" in _mrk and "#ff453a" in _mrk)
 c("kart basliginin altindaki durum metni kaldirildi (bilgi anahtarin renginde)",
   "_alt_txt" not in _mrk and "_st_txt" not in _mrk)
+# Kart sadelestirildi: SETLER ozet seridi ve "N komut gonderildi" satiri
+# kaldirildi; ayrisma/konum uyarilari SAHA DURUMU listesine tasindi.
+c("SETLER ozet seridi karttan kaldirildi", "_set_html" not in _mrk)
+c("komut sayisi satiri karttan kaldirildi", "_cnt_html" not in _mrk)
+c("set ayrismasi SAHA DURUMU listesine dusuyor",
+  "_saha_satirlar.insert" in _mrk and "farklı set" in _mrk)
+c("varsayilan konum uyarisi da listede", "varsayılan konumda" in _mrk)
+c("saha durumu kendi kartinda", "_saglik_html" in _mrk
+  and "SAHA DURUMU" in _mrk and "border-radius:10px" in _mrk)
+c("5 satirdan sonrasi kaydirmaya girer",
+  "_SAHA_GORUNUR = 5" in _mrk and "_SAHA_SATIR_PX" in _mrk
+  and "overflow-y:auto" in _mrk)
+c("zaman damgasi gecis saatleri kartinin altinda",
+  "_os_zaman" in _mrk.split('key="oto_saat_kart"')[1][:600])
 
 _kurallar = {k: (v.get("kural") or {}) for k, v in _lok_ozet.items() if v}
 c("simulasyonda lokasyonlar yururlukteki kurali bildirir",

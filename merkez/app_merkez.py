@@ -1970,8 +1970,8 @@ with sag:
                   "farkli": "lokasyona göre farklı"}.get(_os_ch, _os_ch))
     _dig_label  = {"sogutma": "☀️ Soğutma", "isitma": "❄️ Isıtma",
                    "farkli": "lokasyona göre farklı"}.get(_os_dig, _os_dig)
-    _cnt_html   = (f"<span style='color:#c98500;font-weight:700;'>⚡ {_os_cnt} komut gönderildi</span>"
-                   ) if _os_cnt > 0 else "<span style='color:#46536b;'>Mod değişmedi</span>"
+    # NOT: "⚡ N komut gönderildi" satırı karttan KALDIRILDI (11.10.2026) —
+    # aynı bilgi geçiş kayıtları penceresinde komut sayısıyla zaten duruyor.
 
     # Lokasyon sağlık satırları: her lokasyonun son turda ne yaptığı.
     # Normal bekleme yeşil/soluk, gerçek bir engel (tahmin yok, kural
@@ -2018,37 +2018,23 @@ with sag:
             _sorunlu.append((_l, _o, _kod, _metin))
     _normal_sayi = len(_oto_saglik) - len(_sorunlu)
 
-    _saglik_html = ""
+    # SAHA DURUMU artık kendi kartında ve LİSTE olarak gösterilir; 5 satırdan
+    # sonrası kaydırmaya girer (kart boyu sabit kalsın, uzun liste kartı
+    # 700 px'e çıkarmasın).
+    _SAHA_SATIR_PX = 30
+    _SAHA_GORUNUR = 5
+    _saha_satirlar = []        # (html, ) — sıralı
     for _lid, _o, _sn, _mt in sorted(_sorunlu, key=lambda x: x[0]):
         _ad = HASTANELER.get(_lid, {}).get("kisa", _lid)
         _rk = _SAGLIK_RENK.get(_sn, "#c98500")
         _zm = str(_o.get("zaman") or "")[11:16]
-        _saglik_html += (
-            f"<div style='font-size:9px;padding:2px 0;'>"
+        _saha_satirlar.append(
+            f"<div style='font-size:9px;padding:3px 0;line-height:1.35;"
+            f"border-bottom:1px solid rgba(24,26,30,0.07);'>"
             f"<span style='color:{_rk};'>●</span> "
             f"<b style='color:#24324d;'>{_ad}</b> "
             f"<span style='color:#46536b;'>{_zm}</span><br>"
             f"<span style='color:{_rk};'>{_mt}</span></div>"
-        )
-    if _oto_saglik:
-        _ozet_satir = (
-            f"<div style='font-size:9px;color:rgb(12,163,12);padding:2px 0;'>"
-            f"✓ {_normal_sayi} lokasyon normal</div>" if _normal_sayi else ""
-        )
-        _saglik_html = (
-            f"<div style='border-top:1px solid rgba(24,26,30,0.10);"
-            f"margin-top:6px;padding-top:6px;max-height:150px;overflow-y:auto;'>"
-            f"<div style='font-size:7px;letter-spacing:1px;"
-            f"color:#133273;padding-bottom:3px;'>SAHA DURUMU</div>"
-            f"{_ozet_satir}{_saglik_html}</div>"
-        )
-    else:
-        # Hiç lokasyon bildirim yapmıyorsa bu da bir bilgidir: ya yama
-        # inmemiştir ya da süreç çalışmıyordur. Sessiz kalmak yanıltır.
-        _saglik_html = (
-            f"<div style='border-top:1px solid rgba(24,26,30,0.10);"
-            f"margin-top:6px;padding-top:6px;font-size:9px;color:#c98500;'>"
-            f"⚠ Lokasyonlardan oto-set durumu gelmiyor</div>"
         )
 
     # NOT: Mekanik Zeka öz testi ve öneri geri bildirimi göstergeleri buradan
@@ -2061,10 +2047,11 @@ with sag:
         _oz_kalan = [(l, o) for l, o in _oz_test_saglik if o.get("durum") != "GECTI"]
         for _lid, _o in sorted(_oz_kalan, key=lambda x: x[0]):
             _ad = HASTANELER.get(_lid, {}).get("kisa", _lid)
-            _saglik_html += (
-                f"<div style='font-size:9px;padding:2px 0;'>"
+            _saha_satirlar.append(
+                f"<div style='font-size:9px;padding:3px 0;line-height:1.35;"
+                f"border-bottom:1px solid rgba(24,26,30,0.07);'>"
                 f"<span style='color:#d03b3b;'>●</span> "
-                f"<b style='color:#24324d;'>{_ad}</b> "
+                f"<b style='color:#24324d;'>{_ad}</b><br>"
                 f"<span style='color:#d03b3b;'>Mekanik Zeka öz testi KALDI "
                 f"({_o.get('gecen')}/{_o.get('toplam')}) — detay sayfasına bakın</span></div>"
             )
@@ -2128,48 +2115,68 @@ with sag:
     else:
         _ayni_sayi, _farkli_lok = 0, []
 
-    # Ana ekran ÖZET gösterir: değerler lokasyon detayındadır.
-    # Her hastane kendi dış havasına ve kendi işletme tablosuna göre
-    # çalışıyor; 20 lokasyonda tek bir set değeri göstermek bilgi değil
-    # gürültü olur. Burada yalnızca "ayrışma var mı" sorusu cevaplanır.
-    if not _setler_lok:
-        _set_ozet, _set_renk = "Setler lokasyonlardan bildirilmedi", "#46536b"
-    elif _farkli_lok:
-        _set_ozet = ("%d lokasyon aynı · %d farklı set (%s%s)"
-                     % (_ayni_sayi, len(_farkli_lok),
-                        ", ".join(HASTANELER.get(l, {}).get("kisa", l)
-                                  for l in _farkli_lok[:3]),
-                        "…" if len(_farkli_lok) > 3 else ""))
-        _set_renk = "#8a5a00"
-    else:
-        _set_ozet = ("%d lokasyonda setler aynı" % _ayni_sayi if _ayni_sayi > 1
-                     else "Setler bildiriliyor")
-        _set_renk = "#0ca30c"
+    # SETLER özet şeridi karttan KALDIRILDI (11.10.2026): ayrışma bilgisi ve
+    # konum uyarısı birer DURUM satırıdır, yerleri SAHA DURUMU listesidir.
+    # Değerler zaten lokasyon detayında.
+    if _farkli_lok:
+        _saha_satirlar.insert(0,
+            f"<div style='font-size:9px;padding:3px 0;line-height:1.35;"
+            f"border-bottom:1px solid rgba(24,26,30,0.07);'>"
+            f"<span style='color:#8a5a00;'>●</span> "
+            f"<b style='color:#24324d;'>SETLER</b><br>"
+            f"<span style='color:#8a5a00;'>%d lokasyon aynı · %d farklı set (%s%s)"
+            f"</span></div>"
+            % (_ayni_sayi, len(_farkli_lok),
+               ", ".join(HASTANELER.get(l, {}).get("kisa", l)
+                         for l in _farkli_lok[:3]),
+               "…" if len(_farkli_lok) > 3 else ""))
+    elif not _setler_lok:
+        _saha_satirlar.insert(0,
+            "<div style='font-size:9px;padding:3px 0;line-height:1.35;"
+            "border-bottom:1px solid rgba(24,26,30,0.07);'>"
+            "<span style='color:#c98500;'>●</span> "
+            "<b style='color:#24324d;'>SETLER</b><br>"
+            "<span style='color:#c98500;'>Lokasyonlardan set bildirilmedi</span></div>")
 
     # Hava tahmini koordinatı lokasyonun kendi profilinden gelir; profili
     # girilmemiş hastane İstanbul'a düşer ve yanlış şehrin dış havasına göre
-    # karar verir. Kurulum sonrası unutulan bu adım burada görünür kalsın.
+    # karar verir. Kurulum sonrası unutulan bu adım görünür kalsın.
     if _varsayilan_konum:
-        _konum_uyari = ("⚠ %d lokasyon varsayılan konumda (İstanbul): %s"
-                        % (len(_varsayilan_konum),
-                           ", ".join(HASTANELER.get(l, {}).get("kisa", l)
-                                     for l in _varsayilan_konum[:3])
-                           + ("…" if len(_varsayilan_konum) > 3 else "")))
-    else:
-        _konum_uyari = "Set değerleri lokasyon detayında"
+        _saha_satirlar.insert(0,
+            f"<div style='font-size:9px;padding:3px 0;line-height:1.35;"
+            f"border-bottom:1px solid rgba(24,26,30,0.07);'>"
+            f"<span style='color:#c98500;'>●</span> "
+            f"<b style='color:#24324d;'>KONUM</b><br>"
+            f"<span style='color:#c98500;'>%d lokasyon varsayılan konumda "
+            f"(İstanbul): %s</span></div>"
+            % (len(_varsayilan_konum),
+               ", ".join(HASTANELER.get(l, {}).get("kisa", l)
+                         for l in _varsayilan_konum[:3])
+               + ("…" if len(_varsayilan_konum) > 3 else "")))
 
-    _set_html = (
-        "<div style='display:flex;align-items:center;justify-content:space-between;"
-        "gap:8px;background:#ffffff;border:1px solid rgba(24,26,30,0.10);"
-        "border-radius:10px;padding:6px 10px;margin-bottom:8px;'>"
-        f"<span style='font-size:9px;color:#46536b;'>🎛️ SETLER</span>"
-        f"<span style='font-size:10px;font-weight:600;color:{_set_renk};'>{_set_ozet}</span>"
-        "</div>"
-        "<div style='font-size:8px;color:#46536b;margin:-4px 0 8px;"
-        "display:flex;justify-content:space-between;gap:8px;'>"
-        f"<span>{_konum_uyari}</span>"
-        f"<span>Son geçişler: 🧊 {len(_ml_ch)} chiller · 🌀 {len(_ml_dig)} kol/FCU</span>"
-        "</div>"
+    # ── SAHA DURUMU kartı ──
+    # Başlık + liste; 5 satırdan sonrası kaydırmaya girer.
+    if _oto_saglik or _saha_satirlar:
+        if _normal_sayi:
+            _saha_satirlar.append(
+                f"<div style='font-size:9px;padding:3px 0;color:rgb(12,163,12);'>"
+                f"✓ {_normal_sayi} lokasyon normal</div>")
+    else:
+        # Hiç lokasyon bildirim yapmıyorsa bu da bir bilgidir: ya yama
+        # inmemiştir ya da süreç çalışmıyordur. Sessiz kalmak yanıltır.
+        _saha_satirlar.append(
+            "<div style='font-size:9px;padding:3px 0;color:#c98500;'>"
+            "⚠ Lokasyonlardan oto-set durumu gelmiyor</div>")
+
+    _saha_kaydir = ("max-height:%dpx;overflow-y:auto;" % (_SAHA_SATIR_PX * _SAHA_GORUNUR)
+                    if len(_saha_satirlar) > _SAHA_GORUNUR else "")
+    _saglik_html = (
+        "<div style='background:#f1f0ed;border:1px solid rgba(24,26,30,0.10);"
+        "border-radius:10px;padding:7px 10px;margin-top:10px;'>"
+        "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;"
+        "font-size:8px;font-weight:700;letter-spacing:1.5px;color:#133273;"
+        "margin-bottom:3px;'>SAHA DURUMU</div>"
+        f"<div style='{_saha_kaydir}'>" + "".join(_saha_satirlar) + "</div></div>"
     )
 
     # ── OTO SET — TEK KART ───────────────────────────────────────────────
@@ -2217,6 +2224,29 @@ with sag:
     }
     .st-key-oto_set_karti [data-testid="stHorizontalBlock"] > div {
         min-width:0 !important;
+        /* Sütunların içerik yükseklikleri farklı (rozet 52, saat kartı
+           52+tarih). Dikey ortalamada kutuların üst kenarı kayıyordu;
+           hepsi satırın ÜSTÜNDEN başlar, tarih aşağı sarkar. */
+        display:flex !important;
+        flex-direction:column;
+        justify-content:flex-start;
+    }
+    /* Sütunun içindeki dikey blok da içeriği ortalıyor (saat sütununda
+       tarih satırı olduğu için kutu aşağı kayıyordu) — o da üstten başlasın */
+    .st-key-oto_set_karti [data-testid="stHorizontalBlock"]
+        [data-testid="stVerticalBlock"] {
+        justify-content:flex-start !important;
+        gap:2px !important;
+    }
+    .st-key-oto_set_karti [data-testid="stHorizontalBlock"]
+        [data-testid="stElementContainer"] { margin:0 !important; }
+    /* Düğme inline-flex: satır taban çizgisi yüzünden üstünde ~17 px boşluk
+       kalıyor ve kutu rozetten aşağıda duruyordu. Blok seviyesine alınır. */
+    .st-key-oto_set_karti .stButton { display:flex; line-height:0; }
+    .st-key-oto_set_karti .stButton > button { display:flex !important; }
+    /* Anahtar 30 px: 52 px'lik kutuların ortasına hizalansın */
+    .st-key-oto_switch_on button, .st-key-oto_switch_off button {
+        margin-top:11px !important;
     }
 
     /* ── Senaryo anahtarı (Apple tarzı) ──
@@ -2294,8 +2324,11 @@ with sag:
         # POP-UP (st.dialog) açarlar — kart boyu sabit kalır.
         # Dört öğe TEK SATIRDA: anahtar + dönem rozeti + iki kart düğme.
         # Üç kutu eşit genişlik ve eşit yükseklikte (52 px) durur.
+        # vertical_alignment="center" kullanılmaz: Streamlit bunu kısa sütuna
+        # margin-top vererek yapıyor ve kutuların üst kenarı kayıyordu
+        # (GÜNDÜZ rozeti 7 px aşağıda kalmıştı). Hizayı CSS yapar.
         _k_sw, _k_rozet, _k_saat, _k_liste = st.columns(
-            [0.42, 1, 1, 1], vertical_alignment="center")
+            [0.42, 1, 1, 1], vertical_alignment="top")
 
         with _k_sw:
             _sw_key = "oto_switch_on" if _oto_aktif_su else "oto_switch_off"
@@ -2339,6 +2372,12 @@ with sag:
                          key="oto_saat_kart", use_container_width=True):
                 st.session_state["_oto_popup"] = "saat"
                 st.rerun()
+            # Son durum zamanı: sıcaklık satırının sağında kayıp duruyordu,
+            # ait olduğu yer saat kartının altı.
+            if _os_zaman:
+                st.markdown(
+                    f"<div style='font-size:8px;color:#46536b;text-align:center;"
+                    f"margin-top:-4px;'>{_os_zaman}</div>", unsafe_allow_html=True)
 
         with _k_liste:
             if st.button("📋 Geçiş kayıtları  \n%s" % ("%d kayıt" % len(_ml_data)
@@ -2361,16 +2400,10 @@ with sag:
             f"<span style='font-size:9px;color:#46536b;'>"
             f"bugün max:{_os_max} · yarın min:{_os_min}</span>"
             f"</div>"
-            f"<span style='font-size:8px;color:#46536b;'>{_os_zaman}</span>"
             f"</div>"
-            # ── Satır 3: Yürürlükteki setler (değerler SAHADAN gelir) ──
-            f"{_set_html}"
-            # ── Satır 4: Komut + son geçiş ──
-            f"<div style='font-size:9px;border-top:1px solid rgba(24,26,30,0.10);padding-top:6px;'>"
-            f"{_cnt_html}</div>"
+            # ── Satır 4: Saha durumu kartı + son geçiş ──
             f"{_saglik_html}"
             f"{_son_gecis_html}"
-            f"<div style='border-top:1px solid rgba(24,26,30,0.10);margin:8px 0 2px;'></div>"
             f"</div>",
             unsafe_allow_html=True
         )
