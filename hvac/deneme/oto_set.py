@@ -42,6 +42,17 @@ logger = logging.getLogger(__name__)
 _BASE = os.path.dirname(os.path.abspath(__file__))
 DURUM_FILE = os.path.join(_BASE, "configs", "oto_set_durum.json")
 
+# ── LOKASYON KONUMU (hava tahmini için) ───────────────────────────────────
+# 11.10.2026'ya kadar tahmin koordinatı koda İSTANBUL olarak gömülüydü. Tek
+# lokasyon varken sorun değildi; farklı şehirdeki bir hastane kurulduğunda
+# İstanbul'un dış hava sıcaklığına göre set gönderirdi (Adana'da 15°C eşiği
+# aylarca yanlış tarafta kalırdı). Konum artık lokasyonun kendi profilinden
+# okunur; profil yoksa İstanbul'a düşülür ve bu durum heartbeat'te
+# "varsayilan" olarak bildirilir — merkez hangi lokasyonun hâlâ varsayılanla
+# çalıştığını görebilsin.
+PROFIL_FILE = os.path.join(_BASE, "configs", "lokasyon_profili.json")
+VARSAYILAN_KONUM = {"enlem": 41.0082, "boylam": 28.9784, "ad": "İstanbul"}
+
 # ── Kural varsayılanları (merkez ile birebir aynı olmalı) ──────────────────
 CH_SINIRLAR = [7.0, 23.0, 26.0]
 CH_MODLAR   = ["koc_soguk", "serin", "ilimli", "sicak"]
@@ -68,7 +79,7 @@ CH_NOKTALAR = ["CH1_REM_SET", "CH2_REM_SET", "CH3_REM_SET", "CH4_REM_SET", "CH5_
 # Kural okunamazsa o tur hiçbir şey yapılmaz — bkz. _kural_oku.
 KURAL_ANAHTARLARI = ("oto_set_aktif", "oto_gunduz_saat", "oto_gece_saat")
 
-_tahmin_onbellek = {"zaman": None, "veri": None}
+_tahmin_onbellek = {"zaman": None, "veri": None, "nokta": None}
 _TAHMIN_OMRU_DK = 30
 
 
@@ -204,6 +215,16 @@ def _guncel_setler(d):
     return setler
 
 
+def _konum_ozet():
+    """Heartbeat için küçük konum bilgisi (okuma hatası özeti çökertmesin)."""
+    try:
+        k = konum_oku()
+        return {"ad": k["ad"], "enlem": round(k["enlem"], 4),
+                "boylam": round(k["boylam"], 4), "kaynak": k["kaynak"]}
+    except Exception:
+        return None
+
+
 def durum_ozet():
     """Heartbeat'in Supabase'e taşıyacağı küçük özet."""
     d = durum_oku()
@@ -220,6 +241,15 @@ def durum_ozet():
         # Synapse yalnızca sahanın bildirdiğini gösterir. Kopya tutulursa
         # tablo değişince portal eski değeri göstermeye devam eder.
         "setler": _guncel_setler(d),
+        # Kararın dayandığı hava tahmininin KONUMU. Merkez, hâlâ varsayılan
+        # İstanbul koordinatıyla çalışan lokasyonu buradan görür (yanlış
+        # şehrin dış havasına göre set göndermek sessiz bir hatadır).
+        "konum": _konum_ozet(),
+        # Son geçişin dayandığı dış hava referansı. Merkezin kendi
+        # tahminini göstermesi çok lokasyonda yanıltıcı: karar her
+        # hastanede KENDİ koordinatının tahminiyle verilir.
+        "tahmin": {"ref": d.get("ref_sicaklik"), "bugun_max": d.get("bugun_max"),
+                   "yarin_min": d.get("yarin_min")},
         "son_yazim": d.get("zaman"),
         # Son geçişin sahadaki sonucu — "sonuc" her dakika "gecis_yok" ile
         # güncellendiği için geçişteki sorun burada KALICI tutulur.
@@ -419,6 +449,43 @@ def dig_modu_hesapla(ort, mevcut):
     return "sogutma" if ort >= DIG_ESIK else "isitma"
 
 
+def _sayi(v):
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if f == f else None          # NaN ele
+
+
+def konum_oku():
+    """Bu lokasyonun tahmin koordinatı. {'enlem','boylam','ad','kaynak'} döner.
+
+    Sıra: configs/lokasyon_profili.json → supabase_config.json → İstanbul.
+    Yeni lokasyon kurulumunda TEK dosya düzenlenir; kodda şehir listesi
+    tutulmaz (ikinci kaynak olur, biri güncellenmeyince ayrışır).
+    """
+    for dosya, etiket in ((PROFIL_FILE, "profil"),
+                          (os.path.join(_BASE, "supabase_config.json"), "config")):
+        try:
+            with open(dosya, encoding="utf-8") as f:
+                d = json.load(f)
+        except Exception:
+            continue
+        enlem, boylam = _sayi(d.get("enlem")), _sayi(d.get("boylam"))
+        if enlem is None or boylam is None:
+            continue
+        if not (-90 <= enlem <= 90 and -180 <= boylam <= 180):
+            logger.warning("oto_set: %s koordinati gecersiz (%s, %s)", etiket, enlem, boylam)
+            continue
+        return {"enlem": enlem, "boylam": boylam,
+                "ad": str(d.get("ad") or d.get("sehir") or
+                          d.get("lokasyon_id") or "").strip() or "—",
+                "kaynak": etiket}
+    k = dict(VARSAYILAN_KONUM)
+    k["kaynak"] = "varsayilan"
+    return k
+
+
 def tahmin_al(zorla=False):
     """Bugünün max, yarının min sıcaklığı (30 dk önbellekli).
 
@@ -427,19 +494,25 @@ def tahmin_al(zorla=False):
     sarkar ve en düşük sıcaklık yarın sabaha doğru oluşur.
     """
     simdi = datetime.now()
+    konum = konum_oku()
+    nokta = (konum["enlem"], konum["boylam"])
+    # Önbellek koordinata bağlı: profil düzeltildiğinde eski şehrin tahmini
+    # 30 dakika daha kullanılmasın.
     if (not zorla and _tahmin_onbellek["veri"] and _tahmin_onbellek["zaman"] and
+            _tahmin_onbellek.get("nokta") == nokta and
             (simdi - _tahmin_onbellek["zaman"]) < timedelta(minutes=_TAHMIN_OMRU_DK)):
         return _tahmin_onbellek["veri"]
     try:
         api = ("https://api.open-meteo.com/v1/forecast"
-               "?latitude=41.0082&longitude=28.9784"
+               "?latitude=%.4f&longitude=%.4f"
                "&daily=temperature_2m_max,temperature_2m_min"
-               "&timezone=Europe%2FIstanbul&forecast_days=3")
+               "&timezone=Europe%%2FIstanbul&forecast_days=3"
+               % (konum["enlem"], konum["boylam"]))
         with urllib.request.urlopen(api, timeout=10) as r:
             d = json.loads(r.read())
         veri = {"bugun_max": round(d["daily"]["temperature_2m_max"][0], 1),
                 "yarin_min": round(d["daily"]["temperature_2m_min"][1], 1)}
-        _tahmin_onbellek.update({"zaman": simdi, "veri": veri})
+        _tahmin_onbellek.update({"zaman": simdi, "veri": veri, "nokta": nokta})
         return veri
     except Exception as e:
         logger.warning("oto_set tahmin alinamadi: %s", e)

@@ -1,0 +1,8 @@
+{
+  "_aciklama": "Bu lokasyonun kimligi ve hava tahmini koordinati. HER LOKASYONDA FARKLIDIR; yeni kurulumda ilk duzenlenecek dosya budur. Koordinat oto_set (set karari) ve ahu_collector (dis hava) tarafindan kullanilir. Dosya yoksa Istanbul varsayilani kullanilir ve merkez bunu 'varsayilan konum' olarak gosterir.",
+  "lokasyon_id": "maslak",
+  "ad": "Acibadem Maslak",
+  "sehir": "Istanbul",
+  "enlem": 41.1273,
+  "boylam": 29.0246
+}

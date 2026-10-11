@@ -687,8 +687,21 @@ def _ahu_row_olustur(ahu_adi: str, lokasyon: str, veriler: dict,
 # OAT (DIŞ HAVA) — Open-Meteo'dan anlık sıcaklık
 # ================================================================
 
-def _oat_cek(lat: float = 41.1, lon: float = 29.0) -> float:
-    """Open-Meteo'dan anlık dış hava sıcaklığını çek. Hata → 20.0."""
+def _oat_cek(lat: float | None = None, lon: float | None = None) -> float:
+    """Open-Meteo'dan anlık dış hava sıcaklığını çek. Hata → 20.0.
+
+    Koordinat verilmezse lokasyonun kendi profilinden okunur
+    (configs/lokasyon_profili.json — oto_set ile AYNI kaynak). Önceden
+    İstanbul koordinatı gömülüydü; farklı şehirdeki bir hastanede analiz
+    yanlış dış hava ile çalışırdı.
+    """
+    if lat is None or lon is None:
+        try:
+            from oto_set import konum_oku
+            _k = konum_oku()
+            lat, lon = _k["enlem"], _k["boylam"]
+        except Exception:
+            lat, lon = 41.0082, 28.9784
     try:
         url = (
             f"https://api.open-meteo.com/v1/forecast"

@@ -1867,6 +1867,7 @@ with sag:
     # böyle bir göstergenin olmamasıydı.
     _oto_saglik = []
     _setler_lok = {}            # {lokasyon_id: setler} — lokasyon başına
+    _varsayilan_konum = []      # profili girilmemiş (İstanbul'a düşen) lokasyonlar
     _oz_test_saglik = []
     _geri_bildirim_saglik = []
     try:
@@ -1890,6 +1891,12 @@ with sag:
                     # lokasyonunkini hepsiymiş gibi göstermek yanıltırdı.
                     if isinstance(_o.get("setler"), dict) and _o["setler"]:
                         _setler_lok[_lr["lokasyon_id"]] = _o["setler"]
+                    # Hava tahmini koordinatı: lokasyon profilini girmemiş
+                    # bir hastane İstanbul varsayılanıyla karar verir. Farklı
+                    # şehirde bu SESSİZ bir hatadır (eşik aylarca yanlış
+                    # tarafta kalır), bu yüzden ana ekranda sayılır.
+                    if (_o.get("konum") or {}).get("kaynak") == "varsayilan":
+                        _varsayilan_konum.append(_lr["lokasyon_id"])
                 # Mekanik Zeka öz testi: lokasyon KENDİ ayarlarıyla testleri
                 # koşar (oz_test.py). Aynı kod farklı ayarla farklı karar verir;
                 # "bende yeşildi" yetmez, sahada da yeşil olmalı.
@@ -2125,6 +2132,18 @@ with sag:
                      else "Setler bildiriliyor")
         _set_renk = "#0ca30c"
 
+    # Hava tahmini koordinatı lokasyonun kendi profilinden gelir; profili
+    # girilmemiş hastane İstanbul'a düşer ve yanlış şehrin dış havasına göre
+    # karar verir. Kurulum sonrası unutulan bu adım burada görünür kalsın.
+    if _varsayilan_konum:
+        _konum_uyari = ("⚠ %d lokasyon varsayılan konumda (İstanbul): %s"
+                        % (len(_varsayilan_konum),
+                           ", ".join(HASTANELER.get(l, {}).get("kisa", l)
+                                     for l in _varsayilan_konum[:3])
+                           + ("…" if len(_varsayilan_konum) > 3 else "")))
+    else:
+        _konum_uyari = "Set değerleri lokasyon detayında"
+
     _set_html = (
         "<div style='display:flex;align-items:center;justify-content:space-between;"
         "gap:8px;background:#ffffff;border:1px solid rgba(24,26,30,0.10);"
@@ -2134,7 +2153,7 @@ with sag:
         "</div>"
         "<div style='font-size:8px;color:#46536b;margin:-4px 0 8px;"
         "display:flex;justify-content:space-between;gap:8px;'>"
-        "<span>Set değerleri lokasyon detayında</span>"
+        f"<span>{_konum_uyari}</span>"
         f"<span>Son geçişler: 🧊 {len(_ml_ch)} chiller · 🌀 {len(_ml_dig)} kol/FCU</span>"
         "</div>"
     )

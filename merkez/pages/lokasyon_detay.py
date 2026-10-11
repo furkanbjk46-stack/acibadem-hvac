@@ -1438,6 +1438,33 @@ with tab1:
         st.caption("Dönem: %s · %s" % (_donem, " · ".join(_alt) if _alt else
                                        "eşikler bildirilmedi"))
 
+        # ── Kararın dayandığı dış hava (lokasyonun KENDİ koordinatı) ──
+        # Setler bu hastanenin kendi hava tahminiyle belirlenir; merkez
+        # koordinat göndermez. Profil girilmemişse lokasyon İstanbul
+        # varsayılanıyla çalışır — farklı şehirde sessiz bir hatadır,
+        # bu yüzden ayrıca uyarı verilir.
+        _knm = (_oto or {}).get("konum") or {}
+        _thm = (_oto or {}).get("tahmin") or {}
+        _hv = []
+        if isinstance(_thm.get("ref"), (int, float)):
+            _hv.append("Son geçiş referansı: %g °C" % _thm["ref"])
+        if isinstance(_thm.get("bugun_max"), (int, float)):
+            _hv.append("bugün max %g" % _thm["bugun_max"])
+        if isinstance(_thm.get("yarin_min"), (int, float)):
+            _hv.append("yarın min %g" % _thm["yarin_min"])
+        if _knm.get("kaynak") == "varsayilan":
+            st.caption("⚠️ Hava tahmini VARSAYILAN konumla alınıyor (İstanbul "
+                       "%g, %g) — lokasyon profili girilmemiş%s"
+                       % (_knm.get("enlem", 0), _knm.get("boylam", 0),
+                          (" · " + " · ".join(_hv)) if _hv else ""))
+        elif _knm:
+            st.caption("🌤️ Hava konumu: %s (%g, %g)%s"
+                       % (_knm.get("ad") or "—", _knm.get("enlem", 0),
+                          _knm.get("boylam", 0),
+                          (" · " + " · ".join(_hv)) if _hv else ""))
+        elif _hv:
+            st.caption("🌤️ " + " · ".join(_hv))
+
     # ══════════════════════════════════════════════════════
     # SİSTEM SAĞLIĞI (lokasyona özgü)
     # ══════════════════════════════════════════════════════

@@ -125,5 +125,44 @@ _kart = kaynak_kartlari(_d, _son)
 c("simulasyonda kaynak bolumunde trafo kartlari dolu",
   len(_kart) >= 2 and all(v > 0 for _, v in _kart), _kart)
 
+# ── Yururlukteki setler + hava konumu (lokasyona ozel) ───────────────────
+# Setler her hastanede KENDI dis havasina gore belirlenir; degerler ana
+# ekranda degil burada gosterilir. Konum da lokasyonun kendi profilinden
+# gelir — profil girilmemisse Istanbul'a duser ve bu SESSIZ bir hatadir.
+c("set bolumu heartbeat'ten okur",
+  '.get("setler")' in _metin and 'bakim_ozet.get("oto")' in _metin)
+c("dort set karti var (chiller/kollektor/FCU/AHU)",
+  all(x in _metin for x in ("CHILLER", "KOLLEKTÖR", "FCU", "AHU")))
+c("gomulu set degeri yok (kural yalnizca oto_set.py'de)",
+  not any(v in _metin for v in ("7.5°C", "8.0°C", "7.0°C", "6.5°C")))
+c("varsayilan konum kullaniciya uyari olarak cikar",
+  'kaynak") == "varsayilan"' in _metin and "profili girilmemiş" in _metin)
+c("konum profilden geliyorsa koordinat gosterilir",
+  "Hava konumu" in _metin)
+
+def _ozet_coz(l):
+    """bakim_ozet Supabase'de JSONB; simulasyon metin olarak uretir."""
+    import json as _j
+    b = l.get("bakim_ozet") or {}
+    if isinstance(b, str):
+        try:
+            b = _j.loads(b)
+        except Exception:
+            b = {}
+    return (b or {}).get("oto") or {}
+
+
+_lok_ozet = {l["lokasyon_id"]: _ozet_coz(l) for l in S.veri_uret()["lokasyonlar"]}
+_konumlu = {k: v["konum"] for k, v in _lok_ozet.items() if v.get("konum")}
+c("simulasyonda her aktif lokasyon konum bildirir", len(_konumlu) >= 20, len(_konumlu))
+c("simulasyonda konumlar lokasyona gore farkli",
+  len({(k["enlem"], k["boylam"]) for k in _konumlu.values()}) >= 5,
+  len({(k["enlem"], k["boylam"]) for k in _konumlu.values()}))
+c("simulasyonda profili girilmemis bir kurulum da var (uyari gorunsun)",
+  any(k.get("kaynak") == "varsayilan" for k in _konumlu.values()))
+c("simulasyonda tahmin referansi bildirilir",
+  all(isinstance((v.get("tahmin") or {}).get("ref"), (int, float))
+      for v in _lok_ozet.values() if v))
+
 print("\n%d/%d PASS" % (gecti, gecti + basarisiz))
 raise SystemExit(1 if basarisiz else 0)

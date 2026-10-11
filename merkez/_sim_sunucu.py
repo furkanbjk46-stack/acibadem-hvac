@@ -72,6 +72,19 @@ DIG_NOKTALAR = ["GUNDUZ_KOLLEKTOR_SET", "GECE_KOLLEKTOR_SET", "A_BLOK_FCU_SET",
 # ══════════════════════════════════════════════════════════════════════════
 # SENARYOLAR — hangi lokasyonda ne olacak
 # ══════════════════════════════════════════════════════════════════════════
+# Lokasyonlarin hava tahmini koordinati (sunum icin sehir merkezleri).
+# Gercekte her lokasyon bunu KENDI profilinden bildirir
+# (hvac/deneme/configs/lokasyon_profili.json); merkez koordinat gondermez.
+# Listede olmayan lokasyon Istanbul merkezine dusurulur.
+SIM_KONUM = {
+    "ankara": (39.9334, 32.8597), "bayindir": (39.9334, 32.8597),
+    "bursa": (40.1885, 29.0610), "kocaeli": (40.7654, 29.9408),
+    "eskisehir": (39.7767, 30.5206), "izmir": (38.4237, 27.1428),
+    "kayseri": (38.7312, 35.4787), "adana": (37.0000, 35.3213),
+    "adana_ortopedia": (37.0000, 35.3213), "bodrum": (37.0344, 27.4305),
+}
+SIM_KONUM_VARSAYILAN = (41.0082, 28.9784)
+
 SENARYO = {
     # lokasyon        : (durum,        aciklama)
     "kartal":      ("cevrimdisi",  "3 saattir ping yok"),
@@ -174,6 +187,18 @@ def veri_uret():
                 "sonuc": _oto_sonuc[0], "metin": _oto_sonuc[1], "aciklama": "",
                 "donem": "gunduz" if 5 <= datetime.now(IST).hour < 22 else "gece",
                 "chiller_mod": "serin", "diger_mod": "sogutma",
+                # Karar lokasyonda, KENDI dis havasina gore verilir; konum
+                # lokasyonun profilinden gelir. "veri_yok" senaryosunda
+                # profil girilmemis bir kurulum gosterilir (merkez bunu
+                # "varsayilan konum" uyarisiyla yakalar).
+                "konum": ({"ad": "İstanbul", "enlem": SIM_KONUM_VARSAYILAN[0],
+                           "boylam": SIM_KONUM_VARSAYILAN[1],
+                           "kaynak": "varsayilan"}
+                          if senaryo == "veri_yok" else
+                          {"ad": kisa.title(),
+                           "enlem": SIM_KONUM.get(lok_id, SIM_KONUM_VARSAYILAN)[0],
+                           "boylam": SIM_KONUM.get(lok_id, SIM_KONUM_VARSAYILAN)[1],
+                           "kaynak": "profil"}),
                 # Yururlukteki setler sahadan bildirilir (oto_set.durum_ozet);
                 # sunumda da ayni yapiyi uretelim ki panel gercekte nasil
                 # gorunuyorsa oyle gorunsun.
@@ -197,6 +222,13 @@ def veri_uret():
                             "esikler": {"chiller_sinir": [7.0, 23.0, 26.0],
                                         "chiller_h": 2.0,
                                         "dig_esik": 15.0, "dig_h": 3.0}}),
+                # Son gecisin dayandigi dis hava (lokasyonun kendi tahmini).
+                # Guneydeki hastane daha sicak referansla calisir; sunumda da
+                # oyle gorunsun.
+                "tahmin": ({"ref": 29.4, "bugun_max": 29.4, "yarin_min": 19.8}
+                           if lok_id in ("adana", "adana_ortopedia", "izmir",
+                                         "bodrum") else
+                           {"ref": 24.1, "bugun_max": 24.1, "yarin_min": 15.6}),
             }
 
         lokasyonlar.append({

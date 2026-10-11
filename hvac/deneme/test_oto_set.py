@@ -662,6 +662,111 @@ c("[geri uyum] eski biçimdeki doğrulama kaydı yeni biçime çevrilip tamamlan
   (oto_set.durum_ozet().get("dogrulama") or {}).get("sonuc") == "uygulandi",
   oto_set.durum_ozet().get("dogrulama"))
 
+# ── 11b) LOKASYON KONUMU (hava tahmini koordinati) ──
+# 11.10.2026'ya kadar koordinat koda ISTANBUL olarak gomuluydu. Farkli
+# sehirdeki bir hastane kuruldugunda Istanbul'un dis havasina gore set
+# gonderirdi; Adana'da 15 C esigi aylarca yanlis tarafta kalirdi. Konum artik
+# lokasyonun kendi profilinden okunur, profil yoksa durum heartbeat'te
+# "varsayilan" olarak bildirilir.
+_profil_asil = oto_set.PROFIL_FILE
+_sahte_profil = os.path.join(_tmp, "lokasyon_profili.json")
+
+
+def _profil_yaz(dosya, icerik):
+    with open(dosya, "w", encoding="utf-8") as f:
+        json.dump(icerik, f)
+
+
+try:
+    oto_set.PROFIL_FILE = os.path.join(_tmp, "yok.json")
+    _k = oto_set.konum_oku()
+    c("profil yoksa Istanbul varsayilanina dusulur",
+      _k["kaynak"] == "varsayilan" and round(_k["enlem"], 2) == 41.01, _k)
+
+    oto_set.PROFIL_FILE = _sahte_profil
+    _profil_yaz(_sahte_profil, {"lokasyon_id": "adana", "ad": "Acibadem Adana",
+                                "enlem": 37.0, "boylam": 35.3213})
+    _k = oto_set.konum_oku()
+    c("profil varsa lokasyonun kendi koordinati kullanilir",
+      _k["kaynak"] == "profil" and _k["enlem"] == 37.0 and _k["boylam"] == 35.3213, _k)
+    c("profil adi heartbeat'e tasinir", _k["ad"] == "Acibadem Adana", _k)
+
+    _profil_yaz(_sahte_profil, {"enlem": "bes", "boylam": 35.3})
+    c("sayi olmayan koordinat yok sayilir (varsayilana dusulur)",
+      oto_set.konum_oku()["kaynak"] == "varsayilan", oto_set.konum_oku())
+    _profil_yaz(_sahte_profil, {"enlem": 137.0, "boylam": 35.3})
+    c("aralik disi koordinat yok sayilir",
+      oto_set.konum_oku()["kaynak"] == "varsayilan", oto_set.konum_oku())
+    with open(_sahte_profil, "w", encoding="utf-8") as f:
+        f.write("{bozuk")
+    c("bozuk profil dosyasi cokertmez",
+      oto_set.konum_oku()["kaynak"] == "varsayilan")
+
+    # Tahmin istegi profildeki koordinati kullanmali (yanlis sehir = yanlis set)
+    _profil_yaz(_sahte_profil, {"ad": "Adana", "enlem": 37.0, "boylam": 35.3213})
+    _cagri = {}
+
+    class _Yanit:
+        def __enter__(self_in):
+            return self_in
+
+        def __exit__(self_in, *a):
+            return False
+
+        def read(self_in):
+            return json.dumps({"daily": {"temperature_2m_max": [31.2, 30.0, 29.0],
+                                         "temperature_2m_min": [20.1, 19.4, 18.8]}}).encode()
+
+    _urlopen_asil = oto_set.urllib.request.urlopen
+    oto_set.urllib.request.urlopen = lambda u, timeout=10: (_cagri.update(url=u), _Yanit())[1]
+    try:
+        oto_set._tahmin_onbellek.update({"zaman": None, "veri": None, "nokta": None})
+        _t = oto_set.tahmin_al()
+        c("tahmin istegi profildeki koordinata gider",
+          "latitude=37.0000" in _cagri.get("url", "") and
+          "longitude=35.3213" in _cagri.get("url", ""), _cagri.get("url"))
+        c("tahmin degerleri okunur",
+          _t == {"bugun_max": 31.2, "yarin_min": 19.4}, _t)
+        # Onbellek koordinata bagli: profil duzeltilince eski sehrin tahmini
+        # 30 dakika daha kullanilmamali.
+        _profil_yaz(_sahte_profil, {"ad": "Izmir", "enlem": 38.4237, "boylam": 27.1428})
+        oto_set.tahmin_al()
+        c("konum degisince onbellek yenilenir",
+          "latitude=38.4237" in _cagri.get("url", ""), _cagri.get("url"))
+    finally:
+        oto_set.urllib.request.urlopen = _urlopen_asil
+        oto_set._tahmin_onbellek.update({"zaman": None, "veri": None, "nokta": None})
+
+    # Heartbeat ozeti konumu tasir — merkez varsayilanda kalan lokasyonu gorur
+    _ozet = oto_set.durum_ozet()
+    c("heartbeat ozetinde konum var",
+      (_ozet.get("konum") or {}).get("kaynak") == "profil", _ozet.get("konum"))
+    c("heartbeat ozetinde tahmin referansi var", "tahmin" in _ozet)
+    c("ozet kucuk kalir (heartbeat JSONB)",
+      len(json.dumps(_ozet, ensure_ascii=False)) < 2000,
+      len(json.dumps(_ozet, ensure_ascii=False)))
+finally:
+    oto_set.PROFIL_FILE = _profil_asil
+
+# Depodaki ornek profil gercekten okunabilir olmali (kurulumda bu dosya
+# duzenlenir; bozuk birakilirsa saha sessizce Istanbul'a duser).
+try:
+    _gercek = json.load(open(oto_set.PROFIL_FILE, encoding="utf-8"))
+    c("depodaki lokasyon profili gecerli",
+      isinstance(_gercek.get("enlem"), (int, float)) and
+      isinstance(_gercek.get("boylam"), (int, float)) and
+      _gercek.get("lokasyon_id"), _gercek)
+except Exception as _e:
+    c("depodaki lokasyon profili gecerli", False, _e)
+
+# ahu_collector dis havayi AYNI kaynaktan almali (ikinci koordinat olmasin)
+_ahu_metin = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                               "ahu_collector.py"), encoding="utf-8").read()
+c("ahu_collector dis hava konumunu oto_set profilinden alir",
+  "from oto_set import konum_oku" in _ahu_metin)
+c("ahu_collector'da gomulu sehir koordinati yok",
+  "lat: float = 41" not in _ahu_metin)
+
 # ── 12) Merkezde IKINCI BIR KURAL KOPYASI OLMAMALI ──
 # 01.10.2026'ya kadar app_merkez.py ayni esik/set tablosunu tasiyordu ve bu
 # test ikisinin esitligini kontrol ediyordu. Kopya silindi (iki kaynak
