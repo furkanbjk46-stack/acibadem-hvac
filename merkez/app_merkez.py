@@ -2164,116 +2164,181 @@ with sag:
         "</div>"
     )
 
-    # ── OTO SET Kartı (toggle hariç — toggle aşağıda st.toggle ile) ──
-    st.markdown(
-        f"<div style='background:#fafaf8;"
-        f"border:1px solid rgba(24,26,30,0.10);border-radius:14px;padding:14px 16px;box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);'>"
-        # ── Satır 1: Başlık ──
-        f"<div style='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;'>"
-        f"<div>"
-        f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:9px;font-weight:700;"
-        f"color:#133273;letter-spacing:2px;margin-bottom:2px;'>🤖 OTO SET</div>"
-        f"<div style='font-size:11px;font-weight:700;color:{_st_renk};'>{_st_txt}"
-        f"<span style='font-size:9px;font-weight:400;color:#46536b;margin-left:6px;'>{_alt_txt}</span></div>"
-        f"</div>"
-        # ── ANLIK DÖNEM rozeti (sistem şu an hangi durumda) ──
-        f"<div style='text-align:right;'>"
-        f"<div style='background:rgba(19,50,115,0.04);border:1px solid {_sd_renk}55;"
-        f"border-radius:6px;padding:4px 10px;'>"
-        f"<div style='font-size:11px;font-weight:700;color:{_sd_renk};'>{_sd_ikon} {_sd_ad}</div>"
-        f"<div style='font-size:8px;color:#46536b;margin-top:1px;'>"
-        f"{_g_saat:02d}:00 gündüz · {_ge_saat:02d}:00 gece</div>"
-        f"</div>"
-        f"<div style='font-size:8px;color:#46536b;margin-top:3px;'>"
-        f"sıradaki geçiş {_sonraki}</div>"
-        f"</div>"
-        f"</div>"
-        # ── Ayırıcı ──
-        f"<div style='border-top:1px solid rgba(24,26,30,0.10);margin-bottom:10px;'></div>"
-        # ── Satır 2: Sıcaklık + zaman ──
-        f"<div style='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;'>"
-        f"<div style='display:flex;align-items:baseline;gap:6px;'>"
-        f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:18px;font-weight:900;"
-        f"color:#2a78d6;text-shadow:0 0 12px rgba(19,50,115,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
-        f"<span style='font-size:9px;color:#46536b;'>"
-        f"bugün max:{_os_max} · yarın min:{_os_min}</span>"
-        f"</div>"
-        f"<span style='font-size:8px;color:#46536b;'>{_os_zaman}</span>"
-        f"</div>"
-        # ── Satır 3: Yürürlükteki setler (değerler SAHADAN gelir) ──
-        f"{_set_html}"
-        # ── Satır 4: Komut + son geçiş ──
-        f"<div style='font-size:9px;border-top:1px solid rgba(24,26,30,0.10);padding-top:6px;'>"
-        f"{_cnt_html}</div>"
-        f"{_saglik_html}"
-        f"{_son_gecis_html}"
-        f"</div>",
-        unsafe_allow_html=True
-    )
+    # ── OTO SET — TEK KART ───────────────────────────────────────────────
+    # Panel üç ayrı parçaya dağılmıştı: HTML kart, altında serbest duran
+    # düğme, altında expander, altında bir düğme daha. Her biri kendi
+    # çerçevesiyle göründüğü için ekran dağınıktı. Artık hepsi TEK kabın
+    # (st.container) içinde; kart çerçevesi kabın kendisine verilir, içerik
+    # çerçevesizdir ve düğmeler eşit iki sütunda simetrik durur.
+    st.markdown("""
+    <style>
+    .st-key-oto_set_karti {
+        background:#fafaf8;
+        border:1px solid rgba(24,26,30,0.10);
+        border-radius:14px;
+        padding:0;
+        overflow:hidden;
+        box-shadow:0 1px 1px rgba(20,22,26,.05),
+                   0 10px 22px -12px rgba(20,22,26,.22),
+                   inset 0 1px 0 rgba(255,255,255,.95);
+    }
+    /* Streamlit öğe kapsayıcıları genişliği parent'tan MİRAS alıyor; kaba
+       padding verilirse içerik taşıyor. Bu yüzden boşluk çocuklara verilir. */
+    .st-key-oto_set_karti > div {
+        box-sizing:border-box;
+        padding-left:16px;
+        padding-right:16px;
+    }
+    .st-key-oto_set_karti > div:first-child { padding-top:14px; }
+    .st-key-oto_set_karti > div:last-child  { padding-bottom:12px; }
+    /* İç öğeler de genişliği miras aldığı için padding'in içinde kalmaz;
+       %100'e sabitlenince kutunun içine oturur (sağ kenar taşması gider). */
+    .st-key-oto_set_karti > div > *,
+    .st-key-oto_set_karti [data-testid="stMarkdown"],
+    .st-key-oto_set_karti [data-testid="stMarkdownContainer"] {
+        width:100% !important;
+        max-width:100%;
+    }
+    /* Kabın içindeki expander kendi kartını çizmesin — tek çerçeve kalsın */
+    .st-key-oto_set_karti div[data-testid="stExpander"] details {
+        background:#f1f0ed;
+        border:1px solid rgba(24,26,30,0.10);
+        border-radius:10px;
+        box-shadow:none;
+    }
+    .st-key-oto_set_karti div[data-testid="stExpander"] summary {
+        font-size:11px;
+    }
+    /* Düğmeler eşit yükseklikte ve aynı hizada */
+    .st-key-oto_set_karti .stButton > button {
+        border-radius:10px;
+        min-height:34px;
+        font-size:11px;
+        padding:4px 10px;
+    }
+    .st-key-oto_set_karti [data-testid="stVerticalBlock"] { gap:8px; }
+    </style>
+    """, unsafe_allow_html=True)
 
+    _oto_kart = st.container(key="oto_set_karti")
 
-    # Senaryo açma/kapama butonu (st.toggle/checkbox CSS tarafından gizleniyordu)
-    _btn_lbl = "🟢 Senaryo AKTİF — Kapat" if _oto_aktif_su else "🔴 Senaryo KAPALI — Aç"
-    _btn_type = "secondary" if _oto_aktif_su else "primary"
-    if st.button(_btn_lbl, key="oto_set_toggle_btn", use_container_width=True, type=_btn_type):
-        _yeni_deger = "false" if _oto_aktif_su else "true"
-        _pay = _oajson.dumps({"key":"oto_set_aktif","value":_yeni_deger}).encode()
-        _oaur.urlopen(_oaur.Request(url+"/rest/v1/ayarlar", data=_pay, method="POST",
-            headers={"apikey":key,"Authorization":"Bearer "+key,
-                     "Content-Type":"application/json","Prefer":"resolution=merge-duplicates"}), timeout=4)
-        st.rerun()
+    with _oto_kart:
+        st.markdown(
+            f"<div>"
+            # ── Satır 1: Başlık ──
+            # flex-wrap: dar sütunda rozet satır sonuna sarkıp kırpılmasın
+            f"<div style='display:flex;align-items:center;justify-content:space-between;"
+            f"flex-wrap:wrap;gap:6px;margin-bottom:10px;'>"
+            f"<div>"
+            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:9px;font-weight:700;"
+            f"color:#133273;letter-spacing:2px;margin-bottom:2px;'>🤖 OTO SET</div>"
+            f"<div style='font-size:11px;font-weight:700;color:{_st_renk};'>{_st_txt}"
+            f"<span style='font-size:9px;font-weight:400;color:#46536b;margin-left:6px;'>{_alt_txt}</span></div>"
+            f"</div>"
+            # ── ANLIK DÖNEM rozeti (sistem şu an hangi durumda) ──
+            f"<div style='text-align:right;'>"
+            f"<div style='background:rgba(19,50,115,0.04);border:1px solid {_sd_renk}55;"
+            f"border-radius:6px;padding:4px 10px;'>"
+            f"<div style='font-size:11px;font-weight:700;color:{_sd_renk};'>{_sd_ikon} {_sd_ad}</div>"
+            f"<div style='font-size:8px;color:#46536b;margin-top:1px;'>"
+            f"{_g_saat:02d}:00 gündüz · {_ge_saat:02d}:00 gece</div>"
+            f"</div>"
+            f"<div style='font-size:8px;color:#46536b;margin-top:3px;'>"
+            f"sıradaki geçiş {_sonraki}</div>"
+            f"</div>"
+            f"</div>"
+            # ── Ayırıcı ──
+            f"<div style='border-top:1px solid rgba(24,26,30,0.10);margin-bottom:10px;'></div>"
+            # ── Satır 2: Sıcaklık + zaman ──
+            f"<div style='display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px;'>"
+            f"<div style='display:flex;align-items:baseline;gap:6px;'>"
+            f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:18px;font-weight:900;"
+            f"color:#2a78d6;text-shadow:0 0 12px rgba(19,50,115,0.5);'>{_donem_ikon} {_os_ref}°C</span>"
+            f"<span style='font-size:9px;color:#46536b;'>"
+            f"bugün max:{_os_max} · yarın min:{_os_min}</span>"
+            f"</div>"
+            f"<span style='font-size:8px;color:#46536b;'>{_os_zaman}</span>"
+            f"</div>"
+            # ── Satır 3: Yürürlükteki setler (değerler SAHADAN gelir) ──
+            f"{_set_html}"
+            # ── Satır 4: Komut + son geçiş ──
+            f"<div style='font-size:9px;border-top:1px solid rgba(24,26,30,0.10);padding-top:6px;'>"
+            f"{_cnt_html}</div>"
+            f"{_saglik_html}"
+            f"{_son_gecis_html}"
+            f"<div style='border-top:1px solid rgba(24,26,30,0.10);margin:8px 0 2px;'></div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
 
-    # ── Geçiş saatleri ayarı (GENEL kural) ──
-    # Setler yalnızca bu saatlerde gönderilir; buradan değiştirilebilir.
-    # Bir hastane farklı saatle çalışacaksa kendi lokasyon detayından
-    # ayarlanır — buradaki değer o lokasyonu etkilemez.
-    _saat_baslik = (f"🕐 Geçiş saatleri (genel) — gündüz {_g_saat:02d}:00 · "
-                    f"gece {_ge_saat:02d}:00")
-    if _ozel_saatli:
-        _saat_baslik += "  ·  %d lokasyon kendi saatiyle" % len(_ozel_saatli)
-    with st.expander(_saat_baslik):
+        # ── Kumanda satırları ──
+        # Kart dar bir sütunda (≈270 px) duruyor: düğmeler yan yana
+        # konulduğunda etiketler iki-üç satıra kırılıyor. Bu yüzden alt alta
+        # ve TAM GENİŞLİKTE dururlar; simetriyi ortak kenar boşluğu, eşit
+        # yükseklik ve aynı köşe yarıçapı sağlar.
+        _btn_lbl = "🟢 Senaryo AKTİF — Kapat" if _oto_aktif_su else "🔴 Senaryo KAPALI — Aç"
+        _btn_type = "secondary" if _oto_aktif_su else "primary"
+        if st.button(_btn_lbl, key="oto_set_toggle_btn",
+                     use_container_width=True, type=_btn_type):
+            _yeni_deger = "false" if _oto_aktif_su else "true"
+            _pay = _oajson.dumps({"key": "oto_set_aktif", "value": _yeni_deger}).encode()
+            _oaur.urlopen(_oaur.Request(url+"/rest/v1/ayarlar", data=_pay, method="POST",
+                headers={"apikey": key, "Authorization": "Bearer "+key,
+                         "Content-Type": "application/json",
+                         "Prefer": "resolution=merge-duplicates"}), timeout=4)
+            st.rerun()
+
+        # ── Geçiş saatleri ayarı (GENEL kural) ──
+        # Setler yalnızca bu saatlerde gönderilir; buradan değiştirilebilir.
+        # Bir hastane farklı saatle çalışacaksa kendi lokasyon detayından
+        # ayarlanır — buradaki değer o lokasyonu etkilemez.
+        _saat_baslik = (f"🕐 Geçiş saatleri (genel) — gündüz {_g_saat:02d}:00 · "
+                        f"gece {_ge_saat:02d}:00")
         if _ozel_saatli:
-            st.info("Kendi geçiş saatiyle çalışan lokasyonlar: %s — bu "
-                    "lokasyonlar aşağıdaki genel saatten ETKİLENMEZ, saatleri "
-                    "kendi lokasyon detaylarından değiştirilir."
-                    % ", ".join(HASTANELER.get(l, {}).get("kisa", l)
-                                for l in _ozel_saatli))
-        _sc1, _sc2 = st.columns(2)
-        with _sc1:
-            _yeni_g = st.number_input("Gündüz başlangıcı", min_value=0, max_value=23,
-                                      value=int(_g_saat), step=1, key="oto_gunduz_saat_in",
-                                      help="Gündüz setleri bu saatte gönderilir")
-        with _sc2:
-            _yeni_ge = st.number_input("Gece başlangıcı", min_value=0, max_value=23,
-                                       value=int(_ge_saat), step=1, key="oto_gece_saat_in",
-                                       help="Gece setleri bu saatte gönderilir")
-        if _yeni_g == _yeni_ge:
-            st.warning("Gündüz ve gece saati aynı olamaz.")
-        elif st.button("Saatleri Kaydet", key="oto_saat_kaydet", use_container_width=True):
-            for _k, _v in (("oto_gunduz_saat", _yeni_g), ("oto_gece_saat", _yeni_ge)):
-                _oaur.urlopen(_oaur.Request(
-                    url + "/rest/v1/ayarlar",
-                    data=_oajson.dumps({"key": _k, "value": str(int(_v))}).encode(),
-                    method="POST",
-                    headers={"apikey": key, "Authorization": "Bearer " + key,
-                             "Content-Type": "application/json",
-                             "Prefer": "resolution=merge-duplicates"}), timeout=4)
-            st.success(f"Kaydedildi — gündüz {int(_yeni_g):02d}:00, gece {int(_yeni_ge):02d}:00")
-            st.rerun()
-        st.caption("Setler yalnızca bu saatlerde gönderilir. Gün ortasında hava "
-                   "tahmini değişse bile komut gitmez, bir sonraki geçişte uygulanır.")
+            _saat_baslik += "  ·  %d lokasyon kendi saatiyle" % len(_ozel_saatli)
+        with st.expander(_saat_baslik):
+            if _ozel_saatli:
+                st.info("Kendi geçiş saatiyle çalışan lokasyonlar: %s — bu "
+                        "lokasyonlar aşağıdaki genel saatten ETKİLENMEZ, saatleri "
+                        "kendi lokasyon detaylarından değiştirilir."
+                        % ", ".join(HASTANELER.get(l, {}).get("kisa", l)
+                                    for l in _ozel_saatli))
+            _sc1, _sc2 = st.columns(2)
+            with _sc1:
+                _yeni_g = st.number_input("Gündüz başlangıcı", min_value=0, max_value=23,
+                                          value=int(_g_saat), step=1, key="oto_gunduz_saat_in",
+                                          help="Gündüz setleri bu saatte gönderilir")
+            with _sc2:
+                _yeni_ge = st.number_input("Gece başlangıcı", min_value=0, max_value=23,
+                                           value=int(_ge_saat), step=1, key="oto_gece_saat_in",
+                                           help="Gece setleri bu saatte gönderilir")
+            if _yeni_g == _yeni_ge:
+                st.warning("Gündüz ve gece saati aynı olamaz.")
+            elif st.button("Saatleri Kaydet", key="oto_saat_kaydet", use_container_width=True):
+                for _k, _v in (("oto_gunduz_saat", _yeni_g), ("oto_gece_saat", _yeni_ge)):
+                    _oaur.urlopen(_oaur.Request(
+                        url + "/rest/v1/ayarlar",
+                        data=_oajson.dumps({"key": _k, "value": str(int(_v))}).encode(),
+                        method="POST",
+                        headers={"apikey": key, "Authorization": "Bearer " + key,
+                                 "Content-Type": "application/json",
+                                 "Prefer": "resolution=merge-duplicates"}), timeout=4)
+                st.success(f"Kaydedildi — gündüz {int(_yeni_g):02d}:00, gece {int(_yeni_ge):02d}:00")
+                st.rerun()
+            st.caption("Setler yalnızca bu saatlerde gönderilir. Gün ortasında hava "
+                       "tahmini değişse bile komut gitmez, bir sonraki geçişte uygulanır.")
 
-    # Detay listesi — session_state toggle (autorefresh'e karşı dayanıklı)
-    if _ml_data:
-        if "gecis_listesi_acik" not in st.session_state:
-            st.session_state["gecis_listesi_acik"] = False
+        # ── Geçiş listesi (aynı kartın içinde, gömme panel) ──
+        # Detay listesi session_state ile açılır (autorefresh'e dayanıklı).
+        if _ml_data:
+            _liste_acik = st.session_state.get("gecis_listesi_acik", False)
+            if st.button("🔼 Geçişleri gizle" if _liste_acik
+                         else "📋 Tüm geçişleri göster",
+                         key="gecis_toggle_btn", use_container_width=True):
+                st.session_state["gecis_listesi_acik"] = not _liste_acik
+                st.rerun()
 
-        _btn_label = "🔼 Geçişleri gizle" if st.session_state["gecis_listesi_acik"] else "📋 Tüm geçişleri göster"
-        if st.button(_btn_label, key="gecis_toggle_btn", use_container_width=True):
-            st.session_state["gecis_listesi_acik"] = not st.session_state["gecis_listesi_acik"]
-            st.rerun()
-
-        if st.session_state["gecis_listesi_acik"]:
+        if _ml_data and st.session_state.get("gecis_listesi_acik"):
             _gecis_satirlari = ""
             for _mk in _ml_data[:20]:
                 _mk_z  = _mk["created_at"][:16].replace("T", " ")
@@ -2299,8 +2364,8 @@ with sag:
                     f"</div>"
                 )
             st.markdown(
-                f"<div style='background:#fafaf8;border:1px solid rgba(24,26,30,0.10);"
-                f"border-radius:14px;padding:8px 12px;margin-bottom:5px;'>"
+                f"<div style='background:#f1f0ed;border:1px solid rgba(24,26,30,0.10);"
+                f"border-radius:10px;padding:6px 12px;'>"
                 f"{_gecis_satirlari}</div>",
                 unsafe_allow_html=True
             )
