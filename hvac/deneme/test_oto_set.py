@@ -687,7 +687,25 @@ if _metin:
     # devam ediyordu.
     _gomulu = [v for v in ("8.0°C", "7.5°C", "7.0°C", "6.5°C") if v in _metin]
     c("merkez panelinde gomulu set degeri yok", not _gomulu, _gomulu)
-    c("merkez setleri sahadan okur", '_saha_setleri' in _metin)
+    c("merkez setleri sahadan okur (lokasyon basina)",
+      '_setler_lok' in _metin and '"setler"' in _metin)
+    # 11.10.2026: DEGERLER lokasyon detayina tasindi. Her hastane kendi dis
+    # havasina gore calistigi icin ana ekranda tek deger gostermek lokasyon
+    # sayisi artinca yaniltiyordu; ana ekranda yalnizca "ayrisma var mi"
+    # ozeti kalir.
+    c("ana ekran set DEGERI degil OZET gosterir",
+      "lokasyon detayinda" in _metin or "lokasyon detayında" in _metin)
+
+    _det = os.path.join(os.path.dirname(_mk), "pages", "lokasyon_detay.py")
+    try:
+        _dmetin = open(_det, encoding="utf-8").read()
+    except OSError:
+        _dmetin = ""
+    if _dmetin:
+        c("lokasyon detayi setleri heartbeat'ten okur",
+          '.get("setler")' in _dmetin and 'bakim_ozet.get("oto")' in _dmetin)
+        _dgomulu = [v for v in ("8.0°C", "7.5°C", "7.0°C", "6.5°C") if v in _dmetin]
+        c("lokasyon detayinda gomulu set degeri yok", not _dgomulu, _dgomulu)
 
 hata = sum(1 for _, ok, _ in T if not ok)
 print()

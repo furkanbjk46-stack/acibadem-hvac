@@ -1376,13 +1376,75 @@ with tab1:
             unsafe_allow_html=True
         )
 
+    # ── YÜRÜRLÜKTEKİ SETLER (lokasyona özel) ──────────────────────────
+    # Değerler bu lokasyonun heartbeat'inden gelir (bakim_ozet.oto.setler);
+    # kural tablosu lokasyonun kendi oto_set.py dosyasındadır, merkezde yok.
+    # Ana ekranda tutulmuyor: her hastane kendi dış havasına ve kendi
+    # işletme tablosuna göre çalıştığı için özet kartta tek değer göstermek
+    # lokasyon sayısı arttıkça yanıltıcı oluyordu.
+    _oto = bakim_ozet.get("oto") or {}
+    _setler = (_oto or {}).get("setler") or {}
+    if _setler:
+        st.markdown("<div style='margin-top:14px'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="sec">🎛️ YÜRÜRLÜKTEKİ SETLER</div>', unsafe_allow_html=True)
+
+        def _sd(anahtar):
+            _v = _setler.get(anahtar)
+            return ("%g°C" % _v) if isinstance(_v, (int, float)) else "—"
+
+        _CH_AD = {"koc_soguk": "Koç soğuk", "serin": "Serin",
+                  "ilimli": "Ilımlı", "sicak": "Sıcak"}
+        _DIG_AD = {"sogutma": "Soğutma", "isitma": "Isıtma"}
+        _ch_mod = _CH_AD.get((_oto or {}).get("chiller_mod"), "—")
+        _dig_mod = _DIG_AD.get((_oto or {}).get("diger_mod"), "—")
+        _donem = {"gunduz": "Gündüz", "gece": "Gece"}.get((_oto or {}).get("donem"), "—")
+
+        _fcu = _setler.get("A_BLOK_FCU_SET", _setler.get("B_BLOK_FCU_SET"))
+        _ahu = _setler.get("ZON1_KLIMA_SANTRALI_SET",
+                           _setler.get("ZON2_KLIMA_SANTRALI_SET"))
+        _esik = _setler.get("esikler") or {}
+
+        def _set_kart(etiket, deger, alt):
+            return ("<div style='" + KART + "'><div style='" + LBL + "'>" + etiket + "</div>"
+                    f"<div style='font-size:20px;font-weight:650;color:#133273;'>{deger}</div>"
+                    f"<div style='font-size:10px;color:#46536b;margin-top:2px;'>{alt}</div></div>")
+
+        _k1, _k2, _k3, _k4 = st.columns(4)
+        with _k1:
+            st.markdown(_set_kart("❄️ CHILLER", _sd("chiller"), _ch_mod),
+                        unsafe_allow_html=True)
+        with _k2:
+            st.markdown(_set_kart(
+                "🌀 KOLLEKTÖR",
+                "%s / %s" % (_sd("GUNDUZ_KOLLEKTOR_SET"), _sd("GECE_KOLLEKTOR_SET")),
+                "gündüz / gece · %s" % _dig_mod), unsafe_allow_html=True)
+        with _k3:
+            st.markdown(_set_kart(
+                "🧊 FCU", ("%g°C" % _fcu) if isinstance(_fcu, (int, float)) else "—",
+                "A/B blok"), unsafe_allow_html=True)
+        with _k4:
+            st.markdown(_set_kart(
+                "🏢 AHU", ("%g°C" % _ahu) if isinstance(_ahu, (int, float)) else "—",
+                "Zon-1/2 santral"), unsafe_allow_html=True)
+
+        _ck = _esik.get("chiller_sinir") or []
+        _alt = []
+        if _ck:
+            _alt.append("Chiller bölgeleri: %s °C (±%g histerezis)"
+                        % (" / ".join("%g" % x for x in _ck), _esik.get("chiller_h", 0)))
+        if _esik.get("dig_esik") is not None:
+            _alt.append("Kollektör/FCU/AHU eşiği: %g °C (±%g)"
+                        % (_esik["dig_esik"], _esik.get("dig_h", 0)))
+        st.caption("Dönem: %s · %s" % (_donem, " · ".join(_alt) if _alt else
+                                       "eşikler bildirilmedi"))
+
     # ══════════════════════════════════════════════════════
     # SİSTEM SAĞLIĞI (lokasyona özgü)
     # ══════════════════════════════════════════════════════
     # Bu üç gösterge her lokasyon için AYRI anlamlıdır (kendi ayarları, kendi
     # geçmişi, kendi geri bildirimi). Genel özet kartında toplanınca lokasyon
     # sayısı arttıkça okunamaz hale geliyordu — 20.09.2026'da buraya taşındı.
-    _oto      = bakim_ozet.get("oto") or {}
+    # _oto yukarıda (YÜRÜRLÜKTEKİ SETLER) tanımlandı — aynı heartbeat sözlüğü
     _oz_test  = bakim_ozet.get("oz_test") or {}
     _geri_bld = bakim_ozet.get("geri_bildirim") or {}
 

@@ -184,13 +184,19 @@ def veri_uret():
                             "GUNDUZ_KOLLEKTOR_SET": 9.0, "GECE_KOLLEKTOR_SET": 11.0,
                             "A_BLOK_FCU_SET": 13.0, "B_BLOK_FCU_SET": 13.0,
                             "ZON1_KLIMA_SANTRALI_SET": 9.0,
-                            "ZON2_KLIMA_SANTRALI_SET": 9.0}
+                            "ZON2_KLIMA_SANTRALI_SET": 9.0,
+                            "esikler": {"chiller_sinir": [6.0, 22.0, 25.0],
+                                        "chiller_h": 2.0,
+                                        "dig_esik": 14.0, "dig_h": 3.0}}
                            if lok_id in ("adana", "izmir") else
                            {"chiller": 7.5,
                             "GUNDUZ_KOLLEKTOR_SET": 10.0, "GECE_KOLLEKTOR_SET": 12.0,
                             "A_BLOK_FCU_SET": 14.0, "B_BLOK_FCU_SET": 14.0,
                             "ZON1_KLIMA_SANTRALI_SET": 10.0,
-                            "ZON2_KLIMA_SANTRALI_SET": 10.0}),
+                            "ZON2_KLIMA_SANTRALI_SET": 10.0,
+                            "esikler": {"chiller_sinir": [7.0, 23.0, 26.0],
+                                        "chiller_h": 2.0,
+                                        "dig_esik": 15.0, "dig_h": 3.0}}),
             }
 
         lokasyonlar.append({
