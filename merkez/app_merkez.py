@@ -2798,6 +2798,67 @@ with sag:
                     return "    Mekanik : " + " | ".join(
                         _aiv.mekanik_ozet(_oz, tam=tam)) + "\n"
 
+                def _lok_df(lid):
+                    """Lokasyonun TÜM geçmişi (geçen yıl kıyası için gerekir)."""
+                    return df_all[df_all["lokasyon_id"] == lid]
+
+                def _kiyas_blok(lid, kisa=False):
+                    """Dünü kendi geçmişiyle kıyaslayan satırlar."""
+                    _m2v = HASTANELER.get(lid, {}).get("m2", 10000)
+                    _kn = _aiv.kiyas_noktalari(_lok_df(lid), _dun_dt.date(), _m2v)
+                    if not _kn:
+                        return ""
+                    if kisa:
+                        _p = [("%s %+.1f%%" % (k["ad"].split()[1][:3], k["degisim"]))
+                              for k in _kn if k.get("veri") and k.get("degisim") is not None]
+                        return ("  Kıyas: " + ", ".join(_p) + "\n") if _p else ""
+                    _s = "  ▷ Kıyas (dün ile):\n"
+                    for k in _kn:
+                        if not k.get("veri"):
+                            _s += "    %s (%s): veri yok\n" % (k["ad"],
+                                                               k["tarih"].strftime("%d.%m.%Y"))
+                            continue
+                        _s += "    %s (%s): %s kWh" % (k["ad"],
+                                                       k["tarih"].strftime("%d.%m.%Y"),
+                                                       format(int(k["elektrik"]), ","))
+                        if k.get("degisim") is not None:
+                            _s += "  →  dün %+.1f%%" % k["degisim"]
+                        if k.get("dis_hava") is not None:
+                            _s += "  |  dış hava %.1f°C" % k["dis_hava"]
+                            if k.get("dis_fark") is not None:
+                                _s += " (dün %+.1f°C)" % k["dis_fark"]
+                        _s += "\n"
+                    return _s
+
+                _TREND_AD = {"elektrik_gun": ("Elektrik", "kWh/gün"),
+                             "kojen_verim": ("Kojen verimi", "kWh/m³"),
+                             "sebeke_bag": ("Şebeke payı", "%")}
+
+                def _trend_blok(lid, kisa=False):
+                    """Son 7 gün ile önceki 7 günün karşılaştırması (yön)."""
+                    _tr = _aiv.trend(_lok_df(lid), _dun_dt.date(), 7)
+                    _par = []
+                    for _k, (_ad, _br) in _TREND_AD.items():
+                        _t = _tr.get(_k) or {}
+                        if _t.get("son") is None or _t.get("onceki") is None:
+                            continue
+                        _par.append((_ad, _br, _t))
+                    if not _par:
+                        return ""
+                    if kisa:
+                        return ("  Trend7g: " + ", ".join(
+                            "%s %+.1f%%" % (a, t["degisim"])
+                            for a, _b, t in _par if t.get("degisim") is not None) + "\n")
+                    _s = "  ▷ Trend (son 7 gün / önceki 7 gün):\n"
+                    for _ad, _br, _t in _par:
+                        _s += "    %s: %s → %s %s" % (_ad, _t["onceki"], _t["son"], _br)
+                        if _t.get("degisim") is not None:
+                            _s += "  (%+.1f%%, %s)" % (_t["degisim"], _t.get("yon") or "—")
+                        _s += "\n"
+                    if _tr.get("kapsama", 7) < 7:
+                        _s += "    ⓘ Son 7 günün yalnızca %d gününde veri var\n" % _tr["kapsama"]
+                    return _s
+
                 def _dun_blok_tam(lid, mv):
                     """TIER 1 — tam detay bloğu.
 
@@ -2870,6 +2931,8 @@ with sag:
                     else:
                         b += f"  ▶ Dün: bu güne ait hiç veri girilmemiş (arıza göstergesi DEĞİL)\n"
                     b += _mekanik_blok(lid)
+                    b += _kiyas_blok(lid)
+                    b += _trend_blok(lid)
                     b += f"  ▷ 30g ort: {mv['kwh_m2']} kWh/m²/gün"
                     if mv["kojen_verim"]: b += f"  |  Kojen: {mv['kojen_verim']} kWh/m³"
                     if mv["sebeke_bag"]:  b += f"  |  Şebeke: %{mv['sebeke_bag']}"
@@ -2899,7 +2962,9 @@ with sag:
                         yo   = round(dkwh/_m2v, 2) if _v_kwh else "veri yok"
                         return (f"  {mv['isim']}{flag}: {yo} kWh/m²/gün  |  "
                                 f"Kojen verim {kv}  |  Şebeke {sb}  |  30g ort {mv['kwh_m2']}\n"
-                                + _mekanik_blok(lid, tam=False))
+                                + _mekanik_blok(lid, tam=False)
+                                + _kiyas_blok(lid, kisa=True)
+                                + _trend_blok(lid, kisa=True))
                     else:
                         return (f"  {mv['isim']}{flag}: güne ait veri girilmemiş  |  "
                                 f"30g ort {mv['kwh_m2']} kWh/m²/gün\n"
@@ -2927,8 +2992,10 @@ with sag:
                         yo   = round(dkwh/_m2v, 2) if _v_kwh else "vy"
                         _mek = _mekanik_blok(lid, tam=False).strip()
                         _mek = _mek.replace("Mekanik :", "").strip()
+                        _ky = _kiyas_blok(lid, kisa=True).strip().replace("Kıyas: ", "")
                         return (f"  [{flag}] {mv['isim']}: {yo} kWh/m²  Koj:{kv}  Şeb:{sb}"
-                                f"  — {_mek}\n")
+                                + (f"  [{_ky}]" if _ky else "")
+                                + f"  — {_mek}\n")
                     else:
                         return f"  [?] {mv['isim']}: güne ait veri girilmemiş\n"
 
@@ -2942,21 +3009,29 @@ with sag:
                     "VERİ KURALI: 'veri yok / veri girilmedi / vy' yazan kalem SIFIR DEĞİLDİR, "
                     "ölçüm girilmemiştir. Bu kalemler için arıza, duruş ya da bakım yorumu YAPMA; "
                     "yalnızca 'veri girişi eksik, kontrol edilsin' de. Arıza/bakım/bağlantı "
-                    "iddiasını SADECE 'Mekanik' satırındaki bilgilere dayandır.\n\n"
+                    "iddiasını SADECE 'Mekanik' satırındaki bilgilere dayandır.\n"
+                    # Sabit eşik bir hastanenin kendi normalini söylemez:
+                    # 58.529 kWh tek başına ne iyi ne kötüdür.
+                    "KIYAS KURALI: Değerlendirmeyi önce 'Kıyas' (geçen hafta / geçen yıl "
+                    "aynı gün) ve 'Trend' satırlarına dayandır, sabit eşikler ikincildir. "
+                    "Tüketim farkını yorumlarken DIŞ HAVA farkını hesaba kat: hava daha "
+                    "sıcak/soğukken tüketimin artması tek başına sapma değildir.\n\n"
                 )
 
                 # ════════════════ TIER 1: 1-3 lokasyon ════════════════
                 if _lok_n <= 3:
                     _lok_bloklari = [_dun_blok_tam(lid, mv) for lid, mv in _sirali]
-                    _max_tok = 600
+                    _max_tok = 700
                     _yonerge = (
                         "Türkçe, mühendis dilinde:\n"
-                        "1. Dünün enerji dengesi — kojen/şebeke/gaz üçgeni "
-                        "(eksik kalem varsa önce onu söyle)\n"
-                        "2. En kritik anomali ve kök nedeni — enerji sayısıyla "
-                        "mekanik durumu (arıza, veri alarmı, oto-set) BİRLİKTE yorumla\n"
-                        "3. Bugün yapılacak 1 somut aksiyon\n"
-                        "Maksimum 200 kelime."
+                        "1. Dün nasıl geçti — kendi geçmişine göre (geçen hafta/geçen yıl "
+                        "aynı gün, dış hava farkıyla); eksik kalem varsa önce onu söyle\n"
+                        "2. Eğilim — 7 günlük trend neyi gösteriyor (düzeliyor mu, "
+                        "bozuluyor mu)\n"
+                        "3. En kritik bulgu ve kök nedeni — enerji sayısıyla mekanik "
+                        "durumu (arıza, veri alarmı, oto-set) BİRLİKTE yorumla\n"
+                        "4. Bugün yapılacak 1 somut aksiyon\n"
+                        "Maksimum 230 kelime."
                     )
 
                 # ════════════════ TIER 2: 4-7 lokasyon ════════════════

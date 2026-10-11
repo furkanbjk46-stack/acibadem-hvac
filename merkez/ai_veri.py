@@ -113,6 +113,122 @@ def gun_ozeti(df_gun, m2):
     return o
 
 
+def _gun_satirlari(df_lok, tarih):
+    """Bir güne ait satırlar (Tarih kolonu datetime)."""
+    try:
+        return df_lok[df_lok["Tarih"].dt.date == tarih]
+    except Exception:
+        return df_lok.iloc[0:0]
+
+
+def _dis_hava(df_gun):
+    return _ortalama(df_gun, "Dis_Hava_Sicakligi_C")
+
+
+def kiyas_noktalari(df_lok, hedef_tarih, m2):
+    """Dünü KENDİ geçmişiyle karşılaştır: geçen hafta ve geçen yıl aynı gün.
+
+    Sabit eşik ("0.5–1.5 kWh/m²/gün") bir hastanenin kendi normalini
+    söylemez; 58.529 kWh tek başına ne iyi ne kötüdür. Aynı haftanın günü
+    ve geçen yılın aynı günü, dış hava farkıyla birlikte, asıl zemindir.
+    """
+    import datetime as _dt
+    cikti = []
+    try:
+        hedef = _gun_satirlari(df_lok, hedef_tarih)
+    except Exception:
+        return cikti
+    if hedef.empty or not kalem_var(hedef, KALEMLER["elektrik"]):
+        return cikti
+    simdi_kwh = _topla(hedef, KALEMLER["elektrik"])
+    simdi_dis = _dis_hava(hedef)
+
+    for ad, gun_fark in (("geçen hafta aynı gün", 7), ("geçen yıl aynı gün", 364)):
+        t = hedef_tarih - _dt.timedelta(days=gun_fark)
+        g = _gun_satirlari(df_lok, t)
+        if g.empty or not kalem_var(g, KALEMLER["elektrik"]):
+            cikti.append({"ad": ad, "tarih": t, "veri": False})
+            continue
+        onceki = _topla(g, KALEMLER["elektrik"])
+        onceki_dis = _dis_hava(g)
+        cikti.append({
+            "ad": ad, "tarih": t, "veri": True,
+            "elektrik": onceki,
+            "yogunluk": round(onceki / m2, 2) if m2 else None,
+            "degisim": (round((simdi_kwh - onceki) / onceki * 100, 1)
+                        if onceki > 0 else None),
+            "dis_hava": round(onceki_dis, 1) if onceki_dis is not None else None,
+            "dis_fark": (round(simdi_dis - onceki_dis, 1)
+                         if (simdi_dis is not None and onceki_dis is not None) else None),
+        })
+    return cikti
+
+
+def _pencere(df_lok, bitis, gun):
+    """[bitis-gun+1 .. bitis] aralığındaki satırlar."""
+    import datetime as _dt
+    bas = bitis - _dt.timedelta(days=gun - 1)
+    try:
+        d = df_lok["Tarih"].dt.date
+        return df_lok[(d >= bas) & (d <= bitis)]
+    except Exception:
+        return df_lok.iloc[0:0]
+
+
+def _yon(degisim, buyuk_iyi=True, esik=3.0):
+    """Değişim yönü: eşiğin altındaki oynama 'sabit' sayılır."""
+    if degisim is None:
+        return None
+    if abs(degisim) < esik:
+        return "sabit"
+    artiyor = degisim > 0
+    iyi = artiyor if buyuk_iyi else not artiyor
+    return ("artıyor" if artiyor else "azalıyor") + (" (iyi)" if iyi else " (kötü)")
+
+
+def trend(df_lok, hedef_tarih, pencere_gun=7):
+    """Son N gün ile ÖNCEKİ N günü karşılaştırır — yön bilgisi.
+
+    Tek gün + 30 günlük ortalama, "kojen verimi üç haftadır düşüyor" gibi
+    arıza öncesi sinyali göstermez. Oranlar pencere TOPLAMLARINDAN hesaplanır
+    (günlük oranların ortalaması, az üretilen günleri fazla ağırlıklandırır).
+    """
+    import datetime as _dt
+    son   = _pencere(df_lok, hedef_tarih, pencere_gun)
+    onc   = _pencere(df_lok, hedef_tarih - _dt.timedelta(days=pencere_gun), pencere_gun)
+    cikti = {"pencere": pencere_gun,
+             "kapsama": (int(son["Tarih"].dt.date.nunique()) if not son.empty else 0)}
+
+    def _oran(df, tur):
+        if df.empty:
+            return None
+        if tur == "elektrik_gun":
+            if not kalem_var(df, KALEMLER["elektrik"]):
+                return None
+            gun = max(1, int(df["Tarih"].dt.date.nunique()))
+            return round(_topla(df, KALEMLER["elektrik"]) / gun, 1)
+        if tur == "kojen_verim":
+            if not (kalem_var(df, KALEMLER["kojen"]) and kalem_var(df, KALEMLER["kojen_gaz"])):
+                return None
+            gaz = _topla(df, KALEMLER["kojen_gaz"])
+            return round(_topla(df, KALEMLER["kojen"]) / gaz, 2) if gaz > 0 else None
+        if tur == "sebeke_bag":
+            if not (kalem_var(df, KALEMLER["sebeke"]) and kalem_var(df, KALEMLER["kojen"])):
+                return None
+            s, k = _topla(df, KALEMLER["sebeke"]), _topla(df, KALEMLER["kojen"])
+            return round(s / (s + k) * 100, 1) if (s + k) > 0 else None
+        return None
+
+    for tur, buyuk_iyi in (("elektrik_gun", False), ("kojen_verim", True),
+                           ("sebeke_bag", False)):
+        a, b = _oran(onc, tur), _oran(son, tur)
+        deg = (round((b - a) / a * 100, 1) if (a not in (None, 0) and b is not None)
+               else None)
+        cikti[tur] = {"onceki": a, "son": b, "degisim": deg,
+                      "yon": _yon(deg, buyuk_iyi)}
+    return cikti
+
+
 def mekanik_ozet(bakim_ozet, tam=True):
     """Lokasyonun mekanik/saha durumu — kısa cümleler listesi.
 
