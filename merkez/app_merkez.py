@@ -2251,7 +2251,7 @@ with sag:
     /* ── Rozet görünümlü düğmeler (GÜNDÜZ kartıyla aynı ölçü) ── */
     .st-key-oto_saat_kart button, .st-key-oto_liste_kart button {
         width:100% !important;
-        height:44px !important; min-height:44px !important;
+        height:52px !important; min-height:52px !important;
         overflow:hidden;
         border-radius:8px !important;
         border:1px solid rgba(24,26,30,0.18) !important;
@@ -2292,7 +2292,10 @@ with sag:
         # aynı yerde açıp kapatmak için). Geçiş saatleri ve geçiş listesi de
         # aynı ölçüde kart düğmelerdir; aşağı doğru liste açmak yerine
         # POP-UP (st.dialog) açarlar — kart boyu sabit kalır.
-        _k_sw, _k_rozet = st.columns([0.5, 1.5], vertical_alignment="center")
+        # Dört öğe TEK SATIRDA: anahtar + dönem rozeti + iki kart düğme.
+        # Üç kutu eşit genişlik ve eşit yükseklikte (52 px) durur.
+        _k_sw, _k_rozet, _k_saat, _k_liste = st.columns(
+            [0.42, 1, 1, 1], vertical_alignment="center")
 
         with _k_sw:
             _sw_key = "oto_switch_on" if _oto_aktif_su else "oto_switch_off"
@@ -2318,29 +2321,30 @@ with sag:
         with _k_rozet:
             st.markdown(
                 f"<div style='background:rgba(19,50,115,0.04);border:1px solid {_sd_renk}55;"
-                f"border-radius:8px;padding:5px 10px;min-height:44px;box-sizing:border-box;'>"
+                f"border-radius:8px;padding:4px 10px;height:52px;box-sizing:border-box;"
+                f"display:flex;flex-direction:column;justify-content:center;"
+                f"overflow:hidden;'>"
                 f"<div style='font-size:11px;font-weight:700;color:{_sd_renk};'>"
                 f"{_sd_ikon} {_sd_ad}</div>"
                 f"<div style='font-size:9px;color:#46536b;margin-top:1px;'>"
                 f"sıradaki geçiş {_sonraki}</div>"
                 f"</div>", unsafe_allow_html=True)
 
-        # Rozetle AYNI ölçüdeki iki kart düğme, hemen altında yan yana.
-        _k_saat, _k_liste = st.columns(2)
-
         with _k_saat:
             # Kısa tutulur: düğme rozetle aynı yükseklikte kalmalı
             _saat_alt = "%02d:00 · %02d:00" % (_g_saat, _ge_saat)
             if _ozel_saatli:
                 _saat_alt += " · %d özel" % len(_ozel_saatli)
-            if st.button("🕐 Geçiş saatleri  \n%s" % _saat_alt, key="oto_saat_kart"):
+            if st.button("🕐 Geçiş saatleri  \n%s" % _saat_alt,
+                         key="oto_saat_kart", use_container_width=True):
                 st.session_state["_oto_popup"] = "saat"
                 st.rerun()
 
         with _k_liste:
             if st.button("📋 Geçiş kayıtları  \n%s" % ("%d kayıt" % len(_ml_data)
                                                       if _ml_data else "kayıt yok"),
-                         key="oto_liste_kart", disabled=not _ml_data):
+                         key="oto_liste_kart", use_container_width=True,
+                         disabled=not _ml_data):
                 st.session_state["_oto_popup"] = "liste"
                 st.rerun()
 
