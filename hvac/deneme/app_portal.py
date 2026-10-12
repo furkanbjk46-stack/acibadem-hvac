@@ -1515,7 +1515,36 @@ def persist_df(df: pd.DataFrame) -> None:
         pass
 
 
+def _eski_degerleri_koru(df_new: pd.DataFrame, df_eski: pd.DataFrame,
+                         gelen_sutunlar: list) -> pd.DataFrame:
+    """Aynı tarihin ESKİ satırındaki, bu kayıtta GELMEYEN alanları korur.
+
+    Enerji giriş formunda yalnızca elle okunan kalemler var; MCC / Chiller /
+    Kule alt sayaçlarını data_bridge günde bir kez yazıyor. Eski davranışta
+    kayıt o tarihin satırını TÜMÜYLE yenisiyle değiştiriyordu: geçmiş bir güne
+    su veya doğalgaz girilince aynı günün sayaç değerleri siliniyor, enerji
+    diyagramında tarih duruyor ama bütün çipler "veri yok" görünüyordu.
+
+    Kural: sütun bu kayıtta HİÇ gelmediyse eski değeri kalır; geldiyse (0 dahil)
+    olduğu gibi yazılır — kullanıcı bir kalemi bilerek sıfırlayabilsin diye.
+    Yalnızca gelen değer boşsa (NaN) eskisi yedek olarak kullanılır.
+    """
+    _esk = df_eski.drop_duplicates(subset=["Tarih"], keep="last").set_index("Tarih")
+    for _c in df_new.columns:
+        if _c == "Tarih" or _c not in _esk.columns:
+            continue
+        _eski_deger = df_new["Tarih"].map(_esk[_c])
+        if _c in gelen_sutunlar:
+            df_new[_c] = df_new[_c].where(df_new[_c].notna(), _eski_deger)
+        else:
+            df_new[_c] = _eski_deger
+    return df_new
+
+
 def upsert_by_date(df_new: pd.DataFrame) -> tuple[int, int]:
+    # Gelen tabloda GERÇEKTEN bulunan sütunlar — ensure_schema şemanın geri
+    # kalanını NaN ile dolduracağı için ÖNCE saklanır (_eski_degerleri_koru).
+    _gelen_sutunlar = [c for c in df_new.columns if c != "Tarih"]
     df_new = ensure_schema(df_new.copy())
     df_new = coerce_types(df_new)
     df_new = recalc(df_new)
@@ -1533,7 +1562,10 @@ def upsert_by_date(df_new: pd.DataFrame) -> tuple[int, int]:
     updated = len(old_dates.intersection(new_dates))
     inserted = len(new_dates - old_dates)
 
+    _ayni_tarih = df_old[df_old["Tarih"].isin(new_dates)]
     df_old = df_old[~df_old["Tarih"].isin(new_dates)]
+    if not _ayni_tarih.empty:
+        df_new = _eski_degerleri_koru(df_new, _ayni_tarih, _gelen_sutunlar)
     merged = pd.concat([df_old, df_new], ignore_index=True)
     merged = ensure_schema(merged)
     merged = coerce_types(merged)
@@ -2781,32 +2813,11 @@ _monthly_notif = _auto_notifs.get("monthly", {})
 _daily_auto_ready = _daily_notif.get("filepath") and os.path.exists(_daily_notif.get("filepath", "")) and not _daily_notif.get("seen", True)
 _monthly_auto_ready = _monthly_notif.get("filepath") and os.path.exists(_monthly_notif.get("filepath", "")) and not _monthly_notif.get("seen", True)
 
-# Yeşil buton CSS (otomatik rapor hazır olduğunda)
-if _daily_auto_ready or _monthly_auto_ready:
-    st.markdown("""
-    <style>
-    .auto-report-ready {
-        background: #0ca30c !important;
-        border: 1px solid #0ca30c !important;
-        border-radius: 8px;
-        padding: 10px 14px;
-        margin: 4px 0;
-        animation: pulse-green 2s ease-in-out infinite;
-    }
-    @keyframes pulse-green {
-        0%, 100% { box-shadow: 0 0 5px rgba(12,163,12,0.3); }
-        50% { box-shadow: 0 0 15px rgba(12,163,12,0.6); }
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 _dr_col1, _dr_col2, _dr_col3 = st.columns([3, 1, 1])
 with _dr_col1:
     st.caption("Merkezi Performans İzleme")
 with _dr_col2:
-    if _daily_auto_ready:
-        st.markdown('<div class="auto-report-ready">✅ Günlük Rapor Hazır!</div>', unsafe_allow_html=True)
-    if st.button("📄 Günlük Rapor Oluştur" if not _daily_auto_ready else "🔄 Yeniden Oluştur", key="daily_report_btn", use_container_width=True):
+    if st.button("📄 Günlük Rapor Oluştur", key="daily_report_btn", use_container_width=True):
         try:
             import sys
             sys.path.insert(0, os.path.dirname(__file__))
@@ -2815,13 +2826,12 @@ with _dr_col2:
             _dr_path = gen.generate()
             st.session_state["daily_report_path"] = _dr_path
             st.session_state["daily_report_ready"] = True
+            st.session_state["_rapor_toast"] = "📄 Günlük rapor hazır — bildirim çubuğundan indirin."
             st.rerun()
         except Exception as e:
             st.error(f"Rapor oluşturulamadı: {e}")
 with _dr_col3:
-    if _monthly_auto_ready:
-        st.markdown('<div class="auto-report-ready">✅ Aylık Rapor Hazır!</div>', unsafe_allow_html=True)
-    if st.button("📊 Aylık Rapor Oluştur" if not _monthly_auto_ready else "🔄 Yeniden Oluştur", key="monthly_report_btn", use_container_width=True):
+    if st.button("📊 Aylık Rapor Oluştur", key="monthly_report_btn", use_container_width=True):
         try:
             import sys
             sys.path.insert(0, os.path.dirname(__file__))
@@ -2830,93 +2840,79 @@ with _dr_col3:
             _mr_path = gen.generate()
             st.session_state["monthly_report_path"] = _mr_path
             st.session_state["monthly_report_ready"] = True
+            st.session_state["_rapor_toast"] = "📊 Aylık rapor hazır — bildirim çubuğundan indirin."
             st.rerun()
         except Exception as e:
             st.error(f"Aylık rapor oluşturulamadı: {e}")
 
-# Otomatik günlük rapor bildirim + indirme
-if _daily_auto_ready and not st.session_state.get("daily_report_ready"):
-    _auto_dr_path = _daily_notif["filepath"]
-    _auto_dr_size = round(os.path.getsize(_auto_dr_path) / 1024, 1)
-    _auto_dr_name = os.path.basename(_auto_dr_path)
-    st.success(f"🟢 Günlük rapor otomatik oluşturuldu! ({_daily_notif.get('timestamp', '')}) — {_auto_dr_size} KB")
-    with open(_auto_dr_path, "rb") as _adr_f:
-        if st.download_button(
-            label="⬇️ Günlük PDF İndir",
-            data=_adr_f.read(),
-            file_name=_auto_dr_name,
-            mime="application/pdf",
-            key="auto_daily_download"
-        ):
-            # Bildirimi okundu olarak işaretle
-            _auto_notifs["daily"]["seen"] = True
-            with open(_notif_file, "w", encoding="utf-8") as _wnf:
-                _notif_json.dump(_auto_notifs, _wnf, indent=2, ensure_ascii=False)
+def _rapor_kayitlari():
+    """Hazır PDF raporları bildirim kaydına çevirir.
 
-# Otomatik aylık rapor bildirim + indirme
-if _monthly_auto_ready and not st.session_state.get("monthly_report_ready"):
-    _auto_mr_path = _monthly_notif["filepath"]
-    _auto_mr_size = round(os.path.getsize(_auto_mr_path) / 1024, 1)
-    _auto_mr_name = os.path.basename(_auto_mr_path)
-    st.success(f"🟢 Aylık rapor otomatik oluşturuldu! ({_monthly_notif.get('timestamp', '')}) — {_auto_mr_size} KB")
-    with open(_auto_mr_path, "rb") as _amr_f:
-        if st.download_button(
-            label="⬇️ Aylık PDF İndir",
-            data=_amr_f.read(),
-            file_name=_auto_mr_name,
-            mime="application/pdf",
-            key="auto_monthly_download"
-        ):
-            _auto_notifs["monthly"]["seen"] = True
-            with open(_notif_file, "w", encoding="utf-8") as _wnf2:
-                _notif_json.dump(_auto_notifs, _wnf2, indent=2, ensure_ascii=False)
+    Raporlar eskiden sayfanın üstünde yeşil kutu + indirme düğmesi olarak
+    duruyordu; dört rapor birikince ekranın yarısını kaplıyordu. Artık tek
+    yerde — bildirim çubuğunda — listelenir, indirme oradan yapılır.
+    """
+    _kayit = []
 
-# Manuel günlük rapor bildirim
-if st.session_state.get("daily_report_ready"):
-    _dr_path = st.session_state.get("daily_report_path", "")
-    if _dr_path and os.path.exists(_dr_path):
-        _dr_size = round(os.path.getsize(_dr_path) / 1024, 1)
-        _dr_name = os.path.basename(_dr_path)
-        st.success(f"📄 Günlük özel PDF'iniz gönderilmek üzere hazırlanmıştır. ({_dr_size} KB)")
-        with open(_dr_path, "rb") as _dr_f:
-            st.download_button(
-                label="⬇️ Günlük PDF İndir",
-                data=_dr_f.read(),
-                file_name=_dr_name,
-                mime="application/pdf",
-                key="daily_report_download"
-            )
+    def _ekle(tur, baslik, yol, zaman, notif_anahtar=None):
+        if not yol or not os.path.exists(yol):
+            return
+        _kb = round(os.path.getsize(yol) / 1024, 1)
+        _kayit.append({
+            "kaynak": "rapor", "sinif": "rapor", "id": None,
+            "gonderen": baslik,
+            "zaman": zaman or "",
+            "mesaj": f"{os.path.basename(yol)} — {_kb} KB",
+            "dosya": yol,
+            "anahtar": tur,
+            "notif_anahtar": notif_anahtar,
+        })
 
-# Manuel aylık rapor bildirim
-if st.session_state.get("monthly_report_ready"):
-    _mr_path = st.session_state.get("monthly_report_path", "")
-    if _mr_path and os.path.exists(_mr_path):
-        _mr_size = round(os.path.getsize(_mr_path) / 1024, 1)
-        _mr_name = os.path.basename(_mr_path)
-        st.success(f"📊 Aylık özel PDF'iniz gönderilmek üzere hazırlanmıştır. ({_mr_size} KB)")
-        with open(_mr_path, "rb") as _mr_f:
-            st.download_button(
-                label="⬇️ Aylık PDF İndir",
-                data=_mr_f.read(),
-                file_name=_mr_name,
-                mime="application/pdf",
-                key="monthly_report_download"
-            )
+    if _daily_auto_ready:
+        _ekle("auto_daily", "Günlük rapor (otomatik)", _daily_notif.get("filepath"),
+              _daily_notif.get("timestamp", ""), "daily")
+    if _monthly_auto_ready:
+        _ekle("auto_monthly", "Aylık rapor (otomatik)", _monthly_notif.get("filepath"),
+              _monthly_notif.get("timestamp", ""), "monthly")
+    if st.session_state.get("daily_report_ready"):
+        _ekle("manual_daily", "Günlük rapor (elle)",
+              st.session_state.get("daily_report_path", ""), "")
+    if st.session_state.get("monthly_report_ready"):
+        _ekle("manual_monthly", "Aylık rapor (elle)",
+              st.session_state.get("monthly_report_path", ""), "")
+    return _kayit
+
+
+def _rapor_okundu_isaretle(notif_anahtar):
+    """İndirilen otomatik rapor bildirimini configs dosyasında kapatır."""
+    if not notif_anahtar or notif_anahtar not in _auto_notifs:
+        return
+    try:
+        _auto_notifs[notif_anahtar]["seen"] = True
+        with open(_notif_file, "w", encoding="utf-8") as _wnf:
+            _notif_json.dump(_auto_notifs, _wnf, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
+
 
 # ─── BİLDİRİM ÇUBUĞU ──────────────────────────────────────────────────────
-# Tek şerit, iki kaynak:
+# Tek şerit, üç kaynak:
 #   1) Supabase `bildirimler` — GM merkezden gelen mesajlar, HVAC analiz özeti
 #   2) veri_alarm.py          — analizör bağlantı hatası / boş günlük veri
+#   3) Hazır PDF raporları    — günlük/aylık, otomatik veya elle üretilmiş
 # Aynı alarm listesi heartbeat ile Synapse'teki CANLI UYARILAR'a da düşer.
 def _bildirim_panel():
     import json as _bj
     import urllib.request
     from datetime import datetime as _dt2
 
-    _ONEM_SIRA = {"acil": 0, "kritik": 0, "uyari": 1, "yuksek": 1, "normal": 2, "bilgi": 2}
+    _ONEM_SIRA = {"acil": 0, "kritik": 0, "uyari": 1, "yuksek": 1, "normal": 2,
+                  "bilgi": 2, "rapor": 3}
     _RENK = {"acil": ("#b42525", "rgba(208,59,59,.08)", "rgba(208,59,59,.45)", "🚨", "KRİTİK"),
              "uyari": ("#8a5a00", "rgba(250,178,25,.10)", "rgba(250,178,25,.50)", "⚠️", "UYARI"),
-             "bilgi": ("#133273", "rgba(19,50,115,.06)", "rgba(24,26,30,.12)", "ℹ️", "BİLGİ")}
+             "bilgi": ("#133273", "rgba(19,50,115,.06)", "rgba(24,26,30,.12)", "ℹ️", "BİLGİ"),
+             "rapor": ("#1b7a3e", "rgba(27,122,62,.08)", "rgba(27,122,62,.35)", "📄", "RAPOR")}
+    _SINIFLAR = ("acil", "uyari", "bilgi", "rapor")
 
     def _sinif(onem):
         o = (onem or "bilgi").lower()
@@ -2980,11 +2976,14 @@ def _bildirim_panel():
                 "id": _b.get("id", ""),
             })
 
+    # ── 3) Hazır raporlar (indirme bildirim çubuğunda) ──
+    _kayitlar.extend(_rapor_kayitlari())
+
     if not _kayitlar:
         return
 
     _kayitlar.sort(key=lambda k: _ONEM_SIRA.get(k["sinif"], 3))
-    _say = {s: sum(1 for k in _kayitlar if k["sinif"] == s) for s in ("acil", "uyari", "bilgi")}
+    _say = {s: sum(1 for k in _kayitlar if k["sinif"] == s) for s in _SINIFLAR}
     _en_agir = _kayitlar[0]["sinif"]
     _yazi, _zemin, _kenar, _ikon, _etiket = _RENK[_en_agir]
 
@@ -2993,7 +2992,7 @@ def _bildirim_panel():
         f"<span style='background:{_RENK[s][1]};border:1px solid {_RENK[s][2]};color:{_RENK[s][0]};"
         f"border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin-right:6px;'>"
         f"{_RENK[s][3]} {_say[s]} {_RENK[s][4]}</span>"
-        for s in ("acil", "uyari", "bilgi") if _say[s])
+        for s in _SINIFLAR if _say[s])
     _ilk = _kayitlar[0]["mesaj"].splitlines()[0] if _kayitlar[0]["mesaj"] else ""
     st.markdown(
         f"<div style='background:{_zemin};border:1px solid {_kenar};border-left:4px solid {_yazi};"
@@ -3002,8 +3001,45 @@ def _bildirim_panel():
         f"<span style='color:{_yazi};font-size:13px;font-weight:600;'>{_ilk}</span></div></div>",
         unsafe_allow_html=True)
 
+    def _okundu_yap(kayit_id=None):
+        """Tek bildirimi ya da (kayit_id yoksa) bu lokasyonun okunmamış
+        bildirimlerinin TAMAMINI Supabase'de okundu olarak işaretler."""
+        if not (_url and _key and _lok):
+            return
+        _hedef = (f"/rest/v1/bildirimler?id=eq.{kayit_id}" if kayit_id else
+                  f"/rest/v1/bildirimler?or=(lokasyon.eq.{_lok},lokasyon.eq.all)"
+                  f"&okundu=eq.false")
+        try:
+            _pr = urllib.request.Request(
+                _url + _hedef,
+                data=_bj.dumps({"okundu": True}).encode(),
+                headers={"apikey": _key, "Authorization": "Bearer " + _key,
+                         "Content-Type": "application/json",
+                         "Prefer": "return=minimal"},
+                method="PATCH")
+            urllib.request.urlopen(_pr, timeout=5)
+        except Exception:
+            pass
+        st.session_state.pop("_bildirimler_cache", None)
+
     # ── Ayrıntı: tek tek kayıtlar, mesajlar için "okundu" ──
     with st.expander(f"Bildirimler ({len(_kayitlar)})", expanded=(_en_agir == "acil")):
+        # Toplu kapatma — çok sayıda mesaj birikince tek tek kapatmak zorunda
+        # kalınmasın. Veri alarmları ve raporlar bu düğmeden etkilenmez:
+        # alarm sayaç okunmaya başlayınca kendi düşer, rapor indirilince kapanır.
+        _mesaj_sayisi = sum(1 for _k in _kayitlar if _k["kaynak"] == "mesaj" and _k["id"])
+        if _mesaj_sayisi:
+            _t1, _t2 = st.columns([9, 1])
+            with _t1:
+                st.caption(f"{_mesaj_sayisi} okunmamış mesaj")
+            with _t2:
+                # Etiket kısa: sağdaki sütun dar, uzun yazı alt alta kırılıyor.
+                if st.button("✓✓ Tümü", key="_okundu_tumu",
+                             use_container_width=True,
+                             help=f"{_mesaj_sayisi} mesajın tamamını okundu olarak işaretle"):
+                    _okundu_yap()
+                    st.rerun()
+
         for _i, _k in enumerate(_kayitlar):
             _y, _z, _c, _ik, _et = _RENK[_k["sinif"]]
             _c1, _c2 = st.columns([9, 1])
@@ -3017,20 +3053,18 @@ def _bildirim_panel():
                     f"<span style='color:#0f1f3d;font-size:13.5px;white-space:pre-line;'>"
                     f"{_k['mesaj']}</span></div>", unsafe_allow_html=True)
             with _c2:
-                if _k["kaynak"] == "mesaj" and _k["id"]:
+                if _k["kaynak"] == "rapor":
+                    with open(_k["dosya"], "rb") as _rf:
+                        if st.download_button(
+                                "⬇️ İndir", data=_rf.read(),
+                                file_name=os.path.basename(_k["dosya"]),
+                                mime="application/pdf",
+                                key=f"_rapor_indir_{_k['anahtar']}",
+                                use_container_width=True):
+                            _rapor_okundu_isaretle(_k.get("notif_anahtar"))
+                elif _k["kaynak"] == "mesaj" and _k["id"]:
                     if st.button("✓ Okundu", key=f"_okundu_{_k['id']}", use_container_width=True):
-                        try:
-                            _pr = urllib.request.Request(
-                                _url + f"/rest/v1/bildirimler?id=eq.{_k['id']}",
-                                data=_bj.dumps({"okundu": True}).encode(),
-                                headers={"apikey": _key, "Authorization": "Bearer " + _key,
-                                         "Content-Type": "application/json",
-                                         "Prefer": "return=minimal"},
-                                method="PATCH")
-                            urllib.request.urlopen(_pr, timeout=5)
-                        except Exception:
-                            pass
-                        st.session_state.pop("_bildirimler_cache", None)
+                        _okundu_yap(_k["id"])
                         st.rerun()
                 else:
                     # Veri alarmları elle kapatılmaz: sayaç okunmaya başlayınca
@@ -3038,6 +3072,9 @@ def _bildirim_panel():
                     st.caption("otomatik")
 
 _bildirim_panel()
+# Elle üretilen rapor: indirme çubukta, kullanıcı nereye bakacağını bilsin.
+if st.session_state.pop("_rapor_toast", None):
+    st.toast("Rapor hazır — bildirim çubuğundan indirebilirsiniz.", icon="📄")
 # ───────────────────────────────────────────────────────────────────────────
 
 df = load_data()
@@ -3178,14 +3215,16 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
     df_kaynak["Tarih"] = pd.to_datetime(df_kaynak["Tarih"], errors="coerce")
     df_kaynak = df_kaynak.dropna(subset=["Tarih"])
 
-    _tarihler = sorted(df_kaynak["Tarih"].dropna().dt.date.unique())
+    # EN YENİ GÜN ÜSTTE: liste en son günden başlayıp geriye iner; açılan
+    # listede önce dünün verisi görünsün, en eski gün aşağıda kalsın.
+    _tarihler = sorted(df_kaynak["Tarih"].dropna().dt.date.unique(), reverse=True)
     if not _tarihler:
         st.warning("Geçerli tarihli veri yok.")
         return
 
     # Selectbox — sadece veri olan günler (date_input min==max RangeError'ından kaçınır)
     _sec = st.selectbox(
-        "📅 Gün", options=_tarihler, index=len(_tarihler) - 1,
+        "📅 Gün", options=_tarihler, index=0,
         format_func=lambda d: d.strftime("%d.%m.%Y"), key="ed_tarih",
     )
     _gun_df = df_kaynak[df_kaynak["Tarih"].dt.date == _sec]
