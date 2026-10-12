@@ -109,7 +109,10 @@ c("eski 'en son index' kalıbı kalmadı",
   "options=_tarihler, index=len(_tarihler) - 1" not in KAYNAK)
 
 # ── Bildirim çubuğu ──────────────────────────────────────────────────────
-c("tümü okundu düğmesi var", '"✓✓ Tümü okundu"' in KAYNAK)
+# Etiket metni biçim işidir (dar sütunda kırılmasın diye kısaltıldı); testi
+# değişmeyen yere bağlıyoruz: düğmenin anahtarı ve yanındaki sayaç satırı.
+c("tümü okundu düğmesi var", 'key="_okundu_tumu"' in KAYNAK
+  and "okunmamış mesaj" in KAYNAK)
 c("toplu okundu tek istekte yapılır", "okundu=eq.false" in KAYNAK and
   "_okundu_yap()" in KAYNAK)
 c("tek tek okundu da aynı yardımcıyı kullanır", "_okundu_yap(_k[\"id\"])" in KAYNAK)
