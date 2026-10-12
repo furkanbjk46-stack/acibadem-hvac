@@ -116,9 +116,12 @@ st.markdown("""
         font-size: 10px !important;
     }
 
-    [data-testid="stMetricDelta"] {
-        color: #0f1f3d !important;
-    }
+    /* DELTA RENGİNE DOKUNULMAZ.
+       Burada "color: #0f1f3d !important" vardı; Streamlit'in artış/azalış
+       rengini eziyor, bütün oklar lacivert çıkıyordu — yani tüketim arttı mı
+       azaldı mı renkten anlaşılmıyordu. Renk artık Streamlit'ten gelir:
+       tüketim kalemlerinde delta_color="inverse" (artış KIRMIZI, azalış
+       YEŞİL), etiket niteliğindeki deltalarda "off" (nötr gri). */
 
     /* Headers */
     h1, h2, h3 {
@@ -131,8 +134,10 @@ st.markdown("""
         font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif !important;
     }
 
-    /* Genel metin rengi — tüm uygulama genelinde beyaz/açık */
-    p, span, div {
+    /* Genel metin rengi — metrik deltası HARİÇ: oradaki kırmızı/yeşil
+       tüketimin arttığını mı azaldığını mı gösteriyor, ezilmemeli. */
+    p, span,
+    div:not([data-testid="stMetricDelta"]):not([data-testid="stMetricDelta"] *) {
         color: #24324d !important;
     }
 
@@ -2036,14 +2041,18 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlü
         plot_bgcolor='rgba(250,250,248, 0.98)',
         paper_bgcolor='rgba(250,250,248, 0.98)',
         yaxis=dict(
-            title=dict(text="Toplam Tüketim (kWh)", font=dict(color='#6da7ec')),
+            # Eksen başlığı çizgi rengiyle aynı tonun KOYUSU: açık zeminde
+            # '#6da7ec' okunmuyordu.
+            title=dict(text="Toplam Tüketim (kWh)", font=dict(color='#2a78d6')),
+            tickfont=dict(color='#3a4660'),
             gridcolor='rgba(109,167,236, 0.1)',
             showgrid=True,
             zeroline=False,
             tickformat=',d'
         ),
         yaxis2=dict(
-            title=dict(text="Dış Hava (°C)", font=dict(color='#c98500')),
+            title=dict(text="Dış Hava (°C)", font=dict(color='#8a5a00')),
+            tickfont=dict(color='#3a4660'),
             overlaying="y",
             side="right",
             showgrid=False,
@@ -2052,6 +2061,7 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlü
         xaxis=dict(
             gridcolor='rgba(24,26,30,0.10)',
             showgrid=True,
+            tickfont=dict(color='#3a4660'),
             tickformat=xfmt
         ),
         legend=dict(
@@ -2063,7 +2073,7 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlü
             bgcolor='rgba(241,240,237, 0.9)',
             bordercolor='rgba(24,26,30,0.10)',
             borderwidth=1,
-            font=dict(color='white')
+            font=dict(color='#24324d')
         ),
         margin=dict(l=10, r=10, t=80, b=10),
         hovermode='x unified',
@@ -2071,7 +2081,7 @@ def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlü
             bgcolor="rgba(241,240,237, 0.95)",
             font_size=13,
             font_family="Inter, sans-serif",
-            font_color="white",
+            font_color="#24324d",
             bordercolor='rgba(24,26,30,0.10)'
         )
     )
@@ -2120,11 +2130,13 @@ def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"
             gridcolor='rgba(24,26,30,0.10)',
             showgrid=True,
             zeroline=False,
+            tickfont=dict(color='#3a4660'),
             tickformat=',d'
         ),
         xaxis=dict(
             gridcolor='rgba(24,26,30,0.10)',
             showgrid=False,
+            tickfont=dict(color='#3a4660'),
             tickformat=xfmt
         ),
         legend=dict(
@@ -2136,7 +2148,7 @@ def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"
             bgcolor='rgba(241,240,237, 0.9)',
             bordercolor='rgba(24,26,30,0.10)',
             borderwidth=1,
-            font=dict(color='white'),
+            font=dict(color='#24324d'),
             title=None
         ),
         margin=dict(l=10, r=10, t=80, b=10),
@@ -2145,7 +2157,7 @@ def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"
             bgcolor="rgba(241,240,237, 0.95)",
             font_size=13,
             font_family="Inter, sans-serif",
-            font_color="white",
+            font_color="#24324d",
             bordercolor='rgba(24,26,30,0.10)'
         ),
         bargap=0.2
@@ -2208,11 +2220,16 @@ def chart_month_vs_last_year(yoy_info: dict):
             gridcolor='rgba(24,26,30,0.10)',
             showgrid=True,
             zeroline=False,
+            tickfont=dict(color='#3a4660'),
             tickformat=',d'
         ),
         xaxis=dict(
             gridcolor='rgba(24,26,30,0.10)',
-            showgrid=False
+            showgrid=False,
+            # Etiketler uzun ("🏥 Toplam Hastane"); yatay yazılınca iç içe
+            # giriyordu. Hafif eğik + altta yer bırakılarak okunur kalıyor.
+            tickangle=-18,
+            tickfont=dict(color='#3a4660', size=12)
         ),
         legend=dict(
             orientation="h",
@@ -2223,16 +2240,16 @@ def chart_month_vs_last_year(yoy_info: dict):
             bgcolor='rgba(241,240,237, 0.9)',
             bordercolor='rgba(24,26,30,0.10)',
             borderwidth=1,
-            font=dict(color='white'),
+            font=dict(color='#24324d'),
             title=None
         ),
-        margin=dict(l=10, r=10, t=80, b=10),
+        margin=dict(l=10, r=10, t=80, b=70),
         hovermode='x unified',
         hoverlabel=dict(
             bgcolor="rgba(241,240,237, 0.95)",
             font_size=13,
             font_family="Inter, sans-serif",
-            font_color="white",
+            font_color="#24324d",
             bordercolor='rgba(24,26,30,0.10)'
         ),
         bargap=0.25,
@@ -3932,48 +3949,62 @@ with tab2:
             health_color = "⚪"
         
         # Kartları göster
-        # ─── CSS ile bölüm kartları ───
+        # ─── Bölüm kartları ───
+        # Eskiden .dash-section sınıfı tanımlıydı ama hiçbir yere uygulanmıyordu;
+        # kartlar st.container(border=True)'ın çok soluk çerçevesiyle kalıyor,
+        # üç bölüm birbirinden ayırt edilemiyordu. Artık her kabın bir anahtarı
+        # var ve Streamlit'in verdiği çerçeve kutusu (.st-key-...) doğrudan
+        # biçimlendiriliyor: dolgu/yerleşim Streamlit'te kalıyor, yalnızca zemin,
+        # kenarlık ve sol renk şeridi değişiyor (taşma riski yok).
         st.markdown("""
         <style>
-        .dash-section {
-            background: #fafaf8;
-            border: 1px solid rgba(109,167,236,0.25);
-            border-radius: 12px;
-            padding: 16px 20px 12px 20px;
-            margin-bottom: 12px;
+        .st-key-dash_kart_ozet, .st-key-dash_kart_m2, .st-key-dash_kart_maliyet {
+            background: #fafaf8 !important;
+            border: 1px solid rgba(24,26,30,0.16) !important;
+            border-radius: 14px !important;
+            box-shadow: 0 2px 6px rgba(24,26,30,0.06) !important;
+            margin-bottom: 14px !important;
+            padding: 14px 18px 16px !important;
         }
-        .dash-section-title {
-            font-size: 17px;
-            font-weight: 700;
-            color: #24324d;
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 2px solid rgba(109,167,236,0.3);
+        .st-key-dash_kart_ozet    { border-left: 5px solid #2a78d6 !important; }
+        .st-key-dash_kart_m2      { border-left: 5px solid #8b5cf6 !important; }
+        .st-key-dash_kart_maliyet { border-left: 5px solid #c98500 !important; }
+        /* Kart içindeki öğeler kabın genişliğini miras alır; dolgu verince
+           taşmasınlar diye %100'e sabitlenir. */
+        .st-key-dash_kart_ozet > div, .st-key-dash_kart_m2 > div,
+        .st-key-dash_kart_maliyet > div {
+            width: 100% !important;
         }
-        .dash-section.m2-section {
-            border-color: rgba(139,92,246,0.35);
+        /* Başlık satırı: biraz büyük ve altında ince ayraç */
+        .st-key-dash_kart_ozet > div:first-child,
+        .st-key-dash_kart_m2 > div:first-child,
+        .st-key-dash_kart_maliyet > div:first-child {
+            border-bottom: 1px solid rgba(24,26,30,0.12);
+            padding-bottom: 8px;
+            margin-bottom: 6px;
         }
-        .dash-section.m2-section .dash-section-title {
-            border-bottom-color: rgba(139,92,246,0.4);
-        }
-        .dash-section.cost-section {
-            border-color: rgba(250,178,25,0.35);
-        }
-        .dash-section.cost-section .dash-section-title {
-            border-bottom-color: rgba(250,178,25,0.4);
+        .st-key-dash_kart_ozet > div:first-child p,
+        .st-key-dash_kart_m2 > div:first-child p,
+        .st-key-dash_kart_maliyet > div:first-child p {
+            font-size: 15px !important;
+            color: #24324d !important;
+            letter-spacing: 0.2px;
         }
         </style>
         """, unsafe_allow_html=True)
-        
+
         # ═══ 1. DÜNÜN ÖZETİ ═══
-        with st.container(border=True):
+        with st.container(border=False, key="dash_kart_ozet"):
             st.markdown(f"**📊 Dünün Özeti — {report_date.strftime('%d.%m.%Y')}**")
             if report_data.empty:
                 st.info(f"📅 {report_date.strftime('%d.%m.%Y')} için henüz veri girilmedi.")
             else:
                 sc1, sc2, sc3, sc4, sc5 = st.columns(5)
                 with sc1:
-                    st.metric("⚡ Dünkü Tüketim", f"{rep_total:,.0f} kWh".replace(",", "."), delta=delta_str)
+                    # TÜKETİM ARTIŞI İYİ HABER DEĞİLDİR: ok yukarı -> kırmızı,
+                    # aşağı -> yeşil. Streamlit'in varsayılanı tersidir.
+                    st.metric("⚡ Dünkü Tüketim", f"{rep_total:,.0f} kWh".replace(",", "."),
+                              delta=delta_str, delta_color="inverse")
                 with sc2:
                     st.metric("❄️ Chiller Tüketimi", f"{rep_chiller:,.0f} kWh".replace(",", "."))
                 with sc3:
@@ -4008,7 +4039,7 @@ with tab2:
         
         # ═══ 2. m² BAŞINA TÜKETİM ═══
         if building_area and building_area > 0 and not report_data.empty:
-            with st.container(border=True):
+            with st.container(border=False, key="dash_kart_m2"):
                 st.markdown(f"**📐 m² Başına Tüketim — {building_area:,.0f} m²**".replace(",", "."))
                 ma1, ma2, ma3 = st.columns(3)
                 with ma1:
@@ -4033,7 +4064,7 @@ with tab2:
             cost_water = rep_water * price_water if price_water > 0 else 0
             cost_total = cost_elec + cost_gas + cost_water
             
-            with st.container(border=True):
+            with st.container(border=False, key="dash_kart_maliyet"):
                 st.markdown("**💰 Dünkü Maliyet Tahmini**")
                 cost_count = sum([price_elec > 0, price_gas > 0, price_water > 0, True])
                 cost_cols = st.columns(cost_count)
@@ -4128,7 +4159,9 @@ with tab2:
                 cur_v, prev_v = yoy["metrics"][col_key]
                 pct = safe_pct_change(cur_v, prev_v)
                 delta = f"{pct:+.1f}%" if pct is not None else "N/A"
-                st.metric(label, f"{val:,.0f}".replace(",", ".") + f" {unit}", delta)
+                # Hepsi tüketim kalemi: artış kırmızı, azalış yeşil.
+                st.metric(label, f"{val:,.0f}".replace(",", ".") + f" {unit}", delta,
+                          delta_color="inverse")
             else:
                 st.metric(label, f"{val:,.0f}".replace(",", ".") + f" {unit}")
 
@@ -4417,23 +4450,23 @@ with tab5:
                     val = summary.get("total_grid_consumption", 0)
                     yoy_grid = yoy_analysis.get("comparisons", {}).get("total_grid_consumption", {})
                     delta = f"{yoy_grid.get('change_percent', 0):+.1f}%" if yoy_grid.get('change_percent') else None
-                    st.metric("Şebeke Tüketimi", f"{val:,.0f} kWh", delta)
+                    st.metric("Şebeke Tüketimi", f"{val:,.0f} kWh", delta, delta_color="inverse")
                 with m2:
                     val = summary.get("total_cooling_consumption", 0)
                     yoy_cool = yoy_analysis.get("comparisons", {}).get("total_cooling_consumption", {})
                     delta = f"{yoy_cool.get('change_percent', 0):+.1f}%" if yoy_cool.get('change_percent') else None
-                    st.metric("Soğutma Tüketimi", f"{val:,.0f} kWh", delta)
+                    st.metric("Soğutma Tüketimi", f"{val:,.0f} kWh", delta, delta_color="inverse")
                 with m3:
                     val = summary.get("total_gas", 0)
                     yoy_gas = yoy_analysis.get("comparisons", {}).get("total_gas", {})
                     delta = f"{yoy_gas.get('change_percent', 0):+.1f}%" if yoy_gas.get('change_percent') else None
-                    st.metric("Toplam Doğalgaz", f"{val:,.0f} m³", delta)
+                    st.metric("Toplam Doğalgaz", f"{val:,.0f} m³", delta, delta_color="inverse")
                 with m4:
                     chiller_set = summary.get("avg_chiller_set_temp")
                     if chiller_set:
                         yoy_ch = yoy_analysis.get("comparisons", {}).get("avg_chiller_set_temp", {})
                         delta = f"{yoy_ch.get('change_percent', 0):+.1f}%" if yoy_ch.get('change_percent') else None
-                        st.metric("Ort. Chiller Set", f"{chiller_set:.1f}°C", delta)
+                        st.metric("Ort. Chiller Set", f"{chiller_set:.1f}°C", delta, delta_color="off")
                     else:
                         st.metric("Ort. Chiller Set", "Veri yok")
                 
@@ -4469,22 +4502,26 @@ with tab5:
                         _cost_cols = st.columns(4)
                         with _cost_cols[0]:
                             if _p_elec > 0:
-                                st.metric("⚡ Elektrik Maliyeti", f"{_cost_elec:,.0f} ₺", f"{_p_elec:.2f} TL/kWh")
+                                st.metric("⚡ Elektrik Maliyeti", f"{_cost_elec:,.0f} ₺",
+                                          f"{_p_elec:.2f} TL/kWh", delta_color="off")
                             else:
                                 st.metric("⚡ Elektrik Maliyeti", "Fiyat yok")
                         with _cost_cols[1]:
                             if _p_gas > 0:
-                                st.metric("🔥 Doğalgaz Maliyeti", f"{_cost_gas:,.0f} ₺", f"{_p_gas:.2f} TL/m³")
+                                st.metric("🔥 Doğalgaz Maliyeti", f"{_cost_gas:,.0f} ₺",
+                                          f"{_p_gas:.2f} TL/m³", delta_color="off")
                             else:
                                 st.metric("🔥 Doğalgaz Maliyeti", "Fiyat yok")
                         with _cost_cols[2]:
                             if _p_water > 0:
-                                st.metric("💧 Su Maliyeti", f"{_cost_water:,.0f} ₺", f"{_p_water:.2f} TL/m³")
+                                st.metric("💧 Su Maliyeti", f"{_cost_water:,.0f} ₺",
+                                          f"{_p_water:.2f} TL/m³", delta_color="off")
                             else:
                                 st.metric("💧 Su Maliyeti", "Fiyat yok")
                         with _cost_cols[3]:
                             _daily_avg = _cost_total / _days if _days > 0 else 0
-                            st.metric("📊 Toplam Maliyet", f"{_cost_total:,.0f} ₺", f"Ort. {_daily_avg:,.0f} ₺/gün")
+                            st.metric("📊 Toplam Maliyet", f"{_cost_total:,.0f} ₺",
+                                      f"Ort. {_daily_avg:,.0f} ₺/gün", delta_color="off")
                         
                         st.divider()
                 except Exception:
@@ -4510,7 +4547,8 @@ with tab5:
                                 st.metric(
                                     f"{ys['year']} ({ys['days']} gun)",
                                     f"{ys['total_kwh']:,.0f} kWh".replace(",", "."),
-                                    f"{ys['kwh_per_m2']:.1f} kWh/m2" if b_area > 0 else None
+                                    f"{ys['kwh_per_m2']:.1f} kWh/m2" if b_area > 0 else None,
+                                    delta_color="off"
                                 )
                         
                         # Yıllar arası değişim
@@ -4522,15 +4560,18 @@ with tab5:
                             with trend_cols[0]:
                                 chg = (last_y['total_kwh'] - prev_y['total_kwh']) / prev_y['total_kwh'] * 100 if prev_y['total_kwh'] > 0 else 0
                                 st.metric("Toplam Degisim", f"{chg:+.1f}%",
-                                          f"{prev_y['year']}->{last_y['year']}")
+                                          f"{prev_y['year']}->{last_y['year']}",
+                                          delta_color="off")
                             with trend_cols[1]:
                                 chg_g = (last_y['grid_kwh'] - prev_y['grid_kwh']) / prev_y['grid_kwh'] * 100 if prev_y['grid_kwh'] > 0 else 0
                                 st.metric("Sebeke Degisim", f"{chg_g:+.1f}%",
-                                          f"{prev_y['year']}->{last_y['year']}")
+                                          f"{prev_y['year']}->{last_y['year']}",
+                                          delta_color="off")
                             with trend_cols[2]:
                                 chg_c = (last_y['chiller_kwh'] - prev_y['chiller_kwh']) / prev_y['chiller_kwh'] * 100 if prev_y['chiller_kwh'] > 0 else 0
                                 st.metric("Chiller Degisim", f"{chg_c:+.1f}%",
-                                          f"{prev_y['year']}->{last_y['year']}")
+                                          f"{prev_y['year']}->{last_y['year']}",
+                                          delta_color="off")
                         
                         st.divider()
                     
@@ -4588,12 +4629,13 @@ with tab5:
                         with sv_cols[0]:
                             st.metric("Beklenen Tuketim",
                                       f"{savings['expected_total']:,.0f} kWh".replace(",", "."),
-                                      f"(alan bazli)")
+                                      "(alan bazli)", delta_color="off")
                         with sv_cols[1]:
                             st.metric("Gerceklesen",
                                       f"{savings['curr_total']:,.0f} kWh".replace(",", "."))
                         with sv_cols[2]:
-                            color = "normal" if savings['savings_total_kwh'] >= 0 else "inverse"
+                            # TASARRUF tüketimin tersidir: artı tasarruf iyi haber,
+                            # yani yukarı ok YEŞİL kalır (Streamlit varsayılanı).
                             st.metric("Toplam Tasarruf",
                                       f"{savings['savings_total_kwh']:,.0f} kWh".replace(",", "."),
                                       f"%{savings['savings_total_pct']:.1f}")
@@ -4611,11 +4653,13 @@ with tab5:
                         with nm_cols[0]:
                             st.metric("Beklenen Toplam",
                                       f"{next_m.get('forecast_total', 0):,.0f} kWh".replace(",", "."),
-                                      f"Trend: {next_m.get('trend_total_pct', 0):+.1f}%")
+                                      f"Trend: {next_m.get('trend_total_pct', 0):+.1f}%",
+                                      delta_color="inverse")
                         with nm_cols[1]:
                             st.metric("Beklenen Sebeke",
                                       f"{next_m.get('forecast_grid', 0):,.0f} kWh".replace(",", "."),
-                                      f"Trend: {next_m.get('trend_grid_pct', 0):+.1f}%")
+                                      f"Trend: {next_m.get('trend_grid_pct', 0):+.1f}%",
+                                      delta_color="inverse")
                         with nm_cols[2]:
                             if b_area > 0:
                                 st.metric("Beklenen kWh/m2",
@@ -4987,7 +5031,8 @@ with tab6:
                     st.metric(
                         f"{_ys['year']} ({_ys['days']} gün)",
                         f"{_ys['total_kwh']:,.0f} kWh".replace(",", "."),
-                        f"{_ys['kwh_per_m2']:.1f} kWh/m²" if _fc_area > 0 else None
+                        f"{_ys['kwh_per_m2']:.1f} kWh/m²" if _fc_area > 0 else None,
+                        delta_color="off"
                     )
             
             _tc = st.columns(3)
@@ -4995,13 +5040,16 @@ with tab6:
             _py = _fc_yearly[-2]
             with _tc[0]:
                 _ct = (_ly['total_kwh'] - _py['total_kwh']) / _py['total_kwh'] * 100 if _py['total_kwh'] > 0 else 0
-                st.metric("Toplam Değişim", f"{_ct:+.1f}%", f"{_py['year']}→{_ly['year']}")
+                st.metric("Toplam Değişim", f"{_ct:+.1f}%", f"{_py['year']}→{_ly['year']}",
+                          delta_color="off")
             with _tc[1]:
                 _cg = (_ly['grid_kwh'] - _py['grid_kwh']) / _py['grid_kwh'] * 100 if _py['grid_kwh'] > 0 else 0
-                st.metric("Şebeke Değişim", f"{_cg:+.1f}%", f"{_py['year']}→{_ly['year']}")
+                st.metric("Şebeke Değişim", f"{_cg:+.1f}%", f"{_py['year']}→{_ly['year']}",
+                          delta_color="off")
             with _tc[2]:
                 _cc = (_ly['chiller_kwh'] - _py['chiller_kwh']) / _py['chiller_kwh'] * 100 if _py['chiller_kwh'] > 0 else 0
-                st.metric("Chiller Değişim", f"{_cc:+.1f}%", f"{_py['year']}→{_ly['year']}")
+                st.metric("Chiller Değişim", f"{_cc:+.1f}%", f"{_py['year']}→{_ly['year']}",
+                          delta_color="off")
             
             st.divider()
         
@@ -5062,10 +5110,13 @@ with tab6:
             
             _sv = st.columns(4)
             with _sv[0]:
-                st.metric("Beklenen Tüketim", f"{_fc_savings['expected_total']:,.0f} kWh".replace(",", "."), "(alan bazlı)")
+                st.metric("Beklenen Tüketim", f"{_fc_savings['expected_total']:,.0f} kWh".replace(",", "."),
+                          "(alan bazlı)", delta_color="off")
             with _sv[1]:
                 st.metric("Gerçekleşen", f"{_fc_savings['curr_total']:,.0f} kWh".replace(",", "."))
             with _sv[2]:
+                # TASARRUF tüketimin tersidir: artı tasarruf iyi haber, yukarı ok
+                # YEŞİL kalır (Streamlit varsayılanı) — tüketim kartlarının tersi.
                 st.metric("Toplam Tasarruf", f"{_fc_savings['savings_total_kwh']:,.0f} kWh".replace(",", "."),
                           f"%{_fc_savings['savings_total_pct']:.1f}")
             with _sv[3]:
@@ -5083,10 +5134,12 @@ with tab6:
             _nm = st.columns(3)
             with _nm[0]:
                 st.metric("Beklenen Toplam", f"{_fc_next.get('forecast_total', 0):,.0f} kWh".replace(",", "."),
-                          f"Trend: {_fc_next.get('trend_total_pct', 0):+.1f}%")
+                          f"Trend: {_fc_next.get('trend_total_pct', 0):+.1f}%",
+                          delta_color="inverse")
             with _nm[1]:
                 st.metric("Beklenen Şebeke", f"{_fc_next.get('forecast_grid', 0):,.0f} kWh".replace(",", "."),
-                          f"Trend: {_fc_next.get('trend_grid_pct', 0):+.1f}%")
+                          f"Trend: {_fc_next.get('trend_grid_pct', 0):+.1f}%",
+                          delta_color="inverse")
             with _nm[2]:
                 if _fc_area > 0:
                     st.metric("Beklenen kWh/m²", f"{_fc_next.get('per_m2', 0):.1f} kWh/m²")
@@ -5107,7 +5160,7 @@ with tab6:
             with _mi[0]:
                 _r2t = _model_info.get("r2_total", 0)
                 _quality = "Mükemmel" if _r2t > 0.9 else "İyi" if _r2t > 0.7 else "Orta" if _r2t > 0.5 else "Gelişiyor"
-                st.metric("Toplam R² Skoru", f"{_r2t:.3f}", _quality)
+                st.metric("Toplam R² Skoru", f"{_r2t:.3f}", _quality, delta_color="off")
             with _mi[1]:
                 _r2g = _model_info.get("r2_grid", 0)
                 st.metric("Şebeke R² Skoru", f"{_r2g:.3f}")
