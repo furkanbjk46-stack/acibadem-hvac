@@ -3,3 +3,8 @@ configs/merkez_config.json
 __pycache__/
 *.pyc
 .env
+
+# Enerji verisi makineye özeldir (sahada gerçek, geliştirmede ornek_veri_uret.py
+# ile üretilen örnek veri). Depoya girmesi sahte veriyi lokasyonlara taşır.
+hvac/deneme/energy_data.csv
+hvac/deneme/energy_data_ilk_yedek.csv
