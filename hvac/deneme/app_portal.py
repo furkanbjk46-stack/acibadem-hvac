@@ -12,6 +12,7 @@ import os
 import re
 import io
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from datetime import date
 
@@ -1072,6 +1073,63 @@ st.markdown("""
 })();
 </script>
 """, unsafe_allow_html=True)
+
+# ─── BÖLÜM KARTLARI ───────────────────────────────────────────────────────
+# Dashboard, Aylık Birleşik Rapor ve Tahmin & Trend sekmelerindeki bölümler
+# düz başlık + ayraçtan ibaretti; hangi sayının hangi bölüme ait olduğu
+# anlaşılmıyordu. Artık her bölüm bir kart: anahtarı "kart_" ile başlar,
+# biçim aşağıdaki TEK kuraldan gelir. Yeni bölüm eklerken sadece
+# _bolum_karti("kart_<ad>", "Başlık") demek yeter.
+st.markdown("""
+<style>
+[class*="st-key-kart_"] {
+    background: #fafaf8 !important;
+    border: 1px solid rgba(24,26,30,0.16) !important;
+    border-left: 5px solid #2a78d6 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 6px rgba(24,26,30,0.06) !important;
+    margin-bottom: 14px !important;
+    padding: 14px 18px 16px !important;
+}
+/* Kart içindeki öğeler kabın genişliğini miras alır; dolgu verilince
+   taşmasınlar diye %100'e sabitlenir. */
+[class*="st-key-kart_"] > div { width: 100% !important; }
+/* Başlık satırı: altında ince ayraç */
+[class*="st-key-kart_"] > div:first-child {
+    border-bottom: 1px solid rgba(24,26,30,0.12);
+    padding-bottom: 8px;
+    margin-bottom: 6px;
+}
+[class*="st-key-kart_"] > div:first-child p {
+    font-size: 15px !important;
+    color: #24324d !important;
+    letter-spacing: 0.2px;
+}
+[class*="st-key-kart_"] .kart-aciklama {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    color: #5b6880 !important;
+    margin-top: 2px;
+}
+/* Bölüm rengi: ölçüm mavi, oran/alan mor, para amber, tahmin yeşil */
+[class*="st-key-kart_m2"], [class*="st-key-kart_ml"],
+[class*="st-key-kart_ai"]      { border-left-color: #8b5cf6 !important; }
+[class*="st-key-kart_maliyet"], [class*="st-key-kart_tasarruf"]
+                               { border-left-color: #c98500 !important; }
+[class*="st-key-kart_tahmin"], [class*="st-key-kart_senaryo"],
+[class*="st-key-kart_gelecek"] { border-left-color: #0ca30c !important; }
+</style>
+""", unsafe_allow_html=True)
+
+
+@contextmanager
+def _bolum_karti(anahtar: str, baslik: str, aciklama: str = ""):
+    """Başlıklı bölüm kartı. anahtar "kart_" ile başlamalı (CSS ona bakar)."""
+    with st.container(border=False, key=anahtar):
+        _ek = f"<span class='kart-aciklama'>{aciklama}</span>" if aciklama else ""
+        st.markdown(f"<p><strong>{baslik}</strong>{_ek}</p>", unsafe_allow_html=True)
+        yield
 
 # ── BasEUI Dropdown Koyu Tema — components.html ile gerçek JS enjeksiyonu ──
 # st.markdown içindeki <script> tarayıcı tarafından çalıştırılmaz (innerHTML güvenliği).
@@ -3948,54 +4006,11 @@ with tab2:
             health_status = "Veri Yok"
             health_color = "⚪"
         
-        # Kartları göster
-        # ─── Bölüm kartları ───
-        # Eskiden .dash-section sınıfı tanımlıydı ama hiçbir yere uygulanmıyordu;
-        # kartlar st.container(border=True)'ın çok soluk çerçevesiyle kalıyor,
-        # üç bölüm birbirinden ayırt edilemiyordu. Artık her kabın bir anahtarı
-        # var ve Streamlit'in verdiği çerçeve kutusu (.st-key-...) doğrudan
-        # biçimlendiriliyor: dolgu/yerleşim Streamlit'te kalıyor, yalnızca zemin,
-        # kenarlık ve sol renk şeridi değişiyor (taşma riski yok).
-        st.markdown("""
-        <style>
-        .st-key-dash_kart_ozet, .st-key-dash_kart_m2, .st-key-dash_kart_maliyet {
-            background: #fafaf8 !important;
-            border: 1px solid rgba(24,26,30,0.16) !important;
-            border-radius: 14px !important;
-            box-shadow: 0 2px 6px rgba(24,26,30,0.06) !important;
-            margin-bottom: 14px !important;
-            padding: 14px 18px 16px !important;
-        }
-        .st-key-dash_kart_ozet    { border-left: 5px solid #2a78d6 !important; }
-        .st-key-dash_kart_m2      { border-left: 5px solid #8b5cf6 !important; }
-        .st-key-dash_kart_maliyet { border-left: 5px solid #c98500 !important; }
-        /* Kart içindeki öğeler kabın genişliğini miras alır; dolgu verince
-           taşmasınlar diye %100'e sabitlenir. */
-        .st-key-dash_kart_ozet > div, .st-key-dash_kart_m2 > div,
-        .st-key-dash_kart_maliyet > div {
-            width: 100% !important;
-        }
-        /* Başlık satırı: biraz büyük ve altında ince ayraç */
-        .st-key-dash_kart_ozet > div:first-child,
-        .st-key-dash_kart_m2 > div:first-child,
-        .st-key-dash_kart_maliyet > div:first-child {
-            border-bottom: 1px solid rgba(24,26,30,0.12);
-            padding-bottom: 8px;
-            margin-bottom: 6px;
-        }
-        .st-key-dash_kart_ozet > div:first-child p,
-        .st-key-dash_kart_m2 > div:first-child p,
-        .st-key-dash_kart_maliyet > div:first-child p {
-            font-size: 15px !important;
-            color: #24324d !important;
-            letter-spacing: 0.2px;
-        }
-        </style>
-        """, unsafe_allow_html=True)
+        # Kartları göster (biçim: global "kart_" kuralı, _bolum_karti)
 
         # ═══ 1. DÜNÜN ÖZETİ ═══
-        with st.container(border=False, key="dash_kart_ozet"):
-            st.markdown(f"**📊 Dünün Özeti — {report_date.strftime('%d.%m.%Y')}**")
+        with _bolum_karti("kart_dun_ozeti",
+                          f"📊 Dünün Özeti — {report_date.strftime('%d.%m.%Y')}"):
             if report_data.empty:
                 st.info(f"📅 {report_date.strftime('%d.%m.%Y')} için henüz veri girilmedi.")
             else:
@@ -4039,8 +4054,8 @@ with tab2:
         
         # ═══ 2. m² BAŞINA TÜKETİM ═══
         if building_area and building_area > 0 and not report_data.empty:
-            with st.container(border=False, key="dash_kart_m2"):
-                st.markdown(f"**📐 m² Başına Tüketim — {building_area:,.0f} m²**".replace(",", "."))
+            with _bolum_karti("kart_m2_tuketim",
+                              f"📐 m² Başına Tüketim — {building_area:,.0f} m²".replace(",", ".")):
                 ma1, ma2, ma3 = st.columns(3)
                 with ma1:
                     cooling_per_m2 = rep_chiller / building_area
@@ -4064,8 +4079,7 @@ with tab2:
             cost_water = rep_water * price_water if price_water > 0 else 0
             cost_total = cost_elec + cost_gas + cost_water
             
-            with st.container(border=False, key="dash_kart_maliyet"):
-                st.markdown("**💰 Dünkü Maliyet Tahmini**")
+            with _bolum_karti("kart_maliyet_gunluk", "💰 Dünkü Maliyet Tahmini"):
                 cost_count = sum([price_elec > 0, price_gas > 0, price_water > 0, True])
                 cost_cols = st.columns(cost_count)
                 col_idx = 0
@@ -4442,35 +4456,34 @@ with tab5:
                 st.success(f"Analiz tamamlandı! {unified_data.get('days_with_data', 0)} gün veri işlendi.")
                 
                 # Özet göstergeler
-                st.markdown("### 📊 Özet Göstergeler")
-                summary = unified_data.get("summary", {})
+                with _bolum_karti("kart_birlesik_ozet", "📊 Özet Göstergeler"):
+                    summary = unified_data.get("summary", {})
                 
-                m1, m2, m3, m4 = st.columns(4)
-                with m1:
-                    val = summary.get("total_grid_consumption", 0)
-                    yoy_grid = yoy_analysis.get("comparisons", {}).get("total_grid_consumption", {})
-                    delta = f"{yoy_grid.get('change_percent', 0):+.1f}%" if yoy_grid.get('change_percent') else None
-                    st.metric("Şebeke Tüketimi", f"{val:,.0f} kWh", delta, delta_color="inverse")
-                with m2:
-                    val = summary.get("total_cooling_consumption", 0)
-                    yoy_cool = yoy_analysis.get("comparisons", {}).get("total_cooling_consumption", {})
-                    delta = f"{yoy_cool.get('change_percent', 0):+.1f}%" if yoy_cool.get('change_percent') else None
-                    st.metric("Soğutma Tüketimi", f"{val:,.0f} kWh", delta, delta_color="inverse")
-                with m3:
-                    val = summary.get("total_gas", 0)
-                    yoy_gas = yoy_analysis.get("comparisons", {}).get("total_gas", {})
-                    delta = f"{yoy_gas.get('change_percent', 0):+.1f}%" if yoy_gas.get('change_percent') else None
-                    st.metric("Toplam Doğalgaz", f"{val:,.0f} m³", delta, delta_color="inverse")
-                with m4:
-                    chiller_set = summary.get("avg_chiller_set_temp")
-                    if chiller_set:
-                        yoy_ch = yoy_analysis.get("comparisons", {}).get("avg_chiller_set_temp", {})
-                        delta = f"{yoy_ch.get('change_percent', 0):+.1f}%" if yoy_ch.get('change_percent') else None
-                        st.metric("Ort. Chiller Set", f"{chiller_set:.1f}°C", delta, delta_color="off")
-                    else:
-                        st.metric("Ort. Chiller Set", "Veri yok")
+                    m1, m2, m3, m4 = st.columns(4)
+                    with m1:
+                        val = summary.get("total_grid_consumption", 0)
+                        yoy_grid = yoy_analysis.get("comparisons", {}).get("total_grid_consumption", {})
+                        delta = f"{yoy_grid.get('change_percent', 0):+.1f}%" if yoy_grid.get('change_percent') else None
+                        st.metric("Şebeke Tüketimi", f"{val:,.0f} kWh", delta, delta_color="inverse")
+                    with m2:
+                        val = summary.get("total_cooling_consumption", 0)
+                        yoy_cool = yoy_analysis.get("comparisons", {}).get("total_cooling_consumption", {})
+                        delta = f"{yoy_cool.get('change_percent', 0):+.1f}%" if yoy_cool.get('change_percent') else None
+                        st.metric("Soğutma Tüketimi", f"{val:,.0f} kWh", delta, delta_color="inverse")
+                    with m3:
+                        val = summary.get("total_gas", 0)
+                        yoy_gas = yoy_analysis.get("comparisons", {}).get("total_gas", {})
+                        delta = f"{yoy_gas.get('change_percent', 0):+.1f}%" if yoy_gas.get('change_percent') else None
+                        st.metric("Toplam Doğalgaz", f"{val:,.0f} m³", delta, delta_color="inverse")
+                    with m4:
+                        chiller_set = summary.get("avg_chiller_set_temp")
+                        if chiller_set:
+                            yoy_ch = yoy_analysis.get("comparisons", {}).get("avg_chiller_set_temp", {})
+                            delta = f"{yoy_ch.get('change_percent', 0):+.1f}%" if yoy_ch.get('change_percent') else None
+                            st.metric("Ort. Chiller Set", f"{chiller_set:.1f}°C", delta, delta_color="off")
+                        else:
+                            st.metric("Ort. Chiller Set", "Veri yok")
                 
-                st.divider()
                 
                 # ========== MALİYET ÖZETİ ==========
                 try:
@@ -4486,44 +4499,43 @@ with tab5:
                     _p_water = float(_tab5_prices.get("UNIT_PRICE_WATER", 0))
                     
                     if _p_elec > 0 or _p_gas > 0 or _p_water > 0:
-                        st.markdown("### 💰 Aylık Maliyet Özeti")
+                        with _bolum_karti("kart_maliyet_aylik", "💰 Aylık Maliyet Özeti"):
                         
-                        _total_grid = summary.get("total_grid_consumption", 0)
-                        _total_gas = summary.get("total_gas", 0)
-                        _total_water = summary.get("total_water_consumption", 0)
-                        _days = unified_data.get("days_with_data", 1) or 1
+                            _total_grid = summary.get("total_grid_consumption", 0)
+                            _total_gas = summary.get("total_gas", 0)
+                            _total_water = summary.get("total_water_consumption", 0)
+                            _days = unified_data.get("days_with_data", 1) or 1
                         
-                        _cost_elec = _total_grid * _p_elec if _p_elec > 0 else 0
-                        _cost_gas = _total_gas * _p_gas if _p_gas > 0 else 0
-                        _cost_water = _total_water * _p_water if _p_water > 0 else 0
-                        _cost_total = _cost_elec + _cost_gas + _cost_water
+                            _cost_elec = _total_grid * _p_elec if _p_elec > 0 else 0
+                            _cost_gas = _total_gas * _p_gas if _p_gas > 0 else 0
+                            _cost_water = _total_water * _p_water if _p_water > 0 else 0
+                            _cost_total = _cost_elec + _cost_gas + _cost_water
                         
-                        # Metrik kartları
-                        _cost_cols = st.columns(4)
-                        with _cost_cols[0]:
-                            if _p_elec > 0:
-                                st.metric("⚡ Elektrik Maliyeti", f"{_cost_elec:,.0f} ₺",
-                                          f"{_p_elec:.2f} TL/kWh", delta_color="off")
-                            else:
-                                st.metric("⚡ Elektrik Maliyeti", "Fiyat yok")
-                        with _cost_cols[1]:
-                            if _p_gas > 0:
-                                st.metric("🔥 Doğalgaz Maliyeti", f"{_cost_gas:,.0f} ₺",
-                                          f"{_p_gas:.2f} TL/m³", delta_color="off")
-                            else:
-                                st.metric("🔥 Doğalgaz Maliyeti", "Fiyat yok")
-                        with _cost_cols[2]:
-                            if _p_water > 0:
-                                st.metric("💧 Su Maliyeti", f"{_cost_water:,.0f} ₺",
-                                          f"{_p_water:.2f} TL/m³", delta_color="off")
-                            else:
-                                st.metric("💧 Su Maliyeti", "Fiyat yok")
-                        with _cost_cols[3]:
-                            _daily_avg = _cost_total / _days if _days > 0 else 0
-                            st.metric("📊 Toplam Maliyet", f"{_cost_total:,.0f} ₺",
-                                      f"Ort. {_daily_avg:,.0f} ₺/gün", delta_color="off")
+                            # Metrik kartları
+                            _cost_cols = st.columns(4)
+                            with _cost_cols[0]:
+                                if _p_elec > 0:
+                                    st.metric("⚡ Elektrik Maliyeti", f"{_cost_elec:,.0f} ₺",
+                                              f"{_p_elec:.2f} TL/kWh", delta_color="off")
+                                else:
+                                    st.metric("⚡ Elektrik Maliyeti", "Fiyat yok")
+                            with _cost_cols[1]:
+                                if _p_gas > 0:
+                                    st.metric("🔥 Doğalgaz Maliyeti", f"{_cost_gas:,.0f} ₺",
+                                              f"{_p_gas:.2f} TL/m³", delta_color="off")
+                                else:
+                                    st.metric("🔥 Doğalgaz Maliyeti", "Fiyat yok")
+                            with _cost_cols[2]:
+                                if _p_water > 0:
+                                    st.metric("💧 Su Maliyeti", f"{_cost_water:,.0f} ₺",
+                                              f"{_p_water:.2f} TL/m³", delta_color="off")
+                                else:
+                                    st.metric("💧 Su Maliyeti", "Fiyat yok")
+                            with _cost_cols[3]:
+                                _daily_avg = _cost_total / _days if _days > 0 else 0
+                                st.metric("📊 Toplam Maliyet", f"{_cost_total:,.0f} ₺",
+                                          f"Ort. {_daily_avg:,.0f} ₺/gün", delta_color="off")
                         
-                        st.divider()
                 except Exception:
                     pass
                 # ═══ TAHMİN VE TREND ANALİZİ ═══
@@ -4539,277 +4551,285 @@ with tab5:
                     
                     # 1. Çok Yıllık Trend
                     if yearly and len(yearly) >= 2:
-                        st.markdown("### 📈 Cok Yillik Trend Analizi")
+                        with _bolum_karti("kart_rapor_coklu_yil", "📈 Cok Yillik Trend Analizi"):
                         
-                        yc = st.columns(len(yearly))
-                        for idx, ys in enumerate(yearly):
-                            with yc[idx]:
-                                st.metric(
-                                    f"{ys['year']} ({ys['days']} gun)",
-                                    f"{ys['total_kwh']:,.0f} kWh".replace(",", "."),
-                                    f"{ys['kwh_per_m2']:.1f} kWh/m2" if b_area > 0 else None,
-                                    delta_color="off"
-                                )
+                            yc = st.columns(len(yearly))
+                            for idx, ys in enumerate(yearly):
+                                with yc[idx]:
+                                    st.metric(
+                                        f"{ys['year']} ({ys['days']} gun)",
+                                        f"{ys['total_kwh']:,.0f} kWh".replace(",", "."),
+                                        f"{ys['kwh_per_m2']:.1f} kWh/m2" if b_area > 0 else None,
+                                        delta_color="off"
+                                    )
                         
-                        # Yıllar arası değişim
-                        if len(yearly) >= 2:
-                            trend_cols = st.columns(3)
-                            last_y = yearly[-1]
-                            prev_y = yearly[-2]
+                            # Yıllar arası değişim
+                            if len(yearly) >= 2:
+                                trend_cols = st.columns(3)
+                                last_y = yearly[-1]
+                                prev_y = yearly[-2]
                             
-                            with trend_cols[0]:
-                                chg = (last_y['total_kwh'] - prev_y['total_kwh']) / prev_y['total_kwh'] * 100 if prev_y['total_kwh'] > 0 else 0
-                                st.metric("Toplam Degisim", f"{chg:+.1f}%",
-                                          f"{prev_y['year']}->{last_y['year']}",
-                                          delta_color="off")
-                            with trend_cols[1]:
-                                chg_g = (last_y['grid_kwh'] - prev_y['grid_kwh']) / prev_y['grid_kwh'] * 100 if prev_y['grid_kwh'] > 0 else 0
-                                st.metric("Sebeke Degisim", f"{chg_g:+.1f}%",
-                                          f"{prev_y['year']}->{last_y['year']}",
-                                          delta_color="off")
-                            with trend_cols[2]:
-                                chg_c = (last_y['chiller_kwh'] - prev_y['chiller_kwh']) / prev_y['chiller_kwh'] * 100 if prev_y['chiller_kwh'] > 0 else 0
-                                st.metric("Chiller Degisim", f"{chg_c:+.1f}%",
-                                          f"{prev_y['year']}->{last_y['year']}",
-                                          delta_color="off")
+                                with trend_cols[0]:
+                                    chg = (last_y['total_kwh'] - prev_y['total_kwh']) / prev_y['total_kwh'] * 100 if prev_y['total_kwh'] > 0 else 0
+                                    st.metric("Toplam Degisim", f"{chg:+.1f}%",
+                                              f"{prev_y['year']}->{last_y['year']}",
+                                              delta_color="off")
+                                with trend_cols[1]:
+                                    chg_g = (last_y['grid_kwh'] - prev_y['grid_kwh']) / prev_y['grid_kwh'] * 100 if prev_y['grid_kwh'] > 0 else 0
+                                    st.metric("Sebeke Degisim", f"{chg_g:+.1f}%",
+                                              f"{prev_y['year']}->{last_y['year']}",
+                                              delta_color="off")
+                                with trend_cols[2]:
+                                    chg_c = (last_y['chiller_kwh'] - prev_y['chiller_kwh']) / prev_y['chiller_kwh'] * 100 if prev_y['chiller_kwh'] > 0 else 0
+                                    st.metric("Chiller Degisim", f"{chg_c:+.1f}%",
+                                              f"{prev_y['year']}->{last_y['year']}",
+                                              delta_color="off")
                         
-                        st.divider()
                     
                     # 2. Aylık Tahmin Tablosu
                     if monthly_fc:
-                        st.markdown(f"### 🔮 {report_year} Aylik Tuketim Tahmini")
-                        st.caption("Onceki yillar arasi trende gore konservatif projeksiyon")
-                        
-                        _py5 = str(monthly_fc[0]['prev_year'])
-                        _ly5 = str(monthly_fc[0]['last_year'])
-                        _md5 = f"| Ay | {_py5} (kWh) | {_ly5} (kWh) | Trend | Tahmin (kWh) | Gerceklesen | Sapma |\n"
-                        _md5 += "|:---|---:|---:|:---:|---:|---:|:---:|\n"
-                        
-                        for fc in monthly_fc:
-                            _gc5 = "-"
-                            _sp5 = "-"
-                            if fc["actual_total"] is not None:
-                                _gc5 = f"{fc['actual_total']:,.0f}".replace(",", ".")
-                                if fc.get("is_partial"):
-                                    _gc5 += f" ({fc['actual_days']}g)"
-                                _sp5 = f"{fc['deviation_total_pct']:+.1f}%" if fc.get("deviation_total_pct") is not None else "-"
-                            
-                            _md5 += f"| {fc['month_name']} | {fc['prev_total']:,.0f} | {fc['last_total']:,.0f} | {fc['trend_total_pct']:+.1f}% | {fc['forecast_total']:,.0f} | {_gc5} | {_sp5} |\n".replace(",", ".")
-                        
-                        st.markdown(_md5)
-                        
-                        # Yıllık toplam tahmin
-                        total_forecast = sum(fc["forecast_total"] for fc in monthly_fc)
-                        total_actual = sum(fc["actual_total"] or 0 for fc in monthly_fc)
-                        months_with_data = sum(1 for fc in monthly_fc if fc["actual_total"] is not None)
-                        
-                        fc_summary = st.columns(3)
-                        with fc_summary[0]:
-                            st.metric(f"{report_year} Yillik Tahmin",
-                                      f"{total_forecast:,.0f} kWh".replace(",", "."))
-                        with fc_summary[1]:
-                            if months_with_data > 0:
-                                st.metric(f"Gerceklesen ({months_with_data} ay)",
-                                          f"{total_actual:,.0f} kWh".replace(",", "."))
+                        with _bolum_karti("kart_rapor_aylik_tahmin", f"🔮 {report_year} Aylik Tuketim Tahmini"):
+                            # Kıyas yılı yoksa (motor 0 döndürür) "0 (kWh)" başlıklı
+                            # boş sütunlar basılmaz — Tahmin & Trend ile aynı kural.
+                            _kiyas5 = bool(monthly_fc[0].get("prev_year")) and bool(monthly_fc[0].get("last_year"))
+                            if _kiyas5:
+                                st.caption("Onceki yillar arasi trende gore konservatif projeksiyon")
+                                _py5 = str(monthly_fc[0]['prev_year'])
+                                _ly5 = str(monthly_fc[0]['last_year'])
+                                _md5 = f"| Ay | {_py5} (kWh) | {_ly5} (kWh) | Trend | Tahmin (kWh) | Gerceklesen | Sapma |\n"
+                                _md5 += "|:---|---:|---:|:---:|---:|---:|:---:|\n"
                             else:
-                                st.metric("Gerceklesen", "Veri yok")
-                        with fc_summary[2]:
-                            if b_area > 0:
-                                st.metric("Tahmini kWh/m2",
-                                          f"{total_forecast/b_area:.1f} kWh/m2")
+                                st.caption("Kiyas sutunlari yok: trend icin en az iki TAM yil "
+                                           "(yilda 300+ gunluk veri) gerekiyor.")
+                                _md5 = "| Ay | Tahmin (kWh) | Gerceklesen | Sapma |\n"
+                                _md5 += "|:---|---:|---:|:---:|\n"
+
+                            for fc in monthly_fc:
+                                _gc5 = "-"
+                                _sp5 = "-"
+                                if fc["actual_total"] is not None:
+                                    _gc5 = f"{fc['actual_total']:,.0f}".replace(",", ".")
+                                    if fc.get("is_partial"):
+                                        _gc5 += f" ({fc['actual_days']}g)"
+                                    _sp5 = f"{fc['deviation_total_pct']:+.1f}%" if fc.get("deviation_total_pct") is not None else "-"
+
+                                if _kiyas5:
+                                    _md5 += f"| {fc['month_name']} | {fc['prev_total']:,.0f} | {fc['last_total']:,.0f} | {fc['trend_total_pct']:+.1f}% | {fc['forecast_total']:,.0f} | {_gc5} | {_sp5} |\n".replace(",", ".")
+                                else:
+                                    _md5 += f"| {fc['month_name']} | {fc['forecast_total']:,.0f} | {_gc5} | {_sp5} |\n".replace(",", ".")
                         
-                        st.divider()
+                            st.markdown(_md5)
+                        
+                            # Yıllık toplam tahmin
+                            total_forecast = sum(fc["forecast_total"] for fc in monthly_fc)
+                            total_actual = sum(fc["actual_total"] or 0 for fc in monthly_fc)
+                            months_with_data = sum(1 for fc in monthly_fc if fc["actual_total"] is not None)
+                        
+                            fc_summary = st.columns(3)
+                            with fc_summary[0]:
+                                st.metric(f"{report_year} Yillik Tahmin",
+                                          f"{total_forecast:,.0f} kWh".replace(",", "."))
+                            with fc_summary[1]:
+                                if months_with_data > 0:
+                                    st.metric(f"Gerceklesen ({months_with_data} ay)",
+                                              f"{total_actual:,.0f} kWh".replace(",", "."))
+                                else:
+                                    st.metric("Gerceklesen", "Veri yok")
+                            with fc_summary[2]:
+                                if b_area > 0:
+                                    st.metric("Tahmini kWh/m2",
+                                              f"{total_forecast/b_area:.1f} kWh/m2")
+                        
                     
                     # 3. Tasarruf Özeti
                     if savings and savings.get("savings_total_kwh") is not None:
-                        st.markdown("### 💰 Beklenen vs Gerceklesen Tasarruf")
-                        st.caption(f"Alan artisina ragmen tuketim degisimi ({savings.get('prev_year', '')}->{savings.get('year', '')})")
+                        with _bolum_karti("kart_tasarruf_rapor", "💰 Beklenen vs Gerceklesen Tasarruf"):
+                            st.caption(f"Alan artisina ragmen tuketim degisimi ({savings.get('prev_year', '')}->{savings.get('year', '')})")
                         
-                        sv_cols = st.columns(4)
-                        with sv_cols[0]:
-                            st.metric("Beklenen Tuketim",
-                                      f"{savings['expected_total']:,.0f} kWh".replace(",", "."),
-                                      "(alan bazli)", delta_color="off")
-                        with sv_cols[1]:
-                            st.metric("Gerceklesen",
-                                      f"{savings['curr_total']:,.0f} kWh".replace(",", "."))
-                        with sv_cols[2]:
-                            # TASARRUF tüketimin tersidir: artı tasarruf iyi haber,
-                            # yani yukarı ok YEŞİL kalır (Streamlit varsayılanı).
-                            st.metric("Toplam Tasarruf",
-                                      f"{savings['savings_total_kwh']:,.0f} kWh".replace(",", "."),
-                                      f"%{savings['savings_total_pct']:.1f}")
-                        with sv_cols[3]:
-                            st.metric("Sebeke Tasarruf",
-                                      f"{savings['savings_grid_kwh']:,.0f} kWh".replace(",", "."),
-                                      f"%{savings['savings_grid_pct']:.1f}")
+                            sv_cols = st.columns(4)
+                            with sv_cols[0]:
+                                st.metric("Beklenen Tuketim",
+                                          f"{savings['expected_total']:,.0f} kWh".replace(",", "."),
+                                          "(alan bazli)", delta_color="off")
+                            with sv_cols[1]:
+                                st.metric("Gerceklesen",
+                                          f"{savings['curr_total']:,.0f} kWh".replace(",", "."))
+                            with sv_cols[2]:
+                                # TASARRUF tüketimin tersidir: artı tasarruf iyi haber,
+                                # yani yukarı ok YEŞİL kalır (Streamlit varsayılanı).
+                                st.metric("Toplam Tasarruf",
+                                          f"{savings['savings_total_kwh']:,.0f} kWh".replace(",", "."),
+                                          f"%{savings['savings_total_pct']:.1f}")
+                            with sv_cols[3]:
+                                st.metric("Sebeke Tasarruf",
+                                          f"{savings['savings_grid_kwh']:,.0f} kWh".replace(",", "."),
+                                          f"%{savings['savings_grid_pct']:.1f}")
                         
-                        st.divider()
                     
                     # 4. Gelecek Ay Tahmini
                     if next_m:
-                        st.markdown(f"### 🎯 Gelecek Ay Tahmini: {next_m.get('month_name', '')} {next_m.get('year', '')}")
-                        nm_cols = st.columns(3)
-                        with nm_cols[0]:
-                            st.metric("Beklenen Toplam",
-                                      f"{next_m.get('forecast_total', 0):,.0f} kWh".replace(",", "."),
-                                      f"Trend: {next_m.get('trend_total_pct', 0):+.1f}%",
-                                      delta_color="inverse")
-                        with nm_cols[1]:
-                            st.metric("Beklenen Sebeke",
-                                      f"{next_m.get('forecast_grid', 0):,.0f} kWh".replace(",", "."),
-                                      f"Trend: {next_m.get('trend_grid_pct', 0):+.1f}%",
-                                      delta_color="inverse")
-                        with nm_cols[2]:
-                            if b_area > 0:
-                                st.metric("Beklenen kWh/m2",
-                                          f"{next_m.get('per_m2', 0):.1f} kWh/m2")
+                        with _bolum_karti("kart_gelecek_ay_rapor", f"🎯 Gelecek Ay Tahmini: {next_m.get('month_name', '')} {next_m.get('year', '')}"):
+                            nm_cols = st.columns(3)
+                            with nm_cols[0]:
+                                _mtt = next_m.get('trend_total_pct', 0) or 0
+                                st.metric("Beklenen Toplam",
+                                          f"{next_m.get('forecast_total', 0):,.0f} kWh".replace(",", "."),
+                                          f"Trend: {_mtt:+.1f}%",
+                                          delta_color="inverse" if abs(_mtt) >= 0.05 else "off")
+                            with nm_cols[1]:
+                                _mtg = next_m.get('trend_grid_pct', 0) or 0
+                                st.metric("Beklenen Sebeke",
+                                          f"{next_m.get('forecast_grid', 0):,.0f} kWh".replace(",", "."),
+                                          f"Trend: {_mtg:+.1f}%",
+                                          delta_color="inverse" if abs(_mtg) >= 0.05 else "off")
+                            with nm_cols[2]:
+                                if b_area > 0:
+                                    st.metric("Beklenen kWh/m2",
+                                              f"{next_m.get('per_m2', 0):.1f} kWh/m2")
                         
-                        st.divider()
                 
                 except Exception as _fc_err:
                     st.warning(f"Tahmin modülü hatası: {_fc_err}")
                 
                 # Tasarruf önerileri
-                st.markdown(f"### ⚠️ Tasarruf Önerileri ({rec_summary['total_count']} öneri)")
+                with _bolum_karti("kart_oneriler", f"⚠️ Tasarruf Önerileri ({rec_summary['total_count']} öneri)"):
                 
-                if recommendations:
-                    for rec in recommendations:
-                        severity = rec.get("severity", "INFO")
-                        if severity == "CRITICAL":
-                            st.error(f"🚨 **{rec['name']}** (Potansiyel: {rec['savings_potential']})\n\n{rec['message']}")
-                        elif severity == "WARNING":
-                            st.warning(f"⚠️ **{rec['name']}** (Potansiyel: {rec['savings_potential']})\n\n{rec['message']}")
-                        else:
-                            st.info(f"ℹ️ **{rec['name']}** (Potansiyel: {rec['savings_potential']})\n\n{rec['message']}")
-                else:
-                    st.success("✅ Bu dönem için tasarruf önerisi bulunmamaktadır. Sistem verimli çalışıyor!")
+                    if recommendations:
+                        for rec in recommendations:
+                            severity = rec.get("severity", "INFO")
+                            if severity == "CRITICAL":
+                                st.error(f"🚨 **{rec['name']}** (Potansiyel: {rec['savings_potential']})\n\n{rec['message']}")
+                            elif severity == "WARNING":
+                                st.warning(f"⚠️ **{rec['name']}** (Potansiyel: {rec['savings_potential']})\n\n{rec['message']}")
+                            else:
+                                st.info(f"ℹ️ **{rec['name']}** (Potansiyel: {rec['savings_potential']})\n\n{rec['message']}")
+                    else:
+                        st.success("✅ Bu dönem için tasarruf önerisi bulunmamaktadır. Sistem verimli çalışıyor!")
                 
-                st.divider()
                 
                 # PDF indirme
-                st.markdown("### 📥 PDF Rapor İndir")
-                try:
-                    # PDF Grafiklerini Hazırla
-                    pdf_charts = {}
+                with _bolum_karti("kart_pdf_indir", "📥 PDF Rapor İndir"):
+                    try:
+                        # PDF Grafiklerini Hazırla
+                        pdf_charts = {}
                     
-                    # 1. Enerji Dağılımı (Pasta Grafik)
-                    try:
-                        summ = unified_data.get("summary", {})
-                        labels = ["Şebeke", "Doğalgaz", "Soğutma", "Diğer"]
-                        values = [
-                            summ.get("total_grid_consumption", 0),
-                            summ.get("total_gas", 0) * 10.64,  # m3 -> kWh (yaklaşık)
-                            summ.get("total_cooling_consumption", 0),
-                            summ.get("total_hospital_consumption", 0) - summ.get("total_grid_consumption", 0) # Basit hesap
-                        ]
-                        # Negatif değerleri temizle
-                        values = [max(0, v) for v in values]
+                        # 1. Enerji Dağılımı (Pasta Grafik)
+                        try:
+                            summ = unified_data.get("summary", {})
+                            labels = ["Şebeke", "Doğalgaz", "Soğutma", "Diğer"]
+                            values = [
+                                summ.get("total_grid_consumption", 0),
+                                summ.get("total_gas", 0) * 10.64,  # m3 -> kWh (yaklaşık)
+                                summ.get("total_cooling_consumption", 0),
+                                summ.get("total_hospital_consumption", 0) - summ.get("total_grid_consumption", 0) # Basit hesap
+                            ]
+                            # Negatif değerleri temizle
+                            values = [max(0, v) for v in values]
                         
-                        if sum(values) > 0:
-                            fig_pie = px.pie(names=labels, values=values, hole=0.4,
-                                           color_discrete_sequence=['#6da7ec', '#c98500', '#0ca30c', '#46536b'])
-                            fig_pie.update_layout(
-                                title="Enerji Tüketim Dağılımı",
-                                template="plotly_white",
-                                font=dict(family="Arial", size=12),
-                                showlegend=True
-                            )
-                            pdf_charts["Enerji Dağılımı"] = fig_to_png_bytes(fig_pie)
-                    except Exception as e:
-                        print(f"Chart error (Pie): {e}")
+                            if sum(values) > 0:
+                                fig_pie = px.pie(names=labels, values=values, hole=0.4,
+                                               color_discrete_sequence=['#6da7ec', '#c98500', '#0ca30c', '#46536b'])
+                                fig_pie.update_layout(
+                                    title="Enerji Tüketim Dağılımı",
+                                    template="plotly_white",
+                                    font=dict(family="Arial", size=12),
+                                    showlegend=True
+                                )
+                                pdf_charts["Enerji Dağılımı"] = fig_to_png_bytes(fig_pie)
+                        except Exception as e:
+                            print(f"Chart error (Pie): {e}")
 
-                    # 2. Günlük Tüketim Trendi (Çizgi Grafik)
-                    try:
-                        daily_df = pd.DataFrame([
-                            {
-                                "Gün": d["date"], 
-                                "Tüketim": d["energy"].get("total_hospital", 0),
-                                "Sıcaklık": d["energy"].get("outdoor_temp")
-                            } 
-                            for d in unified_data.get("daily_data", [])
-                        ])
+                        # 2. Günlük Tüketim Trendi (Çizgi Grafik)
+                        try:
+                            daily_df = pd.DataFrame([
+                                {
+                                    "Gün": d["date"], 
+                                    "Tüketim": d["energy"].get("total_hospital", 0),
+                                    "Sıcaklık": d["energy"].get("outdoor_temp")
+                                } 
+                                for d in unified_data.get("daily_data", [])
+                            ])
                         
-                        if not daily_df.empty:
-                            fig_trend = go.Figure()
-                            # Tüketim (Bar)
-                            fig_trend.add_trace(go.Bar(
-                                x=daily_df["Gün"], y=daily_df["Tüketim"],
-                                name="Tüketim (kWh)",
-                                marker_color='rgba(109,167,236, 0.7)'
-                            ))
-                            # Sıcaklık (Çizgi - 2. Eksen)
-                            fig_trend.add_trace(go.Scatter(
-                                x=daily_df["Gün"], y=daily_df["Sıcaklık"],
-                                name="Dış Hava (°C)",
-                                yaxis="y2",
-                                line=dict(color='#d03b3b', width=3)
-                            ))
+                            if not daily_df.empty:
+                                fig_trend = go.Figure()
+                                # Tüketim (Bar)
+                                fig_trend.add_trace(go.Bar(
+                                    x=daily_df["Gün"], y=daily_df["Tüketim"],
+                                    name="Tüketim (kWh)",
+                                    marker_color='rgba(109,167,236, 0.7)'
+                                ))
+                                # Sıcaklık (Çizgi - 2. Eksen)
+                                fig_trend.add_trace(go.Scatter(
+                                    x=daily_df["Gün"], y=daily_df["Sıcaklık"],
+                                    name="Dış Hava (°C)",
+                                    yaxis="y2",
+                                    line=dict(color='#d03b3b', width=3)
+                                ))
                             
-                            fig_trend.update_layout(
-                                title="Günlük Tüketim & Sıcaklık",
+                                fig_trend.update_layout(
+                                    title="Günlük Tüketim & Sıcaklık",
+                                    template="plotly_white",
+                                    font=dict(family="Arial", size=12),
+                                    yaxis=dict(title="Tüketim (kWh)"),
+                                    yaxis2=dict(title="Sıcaklık (°C)", overlaying="y", side="right"),
+                                    legend=dict(orientation="h", y=1.1)
+                                )
+                                pdf_charts["Günlük Trend"] = fig_to_png_bytes(fig_trend)
+                        except Exception as e:
+                            print(f"Chart error (Trend): {e}")
+
+                        # 3. YoY Karşılaştırma (Bar Grafik)
+                        try:
+                            comps = yoy_analysis.get("comparisons", {})
+                            # Ana metrikler
+                            metrics = ["total_grid_consumption", "total_cooling_consumption", "total_gas"]
+                            display_names = ["Şebeke", "Soğutma", "Doğalgaz"]
+                        
+                            curr_vals = [comps.get(m, {}).get("current", 0) for m in metrics]
+                            prev_vals = [comps.get(m, {}).get("previous", 0) for m in metrics]
+                        
+                            fig_yoy = go.Figure()
+                            fig_yoy.add_trace(go.Bar(
+                                name="Bu Yıl", x=display_names, y=curr_vals,
+                                marker_color='#0ca30c'
+                            ))
+                            fig_yoy.add_trace(go.Bar(
+                                name="Geçen Yıl", x=display_names, y=prev_vals,
+                                marker_color='#6366f1'
+                            ))
+                        
+                            fig_yoy.update_layout(
+                                title="Bu Ay vs Geçen Yıl (YoY)",
                                 template="plotly_white",
                                 font=dict(family="Arial", size=12),
-                                yaxis=dict(title="Tüketim (kWh)"),
-                                yaxis2=dict(title="Sıcaklık (°C)", overlaying="y", side="right"),
+                                barmode='group',
                                 legend=dict(orientation="h", y=1.1)
                             )
-                            pdf_charts["Günlük Trend"] = fig_to_png_bytes(fig_trend)
-                    except Exception as e:
-                        print(f"Chart error (Trend): {e}")
+                            pdf_charts["Yıllık Karşılaştırma"] = fig_to_png_bytes(fig_yoy)
+                        except Exception as e:
+                            print(f"Chart error (YoY): {e}")
 
-                    # 3. YoY Karşılaştırma (Bar Grafik)
-                    try:
-                        comps = yoy_analysis.get("comparisons", {})
-                        # Ana metrikler
-                        metrics = ["total_grid_consumption", "total_cooling_consumption", "total_gas"]
-                        display_names = ["Şebeke", "Soğutma", "Doğalgaz"]
-                        
-                        curr_vals = [comps.get(m, {}).get("current", 0) for m in metrics]
-                        prev_vals = [comps.get(m, {}).get("previous", 0) for m in metrics]
-                        
-                        fig_yoy = go.Figure()
-                        fig_yoy.add_trace(go.Bar(
-                            name="Bu Yıl", x=display_names, y=curr_vals,
-                            marker_color='#0ca30c'
-                        ))
-                        fig_yoy.add_trace(go.Bar(
-                            name="Geçen Yıl", x=display_names, y=prev_vals,
-                            marker_color='#6366f1'
-                        ))
-                        
-                        fig_yoy.update_layout(
-                            title="Bu Ay vs Geçen Yıl (YoY)",
-                            template="plotly_white",
-                            font=dict(family="Arial", size=12),
-                            barmode='group',
-                            legend=dict(orientation="h", y=1.1)
+                        # PDF Oluştur (tahmin verisiyle)
+                        pdf_gen = MonthlyReportPDFGenerator()
+                        try:
+                            _fc_engine = _get_forecast_engine()
+                            _fc_data = _fc_engine.full_analysis(report_year)
+                        except Exception:
+                            _fc_data = None
+                        pdf_bytes = pdf_gen.generate(report_year, report_month, unified_data, yoy_analysis, recommendations, charts=pdf_charts, forecast_data=_fc_data)
+                    
+                        ay_adi = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
+                                  "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"][report_month-1]
+                    
+                        st.download_button(
+                            f"📥 {ay_adi} {report_year} Raporunu İndir (PDF)",
+                            data=pdf_bytes,
+                            file_name=f"aylik_tasarruf_raporu_{report_year}_{report_month:02d}.pdf",
+                            mime="application/pdf",
+                            key="monthly_pdf_download"
                         )
-                        pdf_charts["Yıllık Karşılaştırma"] = fig_to_png_bytes(fig_yoy)
-                    except Exception as e:
-                        print(f"Chart error (YoY): {e}")
-
-                    # PDF Oluştur (tahmin verisiyle)
-                    pdf_gen = MonthlyReportPDFGenerator()
-                    try:
-                        _fc_engine = _get_forecast_engine()
-                        _fc_data = _fc_engine.full_analysis(report_year)
-                    except Exception:
-                        _fc_data = None
-                    pdf_bytes = pdf_gen.generate(report_year, report_month, unified_data, yoy_analysis, recommendations, charts=pdf_charts, forecast_data=_fc_data)
-                    
-                    ay_adi = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
-                              "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"][report_month-1]
-                    
-                    st.download_button(
-                        f"📥 {ay_adi} {report_year} Raporunu İndir (PDF)",
-                        data=pdf_bytes,
-                        file_name=f"aylik_tasarruf_raporu_{report_year}_{report_month:02d}.pdf",
-                        mime="application/pdf",
-                        key="monthly_pdf_download"
-                    )
-                except Exception as pdf_err:
-                    st.error(f"PDF oluşturma hatası: {pdf_err}")
+                    except Exception as pdf_err:
+                        st.error(f"PDF oluşturma hatası: {pdf_err}")
                 
     except ImportError as e:
         st.error(f"Monthly report modülü yüklenemedi: {e}")
@@ -4817,188 +4837,187 @@ with tab5:
     
     # ========== AI İLERLEME + ML EGİTİM VERİSİ ==========
     st.divider()
-    st.markdown("### 🧠 Yapay Zeka / Makine Öğrenmesi İlerleme")
+    with _bolum_karti("kart_ai_ilerleme", "🧠 Yapay Zeka / Makine Öğrenmesi İlerleme"):
     
-    # AI İlerleme Göstergesi
-    try:
-        from ai_progress import calculate_ai_progress
-        _ai = calculate_ai_progress()
-        _ai_score = _ai["total_score"]
-        _ai_level = _ai["level"]
-        _ai_emoji = _ai["level_emoji"]
-        _cats = _ai["categories"]
+        # AI İlerleme Göstergesi
+        try:
+            from ai_progress import calculate_ai_progress
+            _ai = calculate_ai_progress()
+            _ai_score = _ai["total_score"]
+            _ai_level = _ai["level"]
+            _ai_emoji = _ai["level_emoji"]
+            _cats = _ai["categories"]
         
-        with st.container(border=True):
-            _ai_col1, _ai_col2 = st.columns([1, 2])
+            with st.container(border=True):
+                _ai_col1, _ai_col2 = st.columns([1, 2])
             
-            with _ai_col1:
-                if _ai_score >= 80:
-                    _ring_color = "#0ca30c"
-                elif _ai_score >= 60:
-                    _ring_color = "#6da7ec"
-                elif _ai_score >= 40:
-                    _ring_color = "#c98500"
-                elif _ai_score >= 20:
-                    _ring_color = "#8b5cf6"
-                else:
-                    _ring_color = "#6b7280"
+                with _ai_col1:
+                    if _ai_score >= 80:
+                        _ring_color = "#0ca30c"
+                    elif _ai_score >= 60:
+                        _ring_color = "#6da7ec"
+                    elif _ai_score >= 40:
+                        _ring_color = "#c98500"
+                    elif _ai_score >= 20:
+                        _ring_color = "#8b5cf6"
+                    else:
+                        _ring_color = "#6b7280"
                 
-                st.markdown(f"""
-                <div style="text-align:center;">
-                    <div style="position:relative; width:130px; height:130px; margin:0 auto;">
-                        <svg viewBox="0 0 120 120" style="transform:rotate(-90deg)">
-                            <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" stroke-width="10"/>
-                            <circle cx="60" cy="60" r="50" fill="none" stroke="{_ring_color}" stroke-width="10"
-                                stroke-dasharray="{_ai_score * 3.14} {(100 - _ai_score) * 3.14}"
-                                stroke-linecap="round"/>
-                        </svg>
-                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-                                    font-size:32px; font-weight:bold; color:{_ring_color};">
-                            %{_ai_score}
-                        </div>
-                    </div>
-                    <div style="margin-top:8px; font-size:20px; font-weight:bold;">{_ai_emoji} {_ai_level}</div>
-                    <div style="font-size:12px; color:#6b7280; margin-top:4px;">Seviye: Başlangıç → Gelişen → Olgun → İleri → Otonom</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with _ai_col2:
-                for _cat_key, _cat in _cats.items():
-                    _pct = int((_cat["score"] / _cat["max"]) * 100) if _cat["max"] > 0 else 0
-                    _cat_names = {
-                        "data_maturity": "Veri Olgunluğu",
-                        "feedback": "Geri Bildirim / Öğrenme",
-                        "feature_maturity": "Özellik Olgunluğu",
-                        "advanced_ai": "İleri AI Yetenekleri"
-                    }
-                    _cat_name = _cat_names.get(_cat_key, _cat_key)
-                    
                     st.markdown(f"""
-                    <div style="margin-bottom:10px;">
-                        <div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:3px;">
-                            <span>{_cat["icon"]} {_cat_name}</span>
-                            <span><b>{_cat["score"]}</b>/{_cat["max"]}</span>
+                    <div style="text-align:center;">
+                        <div style="position:relative; width:130px; height:130px; margin:0 auto;">
+                            <svg viewBox="0 0 120 120" style="transform:rotate(-90deg)">
+                                <circle cx="60" cy="60" r="50" fill="none" stroke="#e5e7eb" stroke-width="10"/>
+                                <circle cx="60" cy="60" r="50" fill="none" stroke="{_ring_color}" stroke-width="10"
+                                    stroke-dasharray="{_ai_score * 3.14} {(100 - _ai_score) * 3.14}"
+                                    stroke-linecap="round"/>
+                            </svg>
+                            <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+                                        font-size:32px; font-weight:bold; color:{_ring_color};">
+                                %{_ai_score}
+                            </div>
                         </div>
-                        <div style="background:#e5e7eb; border-radius:6px; height:12px; overflow:hidden;">
-                            <div style="background:{_ring_color}; width:{_pct}%; height:100%; border-radius:6px;
-                                        transition: width 0.5s ease;"></div>
-                        </div>
-                        <div style="font-size:11px; color:#6b7280; margin-top:2px;">{_cat["detail"]}</div>
+                        <div style="margin-top:8px; font-size:20px; font-weight:bold;">{_ai_emoji} {_ai_level}</div>
+                        <div style="font-size:12px; color:#6b7280; margin-top:4px;">Seviye: Başlangıç → Gelişen → Olgun → İleri → Otonom</div>
                     </div>
                     """, unsafe_allow_html=True)
+            
+                with _ai_col2:
+                    for _cat_key, _cat in _cats.items():
+                        _pct = int((_cat["score"] / _cat["max"]) * 100) if _cat["max"] > 0 else 0
+                        _cat_names = {
+                            "data_maturity": "Veri Olgunluğu",
+                            "feedback": "Geri Bildirim / Öğrenme",
+                            "feature_maturity": "Özellik Olgunluğu",
+                            "advanced_ai": "İleri AI Yetenekleri"
+                        }
+                        _cat_name = _cat_names.get(_cat_key, _cat_key)
+                    
+                        st.markdown(f"""
+                        <div style="margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; font-size:14px; margin-bottom:3px;">
+                                <span>{_cat["icon"]} {_cat_name}</span>
+                                <span><b>{_cat["score"]}</b>/{_cat["max"]}</span>
+                            </div>
+                            <div style="background:#e5e7eb; border-radius:6px; height:12px; overflow:hidden;">
+                                <div style="background:{_ring_color}; width:{_pct}%; height:100%; border-radius:6px;
+                                            transition: width 0.5s ease;"></div>
+                            </div>
+                            <div style="font-size:11px; color:#6b7280; margin-top:2px;">{_cat["detail"]}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
                 
-                st.caption(f"🎯 Sonraki hedef: {_ai['next_milestone']}")
-    except Exception:
-        st.info("AI ilerleme modülü yüklenemedi.")
+                    st.caption(f"🎯 Sonraki hedef: {_ai['next_milestone']}")
+        except Exception:
+            st.info("AI ilerleme modülü yüklenemedi.")
     
-    st.divider()
-    st.markdown("### 🤖 ML Eğitim Verisi Durumu")
+    with _bolum_karti("kart_ml_egitim", "🤖 ML Eğitim Verisi Durumu"):
     
-    try:
-        from monthly_report import TrainingDataCollector
-        collector = TrainingDataCollector()
-        stats = collector.get_statistics()
+        try:
+            from monthly_report import TrainingDataCollector
+            collector = TrainingDataCollector()
+            stats = collector.get_statistics()
         
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Toplam Kayıt", stats.get("total_records", 0))
-        with col2:
-            st.metric("Feedback Alınan", stats.get("with_feedback", 0))
-        with col3:
-            feedback_rate = stats.get("feedback_rate", 0)
-            st.metric("Feedback Oranı", f"%{feedback_rate:.1f}")
-        with col4:
-            ready = "✅ HAZIR" if stats.get("ready_for_ml") else "⏳ Veri Toplaniyor"
-            st.metric("ML Durumu", ready)
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Toplam Kayıt", stats.get("total_records", 0))
+            with col2:
+                st.metric("Feedback Alınan", stats.get("with_feedback", 0))
+            with col3:
+                feedback_rate = stats.get("feedback_rate", 0)
+                st.metric("Feedback Oranı", f"%{feedback_rate:.1f}")
+            with col4:
+                ready = "✅ HAZIR" if stats.get("ready_for_ml") else "⏳ Veri Toplaniyor"
+                st.metric("ML Durumu", ready)
         
-        # Kural dağılımı
-        rule_dist = stats.get("rule_distribution", {})
-        if rule_dist:
-            with st.expander("📊 Kural Dağılımı"):
-                for rule_id, count in sorted(rule_dist.items(), key=lambda x: -x[1]):
-                    st.text(f"  {rule_id}: {count} adet")
+            # Kural dağılımı
+            rule_dist = stats.get("rule_distribution", {})
+            if rule_dist:
+                with st.expander("📊 Kural Dağılımı"):
+                    for rule_id, count in sorted(rule_dist.items(), key=lambda x: -x[1]):
+                        st.text(f"  {rule_id}: {count} adet")
         
-        # Bekleyen feedback'ler
-        pending = collector.get_pending_feedback()
-        if pending:
-            with st.expander(f"⏳ Feedback Bekleyen Öneriler ({len(pending)} adet)", expanded=True):
-                # Session state için seçim listesi
-                if "selected_feedbacks" not in st.session_state:
-                    st.session_state.selected_feedbacks = set()
+            # Bekleyen feedback'ler
+            pending = collector.get_pending_feedback()
+            if pending:
+                with st.expander(f"⏳ Feedback Bekleyen Öneriler ({len(pending)} adet)", expanded=True):
+                    # Session state için seçim listesi
+                    if "selected_feedbacks" not in st.session_state:
+                        st.session_state.selected_feedbacks = set()
                 
-                # TOPLU İŞLEM BUTONLARI
-                col_select_all, col_clear, col_apply_sel, col_reject_sel, col_pending_sel = st.columns(5)
-                with col_select_all:
-                    if st.button("☑️ Tümünü Seç", key="fb_select_all"):
-                        st.session_state.selected_feedbacks = {rec['id'] for rec in pending}
-                        st.rerun()
-                with col_clear:
-                    if st.button("⬜ Temizle", key="fb_clear_all"):
-                        st.session_state.selected_feedbacks = set()
-                        st.rerun()
-                with col_apply_sel:
-                    if st.button("✅ Seçilenleri Uygula", key="fb_apply_selected"):
-                        for rec_id in st.session_state.selected_feedbacks:
-                            collector.update_feedback(rec_id, "applied")
-                        st.success(f"{len(st.session_state.selected_feedbacks)} öneri uygulandı olarak işaretlendi!")
-                        st.session_state.selected_feedbacks = set()
-                        st.rerun()
-                with col_reject_sel:
-                    if st.button("❌ Seçilenleri Reddet", key="fb_reject_selected"):
-                        for rec_id in st.session_state.selected_feedbacks:
-                            collector.update_feedback(rec_id, "not_applied")
-                        st.warning(f"{len(st.session_state.selected_feedbacks)} öneri reddedildi olarak işaretlendi!")
-                        st.session_state.selected_feedbacks = set()
-                        st.rerun()
-                with col_pending_sel:
-                    if st.button("⏸️ Seçilenleri Beklet", key="fb_pending_selected"):
-                        for rec_id in st.session_state.selected_feedbacks:
-                            collector.update_feedback(rec_id, "pending")
-                        st.info(f"{len(st.session_state.selected_feedbacks)} öneri beklemede olarak işaretlendi!")
-                        st.session_state.selected_feedbacks = set()
-                        st.rerun()
-                
-                st.divider()
-                st.caption(f"📌 Seçili: {len(st.session_state.selected_feedbacks)} adet")
-                
-                # ÖNERİ LİSTESİ - Checkbox ile
-                for rec in pending:
-                    rec_data = rec.get("recommendation", {})
-                    rec_id = rec['id']
-                    
-                    col_check, col_info, col_a, col_b, col_c = st.columns([0.5, 3, 1, 1, 1])
-                    
-                    with col_check:
-                        is_selected = rec_id in st.session_state.selected_feedbacks
-                        if st.checkbox("", value=is_selected, key=f"fb_check_{rec_id}", label_visibility="collapsed"):
-                            st.session_state.selected_feedbacks.add(rec_id)
-                        else:
-                            st.session_state.selected_feedbacks.discard(rec_id)
-                    
-                    with col_info:
-                        st.markdown(f"**{rec_id}** - {rec_data.get('name', 'N/A')}")
-                    
-                    with col_a:
-                        if st.button("✅", key=f"fb_applied_{rec_id}", help="Uygulandı"):
-                            collector.update_feedback(rec_id, "applied")
-                            st.success("Kaydedildi!")
+                    # TOPLU İŞLEM BUTONLARI
+                    col_select_all, col_clear, col_apply_sel, col_reject_sel, col_pending_sel = st.columns(5)
+                    with col_select_all:
+                        if st.button("☑️ Tümünü Seç", key="fb_select_all"):
+                            st.session_state.selected_feedbacks = {rec['id'] for rec in pending}
                             st.rerun()
-                    with col_b:
-                        if st.button("❌", key=f"fb_not_{rec_id}", help="Uygulanmadı"):
-                            collector.update_feedback(rec_id, "not_applied")
-                            st.warning("Kaydedildi!")
+                    with col_clear:
+                        if st.button("⬜ Temizle", key="fb_clear_all"):
+                            st.session_state.selected_feedbacks = set()
                             st.rerun()
-                    with col_c:
-                        if st.button("⏸️", key=f"fb_pending_{rec_id}", help="Beklemede"):
-                            collector.update_feedback(rec_id, "pending")
-                            st.info("Kaydedildi!")
+                    with col_apply_sel:
+                        if st.button("✅ Seçilenleri Uygula", key="fb_apply_selected"):
+                            for rec_id in st.session_state.selected_feedbacks:
+                                collector.update_feedback(rec_id, "applied")
+                            st.success(f"{len(st.session_state.selected_feedbacks)} öneri uygulandı olarak işaretlendi!")
+                            st.session_state.selected_feedbacks = set()
+                            st.rerun()
+                    with col_reject_sel:
+                        if st.button("❌ Seçilenleri Reddet", key="fb_reject_selected"):
+                            for rec_id in st.session_state.selected_feedbacks:
+                                collector.update_feedback(rec_id, "not_applied")
+                            st.warning(f"{len(st.session_state.selected_feedbacks)} öneri reddedildi olarak işaretlendi!")
+                            st.session_state.selected_feedbacks = set()
+                            st.rerun()
+                    with col_pending_sel:
+                        if st.button("⏸️ Seçilenleri Beklet", key="fb_pending_selected"):
+                            for rec_id in st.session_state.selected_feedbacks:
+                                collector.update_feedback(rec_id, "pending")
+                            st.info(f"{len(st.session_state.selected_feedbacks)} öneri beklemede olarak işaretlendi!")
+                            st.session_state.selected_feedbacks = set()
                             st.rerun()
                 
-                if len(pending) > 20:
-                    st.info(f"... toplam {len(pending)} öneri bekliyor")
+                    st.divider()
+                    st.caption(f"📌 Seçili: {len(st.session_state.selected_feedbacks)} adet")
+                
+                    # ÖNERİ LİSTESİ - Checkbox ile
+                    for rec in pending:
+                        rec_data = rec.get("recommendation", {})
+                        rec_id = rec['id']
+                    
+                        col_check, col_info, col_a, col_b, col_c = st.columns([0.5, 3, 1, 1, 1])
+                    
+                        with col_check:
+                            is_selected = rec_id in st.session_state.selected_feedbacks
+                            if st.checkbox("", value=is_selected, key=f"fb_check_{rec_id}", label_visibility="collapsed"):
+                                st.session_state.selected_feedbacks.add(rec_id)
+                            else:
+                                st.session_state.selected_feedbacks.discard(rec_id)
+                    
+                        with col_info:
+                            st.markdown(f"**{rec_id}** - {rec_data.get('name', 'N/A')}")
+                    
+                        with col_a:
+                            if st.button("✅", key=f"fb_applied_{rec_id}", help="Uygulandı"):
+                                collector.update_feedback(rec_id, "applied")
+                                st.success("Kaydedildi!")
+                                st.rerun()
+                        with col_b:
+                            if st.button("❌", key=f"fb_not_{rec_id}", help="Uygulanmadı"):
+                                collector.update_feedback(rec_id, "not_applied")
+                                st.warning("Kaydedildi!")
+                                st.rerun()
+                        with col_c:
+                            if st.button("⏸️", key=f"fb_pending_{rec_id}", help="Beklemede"):
+                                collector.update_feedback(rec_id, "pending")
+                                st.info("Kaydedildi!")
+                                st.rerun()
+                
+                    if len(pending) > 20:
+                        st.info(f"... toplam {len(pending)} öneri bekliyor")
     
-    except ImportError:
-        st.info("ML eğitim modülü henüz aktif değil.")
+        except ImportError:
+            st.info("ML eğitim modülü henüz aktif değil.")
 
 # ---------------- TAB 6: TAHMİN & TREND ----------------
 with tab6:
@@ -5023,225 +5042,234 @@ with tab6:
         
         # ═══ 1. ÇOK YILLIK TREND ═══
         if _fc_yearly and len(_fc_yearly) >= 2:
-            st.markdown("### 📈 Çok Yıllık Trend Analizi")
+            with _bolum_karti("kart_tahmin_coklu_yil", "📈 Çok Yıllık Trend Analizi"):
             
-            _yc = st.columns(len(_fc_yearly))
-            for _yi, _ys in enumerate(_fc_yearly):
-                with _yc[_yi]:
-                    st.metric(
-                        f"{_ys['year']} ({_ys['days']} gün)",
-                        f"{_ys['total_kwh']:,.0f} kWh".replace(",", "."),
-                        f"{_ys['kwh_per_m2']:.1f} kWh/m²" if _fc_area > 0 else None,
-                        delta_color="off"
-                    )
+                _yc = st.columns(len(_fc_yearly))
+                for _yi, _ys in enumerate(_fc_yearly):
+                    with _yc[_yi]:
+                        st.metric(
+                            f"{_ys['year']} ({_ys['days']} gün)",
+                            f"{_ys['total_kwh']:,.0f} kWh".replace(",", "."),
+                            f"{_ys['kwh_per_m2']:.1f} kWh/m²" if _fc_area > 0 else None,
+                            delta_color="off"
+                        )
             
-            _tc = st.columns(3)
-            _ly = _fc_yearly[-1]
-            _py = _fc_yearly[-2]
-            with _tc[0]:
-                _ct = (_ly['total_kwh'] - _py['total_kwh']) / _py['total_kwh'] * 100 if _py['total_kwh'] > 0 else 0
-                st.metric("Toplam Değişim", f"{_ct:+.1f}%", f"{_py['year']}→{_ly['year']}",
-                          delta_color="off")
-            with _tc[1]:
-                _cg = (_ly['grid_kwh'] - _py['grid_kwh']) / _py['grid_kwh'] * 100 if _py['grid_kwh'] > 0 else 0
-                st.metric("Şebeke Değişim", f"{_cg:+.1f}%", f"{_py['year']}→{_ly['year']}",
-                          delta_color="off")
-            with _tc[2]:
-                _cc = (_ly['chiller_kwh'] - _py['chiller_kwh']) / _py['chiller_kwh'] * 100 if _py['chiller_kwh'] > 0 else 0
-                st.metric("Chiller Değişim", f"{_cc:+.1f}%", f"{_py['year']}→{_ly['year']}",
-                          delta_color="off")
+                _tc = st.columns(3)
+                _ly = _fc_yearly[-1]
+                _py = _fc_yearly[-2]
+                with _tc[0]:
+                    _ct = (_ly['total_kwh'] - _py['total_kwh']) / _py['total_kwh'] * 100 if _py['total_kwh'] > 0 else 0
+                    st.metric("Toplam Değişim", f"{_ct:+.1f}%", f"{_py['year']}→{_ly['year']}",
+                              delta_color="off")
+                with _tc[1]:
+                    _cg = (_ly['grid_kwh'] - _py['grid_kwh']) / _py['grid_kwh'] * 100 if _py['grid_kwh'] > 0 else 0
+                    st.metric("Şebeke Değişim", f"{_cg:+.1f}%", f"{_py['year']}→{_ly['year']}",
+                              delta_color="off")
+                with _tc[2]:
+                    _cc = (_ly['chiller_kwh'] - _py['chiller_kwh']) / _py['chiller_kwh'] * 100 if _py['chiller_kwh'] > 0 else 0
+                    st.metric("Chiller Değişim", f"{_cc:+.1f}%", f"{_py['year']}→{_ly['year']}",
+                              delta_color="off")
             
-            st.divider()
         
         # ═══ 2. AYLIK TAHMİN TABLOSU ═══
         if _fc_monthly:
-            st.markdown(f"### 🔮 {_fc_year} Aylık Tüketim Tahmini")
-            st.caption("Önceki yıllar arası trende göre konservatif projeksiyon")
-            
-            _prev_y = str(_fc_monthly[0]['prev_year'])
-            _last_y = str(_fc_monthly[0]['last_year'])
-            
-            # Markdown tablo başlığı
-            _md = f"| Ay | {_prev_y} (kWh) | {_last_y} (kWh) | Trend | Tahmin (kWh) | Gerçekleşen | Sapma |\n"
-            _md += "|:---|---:|---:|:---:|---:|---:|:---:|\n"
-            
-            for _fm in _fc_monthly:
-                _ay = _fm["month_name"]
-                _p = f"{_fm['prev_total']:,.0f}".replace(",", ".")
-                _l = f"{_fm['last_total']:,.0f}".replace(",", ".")
-                _tr = f"{_fm['trend_total_pct']:+.1f}%"
-                _th = f"{_fm['forecast_total']:,.0f}".replace(",", ".")
-                
-                if _fm["actual_total"] is not None:
-                    _gc = f"{_fm['actual_total']:,.0f}".replace(",", ".")
-                    if _fm.get("is_partial"):
-                        _gc += f" ({_fm['actual_days']}g)"
-                    _sp = f"{_fm['deviation_total_pct']:+.1f}%" if _fm.get("deviation_total_pct") is not None else "-"
+            with _bolum_karti("kart_tahmin_aylik", f"🔮 {_fc_year} Aylık Tüketim Tahmini"):
+                # Kıyas yılları YOKSA (en az iki TAM yıl veri gerekir) motor
+                # prev_year/last_year'ı 0 döndürüyor; tablo "0 (kWh)" başlıklı
+                # sıfır dolu sütunlar gösteriyordu — ne olduğu anlaşılmıyordu.
+                # Böyle durumda o sütunlar hiç basılmaz, sebebi yazılır.
+                _kiyas_var = bool(_fc_monthly[0].get("prev_year")) and bool(_fc_monthly[0].get("last_year"))
+                if _kiyas_var:
+                    st.caption("Önceki yıllar arası trende göre konservatif projeksiyon")
+                    _prev_y = str(_fc_monthly[0]['prev_year'])
+                    _last_y = str(_fc_monthly[0]['last_year'])
+                    _md = f"| Ay | {_prev_y} (kWh) | {_last_y} (kWh) | Trend | Tahmin (kWh) | Gerçekleşen | Sapma |\n"
+                    _md += "|:---|---:|---:|:---:|---:|---:|:---:|\n"
                 else:
-                    _gc = "-"
-                    _sp = "-"
-                
-                _md += f"| {_ay} | {_p} | {_l} | {_tr} | {_th} | {_gc} | {_sp} |\n"
+                    st.caption("Kıyas sütunları yok: trend için en az iki TAM yıl "
+                               "(yılda 300+ günlük veri) gerekiyor. Tahmin ML modelinden geliyor.")
+                    _md = "| Ay | Tahmin (kWh) | Gerçekleşen | Sapma |\n"
+                    _md += "|:---|---:|---:|:---:|\n"
+
+                for _fm in _fc_monthly:
+                    _ay = _fm["month_name"]
+                    _p = f"{_fm['prev_total']:,.0f}".replace(",", ".")
+                    _l = f"{_fm['last_total']:,.0f}".replace(",", ".")
+                    _tr = f"{_fm['trend_total_pct']:+.1f}%"
+                    _th = f"{_fm['forecast_total']:,.0f}".replace(",", ".")
+
+                    if _fm["actual_total"] is not None:
+                        _gc = f"{_fm['actual_total']:,.0f}".replace(",", ".")
+                        if _fm.get("is_partial"):
+                            _gc += f" ({_fm['actual_days']}g)"
+                        _sp = f"{_fm['deviation_total_pct']:+.1f}%" if _fm.get("deviation_total_pct") is not None else "-"
+                    else:
+                        _gc = "-"
+                        _sp = "-"
+
+                    if _kiyas_var:
+                        _md += f"| {_ay} | {_p} | {_l} | {_tr} | {_th} | {_gc} | {_sp} |\n"
+                    else:
+                        _md += f"| {_ay} | {_th} | {_gc} | {_sp} |\n"
+
+                st.markdown(_md)
             
-            st.markdown(_md)
+                _tf = sum(f["forecast_total"] for f in _fc_monthly)
+                _ta = sum(f["actual_total"] or 0 for f in _fc_monthly)
+                _mwd = sum(1 for f in _fc_monthly if f["actual_total"] is not None)
             
-            _tf = sum(f["forecast_total"] for f in _fc_monthly)
-            _ta = sum(f["actual_total"] or 0 for f in _fc_monthly)
-            _mwd = sum(1 for f in _fc_monthly if f["actual_total"] is not None)
+                _fs = st.columns(3)
+                with _fs[0]:
+                    st.metric(f"{_fc_year} Yıllık Tahmin", f"{_tf:,.0f} kWh".replace(",", "."))
+                with _fs[1]:
+                    if _mwd > 0:
+                        st.metric(f"Gerçekleşen ({_mwd} ay)", f"{_ta:,.0f} kWh".replace(",", "."))
+                    else:
+                        st.metric("Gerçekleşen", "Henüz veri yok")
+                with _fs[2]:
+                    if _fc_area > 0:
+                        st.metric("Tahmini kWh/m²", f"{_tf/_fc_area:.1f} kWh/m²")
             
-            _fs = st.columns(3)
-            with _fs[0]:
-                st.metric(f"{_fc_year} Yıllık Tahmin", f"{_tf:,.0f} kWh".replace(",", "."))
-            with _fs[1]:
-                if _mwd > 0:
-                    st.metric(f"Gerçekleşen ({_mwd} ay)", f"{_ta:,.0f} kWh".replace(",", "."))
-                else:
-                    st.metric("Gerçekleşen", "Henüz veri yok")
-            with _fs[2]:
-                if _fc_area > 0:
-                    st.metric("Tahmini kWh/m²", f"{_tf/_fc_area:.1f} kWh/m²")
-            
-            st.divider()
         
         # ═══ 3. TASARRUF ÖZETİ ═══
         if _fc_savings and _fc_savings.get("savings_total_kwh") is not None:
-            st.markdown("### 💰 Beklenen vs Gerçekleşen Tasarruf")
-            st.caption(f"Alan artışına rağmen tüketim değişimi ({_fc_savings.get('prev_year', '')}→{_fc_savings.get('year', '')})")
+            with _bolum_karti("kart_tasarruf_ozeti", "💰 Beklenen vs Gerçekleşen Tasarruf"):
+                st.caption(f"Alan artışına rağmen tüketim değişimi ({_fc_savings.get('prev_year', '')}→{_fc_savings.get('year', '')})")
             
-            _sv = st.columns(4)
-            with _sv[0]:
-                st.metric("Beklenen Tüketim", f"{_fc_savings['expected_total']:,.0f} kWh".replace(",", "."),
-                          "(alan bazlı)", delta_color="off")
-            with _sv[1]:
-                st.metric("Gerçekleşen", f"{_fc_savings['curr_total']:,.0f} kWh".replace(",", "."))
-            with _sv[2]:
-                # TASARRUF tüketimin tersidir: artı tasarruf iyi haber, yukarı ok
-                # YEŞİL kalır (Streamlit varsayılanı) — tüketim kartlarının tersi.
-                st.metric("Toplam Tasarruf", f"{_fc_savings['savings_total_kwh']:,.0f} kWh".replace(",", "."),
-                          f"%{_fc_savings['savings_total_pct']:.1f}")
-            with _sv[3]:
-                st.metric("Şebeke Tasarruf", f"{_fc_savings['savings_grid_kwh']:,.0f} kWh".replace(",", "."),
-                          f"%{_fc_savings['savings_grid_pct']:.1f}")
+                _sv = st.columns(4)
+                with _sv[0]:
+                    st.metric("Beklenen Tüketim", f"{_fc_savings['expected_total']:,.0f} kWh".replace(",", "."),
+                              "(alan bazlı)", delta_color="off")
+                with _sv[1]:
+                    st.metric("Gerçekleşen", f"{_fc_savings['curr_total']:,.0f} kWh".replace(",", "."))
+                with _sv[2]:
+                    # TASARRUF tüketimin tersidir: artı tasarruf iyi haber, yukarı ok
+                    # YEŞİL kalır (Streamlit varsayılanı) — tüketim kartlarının tersi.
+                    st.metric("Toplam Tasarruf", f"{_fc_savings['savings_total_kwh']:,.0f} kWh".replace(",", "."),
+                              f"%{_fc_savings['savings_total_pct']:.1f}")
+                with _sv[3]:
+                    st.metric("Şebeke Tasarruf", f"{_fc_savings['savings_grid_kwh']:,.0f} kWh".replace(",", "."),
+                              f"%{_fc_savings['savings_grid_pct']:.1f}")
             
-            st.divider()
         
         # ═══ 4. GELECEK AY TAHMİNİ ═══
         if _fc_next:
-            st.markdown(f"### 🎯 Gelecek Ay Tahmini: {_fc_next.get('month_name', '')} {_fc_next.get('year', '')}")
-            _method = _fc_next.get("method", "trend")
-            _method_label = "🤖 ML Model" if _method == "ml" else "📊 Trend"
-            st.caption(f"Tahmin yöntemi: {_method_label}")
-            _nm = st.columns(3)
-            with _nm[0]:
-                st.metric("Beklenen Toplam", f"{_fc_next.get('forecast_total', 0):,.0f} kWh".replace(",", "."),
-                          f"Trend: {_fc_next.get('trend_total_pct', 0):+.1f}%",
-                          delta_color="inverse")
-            with _nm[1]:
-                st.metric("Beklenen Şebeke", f"{_fc_next.get('forecast_grid', 0):,.0f} kWh".replace(",", "."),
-                          f"Trend: {_fc_next.get('trend_grid_pct', 0):+.1f}%",
-                          delta_color="inverse")
-            with _nm[2]:
-                if _fc_area > 0:
-                    st.metric("Beklenen kWh/m²", f"{_fc_next.get('per_m2', 0):.1f} kWh/m²")
+            with _bolum_karti("kart_gelecek_ay", f"🎯 Gelecek Ay Tahmini: {_fc_next.get('month_name', '')} {_fc_next.get('year', '')}"):
+                _method = _fc_next.get("method", "trend")
+                _method_label = "🤖 ML Model" if _method == "ml" else "📊 Trend"
+                st.caption(f"Tahmin yöntemi: {_method_label}")
+                _nm = st.columns(3)
+                with _nm[0]:
+                    _ntt = _fc_next.get('trend_total_pct', 0) or 0
+                    # Trend sıfırsa (kıyas yılı yoksa öyle olur) ok anlam taşımasın
+                    st.metric("Beklenen Toplam", f"{_fc_next.get('forecast_total', 0):,.0f} kWh".replace(",", "."),
+                              f"Trend: {_ntt:+.1f}%",
+                              delta_color="inverse" if abs(_ntt) >= 0.05 else "off")
+                with _nm[1]:
+                    _ntg = _fc_next.get('trend_grid_pct', 0) or 0
+                    st.metric("Beklenen Şebeke", f"{_fc_next.get('forecast_grid', 0):,.0f} kWh".replace(",", "."),
+                              f"Trend: {_ntg:+.1f}%",
+                              delta_color="inverse" if abs(_ntg) >= 0.05 else "off")
+                with _nm[2]:
+                    if _fc_area > 0:
+                        st.metric("Beklenen kWh/m²", f"{_fc_next.get('per_m2', 0):.1f} kWh/m²")
             
-            # Ortalama koşullar (ML tahmini ise)
-            if "avg_conditions" in _fc_next:
-                _ac = _fc_next["avg_conditions"]
-                st.caption(f"Baz koşullar: Dış hava {_ac.get('dis_hava', '-')}°C | Chiller set {_ac.get('chiller_set', '-')}°C | Chiller {_ac.get('chiller_adet', '-')} adet | Kazan {_ac.get('kazan_adet', '-')} adet")
+                # Ortalama koşullar (ML tahmini ise)
+                if "avg_conditions" in _fc_next:
+                    _ac = _fc_next["avg_conditions"]
+                    st.caption(f"Baz koşullar: Dış hava {_ac.get('dis_hava', '-')}°C | Chiller set {_ac.get('chiller_set', '-')}°C | Chiller {_ac.get('chiller_adet', '-')} adet | Kazan {_ac.get('kazan_adet', '-')} adet")
         
-        st.divider()
         
         # ═══ 5. ML MODEL BİLGİLERİ ═══
         _model_info = _fc_result.get("model_info", {})
-        st.markdown("### 🤖 ML Model Durumu")
+        with _bolum_karti("kart_ml_model", "🤖 ML Model Durumu"):
         
-        if _model_info.get("is_trained"):
-            _mi = st.columns(4)
-            with _mi[0]:
-                _r2t = _model_info.get("r2_total", 0)
-                _quality = "Mükemmel" if _r2t > 0.9 else "İyi" if _r2t > 0.7 else "Orta" if _r2t > 0.5 else "Gelişiyor"
-                st.metric("Toplam R² Skoru", f"{_r2t:.3f}", _quality, delta_color="off")
-            with _mi[1]:
-                _r2g = _model_info.get("r2_grid", 0)
-                st.metric("Şebeke R² Skoru", f"{_r2g:.3f}")
-            with _mi[2]:
-                st.metric("Eğitim Verisi", f"{_model_info.get('train_samples', 0)} gün")
-            with _mi[3]:
-                st.metric("Tahmin Yöntemi", "🤖 ML Aktif")
+            if _model_info.get("is_trained"):
+                _mi = st.columns(4)
+                with _mi[0]:
+                    _r2t = _model_info.get("r2_total", 0)
+                    _quality = "Mükemmel" if _r2t > 0.9 else "İyi" if _r2t > 0.7 else "Orta" if _r2t > 0.5 else "Gelişiyor"
+                    st.metric("Toplam R² Skoru", f"{_r2t:.3f}", _quality, delta_color="off")
+                with _mi[1]:
+                    _r2g = _model_info.get("r2_grid", 0)
+                    st.metric("Şebeke R² Skoru", f"{_r2g:.3f}")
+                with _mi[2]:
+                    st.metric("Eğitim Verisi", f"{_model_info.get('train_samples', 0)} gün")
+                with _mi[3]:
+                    st.metric("Tahmin Yöntemi", "🤖 ML Aktif")
             
-            # Feature importance
-            _fi = _model_info.get("feature_importance", {})
-            if _fi:
-                st.markdown("**📊 Parametre Etki Sıralaması:**")
-                _fi_labels = {
-                    "dis_hava": "Dis Hava Sicakligi", "chiller_adet": "Chiller Adet",
-                    "chiller_set": "Chiller Set Temp", "kazan_adet": "Kazan Adet",
-                    "ay": "Ay", "ay_sin": "Mevsim (sin)", "ay_cos": "Mevsim (cos)",
-                    "gun_sayisi": "Gun Sayisi", "absorption_adet": "Absorption Chiller",
-                    "kojen_uretim": "Kojen Uretim", "kazan_dogalgaz": "Kazan Dogalgaz",
-                }
-                _fi_sorted = sorted(_fi.items(), key=lambda x: x[1], reverse=True)
-                _fi_md = "| Parametre | Etki Oranı |\n|:---|---:|\n"
-                for _fname, _fval in _fi_sorted:
-                    _label = _fi_labels.get(_fname, _fname)
-                    _bar = "█" * int(_fval * 50)
-                    _fi_md += f"| {_label} | {_bar} {_fval*100:.1f}% |\n"
-                st.markdown(_fi_md)
+                # Feature importance
+                _fi = _model_info.get("feature_importance", {})
+                if _fi:
+                    st.markdown("**📊 Parametre Etki Sıralaması:**")
+                    _fi_labels = {
+                        "dis_hava": "Dis Hava Sicakligi", "chiller_adet": "Chiller Adet",
+                        "chiller_set": "Chiller Set Temp", "kazan_adet": "Kazan Adet",
+                        "ay": "Ay", "ay_sin": "Mevsim (sin)", "ay_cos": "Mevsim (cos)",
+                        "gun_sayisi": "Gun Sayisi", "absorption_adet": "Absorption Chiller",
+                        "kojen_uretim": "Kojen Uretim", "kazan_dogalgaz": "Kazan Dogalgaz",
+                    }
+                    _fi_sorted = sorted(_fi.items(), key=lambda x: x[1], reverse=True)
+                    _fi_md = "| Parametre | Etki Oranı |\n|:---|---:|\n"
+                    for _fname, _fval in _fi_sorted:
+                        _label = _fi_labels.get(_fname, _fname)
+                        _bar = "█" * int(_fval * 50)
+                        _fi_md += f"| {_label} | {_bar} {_fval*100:.1f}% |\n"
+                    st.markdown(_fi_md)
             
-            # Yeniden eğit butonu
-            if st.button("🔄 Modeli Yeniden Eğit", key="retrain_ml"):
-                _rt = _fc_eng.train_model()
-                if _rt.get("success"):
-                    st.success(f"Model yeniden eğitildi! R²: {_rt.get('r2_total', 0):.3f} | {_rt.get('samples', 0)} veri")
-                    st.rerun()
-                else:
-                    st.error(f"Eğitim hatası: {_rt.get('reason', 'Bilinmeyen')}")
-        else:
-            st.info("ML model henüz eğitilmedi. İlk eğitim için butona tıklayın.")
-            if st.button("🚀 Modeli Eğit", key="first_train_ml"):
-                _rt = _fc_eng.train_model()
-                if _rt.get("success"):
-                    st.success(f"Model eğitildi! R²: {_rt.get('r2_total', 0):.3f} | {_rt.get('samples', 0)} veri")
-                    st.rerun()
-                else:
-                    st.error(f"Eğitim hatası: {_rt.get('reason', 'Bilinmeyen')}")
+                # Yeniden eğit butonu
+                if st.button("🔄 Modeli Yeniden Eğit", key="retrain_ml"):
+                    _rt = _fc_eng.train_model()
+                    if _rt.get("success"):
+                        st.success(f"Model yeniden eğitildi! R²: {_rt.get('r2_total', 0):.3f} | {_rt.get('samples', 0)} veri")
+                        st.rerun()
+                    else:
+                        st.error(f"Eğitim hatası: {_rt.get('reason', 'Bilinmeyen')}")
+            else:
+                st.info("ML model henüz eğitilmedi. İlk eğitim için butona tıklayın.")
+                if st.button("🚀 Modeli Eğit", key="first_train_ml"):
+                    _rt = _fc_eng.train_model()
+                    if _rt.get("success"):
+                        st.success(f"Model eğitildi! R²: {_rt.get('r2_total', 0):.3f} | {_rt.get('samples', 0)} veri")
+                        st.rerun()
+                    else:
+                        st.error(f"Eğitim hatası: {_rt.get('reason', 'Bilinmeyen')}")
         
-        st.divider()
         
         # ═══ 6. SENARYO TAHMİNİ ═══
-        st.markdown("### 🎛️ Senaryo Tahmini")
-        st.caption("Parametreleri değiştirerek farklı koşullarda tüketimi tahmin edin")
+        with _bolum_karti("kart_senaryo", "🎛️ Senaryo Tahmini"):
+            st.caption("Parametreleri değiştirerek farklı koşullarda tüketimi tahmin edin")
         
-        _sc1, _sc2, _sc3 = st.columns(3)
-        with _sc1:
-            _s_hava = st.slider("🌡️ Dış Hava (°C)", -10.0, 45.0, 20.0, 0.5, key="sc_hava")
-            _s_ay = st.selectbox("📅 Ay", list(range(1, 13)),
-                                 format_func=lambda x: AYLAR.get(x, str(x)),
-                                 index=2, key="sc_ay")
-        with _sc2:
-            _s_chiller = st.number_input("❄️ Chiller Adet", 0, 6, 2, key="sc_chiller")
-            _s_set = st.slider("🎯 Chiller Set (°C)", 5.0, 12.0, 7.0, 0.5, key="sc_set")
-        with _sc3:
-            _s_kazan = st.number_input("🔥 Kazan Adet", 0, 4, 1, key="sc_kazan")
-            _s_kar = st.checkbox("🌨️ Kar Eritme", key="sc_kar")
+            _sc1, _sc2, _sc3 = st.columns(3)
+            with _sc1:
+                _s_hava = st.slider("🌡️ Dış Hava (°C)", -10.0, 45.0, 20.0, 0.5, key="sc_hava")
+                _s_ay = st.selectbox("📅 Ay", list(range(1, 13)),
+                                     format_func=lambda x: AYLAR.get(x, str(x)),
+                                     index=2, key="sc_ay")
+            with _sc2:
+                _s_chiller = st.number_input("❄️ Chiller Adet", 0, 6, 2, key="sc_chiller")
+                _s_set = st.slider("🎯 Chiller Set (°C)", 5.0, 12.0, 7.0, 0.5, key="sc_set")
+            with _sc3:
+                _s_kazan = st.number_input("🔥 Kazan Adet", 0, 4, 1, key="sc_kazan")
+                _s_kar = st.checkbox("🌨️ Kar Eritme", key="sc_kar")
         
-        if st.button("🔮 Tahmin Et", key="sc_predict"):
-            _sc_result = _fc_eng.scenario_predict(
-                dis_hava=_s_hava, chiller_set=_s_set,
-                chiller_adet=_s_chiller, kazan_adet=_s_kazan,
-                ay=_s_ay, kar_eritme=_s_kar,
-            )
-            if "error" in _sc_result:
-                st.warning(_sc_result["error"])
-            else:
-                _sr = st.columns(3)
-                with _sr[0]:
-                    st.metric("Günlük Toplam", f"{_sc_result['gunluk_toplam']:,.0f} kWh".replace(",", "."))
-                with _sr[1]:
-                    st.metric("Günlük Şebeke", f"{_sc_result['gunluk_sebeke']:,.0f} kWh".replace(",", "."))
-                with _sr[2]:
-                    st.metric(f"Aylık Toplam ({_sc_result['gun_sayisi']} gün)",
-                              f"{_sc_result['aylik_toplam']:,.0f} kWh".replace(",", "."))
+            if st.button("🔮 Tahmin Et", key="sc_predict"):
+                _sc_result = _fc_eng.scenario_predict(
+                    dis_hava=_s_hava, chiller_set=_s_set,
+                    chiller_adet=_s_chiller, kazan_adet=_s_kazan,
+                    ay=_s_ay, kar_eritme=_s_kar,
+                )
+                if "error" in _sc_result:
+                    st.warning(_sc_result["error"])
+                else:
+                    _sr = st.columns(3)
+                    with _sr[0]:
+                        st.metric("Günlük Toplam", f"{_sc_result['gunluk_toplam']:,.0f} kWh".replace(",", "."))
+                    with _sr[1]:
+                        st.metric("Günlük Şebeke", f"{_sc_result['gunluk_sebeke']:,.0f} kWh".replace(",", "."))
+                    with _sr[2]:
+                        st.metric(f"Aylık Toplam ({_sc_result['gun_sayisi']} gün)",
+                                  f"{_sc_result['aylik_toplam']:,.0f} kWh".replace(",", "."))
     
     except Exception as _fc_err:
         st.warning(f"Tahmin modülü hatası: {_fc_err}")
