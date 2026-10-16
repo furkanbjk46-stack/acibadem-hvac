@@ -337,9 +337,9 @@
     <h1>Synapse (SYN)</h1>
     <div class="subtitle">Gelecek Vizyon Belgesi</div>
     <div class="meta">
-      <span>📅 Son Güncelleme: 20 Eylül 2026 (v8.2)</span>
+      <span>📅 Son Güncelleme: 16 Ekim 2026 (v9.9)</span>
       <span>🚀 Proje Başlangıcı: 5 Ağustos 2025</span>
-      <span>⏱️ Toplam Süre: ~13,5 ay (kavramdan üretime)</span>
+      <span>⏱️ Toplam Süre: ~14,5 ay (kavramdan üretime)</span>
     </div>
   </div>
 
@@ -376,14 +376,17 @@ graph LR
         <tr class="phase-row-done"><td><strong>5</strong></td><td><span class="badge badge-done">✅</span></td><td>Şub-Mart 2026</td><td><strong>ML Tüketim Tahmini, Kural 8-12, Otonom Swarm AI, Feedback Filtresi</strong></td></tr>
         <tr class="phase-row-done"><td><strong>5.5</strong></td><td><span class="badge badge-done">✅</span></td><td>Nis-May 2026</td><td><strong>BACnet otomasyon (56 AHU), GM Merkez portal, Supabase bulut, Lisans sistemi, YoY badge, Personel bildirim + onay</strong></td></tr>
         <tr class="phase-row-done"><td><strong>6</strong></td><td><span class="badge badge-done">✅</span></td><td>May-Eyl 2026</td><td><strong>BACnet write aktif: oto-set ile chiller/kollektör setleri geçiş saatlerinde otomatik gönderiliyor, geri okuma ile doğrulanıyor</strong></td></tr>
-        <tr class="phase-row-active"><td><strong>7</strong></td><td><span class="badge badge-active">🔄</span></td><td>Eylül 2026</td><td><strong>Doğrulama ve Güvence: 180 kontrollük test altyapısı, canlı çıkış denetimi, lokasyon öz testi</strong> — sırada saha verisiyle regresyon</td></tr>
+        <tr class="phase-row-done"><td><strong>7</strong></td><td><span class="badge badge-done">✅</span></td><td>Eylül 2026</td><td><strong>Doğrulama ve Güvence: test altyapısı, canlı çıkış denetimi, lokasyon öz testi (197 kontrol)</strong></td></tr>
+        <tr class="phase-row-active"><td><strong>8</strong></td><td><span class="badge badge-active">🔄</span></td><td>Ekim 2026</td><td><strong>Çok lokasyon ve görünürlük: her hastane kendi koordinatı/saati/setleriyle; sabah analizinde kıyas zemini ve trend; enerji portalında veri kaybı giderildi, bildirim çubuğu ve kart düzeni</strong> — sırada saha verisiyle regresyon</td></tr>
       </tbody>
     </table>
 
     <div class="alert alert-highlight">
-      Proje 5 Ağustos 2025'te başladı. Faz 5 (ML), Faz 5.5 (BACnet + Bulut) ve Faz 6 (Otonom set gönderimi)
-      tamamlandı. Faz 7 (Doğrulama ve Güvence) Eylül 2026'da kuruldu; motorun kararları artık hem yayından
-      önce hem sahada canlı olarak denetleniyor.
+      Proje 5 Ağustos 2025'te başladı. Faz 5 (ML), Faz 5.5 (BACnet + Bulut), Faz 6 (Otonom set gönderimi)
+      ve Faz 7 (Doğrulama ve Güvence) tamamlandı; motorun kararları artık hem yayından önce hem sahada
+      canlı olarak denetleniyor. Faz 8 (Ekim 2026) sistemi <strong>tek hastaneden çok hastaneye</strong>
+      taşıyor: koordinat, geçiş saati ve set değerleri lokasyona özel; kararın dayandığı veri sahadan
+      bildiriliyor, merkez kopya tutmuyor.
     </div>
   </div>
 
@@ -394,7 +397,7 @@ graph LR
     <div class="alert alert-info">
       <strong>Bu puan elle yazılmaz — kod hesaplar.</strong> <code>ai_progress.py</code> dört kategoriyi
       ölçer: veri günü sayısı, kaydedilen geri bildirim sayısı, aktif temel özellikler ve
-      <em>gerçekten çalışan</em> ileri AI özellikleri. Aşağıdaki değerler 20 Eylül 2026'da motorun
+      <em>gerçekten çalışan</em> ileri AI özellikleri. Aşağıdaki değerler Eylül 2026'da motorun
       döndürdüğü sonuçtur; her lokasyon kendi verisine göre farklı puan gösterir.
     </div>
 
@@ -755,6 +758,12 @@ timeline
         : 35 kural kapsam altında
         : Canlı çıkış denetimi
         : Lokasyon öz testi
+    section Faz 8 (Ekim 2026)
+        Çok Lokasyon ve Görünürlük
+        : Lokasyona özel koordinat ve saat
+        : Setler sahadan bildiriliyor
+        : Sabah analizinde kıyas ve trend
+        : Enerji portalı veri bütünlüğü
     </div>
 
     <h3>Fazlara Göre Kronoloji</h3>
@@ -807,10 +816,18 @@ gantt
 
     section Faz 7 — Dogrulama ve Guvence
         Kural duzeltmeleri v7.6-v8.0  :done, f7a, 2026-09-19, 2026-09-20
-        Test altyapisi 180 kontrol    :done, f7b, 2026-09-19, 2026-09-20
+        Test altyapisi (oz test)      :done, f7b, 2026-09-19, 2026-09-20
         Canli cikis denetimi          :done, f7c, 2026-09-20, 2026-09-20
         Lokasyon oz testi             :done, f7d, 2026-09-20, 2026-09-20
         Saha verisiyle regresyon      :active, f7e, 2026-09-21, 2026-10-15
+
+    section Faz 8 — Cok Lokasyon ve Gorunurluk
+        Veri toplama alarmlari        :done, f8a, 2026-10-07, 2026-10-07
+        Setler sahadan bildiriliyor   :done, f8b, 2026-10-07, 2026-10-07
+        Lokasyona ozel koordinat/saat :done, f8c, 2026-10-11, 2026-10-11
+        Sabah analizi kiyas + trend   :done, f8d, 2026-10-11, 2026-10-11
+        Enerji portali veri butunlugu :done, f8e, 2026-10-12, 2026-10-13
+        Kollektor iki esik (23 / 15)  :done, f8f, 2026-10-16, 2026-10-16
     </div>
   </div>
 
@@ -1078,7 +1095,7 @@ gantt
         <li>Kural kataloğu: 35 kuralın tamamı kapsamda + yeni kural eklenirse uyaran kapsam denetimi</li>
         <li>Mod çözümü ve öncelik matrisi testleri (4000 senaryoluk rastgele çakışma taraması dahil)</li>
         <li><strong>Canlı çıkış denetimi:</strong> sonuçlar ekrana basılmadan 15 değişmez kuraldan geçiyor, çelişkiler portalda "Tutarsız" filtresinde toplanıyor</li>
-        <li><strong>Lokasyon öz testi:</strong> 180 kontrol lokasyonun kendi ayarlarıyla açılışta koşuyor, sonuç Synapse'te lokasyon kartında görünüyor</li>
+        <li><strong>Lokasyon öz testi:</strong> lokasyonun kendi ayarlarıyla açılışta koşuyor (bugün 197 kontrol), sonuç Synapse'te lokasyon kartında görünüyor</li>
         <li>Kurallar tek kaynakta (kural_denetim.py): testin aradığı kural ile sahada uygulanan kural ayrılamıyor</li>
       </ul>
     </div>
@@ -1093,23 +1110,66 @@ gantt
         <li>Mekanik Zeka öz test sonucu lokasyon kartlarında</li>
       </ul>
     </div>
+
+    <h3 style="color:var(--blue-dark); margin-top: 30px;">🌐 Faz 8: Çok Lokasyon ve Görünürlük (Ekim 2026)</h3>
+
+    <div class="log-entry">
+      <h4>📌 7 Ekim 2026 — Saha ne yaptığını kendisi söylüyor</h4>
+      <ul>
+        <li><strong>Yürürlükteki set değerleri sahadan bildiriliyor:</strong> merkez kendi tablosundan türetmiyor. Kopya tutulursa tablo değişince portal eski değeri göstermeye devam ediyordu</li>
+        <li>Veri toplama alarmları: analizör bağlantı hatası ve boş günlük veri hem lokasyon bildirim çubuğunda hem Synapse canlı uyarılarında</li>
+        <li>OTO SET paneli çok lokasyonda doğru davranıyor: lokasyonlar ayrışıyorsa "lokasyona göre farklı" denir, tek değer uydurulmaz</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 11 Ekim 2026 — Her hastane kendi koşullarıyla</h4>
+      <ul>
+        <li><strong>Hava tahmini koordinatı lokasyonun kendi profilinden:</strong> koda gömülü İstanbul kalkmıştı; Adana'daki bir hastane İstanbul'un dış havasına göre set alıyordu. Profil yoksa İstanbul'a düşülür ve bu merkeze "varsayılan" olarak bildirilir</li>
+        <li><strong>Geçiş saatleri lokasyon başına:</strong> poliklinik ağırlıklı bina 07:00'de, yoğun bakım ağırlıklı bina 05:00'te açılabilir. Lokasyona özel anahtar bozuksa genel değere düşülmez — yanlış saatte set göndermektense beklenir</li>
+        <li>Set değerleri lokasyon detay sayfasına taşındı; ana ekranda yalnızca "ayrışma var mı" özeti kalır</li>
+        <li><strong>Sabah analizi kendi geçmişiyle kıyaslıyor:</strong> geçen hafta aynı gün, geçen yıl aynı gün ve 7 günlük trend — dış hava farkıyla birlikte. Sabit eşik bir hastanenin kendi normalini söylemez</li>
+        <li><strong>Veri yoksa arıza denmiyor:</strong> eksik kalem ile sıfır ayırt ediliyor. Kojen verisi olmayan gün "%100 şebeke" görünüp model "kojen arızası" diyordu</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 12–13 Ekim 2026 — Enerji portalında veri bütünlüğü ve okunabilirlik</h4>
+      <ul>
+        <li><strong>Veri kaybı giderildi:</strong> geçmiş bir güne su/doğalgaz girilince o günün MCC/Chiller/Kule sayaçları siliniyordu. Artık formda gelmeyen sütun eski değerini korur</li>
+        <li>Bildirim çubuğu tek merkez oldu: "tümü okundu" ve hazır PDF raporların indirmesi orada</li>
+        <li><strong>Tüketim okları düzeltildi:</strong> CSS, Streamlit'in artış/azalış rengini eziyordu — bütün oklar lacivertti. Artık tüketim artarsa kırmızı, azalırsa yeşil; tasarruf bunun tersi</li>
+        <li>Grafik lejantı ve eksen yazıları koyu temadan kalma beyazdı, açık zeminde görünmüyordu</li>
+        <li>Üç sekmede 19 bölüm kart düzenine geçti</li>
+        <li>Otomatik aylık bakım raporu, ekrandaki bakım kartı PDF'i ile aynı kalıba alındı</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 16 Ekim 2026 — Kollektör kuralı iki eşiğe döndü</h4>
+      <ul>
+        <li>01.10'da 15 °C eşiği eklenirken <strong>23 °C eşiği yanlışlıkla onun yerine konmuştu</strong>; yaz bölgesi tablodan düşmüş, 23'ün üstünde kollektör gündüz 10 °C'de kalıyordu (işletme tablosunda 8 °C)</li>
+        <li>İki eşik birlikte geri kondu: 23 yaz bölgesini açar (kollektör 8/10, FCU 12, AHU 8), 15 kış bölgesini (kollektör 12/14) — ikincisi chiller'ın sürekli çalışmasını önlemek için eklenmişti</li>
+        <li>Oto-set algoritması ve bütün eşikler belgelendi (<code>OTO_SET_KURALLARI.md</code>); tablolar koddan kopyalanmadı, gerçek fonksiyonlarla 47 sınır değeri koşularak doğrulandı</li>
+      </ul>
+    </div>
   </div>
 
   <!-- KOD İSTATİSTİKLERİ -->
   <div class="section">
-    <h2>📦 Sistem Büyüklüğü (20 Eylül 2026)</h2>
+    <h2>📦 Sistem Büyüklüğü (16 Ekim 2026)</h2>
     <div class="progress-grid">
       <div class="progress-item">
-        <div class="label"><span>📄 Kod satırı (ham)</span><span class="score" style="color:var(--blue);">48.373</span></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Yorum ve boş satırlar çıkarılınca 39.248 net satır</div>
+        <div class="label"><span>📄 Kod satırı (ham)</span><span class="score" style="color:var(--blue);">62.004</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Yorum ve boş satırlar çıkarılınca 51.575 net satır</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🐍 Python</span><span class="score" style="color:var(--green);">36.204</span></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">93 kod dosyası, 142 takipli dosya</div>
+        <div class="label"><span>🐍 Python</span><span class="score" style="color:var(--green);">42.125</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">141 kod dosyası, 171 takipli dosya</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🧪 Test kodu</span><span class="score" style="color:var(--purple);">3.593</span></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">18 test dosyası, 466 otomatik kontrol</div>
+        <div class="label"><span>🧪 Test kodu</span><span class="score" style="color:var(--purple);">5.932</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">27 test dosyası; lokasyon tarafında 736 kontrol, öz testte 197'si açılışta koşar</div>
       </div>
       <div class="progress-item">
         <div class="label"><span>⚙️ Teşhis kuralı</span><span class="score" style="color:var(--orange);">35</span></div>
@@ -1119,12 +1179,14 @@ gantt
     <table>
       <thead><tr><th>Bileşen</th><th>Satır</th><th>Görev</th></tr></thead>
       <tbody>
-        <tr><td>main_portal.py</td><td>5.398</td><td>Mekanik Zeka motoru + portal girişi</td></tr>
-        <tr><td>app_portal.py</td><td>5.160</td><td>Enerji ve Verimlilik uygulaması</td></tr>
-        <tr><td>static/index.html</td><td>4.234</td><td>Mekanik Zeka arayüzü</td></tr>
-        <tr><td>merkez/app_merkez.py</td><td>3.224</td><td>Synapse GM Merkez portalı</td></tr>
-        <tr><td>ahu_collector.py</td><td>1.159</td><td>BACnet okuma ve ekipman satırları</td></tr>
-        <tr><td>monthly_report/ (11 dosya)</td><td>3.629</td><td>Aylık rapor motoru</td></tr>
+        <tr><td>main_portal.py</td><td>5.430</td><td>Mekanik Zeka motoru + portal girişi</td></tr>
+        <tr><td>app_portal.py</td><td>5.275</td><td>Enerji ve Verimlilik uygulaması</td></tr>
+        <tr><td>static/index.html</td><td>4.347</td><td>Mekanik Zeka arayüzü</td></tr>
+        <tr><td>merkez/app_merkez.py</td><td>3.502</td><td>Synapse GM Merkez portalı</td></tr>
+        <tr><td>merkez/pages/ (4 sayfa)</td><td>3.523</td><td>Lokasyon detayı, karşılaştırma, rapor, yönetim</td></tr>
+        <tr><td>monthly_report/</td><td>3.921</td><td>Aylık rapor motoru</td></tr>
+        <tr><td>ahu_collector.py</td><td>1.172</td><td>BACnet okuma ve ekipman satırları</td></tr>
+        <tr><td>oto_set.py</td><td>853</td><td>Oto-set karar motoru (lokasyon tarafı)</td></tr>
       </tbody>
     </table>
   </div>
@@ -1231,11 +1293,11 @@ gantt
     ~5 ay Faz 0 kavram doğrulama (ChatGPT), ardından Faz 1-5 tam geliştirme,
     Faz 5.5 (BACnet + Supabase bulut + GM Merkez), <strong>Faz 6 (otonom set gönderimi)</strong> ve
     <strong>Faz 7 (doğrulama ve güvence)</strong>.
-    Toplam <strong>~13,5 ayda 90+ özellik</strong> aktif, <strong>48.373 satır kod</strong>.
+    Toplam <strong>~14,5 ayda 90+ özellik</strong> aktif, <strong>62.004 satır kod</strong>.
     AI olgunluk puanı lokasyona göre <strong>%60–85</strong> (kodun kendi hesabı); öğrenen tek bileşen
     ML tüketim tahminidir, geri bildirim döngüsü henüz açık maddedir.
     56 AHU BACnet okuma + yazma, uzak yama, lisans sistemi, GM Merkez portalı, 35 teşhis kuralı ve
-    466 otomatik kontrol üretimde.
+    736 otomatik kontrol üretimde.
     Sırada: saha verisiyle regresyon ve Altunizade BACnet entegrasyonu! 🤖🚀
   </div>
 

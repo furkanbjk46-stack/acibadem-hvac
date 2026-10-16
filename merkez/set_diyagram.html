@@ -52,7 +52,9 @@ code{background:var(--inset);padding:1px 5px;border-radius:5px;font-size:11.5px;
   <div class="ust">Acıbadem Sağlık Grubu — Synapse</div>
   <h1>SET Akışı — Oto-set ve komut zinciri</h1>
   <div class="alt">Koddan çıkarıldı: <code>oto_set.py</code>, <code>bacnet_writer.py</code>,
-     <code>cloud_sync.py</code>, <code>configs/geri_okuma.json</code></div>
+     <code>cloud_sync.py</code>, <code>configs/geri_okuma.json</code>
+     &nbsp;·&nbsp; Güncelleme: <b>16.10.2026 (v9.9)</b>
+     &nbsp;·&nbsp; Ayrıntılı eşik listesi: <code>OTO_SET_KURALLARI.md</code></div>
 </header>
 
 <main>
@@ -113,18 +115,23 @@ code{background:var(--inset);padding:1px 5px;border-radius:5px;font-size:11.5px;
     </div>
     <div>
       <table>
-        <tr><th colspan="3">Kollektör / FCU / AHU — eşik 15 °C · ±3 °C histerezis</th></tr>
-        <tr><th>Nokta</th><th style="text-align:right">15 üstü</th><th style="text-align:right">15 altı</th></tr>
-        <tr><td>Gündüz kollektör</td><td class="s">10,0</td><td class="s">12,0</td></tr>
-        <tr><td>Gece kollektör</td><td class="s">12,0</td><td class="s">14,0</td></tr>
-        <tr><td>A blok FCU</td><td class="s">14,0</td><td class="s">14,0</td></tr>
-        <tr><td>B blok FCU</td><td class="s">14,0</td><td class="s">14,0</td></tr>
-        <tr><td>Zon-1 klima santrali (AHU)</td><td class="s">10,0</td><td class="s">10,0</td></tr>
-        <tr><td>Zon-2 klima santrali (AHU)</td><td class="s">10,0</td><td class="s">10,0</td></tr>
+        <tr><th colspan="4">Kollektör / FCU / AHU — 3 bölge · 2 eşik (23 ve 15 °C) · ±3 °C histerezis</th></tr>
+        <tr><th>Nokta</th><th style="text-align:right">23 üstü</th>
+            <th style="text-align:right">15 – 23</th><th style="text-align:right">15 altı</th></tr>
+        <tr><td>Gündüz kollektör</td><td class="s">8,0</td><td class="s">10,0</td><td class="s">12,0</td></tr>
+        <tr><td>Gece kollektör</td><td class="s">10,0</td><td class="s">12,0</td><td class="s">14,0</td></tr>
+        <tr><td>A blok FCU</td><td class="s">12,0</td><td class="s">14,0</td><td class="s">14,0</td></tr>
+        <tr><td>B blok FCU</td><td class="s">12,0</td><td class="s">14,0</td><td class="s">14,0</td></tr>
+        <tr><td>Zon-1 klima santrali (AHU)</td><td class="s">8,0</td><td class="s">10,0</td><td class="s">10,0</td></tr>
+        <tr><td>Zon-2 klima santrali (AHU)</td><td class="s">8,0</td><td class="s">10,0</td><td class="s">10,0</td></tr>
       </table>
-      <div class="not">Eşik <b>15 °C</b>; mod değiştirmek için 3 °C aşım gerekir.
-         <b>FCU ve AHU moda göre değişmez</b> — yalnızca kollektör seti kayar.
-         (01.10.2026 işletme tablosu; önceki kural eşik 23 °C idi.)</div>
+      <div class="not"><b>İki eşik iki ayrı işi yapar.</b> 23 °C yaz bölgesini açar
+         (kollektör 8/10, FCU 12, AHU 8); 15 °C kış bölgesini açar (kollektör 12/14) —
+         bu eşik, sıcaklık 23'ün altına indiğinde kollektörün gündüz 10 °C'de takılıp
+         <b>chiller'ı sürekli çalıştırması</b> için eklenmiştir. Moddan çıkmak için
+         sınırı 3 °C aşmak gerekir, geçiş kademesizdir.
+         <br>(01.10.2026'da 15 °C eklenirken 23 °C yanlışlıkla onun yerine konmuş,
+         yaz bölgesi tablodan düşmüştü; 16.10.2026'da ikisi birlikte geri kondu.)</div>
     </div>
   </div>
 </div></div></div>

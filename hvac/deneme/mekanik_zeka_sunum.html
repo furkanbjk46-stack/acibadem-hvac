@@ -167,9 +167,9 @@
                 Eşanjör ekipmanlarının sıcaklık/vana verilerini her gün otomatik analiz eder, sorunları teşhis eder
                 ve sahaya uygulanabilir aksiyon önerileri üretir.
                 <br><br>
-                <strong>Sürüm v8.2 — 20 Eylül 2026</strong> &nbsp;|&nbsp; 35 teşhis kuralı &nbsp;|&nbsp;
+                <strong>Sürüm v9.9 — 16 Ekim 2026</strong> &nbsp;|&nbsp; 35 teşhis kuralı &nbsp;|&nbsp;
                 talep esaslı mod çözümü &nbsp;|&nbsp; çıkış denetimi (15 değişmez kural) &nbsp;|&nbsp;
-                180 kontrollük öz test
+                197 kontrollük öz test
             </div>
         </div>
 
@@ -767,7 +767,7 @@
             <div class="info-grid">
                 <div class="info-card">
                     <div class="icon">🧪</div>
-                    <div class="value">180 kontrol</div>
+                    <div class="value">197 kontrol</div>
                     <div class="label">Öz test — lokasyonun kendi ayarlarıyla, portal açılışında</div>
                 </div>
                 <div class="info-card">
@@ -798,7 +798,7 @@
                         sınır değerleri</td></tr>
                     <tr><td>Öncelik matrisi</td><td>24</td><td>İki kural çakışınca hangisinin kazanacağı +
                         4000 senaryoluk rastgele çakışma taraması</td></tr>
-                    <tr><td>Değişmez kurallar</td><td>15</td><td>Binlerce rastgele senaryoda bozulmaması gereken
+                    <tr><td>Değişmez kurallar</td><td>16</td><td>Binlerce rastgele senaryoda bozulmaması gereken
                         doğrular; karşı örnek bulunursa en küçük haliyle raporlanır</td></tr>
                 </tbody>
             </table>
@@ -823,10 +823,10 @@
 
             <h3>3. Lokasyon Öz Testi (portal açılışında)</h3>
             <p>Her lokasyonun <strong>kendi ayarları</strong> vardır (üfleme bandı, tolerans, chiller hedefi).
-                Aynı kod farklı ayarla farklı karar verir — bu yüzden 180 kontrol lokasyon PC'sinde de koşar.
+                Aynı kod farklı ayarla farklı karar verir — bu yüzden 197 kontrol lokasyon PC'sinde de koşar.
                 Sonuç heartbeat ile Synapse'e gider ve lokasyon kartında görünür:</p>
             <div class="alert alert-green">
-                🧪 <strong>öz test: 2 lokasyon 180/180 geçti</strong> — kalan varsa kırmızı satır ve hangi
+                🧪 <strong>öz test: 2 lokasyon 197/197 geçti</strong> — kalan varsa kırmızı satır ve hangi
                 paketin kaldığı yazılır.
             </div>
             <p>Böylece bozuk bir yama, bozulmuş bir ayar dosyası veya motoru anlamsız bir noktaya iten bir
@@ -916,6 +916,59 @@
             </div>
         </div>
 
+
+        <!-- ========== EKIM 2026 GUNCELLEMELERI ========== -->
+        <div class="section page-break">
+            <h2>🆕 Eylül'den Bu Yana Ne Değişti? (v8.2 → v9.9)</h2>
+            <p>Teşhis motorunun <strong>kuralları ve eşikleri değişmedi</strong> — 35 kural, talep esaslı
+                mod çözümü ve çıkış denetimi v8.2'deki gibi çalışıyor. Değişen, motorun çevresindeki
+                görünürlük ve bakım tarafı:</p>
+
+            <table>
+                <thead>
+                    <tr><th>Konu</th><th>Ne değişti</th><th>Neden</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Bakım kartı PDF'i</strong></td>
+                        <td>Hangi bileşenin arızalı/bakımda olduğu artık görünüyor: santral × 7 bileşen
+                            matrisi, öncelik rozeti ve ayrı detay tablosu</td>
+                        <td>Eski rapor yalnızca sayı veriyordu ("7/7", "arıza: 2") — hangi bileşen olduğu
+                            yazmıyordu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Otomatik aylık bakım raporu</strong></td>
+                        <td>Ayın 5'inde üretilen rapor, ekrandan üretilen PDF ile <strong>aynı kalıba</strong>
+                            geçti (<code>bakim_raporu.py</code>)</td>
+                        <td>Aynı veriyi iki farklı yüzle görmek sahada karışıklık yaratıyordu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>BAKIMDA işareti</strong></td>
+                        <td>Bileşen bazına indi; basınç sensörü işareti analizde de uygulanıyor</td>
+                        <td>Santralin tamamını "bakımda" saymak, çalışan bileşenlerin alarmını gizliyordu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Öz test</strong></td>
+                        <td>180 → <strong>197 kontrol</strong> (değişmez kural <em>test paketi</em> 15 → 16 vaka)</td>
+                        <td>Her yeni kural kararı test altına alınıyor</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Arayüz</strong></td>
+                        <td>Lokasyon portalları mat beyaz temaya geçti; açılır liste, takvim ve köşe
+                            yarıçapları düzeltildi</td>
+                        <td>Synapse ile görsel bütünlük</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert alert-info">
+                <strong>Oto-set tarafı ayrı belgededir.</strong> Chiller ve kollektör setlerini dış hava
+                tahminine göre gönderen karar zinciri <code>OTO_SET_KURALLARI.md</code> ve
+                <code>merkez/set_diyagram.html</code> dosyalarında anlatılır. 16.10.2026'da kollektör
+                kuralı <strong>iki eşiğe</strong> (23 ve 15 °C) döndü.
+            </div>
+        </div>
+
         <!-- ========== KOD VE DOSYA ========== -->
         <div class="section">
             <h2>📦 Mekanik Zeka — Kod ve Dosya Yapısı</h2>
@@ -928,35 +981,37 @@
                     <tr><th>Dosya</th><th>Satır</th><th>Görev</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td><code>main_portal.py</code></td><td>5.398</td><td>Kural motoru, ΔT/hedef/skor,
+                    <tr><td><code>main_portal.py</code></td><td>5.430</td><td>Kural motoru, ΔT/hedef/skor,
                         talimat rehberi, API uçları, portal girişi</td></tr>
-                    <tr><td><code>static/index.html</code></td><td>4.234</td><td>Analiz arayüzü, filtreler,
+                    <tr><td><code>static/index.html</code></td><td>4.347</td><td>Analiz arayüzü, filtreler,
                         talimat penceresi, PDF üretimi</td></tr>
-                    <tr><td><code>ahu_collector.py</code></td><td>1.159</td><td>BACnet okuma → motora besleme,
+                    <tr><td><code>ahu_collector.py</code></td><td>1.172</td><td>BACnet okuma → motora besleme,
                         ek ekipman satırları (kollektör/chiller/kazan)</td></tr>
-                    <tr><td><code>on_kosul.py</code></td><td>430</td><td>Ön koşul kapısı: start/stop, kanal
+                    <tr><td><code>bakim_raporu.py</code></td><td>485</td><td>Aylık bakım raporu PDF'i —
+                        ekrandaki bakım kartı PDF'i ile aynı kalıpta</td></tr>
+                    <tr><td><code>on_kosul.py</code></td><td>441</td><td>Ön koşul kapısı: start/stop, kanal
                         basıncı, sensör aralığı (2/3 – 3/3 onay)</td></tr>
                     <tr><td><code>kural_denetim.py</code></td><td>169</td><td>15 değişmez kural — motor ve
                         testler için tek kaynak</td></tr>
-                    <tr><td><code>oz_test.py</code></td><td>128</td><td>Lokasyon öz testi (180 kontrol) ve
+                    <tr><td><code>oz_test.py</code></td><td>128</td><td>Lokasyon öz testi (197 kontrol) ve
                         sonucun heartbeat'e aktarılması</td></tr>
-                    <tr><td>Test dosyaları (6 paket)</td><td>1.226</td><td>Golden, katalog, tutarlılık, mod,
+                    <tr><td>Test dosyaları (6 paket)</td><td>1.334</td><td>Golden, katalog, tutarlılık, mod,
                         öncelik, değişmez kurallar</td></tr>
                 </tbody>
             </table>
 
             <div class="alert alert-green">
-                <strong>Sistem geneli:</strong> 142 takipli dosya, 93 kod dosyası,
-                <strong>48.373 ham satır</strong> (yorum ve boş satırlar çıkarılınca 39.248 net satır),
-                bunun 36.204'ü Python. 18 test dosyasında 3.593 satır test kodu.
+                <strong>Sistem geneli (16.10.2026):</strong> 171 takipli dosya, 141 kod dosyası,
+                <strong>62.004 ham satır</strong> (yorum ve boş satırlar çıkarılınca 51.575 net satır),
+                bunun 42.125'i Python. 27 test dosyasında 5.932 satır test kodu.
             </div>
         </div>
 
         <!-- FOOTER -->
         <div class="footer">
             <strong>Mekanik Zeka</strong> — Synapse (SYN) HVAC Analiz Modülü — Acıbadem Hastanesi<br>
-            Sürüm <strong>v8.2</strong> — 20 Eylül 2026 | 35 kural | 52 ayar eşiği | 617 karar dalı |
-            180 kontrollük öz test | 15 değişmez kuralla canlı çıkış denetimi<br>
+            Sürüm <strong>v9.9</strong> — 16 Ekim 2026 | 35 kural | 52 ayar eşiği | 617 karar dalı |
+            197 kontrollük öz test | 15 değişmez kuralla canlı çıkış denetimi<br>
             <em>Bu belge motorun güncel davranışını anlatır; kural eşikleri ayarlar panelinden değiştirilebilir.</em>
         </div>
     </div>

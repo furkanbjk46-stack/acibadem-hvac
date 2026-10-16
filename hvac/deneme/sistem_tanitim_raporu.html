@@ -445,9 +445,9 @@
                 BACnet/Modbus entegrasyonu, Supabase bulut altyapısı, çok lokasyon (Maslak + Altunizade) yönetimi
                 ve GM Merkez portalı ile hastane konforunu koruyarak enerji maliyetlerini düşürme hedefi.
                 <br><br>
-                <strong>Sürüm v8.2 — 20 Eylül 2026</strong> &nbsp;|&nbsp; 48.373 satır kod &nbsp;|&nbsp;
+                <strong>Sürüm v9.9 — 16 Ekim 2026</strong> &nbsp;|&nbsp; 62.004 satır kod &nbsp;|&nbsp;
                 35 teşhis + 12 tasarruf kuralı &nbsp;|&nbsp; otonom set gönderimi (oto-set) aktif &nbsp;|&nbsp;
-                canlı çıkış denetimi + lokasyon öz testi
+                canlı çıkış denetimi + 197 kontrollük lokasyon öz testi
             </div>
         </div>
 
@@ -547,7 +547,7 @@
                 </tbody>
             </table>
             <p>Portal açılışında ayrıca <strong>Mekanik Zeka öz testi</strong> arka planda çalışır
-                (180 kontrol, ~30 sn) ve sonucu heartbeat ile Synapse'e bildirilir.</p>
+                (197 kontrol, ~20 sn) ve sonucu heartbeat ile Synapse'e bildirilir.</p>
         </div>
 
         <!-- ========== 8. HEDEFLER ========== -->
@@ -1129,14 +1129,14 @@
                     <tr><th>Katman</th><th>Ne zaman</th><th>Ne güvence altına alır</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td><strong>Test paketleri</strong> (6 paket, 180 kontrol)</td>
+                    <tr><td><strong>Test paketleri</strong> (6 paket)</td>
                         <td>Yayından önce, geliştirme makinesinde</td>
                         <td>Golden vakalar, kural kapsamı, mod çözümü, öncelik matrisi, değişmez kurallar</td></tr>
                     <tr><td><strong>Çıkış denetimi</strong> (15 değişmez kural)</td>
                         <td>Her analizde, sonuç ekrana basılmadan önce</td>
                         <td>Motorun kendi içinde çelişmesi (kritik ama skoru düşük, normal ama kırmızı,
                             mod ısıtma ama soğutma alarmı…)</td></tr>
-                    <tr><td><strong>Lokasyon öz testi</strong> (180 kontrol)</td>
+                    <tr><td><strong>Lokasyon öz testi</strong> (197 kontrol)</td>
                         <td>Portal açılışında ve her güncellemeden sonra</td>
                         <td>Lokasyonun kendi ayarlarıyla motorun doğru karar verdiği; bozuk yama/ayar
                             dosyası açılışta yakalanır</td></tr>
@@ -1157,15 +1157,15 @@
         <!-- ========== KOD İSTATİSTİKLERİ ========== -->
         <div class="section">
             <h2>📦 Kod ve Dosya İstatistikleri</h2>
-            <p>20 Eylül 2026 itibarıyla sistemin büyüklüğü (git'in takip ettiği dosyalar; üretilen CSV/log
+            <p>16 Ekim 2026 itibarıyla sistemin büyüklüğü (git'in takip ettiği dosyalar; üretilen CSV/log
                 dosyaları ve veri klasörleri hariç):</p>
 
             <div class="kpi-strip">
-                <div class="kpi-item"><div class="val">142</div><div class="lbl">Takipli dosya</div></div>
-                <div class="kpi-item"><div class="val">93</div><div class="lbl">Kod dosyası</div></div>
-                <div class="kpi-item"><div class="val">48.373</div><div class="lbl">Ham satır</div></div>
-                <div class="kpi-item"><div class="val">39.248</div><div class="lbl">Net satır</div></div>
-                <div class="kpi-item"><div class="val">3.593</div><div class="lbl">Test satırı</div></div>
+                <div class="kpi-item"><div class="val">171</div><div class="lbl">Takipli dosya</div></div>
+                <div class="kpi-item"><div class="val">141</div><div class="lbl">Kod dosyası</div></div>
+                <div class="kpi-item"><div class="val">62.004</div><div class="lbl">Ham satır</div></div>
+                <div class="kpi-item"><div class="val">51.575</div><div class="lbl">Net satır</div></div>
+                <div class="kpi-item"><div class="val">5.932</div><div class="lbl">Test satırı</div></div>
             </div>
 
             <table>
@@ -1173,23 +1173,27 @@
                     <tr><th>Dosya</th><th>Satır</th><th>Görev</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td><code>hvac/deneme/main_portal.py</code></td><td>5.398</td>
+                    <tr><td><code>hvac/deneme/main_portal.py</code></td><td>5.430</td>
                         <td>Mekanik Zeka — kural motoru + portal girişi</td></tr>
-                    <tr><td><code>hvac/deneme/app_portal.py</code></td><td>5.160</td>
+                    <tr><td><code>hvac/deneme/app_portal.py</code></td><td>5.275</td>
                         <td>Enerji ve Verimlilik — Streamlit uygulaması</td></tr>
-                    <tr><td><code>hvac/deneme/static/index.html</code></td><td>4.234</td>
+                    <tr><td><code>hvac/deneme/static/index.html</code></td><td>4.347</td>
                         <td>Mekanik Zeka arayüzü (filtreler, talimat, PDF)</td></tr>
-                    <tr><td><code>merkez/app_merkez.py</code></td><td>3.224</td>
+                    <tr><td><code>merkez/app_merkez.py</code></td><td>3.502</td>
                         <td>Synapse GM Merkez portalı</td></tr>
                     <tr><td><code>hvac/deneme/static/qrcode_generator.js</code></td><td>2.297</td>
                         <td>QR bakım kartı üretimi (hazır kütüphane)</td></tr>
-                    <tr><td><code>hvac/deneme/ahu_collector.py</code></td><td>1.159</td>
+                    <tr><td><code>merkez/pages/lokasyon_detay.py</code></td><td>1.794</td>
+                        <td>Lokasyon detay sayfası — setler, eşikler, oto-set durumu</td></tr>
+                    <tr><td><code>hvac/deneme/ahu_collector.py</code></td><td>1.172</td>
                         <td>BACnet okuma → analiz motoru beslemesi</td></tr>
+                    <tr><td><code>hvac/deneme/oto_set.py</code></td><td>853</td>
+                        <td>Oto-set karar motoru — eşikler, histerezis, doğrulama</td></tr>
                 </tbody>
             </table>
-            <p><strong>Klasör dağılımı:</strong> lokasyon programı (<code>hvac/deneme</code>) ~21.800 satır,
-                Synapse merkez portalı (<code>merkez</code>) ~6.400, arayüz (<code>static</code>) ~5.800,
-                aylık rapor motoru (<code>monthly_report</code>) ~3.600 satır.</p>
+            <p><strong>Klasör dağılımı:</strong> lokasyon programı (<code>hvac/deneme</code>) ~35.200 satır,
+                Synapse merkez portalı (<code>merkez</code>) ~13.800, arayüz (<code>static</code>) ~6.800,
+                aylık rapor motoru (<code>monthly_report</code>) ~3.900 satır.</p>
         </div>
 
         <!-- ========== 5. ENERJİ MODÜLÜ ========== -->
@@ -1640,7 +1644,7 @@
                     <tr>
                         <td>📍 <strong>lokasyonlar</strong></td>
                         <td>Lokasyon metadata + heartbeat (ping, bakım özeti, oto-set sağlığı, öz test sonucu)</td>
-                        <td>"maslak — öz test 180/180, oto-set: yazıldı 23:00"</td>
+                        <td>"maslak — öz test 197/197, oto-set: yazıldı 23:00"</td>
                     </tr>
                     <tr>
                         <td>🎛️ <strong>komutlar</strong></td>
@@ -1679,8 +1683,22 @@
                     <tr><td><strong>v8.0</strong></td><td>Mod talep esaslı; vana eşikleri ayardan okunuyor
                         (%90 sabiti düzeltildi); kısmi yükte yanlış alarm kalktı</td></tr>
                     <tr><td><strong>v8.1</strong></td><td>Canlı çıkış denetimi + portalda Tutarsız filtresi</td></tr>
-                    <tr><td><strong>v8.2</strong></td><td>Lokasyon öz testi (180 kontrol) ve sonucunun
+                    <tr><td><strong>v8.2</strong></td><td>Lokasyon öz testi ve sonucunun
                         Synapse'te gösterimi</td></tr>
+                    <tr><td><strong>v8.3 – v8.9</strong></td><td>Şebeke = ölçülen TRDP'lerin toplamı (çift sayım
+                        düzeltildi, günde ~16.000 kWh); enerji hesabı ortak modüle alındı; Synapse açık temaya
+                        geçti; TRDP-2 ve MCC-5 sahaya entegre edildi</td></tr>
+                    <tr><td><strong>v9.0 – v9.3</strong></td><td>Veri toplama alarmları bildirim çubuğunda ve
+                        Synapse canlı uyarılarında; yürürlükteki set değerleri sahadan bildiriliyor (merkezdeki
+                        kopya silindi); kollektör eşiği işletme tablosuna göre güncellendi</td></tr>
+                    <tr><td><strong>v9.4 – v9.5</strong></td><td>Çok lokasyon: set değerleri lokasyon detayına,
+                        hava tahmini koordinatı lokasyon profilinden, geçiş saatleri lokasyon başına</td></tr>
+                    <tr><td><strong>v9.6 – v9.8</strong></td><td>Enerji portalında veri kaybı giderildi
+                        (geçmiş güne giriş sayaçları silmiyor); bildirim çubuğunda "tümü okundu" ve rapor
+                        indirme; tüketim ok renkleri ve grafik yazıları düzeltildi; 19 bölüm kart düzenine
+                        geçti; otomatik bakım raporu ekrandaki PDF ile aynı kalıpta</td></tr>
+                    <tr><td><strong>v9.9</strong></td><td>Kollektör/FCU/AHU kuralı <strong>iki eşiğe</strong>
+                        döndü (23 ve 15 °C, üç bölge); oto-set algoritması ve bütün eşikler belgelendi</td></tr>
                 </tbody>
             </table>
         </div>
@@ -1728,11 +1746,11 @@
 
         <!-- FOOTER -->
         <div class="footer">
-            <strong>Synapse (SYN)</strong> — Acıbadem Hastanesi — Sürüm v8.2, 20 Eylül 2026<br>
+            <strong>Synapse (SYN)</strong> — Acıbadem Hastanesi — Sürüm v9.9, 16 Ekim 2026<br>
             2 Lokasyon (Maslak + Altunizade) | 56 AHU BACnet | 22 Modbus Analizör | 35 teşhis + 12 tasarruf kuralı |
-            90+ özellik | 48.373 satır kod<br>
+            90+ özellik | 62.004 satır kod<br>
             BACnet/IP (okuma + yazma) + Modbus TCP + Supabase Bulut + GM Merkez Portalı + Lisans Sistemi<br>
-            466 otomatik kontrol | canlı çıkış denetimi | lokasyon öz testi<br>
+            736 otomatik kontrol (lokasyon tarafı) | canlı çıkış denetimi | 197 kontrollük lokasyon öz testi<br>
             <em>Yapay zeka destekli otomatik hastane enerji optimizasyonu — Konfor + Tasarruf + Proaktif Bakım</em> 🏥⚡🧠
         </div>
 

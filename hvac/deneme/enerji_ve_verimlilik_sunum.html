@@ -163,7 +163,7 @@
                 chiller tüketimini günlük takip eder, anomalileri tespit eder ve maliyet düşürme
                 fırsatlarını otomatik olarak raporlar.
                 <br><br>
-                <strong>Sürüm v8.2 — 20 Eylül 2026</strong> &nbsp;|&nbsp; <code>app_portal.py</code> (Streamlit,
+                <strong>Sürüm v9.9 — 16 Ekim 2026</strong> &nbsp;|&nbsp; <code>app_portal.py</code> (Streamlit,
                 port 8501) &nbsp;|&nbsp; 22 Modbus analizör &nbsp;|&nbsp; 12 tasarruf kuralı &nbsp;|&nbsp;
                 GM Merkez'de lokasyon karşılaştırma
             </div>
@@ -224,7 +224,7 @@
             <p>Enerji tarafının yardımcı modülleri: <code>data_collector.py</code> (Modbus okuma),
                 <code>data_bridge.py</code> (gece 23:45 aktarım), <code>daily_report.py</code>,
                 <code>monthly_summary_report.py</code> ve <code>monthly_report/</code> klasöründeki
-                11 dosyalık aylık rapor motoru (3.629 satır).</p>
+                aylık rapor motoru (3.921 satır).</p>
         </div>
 
         <!-- ========== 2. TAKİP EDİLEN VERİLER ========== -->
@@ -541,9 +541,108 @@
 
             <h3>Bilinen Açık Kalem</h3>
             <div class="alert alert-warning">
-                <strong>Kojen / şebekeye satış:</strong> Toplam tüketim hesabında şebekeye satılan elektrik
-                kalemi henüz düşülmüyor; bu da toplamı olduğundan yüksek gösteriyor. TRDP-2 ve TRDP-4
-                sayaçları bağlandığında hesap tamamlanacak.
+                <strong>Kojen / şebekeye satış:</strong> Toplam tüketim hesabında şebekeye satılan
+                elektrik kalemi henüz düşülmüyor. 27.09.2026'da çift sayım düzeltildi — şebeke artık
+                <strong>yalnızca ölçülen TRDP'lerin toplamıdır</strong>, MCC/Chiller alt sayaçları yedek
+                olarak kullanılmaz (aynı enerji iki kez sayılıyordu: günde ~16.000 kWh). Kalan kalemler:
+                TRDP-2 step-up sayacı ve şebekeye satış.
+            </div>
+        </div>
+
+
+        <!-- ========== EKIM 2026 GUNCELLEMELERI ========== -->
+        <div class="section page-break">
+            <h2>🆕 Eylül'den Bu Yana Ne Değişti? (v8.2 → v9.9)</h2>
+
+            <h3>1. Veri kaybı giderildi <span class="badge badge-critical">kritik düzeltme</span></h3>
+            <div class="alert alert-warning">
+                <strong>Sorun:</strong> Geçmiş bir güne su veya doğalgaz girildiğinde, aynı günün
+                <strong>MCC / Chiller / Kule sayaç değerleri siliniyordu</strong>. Enerji diyagramında tarih
+                duruyor ama bütün çipler "veri yok" görünüyordu.<br>
+                <strong>Sebep:</strong> Kayıt, o tarihin satırını tümüyle yenisiyle değiştiriyordu; giriş
+                formunda alt sayaç alanları yok (onları <code>data_bridge</code> günde bir kez yazıyor).<br>
+                <strong>Çözüm:</strong> Formda <em>hiç gelmeyen</em> sütun eski değerini korur; gelen sütun
+                (0 dahil) olduğu gibi yazılır — bir kalemi bilerek sıfırlamak hâlâ mümkün.
+            </div>
+
+            <h3>2. Bildirim çubuğu tek merkez oldu</h3>
+            <ul>
+                <li><strong>"✓✓ Tümü"</strong> düğmesi: bu lokasyonun okunmamış mesajlarının tamamı tek
+                    işlemde kapatılır (veri toplama alarmları etkilenmez — sayaç okunmaya başlayınca
+                    kendileri düşer)</li>
+                <li><strong>Günlük ve aylık PDF raporlar</strong> artık sayfanın üstünde yeşil kutu olarak
+                    durmuyor; çubukta "RAPOR" kaydı olarak listelenip oradan indiriliyor</li>
+                <li>Yanıp sönen "Rapor Hazır!" rozetleri kaldırıldı — görüntü kirliliği yaratıyordu</li>
+            </ul>
+
+            <h3>3. Okunabilirlik ve ok yönü mantığı</h3>
+            <table>
+                <thead>
+                    <tr><th>Konu</th><th>Eski</th><th>Yeni</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Tüketim okları</td>
+                        <td>Bütün oklar lacivertti — CSS, Streamlit'in artış/azalış rengini eziyordu</td>
+                        <td><strong>Tüketim artarsa KIRMIZI, azalırsa YEŞİL.</strong> Tasarruf bunun tersi:
+                            artı tasarruf yeşil. Etiket niteliğindeki değerler (birim fiyat, "2025→2026")
+                            nötr gri</td>
+                    </tr>
+                    <tr>
+                        <td>Grafik yazıları</td>
+                        <td>Lejant ve ipucu kutusu beyazdı (koyu temadan kalma) — açık zeminde görünmüyordu</td>
+                        <td>Lejant, eksen etiketleri ve ipucu koyu renge alındı</td>
+                    </tr>
+                    <tr>
+                        <td>Bölüm kartları</td>
+                        <td>Dashboard, Aylık Birleşik Rapor ve Tahmin &amp; Trend'de bölümler düz başlık +
+                            ayraçtı; hangi sayının nereye ait olduğu anlaşılmıyordu</td>
+                        <td><strong>19 bölüm kart düzenine geçti</strong> — başlık, ince ayraç ve konuya göre
+                            sol renk şeridi (ölçüm mavi, oran/alan mor, para amber, tahmin yeşil)</td>
+                    </tr>
+                    <tr>
+                        <td>Gün listesi</td>
+                        <td>Enerji diyagramı açılır listesi en eski günden başlıyordu</td>
+                        <td>En yeni gün üstte</td>
+                    </tr>
+                    <tr>
+                        <td>Tahmin tablosu</td>
+                        <td>Kıyas yılı yoksa "0 (kWh) | 0 (kWh) | Trend +0,0%" diye boş sütunlar basıyordu</td>
+                        <td>O sütunlar hiç basılmıyor, sebebi yazıyor: trend için en az iki TAM yıl gerekir</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>4. Sabah analizi artık kendi geçmişiyle kıyaslıyor</h3>
+            <p>Synapse'teki otomatik sabah analizi yalnızca <em>sabit eşiklerle</em> (kWh/m², kojen verimi,
+                şebeke payı) ölçüyordu; sabit eşik bir hastanenin <strong>kendi normalini</strong> söylemez.
+                Eklenenler:</p>
+            <ul>
+                <li><strong>Kıyas zemini:</strong> geçen hafta aynı gün ve geçen yıl aynı gün — yüzde değişim
+                    ve <strong>dış hava farkı</strong> ile birlikte</li>
+                <li><strong>7 günlük trend:</strong> son 7 gün / önceki 7 gün; %3 altındaki oynama "sabit"
+                    sayılır (her küçük değişim haber değildir)</li>
+                <li><strong>Veri yoksa arıza denmez:</strong> eksik kalem ile sıfır ayırt edilir; oran
+                    hesaplanamıyorsa yazılmaz. Önceden kojen verisi olmayan gün "%100 şebeke" görünüp
+                    model "kojen arızası" diyordu</li>
+                <li><strong>Mekanik durum</strong> analize dahil: arıza iddiası yalnızca bakım kartlarından
+                    gelen gerçek arıza satırına dayanabilir</li>
+            </ul>
+
+            <h3>5. Çok lokasyon</h3>
+            <ul>
+                <li>Set değerleri lokasyon detayına taşındı — her hastane kendi dış havasına göre çalışıyor</li>
+                <li>Hava tahmini koordinatı lokasyonun kendi profilinden okunuyor
+                    (<code>configs/lokasyon_profili.json</code>); profil yoksa İstanbul'a düşülür ve bu
+                    durum merkeze "varsayılan" olarak bildirilir</li>
+                <li>Oto-set geçiş saatleri lokasyon başına ayarlanabiliyor</li>
+            </ul>
+
+            <div class="alert alert-green">
+                <strong>Geliştirme tarafı:</strong> <code>ornek_veri_uret.py</code> ile 2 yıllık gerçekçi
+                örnek veri üretilebiliyor (İstanbul mevsim eğrisi, derece-gün bağlı mekanik yük, kojen
+                duruşları, analizör arızası günleri). Sahada çalıştırılmaz — yanında
+                <code>supabase_config.json</code> görürse reddeder.
             </div>
         </div>
 
@@ -611,10 +710,10 @@
         <!-- FOOTER -->
         <div class="footer">
             <strong>Enerji ve Verimlilik</strong> — Synapse (SYN) Enerji Modülü — Acıbadem Hastanesi<br>
-            Sürüm <strong>v8.2</strong> — 20 Eylül 2026 | <code>app_portal.py</code> (5.160 satır) +
-            aylık rapor motoru (3.629 satır) | 22 Modbus analizör | 12 tasarruf kuralı<br>
-            Synapse portal tarafında 220 otomatik kontrol (veri, karşılaştırma, giriş, oto-mod) yayından
-            önce çalıştırılır.<br>
+            Sürüm <strong>v9.9</strong> — 16 Ekim 2026 | <code>app_portal.py</code> (5.275 satır) +
+            aylık rapor motoru (3.921 satır) | 22 Modbus analizör | 12 tasarruf kuralı<br>
+            Synapse portal tarafında otomatik kontroller (veri, karşılaştırma, giriş, gösterge renkleri,
+            oto-mod) yayından önce çalıştırılır; lokasyon tarafında 197 kontrollük öz test açılışta koşar.<br>
             <em>Bu belge modülün güncel davranışını anlatır; birim fiyatlar ve eşikler ayarlar panelinden
             değiştirilebilir.</em>
         </div>
