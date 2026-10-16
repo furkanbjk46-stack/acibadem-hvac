@@ -1968,7 +1968,8 @@ with sag:
     _ch_label   = "%s %s" % (_CH_IKON.get(_os_ch, ""), {"koc_soguk": "Koç soğuk",
                   "serin": "Serin", "ilimli": "Ilımlı", "sicak": "Sıcak",
                   "farkli": "lokasyona göre farklı"}.get(_os_ch, _os_ch))
-    _dig_label  = {"sogutma": "☀️ Soğutma", "isitma": "❄️ Isıtma",
+    _dig_label  = {"yogun_sogutma": "🔆 Yoğun soğutma", "sogutma": "☀️ Soğutma",
+                   "isitma": "❄️ Isıtma",
                    "farkli": "lokasyona göre farklı"}.get(_os_dig, _os_dig)
     # NOT: "⚡ N komut gönderildi" satırı karttan KALDIRILDI (11.10.2026) —
     # aynı bilgi geçiş kayıtları penceresinde komut sayısıyla zaten duruyor.
@@ -2066,7 +2067,8 @@ with sag:
     _ml_top = len(_ml_data)
     # Mod değişmediyse (dönem yenilemesi) yön oku yerine ↔️ gösterilir;
     # aksi halde "serin → serin" satırı yanıltıcı biçimde ⬇️ görünüyordu.
-    _SIRA = ["koc_soguk","serin","ilimli","sicak","isitma","sogutma"]
+    _SIRA = ["koc_soguk","serin","ilimli","sicak",
+             "isitma","sogutma","yogun_sogutma"]
     _eski_yeni_ikon = lambda e, y: ("↔️" if e == y else
                                     ("⬆️" if _SIRA.index(y) > _SIRA.index(e) else "⬇️"))
     # "Son geçiş" yalnızca GERÇEK mod değişimlerinden seçilir; günlük yeniden

@@ -589,7 +589,7 @@ c("[gecikme] yazılamayan nokta doğrulamaya girmez", oto_set.durum_ozet().get("
 # ── 11c2) KOMUT LOGU — Uzaktan Kontrol'de "hangi noktaya kaç derece gitti" ──
 durum_sifirla()
 sb = Sahte(TEMEL)
-calistir(sb, tahmin=(30.0, 24.0), saat=12)          # gunduz, sicak -> CH 6.5, sogutma
+calistir(sb, tahmin=(30.0, 24.0), saat=12)          # gunduz 30C -> CH 6.5, yogun_sogutma
 c("[komut logu] geçiş anında başarılı satır YAZILMAZ (bayat değer göstermesin)",
   len(sb.komut_log) == 0, len(sb.komut_log))
 calistir(sb, tahmin=(30.0, 24.0), saat=12, dakika=oto_set.ILK_DOGRULAMA_DK)
@@ -599,9 +599,17 @@ c("[komut logu] doğrulamadan sonra 11 noktanın hepsi yazıldı", len(sb.komut_
 c("[komut logu] her nokta için TEK satır", len(_kl) == 11, len(_kl))
 c("[komut logu] chiller degeri dogru (6.5)", _kl.get("CH1_REM_SET", {}).get("hedef_deger") == 6.5,
   _kl.get("CH1_REM_SET"))
-c("[komut logu] kollektor degeri dogru (gunduz sogutma 7.0)",
-  _kl.get("GUNDUZ_KOLLEKTOR_SET", {}).get("hedef_deger") == oto_set.DIG_SET["sogutma"]["GUNDUZ_KOLLEKTOR_SET"],
+# 30 C, 23 esiginin ustu: kollektor gunduz 8, FCU 12, AHU 8 olmali.
+# (01.10-16.10 arasi 23 esigi yoktu ve burada 10 kaliyordu — chiller
+#  surekli calisiyordu, isletmenin bildirdigi hata buydu.)
+c("[komut logu] 23 ustunde kollektor gunduz 8.0",
+  _kl.get("GUNDUZ_KOLLEKTOR_SET", {}).get("hedef_deger")
+  == oto_set.DIG_SET["yogun_sogutma"]["GUNDUZ_KOLLEKTOR_SET"] == 8.0,
   _kl.get("GUNDUZ_KOLLEKTOR_SET"))
+c("[komut logu] 23 ustunde FCU 12, AHU 8",
+  _kl.get("A_BLOK_FCU_SET", {}).get("hedef_deger") == 12.0
+  and _kl.get("ZON1_KLIMA_SANTRALI_SET", {}).get("hedef_deger") == 8.0,
+  (_kl.get("A_BLOK_FCU_SET"), _kl.get("ZON1_KLIMA_SANTRALI_SET")))
 c("[komut logu] hepsi OTO-SET onekli", all(r["hata_mesaji"].startswith("OTO-SET") for r in sb.komut_log))
 c("[komut logu] mesaj gecis turunu soyler", "gündüz geçişi" in _kl["CH1_REM_SET"]["hata_mesaji"],
   _kl["CH1_REM_SET"]["hata_mesaji"])
@@ -892,6 +900,58 @@ if _metin:
           '.get("setler")' in _dmetin and 'bakim_ozet.get("oto")' in _dmetin)
         _dgomulu = [v for v in ("8.0°C", "7.5°C", "7.0°C", "6.5°C") if v in _dmetin]
         c("lokasyon detayinda gomulu set degeri yok", not _dgomulu, _dgomulu)
+
+# ── 15) ISLETME TABLOSU — kollektor/FCU/AHU UC BOLGE, IKI ESIK ──────────
+# 01.10.2026'da 15 C esigi eklenirken 23 C esigi yanlislikla kaldirilmis,
+# mod ikiliye dusmustu. Sonuc: 23 ustunde kollektor gunduz 10'da kaliyor,
+# chiller surekli calisiyordu. Iki esik iki AYRI isi yapar:
+#   23 -> yaz bolgesi (kollektor 8/10, FCU 12, AHU 8)
+#   15 -> kis bolgesi (kollektor 12/14) — chiller'i durdurur
+# Biri digerinin yerine gecemez; bu blok ikisinin de durdugunu kilitler.
+c("[tablo] iki esik tanimli (15 ve 23)",
+  oto_set.DIG_SINIRLAR == [15.0, 23.0], oto_set.DIG_SINIRLAR)
+c("[tablo] uc mod tanimli", oto_set.DIG_MODLAR == ["isitma", "sogutma", "yogun_sogutma"],
+  oto_set.DIG_MODLAR)
+c("[tablo] histerezis 3 C", oto_set.DIG_H == 3.0, oto_set.DIG_H)
+c("[tablo] her modun set takimi tam",
+  set(oto_set.DIG_SET) == {"isitma", "sogutma", "yogun_sogutma"}
+  and all(set(v) == set(oto_set.DIG_SET["sogutma"]) for v in oto_set.DIG_SET.values()),
+  sorted(oto_set.DIG_SET))
+
+for _mod, _gun, _gece, _fcu, _ahu in (
+        ("yogun_sogutma", 8.0, 10.0, 12.0, 8.0),       # 23 ustu
+        ("sogutma",      10.0, 12.0, 14.0, 10.0),      # 15-23
+        ("isitma",       12.0, 14.0, 14.0, 10.0)):     # 15 alti
+    _s = oto_set.DIG_SET[_mod]
+    c("[tablo] %s setleri (%g/%g · FCU %g · AHU %g)" % (_mod, _gun, _gece, _fcu, _ahu),
+      _s["GUNDUZ_KOLLEKTOR_SET"] == _gun and _s["GECE_KOLLEKTOR_SET"] == _gece
+      and _s["A_BLOK_FCU_SET"] == _s["B_BLOK_FCU_SET"] == _fcu
+      and _s["ZON1_KLIMA_SANTRALI_SET"] == _s["ZON2_KLIMA_SANTRALI_SET"] == _ahu, _s)
+
+# Bolge secimi ve histerezis (sahaya giden kararin kendisi)
+for _ref, _bek in ((14.9, "isitma"), (15.0, "sogutma"),
+                   (22.9, "sogutma"), (23.0, "yogun_sogutma")):
+    c("[tablo] %.1f C -> %s" % (_ref, _bek),
+      oto_set.dig_modu_hesapla(_ref, "") == _bek, oto_set.dig_modu_hesapla(_ref, ""))
+c("[tablo] sogutma 26'da kalir, 26.1'de yogun_sogutma",
+  oto_set.dig_modu_hesapla(26.0, "sogutma") == "sogutma"
+  and oto_set.dig_modu_hesapla(26.1, "sogutma") == "yogun_sogutma")
+c("[tablo] yogun_sogutma 20'de kalir, 19.9'da sogutma",
+  oto_set.dig_modu_hesapla(20.0, "yogun_sogutma") == "yogun_sogutma"
+  and oto_set.dig_modu_hesapla(19.9, "yogun_sogutma") == "sogutma")
+
+# Yaz bolgesindeki butun setler yazma kapisindan gecmeli (5-40 C)
+try:
+    from bacnet_writer import komut_degeri_gecerli as _kapi
+    c("[tablo] yaz bolgesi setleri deger kapisindan gecer",
+      all(_kapi(v)[0] for v in oto_set.DIG_SET["yogun_sogutma"].values()))
+except Exception:
+    pass
+
+# Heartbeat IKI esigi de tasimali: merkez "23 nerede" diye sormasin
+_esik_ozet = oto_set.durum_ozet()["setler"]["esikler"]
+c("[tablo] heartbeat iki esigi de bildirir",
+  _esik_ozet.get("dig_sinir") == [15.0, 23.0], _esik_ozet)
 
 hata = sum(1 for _, ok, _ in T if not ok)
 print()

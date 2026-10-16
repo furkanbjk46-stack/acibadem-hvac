@@ -1394,7 +1394,8 @@ with tab1:
 
         _CH_AD = {"koc_soguk": "Koç soğuk", "serin": "Serin",
                   "ilimli": "Ilımlı", "sicak": "Sıcak"}
-        _DIG_AD = {"sogutma": "Soğutma", "isitma": "Isıtma"}
+        _DIG_AD = {"yogun_sogutma": "Yoğun soğutma",
+                   "sogutma": "Soğutma", "isitma": "Isıtma"}
         _ch_mod = _CH_AD.get((_oto or {}).get("chiller_mod"), "—")
         _dig_mod = _DIG_AD.get((_oto or {}).get("diger_mod"), "—")
         _donem = {"gunduz": "Gündüz", "gece": "Gece"}.get((_oto or {}).get("donem"), "—")
@@ -1432,9 +1433,15 @@ with tab1:
         if _ck:
             _alt.append("Chiller bölgeleri: %s °C (±%g histerezis)"
                         % (" / ".join("%g" % x for x in _ck), _esik.get("chiller_h", 0)))
-        if _esik.get("dig_esik") is not None:
-            _alt.append("Kollektör/FCU/AHU eşiği: %g °C (±%g)"
-                        % (_esik["dig_esik"], _esik.get("dig_h", 0)))
+        # İki eşik var (15 ve 23 °C) ve saha bunları "dig_sinir" listesiyle
+        # bildirir. v9.8 ve öncesi tek eşikli "dig_esik" gönderiyordu; o
+        # sürümdeki lokasyonlar güncellenene kadar ikisi de okunur.
+        _ds = _esik.get("dig_sinir")
+        if not _ds and _esik.get("dig_esik") is not None:
+            _ds = [_esik["dig_esik"]]
+        if _ds:
+            _alt.append("Kollektör/FCU/AHU eşikleri: %s °C (±%g histerezis)"
+                        % (" / ".join("%g" % x for x in _ds), _esik.get("dig_h", 0)))
         st.caption("Dönem: %s · %s" % (_donem, " · ".join(_alt) if _alt else
                                        "eşikler bildirilmedi"))
 

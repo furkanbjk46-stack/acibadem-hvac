@@ -59,11 +59,30 @@ CH_MODLAR   = ["koc_soguk", "serin", "ilimli", "sicak"]
 CH_SET      = {"koc_soguk": 8.0, "serin": 7.5, "ilimli": 7.0, "sicak": 6.5}
 CH_H        = 2.0
 
-# 01.10.2026: esik 23 -> 15 C, kollektor setleri +2, FCU/AHU artik
-# moddan BAGIMSIZ sabit (FCU 14, AHU 10). Kaynak: isletme tablosu.
-DIG_ESIK = 15.0
-DIG_H    = 3.0
+# KOLLEKTÖR / FCU / AHU — ÜÇ BÖLGE, İKİ EŞİK (23 °C ve 15 °C)
+#
+# 01.10.2026'da 15 °C eşiği eklenirken 23 °C eşiği YANLIŞLIKLA KALDIRILDI;
+# mod ikiliye (sogutma/isitma) düştü. Sonuç: dış hava 23'ün üstüne çıktığında
+# kollektör gündüz 10 °C'de kalıyordu — işletme tablosunda o bölge 8 °C,
+# FCU 12, AHU 8. 16.10.2026'da iki eşik birlikte geri kondu.
+#
+# 15 eşiğinin eklenme sebebi (işletmenin notu): tek eşik 23 iken sıcaklık
+# 23'ün altına indiğinde kollektör gündüz 10 °C'de kalıyor, bu da chiller'ı
+# sürekli çalıştırıyordu. 15'in altında set 12/14'e çıkarak chiller'ı
+# durduruyor. İki eşik iki ayrı işi yapar; biri diğerinin yerine geçmez.
+#
+#   > 23 °C   yogun_sogutma : gündüz 8  / gece 10 · FCU 12 · AHU 8
+#   15-23 °C  sogutma       : gündüz 10 / gece 12 · FCU 14 · AHU 10
+#   < 15 °C   isitma        : gündüz 12 / gece 14 · FCU 14 · AHU 10
+#
+# Kaynak: işletme tablosu (ekran görüntüsü, 16.10.2026).
+DIG_SINIRLAR = [15.0, 23.0]
+DIG_MODLAR   = ["isitma", "sogutma", "yogun_sogutma"]
+DIG_H        = 3.0
 DIG_SET  = {
+    "yogun_sogutma": {"GUNDUZ_KOLLEKTOR_SET": 8.0, "GECE_KOLLEKTOR_SET": 10.0,
+                      "A_BLOK_FCU_SET": 12.0, "B_BLOK_FCU_SET": 12.0,
+                      "ZON1_KLIMA_SANTRALI_SET": 8.0, "ZON2_KLIMA_SANTRALI_SET": 8.0},
     "sogutma": {"GUNDUZ_KOLLEKTOR_SET": 10.0, "GECE_KOLLEKTOR_SET": 12.0,
                 "A_BLOK_FCU_SET": 14.0, "B_BLOK_FCU_SET": 14.0,
                 "ZON1_KLIMA_SANTRALI_SET": 10.0, "ZON2_KLIMA_SANTRALI_SET": 10.0},
@@ -242,8 +261,10 @@ def _guncel_setler(d):
     if dig_mod in DIG_SET:
         for nokta, deger in DIG_SET[dig_mod].items():
             setler[nokta] = deger
+    # dig_sinir ARTIK LİSTE (iki eşik: 15 ve 23). Eski tek eşikli sürümlerden
+    # gelen heartbeat'te "dig_esik" vardı; merkez ikisini de okur.
     setler["esikler"] = {"chiller_sinir": CH_SINIRLAR, "chiller_h": CH_H,
-                         "dig_esik": DIG_ESIK, "dig_h": DIG_H}
+                         "dig_sinir": DIG_SINIRLAR, "dig_h": DIG_H}
     return setler
 
 
@@ -460,33 +481,51 @@ def donem_hesapla(saat, gunduz_saat, gece_saat):
     return "gunduz" if (saat >= gunduz_saat or saat < gece_saat) else "gece"
 
 
-def _hedef_bolge(ort):
-    for i, sinir in enumerate(CH_SINIRLAR):
+def _bolge(ort, sinirlar, modlar):
+    """Histerezis YOKSAYILARAK sıcaklığın düştüğü bölge."""
+    for i, sinir in enumerate(sinirlar):
         if ort < sinir:
-            return CH_MODLAR[i]
-    return CH_MODLAR[-1]
+            return modlar[i]
+    return modlar[-1]
+
+
+def _bolgeli_mod(ort, mevcut, sinirlar, modlar, h):
+    """Bölgeli mod + ±h histerezis, KADEMESİZ geçiş.
+
+    Mevcut bölgeden çıkmak için sınırın h kadar ötesine geçmek gerekir;
+    çıkılınca ara kademeye değil doğrudan hedef bölgeye gidilir (sıcaklık
+    bir gecede iki bölge atlayabilir, araya sahte bir geçiş koymayız).
+    Chiller ve kollektör aynı mantığı kullanır: tek yerde dursun.
+    """
+    if mevcut in modlar:
+        idx = modlar.index(mevcut)
+        ust = sinirlar[idx]     if idx < len(sinirlar) else None
+        alt = sinirlar[idx - 1] if idx > 0             else None
+        cikis = ((ust is not None and ort > ust + h) or
+                 (alt is not None and ort < alt - h))
+        if not cikis:
+            return mevcut
+    return _bolge(ort, sinirlar, modlar)
+
+
+def _hedef_bolge(ort):
+    """Chiller hedef bölgesi (histerezissiz) — geriye dönük ad."""
+    return _bolge(ort, CH_SINIRLAR, CH_MODLAR)
 
 
 def ch_modu_hesapla(ort, mevcut):
     """4 bölgeli chiller modu — ±2°C histerezis, KADEMESİZ geçiş."""
-    if mevcut in CH_MODLAR:
-        idx = CH_MODLAR.index(mevcut)
-        ust = CH_SINIRLAR[idx]     if idx < len(CH_SINIRLAR) else None
-        alt = CH_SINIRLAR[idx - 1] if idx > 0                else None
-        cikis = ((ust is not None and ort > ust + CH_H) or
-                 (alt is not None and ort < alt - CH_H))
-        if not cikis:
-            return mevcut
-    return _hedef_bolge(ort)
+    return _bolgeli_mod(ort, mevcut, CH_SINIRLAR, CH_MODLAR, CH_H)
 
 
 def dig_modu_hesapla(ort, mevcut):
-    """Kollektör/FCU/AHU ikili mod — ±3°C histerezis."""
-    if mevcut == "sogutma":
-        return "isitma" if ort < DIG_ESIK - DIG_H else "sogutma"
-    if mevcut == "isitma":
-        return "sogutma" if ort > DIG_ESIK + DIG_H else "isitma"
-    return "sogutma" if ort >= DIG_ESIK else "isitma"
+    """Kollektör/FCU/AHU modu — 3 bölge (23 / 15 °C), ±3°C histerezis.
+
+    Eski ikili sürümden kalan "sogutma"/"isitma" adları korunur: sahadaki
+    durum dosyası ve merkezdeki kayıtlar bu adlarla dolu, yeniden
+    adlandırmak geçmişi okunamaz hale getirirdi.
+    """
+    return _bolgeli_mod(ort, mevcut, DIG_SINIRLAR, DIG_MODLAR, DIG_H)
 
 
 def _sayi(v):

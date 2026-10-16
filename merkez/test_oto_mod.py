@@ -17,7 +17,9 @@ _metin = open(_KAYNAK, encoding="utf-8").read()
 _ns = {}
 for _desen in [
     r"CH_SINIRLAR\s*=.*?\n", r"CH_MODLAR\s*=.*?\n", r"CH_SET\s*=.*?\n",
-    r"CH_H\s*=.*?\n", r"DIG_ESIK\s*=.*?\n", r"DIG_H\s*=.*?\n",
+    r"CH_H\s*=.*?\n", r"DIG_SINIRLAR\s*=.*?\n", r"DIG_MODLAR\s*=.*?\n",
+    r"DIG_H\s*=.*?\n",
+    r"def _bolge\(.*?(?=\ndef )", r"def _bolgeli_mod.*?(?=\ndef )",
     r"def _hedef_bolge.*?(?=\ndef )", r"def ch_modu_hesapla.*?(?=\ndef )",
     r"def dig_modu_hesapla.*?(?=\ndef )",
 ]:
@@ -75,20 +77,45 @@ m1 = ch(15.0, "sicak")
 m2 = ch(15.0, m1)
 c("hedefe varinca sabit kalir (tekrar komut yok)", m1 == m2 == "serin", "%s -> %s" % (m1, m2))
 
-# ── DIGER (kollektor/FCU/AHU) — esik 23, histerezis 3 ──
-c("sogutma, 21C -> sogutma (histerezis)", dig(21.0, "sogutma") == "sogutma")
-# Beklentiler ESIKTEN turetilir; esik degisince (23 -> 15 gibi) test kirmizi
-# yanmasin, kuralin KENDISI dogrulansin.
-_E = _ns["DIG_ESIK"]
+# ── DIGER (kollektor/FCU/AHU) — IKI ESIK (15 ve 23), histerezis 3 ──
+# 01.10.2026'da 15 esigi eklenirken 23 esigi yanlislikla KALDIRILMISTI; mod
+# ikiliye dustu ve 23 ustunde kollektor gunduz 10'da kaliyordu (tabloda 8).
+# 16.10.2026'da iki esik birlikte geri kondu. Beklentiler esiklerden
+# turetilir: esik degisirse test kuralin KENDISINI dogrular.
+_S = _ns["DIG_SINIRLAR"]
 _H = _ns["DIG_H"]
-c("sogutma, esik-1 -> hala sogutma (histerezis tutuyor)",
-  dig(_E - 1, "sogutma") == "sogutma")
-c("sogutma, esik-H-1 -> isitma", dig(_E - _H - 1, "sogutma") == "isitma")
-c("isitma, esik+1 -> hala isitma (histerezis tutuyor)",
-  dig(_E + 1, "isitma") == "isitma")
-c("isitma, esik+H+1 -> sogutma", dig(_E + _H + 1, "isitma") == "sogutma")
-c("mod yokken esik ustu sogutma", dig(_E + 0.5, None) == "sogutma")
-c("mod yokken esik alti isitma", dig(_E - 0.5, None) == "isitma")
+c("iki esik var (15 ve 23)", len(_S) == 2, _S)
+_ALT, _UST = _S[0], _S[1]                       # 15, 23
+
+# Mod yokken: dogrudan bolgesine duser
+c("mod yokken alt esik alti -> isitma", dig(_ALT - 0.5, None) == "isitma")
+c("mod yokken iki esik arasi -> sogutma", dig(_ALT + 0.5, None) == "sogutma")
+c("mod yokken ust esik ustu -> yogun_sogutma",
+  dig(_UST + 0.5, None) == "yogun_sogutma", dig(_UST + 0.5, None))
+
+# Alt esik (15) histerezisi — chiller surekli calismasin diye eklenmisti
+c("sogutma, alt esik-1 -> hala sogutma (histerezis tutuyor)",
+  dig(_ALT - 1, "sogutma") == "sogutma")
+c("sogutma, alt esik-H-1 -> isitma", dig(_ALT - _H - 1, "sogutma") == "isitma")
+c("isitma, alt esik+1 -> hala isitma (histerezis tutuyor)",
+  dig(_ALT + 1, "isitma") == "isitma")
+c("isitma, alt esik+H+1 -> sogutma", dig(_ALT + _H + 1, "isitma") == "sogutma")
+
+# Ust esik (23) histerezisi — 23 ustunde kollektor 8'e inmeli
+c("sogutma, ust esik+1 -> hala sogutma (histerezis tutuyor)",
+  dig(_UST + 1, "sogutma") == "sogutma")
+c("sogutma, ust esik+H+1 -> yogun_sogutma",
+  dig(_UST + _H + 1, "sogutma") == "yogun_sogutma",
+  dig(_UST + _H + 1, "sogutma"))
+c("yogun_sogutma, ust esik-1 -> hala yogun_sogutma",
+  dig(_UST - 1, "yogun_sogutma") == "yogun_sogutma")
+c("yogun_sogutma, ust esik-H-1 -> sogutma",
+  dig(_UST - _H - 1, "yogun_sogutma") == "sogutma")
+
+# Kademesiz: yaz ortasindan kisa tek adimda
+c("yogun_sogutma -> alt esik alti -> isitma (kademesiz)",
+  dig(_ALT - _H - 1, "yogun_sogutma") == "isitma",
+  dig(_ALT - _H - 1, "yogun_sogutma"))
 
 hata = sum(1 for _, ok, _ in T if not ok)
 print()

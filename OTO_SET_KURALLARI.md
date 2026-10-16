@@ -4,7 +4,13 @@ Bu belge **koddan çıkarılmıştır**; her sayının yanında kaynağı yazıl
 Tek kaynak `hvac/deneme/oto_set.py`'dir — merkez (Synapse) kural kopyası
 tutmaz, yalnızca sahanın bildirdiğini gösterir.
 
-Çıkarım tarihi: 16.10.2026 · Kod sürümü: v9.8 (maslak)
+Çıkarım tarihi: 16.10.2026 · Kod sürümü: v9.9 (maslak)
+
+> **16.10.2026 düzeltmesi:** Kollektör/FCU/AHU tarafında **iki eşik** vardır
+> (23 °C ve 15 °C). 01.10.2026'da 15 °C eşiği eklenirken 23 °C eşiği
+> yanlışlıkla kaldırılmış, mod ikiliye düşmüştü; dış hava 23'ün üstüne
+> çıktığında kollektör gündüz 10 °C'de kalıyordu (tabloda 8 °C). İki eşik
+> birlikte geri kondu — ayrıntı §6.
 
 ---
 
@@ -84,7 +90,7 @@ Lokasyona özel saat tanımlı değil. Tanımlanırsa anahtar
 
 - Kaynak: `api.open-meteo.com` → `temperature_2m_max` / `temperature_2m_min`
 - Koordinat: `configs/lokasyon_profili.json` → `supabase_config.json` → İstanbul (41.0082 / 28.9784)
-- Önbellek: **30 dakika**, koordinata bağlı (`_TAHMIN_OMRU_DK`, `oto_set.py:83`)
+- Önbellek: **30 dakika**, koordinata bağlı (`_TAHMIN_OMRU_DK`, `oto_set.py:102`)
 - Tahmin alınamazsa geçiş **ertelenir** — eski referansla set gönderilmez
 
 ---
@@ -125,33 +131,46 @@ için `sicak` (set 6,5) — `ilimli` atlanır.
 
 ---
 
-## 6. Kollektör / FCU / AHU modu — ikili, ±3 °C histerezis
+## 6. Kollektör / FCU / AHU modu — 3 bölge, 2 eşik, ±3 °C histerezis
 
-`DIG_ESIK = 15.0` · `DIG_H = 3.0` · `oto_set.py:64-73`
+`DIG_SINIRLAR = [15.0, 23.0]` · `DIG_H = 3.0` · `oto_set.py:79-92`
 
-| Mevcut mod | Geçiş koşulu |
+**İki eşik iki ayrı işi yapar; biri diğerinin yerine geçmez:**
+
+- **23 °C** → yaz bölgesini açar: kollektör 8/10, FCU 12, AHU 8
+- **15 °C** → kış bölgesini açar: kollektör 12/14. Bu eşik, sıcaklık 23'ün
+  altına indiğinde kollektörün gündüz 10 °C'de takılıp **chiller'ı sürekli
+  çalıştırması** sorunu için eklenmiştir.
+
+### Bölgeler ve set değerleri
+
+| Mod | Dış hava | Gündüz kollektör | Gece kollektör | FCU (A/B blok) | AHU (Zon-1/2) |
+|---|---|---|---|---|---|
+| `yogun_sogutma` | ref > 23 °C | **8,0** | **10,0** | **12,0** | **8,0** |
+| `sogutma` | 15 ≤ ref ≤ 23 °C | **10,0** | **12,0** | **14,0** | **10,0** |
+| `isitma` | ref < 15 °C | **12,0** | **14,0** | **14,0** | **10,0** |
+
+### Histerezis — moddan çıkış eşikleri
+
+| Mevcut mod | Çıkış koşulu |
 |---|---|
-| `sogutma` | ref < **12** olursa ısıtmaya |
-| `isitma` | ref > **18** olursa soğutmaya |
-| (bilinmiyor) | ref ≥ 15 → soğutma, değilse ısıtma |
+| `yogun_sogutma` | ref < **20** → `sogutma` |
+| `sogutma` | ref > **26** → `yogun_sogutma` · ref < **12** → `isitma` |
+| `isitma` | ref > **18** → `sogutma` |
+| (bilinmiyor) | doğrudan bölgesine düşer: <15 ısıtma, 15–23 soğutma, ≥23 yoğun soğutma |
 
-### Set değerleri
+Chiller'da olduğu gibi **kademesiz**: yaz ortasından kışa tek adımda
+`yogun_sogutma` → `isitma` geçilebilir, araya sahte bir `sogutma` turu
+konmaz.
 
-| Nokta | Soğutma | Isıtma |
-|---|---|---|
-| `GUNDUZ_KOLLEKTOR_SET` | **10,0** | **12,0** |
-| `GECE_KOLLEKTOR_SET` | **12,0** | **14,0** |
-| `A_BLOK_FCU_SET` | 14,0 | 14,0 |
-| `B_BLOK_FCU_SET` | 14,0 | 14,0 |
-| `ZON1_KLIMA_SANTRALI_SET` | 10,0 | 10,0 |
-| `ZON2_KLIMA_SANTRALI_SET` | 10,0 | 10,0 |
+Her geçişte **altı noktanın tamamı** yazılır — gündüz ve gece kollektör
+setleri, dönem hangisi olursa olsun birlikte güncellenir.
 
-> 01.10.2026 değişikliği: eşik 23 → 15 °C, kollektör setleri +2 °C,
-> **FCU ve AHU setleri moddan bağımsız sabit** (FCU 14, AHU 10).
-> Kaynak: işletme tablosu. (`oto_set.py:62`)
-
-Her geçişte **iki kollektör noktası da** (gündüz ve gece) yazılır; dönem
-hangisi olursa olsun altı noktanın tamamı güncellenir.
+> **Tarihçe.** 01.10.2026'da işletme tablosuna göre eşik 23 → 15 °C
+> değiştirildi, kollektör setleri +2 °C yapıldı ve FCU/AHU "moddan bağımsız
+> sabit" kabul edildi. Bu sırada 23 °C bölgesi tablodan düştü; 16.10.2026'da
+> sahadan bildirilen hata üzerine iki eşik birlikte geri kondu. FCU/AHU
+> yalnızca 15–23 ve 15 altı bölgelerde sabittir, yaz bölgesinde 12/8'e iner.
 
 ---
 
@@ -186,7 +205,7 @@ komutlar **aynı kapıdan** geçer.
 
 ## 9. Doğrulama — gönderildi ≠ uygulandı
 
-`oto_set.py:223-225`
+`oto_set.py:242-244`
 
 | Eşik | Değer | Anlamı |
 |---|---|---|
@@ -232,16 +251,16 @@ sahada 10 gün durdu ve kimse fark etmedi.)
 | Chiller bölge sınırları | 7 / 23 / 26 °C | `oto_set.py:57` |
 | Chiller histerezisi | ±2 °C | `oto_set.py:60` |
 | Chiller setleri | 8,0 / 7,5 / 7,0 / 6,5 °C | `oto_set.py:59` |
-| Kollektör mod eşiği | 15 °C | `oto_set.py:64` |
-| Kollektör histerezisi | ±3 °C | `oto_set.py:65` |
-| Kollektör setleri (gündüz/gece) | soğutma 10/12 · ısıtma 12/14 °C | `oto_set.py:66-73` |
-| FCU seti | 14 °C (sabit) | `oto_set.py:66-73` |
-| AHU seti | 10 °C (sabit) | `oto_set.py:66-73` |
+| Kollektör mod eşikleri | **23 ve 15 °C** | `oto_set.py:79` |
+| Kollektör histerezisi | ±3 °C | `oto_set.py:81` |
+| Kollektör setleri (gündüz/gece) | >23: 8/10 · 15–23: 10/12 · <15: 12/14 °C | `oto_set.py:82-92` |
+| FCU seti | >23: 12 °C · diğer: 14 °C | `oto_set.py:82-92` |
+| AHU seti | >23: 8 °C · diğer: 10 °C | `oto_set.py:82-92` |
 | Geçiş saatleri | 08:00 / 23:00 | Supabase `ayarlar` |
-| Tahmin önbelleği | 30 dk | `oto_set.py:83` |
-| İlk doğrulama | 3 dk | `oto_set.py:223` |
-| Doğrulama takibi | 15 dk | `oto_set.py:224` |
-| Doğrulama toleransı | 0,05 °C | `oto_set.py:225` |
+| Tahmin önbelleği | 30 dk | `oto_set.py:102` |
+| İlk doğrulama | 3 dk | `oto_set.py:242` |
+| Doğrulama takibi | 15 dk | `oto_set.py:243` |
+| Doğrulama toleransı | 0,05 °C | `oto_set.py:244` |
 | Yazma alt/üst sınırı | 5 / 40 °C | `bacnet_writer.py:33-34` |
 | Komut ömrü | 30 dk | `bacnet_writer.py:41` |
 
