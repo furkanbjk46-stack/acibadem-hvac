@@ -1345,7 +1345,7 @@
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
                         <div class="setting-item">
                             <label>AHU Hava ΔT - Soğutma</label>
-                            <input type="number" id="set_TARGET_AIR_DT_AHU_COOL" step="0.5" min="1" max="20">
+                            <input type="number" id="set_TARGET_AIR_DT_AHU_COOL" step="0.5" min="4" max="8">
                         </div>
                         <div class="setting-item">
                             <label>AHU Hava ΔT - Isıtma</label>
@@ -1357,7 +1357,7 @@
                         </div>
                         <div class="setting-item">
                             <label>Chiller</label>
-                            <input type="number" id="set_TARGET_DT_CHILLER" step="0.5" min="1" max="20">
+                            <input type="number" id="set_TARGET_DT_CHILLER" step="0.5" min="2" max="7">
                         </div>
                         <div class="setting-item">
                             <label>Kolektör</label>
@@ -1380,11 +1380,11 @@
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
                         <div class="setting-item">
                             <label>Soğutma Min</label>
-                            <input type="number" id="set_SAT_COOLING_MIN" step="0.5" min="10" max="20">
+                            <input type="number" id="set_SAT_COOLING_MIN" step="0.5" min="12" max="17">
                         </div>
                         <div class="setting-item">
                             <label>Soğutma Max</label>
-                            <input type="number" id="set_SAT_COOLING_MAX" step="0.5" min="12" max="25">
+                            <input type="number" id="set_SAT_COOLING_MAX" step="0.5" min="16" max="20">
                         </div>
                         <div class="setting-item">
                             <label>Isıtma Min</label>
@@ -1436,10 +1436,6 @@
                             <input type="number" id="set_APPROACH_MAX" step="0.5" min="5" max="20">
                         </div>
                         <div class="setting-item">
-                            <label>Kritik Skor Eşiği</label>
-                            <input type="number" id="set_SCORE_CRITICAL_THRESHOLD" step="0.5" min="5" max="10">
-                        </div>
-                        <div class="setting-item">
                             <label>Düşük ΔT Eşiği (°C)</label>
                             <input type="number" id="set_LOW_DT_THRESHOLD" step="0.5" min="1" max="10">
                         </div>
@@ -1447,6 +1443,123 @@
                             <label>Chiller Düşük ΔT (°C)</label>
                             <input type="number" id="set_CHILLER_LOW_DT_THRESHOLD" step="0.5" min="1" max="5">
                         </div>
+                        <div class="setting-item">
+                            <label>Chiller Bypass ΔT (°C)</label>
+                            <input type="number" id="set_CHILLER_BYPASS_DT" step="0.5" min="0.5" max="3">
+                        </div>
+                        <div class="setting-item">
+                            <label>Dış Hava Kayması Üst Sınırı (°C)</label>
+                            <input type="number" id="set_OAT_BIAS_MAX" step="0.5" min="0" max="3">
+                        </div>
+                        <div class="setting-item">
+                            <label>SAT Toleransı (°C)</label>
+                            <input type="number" id="set_SAT_TOLERANS" step="0.5" min="0.5" max="5">
+                        </div>
+                        <div class="setting-item">
+                            <label>Isıtmada Düşük SAT Eşiği (°C)</label>
+                            <input type="number" id="set_HEAT_SAT_LOW_THRESHOLD" step="0.5" min="20" max="35">
+                        </div>
+                        <div class="setting-item">
+                            <label>SAT Soğutma Sapma Eşiği (°C)</label>
+                            <input type="number" id="set_SAT_COOLING_THRESHOLD" step="0.5" min="0.5" max="5">
+                        </div>
+                        <div class="setting-item">
+                            <label>SAT Isıtma Sapma Eşiği (°C)</label>
+                            <input type="number" id="set_SAT_HEATING_THRESHOLD" step="0.5" min="0.5" max="5">
+                        </div>
+                        <div class="setting-item">
+                            <label>Varsayılan Hedef ΔT (°C)</label>
+                            <input type="number" id="set_TARGET_DT_DEFAULT" step="0.5" min="1" max="20">
+                        </div>
+                    </div>
+                    <div style="margin-top: 6px;">
+                        <label style="font-size: 10px; color: #46536b;">Dış hava kayması, AHU hedef ΔT'sinin
+                            dış sıcaklığa göre ne kadar kaydırılabileceğini sınırlar; hedef + kayma, tipik
+                            emişle (24 °C) ulaşılabilir olmak zorundadır.</label>
+                    </div>
+                </div>
+
+                <!-- Konfor Eşikleri -->
+                <div class="instruction-section">
+                    <h3><i class="fas fa-user-check"></i> Konfor Eşikleri</h3>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                        <div class="setting-item">
+                            <label>Konfor Sapması — Uyarı (°C)</label>
+                            <input type="number" id="set_COMFORT_DEPARTURE" step="0.5" min="1" max="6">
+                        </div>
+                        <div class="setting-item">
+                            <label>Konfor Sapması — Kritik (°C)</label>
+                            <input type="number" id="set_COMFORT_CRITICAL_DEPARTURE" step="0.5" min="2" max="15">
+                        </div>
+                        <div class="setting-item">
+                            <label>Kapasite Ayrım Vanası (%)</label>
+                            <input type="number" id="set_COMFORT_CAPACITY_VALVE" step="5" min="50" max="100">
+                        </div>
+                    </div>
+                    <div style="margin-top: 6px;">
+                        <label style="font-size: 10px; color: #46536b;">Oda–set sapması kritik eşiği aşarsa:
+                            vana bu yüzdenin ÜSTÜNDEyse kapasite yetersiz (COMFORT_CAPACITY_FAULT),
+                            altındaysa kontrol sorunu (COMFORT_CONTROL_FAULT) olarak ayrılır.</label>
+                    </div>
+                </div>
+
+                <!-- Ön Koşul Kapısı -->
+                <div class="instruction-section">
+                    <h3><i class="fas fa-door-closed"></i> Ön Koşul Kapısı (sensör ve fan)</h3>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                        <div class="setting-item">
+                            <label>Fan Çalışıyor — En Düşük Basınç (Pa)</label>
+                            <input type="number" id="set_PRESSURE_RUN_MIN_PA" step="5" min="10" max="100">
+                        </div>
+                        <div class="setting-item">
+                            <label>Basınç Sensörü Arızalı — Üst (Pa)</label>
+                            <input type="number" id="set_PRESSURE_FAULT_MAX_PA" step="50" min="1000" max="3000">
+                        </div>
+                        <div class="setting-item">
+                            <label>Geçerli Sensör — Alt (°C)</label>
+                            <input type="number" id="set_SENSOR_VALID_MIN_C" step="0.5" min="0.5" max="5">
+                        </div>
+                        <div class="setting-item">
+                            <label>Geçerli Sensör — Üst (°C)</label>
+                            <input type="number" id="set_SENSOR_VALID_MAX_C" step="1" min="45" max="60">
+                        </div>
+                    </div>
+                    <div style="margin-top: 6px;">
+                        <label style="font-size: 10px; color: #46536b;">Bu eşikler analiz başlamadan önceki
+                            kapıdır: santral durmuşsa, fan hava basmıyorsa veya sensör aralık dışıysa teşhis
+                            üretilmez, sebep satırda yazar.</label>
+                    </div>
+                </div>
+
+                <!-- Kararlılık ve Bakım -->
+                <div class="instruction-section">
+                    <h3><i class="fas fa-shield-alt"></i> Kararlılık ve Bakım İşareti</h3>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                        <div class="setting-item">
+                            <label>Durum Değişimi — Ardışık Okuma</label>
+                            <input type="number" id="set_DEBOUNCE_OKUMA" step="1" min="1" max="10">
+                        </div>
+                        <div class="setting-item">
+                            <label>Sensör Düzeldi — Ardışık Okuma</label>
+                            <input type="number" id="set_DUZELME_OKUMA" step="1" min="1" max="10">
+                        </div>
+                        <div class="setting-item">
+                            <label>Takılı Sensör Şüphesi — Okuma</label>
+                            <input type="number" id="set_TAKILI_OKUMA" step="1" min="4" max="48">
+                        </div>
+                        <div class="setting-item">
+                            <label>Elle Susturma Süresi (saat)</label>
+                            <input type="number" id="set_MANUAL_SUPPRESS_HOURS" step="1" min="1" max="72">
+                        </div>
+                        <div class="setting-item">
+                            <label>Analiz Dışı Eskalasyon (gün)</label>
+                            <input type="number" id="set_SKIP_ESKALASYON_GUN" step="1" min="1" max="60">
+                        </div>
+                    </div>
+                    <div style="margin-top: 6px;">
+                        <label style="font-size: 10px; color: #46536b;">Bir işaret elle "OK"a çekildiğinde
+                            silinmez, bu kadar saat susturulur; süre dolunca sensör hâlâ arızalıysa kendiliğinden
+                            geri gelir. Susturmalar denetim izine yazılır.</label>
                     </div>
                 </div>
 
@@ -3468,6 +3581,65 @@
 
         let currentSettings = {};
         let defaultSettings = {};
+        let settingsLimits = {};          // sunucudaki CONFIG_LIMITS — tek kaynak
+
+        // Sunucunun kabul ettiği aralığı alanlara uygula ve etikette göster.
+        // Eskiden min/max HTML'e elle yazılmıştı ve sunucuyla tutmuyordu:
+        // ekran 1-20 kabul ediyor, sunucu 4-8 istiyordu; Kaydet sessizce
+        // reddediliyordu.
+        function applySettingsLimits() {
+            Object.keys(settingsLimits).forEach(key => {
+                const input = document.getElementById('set_' + key);
+                if (!input) return;
+                const [alt, ust] = settingsLimits[key];
+                input.min = alt;
+                input.max = ust;
+                input.title = 'İzin verilen aralık: ' + alt + ' – ' + ust;
+                const label = input.parentElement && input.parentElement.querySelector('label');
+                if (label && !label.querySelector('.limit-hint')) {
+                    const s = document.createElement('span');
+                    s.className = 'limit-hint';
+                    s.style.cssText = 'color:#46536b;font-weight:400;font-size:10px;margin-left:6px;';
+                    s.textContent = '(' + alt + ' – ' + ust + ')';
+                    label.appendChild(s);
+                }
+            });
+        }
+
+        // Reddedilen alanları işaretle / temizle
+        function markSettingFields(keys) {
+            document.querySelectorAll('#settingsModal input[type="number"]').forEach(i => {
+                i.style.borderColor = '';
+                i.style.background = '';
+            });
+            let ilk = null;
+            (keys || []).forEach(k => {
+                const input = document.getElementById('set_' + k);
+                if (!input) return;
+                input.style.borderColor = '#d03b3b';
+                input.style.background = 'rgba(208,59,59,.06)';
+                if (!ilk) ilk = input;
+            });
+            if (ilk) {
+                ilk.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                ilk.focus();
+            }
+        }
+
+        // Kaydetmeden ÖNCE aralık denetimi — sunucuya gitmeden söyle
+        function validateSettingsForm(settings) {
+            const hatalar = [], keys = [];
+            Object.keys(settings).forEach(key => {
+                const lim = settingsLimits[key];
+                if (!lim) return;
+                const v = settings[key];
+                if (v < lim[0] || v > lim[1]) {
+                    hatalar.push(key + ': ' + v + ' aralık dışı (izin: ' + lim[0] + '–' + lim[1] + ')');
+                    keys.push(key);
+                }
+            });
+            return { hatalar, keys };
+        }
 
         const CHILLER_FCU_KEYS = [
             'chiller_adedi', 'chiller_birim_kw', 'chiller_t1_gidis', 'chiller_t2_donus',
@@ -3483,6 +3655,8 @@
                 if (data.success) {
                     currentSettings = data.settings;
                     defaultSettings = data.defaults;
+                    settingsLimits = data.limits || {};
+                    applySettingsLimits();
                     populateSettingsForm(currentSettings);
                 }
 
@@ -3503,21 +3677,13 @@
 
         // Form alanlarını doldur
         function populateSettingsForm(settings) {
-            const settingKeys = [
-                'TARGET_AIR_DT_AHU_COOL', 'TARGET_AIR_DT_AHU_HEAT', 'TARGET_DT_FCU', 'TARGET_DT_CHILLER', 'TARGET_DT_COLLECTOR',
-                'TARGET_DT_HEAT_EXCHANGER', 'TARGET_DT_HEAT',
-                'SAT_COOLING_MIN', 'SAT_COOLING_MAX', 'SAT_HEATING_MIN', 'SAT_HEATING_MAX',
-                'VALVE_THRESHOLD', 'HIGH_VALVE_THRESHOLD', 'VALVE_SIMUL_THRESHOLD',
-                'TOLERANCE_NORMAL',
-                'APPROACH_MAX', 'SCORE_CRITICAL_THRESHOLD', 'LOW_DT_THRESHOLD', 'CHILLER_LOW_DT_THRESHOLD',
-                'BUILDING_AREA_M2',
-                'UNIT_PRICE_ELECTRICITY', 'UNIT_PRICE_GAS', 'UNIT_PRICE_WATER',
-                'DAILY_REPORT_HOUR', 'DAILY_REPORT_MINUTE', 'MONTHLY_REPORT_DAY', 'MONTHLY_REPORT_HOUR'
-            ];
-
-            settingKeys.forEach(key => {
+            // Anahtar listesi ELLE TUTULMUYOR: sunucunun döndürdüğü her ayar için
+            // aynı adlı alan varsa doldurulur. Elle liste, forma yeni alan
+            // eklendiğinde güncellenmeyi unutturuyor; alan HTML'deki değerle
+            // kalıp kaydedilince geçersiz değer gönderiyordu.
+            Object.keys(settings).forEach(key => {
                 const input = document.getElementById('set_' + key);
-                if (input && settings[key] !== undefined) {
+                if (input && settings[key] !== undefined && settings[key] !== null) {
                     input.value = settings[key];
                 }
             });
@@ -3558,6 +3724,15 @@
             try {
                 const settings = getSettingsFromForm();
 
+                // 1) Aralık denetimi burada da yapılır: sunucuya gitmeden,
+                //    hangi alanın neden kabul edilmediği anında görünür.
+                const on = validateSettingsForm(settings);
+                if (on.hatalar.length) {
+                    markSettingFields(on.keys);
+                    showAlert('Kaydedilmedi — ' + on.hatalar.join(' | '), 'error');
+                    return;
+                }
+
                 const response = await fetch('/api/settings', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3566,6 +3741,17 @@
 
                 const data = await response.json();
 
+                // 2) Sunucu reddettiyse Chiller/FCU ayarlarını da YAZMA: yarısı
+                //    kaydedilmiş bir ayar takımı bırakmak, hiç kaydetmemekten kötü.
+                if (!data.success) {
+                    // FastAPI hata gövdesi {"detail": ...} döner; eski kod
+                    // data.message okuyordu ve ekranda "undefined" yazıyordu.
+                    const sebep = data.detail || data.message || 'bilinmeyen sebep';
+                    markSettingFields(data.keys || []);
+                    showAlert('Ayarlar kaydedilemedi — ' + sebep, 'error');
+                    return;
+                }
+
                 await fetch('/api/chiller_fcu_ayarlari', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -3573,15 +3759,12 @@
                 });
                 _ahuKapasiteler = null; // kW kartları cache'ini sıfırla
 
-                if (data.success) {
-                    showAlert('Ayarlar başarıyla kaydedildi!', 'success');
-                    closeSettingsModal();
-                } else {
-                    showAlert('Ayarlar kaydedilemedi: ' + data.message, 'error');
-                }
+                markSettingFields([]);
+                showAlert('Ayarlar başarıyla kaydedildi!', 'success');
+                closeSettingsModal();
             } catch (error) {
                 console.error('Ayarlar kaydedilirken hata:', error);
-                showAlert('Ayarlar kaydedilirken hata oluştu.', 'error');
+                showAlert('Ayarlar kaydedilirken hata oluştu: ' + error.message, 'error');
             }
         }
 

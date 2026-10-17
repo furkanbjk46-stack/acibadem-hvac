@@ -141,6 +141,10 @@ CONFIG_LIMITS = {
     "PRESSURE_RUN_MIN_PA": (10.0, 100.0), "PRESSURE_FAULT_MAX_PA": (1000.0, 3000.0),
     "SENSOR_VALID_MIN_C": (0.5, 5.0), "SENSOR_VALID_MAX_C": (45.0, 60.0),
     "MANUAL_SUPPRESS_HOURS": (1, 72),
+    # Eşzamanlı ısıtma+soğutma eşiği (17.10.2026'da koddan ayara bağlandı).
+    # Çok düşük: sızdıran vana bile alarm üretir. Çok yüksek: gerçek
+    # eşzamanlılık gözden kaçar.
+    "VALVE_SIMUL_THRESHOLD": (1.0, 20.0),
 }
 
 def config_dogrula(cfg: dict) -> list:
@@ -1848,10 +1852,15 @@ class HVACAnalyzer:
         cool_v = profile.valves.cooling if profile.valves.cooling is not None else 0.0
         heat_v = profile.valves.heating if profile.valves.heating is not None else 0.0
         
-        if (cool_v >= 5.0 and heat_v >= 5.0):
+        # Eşik AYARDAN okunur. 17.10.2026'ya kadar 5.0 koda gömülüydü; ayar
+        # ekranında "Simul. Eşik" alanı vardı ama değiştirmek hiçbir şeyi
+        # değiştirmiyordu (ölü ayar).
+        _simul_esik = float(self.config.get("VALVE_SIMUL_THRESHOLD", 5.0))
+        if (cool_v >= _simul_esik and heat_v >= _simul_esik):
             result.update({
                 "action": "Investigate Simultaneous HEAT+COOL",
-                "reason": f"Soğutma ({cool_v:.0f}%) ve ısıtma ({heat_v:.0f}%) vanaları aynı anda açık (Eşik: %5)",
+                "reason": f"Soğutma ({cool_v:.0f}%) ve ısıtma ({heat_v:.0f}%) vanaları "
+                          f"aynı anda açık (Eşik: %{_simul_esik:g})",
                 "rule": "SIMUL_HEAT_COOL"
             })
             return result
@@ -3845,7 +3854,12 @@ async def get_settings():
     return {
         "success": True,
         "settings": settings,
-        "defaults": {k: v for k, v in DEFAULT_CONFIG.items() if not isinstance(v, list) and k != "APP_TITLE"}
+        "defaults": {k: v for k, v in DEFAULT_CONFIG.items() if not isinstance(v, list) and k != "APP_TITLE"},
+        # SINIRLAR ARTIK UI'A GİDİYOR. Önceden HTML'deki min/max elle yazılmıştı
+        # ve sunucudaki CONFIG_LIMITS ile tutmuyordu: ekran 1-20 kabul ediyor,
+        # sunucu 4-8 istiyordu. Kullanıcı geçersiz değeri girebiliyor, Kaydet
+        # 422 dönüyor ve sebebi görünmüyordu. Tek kaynak burasıdır.
+        "limits": {k: list(v) for k, v in CONFIG_LIMITS.items()},
     }
 
 @app.post("/api/settings")
@@ -3860,10 +3874,18 @@ async def save_settings(request: Request):
         
         success = save_settings_to_file(new_settings)
 
-        # F5: doğrulama reddi — hangi anahtarın neden reddedildiği kullanıcıya döner
+        # F5: doğrulama reddi — hangi anahtarın neden reddedildiği kullanıcıya döner.
+        # Hata listesi AYRICA yapısal olarak döner: ekran hangi alanı kırmızıya
+        # boyayacağını metni ayrıştırmadan bilsin.
         if isinstance(success, dict) and not success.get("success", True):
-            raise HTTPException(status_code=422,
-                                detail="Ayar reddedildi: " + " | ".join(success.get("errors", [])))
+            _hatalar = success.get("errors", [])
+            _anahtarlar = [h.split(":", 1)[0].strip() for h in _hatalar if ":" in h]
+            return JSONResponse(
+                {"success": False,
+                 "detail": "Ayar reddedildi: " + " | ".join(_hatalar),
+                 "errors": _hatalar,
+                 "keys": [k for k in _anahtarlar if k in CONFIG]},
+                status_code=422)
         if success:
             return {"success": True, "message": "Ayarlar kaydedildi"}
         else:
