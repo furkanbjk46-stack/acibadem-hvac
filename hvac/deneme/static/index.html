@@ -950,9 +950,24 @@
             font-size: 13px;
             color: #24324d;
             font-weight: 500;
+            line-height: 1.35;
+        }
+
+        /* Aralık notu etiketin ALTINDA kendi satırında durur. Satır sonuna
+           eklenince uzun etiketler ikiye bölünüyor, o sütunun kutusu aşağı
+           kayıyor ve satırdaki kutular farklı hizalarda duruyordu. */
+        .setting-item label .limit-hint {
+            display: block;
+            font-size: 10px;
+            font-weight: 400;
+            color: #46536b;
+            margin-top: 1px;
         }
 
         .setting-item input {
+            /* Etiket bir ya da iki satır olsun, kutular satırın altına
+               hizalanır — aynı çizgide dururlar. */
+            margin-top: auto;
             padding: 10px 12px;
             border: 1px solid rgba(24,26,30,0.10);
             border-radius: 14px;
@@ -3597,10 +3612,11 @@
                 input.title = 'İzin verilen aralık: ' + alt + ' – ' + ust;
                 const label = input.parentElement && input.parentElement.querySelector('label');
                 if (label && !label.querySelector('.limit-hint')) {
+                    // Biçim CSS'te (.limit-hint): not etiketin altına düşer,
+                    // uzun etiketi ikiye bölüp kutuyu kaydırmaz.
                     const s = document.createElement('span');
                     s.className = 'limit-hint';
-                    s.style.cssText = 'color:#46536b;font-weight:400;font-size:10px;margin-left:6px;';
-                    s.textContent = '(' + alt + ' – ' + ust + ')';
+                    s.textContent = 'izin: ' + alt + ' – ' + ust;
                     label.appendChild(s);
                 }
             });
