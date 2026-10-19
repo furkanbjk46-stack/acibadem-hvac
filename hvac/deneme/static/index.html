@@ -3224,7 +3224,12 @@
             const kazan = _kazanUretimEkrandaHesapla(rows);
             const isitmaUretim = _isitmaUretilenOverrideKw !== null
                 ? _isitmaUretilenOverrideKw : kazan.uretim;
-            const isitmaVar = isitmaFound || kazan.adet > 0 || _isitmaUretilenOverrideKw !== null;
+            // Kart, iki taraftan BİRİ doluysa görünür. Yazın otomatik analiz
+            // üretimi 0 olarak bildirir (sayıdır, null değil); bunu "var"
+            // saymak kışın kapalı duran tesisi "Talep — / Üretim 0 kW" diye
+            // ekranda tutardı. Talep varken üretim 0 ise kart GÖRÜNÜR kalır —
+            // vanalar açık ama kazan yok demektir, görülmesi gereken şey odur.
+            const isitmaVar = isitmaFound || kazan.adet > 0 || isitmaUretim > 0;
 
             if (!found && !isitmaVar) {
                 container.style.display = 'none';
@@ -3249,8 +3254,7 @@
                 document.getElementById('heat_kw_talep').textContent =
                     isitmaFound ? `${isitmaTalep.toFixed(0)} kW` : '—';
                 document.getElementById('heat_kw_uretim').textContent =
-                    (kazan.adet > 0 || _isitmaUretilenOverrideKw !== null)
-                        ? `${isitmaUretim.toFixed(0)} kW` : '—';
+                    `${isitmaUretim.toFixed(0)} kW`;
 
                 const yontem = _isitmaUretilenOverrideKw !== null ? _isitmaUretimYontem : 'dt';
                 let not;

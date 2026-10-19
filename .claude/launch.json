@@ -10,6 +10,17 @@
       "port": 8005
     },
     {
+      "name": "Mekanik Zeka + TEST VERISI (local)",
+      "runtimeExecutable": "E:\\Program Files\\Python313\\python.exe",
+      "runtimeArgs": [
+        "hvac/deneme/simulasyon_sunucu.py",
+        "--portal-ile",
+        "--mevsim",
+        "kis"
+      ],
+      "port": 8005
+    },
+    {
       "name": "Maslak Portal",
       "runtimeExecutable": "streamlit",
       "runtimeArgs": [
