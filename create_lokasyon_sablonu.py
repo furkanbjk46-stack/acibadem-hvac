@@ -132,22 +132,24 @@ satir(ws1, 41, 'Isitma Max Ufleme (SAT)',   'Bos = varsayilan 31.0 kullanilir', 
 ws1.row_dimensions[42].height = 8
 ws1.row_dimensions[43].height = 22
 ws1.merge_cells('A43:D43')
-alan_baslik(ws1, 'A43', '  6. CHILLER / FCU KAPASITE BILGISI (Opsiyonel — kojen/uretim hesabi icin)')
+alan_baslik(ws1, 'A43', '  6. CHILLER / KAZAN / FCU KAPASITE BILGISI (Opsiyonel — talep/uretim hesabi icin)')
 
 satir(ws1, 44, 'Chiller Birim Kapasite (kW)', 'Tek bir chiller biriminin kW kapasitesi',         '2000', zorunlu=False)
 satir(ws1, 45, 'Chiller Gidis Sicakligi (C)', 'Tasarim gidis suyu sicakligi',                    '7',    zorunlu=False)
 satir(ws1, 46, 'Chiller Donus Sicakligi (C)', 'Tasarim donus suyu sicakligi',                    '12',   zorunlu=False)
-satir(ws1, 47, 'FCU Adedi',                   'Toplam FCU sayisi',                               '1750', zorunlu=False)
-satir(ws1, 48, 'FCU Birim Kapasite (kW)',     'Tek bir FCU biriminin ortalama kW kapasitesi',     '2.5',  zorunlu=False)
-satir(ws1, 49, 'FCU Esanjor Diversity',       'Eszamanlilik faktoru (0-1 arasi)',                 '0.55', zorunlu=False)
-satir(ws1, 50, 'Tasarim Hava DT (C)',         'AHU/FCU tasarim hava sicaklik farki',              '5',    zorunlu=False)
+satir(ws1, 47, 'Kazan Birim Kapasite (kW)',   'Tek bir kazanin kW isitma kapasitesi (adet: 17. satir)',
+      '1950', zorunlu=False)
+satir(ws1, 48, 'FCU Adedi',                   'Toplam FCU sayisi',                               '1750', zorunlu=False)
+satir(ws1, 49, 'FCU Birim Kapasite (kW)',     'Tek bir FCU biriminin ortalama kW kapasitesi',     '2.5',  zorunlu=False)
+satir(ws1, 50, 'FCU Esanjor Diversity',       'Eszamanlilik faktoru (0-1 arasi)',                 '0.55', zorunlu=False)
+satir(ws1, 51, 'Tasarim Hava DT (C)',         'AHU/FCU tasarim hava sicaklik farki',              '5',    zorunlu=False)
 
-ws1.row_dimensions[51].height = 8
-ws1.row_dimensions[52].height = 22
-ws1.merge_cells('A52:D52')
-alan_baslik(ws1, 'A52', '  7. LiSANS BiLGiSi (Lokasyon ID ile KARISTIRMAYIN — farkli kavramlar)')
+ws1.row_dimensions[52].height = 8
+ws1.row_dimensions[53].height = 22
+ws1.merge_cells('A53:D53')
+alan_baslik(ws1, 'A53', '  7. LiSANS BiLGiSi (Lokasyon ID ile KARISTIRMAYIN — farkli kavramlar)')
 
-satir(ws1, 53, 'Makine ID',  'Lokasyon PC sinin anakart UUID si — PC de "wmic csproduct get uuid" '
+satir(ws1, 54, 'Makine ID',  'Lokasyon PC sinin anakart UUID si — PC de "wmic csproduct get uuid" '
                               'komutuyla alinir. Bu, Lokasyon ID DEGiLDiR, ayri bir kavramdir.',
       'DF9ABA0D-A7A8-C416-A430-00D861BD5794', zorunlu=False)
 
@@ -393,23 +395,26 @@ ws_sat.column_dimensions['B'].width = 14
 ws_sat.column_dimensions['C'].width = 22
 ws_sat.column_dimensions['D'].width = 22
 ws_sat.column_dimensions['E'].width = 22
+ws_sat.column_dimensions['F'].width = 24
 
 ws_sat.row_dimensions[1].height = 30
-ws_sat.merge_cells('A1:E1')
+ws_sat.merge_cells('A1:F1')
 baslik(ws_sat, 'A1', 'AHU SAT LiMiTLERi VE TASARIM KAPASiTESi (Opsiyonel)')
 
 ws_sat.row_dimensions[2].height = 30
-ws_sat.merge_cells('A2:E2')
+ws_sat.merge_cells('A2:F2')
 ws_sat['A2'] = ('OPSiYONEL sayfa — doldurulmazsa sistem genel varsayilan degerlerle calisir. '
-                'Her AHU icin ozel sogutma/isitma SAT (ufleme) limiti ve tasarim kapasitesi (kW) '
-                'girilirse analiz daha dogru olur.')
+                'Her AHU icin ozel sogutma/isitma SAT (ufleme) limiti ve tasarim kapasiteleri (kW) '
+                'girilirse analiz daha dogru olur. Sogutma ve isitma kapasiteleri, mekanik zeka '
+                'ekranindaki talep-uretim kartlarinin hesabinda kullanilir.')
 ws_sat['A2'].fill = PatternFill('solid', start_color=ACIK_MAVI)
 ws_sat['A2'].font = Font(size=9, name='Arial', color=KOYU_MAVI, italic=True)
 ws_sat['A2'].alignment = Alignment(horizontal='left', vertical='center', wrap_text=True)
 
 ws_sat.row_dimensions[3].height = 22
 for col, text in enumerate(['Mahal', 'AHU Adi', 'Sogutma SAT Limiti (C)',
-                              'Isitma SAT Limiti (C)', 'Tasarim Kapasitesi (kW)'], 1):
+                              'Isitma SAT Limiti (C)', 'Tasarim Sogutma Kapasitesi (kW)',
+                              'Tasarim Isitma Kapasitesi (kW)'], 1):
     c = ws_sat.cell(row=3, column=col)
     c.value = text
     c.fill = PatternFill('solid', start_color=KOYU_MAVI)
@@ -418,7 +423,7 @@ for col, text in enumerate(['Mahal', 'AHU Adi', 'Sogutma SAT Limiti (C)',
 
 for i in range(4, 35):
     ws_sat.row_dimensions[i].height = 20
-    for col in range(1, 6):
+    for col in range(1, 7):
         ws_sat.cell(row=i, column=col).fill = PatternFill('solid', start_color=SARI)
         ws_sat.cell(row=i, column=col).font = Font(size=10, name='Arial')
         ws_sat.cell(row=i, column=col).alignment = Alignment(horizontal='left', vertical='center')
@@ -429,11 +434,12 @@ ws_sat.cell(row=4, column=2).value = 'Ahu-1'
 ws_sat.cell(row=4, column=3).value = 18.0
 ws_sat.cell(row=4, column=4).value = 28.0
 ws_sat.cell(row=4, column=5).value = 194.9
-for col in range(1, 6):
+ws_sat.cell(row=4, column=6).value = 182.2
+for col in range(1, 7):
     ws_sat.cell(row=4, column=col).font = Font(size=10, name='Arial', italic=True, color='0070C0')
 
 ws_sat.row_dimensions[35].height = 36
-ws_sat.merge_cells('A35:E35')
+ws_sat.merge_cells('A35:F35')
 ws_sat['A35'] = ('AHU Adi, "AHU Noktalari" sayfasindaki Point Name icindeki AHU adiyla AYNI olmali '
                   '(orn. "Ahu-1") — eslesmezse o AHU icin ozel limit/kapasite uygulanmaz, genel varsayilan '
                   'kullanilir. Mahal, Lokasyon Profili sayfasindaki Hat 1/Hat 2 adlarina karsilik gelir (MAS-1/MAS-2).')
@@ -465,7 +471,8 @@ talimatlar = [
     ('',       '  - data_collector.py  (Modbus analizor listesiyle, ANALYZERS dizisi)'),
     ('',       '  - data_bridge.py  (Chiller/MCC kategorileri + BACNET_MAP)'),
     ('',       '  - ahu_nokta_konfig.json  (AHU Noktalari sayfasindan)'),
-    ('',       '  - ahu_sat_limitleri.json / ahu_tasarim_kapasiteleri.json  (AHU SAT ve Kapasite sayfasindan, doldurulduysa)'),
+    ('',       '  - ahu_sat_limitleri.json / ahu_tasarim_kapasiteleri.json / '
+               'ahu_tasarim_isitma_kapasiteleri.json  (AHU SAT ve Kapasite sayfasindan, doldurulduysa)'),
     ('',       '  - hvac_settings.json  (Genel AHU Ufleme Bandi + on kosul kapisi esikleri: basinc/sensor '
                'gecerlilik araliklari, susturma suresi vb. — CONFIG override, kaynak kod degismez)'),
     ('',       '  - chiller_fcu_ayarlari.json  (Chiller/FCU Kapasite Bilgisi alanlarindan, doldurulduysa)'),

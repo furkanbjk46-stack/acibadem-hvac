@@ -21,6 +21,9 @@ AHU_CONFIG_FILE   = os.path.join(BASE_DIR, "ahu_nokta_konfig.json")
 AHU_RESULTS_FILE  = os.path.join(BASE_DIR, "hvac_ahu_analiz_sonuclari.json")
 AHU_TRIGGER_FILE  = os.path.join(BASE_DIR, "hvac_analiz_trigger.txt")
 AHU_TASARIM_KAPASITE_FILE = os.path.join(BASE_DIR, "configs", "ahu_tasarim_kapasiteleri.json")
+AHU_TASARIM_ISITMA_KAPASITE_FILE = os.path.join(BASE_DIR, "configs",
+                                                "ahu_tasarim_isitma_kapasiteleri.json")
+SETTINGS_FILE     = os.path.join(BASE_DIR, "configs", "hvac_settings.json")
 URETIM_TUKETIM_GECMIS_FILE = os.path.join(BASE_DIR, "configs", "uretim_tuketim_gecmis.json")
 GECMIS_MAKS_KAYIT = 1008  # 10 dk aralıkla ~1 hafta
 ENERGY_CSV_TAZELIK_ESIK_SAAT = 3  # bu süreden eski hedefli_enerji_verileri.csv için uyarı
@@ -586,17 +589,129 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
     }
 
 
-def talep_hesapla(rows: list) -> float:
+def _kazan_tasarim_dt() -> float:
     """
-    AHU'ların soğutma vana açıklığı (%) ve Sistem Ayarları'ndaki tasarım
-    kapasitelerine (ahu_tasarim_kapasiteleri.json) göre talep edilen soğutma
-    kW'ını hesaplar (frontend'deki updateCoolingKw ile aynı mantık).
-    FCU filosu, chiller -> kolektör -> FCU hiyerarşisinde üretilen soğutmayı
-    tüketen taraf olduğu için talebe ayrıca eklenmez/tavan olarak kullanılmaz
-    (çift sayım olur) — fcu_kapasite_kw sadece bilgi amaçlı ayrı tutulur.
+    Kazan tasarım ΔT'si TEK KAYNAKTAN gelir: kural motorunun
+    TARGET_DT_HEAT_EXCHANGER ayarı (configs/hvac_settings.json). Ayrıca bir
+    "kazan tasarım ΔT" ayarı AÇILMADI — aynı eşiğin iki yerde durması
+    kaçınılmaz olarak ayrışmaya götürüyor.
     """
     try:
-        with open(AHU_TASARIM_KAPASITE_FILE, "r", encoding="utf-8") as f:
+        with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
+            return float(json.load(f).get("TARGET_DT_HEAT_EXCHANGER", 8.0))
+    except Exception:
+        return 8.0
+
+
+def kazan_uretim_hesapla(enerji_verileri: dict = None) -> dict:
+    """
+    Çalışan kazanların ürettiği ısıtma kW'ını hesaplar.
+
+    ── GEÇİCİ YÖNTEM (ÖNEMLİ) ────────────────────────────────────────────────
+    Kazanlarda chiller'ın "CH-n CALISMA YUZDELIK" noktasının KARŞILIĞI YOK;
+    BACnet şablonunda kazan için yalnızca DURUM BILGISI / INLET / OUTLET var.
+    Bu yüzden yük oranı kazanın kendi su ΔT'sinden türetilir:
+
+        oran = kazan ΔT / tasarım ΔT          (debi SABİT varsayımı, tavan 1.0)
+
+    Sahada kazanlara yüzdelik modülasyon noktası eklendiğinde ("KAZAN-n
+    CALISMA YUZDELIK") hesap kendiliğinden ona geçer: nokta okunabiliyorsa ΔT
+    yerine yüzde kullanılır ve chiller tarafıyla bire bir aynı mantık olur.
+    Ekrandaki not da yöntemi yazar — kullanıcı neyi gördüğünü bilsin.
+
+    Dönen: {"uretilen_kw", "calisan_adet", "ortalama_yuk_pct", "yontem",
+            "kazan_birim_kw", "tasarim_dt"}
+    yontem: "yuzde"    → saha noktası var, gerçek modülasyon
+            "dt"       → ΔT'den tahmin (bugünkü durum)
+            "kapasite" → kazan açık ama ΔT okunamadı, tam kapasite sayıldı
+            None       → çalışan kazan yok
+    En kaba yöntem kazanır: biri "kapasite" ise sonuç "kapasite" döner.
+    """
+    try:
+        kazan_dosya = os.path.join(BASE_DIR, "configs", "chiller_fcu_ayarlari.json")
+        with open(kazan_dosya, "r", encoding="utf-8") as f:
+            ayarlar = json.load(f)
+        birim_kw = float(ayarlar.get("kazan_birim_kw", 0))
+        kazan_adedi = int(ayarlar.get("kazan_adedi", 3))
+    except Exception:
+        birim_kw = 0
+        kazan_adedi = 3
+
+    tasarim_dt = _kazan_tasarim_dt()
+    if tasarim_dt <= 0:
+        tasarim_dt = 8.0
+
+    uretilen_kw = 0.0
+    calisan_adet = 0
+    oranlar = []
+    yontemler = []
+
+    # BACnet şablonunda KAZAN-1..3 tanımlı — ayarlardaki adet bu sınırı aşamaz
+    for n in range(1, min(kazan_adedi, 3) + 1):
+        durum = _nokta_oku(f"KAZAN-{n} DURUM BILGISI", enerji_verileri)
+        if durum is not None and durum == 0:
+            continue
+
+        oran = None
+        # 1) İleride eklenecek saha noktası: varsa her şeyin üstünde
+        yuzde = _nokta_oku(f"KAZAN-{n} CALISMA YUZDELIK", enerji_verileri)
+        if yuzde is not None:
+            oran = max(0.0, yuzde / 100.0)
+            yontem = "yuzde"
+        else:
+            # 2) Bugünkü yöntem: kazanın kendi ΔT'si
+            k_inlet = _nokta_oku(f"KAZAN-{n} INLET", enerji_verileri)
+            k_outlet = _nokta_oku(f"KAZAN-{n} OUTLET", enerji_verileri)
+            if k_inlet is not None and k_outlet is not None:
+                dt = abs(k_outlet - k_inlet)
+                if dt < 0.5:
+                    # ΔT≈0 → kazan fiilen ısıtmıyor (ek_ekipman_satirlari_olustur
+                    # da aynı eşikle bu kazanı analiz dışı bırakıyor)
+                    continue
+                oran = min(dt / tasarim_dt, 1.0)
+                yontem = "dt"
+            elif durum is not None and durum != 0:
+                # 3) Kazan açık diyor ama sıcaklık okunamıyor: üretimi gizlemek
+                #    yerine tam kapasite sayılır ve yöntem bunu söyler
+                oran = 1.0
+                yontem = "kapasite"
+
+        if oran is None:
+            continue
+
+        calisan_adet += 1
+        oranlar.append(oran)
+        yontemler.append(yontem)
+        uretilen_kw += birim_kw * oran
+
+    if "kapasite" in yontemler:
+        yontem_sonuc = "kapasite"
+    elif "dt" in yontemler:
+        yontem_sonuc = "dt"
+    elif "yuzde" in yontemler:
+        yontem_sonuc = "yuzde"
+    else:
+        yontem_sonuc = None
+
+    ortalama = sum(oranlar) / len(oranlar) * 100 if oranlar else None
+    return {
+        "uretilen_kw": round(uretilen_kw, 1),
+        "calisan_adet": calisan_adet,
+        "ortalama_yuk_pct": round(ortalama, 1) if ortalama is not None else None,
+        "yontem": yontem_sonuc,
+        "kazan_birim_kw": birim_kw,
+        "tasarim_dt": tasarim_dt,
+    }
+
+
+def _ahu_talep_hesapla(rows: list, kapasite_dosya: str, vana_alani: str) -> float:
+    """
+    AHU vana açıklığı (%) × tasarım kapasitesi (kW) toplamı.
+    Soğutma ve ısıtma talebi AYNI formülü kullanır — iki ayrı kopya yazılmadı,
+    yalnızca kapasite dosyası ve vana alanı değişir.
+    """
+    try:
+        with open(kapasite_dosya, "r", encoding="utf-8") as f:
             kapasiteler = json.load(f)
     except Exception:
         kapasiteler = {}
@@ -605,19 +720,50 @@ def talep_hesapla(rows: list) -> float:
     for r in rows:
         if (r.get("Type") or "AHU").upper() != "AHU":
             continue
-        cv = r.get("Cool Valve (%)")
-        if cv is None or cv <= 0:
+        v = r.get(vana_alani)
+        if v is None or v <= 0:
             continue
         qt = (kapasiteler.get(r.get("Location", "")) or {}).get(r.get("Name", ""))
         if qt is None:
             continue
-        talep_kw += qt * (cv / 100.0)
+        talep_kw += qt * (v / 100.0)
 
     return round(talep_kw, 1)
 
 
-def gecmis_kaydet(uretilen_kw: float, talep_kw: float) -> None:
-    """Üretilen/talep edilen kW'ı zaman damgasıyla geçmiş dosyasına ekler (canlı grafik için)."""
+def talep_hesapla(rows: list) -> float:
+    """
+    AHU'ların soğutma vana açıklığı (%) ve Sistem Ayarları'ndaki tasarım
+    kapasitelerine (ahu_tasarim_kapasiteleri.json) göre talep edilen soğutma
+    kW'ını hesaplar (frontend'deki updateTalepUretimKw ile aynı mantık).
+    FCU filosu, chiller -> kolektör -> FCU hiyerarşisinde üretilen soğutmayı
+    tüketen taraf olduğu için talebe ayrıca eklenmez/tavan olarak kullanılmaz
+    (çift sayım olur) — fcu_kapasite_kw sadece bilgi amaçlı ayrı tutulur.
+    """
+    return _ahu_talep_hesapla(rows, AHU_TASARIM_KAPASITE_FILE, "Cool Valve (%)")
+
+
+def talep_isitma_hesapla(rows: list) -> float:
+    """
+    AHU'ların ısıtma vana açıklığı (%) ve tasarım ısıtma kapasitelerine
+    (ahu_tasarim_isitma_kapasiteleri.json) göre talep edilen ısıtma kW'ı.
+
+    Bu değer YALNIZCA AHU talebidir. Kazanlar ayrıca FCU ısıtma serpantinlerini,
+    kar eritme hattını ve kullanım sıcak suyunu da besliyor; bunların vana/debi
+    ölçümü olmadığı için talebe eklenemez. Dolayısıyla ısıtmada üretimin
+    talepten büyük çıkması yapısaldır, tek başına "boşa üretim" demek değildir.
+    """
+    return _ahu_talep_hesapla(rows, AHU_TASARIM_ISITMA_KAPASITE_FILE, "Heat Valve (%)")
+
+
+def gecmis_kaydet(uretilen_kw: float, talep_kw: float,
+                  isitma_uretilen_kw: float = None, isitma_talep_kw: float = None) -> None:
+    """Üretilen/talep edilen kW'ı zaman damgasıyla geçmiş dosyasına ekler (canlı grafik için).
+
+    Isıtma alanları SONRADAN eklendi: eski kayıtlarda yok. Grafik tarafı bu
+    yüzden eksik alanı 0 değil null saymalı — yoksa ısıtma eğrisi geçmişin
+    tamamında tabana yapışır ve veri yokluğu "üretim yok" gibi okunur.
+    """
     try:
         os.makedirs(os.path.dirname(URETIM_TUKETIM_GECMIS_FILE), exist_ok=True)
         try:
@@ -626,11 +772,16 @@ def gecmis_kaydet(uretilen_kw: float, talep_kw: float) -> None:
         except Exception:
             gecmis = []
 
-        gecmis.append({
+        kayit = {
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "uretilen_kw": uretilen_kw,
             "talep_kw": talep_kw,
-        })
+        }
+        if isitma_uretilen_kw is not None:
+            kayit["isitma_uretilen_kw"] = isitma_uretilen_kw
+        if isitma_talep_kw is not None:
+            kayit["isitma_talep_kw"] = isitma_talep_kw
+        gecmis.append(kayit)
         gecmis = gecmis[-GECMIS_MAKS_KAYIT:]
 
         with open(URETIM_TUKETIM_GECMIS_FILE, "w", encoding="utf-8") as f:
@@ -1129,17 +1280,33 @@ def hvac_analiz_calistir() -> dict | None:
         uretim["uretilen_kw"], uretim["calisan_adet"], uretim["ortalama_yuzde"]
     )
 
+    # Kazan tarafı: yüzdelik modülasyon noktası olmadığı için ΔT'den tahmin
+    isitma = kazan_uretim_hesapla(enerji_verileri)
+    logger.info(
+        "Kazan üretimi: %.0f kW (%d çalışan, ortalama yük %s%%, yöntem=%s)",
+        isitma["uretilen_kw"], isitma["calisan_adet"],
+        isitma["ortalama_yuk_pct"], isitma["yontem"]
+    )
+
     # API'ye gönder
     sonuc = analiz_gonder(rows, oat=oat, chiller_load_percent=uretim["ortalama_yuzde"])
     if sonuc:
         talep_kw = talep_hesapla(rows)
+        isitma_talep_kw = talep_isitma_hesapla(rows)
         sonuc["uretilen_sogutma_kw"] = uretim["uretilen_kw"]
         sonuc["calisan_chiller_adet"] = uretim["calisan_adet"]
         sonuc["chiller_ortalama_yuk_pct"] = uretim["ortalama_yuzde"]
         sonuc["fcu_kapasite_kw"] = uretim["fcu_kapasite_kw"]
         sonuc["talep_sogutma_kw"] = talep_kw
+        sonuc["uretilen_isitma_kw"] = isitma["uretilen_kw"]
+        sonuc["calisan_kazan_adet"] = isitma["calisan_adet"]
+        sonuc["kazan_ortalama_yuk_pct"] = isitma["ortalama_yuk_pct"]
+        sonuc["isitma_uretim_yontem"] = isitma["yontem"]
+        sonuc["talep_isitma_kw"] = isitma_talep_kw
         sonuclari_kaydet(sonuc, veriler=veriler, ahu_sayisi=len(rows), oat=oat)
-        gecmis_kaydet(uretim["uretilen_kw"], talep_kw)
+        gecmis_kaydet(uretim["uretilen_kw"], talep_kw,
+                      isitma_uretilen_kw=isitma["uretilen_kw"],
+                      isitma_talep_kw=isitma_talep_kw)
         logger.info("═══ HVAC ANALİZİ TAMAMLANDI (%d AHU) ═══", len(rows))
     return sonuc
 

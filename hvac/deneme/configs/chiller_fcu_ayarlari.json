@@ -3,6 +3,8 @@
   "chiller_birim_kw": 2000,
   "chiller_t1_gidis": 7,
   "chiller_t2_donus": 12,
+  "kazan_adedi": 3,
+  "kazan_birim_kw": 1950,
   "fcu_adedi": 1750,
   "fcu_birim_kw_ortalama": 2.5,
   "fcu_esanjor_diversity": 0.55,

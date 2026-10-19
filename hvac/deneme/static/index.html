@@ -1133,6 +1133,21 @@
                     </div>
                 </div>
 
+                <!-- Üretilen / Talep Edilen Isıtma kW - canlı çizgi grafik.
+                     Soğutmayla AYNI grafiğe konmadı: 220 px'te dört eğri okunmuyor. -->
+                <div id="isitmaUretimTuketimChartContainer" style="display:none; margin-bottom: 16px; border:1px solid rgba(24,26,30,0.10); border-radius: 14px; padding:12px 16px;">
+                    <div style="font-size:13px; opacity:0.8; margin-bottom:8px;">
+                        <i class="fas fa-wave-square"></i> Üretilen / Talep Edilen Isıtma (kW) — Canlı
+                    </div>
+                    <div style="position:relative; height:220px;">
+                        <canvas id="isitmaUretimTuketimChart"></canvas>
+                    </div>
+                    <div style="font-size:10px; color:#46536b; margin-top:6px;">
+                        Üretim kazan ΔT'sinden tahmin edilir (yüzdelik modülasyon noktası eklenince
+                        gerçek yükten hesaplanacak). Talep yalnızca AHU'ları kapsar.
+                    </div>
+                </div>
+
                 <div class="results-header">
                     <h2><i class="fas fa-chart-line"></i> Analiz Sonuçları</h2>
                     <div class="results-actions">
@@ -1202,15 +1217,36 @@
                     </div>
                 </div>
 
-                <!-- Soğutma kW Talep / Üretim (anlik) -->
-                <div id="coolingKwContainer" style="display:none; gap: 12px; margin-bottom: 14px;" class="capacity-row">
-                    <div style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
-                        <div style="font-size:12px; opacity:0.7;">📥 Talep Edilen Soğutma (kW)</div>
-                        <div id="cool_kw_talep" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
+                <!-- Talep / Üretim kW (anlik) — soğutma SOL, ısıtma SAĞ:
+                     üstteki oran kartlarıyla aynı hizada dursun -->
+                <div id="talepUretimKwContainer" style="display:none; gap: 12px; margin-bottom: 14px;" class="capacity-row">
+                    <div id="coolingKwCard" style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
+                        <div style="font-size:12px; opacity:0.7;">❄️ Soğutma Talep / Üretim (kW)</div>
+                        <div style="display:flex; gap:18px; margin-top:4px;">
+                            <div>
+                                <div style="font-size:10px; opacity:0.6;">📥 Talep (AHU)</div>
+                                <div id="cool_kw_talep" style="font-size:20px; font-weight:700;">-</div>
+                            </div>
+                            <div>
+                                <div style="font-size:10px; opacity:0.6;">📤 Üretim (Chiller)</div>
+                                <div id="cool_kw_uretim" style="font-size:20px; font-weight:700;">-</div>
+                            </div>
+                        </div>
+                        <div id="cool_kw_not" style="font-size:10px; color:#46536b; margin-top:6px;"></div>
                     </div>
-                    <div style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
-                        <div style="font-size:12px; opacity:0.7;">📤 Üretilen Soğutma (kW)</div>
-                        <div id="cool_kw_uretim" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
+                    <div id="heatingKwCard" style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
+                        <div style="font-size:12px; opacity:0.7;">🔥 Isıtma Talep / Üretim (kW)</div>
+                        <div style="display:flex; gap:18px; margin-top:4px;">
+                            <div>
+                                <div style="font-size:10px; opacity:0.6;">📥 Talep (AHU)</div>
+                                <div id="heat_kw_talep" style="font-size:20px; font-weight:700;">-</div>
+                            </div>
+                            <div>
+                                <div style="font-size:10px; opacity:0.6;">📤 Üretim (Kazan)</div>
+                                <div id="heat_kw_uretim" style="font-size:20px; font-weight:700;">-</div>
+                            </div>
+                        </div>
+                        <div id="heat_kw_not" style="font-size:10px; color:#46536b; margin-top:6px;"></div>
                     </div>
                 </div>
 
@@ -1618,7 +1654,7 @@
 
                 <!-- Chiller / FCU Kapasite Ayarları -->
                 <div class="instruction-section">
-                    <h3><i class="fas fa-snowflake"></i> Chiller / FCU Kapasite Ayarları</h3>
+                    <h3><i class="fas fa-snowflake"></i> Chiller / Kazan / FCU Kapasite Ayarları</h3>
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
                         <div class="setting-item">
                             <label>Chiller Adedi</label>
@@ -1635,6 +1671,14 @@
                         <div class="setting-item">
                             <label>Chiller T2 - Dönüş (°C)</label>
                             <input type="number" id="set_chiller_t2_donus" step="0.5" min="-10" max="30">
+                        </div>
+                        <div class="setting-item">
+                            <label>Kazan Adedi</label>
+                            <input type="number" id="set_kazan_adedi" step="1" min="0" max="20">
+                        </div>
+                        <div class="setting-item">
+                            <label>Kazan Birim Güç (kW)</label>
+                            <input type="number" id="set_kazan_birim_kw" step="1" min="0" max="100000">
                         </div>
                         <div class="setting-item">
                             <label>FCU Adedi</label>
@@ -1655,7 +1699,9 @@
                     </div>
                     <div style="margin-top: 6px;">
                         <label style="font-size: 10px; color: #46536b;">Bu değerler AHU kW talep/üretim
-                            kartlarının hesabında kullanılır.</label>
+                            kartlarının hesabında kullanılır. Kazanlarda yüzdelik modülasyon noktası
+                            olmadığı için üretilen ısıtma, kazan ΔT'si / tasarım ΔT oranıyla tahmin
+                            edilir (tasarım ΔT = Hedef ΔT - Eşanjör/Kazan ayarı).</label>
                     </div>
                 </div>
 
@@ -2507,33 +2553,36 @@
             }
         });
 
-        // ─── Üretilen / Talep Edilen Soğutma kW - canlı çizgi grafik ───
+        // ─── Üretilen / Talep Edilen kW - canlı çizgi grafikler (soğutma + ısıtma) ───
         let uretimTuketimChart = null;
+        let isitmaUretimTuketimChart = null;
 
-        function initUretimTuketimChart() {
-            const ctx = document.getElementById('uretimTuketimChart').getContext('2d');
-            uretimTuketimChart = new Chart(ctx, {
+        function _kwGrafikKur(canvasId, uretimEtiket, talepEtiket, uretimRenk, talepRenk) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: [],
                     datasets: [
                         {
-                            label: 'Üretilen Soğutma (kW)',
+                            label: uretimEtiket,
                             data: [],
-                            borderColor: 'rgb(109,167,236)',
-                            backgroundColor: 'rgba(109,167,236, 0.15)',
+                            borderColor: `rgb(${uretimRenk})`,
+                            backgroundColor: `rgba(${uretimRenk}, 0.15)`,
                             tension: 0.3,
                             fill: true,
                             pointRadius: 0,
+                            spanGaps: true,
                         },
                         {
-                            label: 'Talep Edilen Soğutma (kW)',
+                            label: talepEtiket,
                             data: [],
-                            borderColor: 'rgb(250,178,25)',
-                            backgroundColor: 'rgba(250,178,25, 0.1)',
+                            borderColor: `rgb(${talepRenk})`,
+                            backgroundColor: `rgba(${talepRenk}, 0.1)`,
                             tension: 0.3,
                             fill: true,
                             pointRadius: 0,
+                            spanGaps: true,
                         }
                     ]
                 },
@@ -2553,13 +2602,22 @@
             });
         }
 
+        function initUretimTuketimChart() {
+            uretimTuketimChart = _kwGrafikKur('uretimTuketimChart',
+                'Üretilen Soğutma (kW)', 'Talep Edilen Soğutma (kW)', '109,167,236', '250,178,25');
+            isitmaUretimTuketimChart = _kwGrafikKur('isitmaUretimTuketimChart',
+                'Üretilen Isıtma (kW)', 'Talep Edilen Isıtma (kW)', '208,59,59', '201,133,0');
+        }
+
         async function loadUretimTuketimGecmis() {
             try {
                 const resp = await fetch('/api/uretim_tuketim_gecmis');
                 const data = await resp.json();
                 const container = document.getElementById('uretimTuketimChartContainer');
+                const isitmaContainer = document.getElementById('isitmaUretimTuketimChartContainer');
                 if (!data.success || !data.gecmis || data.gecmis.length === 0) {
                     container.style.display = 'none';
+                    isitmaContainer.style.display = 'none';
                     return;
                 }
                 const labels = data.gecmis.map(g => (g.timestamp || '').slice(5, 16)); // MM-DD HH:MM
@@ -2572,6 +2630,24 @@
                 uretimTuketimChart.data.datasets[1].data = talep;
                 uretimTuketimChart.resize();
                 uretimTuketimChart.update();
+
+                // Isıtma alanları SONRADAN eklendi: eski kayıtlarda yok. Eksik alan
+                // 0 değil null olur — yoksa ısıtma eğrisi geçmişin tamamında tabana
+                // yapışır ve "veri yok" ile "üretim yok" ayırt edilemez.
+                const isitmaUretim = data.gecmis.map(g =>
+                    (typeof g.isitma_uretilen_kw === 'number') ? g.isitma_uretilen_kw : null);
+                const isitmaTalep = data.gecmis.map(g =>
+                    (typeof g.isitma_talep_kw === 'number') ? g.isitma_talep_kw : null);
+                const isitmaVeriVar = isitmaUretim.some(v => v !== null) || isitmaTalep.some(v => v !== null);
+
+                isitmaContainer.style.display = isitmaVeriVar ? 'block' : 'none';
+                if (isitmaVeriVar) {
+                    isitmaUretimTuketimChart.data.labels = labels;
+                    isitmaUretimTuketimChart.data.datasets[0].data = isitmaUretim;
+                    isitmaUretimTuketimChart.data.datasets[1].data = isitmaTalep;
+                    isitmaUretimTuketimChart.resize();
+                    isitmaUretimTuketimChart.update();
+                }
             } catch (e) {
                 console.error('Üretim/talep geçmişi yüklenirken hata:', e);
             }
@@ -2825,6 +2901,8 @@
                 const data = await resp.json();
                 if (data.success && data.recs_table) {
                     _uretilenOverrideKw = (typeof data.uretilen_sogutma_kw === 'number') ? data.uretilen_sogutma_kw : null;
+                    _isitmaUretilenOverrideKw = (typeof data.uretilen_isitma_kw === 'number') ? data.uretilen_isitma_kw : null;
+                    _isitmaUretimYontem = data.isitma_uretim_yontem || null;
                     displayResults(data.recs_table);
                     isAutoAnalysis = true;
                     document.getElementById('onayBtn').style.display = 'inline-flex';
@@ -2906,7 +2984,11 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    // Elle yüklenen veride saha üretim değerleri yok: ekran kendi
+                    // tahminini kullansın (soğutma hava ΔT'si, ısıtma kazan ΔT'si)
                     _uretilenOverrideKw = null;
+                    _isitmaUretilenOverrideKw = null;
+                    _isitmaUretimYontem = null;
                     displayResults(result.recs_table);
                     showAlert('Analiz başarıyla tamamlandı!', 'success');
                 } else {
@@ -2933,7 +3015,11 @@
                 const result = await response.json();
 
                 if (result.success) {
+                    // Elle yüklenen veride saha üretim değerleri yok: ekran kendi
+                    // tahminini kullansın (soğutma hava ΔT'si, ısıtma kazan ΔT'si)
                     _uretilenOverrideKw = null;
+                    _isitmaUretilenOverrideKw = null;
+                    _isitmaUretimYontem = null;
                     displayResults(result.recs_table);
                     showAlert('Analiz başarıyla tamamlandı!', 'success');
                 } else {
@@ -3021,7 +3107,7 @@
             updateKPIs(critical, warning, optimal, currentResults.length);
             updateChart(scores);
             updateCapacityStatus(currentResults);
-            updateCoolingKw(currentResults);
+            updateTalepUretimKw(currentResults);
 
             // Analiz Dışı sayacı (buton rozetinde göster)
             const _adCount = tbody.querySelectorAll('tr[data-analizdisi="1"]').length;
@@ -3036,13 +3122,20 @@
             if (_tsBtn) _tsBtn.style.color = _tsCount > 0 ? '#d03b3b' : '';
         }
 
-        // Talep edilen / üretilen soğutma kW (AHU bazlı)
+        // Talep edilen / üretilen soğutma ve ısıtma kW (AHU bazlı)
         let _ahuKapasiteler = null;
+        let _ahuIsitmaKapasiteler = {};
         let _tasarimHavaDt = 5.0;
         // FCU filosunun (adet x birim kW x diversity) aynı anda tüketebileceği teorik üst sınır
         let _fcuKapasiteKw = 0;
+        // Kazan tarafı: birim güç ve tasarım ΔT — ısıtma üretimini ekranda hesaplamak için
+        let _kazanBirimKw = 0;
+        let _kazanTasarimDt = 8.0;
         // Otomatik analizden gelen, chiller yük yüzdesine dayalı gerçek üretim (varsa AHU tahminine üstündür)
         let _uretilenOverrideKw = null;
+        // Otomatik analizden gelen ısıtma üretimi ve yöntemi (yuzde / dt / kapasite)
+        let _isitmaUretilenOverrideKw = null;
+        let _isitmaUretimYontem = null;
         async function _loadAhuKapasiteler() {
             if (_ahuKapasiteler !== null) return;
             try {
@@ -3050,8 +3143,11 @@
                 const data = await resp.json();
                 if (data.success) {
                     _ahuKapasiteler = data.kapasiteler || {};
+                    _ahuIsitmaKapasiteler = data.isitma_kapasiteleri || {};
                     _tasarimHavaDt = data.tasarim_hava_dt || 5.0;
                     _fcuKapasiteKw = data.fcu_kapasite_kw || 0;
+                    _kazanBirimKw = data.kazan_birim_kw || 0;
+                    _kazanTasarimDt = data.kazan_tasarim_dt || 8.0;
                 } else {
                     _ahuKapasiteler = {};
                 }
@@ -3060,9 +3156,32 @@
             }
         }
 
-        async function updateCoolingKw(rows) {
+        // ISITMA ÜRETİMİ — GEÇİCİ YÖNTEM:
+        // Kazanlarda chiller'ın "CALISMA YUZDELIK" karşılığı yok. Tablodaki
+        // Kazan-n satırlarının kendi ΔT'sinden yük oranı türetilir
+        // (oran = ΔT / tasarım ΔT, debi sabit varsayımı, tavan 1.0).
+        // Saha noktası eklendiğinde otomatik analiz zaten yüzdeyi kullanacak ve
+        // buradaki tahmin devre dışı kalacak (override).
+        function _kazanUretimEkrandaHesapla(rows) {
+            let uretim = 0;
+            let adet = 0;
+            rows.forEach(r => {
+                const ad = String(r.Name || '');
+                if (!/^kazan/i.test(ad)) return;
+                const inlet = parseFloat(r['Inlet (°C)']);
+                const outlet = parseFloat(r['Outlet (°C)']);
+                if (isNaN(inlet) || isNaN(outlet)) return;
+                const dt = Math.abs(outlet - inlet);
+                if (dt < 0.5) return;   // fiilen ısıtmıyor
+                adet++;
+                uretim += _kazanBirimKw * Math.min(dt / _kazanTasarimDt, 1.0);
+            });
+            return { uretim: uretim, adet: adet };
+        }
+
+        async function updateTalepUretimKw(rows) {
             await _loadAhuKapasiteler();
-            const container = document.getElementById('coolingKwContainer');
+            const container = document.getElementById('talepUretimKwContainer');
             const ahuRows = rows.filter(r => (r.Type || '').toUpperCase() === 'AHU');
             if (ahuRows.length === 0) {
                 container.style.display = 'none';
@@ -3071,35 +3190,83 @@
 
             let talep = 0;
             let uretim = 0;
+            let isitmaTalep = 0;
             let found = false;
+            let isitmaFound = false;
 
             ahuRows.forEach(r => {
-                const cv = parseFloat(r['Cool Valve (%)']);
-                if (isNaN(cv) || cv <= 0) return;
-
                 const loc = r.Location || '';
                 const name = r.Name || '';
+                const cv = parseFloat(r['Cool Valve (%)']);
+                const hv = parseFloat(r['Heat Valve (%)']);
+
                 const qt = (_ahuKapasiteler[loc] && _ahuKapasiteler[loc][name] !== undefined)
                     ? _ahuKapasiteler[loc][name] : null;
-                if (qt === null) return;
+                if (qt !== null && !isNaN(cv) && cv > 0) {
+                    found = true;
+                    talep += qt * (cv / 100);
 
-                found = true;
-                talep += qt * (cv / 100);
+                    const havaDt = parseFloat(r['Hava ΔT (°C)']);
+                    if (!isNaN(havaDt) && havaDt > 0) {
+                        uretim += qt * (havaDt / _tasarimHavaDt);
+                    }
+                }
 
-                const havaDt = parseFloat(r['Hava ΔT (°C)']);
-                if (!isNaN(havaDt) && havaDt > 0) {
-                    uretim += qt * (havaDt / _tasarimHavaDt);
+                const qtIsitma = (_ahuIsitmaKapasiteler[loc] && _ahuIsitmaKapasiteler[loc][name] !== undefined)
+                    ? _ahuIsitmaKapasiteler[loc][name] : null;
+                if (qtIsitma !== null && !isNaN(hv) && hv > 0) {
+                    isitmaFound = true;
+                    isitmaTalep += qtIsitma * (hv / 100);
                 }
             });
 
-            if (!found) {
+            // Kazan üretimi: otomatik analizden gelen değer varsa o, yoksa tablodan hesap
+            const kazan = _kazanUretimEkrandaHesapla(rows);
+            const isitmaUretim = _isitmaUretilenOverrideKw !== null
+                ? _isitmaUretilenOverrideKw : kazan.uretim;
+            const isitmaVar = isitmaFound || kazan.adet > 0 || _isitmaUretilenOverrideKw !== null;
+
+            if (!found && !isitmaVar) {
                 container.style.display = 'none';
                 return;
             }
 
-            document.getElementById('cool_kw_talep').textContent = `${talep.toFixed(0)} kW`;
-            const uretimGosterilen = _uretilenOverrideKw !== null ? _uretilenOverrideKw : uretim;
-            document.getElementById('cool_kw_uretim').textContent = `${uretimGosterilen.toFixed(0)} kW`;
+            const coolCard = document.getElementById('coolingKwCard');
+            const heatCard = document.getElementById('heatingKwCard');
+            coolCard.style.display = found ? '' : 'none';
+            heatCard.style.display = isitmaVar ? '' : 'none';
+
+            if (found) {
+                document.getElementById('cool_kw_talep').textContent = `${talep.toFixed(0)} kW`;
+                const uretimGosterilen = _uretilenOverrideKw !== null ? _uretilenOverrideKw : uretim;
+                document.getElementById('cool_kw_uretim').textContent = `${uretimGosterilen.toFixed(0)} kW`;
+                document.getElementById('cool_kw_not').textContent = _uretilenOverrideKw !== null
+                    ? 'Üretim: chiller yük yüzdesinden (gerçek). Talep yalnızca AHU — FCU filosu ayrıca sayılmaz.'
+                    : 'Üretim: AHU hava ΔT\'sinden tahmin (chiller yüzdesi yok). Talep yalnızca AHU.';
+            }
+
+            if (isitmaVar) {
+                document.getElementById('heat_kw_talep').textContent =
+                    isitmaFound ? `${isitmaTalep.toFixed(0)} kW` : '—';
+                document.getElementById('heat_kw_uretim').textContent =
+                    (kazan.adet > 0 || _isitmaUretilenOverrideKw !== null)
+                        ? `${isitmaUretim.toFixed(0)} kW` : '—';
+
+                const yontem = _isitmaUretilenOverrideKw !== null ? _isitmaUretimYontem : 'dt';
+                let not;
+                if (yontem === 'yuzde') {
+                    not = 'Üretim: kazan yük yüzdesinden (gerçek).';
+                } else if (yontem === 'kapasite') {
+                    not = 'Üretim: kazan ΔT\'si okunamadı, TAM KAPASİTE sayıldı — gerçek yükten yüksek olabilir.';
+                } else {
+                    not = `Üretim: kazan ΔT'sinden tahmin (ΔT / ${_kazanTasarimDt}°C tasarım, debi sabit varsayımı). `
+                        + 'Kazanlarda yüzdelik modülasyon noktası eklenince chiller gibi gerçek yükten hesaplanacak.';
+                }
+                document.getElementById('heat_kw_not').textContent = not
+                    + ' Talep yalnızca AHU — FCU ısıtma, kar eritme ve kullanım sıcak suyu ölçülmüyor,'
+                    + ' bu yüzden üretimin talepten yüksek olması normaldir.';
+            }
+
             container.style.display = 'flex';
         }
 
@@ -3659,6 +3826,7 @@
 
         const CHILLER_FCU_KEYS = [
             'chiller_adedi', 'chiller_birim_kw', 'chiller_t1_gidis', 'chiller_t2_donus',
+            'kazan_adedi', 'kazan_birim_kw',
             'fcu_adedi', 'fcu_birim_kw_ortalama', 'fcu_esanjor_diversity', 'tasarim_hava_dt'
         ];
 

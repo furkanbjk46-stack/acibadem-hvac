@@ -220,6 +220,7 @@ def _nokta_var(location: str, name: str) -> dict:
     except Exception:
         return {"basinc": False, "sat": True, "return": True, "start": False}
 AHU_TASARIM_KAPASITE_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_tasarim_kapasiteleri.json")
+AHU_TASARIM_ISITMA_KAPASITE_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_tasarim_isitma_kapasiteleri.json")
 CHILLER_FCU_AYARLAR_FILE = os.path.join(os.path.dirname(__file__), "configs", "chiller_fcu_ayarlari.json")
 
 def _ahu_sat_limit(location: str, name: str, tip: str):
@@ -3768,15 +3769,28 @@ def _iframe_wrapper_html(title: str, iframe_src: str) -> str:
 
 @app.get("/api/ahu_tasarim_kapasiteleri")
 async def get_ahu_tasarim_kapasiteleri():
-    """AHU'ların tasarım toplam soğutma kapasitelerini (Qt, kW) döndürür."""
+    """AHU'ların tasarım soğutma VE ısıtma kapasitelerini (Qt, kW) döndürür.
+
+    Ekran, ısıtma üretimini kazan satırlarının ΔT'sinden kendisi de
+    hesaplayabilsin diye kazan birim gücü ve tasarım ΔT'si de burada döner
+    (elle Excel yüklemesinde otomatik analizden gelen gerçek değer yoktur).
+    """
     try:
         with open(AHU_TASARIM_KAPASITE_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
     except Exception:
         data = {}
 
+    try:
+        with open(AHU_TASARIM_ISITMA_KAPASITE_FILE, "r", encoding="utf-8") as f:
+            isitma_data = json.load(f)
+    except Exception:
+        isitma_data = {}
+
     tasarim_hava_dt = 5.0
     fcu_kapasite_kw = 0.0
+    kazan_adedi = 0.0
+    kazan_birim_kw = 0.0
     try:
         with open(CHILLER_FCU_AYARLAR_FILE, "r", encoding="utf-8") as f:
             ayarlar = json.load(f)
@@ -3786,14 +3800,21 @@ async def get_ahu_tasarim_kapasiteleri():
                 * float(ayarlar.get("fcu_birim_kw_ortalama", 0))
                 * float(ayarlar.get("fcu_esanjor_diversity", 1.0))
             )
+            kazan_adedi = float(ayarlar.get("kazan_adedi", 0))
+            kazan_birim_kw = float(ayarlar.get("kazan_birim_kw", 0))
     except Exception:
         pass
 
     return {
         "success": True,
         "kapasiteler": data,
+        "isitma_kapasiteleri": isitma_data,
         "tasarim_hava_dt": tasarim_hava_dt,
         "fcu_kapasite_kw": round(fcu_kapasite_kw, 1),
+        "kazan_adedi": kazan_adedi,
+        "kazan_birim_kw": kazan_birim_kw,
+        # Kazan tasarım ΔT'si ayrı bir ayar DEĞİL: kural motorunun kendi eşiği
+        "kazan_tasarim_dt": float(CONFIG.get("TARGET_DT_HEAT_EXCHANGER", 8.0)),
     }
 
 
@@ -3829,8 +3850,12 @@ async def save_chiller_fcu_ayarlari(request: Request):
         if not ayarlar:
             raise HTTPException(status_code=400, detail="Ayarlar boş olamaz")
 
+        # DİKKAT: Bu liste bir BEYAZ LİSTEDİR — burada olmayan anahtar sessizce
+        # düşer. Ekrana yeni bir kapasite alanı eklendiğinde buraya da eklenmeli
+        # (yoksa kullanıcı kaydeder, değer kaybolur).
         numeric_keys = [
             "chiller_adedi", "chiller_birim_kw", "chiller_t1_gidis", "chiller_t2_donus",
+            "kazan_adedi", "kazan_birim_kw",
             "fcu_adedi", "fcu_birim_kw_ortalama", "fcu_esanjor_diversity", "tasarim_hava_dt",
         ]
         cleaned = {}

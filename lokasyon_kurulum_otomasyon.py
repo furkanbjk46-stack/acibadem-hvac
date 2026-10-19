@@ -265,12 +265,17 @@ def ahu_noktalari_oku(ws):
 
 
 def ahu_sat_kapasite_oku(ws):
-    """'AHU SAT ve Kapasite' sayfasini okur — opsiyonel sayfa, bossa bos sonuc doner."""
+    """'AHU SAT ve Kapasite' sayfasini okur — opsiyonel sayfa, bossa bos sonuc doner.
+
+    6. kolon tasarim ISITMA kapasitesidir (sonradan eklendi): soguma tarafiyla
+    ayni mantik, isitma talep-uretim kartlari icin kullanilir.
+    """
     sat_limitleri = {}
     tasarim_kapasiteleri = {}
+    tasarim_isitma_kapasiteleri = {}
     uyarilar = []
-    for row in ws.iter_rows(min_row=4, max_row=ws.max_row, max_col=5):
-        mahal, ahu_adi, sogutma, isitma, kapasite = (c.value for c in row)
+    for row in ws.iter_rows(min_row=4, max_row=ws.max_row, max_col=6):
+        mahal, ahu_adi, sogutma, isitma, kapasite, isitma_kapasite = (c.value for c in row)
         if row[0].row == 4 and str(mahal).strip() == "MAS-1" and str(ahu_adi).strip() == "Ahu-1" \
                 and sogutma == 18.0 and kapasite == 194.9:
             continue  # degismemis ornek satir
@@ -293,7 +298,13 @@ def ahu_sat_kapasite_oku(ws):
             except (TypeError, ValueError):
                 uyarilar.append(f"'{ahu_adi}' icin gecersiz kapasite degeri: '{kapasite}'")
 
-    return sat_limitleri, tasarim_kapasiteleri, uyarilar
+        if isitma_kapasite is not None:
+            try:
+                tasarim_isitma_kapasiteleri.setdefault(mahal, {})[ahu_adi] = float(isitma_kapasite)
+            except (TypeError, ValueError):
+                uyarilar.append(f"'{ahu_adi}' icin gecersiz isitma kapasite degeri: '{isitma_kapasite}'")
+
+    return sat_limitleri, tasarim_kapasiteleri, tasarim_isitma_kapasiteleri, uyarilar
 
 
 def data_collector_uret(analizorler: list) -> str:
@@ -345,6 +356,7 @@ SAT_BAND_PROFIL_ETIKETI = {
 CHILLER_FCU_VARSAYILAN = {
     "chiller_adedi": None, "chiller_birim_kw": None,
     "chiller_t1_gidis": None, "chiller_t2_donus": None,
+    "kazan_adedi": None, "kazan_birim_kw": None,
     "fcu_adedi": None, "fcu_birim_kw_ortalama": None,
     "fcu_esanjor_diversity": None, "tasarim_hava_dt": None,
 }
@@ -353,6 +365,9 @@ CHILLER_FCU_PROFIL_ETIKETI = {
     "chiller_birim_kw": "Chiller Birim Kapasite (kW)",
     "chiller_t1_gidis": "Chiller Gidis Sicakligi (C)",
     "chiller_t2_donus": "Chiller Donus Sicakligi (C)",
+    # Kazan adedi profilin 1. bolumunde zaten var (Kazan Sayisi) — ikinci kez sorulmaz
+    "kazan_adedi": "Kazan Sayisi",
+    "kazan_birim_kw": "Kazan Birim Kapasite (kW)",
     "fcu_adedi": "FCU Adedi",
     "fcu_birim_kw_ortalama": "FCU Birim Kapasite (kW)",
     "fcu_esanjor_diversity": "FCU Esanjor Diversity",
@@ -551,7 +566,8 @@ def main():
     uyarilar += bacnet_uyarilar
     ahu_konfig, ahu_uyarilar = ahu_noktalari_oku(wb["AHU Noktalari"])
     uyarilar += ahu_uyarilar
-    sat_limitleri, tasarim_kapasiteleri, sat_uyarilar = ahu_sat_kapasite_oku(wb["AHU SAT ve Kapasite"])
+    (sat_limitleri, tasarim_kapasiteleri, tasarim_isitma_kapasiteleri,
+     sat_uyarilar) = ahu_sat_kapasite_oku(wb["AHU SAT ve Kapasite"])
     uyarilar += sat_uyarilar
 
     lokasyon_id = profil.get("Lokasyon ID", "").strip()
@@ -656,6 +672,15 @@ def main():
         print(f"OLUSTURULDU: {kap_yolu}")
     else:
         print("ATLANDI: ahu_tasarim_kapasiteleri.json — AHU SAT ve Kapasite sayfasi bos (opsiyonel)")
+
+    if tasarim_isitma_kapasiteleri:
+        os.makedirs(os.path.join(cikti_dir, "configs"), exist_ok=True)
+        kap_isi_yolu = os.path.join(cikti_dir, "configs", "ahu_tasarim_isitma_kapasiteleri.json")
+        with open(kap_isi_yolu, "w", encoding="utf-8") as f:
+            json.dump(tasarim_isitma_kapasiteleri, f, ensure_ascii=False, indent=2)
+        print(f"OLUSTURULDU: {kap_isi_yolu}")
+    else:
+        print("ATLANDI: ahu_tasarim_isitma_kapasiteleri.json — isitma kapasite kolonu bos (opsiyonel)")
 
     zip_yolu = shutil.make_archive(cikti_dir, "zip", cikti_dir)
     print(f"OLUSTURULDU: {zip_yolu}  (kurulum zip paketi)")
