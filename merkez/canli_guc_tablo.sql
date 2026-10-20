@@ -34,3 +34,11 @@ create table if not exists canli_guc (
 -- Mevcut tablolarla (energy_data, bakim_kartlari vb.) aynı erişim modeli:
 -- anon/publishable key ile okuma-yazma (RLS kapalı).
 alter table canli_guc disable row level security;
+
+-- YETKİ — bunu atlamak 401'e çıkar.
+-- Lokasyon PC'si ve portal anon/publishable anahtarla bağlanır. Yeni tabloda
+-- bu rolün yetkisi yoksa PostgREST "permission denied for table" hatasını
+-- HTTP 401 Unauthorized olarak döndürür; lokasyonun CMD penceresinde
+-- "http/2 401 unauthorized" diye görünür. Tablo kurulurken varsayılan
+-- yetkiler her projede aynı işlemiyor, bu yüzden AÇIKÇA veriyoruz.
+grant select, insert, update, delete on table canli_guc to anon, authenticated, service_role;
