@@ -499,9 +499,6 @@ def _panel(lid):
         "ik_metin": _ik_metin, "ik_birim": _IK_BIRIM, "esik": _ESIK,
         "oran": _ORAN, "ik_ond": _IK_OND, "beklenen_gun": _BEKLENEN_GUN,
         "grup": _GRUP, "teshis": _KH.teshis, "anahtar": "ozet_panel",
-        # Sağ sütun: sahadan gelen canlı kW. Panel veriyi kendi çekmez —
-        # canlı sayfa Supabase'den, sunum sürümü kendi örneğinden besler.
-        "canli": lambda: fetch_canli_guc(url, key, lid),
     })
 
 

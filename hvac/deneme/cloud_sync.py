@@ -969,6 +969,10 @@ def start_background_sync():
                         "olcum_zamani": veri["zaman"],
                     } for o in veri.get("olcumler", []) if o.get("cihaz")]
                     if satirlar:
+                        # Tabloda GEÇMİŞ TUTULMAZ: lokasyon×cihaz başına tek
+                        # satır, üzerine yazılır. Grafiğin ihtiyacı olan son
+                        # birkaç dakika merkezin oturumunda birikir; böylece
+                        # Supabase'de satır sayısı sabit kalır (4 satır).
                         client.table("canli_guc").upsert(
                             satirlar, on_conflict="lokasyon_id,cihaz",
                             returning="minimal").execute()

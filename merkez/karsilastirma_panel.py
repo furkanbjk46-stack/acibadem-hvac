@@ -61,74 +61,6 @@ def mini_liste(baslik, kalemler, renk):
             f"color:#133273;margin-bottom:2px;'>{baslik}</div>{satirlar}</div>")
 
 
-# ── Canlı okuma (saf HTML — testten doğrudan çağrılır) ────────────────────
-# Sol sütun DÖNEM TOPLAMINI (kWh) gösterir; sağ sütun aynı sayaçların O ANKİ
-# gücünü (kW). İkisi farklı sorulara cevap verir: "bu ay ne harcadık" ve
-# "şu anda ne çekiyoruz". Bu yüzden yan yana dururlar.
-CANLI_BAYAT_SN = 60          # bu yaştan sonra değer "eski" sayılır
-
-YONTEM_ETIKET = {
-    "register": ("sayaçla doğrulandı", "#0ca30c"),
-    "register?": ("henüz doğrulanmadı", "#c98500"),
-    "sayac": ("sayaç farkından", "#c98500"),
-}
-
-
-def canli_satir(olcum):
-    """Tek cihazın canlı kW satırı."""
-    ad = olcum.get("cihaz", "?")
-    kw = olcum.get("kw")
-    yontem = olcum.get("yontem")
-    etiket, renk = YONTEM_ETIKET.get(yontem, ("okunamadı", "#d03b3b"))
-    deger = "—" if kw is None else f"{tr(kw, 1)} kW"
-    aciklama = olcum.get("aciklama") or olcum.get("not") or ""
-    ipucu = f" title=\"{aciklama}\"" if aciklama else ""
-    return (
-        f"<div style='display:flex;justify-content:space-between;align-items:baseline;"
-        f"gap:8px;padding:5px 0;border-bottom:1px solid rgba(24,26,30,0.08);'{ipucu}>"
-        f"<div><div style='font-size:11px;color:#24324d;'>{ad}</div>"
-        f"<div style='font-size:9px;color:{renk};'>{etiket}</div></div>"
-        f"<div style='font-family:Inter,system-ui,sans-serif;font-size:18px;font-weight:700;"
-        f"color:#133273;white-space:nowrap;'>{deger}</div></div>")
-
-
-def canli_blok(olcumler, yas_sn=None, baslik="CANLI OKUMA (kW)"):
-    """Sağ sütunun gövdesi. olcumler boşsa nedenini yazar, uydurma değer ÜRETMEZ."""
-    h = (f"<div style='font-size:10px;letter-spacing:1px;color:#133273;'>{baslik}</div>")
-
-    if not olcumler:
-        return h + ("<div style='font-size:11px;color:#46536b;margin-top:6px;'>"
-                    "Canlı veri yok. Lokasyon çevrimdışı olabilir ya da sayaç "
-                    "okuması henüz başlamamıştır.</div>")
-
-    bayat = yas_sn is not None and yas_sn > CANLI_BAYAT_SN
-    if yas_sn is None:
-        alt = "ölçüm zamanı bilinmiyor"
-        renk = "#46536b"
-    elif bayat:
-        alt = f"son ölçüm {yas_sn:.0f} sn önce — akış durmuş olabilir"
-        renk = "rgb(250,178,25)"
-    else:
-        alt = f"son ölçüm {yas_sn:.0f} sn önce"
-        renk = "#0ca30c"
-    h += (f"<div style='font-size:9px;color:{renk};margin-bottom:4px;'>● {alt}</div>")
-
-    h += "".join(canli_satir(o) for o in olcumler)
-
-    toplam = sum(o["kw"] for o in olcumler if o.get("kw") is not None)
-    okunan = sum(1 for o in olcumler if o.get("kw") is not None)
-    if okunan:
-        h += (f"<div style='display:flex;justify-content:space-between;align-items:baseline;"
-              f"gap:8px;padding:7px 0 0;'>"
-              f"<span style='font-size:11px;color:#46536b;'>TOPLAM"
-              + ("" if okunan == len(olcumler)
-                 else f" <span style='color:rgb(250,178,25);'>({okunan}/{len(olcumler)} sayaç)</span>")
-              + f"</span>"
-              f"<span style='font-family:Inter,system-ui,sans-serif;font-size:20px;font-weight:700;"
-              f"color:#133273;'>{tr(toplam, 1)} kW</span></div>")
-    return h
-
-
 def durum_stil(v):
     """Tablodaki 'Durum' hücresinin rengi (renkler tema.py'de)."""
     import tema
@@ -235,12 +167,15 @@ def panel_govde(st, r, dag, ld, ctx):
         h += mini_liste("CHILLER BAZINDA", dag["chiller"], "#256abf")
         h += mini_liste("SOĞUTMA KULELERİ", dag["kule"], "#2a78d6")
         h += mini_liste("MCC PANOLARI", dag["mcc"], "#6da7ec")
+        st.markdown(h, unsafe_allow_html=True)
 
-        # ENERJİ KAYNAĞI ve SİSTEM DURUMU da SOLDA durur: sağ sütun artık
-        # tamamen canlı okumaya ayrıldı, dönem verisi tek yerde toplandı.
+    with s2:
+        # Bu pencere DÖNEM verisini gösterir. Canlı izleme buraya sığmıyordu
+        # (20.10.2026: iki sütun da dolunca pencere okunmaz hale geldi);
+        # kendi sekmesine taşındı: Lokasyon detayı → "Canlı İzleme".
         kay = dag["sebeke"] + dag["kojen"]
         h2 = ("<div style='font-size:10px;letter-spacing:1px;color:#133273;"
-              "margin:14px 0 4px;'>ENERJİ KAYNAĞI</div>")
+              "margin-bottom:4px;'>ENERJİ KAYNAĞI</div>")
         if kay:
             h2 += ilerleme("Şebeke", dag["sebeke"], dag["sebeke"] / kay * 100, "#4a3aa7")
             if dag["kojen"] > 0:        # kojen tesisi olmayan hastanede satır gösterilmez
@@ -266,31 +201,7 @@ def panel_govde(st, r, dag, ld, ctx):
                    f"padding:4px 0;border-bottom:1px solid rgba(24,26,30,0.10);'>"
                    f"<span style='color:#46536b;'>{et}</span>"
                    f"<span style='color:#24324d;text-align:right;'>{dg}</span></div>")
-        st.markdown(h + h2, unsafe_allow_html=True)
-
-    with s2:
-        # CANLI OKUMA — kendi kendine yenilenen BÖLÜM.
-        # st.fragment şart: detay penceresi açıkken sayfanın geneli bilerek
-        # yenilenmiyor (app_merkez.py'deki autorefresh koşulu), çünkü tam
-        # yenileme pencereyi kapatıyordu. Fragment yalnızca bu sütunu
-        # tazeler, pencere açık kalır ve soldaki dönem verisi oynamaz.
-        canli_oku = ctx.get("canli")
-        if canli_oku is None:
-            st.markdown(canli_blok([]), unsafe_allow_html=True)
-        else:
-            aralik = ctx.get("canli_aralik", "10s")
-
-            @st.fragment(run_every=aralik)
-            def _canli():
-                try:
-                    olcumler, yas = canli_oku()
-                except Exception as e:
-                    st.markdown(canli_blok([]), unsafe_allow_html=True)
-                    st.caption("Canlı veri alınamadı: %s" % e)
-                    return
-                st.markdown(canli_blok(olcumler, yas), unsafe_allow_html=True)
-
-            _canli()
+        st.markdown(h2, unsafe_allow_html=True)
 
     b1, b2, b3 = st.columns(3)
     with b1:

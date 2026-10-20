@@ -467,7 +467,9 @@ if df.empty:
     st.stop()
 
 # ── SEKMELER ─────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Dashboard", "📈 Trend & Tahmin", "📋 Veri Tablosu", "📄 Rapor Oluştur"])
+tab1, tab_canli, tab2, tab3, tab4 = st.tabs(
+    ["📊 Dashboard", "⚡ Canlı İzleme", "📈 Trend & Tahmin",
+     "📋 Veri Tablosu", "📄 Rapor Oluştur"])
 
 # ════════ TAB 1: DASHBOARD ════════
 with tab1:
@@ -1652,6 +1654,72 @@ with tab1:
             st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>ÖNERİ GERİ BİLDİRİMİ</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
 
+
+
+# ════════ TAB: CANLI İZLEME ════════
+# Sahadaki sayaçların O ANKİ gücü. Dönem toplamları (kWh) diğer sekmelerde;
+# burası "şu anda ne çekiyoruz" sorusunun yeri.
+with tab_canli:
+    import canli_izleme as _CI
+
+    st.markdown('<div class="sec">⚡ CANLI GÜÇ — TRAFOLAR</div>', unsafe_allow_html=True)
+
+    _k1, _k2 = st.columns([1, 3])
+    with _k1:
+        # Pencere seçimi FRAGMENT DIŞINDA: kendi kendine yenilenen bir
+        # bölümün içindeki widget her turda yeniden kurulur ve seçim elden
+        # kayar. Seçim burada yapılır, fragment session_state'ten okur.
+        _pencere_adi = st.selectbox(
+            "Pencere", list(_CI.PENCERELER),
+            index=list(_CI.PENCERELER).index(_CI.VARSAYILAN_PENCERE),
+            key="canli_pencere",
+            help="Grafikte kaç dakikalık geçmiş görünsün. Seri merkezin "
+                 "oturumunda tutulur, veri tabanında yer kaplamaz.")
+    with _k2:
+        st.caption(" ")
+        st.caption("Çizgi soldan sağa akar; pencereden çıkan nokta düşer. "
+                   "Sekme açıldığında grafik boş başlar ve pencere süresince dolar.")
+
+    _seri_anahtar = "canli_seri_" + str(lok_id)
+
+    @st.fragment(run_every="3s")
+    def _canli_izleme_blok():
+        pencere_sn = _CI.PENCERELER.get(
+            st.session_state.get("canli_pencere", _CI.VARSAYILAN_PENCERE), 300)
+
+        olcumler, yas = fetch_canli_guc(url, key, lok_id)
+        seri = _CI.seri_guncelle(
+            st.session_state.get(_seri_anahtar), olcumler, pencere_sn)
+        st.session_state[_seri_anahtar] = seri
+
+        degerler = _CI.son_degerler(seri)
+        if not degerler and not olcumler:
+            st.info("Bu lokasyonda canlı sayaç okuması yok. Trafo sayacı bağlı "
+                    "değilse ya da lokasyon çevrimdışıysa bu bölüm boş kalır.")
+            return
+
+        # Anlık kartlar — grafikle AYNI renk kodu
+        _sirali = sorted(degerler)
+        _kolonlar = st.columns(len(_sirali) + 1)
+        for _i, _ad in enumerate(_sirali):
+            _v = degerler[_ad]
+            with _kolonlar[_i]:
+                st.metric(_ad, "—" if _v is None else f"{_v:,.1f} kW".replace(",", "."))
+        with _kolonlar[-1]:
+            _t = _CI.toplam(degerler)
+            st.metric("TOPLAM", "—" if _t is None else f"{_t:,.1f} kW".replace(",", "."))
+
+        _yontem_metin, _yontem_renk = _CI.yontem_ozeti(olcumler)
+        if _yontem_metin:
+            st.markdown(
+                f"<div style='font-size:10px;color:{_yontem_renk};margin:-6px 0 4px;'>"
+                f"● {_yontem_metin}</div>", unsafe_allow_html=True)
+
+        st.plotly_chart(_CI.grafik(go, seri, pencere_sn),
+                        use_container_width=True, config={"displayModeBar": False})
+        st.caption(_CI.durum_metni(seri, yas, pencere_sn))
+
+    _canli_izleme_blok()
 
 
 # ════════ TAB 2: TREND & TAHMİN ════════
