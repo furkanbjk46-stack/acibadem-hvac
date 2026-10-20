@@ -79,6 +79,38 @@ header[data-testid="stHeader"] button    { display: none !important; }
     z-index: 1 !important; border: none !important;
 }
 
+/* TABLET DÜZENİ (641–1180px, ör. iPad dikey/yatay) — üç kolon yan yana
+   sığmıyor: sol/sağ kartlar ~180px'e düşüp kesiliyor, OTO SET yazıları
+   dikey kırılıyordu. Bu aralıkta harita en üste tam genişlikte alınır,
+   lokasyon kolonu ile sağ kolon altında yan yana durur.
+   (640px altını Streamlit zaten alt alta diziyor.) Ana düzen bloğu,
+   sol kolondaki .ana-duzen-isaret işaretinden bulunur. */
+@media (min-width: 641px) and (max-width: 1180px) {
+    [data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) {
+        flex-wrap: wrap !important;
+        row-gap: 0.75rem !important;
+    }
+    [data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > div {
+        flex: 1 1 calc(50% - 1rem) !important;
+        width: calc(50% - 1rem) !important;
+        min-width: 0 !important;
+    }
+    [data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > div:nth-child(2) {
+        order: -1;
+        flex-basis: 100% !important;
+        width: 100% !important;
+    }
+    [data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > div:nth-child(2) iframe,
+    [data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > div:nth-child(2)
+        [data-testid="stElementContainer"]:has(> iframe) {
+        height: 62vh !important;
+        min-height: 420px !important;
+        flex: 0 0 auto !important;   /* Streamlit kabı 900px flex-basis veriyor */
+    }
+    /* Yarım genişlikte iki kart yan yana sığmıyor → tek sütun */
+    .lok-scroll { grid-template-columns: 1fr !important; }
+}
+
 /* Tüm yazılar — lokasyon detay sayfası (st.container(key="detay_gecis_katmani") içinde inline exec ile çalışıyor) kendi renklerini korusun */
 h1:not(.st-key-detay_gecis_katmani *),h2:not(.st-key-detay_gecis_katmani *),h3:not(.st-key-detay_gecis_katmani *),h4:not(.st-key-detay_gecis_katmani *),h5:not(.st-key-detay_gecis_katmani *),h6:not(.st-key-detay_gecis_katmani *) { color: #0f1f3d !important; font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important; font-weight: 650 !important; }
 p:not(.st-key-detay_gecis_katmani *), span:not(.st-key-detay_gecis_katmani *), div:not(.st-key-detay_gecis_katmani *), label:not(.st-key-detay_gecis_katmani *) { color: #0f1f3d !important; font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important; }
@@ -1041,7 +1073,8 @@ sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 # ════════════════════════════════
 with sol:
     # ── Lokasyon Durumu ──
-    st.markdown('<div class="sec">📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
+    # .ana-duzen-isaret: tablet CSS'inin ana 3'lü düzeni bulması için işaret
+    st.markdown('<div class="sec"><span class="ana-duzen-isaret"></span>📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
 
     # Tümünü tüketime göre sırala (veri olanlar önce, olmayanlar sona)
     lok_sira = sorted(
@@ -1464,10 +1497,46 @@ var map = L.map('map', {{
 // Altlık MapLibre (vektör), işaretçiler ise Leaflet. İkisini birleştirmek için
 // maplibre-gl-leaflet köprüsü kullanılır: böylece mevcut hastane ikonları,
 // nefes alan glow halkaları ve popup'lar olduğu gibi korunur.
-var glKatman = L.maplibreGL({{
-    style: 'https://tiles.versatiles.org/assets/styles/gray/style.json',
-    attribution: '&copy; OpenStreetMap'
-}}).addTo(map);
+// YEDEK ALTLIK (tablet/iPad) — MapLibre WebGL2 ister ve harita data: URL
+// iframe'inde açıldığı için bazı tarayıcılarda (özellikle iPad Safari) worker
+// başlatamayıp altlığı hiç çizmez: işaretçiler görünür, harita bomboş kalır.
+// WebGL2 yoksa, MapLibre hata verirse ya da 5 sn içinde yüklenmezse
+// anahtarsız açık gri RASTER altlığa geçilir.
+var glKatman = null;
+var yedekAktif = false;
+function yedekAltlik() {{
+    if (yedekAktif) return;
+    yedekAktif = true;
+    try {{ if (glKatman) {{ map.removeLayer(glKatman); }} }} catch (e) {{}}
+    glKatman = null;
+    L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{{z}}/{{y}}/{{x}}',
+        {{ maxZoom: 16, attribution: '&copy; Esri, OpenStreetMap' }}
+    ).addTo(map);
+}}
+function webgl2Var() {{
+    try {{ return !!document.createElement('canvas').getContext('webgl2'); }}
+    catch (e) {{ return false; }}
+}}
+if (typeof L.maplibreGL !== 'function' || !webgl2Var()) {{
+    yedekAltlik();
+}} else {{
+    try {{
+        glKatman = L.maplibreGL({{
+            style: 'https://tiles.versatiles.org/assets/styles/gray/style.json',
+            attribution: '&copy; OpenStreetMap'
+        }}).addTo(map);
+        var _ml = glKatman.getMaplibreMap ? glKatman.getMaplibreMap() : null;
+        var _yuklendi = false;
+        if (_ml) {{
+            _ml.on('load', function() {{ _yuklendi = true; }});
+            _ml.on('error', function() {{ if (!_yuklendi) {{ yedekAltlik(); }} }});
+        }}
+        setTimeout(function() {{ if (!_yuklendi) {{ yedekAltlik(); }} }}, 5000);
+    }} catch (e) {{
+        yedekAltlik();
+    }}
+}}
 
 // BOYUT TAZELEME — Streamlit bileşen çerçevesi ilk anda sıfır/yanlış
 // yükseklikte açılabiliyor. MapLibre o anda çizim yapamaz ve kendiliğinden
@@ -1492,7 +1561,7 @@ function haritayiOdakla() {{
 function haritaTazele() {{
     try {{
         map.invalidateSize();
-        var ml = glKatman.getMaplibreMap ? glKatman.getMaplibreMap() : null;
+        var ml = (glKatman && glKatman.getMaplibreMap) ? glKatman.getMaplibreMap() : null;
         if (ml) {{ ml.resize(); }}
         // Çerçeve boyutu oturduktan SONRA odaklanılır: ilk anda kap yüksekliği
         // 0 olabiliyor, o anda yapılan fitBounds yanlış zoom veriyordu.
