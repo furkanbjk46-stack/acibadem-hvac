@@ -27,8 +27,17 @@ def c(ad, kosul, detay=""):
 
 
 # ── 1) İzin listesi ──────────────────────────────────────────────────────
-c("yalnızca TRDP-4 okunabilir", ao.IZINLI == {"TRDP-4"}, ao.IZINLI)
+# 20.10.2026: liste dört trafoya açıldı (canlı güç paneli bunları okuyor).
+# Asıl koruma "tek cihaz" değil, KAPSAM: yalnızca trafolar okunabilir —
+# chiller/MCC/kule listeye sızarsa merkez istediği sayacı okutabilir hale gelir.
+c("yalnızca trafolar okunabilir",
+  ao.IZINLI and all(a.startswith("TRDP-") for a in ao.IZINLI), ao.IZINLI)
+c("izin listesi dar kalıyor (sayaç listesinin tamamı değil)",
+  len(ao.IZINLI) <= 6, ao.IZINLI)
 c("okuma isteği tanınır", ao.okuma_istegi_mi("OKUMA:TRDP-4"))
+c("güç isteği tanınır", ao.guc_istegi_mi("GUC:TRDP-1"))
+c("güç isteği de yazma yoluna girmez", ao.istek_mi("GUC:TRDP-1"))
+c("normal nokta hiçbir okuma öneki ile karışmaz", not ao.istek_mi("CH1_REM_SET"))
 c("normal set noktası okuma isteği sayılmaz", not ao.okuma_istegi_mi("CH1_REM_SET"))
 c("boş/None güvenli", not ao.okuma_istegi_mi(None) and not ao.okuma_istegi_mi(""))
 

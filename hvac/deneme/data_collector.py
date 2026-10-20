@@ -69,6 +69,10 @@ ANALYZERS = [
 
 MODBUS_PORT    = 502
 MODBUS_CSV     = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
+# Sayaçlara aynı anda iki okuma gitmesin: günlük okuma ile canlı güç okuması
+# (canli_guc.py) bu kilidi paylaşır. Analizörlerin bir kısmı eşzamanlı TCP
+# bağlantısında yanıt vermiyor.
+MODBUS_KILIT   = threading.Lock()
 READ_INTERVAL  = 1800  # 30 dakika (saniye) — artık kullanılmıyor, saat 07:00 tetikler
 READ_SAAT      = 7    # Günlük Modbus okuma saati
 READ_DAKIKA    = 0    # Günlük Modbus okuma dakikası
@@ -136,7 +140,11 @@ def modbus_thread():
             ok_count = 0
 
             for dev in ANALYZERS:
-                val = modbus_get_kwh(dev)
+                # Canlı güç okuması aynı sayaçlara gidiyor; kilit ikisinin
+                # aynı anda aynı cihaza bağlanmasını önler (günlük okuma
+                # ÖNCELİKLİ değildir, sadece çakışmaz).
+                with MODBUS_KILIT:
+                    val = modbus_get_kwh(dev)
                 if val is not None:
                     ok_count += 1
                     status = f"{val} kWh"
@@ -337,6 +345,16 @@ def start():
 
     t2 = threading.Thread(target=bacnet_thread, daemon=True, name="bacnet")
     t2.start()
+
+    # Canlı güç okuması (TRDP trafoları, ~15 sn). Modbus erişimi TEK süreçte
+    # kalsın diye buradan başlatılır; sonucu configs/canli_guc_son.json'a
+    # yazar, buluta taşımayı cloud_sync yapar. Modül yoksa/başlamazsa
+    # toplayıcı normal çalışmaya devam eder — günlük okuma etkilenmez.
+    try:
+        import canli_guc
+        canli_guc.baslat(kilit=MODBUS_KILIT)
+    except Exception as e:
+        logger.warning("Canli guc okumasi baslatilamadi: %s", e)
 
     return t1, t2
 

@@ -445,6 +445,10 @@ def _panel(lid):
         "ik_metin": _ik_metin, "ik_birim": _IK_BIRIM, "esik": _ESIK,
         "oran": _ORAN, "ik_ond": _IK_OND, "beklenen_gun": _BEKLENEN_GUN,
         "grup": _GRUP, "teshis": _KH.teshis, "anahtar": "ozet_panel",
+        # Canlı sürümle AYNI yol: demo modunda url zaten sahte Supabase
+        # sunucusunu gösterir, canlı kW oradan gelir. Panelde demoya özel
+        # bir dal yok — ikisi ayrışamaz.
+        "canli": lambda: fetch_canli_guc(url, key, lid),
     })
 
 

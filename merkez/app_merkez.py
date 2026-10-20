@@ -445,6 +445,40 @@ def fetch_lokasyonlar(url, key):
     except:
         return []
 
+@st.cache_data(ttl=5, show_spinner=False)
+def fetch_canli_guc(url, key, lokasyon_id):
+    """Lokasyonun canlı sayaç gücü (kW) — (olcumler, yas_sn).
+
+    TTL 5 sn: panel 10 saniyede bir yenileniyor, önbellek yalnızca aynı
+    yenileme içindeki tekrar sorguyu engeller. Uzun TTL canlı değeri
+    dondururdu.
+
+    Yaş, SAHADAKİ ölçüm zamanından hesaplanır (sorgu zamanından değil):
+    lokasyon okumayı kesmişse panel bunu "akış durmuş" diye gösterebilsin.
+    """
+    try:
+        from supabase import create_client
+        from datetime import datetime, timezone
+        c = create_client(url, key)
+        r = (c.table("canli_guc").select("*")
+             .eq("lokasyon_id", lokasyon_id).order("cihaz").execute())
+        satirlar = r.data or []
+        if not satirlar:
+            return [], None
+        yas = None
+        for s in satirlar:
+            try:
+                t = datetime.fromisoformat(str(s.get("olcum_zamani")).replace("Z", "+00:00"))
+                simdi = datetime.now(timezone.utc) if t.tzinfo else datetime.now()
+                _y = (simdi - t).total_seconds()
+                yas = _y if yas is None else min(yas, _y)
+            except Exception:
+                pass
+        return satirlar, yas
+    except Exception:
+        return [], None
+
+
 @st.cache_data(ttl=60, show_spinner=False)
 def fetch_m2_supabase(url, key):
     """Supabase ayarlar tablosundan m² değerlerini çek."""

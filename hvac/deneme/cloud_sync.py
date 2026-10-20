@@ -937,11 +937,57 @@ def start_background_sync():
                 logger.warning(f"Heartbeat döngüsü hatası: {e}")
             time.sleep(60)  # 1 dakika
 
+    def _canli_guc_loop():
+        """Canlı TRDP gücünü buluta taşır (≈15 sn).
+
+        Heartbeat döngüsüne EKLENMEDİ: o 1 dakikada bir dönüyor ve canlı panel
+        için fazla yavaş. Ölçümü data_collector yapar, burası yalnızca dosyayı
+        okuyup yazar — Modbus'a bu süreçten gidilmez.
+
+        Kendi içinde kapalıdır: modül yoksa, dosya yoksa ya da tablo henüz
+        açılmamışsa sessizce döner; senkron ve heartbeat etkilenmez.
+        """
+        try:
+            import canli_guc
+        except Exception as e:
+            logger.info(f"Canlı güç taşıma kapalı (modül yok): {e}")
+            return
+        _periyot = max(5, int(canli_guc.ayar_oku().get("periyot_sn", 15)))
+        _son_yazilan = None
+        _uyarildi = False
+        while True:
+            try:
+                veri = canli_guc.son_olcum()
+                # Aynı ölçüm iki kez yazılmasın (okuma durduysa boşuna istek gitmesin)
+                if client and veri and veri.get("zaman") != _son_yazilan:
+                    satirlar = [{
+                        "lokasyon_id": lokasyon_id,
+                        "cihaz": o.get("cihaz"),
+                        "kw": o.get("kw"),
+                        "yontem": o.get("yontem"),
+                        "aciklama": o.get("not"),
+                        "olcum_zamani": veri["zaman"],
+                    } for o in veri.get("olcumler", []) if o.get("cihaz")]
+                    if satirlar:
+                        client.table("canli_guc").upsert(
+                            satirlar, on_conflict="lokasyon_id,cihaz",
+                            returning="minimal").execute()
+                        _son_yazilan = veri["zaman"]
+                        _uyarildi = False
+            except Exception as e:
+                if not _uyarildi:      # her 15 sn log basmasın
+                    logger.warning(f"Canlı güç taşınamadı: {e}")
+                    _uyarildi = True
+            time.sleep(_periyot)
+
     t_sync = threading.Thread(target=_sync_loop, daemon=True, name="cloud-sync")
     t_sync.start()
 
     t_hb = threading.Thread(target=_heartbeat_loop, daemon=True, name="heartbeat")
     t_hb.start()
+
+    t_cg = threading.Thread(target=_canli_guc_loop, daemon=True, name="canli-guc-sync")
+    t_cg.start()
 
     logger.info(f"🔄 Arka plan senkronizasyonu başlatıldı (günlük {_SYNC_SAAT:02d}:{_SYNC_DAKIKA:02d}, heartbeat: 2 dk)")
     return True

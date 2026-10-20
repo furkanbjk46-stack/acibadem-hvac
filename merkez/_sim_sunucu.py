@@ -23,6 +23,7 @@ Gonderilen komutlar ve loglar bellekte biriktirilir; su adreslerden okunabilir:
 
 import argparse
 import json
+import math
 import random
 import re
 import sys
@@ -436,6 +437,7 @@ def veri_uret():
         "ayarlar": ayarlar,
         "oto_mod_log": oto_log,
         "komutlar": [],
+        "canli_guc": [],          # her istekte canli_guc_tazele() doldurur
         "guncellemeler": [],
         "hvac_summary": [],
         "ai_analizler": [],
@@ -446,6 +448,38 @@ def veri_uret():
 
 VERI = veri_uret()
 KILIT = threading.Lock()
+
+
+def canli_guc_tazele(simdi=None):
+    """Canli TRDP gucunu HER ISTEKTE yeniden uretir.
+
+    NEDEN HER ISTEKTE: panel 10 saniyede bir soruyor; deger sabit kalirsa
+    sunumda "canli" oldugu anlasilmaz. Degerler gercekci bir bantta yavasca
+    salinir (saat + kucuk gurultu), sayac ani sicramaz.
+
+    Yalnizca sayaci bagli lokasyonda (Maslak) dolu doner — gercek sistemde
+    de boyle: trafo sayaci olmayan hastanede canli panel bos kalir.
+    """
+    simdi = simdi or datetime.now(IST)
+    t = simdi.hour + simdi.minute / 60.0
+    # Gunduz yuku yuksek, gece dusuk (gercek trafo profiline benzer)
+    gunduz = 0.55 + 0.45 * max(0.0, math.sin((t - 6) / 24 * 2 * math.pi))
+    taban = {"TRDP-1": 520.0, "TRDP-2": 410.0, "TRDP-3": 190.0, "TRDP-4": 290.0}
+    satirlar = []
+    for ad, tb in taban.items():
+        # Saniyeye bagli kucuk salinim: her istekte biraz farkli
+        salinim = math.sin(simdi.second / 60.0 * 2 * math.pi + len(ad))
+        kw = tb * gunduz * (1.0 + 0.04 * salinim)
+        satirlar.append({
+            "lokasyon_id": "maslak",
+            "cihaz": ad,
+            "kw": round(kw, 1),
+            "yontem": "register",
+            "aciklama": None,
+            "olcum_zamani": simdi.isoformat(timespec="seconds"),
+        })
+    with KILIT:
+        VERI["canli_guc"] = satirlar
 
 
 def ping_tazele(simdi=None):
@@ -569,6 +603,8 @@ class Islek(BaseHTTPRequestHandler):
 
         if tablo == "lokasyonlar":
             ping_tazele()
+        if tablo == "canli_guc":
+            canli_guc_tazele()
 
         satirlar = _sirala(_filtre_uygula(VERI[tablo], sorgu), sorgu)
 

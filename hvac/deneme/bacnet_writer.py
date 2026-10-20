@@ -516,7 +516,12 @@ def komutlari_isle(sb_url: str, sb_key: str, lokasyon_id: str):
             # ANLIK SAHA OKUMASI ("OKUMA:<cihaz>") — merkezden istenen tek seferlik
             # sayaç okuması. YAZMA değildir: nokta tablosuna, değer kapısına ve
             # BACnet yazmaya ulaşmadan burada ayrılır (anlik_okuma.py).
-            if isinstance(nokta_adi, str) and nokta_adi.startswith("OKUMA:"):
+            # "GUC:<cihaz>" aynı kapıdan geçer: anlık güç register'ını okur
+            # (canlı panelin adresini sahada doğrulamak için). O da YAZMA
+            # değildir; önekler burada AÇIKÇA listelenir ki anlik_okuma
+            # yüklenemese bile bu komutlar yazma yoluna düşmesin.
+            if isinstance(nokta_adi, str) and (nokta_adi.startswith("OKUMA:")
+                                               or nokta_adi.startswith("GUC:")):
                 try:
                     from anlik_okuma import isle as _okuma_isle
                     _od, _om = _okuma_isle(nokta_adi)
