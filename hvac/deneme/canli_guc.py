@@ -9,10 +9,11 @@ günde BİR kez çalışır — canlı izleme için uygun değildir.
 Analizörden anlık gücü okumanın iki yolu var:
 
   1) GÜÇ REGISTER'I — cihazın kendi bildirdiği toplam etkin güç (W).
-     Gerçek anlık değerdir, ama register adresi cihaz modeline göre değişir.
-     Yanlış adres "makul ama yanlış" bir sayı döndürebilir: tek faz okunursa
-     gerçeğin üçte biri, gerilim register'ına denk gelinirse sabit ~230
-     görünür. Bunu gözle ayırmak mümkün değildir.
+     Gerçek anlık değerdir. Adresler üretici kılavuzlarından alındı (aşağıda
+     VARSAYILAN_AYAR'da kaynağıyla yazılı), ama saha her zaman kâğıda
+     uymaz: başka model takılabilir, akım trafosu oranı yanlış girilmiş
+     olabilir, tek faz okunuyor olabilir. Böyle bir durumda değer "makul
+     ama yanlış" görünür ve gözle ayırt edilemez.
 
   2) SAYAÇ FARKI — kWh sayacının iki okuma arasındaki artışı / geçen süre.
      Anlık değil, aradaki sürenin ORTALAMASIDIR; buna karşılık kaynağı
@@ -59,9 +60,19 @@ VARSAYILAN_AYAR = {
     "tolerans_kw": 15.0,       # küçük yüklerde oran anlamsız, mutlak pay
     "makul_alt_kw": -50.0,     # şebekeye verme ihtimaline karşı negatife biraz pay
     "makul_ust_kw": 5000.0,    # bir trafodan beklenebilecek üst sınır
-    # Toplam etkin güç register adresi (W, float32). Cihaz modeline göre
-    # değişir; sahada GUC: komutuyla doğrulanır ve gerekirse BURADAN
-    # düzeltilir — kod değişmeden.
+    # Toplam etkin güç register adresi (W, float32, 2 register).
+    # ÜRETİCİ KILAVUZLARINDAN ALINDI (20.10.2026) — tahmin değildir:
+    #   janitza 19026 → "_G_P_SUM3  W  Sum; Psum3=P1+P2+P3"  (UMG float tablosu;
+    #                   aynı tabloda 19060 = "Real energy L1..L3", yani
+    #                   data_collector'ın yıllardır okuduğu kWh adresi — harita
+    #                   bu cihazlarla birebir tutuyor)
+    #   siemens 65    → "Aktif güç toplamı  Float  W"  (SENTRON PAC3200 cihaz
+    #                   kitabı, Modbus ölçüm büyüklükleri tablosu; aynı belgede
+    #                   801 = "Aktif enerji Giren Tarife 1  Double  Wh", yine
+    #                   kodun okuduğu adres. PAC4200 bu temel ölçümlerde
+    #                   PAC3200 ile aynı haritayı kullanır.)
+    # Sahada farklı model çıkarsa GUC: komutuyla denenir ve BURADAN düzeltilir
+    # — kod değişmeden.
     "guc_register": {"janitza": 19026, "siemens": 65},
 }
 
