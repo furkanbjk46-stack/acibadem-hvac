@@ -1666,30 +1666,23 @@ with tab_canli:
     # ise sürece BİR KEZ yüklenir. Yayın sonrası süreç yeniden başlamazsa
     # sayfa yeni, modül eski kalır ve burada olmayan bir işlev çağrılır
     # (21.10.2026: ekranda AttributeError çıktı). Sürüm tutmuyorsa tazele.
-    _CI_GEREKEN_SURUM = 2
+    _CI_GEREKEN_SURUM = 3
     if getattr(_CI, "SURUM", 0) < _CI_GEREKEN_SURUM:
         import importlib
         _CI = importlib.reload(_CI)
 
-    st.markdown('<div class="sec">⚡ CANLI GÜÇ — TRAFOLAR</div>', unsafe_allow_html=True)
-
-    _k1, _k2 = st.columns([1, 3])
-    with _k1:
-        # Pencere seçimi FRAGMENT DIŞINDA: kendi kendine yenilenen bir
-        # bölümün içindeki widget her turda yeniden kurulur ve seçim elden
-        # kayar. Seçim burada yapılır, fragment session_state'ten okur.
-        _pencere_adi = st.selectbox(
-            "Pencere", list(_CI.PENCERELER),
-            index=list(_CI.PENCERELER).index(_CI.VARSAYILAN_PENCERE),
-            key="canli_pencere",
-            help="Grafikte kaç dakikalık geçmiş görünsün. Seri merkezin "
-                 "oturumunda tutulur, veri tabanında yer kaplamaz.")
-    with _k2:
-        st.caption(" ")
-        st.caption("Çizgi soldan sağa akar; pencereden çıkan nokta düşer. "
-                   "Sekme açıldığında grafik boş başlar ve pencere süresince dolar.")
-
     _seri_anahtar = "canli_seri_" + str(lok_id)
+
+    # Canlı sayacı olmayan kalemlerden HANGİLERİ bu binada var?
+    # Sütun hiç dolmuyorsa o sistem burada yok demektir; kojeni olmayan
+    # hastanede "kojen verisi çekilemiyor" yazmak yanlış olurdu.
+    _olculmeyen = []
+    for _ad, _kolon, _neden in _CI.OLCULMEYEN:
+        try:
+            if _kolon in df.columns and float(df[_kolon].fillna(0).abs().sum()) > 0:
+                _olculmeyen.append((_ad, _neden))
+        except Exception:
+            pass
 
     @st.fragment(run_every="3s")
     def _canli_izleme_blok():
@@ -1721,44 +1714,92 @@ with tab_canli:
 
         _yontemler = {o.get("cihaz"): o.get("yontem") for o in (olcumler or [])}
         _gruplar = _CI.gruplara_ayir(list(degerler))
+        _aralik = _CI.olcum_araligi_sn(seri)
+        _okunan_top = sum(1 for v in degerler.values() if v is not None)
 
-        # Üst şerit: grup toplamları
-        _ozet = st.columns(len(_gruplar) + 1)
-        for _i, (_an, _bas, _cihazlar) in enumerate(_gruplar):
-            _tp = _CI.grup_toplami(seri, _cihazlar)
-            with _ozet[_i]:
-                st.metric(_bas, "—" if _tp is None else
-                          f"{_CI.tr_sayi(_tp)} kW".replace(".", " "))
-        with _ozet[-1]:
-            _okunan = sum(1 for v in degerler.values() if v is not None)
-            st.metric("OKUNAN SAYAÇ", f"{_okunan} / {len(degerler)}")
-
-        _yontem_metin, _yontem_renk = _CI.yontem_ozeti(olcumler)
-        if _yontem_metin:
-            st.markdown(
-                f"<div style='font-size:10px;color:{_yontem_renk};margin:-4px 0 6px;'>"
-                f"● {_yontem_metin}</div>", unsafe_allow_html=True)
-
-        # Gruplar — her biri kendi içinde kaydırmalı
-        _parcalar = []
+        # ── Üst şerit ────────────────────────────────────────────────
+        _kartlar, _grup_govde = [], []
         for _an, _bas, _cihazlar in _gruplar:
+            _tp = _CI.grup_toplami(seri, _cihazlar)
+            _ok = sum(1 for _c in _cihazlar if degerler.get(_c) is not None)
+
+            if _an == "enerji":
+                _etiket, _alt = "ŞEBEKEDEN ÇEKİLEN", "%d trafo" % len(_cihazlar)
+                if yas is not None:
+                    _alt += " · son ölçüm %.0f sn önce" % yas
+            elif _an == "sogutma":
+                _ch = sum(1 for _c in _cihazlar
+                          if _CI.kisa_ad(_c).startswith("CH-") and (degerler.get(_c) or 0) >= 1)
+                _ku = sum(1 for _c in _cihazlar
+                          if _c.upper().startswith("KULE") and (degerler.get(_c) or 0) >= 1)
+                _etiket, _alt = _bas, "%d chiller + %d kule çalışıyor" % (_ch, _ku)
+            else:
+                _etiket = _bas
+                _alt = "%d pano" % len(_cihazlar)
+                if _aralik:
+                    _alt += " · %d sn'de bir okunuyor" % _aralik
+            _kartlar.append(_CI.ozet_kart_html(
+                _etiket, "—" if _tp is None else _CI.tr_sayi(_tp) +
+                "<span class='cg-br'>kW</span>", _alt, canli=(_an == "enerji")))
+
+            # ── Grup gövdesi ─────────────────────────────────────────
             _satirlar = ""
-            for _j, _c in enumerate(_cihazlar):
+            if _an == "enerji" and len(_cihazlar) > 1:
+                # Trafoların toplamı: "şebekeden o an ne çekiyoruz"
+                _satirlar += _CI.toplam_satir_html(
+                    "ŞEBEKE", _tp,
+                    _CI.kivrim_svg(_CI.toplam_seri(seri, _cihazlar), "#133273"))
+            for _c in _cihazlar:
                 _satirlar += _CI.satir_html(
                     _c, degerler.get(_c),
-                    _CI.kivrim_svg(seri["cihazlar"].get(_c, []),
-                                   _CI.renk(_c, _cihazlar)),
+                    _CI.kivrim_svg(seri["cihazlar"].get(_c, []), _CI.renk(_c, _cihazlar)),
                     _yontemler.get(_c))
-            _okunan = sum(1 for _c in _cihazlar if degerler.get(_c) is not None)
-            _parcalar.append(_CI.grup_html(
-                _bas, _CI.GRUP_ACIKLAMA.get(_an, ""), _satirlar,
-                _CI.grup_toplami(seri, _cihazlar), _okunan, len(_cihazlar)))
-        st.markdown(_CI.STIL + "<div class='cg-sarmal'>" + "".join(_parcalar) + "</div>",
-                    unsafe_allow_html=True)
+            _olcusuz = 0
+            if _an == "enerji":
+                for _ad, _neden in _olculmeyen:
+                    _satirlar += _CI.olculmeyen_satir_html(_ad, _neden)
+                _olcusuz = len(_olculmeyen)
 
-        st.caption(_CI.durum_metni(seri, yas, pencere_sn))
+            _ack = _CI.GRUP_ACIKLAMA.get(_an, "")
+            if _an == "enerji" and _olculmeyen:
+                _ack = ("Şebeke trafoları canlı sayaçtan; " +
+                        ", ".join(a.lower() for a, _ in _olculmeyen) +
+                        " kalemlerinde canlı sayaç yok")
+            _grup_govde.append(_CI.grup_html(_bas, _ack, _satirlar, _tp, _ok, _olcusuz))
+
+        _kartlar.append(_CI.ozet_kart_html(
+            "OKUNABİLEN SAYAÇ",
+            "%d<span class='cg-br'>/ %d</span>" % (_okunan_top, len(degerler) + len(_olculmeyen)),
+            "%d kalem canlı ölçülmüyor" % len(_olculmeyen) if _olculmeyen
+            else "tüm kalemler ölçülüyor"))
+
+        _yontem_metin, _yontem_renk = _CI.yontem_ozeti(olcumler)
+        _ozet_metin = "%d sayaç okunuyor" % _okunan_top
+        if _olculmeyen:
+            _ozet_metin += ", %d kalemde canlı sayaç yok" % len(_olculmeyen)
+        if yas is not None:
+            _ozet_metin += " · son ölçüm %.0f sn önce" % yas
+
+        st.markdown(
+            _CI.STIL + _CI.ozet_serit_html(_kartlar)
+            + "<div class='cg-sarmal'>" + "".join(_grup_govde) + "</div>"
+            + _CI.alt_bant_html(_yontem_metin, _yontem_renk, _ozet_metin),
+            unsafe_allow_html=True)
 
     _canli_izleme_blok()
+
+    # Pencere seçimi FRAGMENT DIŞINDA ve altta: kendi kendine yenilenen bir
+    # bölümün içindeki widget her turda yeniden kurulur ve seçim elden kayar.
+    # Seçim burada yapılır, fragment session_state'ten okur.
+    _bos, _sag = st.columns([4, 1])
+    with _sag:
+        st.selectbox(
+            "Pencere", list(_CI.PENCERELER),
+            index=list(_CI.PENCERELER).index(_CI.VARSAYILAN_PENCERE),
+            key="canli_pencere",
+            help="Satır grafiklerinde kaç dakikalık geçmiş görünsün. Seri "
+                 "merkezin oturumunda tutulur, veri tabanında yer kaplamaz; "
+                 "sekme açıldığında boş başlar ve pencere süresince dolar.")
 
 
 # ════════ TAB 2: TREND & TAHMİN ════════

@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 2
+SURUM = 3
 
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
@@ -150,6 +150,43 @@ def grup_toplami(seri: dict, cihazlar: list):
     """Gruptaki okunabilen cihazların son değerleri toplamı."""
     son = son_degerler(seri)
     return toplam({c: son.get(c) for c in cihazlar})
+
+
+def toplam_seri(seri: dict, cihazlar: list) -> list:
+    """Cihazların zaman İÇİNDE toplamı — ŞEBEKE gibi birleşik satırlar için.
+
+    Bir anda hiçbir cihaz okunamadıysa o nokta None kalır; okunanların
+    toplamı alınır (eksik sayaç yüzünden toplam sıfıra düşmesin).
+    """
+    diziler = [seri.get("cihazlar", {}).get(c) or [] for c in cihazlar]
+    n = len(seri.get("zamanlar") or [])
+    sonuc = []
+    for i in range(n):
+        degerler = [d[i] for d in diziler if i < len(d) and d[i] is not None]
+        sonuc.append(round(sum(degerler), 1) if degerler else None)
+    return sonuc
+
+
+def olcum_araligi_sn(seri: dict):
+    """Ölçümler kaç saniyede bir geliyor (ortanca). Yetersiz veri → None."""
+    zamanlar = seri.get("zamanlar") or []
+    if len(zamanlar) < 3:
+        return None
+    farklar = sorted((zamanlar[i + 1] - zamanlar[i]).total_seconds()
+                     for i in range(len(zamanlar) - 1))
+    orta = farklar[len(farklar) // 2]
+    return int(round(orta)) if orta > 0 else None
+
+
+# Canlı sayacı OLMAYAN kalemler. Enerji grubunda kesik çizgiyle gösterilir.
+# (ad, energy_data sütunu, neden). Sütun o lokasyonda hiç dolmuyorsa o
+# sistem binada yok demektir ve satır GÖSTERİLMEZ — kojeni olmayan
+# hastanede "kojen verisi çekilemiyor" yazmak yanlış olurdu.
+OLCULMEYEN = [
+    ("KOJEN",    "Kojen_Uretim_kWh",  "canlı sayaç yok · günlük üretim kaydı var"),
+    ("DOĞALGAZ", "Kazan_Dogalgaz_m3", "m³ sayacı canlı okunmuyor"),
+    ("SU",       "Su_Tuketimi_m3",    "m³ sayacı canlı okunmuyor"),
+]
 
 
 def _zaman_coz(deger):
@@ -301,18 +338,75 @@ def satir_html(cihaz: str, deger, cizgi_svg: str, yontem: str = None) -> str:
             f"<div class='{dg_sinif}'>{dg}</div></div>")
 
 
+def toplam_satir_html(ad: str, deger, cizgi_svg: str) -> str:
+    """Grubun TOPLAMINI gösteren vurgulu satır (ör. ŞEBEKE = 4 trafo)."""
+    dg = "—" if deger is None else (tr_sayi(deger) + "<span class='cg-br'>kW</span>")
+    return (f"<div class='cg-satir cg-ust-satir'><div class='cg-cip cg-cip-ust'>{ad}</div>"
+            f"<div class='cg-cizgi'>{cizgi_svg}</div>"
+            f"<div class='cg-dg cg-dg-ust'>{dg}</div></div>")
+
+
+def olculmeyen_satir_html(ad: str, aciklama: str) -> str:
+    """Canlı sayacı OLMAYAN kalem: kesik çizgi + nedeni.
+
+    Bu satırlar "0 kW" göstermez. Sıfır, tüketimin durduğunu söyler;
+    burada ölçüm yoktur — ikisi aynı şey değildir.
+    """
+    return (f"<div class='cg-satir cg-olcusuz'><div class='cg-cip cg-yok'>{ad}</div>"
+            f"<div class='cg-bos'><span class='cg-tire'></span>"
+            f"<span class='cg-bos-not'>{aciklama}</span>"
+            f"<span class='cg-tire'></span></div>"
+            f"<div class='cg-dg cg-dg-yok'>veri çekilemiyor</div></div>")
+
+
 def grup_html(baslik: str, aciklama: str, satirlar: str, toplam_kw,
-              okunan: int, adet: int, yukseklik: int = 430) -> str:
+              okunan: int, olcusuz: int = 0, yukseklik: int = 430) -> str:
     """Bir grup kartı. Liste uzarsa KART değil liste kayar."""
     ust = f"<div class='cg-toplam'>{'—' if toplam_kw is None else tr_sayi(toplam_kw) + ' kW'}</div>"
+    dip = "%d kalem canlı okunuyor" % okunan
+    if olcusuz:
+        dip += " · %d kalemde sayaç yok" % olcusuz
     return (f"<div class='cg-grup'><h4>{baslik}{ust}</h4>"
             f"<div class='cg-ack'>{aciklama}</div>"
             f"<div class='cg-liste' style='max-height:{yukseklik}px'>{satirlar}</div>"
-            f"<div class='cg-dip'>{okunan}/{adet} sayaç okunuyor</div></div>")
+            f"<div class='cg-dip'>{dip}</div></div>")
+
+
+def ozet_kart_html(etiket: str, deger: str, alt: str, canli: bool = False) -> str:
+    nokta = "<span class='cg-nabiz'></span>" if canli else ""
+    return (f"<div class='cg-ozet'><div class='cg-ozet-et'>{nokta}{etiket}</div>"
+            f"<div class='cg-ozet-dg'>{deger}</div>"
+            f"<div class='cg-ozet-alt'>{alt}</div></div>")
+
+
+def ozet_serit_html(kartlar: list) -> str:
+    return "<div class='cg-serit'>" + "".join(kartlar) + "</div>"
+
+
+def alt_bant_html(yontem_metin: str, yontem_renk: str, ozet: str) -> str:
+    return (f"<div class='cg-alt'><span style='color:{yontem_renk};'>● {yontem_metin}</span>"
+            f"<span class='cg-alt-ayrac'>·</span>{ozet}</div>")
 
 
 STIL = """
 <style>
+/* ── özet şeridi ── */
+.cg-serit{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:12px; margin:2px 0 14px;}
+.cg-ozet{background:#fff; border:1px solid rgba(24,26,30,.10); border-radius:16px;
+  padding:11px 15px;
+  box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22);}
+.cg-ozet-et{font-size:10px; letter-spacing:1.2px; color:#46536b; font-weight:600;}
+.cg-ozet-dg{font-size:26px; font-weight:700; color:#133273; margin-top:1px; line-height:1.15;}
+.cg-ozet-alt{font-size:10px; color:#46536b; margin-top:1px;}
+.cg-nabiz{display:inline-block; width:7px; height:7px; border-radius:50%;
+  background:#0ca30c; margin-right:5px; animation:cgNabiz 1.6s ease-in-out infinite;}
+@keyframes cgNabiz{0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.35; transform:scale(.8);}}
+
+/* ── alt bant ── */
+.cg-alt{font-size:12px; color:#46536b; margin-top:12px;}
+.cg-alt-ayrac{margin:0 8px; color:#c9d2e0;}
+
 .cg-sarmal{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
   gap:12px; align-items:start;}
 .cg-grup{background:#fff; border:1px solid rgba(24,26,30,.10); border-radius:16px;
@@ -328,17 +422,24 @@ STIL = """
   scrollbar-width:thin; scrollbar-color:#cdd5e2 transparent;}
 .cg-liste::-webkit-scrollbar{width:7px;}
 .cg-liste::-webkit-scrollbar-thumb{background:#cdd5e2; border-radius:4px;}
-.cg-satir{display:grid; grid-template-columns:96px 1fr 84px; gap:9px; align-items:center;
-  padding:7px 0; border-bottom:1px solid rgba(24,26,30,.06);}
+.cg-satir{display:grid; grid-template-columns:104px 1fr 92px; gap:10px; align-items:center;
+  padding:10px 0; border-bottom:1px solid rgba(24,26,30,.06);}
 .cg-satir:last-child{border-bottom:0;}
-.cg-cip{font-size:10.5px; font-weight:600; color:#0f1f3d; background:#f6f7f9;
-  border:1px solid rgba(24,26,30,.12); border-radius:8px; padding:4px 5px; text-align:center;
+.cg-cip{font-size:11px; font-weight:600; color:#0f1f3d; background:#f6f7f9;
+  border:1px solid rgba(24,26,30,.12); border-radius:9px; padding:6px 5px; text-align:center;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .cg-cip.cg-yok{color:#8b93a3; background:#f3f3f4; border-style:dashed;}
-.cg-cizgi{height:26px; overflow:hidden;}
-.cg-dg{font-size:14px; font-weight:700; color:#133273; text-align:right; white-space:nowrap;}
-.cg-dg.cg-dg-yok{font-size:10px; font-weight:600; color:#9aa2b1;}
-.cg-br{font-size:9px; font-weight:500; color:#46536b; margin-left:2px;}
+.cg-cip-ust{font-weight:700; background:#eef3fb; border-color:#cddcf1; color:#133273;}
+.cg-dg-ust{font-size:16px;}
+.cg-cizgi{height:28px; overflow:hidden;}
+.cg-dg{font-size:15px; font-weight:700; color:#133273; text-align:right; white-space:nowrap;}
+.cg-dg.cg-dg-yok{font-size:10.5px; font-weight:600; color:#9aa2b1;}
+.cg-br{font-size:9.5px; font-weight:500; color:#46536b; margin-left:2px;}
+
+/* ── ölçülemeyen kalem: kesik çizgi + nedeni ── */
+.cg-bos{height:28px; display:flex; align-items:center; gap:7px;}
+.cg-bos .cg-tire{flex:1; border-top:1.6px dashed #cfd5df;}
+.cg-bos-not{font-size:10px; color:#9aa2b1; white-space:nowrap;}
 </style>
 """
 

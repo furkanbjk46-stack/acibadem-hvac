@@ -199,7 +199,9 @@ c("okunamayan satır 0 YAZMIYOR", "okunamadı" in _sat_yok and "0,0" not in _sat
 
 _gh = CI.grup_html("MCC YÜKÜ", "açıklama", "<i></i>", 456.2, 14, 15)
 c("grup başlığında toplam", "456,2 kW" in _gh)
-c("grup dibinde okunan sayaç", "14/15 sayaç okunuyor" in _gh)
+c("grup dibinde okunan kalem sayısı", "14 kalem canlı okunuyor" in _gh, _gh[-160:])
+_gh2 = CI.grup_html("ENERJİ", "a", "<i></i>", 100.0, 5, 3)
+c("ölçülemeyen kalem sayısı da yazıyor", "3 kalemde sayaç yok" in _gh2, _gh2[-160:])
 c("liste kaydırmalı (uzun liste kartı taşırmasın)",
   "max-height:430px" in _gh and "overflow-y:auto" in CI.STIL)
 
@@ -235,8 +237,14 @@ c("canlı veri çekiliyor", "fetch_canli_guc(url, key, lok_id)" in SAYFA)
 c("seri oturumda tutuluyor", "st.session_state[_seri_anahtar] = seri" in SAYFA)
 c("seri lokasyona göre ayrı", '"canli_seri_" + str(lok_id)' in SAYFA)
 c("kendi kendine yenileniyor", '@st.fragment(run_every="3s")' in SAYFA)
-c("pencere seçimi fragment DIŞINDA (seçim elden kaymasın)",
-  SAYFA.index('key="canli_pencere"') < SAYFA.index('@st.fragment(run_every="3s")'))
+# Widget fragment GOVDESINDE olmamali: kendi kendine yenilenen bolumde her
+# turda yeniden kurulur ve secim elden kayar. (Konum ust/alt onemli degil,
+# ONEMLI OLAN govdenin icinde olmamasi.)
+_fragman_govde = (SAYFA.split("def _canli_izleme_ciz():")[1]
+                  .split("\n    _canli_izleme_blok()")[0])
+c("pencere seçimi fragment gövdesinde DEĞİL",
+  "st.selectbox" not in _fragman_govde and 'key="canli_pencere"' in SAYFA)
+c("fragment session_state'ten okuyor", 'st.session_state.get("canli_pencere"' in SAYFA)
 c("sayaç yoksa açıklanıyor", "canlı sayaç okuması yok" in SAYFA)
 c("satırlar modülden üretiliyor (sayfada kopya HTML yok)",
   "_CI.satir_html(" in SAYFA and "_CI.grup_html(" in SAYFA
