@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 5
+SURUM = 6
 
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
@@ -352,8 +352,10 @@ def satir_html(cihaz: str, deger, cizgi_svg: str, yontem: str = None) -> str:
     else:
         nokta = ("<span class='cg-dot cg-dot-ok'></span>" if dogrulandi_mi(yontem)
                  else "<span class='cg-dot cg-dot-bekle'></span>")
-    return (f"<div class='cg-satir'{baslik}>"
-            f"<div class='{cip_sinif}'>{kisa_ad(cihaz)}{nokta}</div>"
+    # İpucu ÇİPTE: satır display:contents olduğu için kendi kutusu yok,
+    # üzerine konan title görünmezdi.
+    return (f"<div class='cg-satir'>"
+            f"<div class='{cip_sinif}'{baslik}>{nokta}{kisa_ad(cihaz)}</div>"
             f"<div class='cg-cizgi'>{cizgi_svg}</div>"
             f"<div class='{dg_sinif}'>{dg}</div></div>")
 
@@ -441,13 +443,22 @@ STIL = """
 .cg-ack{font-size:9.5px; color:#46536b; margin-bottom:5px; padding-right:8px;}
 .cg-dip{font-size:9px; color:#9aa2b1; padding:6px 8px 0 0;
   border-top:1px solid rgba(24,26,30,.07); margin-top:3px;}
+/* Izgara LİSTEDE, satırda değil: sütunlar bütün satırlarda ORTAK olsun.
+   Her satır kendi ızgarası olsaydı uzun adlı satır geniş, kısa adlı dar
+   çıkar ve çizgiler satırdan satıra kayardı. Satırlar display:contents ile
+   bu ızgaraya katılır. */
 .cg-liste{flex:1 1 auto; min-height:0; overflow-y:auto; padding-right:8px;
+  display:grid; grid-template-columns:minmax(86px,max-content) minmax(60px,1fr) 92px;
+  column-gap:10px; align-items:center; align-content:start;
   scrollbar-width:thin; scrollbar-color:#cdd5e2 transparent;}
 .cg-liste::-webkit-scrollbar{width:7px;}
 .cg-liste::-webkit-scrollbar-thumb{background:#cdd5e2; border-radius:4px;}
-.cg-satir{display:grid; grid-template-columns:104px 1fr 92px; gap:10px; align-items:center;
-  padding:10px 0; border-bottom:1px solid rgba(24,26,30,.06);}
-.cg-satir:last-child{border-bottom:0;}
+/* Ad sütunu İÇERİĞE göre genişler (max-content): "2BK-MCC-D01" gibi uzun
+   adlar sabit 104px'e sığmayıp "2BK-MCC-D0…" diye kesiliyordu (21.10.2026).
+   Çizgiye en az 60px bırakılır ki uzun bir ad grafiği yutmasın. */
+.cg-satir{display:contents;}
+.cg-liste > .cg-satir > *{padding:10px 0; border-bottom:1px solid rgba(24,26,30,.06);}
+.cg-liste > .cg-satir:last-child > *{border-bottom:0;}
 .cg-cip{font-size:11px; font-weight:600; color:#0f1f3d; background:#f6f7f9;
   border:1px solid rgba(24,26,30,.12); border-radius:9px; padding:6px 5px; text-align:center;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
@@ -459,9 +470,9 @@ STIL = """
 .cg-dg.cg-dg-yok{font-size:10.5px; font-weight:600; color:#9aa2b1;}
 .cg-br{font-size:9.5px; font-weight:500; color:#46536b; margin-left:2px;}
 
-/* ── doğrulama noktası: cihaz adının yanında, yanıp söner ── */
+/* ── doğrulama noktası: cihaz adının SOLUNDA, yanıp söner ── */
 .cg-dot{display:inline-block; width:6px; height:6px; border-radius:50%;
-  margin-left:5px; vertical-align:middle; animation:cgNabiz 2.2s ease-in-out infinite;}
+  margin-right:6px; vertical-align:middle; animation:cgNabiz 2.2s ease-in-out infinite;}
 .cg-dot-ok{background:#0ca30c;}      /* kWh sayacıyla doğrulandı */
 .cg-dot-bekle{background:#fab219;}   /* doğrulanmadı / sayaç farkından */
 

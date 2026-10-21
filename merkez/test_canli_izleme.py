@@ -250,6 +250,20 @@ c("henüz doğrulanmamış da turuncu",
 c("okunamayan satırda nokta yok",
   "cg-dot" not in CI.satir_html("MCC-3", None, "<svg/>", None))
 c("noktalar yanıp sönüyor", "animation:cgNabiz" in CI.STIL)
+c("nokta adın SOLUNDA (nokta cihaz)",
+  _cip(_h).index("cg-dot") < _cip(_h).index("MCC-1"), _cip(_h))
+
+# Ad sutunu SABIT px degil, iceriğe gore: sabit genislikte "2BK-MCC-D01"
+# gibi adlar "2BK-MCC-D0..." diye kesiliyordu ve kesilme yazi tipine gore
+# degisiyordu (Inter yuklenince daha genis). max-content fonttan bagimsiz.
+c("ad sütunu içeriğe göre genişliyor", "max-content" in CI.STIL)
+c("çizgiye alt sınır var (uzun ad grafiği yutmasın)", "minmax(60px,1fr)" in CI.STIL)
+# Izgara LISTEDE: sutunlar butun satirlarda ortak, cizgiler hizali
+c("ızgara listede, satırlar ona katılıyor",
+  ".cg-liste{" in CI.STIL and "display:contents" in CI.STIL)
+c("satır kendi ızgarasını kurmuyor",
+  ".cg-satir{display:grid" not in CI.STIL, "satir kendi izgarasini kuruyor")
+
 c("iki nokta rengi de tanımlı",
   ".cg-dot-ok{background:#0ca30c;}" in CI.STIL and ".cg-dot-bekle{background:#fab219;}" in CI.STIL)
 

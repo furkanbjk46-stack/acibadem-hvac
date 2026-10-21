@@ -1666,7 +1666,7 @@ with tab_canli:
     # ise sürece BİR KEZ yüklenir. Yayın sonrası süreç yeniden başlamazsa
     # sayfa yeni, modül eski kalır ve burada olmayan bir işlev çağrılır
     # (21.10.2026: ekranda AttributeError çıktı). Sürüm tutmuyorsa tazele.
-    _CI_GEREKEN_SURUM = 5
+    _CI_GEREKEN_SURUM = 6
     if getattr(_CI, "SURUM", 0) < _CI_GEREKEN_SURUM:
         import importlib
         _CI = importlib.reload(_CI)
