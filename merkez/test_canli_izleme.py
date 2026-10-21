@@ -249,6 +249,35 @@ c("detay penceresinden canlı blok kaldırıldı", "canli" not in PANEL)
 c("detay penceresi iki sütunu da dönem verisiyle kullanıyor",
   "ENERJİ KAYNAĞI" in PANEL and "SİSTEM DURUMU" in PANEL)
 
+# ── 10) BAYAT MODUL KAPISI ──────────────────────────────────────────────
+# 21.10.2026 SAHADAN GELEN HATA: ekranda AttributeError. Sebep: bu sayfa HER
+# calismada diskten okunup exec ediliyor, canli_izleme modulu ise Streamlit
+# surecine BIR KEZ yukleniyor. Yayin sonrasi surec yeniden baslamazsa sayfa
+# yeni, modul eski kalir ve sayfa modulde olmayan bir islevi cagirir.
+import re as _re  # noqa: E402
+
+c("modülde sürüm damgası var", isinstance(getattr(CI, "SURUM", None), int), getattr(CI, "SURUM", None))
+c("sayfa sürümü kontrol ediyor", 'getattr(_CI, "SURUM", 0)' in SAYFA)
+c("tutmuyorsa modülü tazeliyor", "importlib.reload(_CI)" in SAYFA)
+
+_bekl = _re.search(r"_CI_GEREKEN_SURUM = (\d+)", SAYFA)
+c("sayfa beklenen sürümü yazıyor", _bekl is not None)
+# Asil koruma: module yeni islev eklenip SURUM artirilmazsa ayrisma geri doner
+c("sayfanın beklediği sürüm modülünkiyle UYUMLU",
+  _bekl and int(_bekl.group(1)) == CI.SURUM,
+  (_bekl.group(1) if _bekl else None, CI.SURUM))
+
+# Sayfanin kullandigi HER _CI islevi modulde bulunmali (ayrisma testi)
+_kullanilan = set(_re.findall(r"_CI\.([A-Za-z_][A-Za-z_0-9]*)", SAYFA))
+_eksik = [a for a in _kullanilan if not hasattr(CI, a)]
+c("sayfanın çağırdığı her işlev modülde var", not _eksik, _eksik)
+
+# Canli bolum 3 saniyede bir yenileniyor; hatasi sayfayi kaplamamali
+c("canlı bölüm hatası sekmede kalıyor (sayfa kırmızıya boyanmıyor)",
+  "except Exception as _hata:" in SAYFA and "st.warning(" in SAYFA)
+c("hata gizlenmiyor, ayrıntı gösteriliyor",
+  "Teknik ayrıntı" in SAYFA and "st.code(" in SAYFA)
+
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))
 _g = sum(1 for _, ok, _ in T if ok)

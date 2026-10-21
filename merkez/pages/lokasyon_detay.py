@@ -1662,6 +1662,15 @@ with tab1:
 with tab_canli:
     import canli_izleme as _CI
 
+    # Bu SAYFA her çalışmada diskten okunup exec edilir; canli_izleme modülü
+    # ise sürece BİR KEZ yüklenir. Yayın sonrası süreç yeniden başlamazsa
+    # sayfa yeni, modül eski kalır ve burada olmayan bir işlev çağrılır
+    # (21.10.2026: ekranda AttributeError çıktı). Sürüm tutmuyorsa tazele.
+    _CI_GEREKEN_SURUM = 2
+    if getattr(_CI, "SURUM", 0) < _CI_GEREKEN_SURUM:
+        import importlib
+        _CI = importlib.reload(_CI)
+
     st.markdown('<div class="sec">⚡ CANLI GÜÇ — TRAFOLAR</div>', unsafe_allow_html=True)
 
     _k1, _k2 = st.columns([1, 3])
@@ -1684,6 +1693,18 @@ with tab_canli:
 
     @st.fragment(run_every="3s")
     def _canli_izleme_blok():
+        try:
+            _canli_izleme_ciz()
+        except Exception as _hata:
+            # Canlı bölüm 3 saniyede bir yenileniyor; buradaki bir hata
+            # sayfayı baştan sona kırmızı traceback'le kaplıyordu. Hata
+            # SAKLANMAZ — açılır kutuda durur — ama sekmenin geri kalanı
+            # ve diğer sekmeler çalışmaya devam eder.
+            st.warning("Canlı izleme şu an çizilemedi. Sayfayı yenilemeyi deneyin.")
+            with st.expander("Teknik ayrıntı"):
+                st.code("%s: %s" % (type(_hata).__name__, _hata))
+
+    def _canli_izleme_ciz():
         pencere_sn = _CI.PENCERELER.get(
             st.session_state.get("canli_pencere", _CI.VARSAYILAN_PENCERE), 300)
 

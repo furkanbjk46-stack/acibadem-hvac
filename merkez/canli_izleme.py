@@ -27,6 +27,15 @@ Hesap (seri_guncelle) saf fonksiyondur: Streamlit olmadan test edilir.
 import re
 from datetime import datetime, timedelta, timezone
 
+# SÜRÜM DAMGASI — sayfa ile bu modülün ayrışmasını yakalamak için.
+# pages/lokasyon_detay.py her çalışmada DİSKTEN okunup exec edilir; bu modül
+# ise Streamlit sürecine BİR KEZ yüklenir. Yeni sürüm yayınlandığında süreç
+# yeniden başlamazsa sayfa yeni, modül eski kalır ve sayfa burada olmayan bir
+# işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
+# kontrol eder, tutmazsa modülü tazeler.
+# Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
+SURUM = 2
+
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
 VARSAYILAN_PENCERE = "5 dakika"
