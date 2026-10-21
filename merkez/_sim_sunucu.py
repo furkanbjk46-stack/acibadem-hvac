@@ -464,12 +464,24 @@ def canli_guc_tazele(simdi=None):
     t = simdi.hour + simdi.minute / 60.0
     # Gunduz yuku yuksek, gece dusuk (gercek trafo profiline benzer)
     gunduz = 0.55 + 0.45 * max(0.0, math.sin((t - 6) / 24 * 2 * math.pi))
-    taban = {"TRDP-1": 520.0, "TRDP-2": 410.0, "TRDP-3": 190.0, "TRDP-4": 290.0}
+    # Sahadaki 27 analizorun tamami (21.10.2026). Tabanlar gercek 19 gunluk
+    # kWh toplamlarinin saate bolunmesiyle secildi.
+    taban = {
+        "TRDP-1": 878.0, "TRDP-2": 702.0, "TRDP-3": 327.0, "TRDP-4": 499.0,
+        "CHILLER-1": 109.0, "CHILLER-2": 0.0, "CHILLER-3": 72.0,
+        "CHILLER-4": 0.6, "CHILLER-5": 10.0,
+        "KULE-1": 15.6, "KULE-2": 4.3, "KULE-3": 3.9,
+        "MCC-1": 106.0, "MCC-2": 49.0, "MCC-3": 11.0, "MCC-4": 13.0,
+        "MCC-5": 5.0, "MCC-6": 64.0, "MCC-7": 27.0,
+        "2BK-MCC-D01": 16.5, "2BK-MCC-D02": 7.4,
+        "4BK-MCC-E01": 19.2, "4BK-MCC-E02": 33.4, "4BK-MCC-F01": 20.5,
+        "CK-MCC-D01": 20.7, "CK-MCC-E01": 32.6, "CK-MCC-F01": 15.9,
+    }
     satirlar = []
     for ad, tb in taban.items():
         # Saniyeye bagli kucuk salinim: her istekte biraz farkli
         salinim = math.sin(simdi.second / 60.0 * 2 * math.pi + len(ad))
-        kw = tb * gunduz * (1.0 + 0.04 * salinim)
+        kw = 0.0 if tb <= 0 else tb * gunduz * (1.0 + 0.04 * salinim)
         satirlar.append({
             "lokasyon_id": "maslak",
             "cihaz": ad,

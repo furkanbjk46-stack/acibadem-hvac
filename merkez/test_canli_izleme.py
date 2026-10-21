@@ -74,8 +74,8 @@ s = CI.seri_guncelle(s, olcum(30, **{"TRDP-1": None, "TRDP-2": 310.0}), 300)
 c("okunamayan değer None olarak giriyor (0 DEĞİL)",
   s["cihazlar"]["TRDP-1"][-1] is None, s["cihazlar"]["TRDP-1"])
 c("diğer sayaç etkilenmiyor", s["cihazlar"]["TRDP-2"][-1] == 310.0)
-c("grafik boşlukları birleştirmiyor", "connectgaps=False" in
-  open(os.path.join(BURASI, "canli_izleme.py"), encoding="utf-8").read())
+c("grafik boşlukları birleştirmiyor (satır grafiğinde ölçüldü)",
+  CI.kivrim_svg([10.0, 11.0, None, 14.0, 15.0]).count("polyline") == 2)
 
 # Sonradan görünen cihaz: geçmişi uydurulmamalı, hizalama bozulmamalı
 s = CI.seri_guncelle(s, olcum(45, **{"TRDP-1": 420.0, "TRDP-2": 315.0,
@@ -118,51 +118,90 @@ c("toplam hesaplanıyor", CI.toplam(son) == 710.5, CI.toplam(son))
 c("hiç değer yoksa toplam None", CI.toplam({"a": None}) is None)
 c("boş sözlükte toplam None", CI.toplam({}) is None)
 
-# ── 5) Eksen — çizginin akmasını sağlayan şey ────────────────────────────
-bas, bit = CI.eksen_araligi(s, 300, simdi=T0 + timedelta(seconds=60))
-c("eksen sonu şimdiki zaman", bit == T0 + timedelta(seconds=60), bit)
-c("eksen başı pencere kadar geride", (bit - bas).total_seconds() == 300)
-# Veri gelmese bile aralık ilerler → çizgi sola akar
-bas2, bit2 = CI.eksen_araligi(s, 300, simdi=T0 + timedelta(seconds=120))
-c("yeni veri olmasa da eksen ilerliyor (akış görüntüsü)", bit2 > bit)
+# ── 5) Satır grafiği (SVG) ───────────────────────────────────────────────
+# 27 cihaz icin 27 Plotly grafigi agirdi; satir grafigi duz SVG uretilir.
+bos = CI.kivrim_svg([])
+c("veri yokken kesik çizgi (sahte değer yok)",
+  "stroke-dasharray" in bos and "polyline" not in bos, bos[:90])
+c("boş seride de yükseklik korunuyor (satırlar kaymasın)", "height:26px" in bos)
 
-# ── 6) Grafik ────────────────────────────────────────────────────────────
-class _SahteGo:
-    """plotly yerine: çağrıları kaydeder, kurulum doğru mu bakarız."""
-    class Scatter(dict):
-        def __init__(self, **kw):
-            super().__init__(**kw)
+dolu = CI.kivrim_svg([10.0, 12.0, 11.0, 14.0])
+c("dolu seri çizgi üretiyor", dolu.count("polyline") == 1, dolu[:120])
+c("çizgi verilen renkte", CI.kivrim_svg([1.0, 2.0], renk="#abcdef").count("#abcdef") == 1)
 
-    class Figure:
-        def __init__(self):
-            self.izler, self.yerlesim, self.x, self.y = [], {}, {}, {}
+c("boşluk çizgiyi KOPARIYOR (uydurma bağlantı yok)",
+  CI.kivrim_svg([10.0, 11.0, None, 14.0, 15.0]).count("polyline") == 2)
+c("tek nokta da görünür", CI.kivrim_svg([None, 12.0, None]).count("polyline") == 1)
+c("düz seri çökmüyor (sıfıra bölme yok)",
+  CI.kivrim_svg([7.0, 7.0, 7.0]).count("polyline") == 1)
 
-        def add_trace(self, iz):
-            self.izler.append(iz)
+# Her cihaz KENDI araligina olceklenir: kucuk sayacin hareketi de gorunur
+k_buyuk = CI.kivrim_svg([800.0, 900.0, 850.0])
+k_kucuk = CI.kivrim_svg([4.0, 5.0, 4.5])
+c("küçük sayacın hareketi de görünüyor (kendi ölçeğinde)",
+  k_buyuk.count("polyline") == 1 and k_kucuk.count("polyline") == 1)
 
-        def update_layout(self, **kw):
-            self.yerlesim.update(kw)
+# ── 6) Gruplama ──────────────────────────────────────────────────────────
+_c = ["TRDP-1", "TRDP-4", "CHILLER-1", "KULE-2", "MCC-3", "2BK-MCC-D01",
+      "CK-MCC-F01", "4BK-MCC-E02"]
+_g = dict((a, c_) for a, _b, c_ in CI.gruplara_ayir(_c))
+c("trafolar enerji grubunda", _g["enerji"] == ["TRDP-1", "TRDP-4"], _g.get("enerji"))
+c("chiller ve kule soğutmada", _g["sogutma"] == ["CHILLER-1", "KULE-2"], _g.get("sogutma"))
+c("ana ve blok panoları MCC'de", len(_g["mcc"]) == 4, _g.get("mcc"))
+c("grup sırası sabit", [a for a, _, _ in CI.gruplara_ayir(_c)] == ["enerji", "sogutma", "mcc"])
+c("boş grup gösterilmiyor", len(CI.gruplara_ayir(["TRDP-1"])) == 1)
 
-        def update_xaxes(self, **kw):
-            self.x.update(kw)
+# Tanimsiz cihaz KAYBOLMAZ — yeni sayac eklenince sessizce dusmesin
+_gd = CI.gruplara_ayir(["TRDP-1", "YENI-SAYAC-9"])
+c("gruplanmamış cihaz DİĞER'e düşüyor",
+  any(a == "diger" and c_ == ["YENI-SAYAC-9"] for a, _b, c_ in _gd), _gd)
+c("her cihaz bir gruba giriyor",
+  sum(len(c_) for _a, _b, c_ in CI.gruplara_ayir(_c)) == len(_c))
 
-        def update_yaxes(self, **kw):
-            self.y.update(kw)
+# Sira: ana panolar once, bloklar sonra; sayilar SAYISAL sirada
+_m = dict((a, c_) for a, _b, c_ in
+          CI.gruplara_ayir(["CK-MCC-F01", "MCC-10", "MCC-2", "2BK-MCC-D01", "MCC-1"]))["mcc"]
+c("ana panolar blok panolarından önce", _m[:3] == ["MCC-1", "MCC-2", "MCC-10"], _m)
+c("MCC-10 MCC-2'den SONRA (sayısal sıra)", _m.index("MCC-10") > _m.index("MCC-2"), _m)
+_sg = dict((a, c_) for a, _b, c_ in
+           CI.gruplara_ayir(["CHILLER-5", "CH-1", "KULE-2"]))["sogutma"]
+c("CH-1 ile CHILLER-5 aynı ailede sıralanıyor", _sg[:2] == ["CH-1", "CHILLER-5"], _sg)
 
+# Cizgi renkleri DURUM rengi olmamali: bu portalda yesil/turuncu/kirmizi
+# iyi/uyari/kritik demek. Saglam sayac sorunluymus gibi gorunmesin.
+_durum_renkleri = {"#0ca30c", "#fab219", "#c98500", "#d03b3b", "#ec835a"}
+c("satır çizgilerinde durum rengi kullanılmıyor",
+  not (set(CI.CIZGI_RENKLERI) & _durum_renkleri), CI.CIZGI_RENKLERI)
+c("renk cihaza göre sabit",
+  CI.renk("MCC-3", ["MCC-1", "MCC-3"]) == CI.renk("MCC-3", ["MCC-1", "MCC-3"]))
 
-f = CI.grafik(_SahteGo, s, 300, simdi=T0 + timedelta(seconds=30))
-c("her cihaz için bir çizgi", len(f.izler) == 2, len(f.izler))
-c("çizgiler isimli", {i["name"] for i in f.izler} == {"TRDP-1", "TRDP-2"})
-c("çizgi modunda (nokta yığını değil)", all(i["mode"] == "lines" for i in f.izler))
-c("eksen aralığı uygulanmış", "range" in f.x, f.x)
-c("y ekseni sıfırdan başlıyor", f.y.get("rangemode") == "tozero")
-c("yenilemede kullanıcı görünümü korunuyor", f.yerlesim.get("uirevision") == "canli")
-c("hover birleşik", f.yerlesim.get("hovermode") == "x unified")
+c("CHILLER-1 ekranda CH-1", CI.kisa_ad("CHILLER-1") == "CH-1")
+c("kısaltma veri adını değiştirmiyor", CI.kisa_ad("MCC-3") == "MCC-3")
 
-_renkler = [i["line"]["color"] for i in f.izler]
-c("her cihazın rengi farklı", len(set(_renkler)) == len(_renkler), _renkler)
-c("renk cihaza sabit (yenilemede değişmiyor)",
-  CI.renk("TRDP-2", ["TRDP-1", "TRDP-2"]) == CI.renk("TRDP-2", ["TRDP-1", "TRDP-2"]))
+# Grup toplami: yalnizca o grubun okunan cihazlari
+_s = CI.bos_seri()
+_s = CI.seri_guncelle(_s, olcum(0, **{"TRDP-1": 400.0, "TRDP-2": 300.0,
+                                      "CHILLER-1": 50.0}), 300)
+c("grup toplamı yalnız o grubu sayıyor",
+  CI.grup_toplami(_s, ["TRDP-1", "TRDP-2"]) == 700.0,
+  CI.grup_toplami(_s, ["TRDP-1", "TRDP-2"]))
+c("okunamayan cihaz toplamı bozmuyor",
+  CI.grup_toplami(_s, ["TRDP-1", "YOK"]) == 400.0)
+c("hiç okunan yoksa toplam None", CI.grup_toplami(_s, ["YOK"]) is None)
+
+# Satir ve grup govdesi
+_sat = CI.satir_html("CHILLER-1", 117.4, "<svg/>", "register")
+c("satırda kısa ad", ">CH-1<" in _sat, _sat[:120])
+c("satırda değer", "117,4" in _sat)
+c("satırda yöntem ipucu", "sayaçla doğrulandı" in _sat)
+_sat_yok = CI.satir_html("MCC-5", None, "<svg/>", None)
+c("okunamayan satır 0 YAZMIYOR", "okunamadı" in _sat_yok and "0,0" not in _sat_yok)
+
+_gh = CI.grup_html("MCC YÜKÜ", "açıklama", "<i></i>", 456.2, 14, 15)
+c("grup başlığında toplam", "456,2 kW" in _gh)
+c("grup dibinde okunan sayaç", "14/15 sayaç okunuyor" in _gh)
+c("liste kaydırmalı (uzun liste kartı taşırmasın)",
+  "max-height:430px" in _gh and "overflow-y:auto" in CI.STIL)
 
 # ── 7) Yöntem özeti — tahmin, ölçüm gibi gösterilmesin ───────────────────
 metin, _ = CI.yontem_ozeti([{"cihaz": "TRDP-1", "yontem": "register"},
@@ -199,7 +238,11 @@ c("kendi kendine yenileniyor", '@st.fragment(run_every="3s")' in SAYFA)
 c("pencere seçimi fragment DIŞINDA (seçim elden kaymasın)",
   SAYFA.index('key="canli_pencere"') < SAYFA.index('@st.fragment(run_every="3s")'))
 c("sayaç yoksa açıklanıyor", "canlı sayaç okuması yok" in SAYFA)
-c("grafik tek yerden çiziliyor", "_CI.grafik(go, seri, pencere_sn)" in SAYFA)
+c("satırlar modülden üretiliyor (sayfada kopya HTML yok)",
+  "_CI.satir_html(" in SAYFA and "_CI.grup_html(" in SAYFA
+  and "_CI.kivrim_svg(" in SAYFA)
+c("gruplama modülden", "_CI.gruplara_ayir(" in SAYFA)
+c("stil tek yerden", "_CI.STIL" in SAYFA and "cg-grup" not in SAYFA)
 
 # Pencere (detay pop-up'ı) artık canlı veri göstermiyor — sıkışıklık giderildi
 c("detay penceresinden canlı blok kaldırıldı", "canli" not in PANEL)

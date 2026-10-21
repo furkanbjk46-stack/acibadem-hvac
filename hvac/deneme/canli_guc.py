@@ -49,13 +49,21 @@ SONUC_DOSYA = os.path.join(BURASI, "configs", "canli_guc_son.json")
 MODBUS_PORT = 502
 OKUMA_TIMEOUT = 2.0          # günlük okumadan kısa: canlı turu geciktirmesin
 
-# Hangi cihazlar canlı okunuyor. Şimdilik yalnız trafolar (kullanıcı kararı
-# 20.10.2026); chiller/MCC/kule aynı mekanizmayla sonra eklenebilir.
-CIHAZ_ONEKI = "TRDP-"
+# Hangi cihazlar canlı okunuyor.
+#   20.10.2026: yalnız trafolar (TRDP) ile başlandı.
+#   21.10.2026: sahanın TAMAMI — 27 analizör. Önce okumalar paralelleştirildi
+#               ve arızalı cihaz geçici atlanır hale getirildi; yoksa cevap
+#               vermeyen birkaç sayaç 15 saniyelik turu tek başına yerdi.
+# Boş liste = data_collector.ANALYZERS'ın tamamı. Daraltmak için ayar
+# dosyasına ön ek yazılır (ör. ["TRDP-"]) — kod değişmeden.
+CIHAZ_ONEKLERI = []
 
 VARSAYILAN_AYAR = {
     "periyot_sn": 15,          # kaç saniyede bir güç okunsun
-    "sayac_her_n_tur": 4,      # kaç turda bir kWh ile çapraz denetim (4×15 = 60 sn)
+    "es_zamanli": 8,           # aynı anda kaç sayaç okunsun (0/1 = sırayla)
+    "ariza_esigi": 3,          # kaç ardışık hatadan sonra cihaz geçici atlanır
+    "ariza_bekleme_tur": 10,   # atlanan cihaz kaç tur sonra tekrar denenir
+    "sayac_her_n_tur": 8,      # kaç turda bir kWh ile çapraz denetim (8×15 = 2 dk)
     "tolerans_oran": 0.12,     # register ile sayaç farkı: %12'ye kadar uyumlu sayılır
     "tolerans_kw": 15.0,       # küçük yüklerde oran anlamsız, mutlak pay
     "makul_alt_kw": -50.0,     # şebekeye verme ihtimaline karşı negatife biraz pay
@@ -74,6 +82,8 @@ VARSAYILAN_AYAR = {
     # Sahada farklı model çıkarsa GUC: komutuyla denenir ve BURADAN düzeltilir
     # — kod değişmeden.
     "guc_register": {"janitza": 19026, "siemens": 65},
+    # Boş = tüm analizörler. Daraltmak için ör. ["TRDP-"].
+    "cihaz_onekleri": [],
 }
 
 
@@ -140,18 +150,23 @@ def guc_oku(dev: dict, ayar: dict = None, adres: int = None):
     return round(w / 1000.0, 2)          # W → kW
 
 
-def cihazlar() -> list:
+def cihazlar(ayar: dict = None) -> list:
     """Canlı okunacak cihazlar — TEK KAYNAK data_collector.ANALYZERS.
 
-    Ayrı bir liste tutulmaz: sahada bir trafo eklenip ANALYZERS'a yazıldığında
-    canlı panel de kendiliğinden onu gösterir.
+    Ayrı bir liste tutulmaz: sahada bir sayaç eklenip ANALYZERS'a
+    yazıldığında canlı panel de kendiliğinden onu gösterir.
     """
+    onekler = (ayar or {}).get("cihaz_onekleri", CIHAZ_ONEKLERI) or []
     try:
         import data_collector as dc
-        return [d for d in dc.ANALYZERS if str(d.get("name", "")).startswith(CIHAZ_ONEKI)]
+        liste = list(dc.ANALYZERS)
     except Exception as e:
         logger.warning("Analizör listesi okunamadı: %s", e)
         return []
+    if onekler:
+        liste = [d for d in liste
+                 if any(str(d.get("name", "")).startswith(o) for o in onekler)]
+    return liste
 
 
 def _sayac_oku(dev: dict):
@@ -166,14 +181,37 @@ def _sayac_oku(dev: dict):
 # ── Ölçüm turu ────────────────────────────────────────────────────────────
 
 class Olcer:
-    """Turları yürütür ve sayaç geçmişini tutar (çapraz denetim için)."""
+    """Turları yürütür ve sayaç geçmişini tutar (çapraz denetim için).
 
-    def __init__(self, ayar: dict = None, kilit=None):
+    OKUMA PARALEL, KARAR TEK İPLİK: cihazlardan okuma iş parçacığı havuzunda
+    yapılır (27 sayaç sırayla okunursa cevap vermeyen tek cihaz bütün turu
+    geciktirir), ama hangi değerin gösterileceğine ana iplik karar verir.
+    Böylece sayaç geçmişi ve doğrulama damgası yarış koşuluna girmez.
+    """
+
+    def __init__(self, ayar: dict = None, kilit_al=None):
         self.ayar = ayar or ayar_oku()
-        self.kilit = kilit                 # günlük okumayla çakışmayı önler
+        # kilit_al(dev) → o cihazın kilidi. Günlük okumayla çakışmayı önler;
+        # cihaz bazında olduğu için farklı sayaçlar birbirini beklemez.
+        self.kilit_al = kilit_al
         self.tur_no = 0
         self._sayac = {}                   # cihaz → (kwh, zaman)
         self._son_karar = {}               # cihaz → {"yontem": ...} (doğrulama damgası)
+        self._hata = {}                    # cihaz → ardışık hata sayısı
+        self._atla = {}                    # cihaz → kaç tur daha atlanacak
+
+    def _oku_tek(self, dev, sayac_turu):
+        """TEK cihazdan okuma (havuzda çalışır, ortak duruma DOKUNMAZ)."""
+        kilit = self.kilit_al(dev) if self.kilit_al else None
+        if kilit is not None:
+            kilit.acquire()
+        try:
+            kw_reg = guc_oku(dev, self.ayar)
+            kwh = _sayac_oku(dev) if sayac_turu else None
+        finally:
+            if kilit is not None:
+                kilit.release()
+        return kw_reg, kwh
 
     def _makul(self, kw) -> bool:
         return (kw is not None
@@ -191,24 +229,71 @@ class Olcer:
             return None
         return round((kwh - eski_kwh) / dt * 3600.0, 2)
 
+    def _atlanacak(self, ad) -> bool:
+        """Üst üste cevap vermeyen cihaz bir süre atlanır.
+
+        NEDEN: her başarısız okuma zaman aşımı kadar (2 sn) bekler. Arızalı
+        beş sayaç, 15 saniyelik turun 10 saniyesini tek başına yer; sağlam
+        sayaçların verisi de gecikir. Atlanan cihaz ekranda 'okunamadı'
+        kalır — gizlenmez — ve belirli aralıkla yeniden denenir.
+        """
+        kalan = self._atla.get(ad, 0)
+        if kalan > 0:
+            self._atla[ad] = kalan - 1
+            return True
+        return False
+
+    def _hata_isle(self, ad, basarili):
+        if basarili:
+            self._hata[ad] = 0
+            return
+        self._hata[ad] = self._hata.get(ad, 0) + 1
+        if self._hata[ad] >= int(self.ayar["ariza_esigi"]):
+            self._atla[ad] = int(self.ayar["ariza_bekleme_tur"])
+            self._hata[ad] = 0
+            logger.info("%s üst üste cevap vermedi — %d tur atlanacak",
+                        ad, self.ayar["ariza_bekleme_tur"])
+
     def tur(self) -> list:
         """Bir ölçüm turu. Her cihaz için sözlük döner."""
         self.tur_no += 1
         sayac_turu = (self.tur_no % max(1, int(self.ayar["sayac_her_n_tur"])) == 1)
+        liste = cihazlar(self.ayar)
+        okunacak = [d for d in liste if not self._atlanacak(d.get("name", "?"))]
+
+        # ── Paralel okuma ────────────────────────────────────────────────
+        ham = {}
+        es_zamanli = max(1, int(self.ayar.get("es_zamanli", 8)))
+        if es_zamanli > 1 and len(okunacak) > 1:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=min(es_zamanli, len(okunacak)),
+                                    thread_name_prefix="canli-guc") as havuz:
+                isler = {havuz.submit(self._oku_tek, d, sayac_turu): d for d in okunacak}
+                for is_, dev in isler.items():
+                    try:
+                        ham[dev.get("name", "?")] = is_.result()
+                    except Exception:
+                        ham[dev.get("name", "?")] = (None, None)
+        else:
+            for dev in okunacak:
+                try:
+                    ham[dev.get("name", "?")] = self._oku_tek(dev, sayac_turu)
+                except Exception:
+                    ham[dev.get("name", "?")] = (None, None)
+
+        # ── Karar: tek iplikte, sıra GARANTİLİ ───────────────────────────
+        simdi = time.time()
         sonuc = []
-
-        for dev in cihazlar():
+        for dev in liste:
             ad = dev.get("name", "?")
-            if self.kilit is not None:
-                self.kilit.acquire()
-            try:
-                kw_reg = guc_oku(dev, self.ayar)
-                kwh = _sayac_oku(dev) if sayac_turu else None
-            finally:
-                if self.kilit is not None:
-                    self.kilit.release()
-
-            kw_sayac = self._sayac_gucu(ad, kwh, time.time()) if sayac_turu else None
+            if ad not in ham:                       # bu tur atlandı
+                kayit = self._karar(ad, None, None, None)
+                kayit["not"] = "cihaz cevap vermiyor — geçici olarak atlanıyor"
+                sonuc.append(kayit)
+                continue
+            kw_reg, kwh = ham[ad]
+            self._hata_isle(ad, kw_reg is not None or kwh is not None)
+            kw_sayac = self._sayac_gucu(ad, kwh, simdi) if sayac_turu else None
             sonuc.append(self._karar(ad, kw_reg, kw_sayac, kwh))
 
         return sonuc
@@ -288,12 +373,12 @@ def son_olcum(dosya: str = None, azami_yas_sn: int = 120):
 
 # ── Döngü (data_collector tarafından thread olarak başlatılır) ────────────
 
-def dongu(kilit=None):
+def dongu(kilit_al=None):
     ayar = ayar_oku()
     periyot = max(5, int(ayar.get("periyot_sn", 15)))
-    olcer = Olcer(ayar, kilit=kilit)
-    logger.info("Canlı güç okuması başladı — %d cihaz, %d sn periyot",
-                len(cihazlar()), periyot)
+    olcer = Olcer(ayar, kilit_al=kilit_al)
+    logger.info("Canlı güç okuması başladı — %d cihaz, %d sn periyot, %d eş zamanlı",
+                len(cihazlar(ayar)), periyot, ayar.get("es_zamanli", 8))
     while True:
         basla = time.time()
         try:
@@ -304,8 +389,8 @@ def dongu(kilit=None):
         time.sleep(max(1.0, periyot - (time.time() - basla)))
 
 
-def baslat(kilit=None):
-    t = threading.Thread(target=dongu, kwargs={"kilit": kilit},
+def baslat(kilit_al=None):
+    t = threading.Thread(target=dongu, kwargs={"kilit_al": kilit_al},
                          daemon=True, name="canli-guc")
     t.start()
     return t

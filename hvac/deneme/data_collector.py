@@ -70,9 +70,26 @@ ANALYZERS = [
 MODBUS_PORT    = 502
 MODBUS_CSV     = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
 # Sayaçlara aynı anda iki okuma gitmesin: günlük okuma ile canlı güç okuması
-# (canli_guc.py) bu kilidi paylaşır. Analizörlerin bir kısmı eşzamanlı TCP
+# (canli_guc.py) bu kilitleri paylaşır. Analizörlerin bir kısmı eşzamanlı TCP
 # bağlantısında yanıt vermiyor.
-MODBUS_KILIT   = threading.Lock()
+#
+# KİLİT CİHAZ BAZINDADIR, tek bir genel kilit DEĞİL: farklı sayaçlar farklı
+# IP'lerde, birbirlerini beklemeleri için sebep yok. Tek kilitle canlı okuma
+# 27 sayacı sırayla okumak zorunda kalır ve cevap vermeyen bir sayaç bütün
+# turu geciktirir. Aynı sayaca iki okuma ise hâlâ sıraya girer.
+_MODBUS_KILITLER = {}
+_KILIT_SOZLUGU   = threading.Lock()
+
+
+def cihaz_kilidi(dev):
+    """Verilen cihazın kilidi (yoksa oluşturulur)."""
+    ad = str(dev.get("name") or dev.get("ip") or "?")
+    with _KILIT_SOZLUGU:
+        kilit = _MODBUS_KILITLER.get(ad)
+        if kilit is None:
+            kilit = threading.Lock()
+            _MODBUS_KILITLER[ad] = kilit
+        return kilit
 READ_INTERVAL  = 1800  # 30 dakika (saniye) — artık kullanılmıyor, saat 07:00 tetikler
 READ_SAAT      = 7    # Günlük Modbus okuma saati
 READ_DAKIKA    = 0    # Günlük Modbus okuma dakikası
@@ -143,7 +160,7 @@ def modbus_thread():
                 # Canlı güç okuması aynı sayaçlara gidiyor; kilit ikisinin
                 # aynı anda aynı cihaza bağlanmasını önler (günlük okuma
                 # ÖNCELİKLİ değildir, sadece çakışmaz).
-                with MODBUS_KILIT:
+                with cihaz_kilidi(dev):
                     val = modbus_get_kwh(dev)
                 if val is not None:
                     ok_count += 1
@@ -352,7 +369,7 @@ def start():
     # toplayıcı normal çalışmaya devam eder — günlük okuma etkilenmez.
     try:
         import canli_guc
-        canli_guc.baslat(kilit=MODBUS_KILIT)
+        canli_guc.baslat(kilit_al=cihaz_kilidi)
     except Exception as e:
         logger.warning("Canli guc okumasi baslatilamadi: %s", e)
 

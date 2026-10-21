@@ -68,11 +68,17 @@ c("yalnızca 'read holding registers' (fonksiyon 3) kullanılıyor",
 c("günlük tüketim referansına dokunulmuyor",
   "modbus_daily_ref" not in KOD and "analizor_guncel_veriler" not in KOD)
 c("günlük okuma CSV'si yazılmıyor", "MODBUS_CSV" not in KOD)
+# Kilit CIHAZ BAZINDA: tek genel kilit 27 sayaci sirayla okumaya zorlar ve
+# cevap vermeyen bir sayac butun turu geciktirir. Ayni sayaca iki okuma ise
+# hala siraya girmeli.
 c("okuma kilidi destekleniyor (günlük okumayla çakışmasın)",
-  "self.kilit.acquire()" in KAYNAK and "self.kilit.release()" in KAYNAK)
-c("günlük okuma da aynı kilidi kullanıyor", "with MODBUS_KILIT:" in DC_KAYNAK)
-c("kilit data_collector'da tanımlı", "MODBUS_KILIT   = threading.Lock()" in DC_KAYNAK)
-c("toplayıcı canlı okumayı başlatıyor", "canli_guc.baslat(kilit=MODBUS_KILIT)" in DC_KAYNAK)
+  "kilit.acquire()" in KAYNAK and "kilit.release()" in KAYNAK)
+c("kilit cihaz bazında alınıyor", "self.kilit_al(dev)" in KAYNAK)
+c("günlük okuma da aynı kilidi kullanıyor", "with cihaz_kilidi(dev):" in DC_KAYNAK)
+c("cihaz kilidi data_collector'da tanımlı", "def cihaz_kilidi(dev):" in DC_KAYNAK)
+c("kilitler cihaz adına göre saklanıyor", "_MODBUS_KILITLER" in DC_KAYNAK)
+c("toplayıcı canlı okumayı başlatıyor",
+  "canli_guc.baslat(kilit_al=cihaz_kilidi)" in DC_KAYNAK)
 c("canlı okuma başlamazsa toplayıcı çalışmaya devam ediyor",
   "Canli guc okumasi baslatilamadi" in DC_KAYNAK)
 
@@ -197,9 +203,11 @@ import data_collector as dc  # noqa: E402
 _liste = cg.cihazlar()
 c("cihazlar ANALYZERS'tan geliyor",
   all(any(x["name"] == d["name"] for x in dc.ANALYZERS) for d in _liste), len(_liste))
-c("yalnızca trafolar canlı okunuyor",
-  _liste and all(d["name"].startswith("TRDP-") for d in _liste),
-  [d["name"] for d in _liste])
+# 21.10.2026: saha genisledi — 27 analizorun TAMAMI canli okunuyor.
+c("sahanın tamamı canlı okunuyor", len(_liste) == len(dc.ANALYZERS), len(_liste))
+c("liste daraltılabiliyor (kod değişmeden)",
+  [d["name"] for d in cg.cihazlar({"cihaz_onekleri": ["TRDP-"]})]
+  == [d["name"] for d in dc.ANALYZERS if d["name"].startswith("TRDP-")])
 c("canli_guc'ta ayrı cihaz listesi tutulmuyor",
   "172.17.91" not in KAYNAK)
 
@@ -227,6 +235,87 @@ c("modül yoksa senkron bozulmuyor", "Canlı güç taşıma kapalı" in CS_KAYNA
 c("taşıma Modbus'a gitmiyor (yalnız dosya okur)",
   "son_olcum ( )" in CS_KOD.replace("son_olcum()", "son_olcum ( )")
   and "modbus" not in CS_KOD.split("_canli_guc_loop")[1][:1500].lower())
+
+# ── 10) PARALEL OKUMA · ARIZA ATLAMASI · SEYRELTILMIS DENETIM ───────────
+# 27 sayac sirayla okunursa cevap vermeyen birkac cihaz (her biri 2 sn zaman
+# asimi) 15 saniyelik turu tek basina yer. Olculdu: sirayla 25,3 sn, paralel
+# 5,0 sn, arizalilar atlaninca 0,4 sn.
+import threading as _th  # noqa: E402
+import time as _tm  # noqa: E402
+
+c("eş zamanlı okuma ayarı var", "es_zamanli" in a, a.get("es_zamanli"))
+c("varsayılan paralel (sırayla değil)", int(a["es_zamanli"]) > 1, a["es_zamanli"])
+c("iş parçacığı havuzu kullanılıyor", "ThreadPoolExecutor" in KOD)
+# Havuzda calisan fonksiyon ORTAK DURUMA dokunmamali: sayac gecmisi ve
+# dogrulama damgasi karar asamasinda, tek iplikte guncellenir.
+_isci = KAYNAK.split("def _oku_tek")[1].split("\n    def ")[0]
+c("karar TEK iplikte veriliyor (yarış koşulu yok)",
+  "self._son_karar" not in _isci and "self._sayac" not in _isci
+  and "self._hata" not in _isci and "self._atla" not in _isci, _isci[:120])
+
+c("çapraz denetim seyreltildi (27 sayaçta sayaç okuması pahalı)",
+  int(a["sayac_her_n_tur"]) >= 8, a["sayac_her_n_tur"])
+
+ARIZALI = {"MCC-5", "CHILLER-2"}
+_kilitler = {}
+
+
+def _kilit_al(dev):
+    return _kilitler.setdefault(dev["name"], _th.Lock())
+
+
+def _sahte_guc(dev, ayar=None, adres=None):
+    if dev["name"] in ARIZALI:
+        _tm.sleep(0.25)          # zaman asimi (testte kisaltildi)
+        return None
+    _tm.sleep(0.02)
+    return 100.0
+
+
+_orj_guc, _orj_sayac = cg.guc_oku, cg._sayac_oku
+cg.guc_oku = _sahte_guc
+cg._sayac_oku = lambda dev: None if dev["name"] in ARIZALI else 1000.0
+try:
+    _ay = dict(a)
+    _ay["es_zamanli"] = 1
+    _o1 = cg.Olcer(_ay, kilit_al=_kilit_al)
+    _t0 = _tm.time(); _r1 = _o1.tur(); _sira_sn = _tm.time() - _t0
+
+    _ay2 = dict(a)
+    _ay2["es_zamanli"] = 8
+    _o2 = cg.Olcer(_ay2, kilit_al=_kilit_al)
+    _t0 = _tm.time(); _r2 = _o2.tur(); _paralel_sn = _tm.time() - _t0
+
+    c("paralel okuma sıralıdan HIZLI", _paralel_sn < _sira_sn * 0.6,
+      "sirayla %.2f sn / paralel %.2f sn" % (_sira_sn, _paralel_sn))
+    c("paralelde de her cihaz dönüyor", len(_r2) == len(cg.cihazlar(a)), len(_r2))
+    c("paralelde sonuç sırası cihaz listesiyle aynı",
+      [x["cihaz"] for x in _r2] == [d["name"] for d in cg.cihazlar(a)])
+    c("sağlam sayaçlar okundu",
+      all(x["kw"] == 100.0 for x in _r2 if x["cihaz"] not in ARIZALI))
+    c("arızalı sayaç uydurulmadı",
+      all(x["kw"] is None for x in _r2 if x["cihaz"] in ARIZALI))
+
+    # Ariza atlamasi: esik asilinca cihaz bir sure atlanir
+    _o3 = cg.Olcer(dict(a, es_zamanli=8, ariza_esigi=2, ariza_bekleme_tur=3),
+                   kilit_al=_kilit_al)
+    _atlanma = []
+    for _i in range(6):
+        _rr = _o3.tur()
+        _atlanma.append(sum(1 for x in _rr
+                            if (x.get("not") or "").startswith("cihaz cevap vermiyor")))
+    c("eşik aşılınca arızalı cihaz atlanıyor", max(_atlanma) == len(ARIZALI), _atlanma)
+    c("ilk turlarda atlanmıyor (önce denenir)", _atlanma[0] == 0, _atlanma)
+    c("atlanan cihaz tekrar deneniyor (kalıcı dışlanmıyor)",
+      _atlanma[-1] == 0 or 0 in _atlanma[2:], _atlanma)
+
+    _son = _o3.tur()
+    c("atlanan cihaz ekranda GİZLENMİYOR", len(_son) == len(cg.cihazlar(a)))
+    c("atlanan cihazın durumu yazıyor",
+      any("atlan" in (x.get("not") or "") for x in _son if x["cihaz"] in ARIZALI)
+      or all(x["kw"] is None for x in _son if x["cihaz"] in ARIZALI))
+finally:
+    cg.guc_oku, cg._sayac_oku = _orj_guc, _orj_sayac
 
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))

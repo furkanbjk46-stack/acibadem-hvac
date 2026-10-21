@@ -477,13 +477,14 @@ def fetch_lokasyonlar(url, key):
     except:
         return []
 
-@st.cache_data(ttl=5, show_spinner=False)
+@st.cache_data(ttl=12, show_spinner=False)
 def fetch_canli_guc(url, key, lokasyon_id):
     """Lokasyonun canlı sayaç gücü (kW) — (olcumler, yas_sn).
 
-    TTL 5 sn: panel 10 saniyede bir yenileniyor, önbellek yalnızca aynı
-    yenileme içindeki tekrar sorguyu engeller. Uzun TTL canlı değeri
-    dondururdu.
+    TTL 12 sn: saha 15 saniyede bir yazıyor, daha sık sormak AYNI veriyi
+    tekrar indirmek demek. 27 sayaçta bu fark günde 63 MB ile 21 MB
+    arasında: ekranda hiçbir değişiklik olmadan trafik üçte bire iner.
+    Çizginin akması eksenin kaymasından gelir, sorgu sıklığından değil.
 
     Yaş, SAHADAKİ ölçüm zamanından hesaplanır (sorgu zamanından değil):
     lokasyon okumayı kesmişse panel bunu "akış durmuş" diye gösterebilsin.

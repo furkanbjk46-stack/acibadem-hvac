@@ -3,8 +3,8 @@
 CANLI İZLEME — akan kW grafiği
 ==============================
 
-Lokasyon detayındaki "Canlı İzleme" sekmesinin gövdesi. Sahadaki sayaçların
-o anki gücü (kW) kayan bir pencerede çizilir; çizgi soldan sağa akar.
+Lokasyon detayındaki "Canlı İzleme" sekmesinin gövdesi. Sahadaki 27 sayacın
+o anki gücü (kW) üç başlık altında, satır başına mini akan grafikle gösterilir.
 
 ── GEÇMİŞ NEREDE TUTULUYOR (ÖNEMLİ KARAR) ───────────────────────────────
 Hiçbir yerde. Supabase'deki canli_guc tablosu SON değeri tutar, üzerine
@@ -24,15 +24,18 @@ burada değil, lokasyon tarafında yazılır.
 
 Hesap (seri_guncelle) saf fonksiyondur: Streamlit olmadan test edilir.
 """
+import re
 from datetime import datetime, timedelta, timezone
 
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
 VARSAYILAN_PENCERE = "5 dakika"
 
-# Dört trafo için sabit renk: grafikte ve kartlarda AYNI renk kullanılsın
-CIZGI_RENKLERI = ["#133273", "#2a78d6", "#6da7ec", "#4a3aa7",
-                  "#0ca30c", "#c98500", "#d03b3b", "#46536b"]
+# Satır grafiği renkleri — BİLEREK tek aile (lacivert/mavi).
+# Yeşil/turuncu/kırmızı bu portalda DURUM demek (iyi/uyarı/kritik); çizgiyi
+# ayırt etmek için onları kullanmak, sağlam bir sayacı sorunluymuş gibi
+# gösterir. Ayrım renk tonuyla yapılır, anlamla değil.
+CIZGI_RENKLERI = ["#133273", "#2a78d6", "#4a3aa7", "#6da7ec", "#1d4ed8", "#5b8fd4"]
 
 # Değerin NEREDEN geldiği ekranda yazar: tahmin, ölçüm gibi gösterilmesin.
 #   register  → cihazın güç register'ı, kWh sayacıyla doğrulandı
@@ -70,6 +73,74 @@ def renk(cihaz: str, sirali_cihazlar: list) -> str:
         return CIZGI_RENKLERI[sirali_cihazlar.index(cihaz) % len(CIZGI_RENKLERI)]
     except ValueError:
         return CIZGI_RENKLERI[-1]
+
+
+# ── Gruplama ─────────────────────────────────────────────────────────────
+# Sahadaki 27 sayaç tek listede okunur; ekranda anlamlı üç başlık altında
+# toplanır. Eşleşmeyen cihaz KAYBOLMAZ, "DİĞER" başlığına düşer.
+GRUPLAR = [
+    ("enerji",  "ENERJİ KAYNAĞI",   ("TRDP-",)),
+    ("sogutma", "SOĞUTMA SİSTEMİ",  ("CHILLER-", "CH-", "KULE-")),
+    ("mcc",     "MCC YÜKÜ",         ("MCC-", "2BK-", "4BK-", "CK-")),
+]
+GRUP_ACIKLAMA = {
+    "enerji":  "Şebeke trafoları · canlı sayaçtan",
+    "sogutma": "Chiller'lar ve soğutma kuleleri · canlı sayaçtan",
+    "mcc":     "Ana panolar ve blok panoları · canlı sayaçtan",
+    "diger":   "Gruplanmamış sayaçlar",
+}
+
+
+def grup_bul(cihaz: str) -> str:
+    ad = str(cihaz or "").upper()
+    for anahtar, _, onekler in GRUPLAR:
+        if any(ad.startswith(o) for o in onekler):
+            return anahtar
+    return "diger"
+
+
+def kisa_ad(cihaz: str) -> str:
+    """CHILLER-1 → CH-1 (ekranda dar sütuna sığsın; veri adı DEĞİŞMEZ)."""
+    return str(cihaz or "").replace("CHILLER-", "CH-")
+
+
+def _sira_anahtari(cihaz: str, onekler: tuple):
+    """Grup içi sıra: önce ön ek sırası, sonra SAYISAL.
+
+    Düz alfabetik sıralamada '2BK-MCC-D01' ana panoların önüne geçiyor ve
+    'MCC-10' da 'MCC-2'den önce geliyordu. Ön ek sırası GRUPLAR'daki
+    yazılış sırasıdır — ana panolar önce, blok panoları sonra.
+    """
+    # Sıralama EKRANDAKİ ada göre: CHILLER-5 ile CH-1 aynı aile, listede
+    # yan yana ve sayı sırasıyla dursunlar (CH-1, CH-5), ayrı kümeler gibi
+    # değil.
+    ad = kisa_ad(str(cihaz or "")).upper()
+    sira = next((i for i, o in enumerate(onekler) if ad.startswith(o)), len(onekler))
+    parcalar = []
+    for p in re.split(r"(\d+)", ad):
+        parcalar.append((1, int(p)) if p.isdigit() else (0, p))
+    return (sira, parcalar)
+
+
+def gruplara_ayir(cihazlar: list) -> list:
+    """[(anahtar, baslik, [cihaz...])] — sıralı, boş grup dönmez."""
+    sonuc = []
+    kalan = list(cihazlar or [])
+    for anahtar, baslik, onekler in GRUPLAR:
+        uyan = [c for c in kalan if grup_bul(c) == anahtar]
+        if uyan:
+            sonuc.append((anahtar, baslik,
+                          sorted(uyan, key=lambda c: _sira_anahtari(c, onekler))))
+    artan = sorted(c for c in kalan if grup_bul(c) == "diger")
+    if artan:
+        sonuc.append(("diger", "DİĞER", artan))
+    return sonuc
+
+
+def grup_toplami(seri: dict, cihazlar: list):
+    """Gruptaki okunabilen cihazların son değerleri toplamı."""
+    son = son_degerler(seri)
+    return toplam({c: son.get(c) for c in cihazlar})
 
 
 def _zaman_coz(deger):
@@ -145,55 +216,122 @@ def toplam(degerler: dict):
     return round(sum(okunan), 1) if okunan else None
 
 
-def eksen_araligi(seri: dict, pencere_sn: int, simdi: datetime = None) -> tuple:
-    """Grafiğin x aralığı: SON ANA sabitlenir, pencere kadar geriye gider.
+# ── Satır içi mini grafik (SVG) ──────────────────────────────────────────
+# 27 cihaz için 27 Plotly grafiği çizmek ağır olurdu; satır grafiği düz SVG
+# olarak üretilir. Her cihaz KENDİ aralığına ölçeklenir: amaç sayaçları
+# birbiriyle kıyaslamak değil, o sayacın son dakikalarda ne yaptığını
+# göstermek — yoksa 4 kW'lık kulenin hareketi 880 kW'lık trafonun yanında
+# düz çizgi görünürdü.
 
-    Aralık saate bağlı olduğu için yeni veri gelmese bile çizgi sola akar —
-    'ilerleyen grafik' görüntüsü buradan gelir.
+def kivrim_svg(degerler: list, renk: str = "#2a78d6",
+               genislik: int = 100, yukseklik: int = 26) -> str:
+    """Seriden mini çizgi. Okunamayan noktalar BOŞLUK bırakır."""
+    gecerli = [d for d in (degerler or []) if d is not None]
+    if not gecerli:
+        return (f"<svg viewBox='0 0 {genislik} {yukseklik}' preserveAspectRatio='none' "
+                f"style='width:100%;height:{yukseklik}px;display:block;'>"
+                f"<line x1='0' y1='{yukseklik/2:.0f}' x2='{genislik}' y2='{yukseklik/2:.0f}' "
+                f"stroke='#d7dde7' stroke-width='1.4' stroke-dasharray='3 3'/></svg>")
+
+    n = len(degerler)
+    alt, ust = min(gecerli), max(gecerli)
+    if ust - alt < 1e-9:                  # düz çizgi: ortada dursun
+        alt, ust = alt - 1.0, ust + 1.0
+    pay = (ust - alt) * 0.18
+    alt, ust = alt - pay, ust + pay
+
+    def nokta(i, v):
+        x = 0 if n < 2 else i * genislik / (n - 1)
+        y = yukseklik - (v - alt) / (ust - alt) * yukseklik
+        return "%.1f,%.1f" % (x, max(1.0, min(yukseklik - 1.0, y)))
+
+    # Boşluklara göre parçalara ayır — kopuk veri birleştirilmez
+    parcalar, parca = [], []
+    for i, v in enumerate(degerler):
+        if v is None:
+            if len(parca) > 1:
+                parcalar.append(parca)
+            parca = []
+        else:
+            parca.append(nokta(i, v))
+    if len(parca) > 1:
+        parcalar.append(parca)
+    if not parcalar:                      # tek nokta: kısa yatay iz
+        i = next(i for i, v in enumerate(degerler) if v is not None)
+        x, y = nokta(i, degerler[i]).split(",")
+        parcalar = [["%.1f,%s" % (max(0.0, float(x) - 5), y), "%s,%s" % (x, y)]]
+
+    cizgiler = "".join(
+        f"<polyline fill='none' stroke='{renk}' stroke-width='1.8' "
+        f"stroke-linejoin='round' stroke-linecap='round' points='{' '.join(p)}'/>"
+        for p in parcalar)
+    return (f"<svg viewBox='0 0 {genislik} {yukseklik}' preserveAspectRatio='none' "
+            f"style='width:100%;height:{yukseklik}px;display:block;'>{cizgiler}</svg>")
+
+
+def tr_sayi(x, ond=1):
+    s = ("{:,.%df}" % ond).format(x)
+    tam, _, kus = s.partition(".")
+    return tam.replace(",", ".") + "," + kus
+
+
+def satir_html(cihaz: str, deger, cizgi_svg: str, yontem: str = None) -> str:
+    """Tek cihaz satırı: ad · mini grafik · anlık kW.
+
+    Okunamayan cihaz "0,0 kW" DEĞİL "okunamadı" yazar: sıfır, sayacın
+    durduğunu söyler; okunamamak başka bir şeydir.
     """
-    bit = simdi or datetime.now()
-    zamanlar = seri.get("zamanlar") or []
-    if zamanlar and zamanlar[-1] > bit:
-        bit = zamanlar[-1]
-    return bit - timedelta(seconds=pencere_sn), bit
+    okunamadi = deger is None
+    dg = "okunamadı" if okunamadi else (tr_sayi(deger) + "<span class='cg-br'>kW</span>")
+    cip_sinif = "cg-cip cg-yok" if okunamadi else "cg-cip"
+    dg_sinif = "cg-dg cg-dg-yok" if okunamadi else "cg-dg"
+    ipucu = YONTEM_ETIKET.get(yontem, ("", ""))[0]
+    baslik = f" title='{ipucu}'" if ipucu else ""
+    return (f"<div class='cg-satir'{baslik}><div class='{cip_sinif}'>{kisa_ad(cihaz)}</div>"
+            f"<div class='cg-cizgi'>{cizgi_svg}</div>"
+            f"<div class='{dg_sinif}'>{dg}</div></div>")
 
 
-def grafik(go, seri: dict, pencere_sn: int, simdi: datetime = None,
-           yukseklik: int = 380):
-    """Akan çizgi grafiği (plotly)."""
-    cihazlar = seri.get("cihazlar") or {}
-    sirali = sorted(cihazlar)
-    zamanlar = seri.get("zamanlar") or []
-    bas, bit = eksen_araligi(seri, pencere_sn, simdi)
+def grup_html(baslik: str, aciklama: str, satirlar: str, toplam_kw,
+              okunan: int, adet: int, yukseklik: int = 430) -> str:
+    """Bir grup kartı. Liste uzarsa KART değil liste kayar."""
+    ust = f"<div class='cg-toplam'>{'—' if toplam_kw is None else tr_sayi(toplam_kw) + ' kW'}</div>"
+    return (f"<div class='cg-grup'><h4>{baslik}{ust}</h4>"
+            f"<div class='cg-ack'>{aciklama}</div>"
+            f"<div class='cg-liste' style='max-height:{yukseklik}px'>{satirlar}</div>"
+            f"<div class='cg-dip'>{okunan}/{adet} sayaç okunuyor</div></div>")
 
-    fig = go.Figure()
-    for ad in sirali:
-        fig.add_trace(go.Scatter(
-            x=zamanlar, y=cihazlar[ad], name=ad, mode="lines",
-            line=dict(color=renk(ad, sirali), width=2, shape="spline", smoothing=0.6),
-            hovertemplate="%{y:.1f} kW<extra>" + ad + "</extra>",
-            connectgaps=False,          # okunamayan nokta BOŞLUK kalsın
-        ))
 
-    fig.update_layout(
-        height=yukseklik,
-        margin=dict(l=8, r=8, t=8, b=8),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#ffffff",
-        font=dict(family="Inter, system-ui, sans-serif", size=11, color="#24324d"),
-        legend=dict(orientation="h", yanchor="bottom", y=1.01, x=0,
-                    font=dict(size=11, color="#24324d")),
-        hovermode="x unified",
-        # uirevision: yenilemede kullanıcının gezinme/yakınlaştırmasi bozulmasın
-        uirevision="canli",
-        transition=dict(duration=0),
-    )
-    fig.update_xaxes(range=[bas, bit], gridcolor="#e8edf4", linecolor="#c9d2e0",
-                     tickformat="%H:%M:%S", title=None)
-    fig.update_yaxes(gridcolor="#e8edf4", linecolor="#c9d2e0",
-                     title=dict(text="kW", font=dict(size=11, color="#46536b")),
-                     rangemode="tozero")
-    return fig
+STIL = """
+<style>
+.cg-sarmal{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:12px; align-items:start;}
+.cg-grup{background:#fff; border:1px solid rgba(24,26,30,.10); border-radius:16px;
+  padding:11px 6px 9px 13px;
+  box-shadow:0 1px 1px rgba(20,22,26,.05),0 12px 26px -14px rgba(20,22,26,.25);}
+.cg-grup h4{margin:0 0 2px; font-size:12px; letter-spacing:1.4px; color:#133273;
+  font-weight:700; padding-right:8px;}
+.cg-toplam{float:right; font-size:13px; font-weight:700; color:#133273;}
+.cg-ack{font-size:9.5px; color:#46536b; margin-bottom:5px; padding-right:8px;}
+.cg-dip{font-size:9px; color:#9aa2b1; padding:6px 8px 0 0;
+  border-top:1px solid rgba(24,26,30,.07); margin-top:3px;}
+.cg-liste{overflow-y:auto; padding-right:8px;
+  scrollbar-width:thin; scrollbar-color:#cdd5e2 transparent;}
+.cg-liste::-webkit-scrollbar{width:7px;}
+.cg-liste::-webkit-scrollbar-thumb{background:#cdd5e2; border-radius:4px;}
+.cg-satir{display:grid; grid-template-columns:96px 1fr 84px; gap:9px; align-items:center;
+  padding:7px 0; border-bottom:1px solid rgba(24,26,30,.06);}
+.cg-satir:last-child{border-bottom:0;}
+.cg-cip{font-size:10.5px; font-weight:600; color:#0f1f3d; background:#f6f7f9;
+  border:1px solid rgba(24,26,30,.12); border-radius:8px; padding:4px 5px; text-align:center;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.cg-cip.cg-yok{color:#8b93a3; background:#f3f3f4; border-style:dashed;}
+.cg-cizgi{height:26px; overflow:hidden;}
+.cg-dg{font-size:14px; font-weight:700; color:#133273; text-align:right; white-space:nowrap;}
+.cg-dg.cg-dg-yok{font-size:10px; font-weight:600; color:#9aa2b1;}
+.cg-br{font-size:9px; font-weight:500; color:#46536b; margin-left:2px;}
+</style>
+"""
 
 
 def durum_metni(seri: dict, yas_sn=None, pencere_sn: int = 300) -> str:

@@ -1694,29 +1694,47 @@ with tab_canli:
 
         degerler = _CI.son_degerler(seri)
         if not degerler and not olcumler:
-            st.info("Bu lokasyonda canlı sayaç okuması yok. Trafo sayacı bağlı "
+            st.info("Bu lokasyonda canlı sayaç okuması yok. Sayaçlar bağlı "
                     "değilse ya da lokasyon çevrimdışıysa bu bölüm boş kalır.")
             return
 
-        # Anlık kartlar — grafikle AYNI renk kodu
-        _sirali = sorted(degerler)
-        _kolonlar = st.columns(len(_sirali) + 1)
-        for _i, _ad in enumerate(_sirali):
-            _v = degerler[_ad]
-            with _kolonlar[_i]:
-                st.metric(_ad, "—" if _v is None else f"{_v:,.1f} kW".replace(",", "."))
-        with _kolonlar[-1]:
-            _t = _CI.toplam(degerler)
-            st.metric("TOPLAM", "—" if _t is None else f"{_t:,.1f} kW".replace(",", "."))
+        _yontemler = {o.get("cihaz"): o.get("yontem") for o in (olcumler or [])}
+        _gruplar = _CI.gruplara_ayir(list(degerler))
+
+        # Üst şerit: grup toplamları
+        _ozet = st.columns(len(_gruplar) + 1)
+        for _i, (_an, _bas, _cihazlar) in enumerate(_gruplar):
+            _tp = _CI.grup_toplami(seri, _cihazlar)
+            with _ozet[_i]:
+                st.metric(_bas, "—" if _tp is None else
+                          f"{_CI.tr_sayi(_tp)} kW".replace(".", " "))
+        with _ozet[-1]:
+            _okunan = sum(1 for v in degerler.values() if v is not None)
+            st.metric("OKUNAN SAYAÇ", f"{_okunan} / {len(degerler)}")
 
         _yontem_metin, _yontem_renk = _CI.yontem_ozeti(olcumler)
         if _yontem_metin:
             st.markdown(
-                f"<div style='font-size:10px;color:{_yontem_renk};margin:-6px 0 4px;'>"
+                f"<div style='font-size:10px;color:{_yontem_renk};margin:-4px 0 6px;'>"
                 f"● {_yontem_metin}</div>", unsafe_allow_html=True)
 
-        st.plotly_chart(_CI.grafik(go, seri, pencere_sn),
-                        use_container_width=True, config={"displayModeBar": False})
+        # Gruplar — her biri kendi içinde kaydırmalı
+        _parcalar = []
+        for _an, _bas, _cihazlar in _gruplar:
+            _satirlar = ""
+            for _j, _c in enumerate(_cihazlar):
+                _satirlar += _CI.satir_html(
+                    _c, degerler.get(_c),
+                    _CI.kivrim_svg(seri["cihazlar"].get(_c, []),
+                                   _CI.renk(_c, _cihazlar)),
+                    _yontemler.get(_c))
+            _okunan = sum(1 for _c in _cihazlar if degerler.get(_c) is not None)
+            _parcalar.append(_CI.grup_html(
+                _bas, _CI.GRUP_ACIKLAMA.get(_an, ""), _satirlar,
+                _CI.grup_toplami(seri, _cihazlar), _okunan, len(_cihazlar)))
+        st.markdown(_CI.STIL + "<div class='cg-sarmal'>" + "".join(_parcalar) + "</div>",
+                    unsafe_allow_html=True)
+
         st.caption(_CI.durum_metni(seri, yas, pencere_sn))
 
     _canli_izleme_blok()
