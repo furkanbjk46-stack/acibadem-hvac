@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 4
+SURUM = 5
 
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
@@ -344,16 +344,18 @@ def satir_html(cihaz: str, deger, cizgi_svg: str, yontem: str = None) -> str:
     ipucu = YONTEM_ETIKET.get(yontem, ("", ""))[0]
     baslik = f" title='{ipucu}'" if ipucu else ""
 
-    # Doğrulama durumu SATIRIN KENDİSİNDE: yeşil = kWh sayacıyla doğrulandı,
-    # turuncu = doğrulanmadı / sayaç farkından. Alt bantta isim listesi yok.
+    # Doğrulama durumu CİHAZ ADININ yanında: yeşil = kWh sayacıyla
+    # doğrulandı, turuncu = doğrulanmadı / sayaç farkından. Nokta, ait
+    # olduğu cihazla birlikte okunsun diye değerin değil adın yanındadır.
     if okunamadi:
         nokta = ""
     else:
         nokta = ("<span class='cg-dot cg-dot-ok'></span>" if dogrulandi_mi(yontem)
                  else "<span class='cg-dot cg-dot-bekle'></span>")
-    return (f"<div class='cg-satir'{baslik}><div class='{cip_sinif}'>{kisa_ad(cihaz)}</div>"
+    return (f"<div class='cg-satir'{baslik}>"
+            f"<div class='{cip_sinif}'>{kisa_ad(cihaz)}{nokta}</div>"
             f"<div class='cg-cizgi'>{cizgi_svg}</div>"
-            f"<div class='{dg_sinif}'>{nokta}{dg}</div></div>")
+            f"<div class='{dg_sinif}'>{dg}</div></div>")
 
 
 def toplam_satir_html(ad: str, deger, cizgi_svg: str) -> str:
@@ -457,9 +459,9 @@ STIL = """
 .cg-dg.cg-dg-yok{font-size:10.5px; font-weight:600; color:#9aa2b1;}
 .cg-br{font-size:9.5px; font-weight:500; color:#46536b; margin-left:2px;}
 
-/* ── doğrulama noktası: değerin solunda, yanıp söner ── */
-.cg-dot{display:inline-block; width:7px; height:7px; border-radius:50%;
-  margin-right:6px; vertical-align:middle; animation:cgNabiz 2.2s ease-in-out infinite;}
+/* ── doğrulama noktası: cihaz adının yanında, yanıp söner ── */
+.cg-dot{display:inline-block; width:6px; height:6px; border-radius:50%;
+  margin-left:5px; vertical-align:middle; animation:cgNabiz 2.2s ease-in-out infinite;}
 .cg-dot-ok{background:#0ca30c;}      /* kWh sayacıyla doğrulandı */
 .cg-dot-bekle{background:#fab219;}   /* doğrulanmadı / sayaç farkından */
 

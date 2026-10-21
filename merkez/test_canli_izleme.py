@@ -226,9 +226,23 @@ c("okunamayan cihaz sayıma girmiyor",
   CI.yontem_ozeti([{"cihaz": "X", "kw": None, "yontem": None}])[0] == "")
 c("boş ölçümde metin yok", CI.yontem_ozeti([])[0] == "")
 
-# Satirdaki nokta: yesil = dogrulandi, turuncu = dogrulanmadi
-c("doğrulanan satırda yeşil nokta",
-  "cg-dot-ok" in CI.satir_html("MCC-1", 10.0, "<svg/>", "register"))
+# Satirdaki nokta: yesil = dogrulandi, turuncu = dogrulanmadi.
+# Nokta CIHAZ ADININ yaninda durur (kullanici karari 21.10.2026): ait
+# oldugu cihazla birlikte okunsun, kW degerinin yaninda degil.
+def _cip(h):
+    return h.split("class='cg-cip'")[1].split("</div>")[0]
+
+
+def _deger(h):
+    return h.split("class='cg-dg'")[1].split("</div>")[0]
+
+
+_h = CI.satir_html("MCC-1", 10.0, "<svg/>", "register")
+c("doğrulanan satırda yeşil nokta", "cg-dot-ok" in _h)
+c("nokta CİHAZ ADININ yanında", "cg-dot" in _cip(_h), _cip(_h))
+c("değerin yanında nokta YOK", "cg-dot" not in _deger(_h), _deger(_h))
+_hu = CI.satir_html("2BK-MCC-D01", 17.1, "<svg/>", "sayac")
+c("uzun cihaz adında da nokta adın yanında", "cg-dot" in _cip(_hu), _cip(_hu))
 c("doğrulanmayan satırda turuncu nokta",
   "cg-dot-bekle" in CI.satir_html("MCC-2", 10.0, "<svg/>", "sayac"))
 c("henüz doğrulanmamış da turuncu",
