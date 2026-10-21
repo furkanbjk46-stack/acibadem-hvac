@@ -205,16 +205,53 @@ c("ölçülemeyen kalem sayısı da yazıyor", "3 kalemde sayaç yok" in _gh2, _
 c("liste kaydırmalı (uzun liste kartı taşırmasın)",
   "max-height:430px" in _gh and "overflow-y:auto" in CI.STIL)
 
-# ── 7) Yöntem özeti — tahmin, ölçüm gibi gösterilmesin ───────────────────
-metin, _ = CI.yontem_ozeti([{"cihaz": "TRDP-1", "yontem": "register"},
-                            {"cihaz": "TRDP-2", "yontem": "register"}])
-c("hepsi doğrulanmışsa tek satır", "sayaçla doğrulandı" in metin, metin)
-metin, renk_ = CI.yontem_ozeti([{"cihaz": "TRDP-1", "yontem": "register"},
-                                {"cihaz": "TRDP-2", "yontem": "sayac"}])
-c("karışık yöntemde cihaz bazında yazıyor",
-  "TRDP-2" in metin and "sayaç farkından" in metin, metin)
-c("karışık yöntem uyarı renginde", renk_ == "#c98500")
+# ── 7) Yöntem özeti ve satır noktaları ──────────────────────────────────
+# Ilk surum dogrulanan/dogrulanmayan cihazlarin ADLARINI tek tek yaziyordu;
+# 27 sayacta alt bant ekrani boydan boya dolduruyordu (21.10.2026). Durum
+# artik SATIRIN noktasindan okunuyor, alt bantta yalnizca sayi var.
+_hepsi = [{"cihaz": "A%d" % i, "kw": 10.0, "yontem": "register"} for i in range(27)]
+_metin, _renk = CI.yontem_ozeti(_hepsi)
+c("hepsi doğrulanmışsa sayı yazıyor", _metin == "27 sayaç doğrulandı", _metin)
+c("hepsi doğrulanmışsa yeşil", _renk == "#0ca30c")
+
+_karisik = _hepsi[:24] + [{"cihaz": "B%d" % i, "kw": 5.0, "yontem": "sayac"}
+                          for i in range(3)]
+_metin, _renk = CI.yontem_ozeti(_karisik)
+c("karışıkta iki sayı da yazıyor",
+  "24 sayaç doğrulandı" in _metin and "3 sayaç doğrulanmadı" in _metin, _metin)
+c("karışık yöntem uyarı renginde", _renk == "#c98500")
+c("alt bant KISA kalıyor (cihaz adı listelenmiyor)",
+  len(_metin) < 70 and "A0" not in _metin and "B0" not in _metin, (len(_metin), _metin))
+c("okunamayan cihaz sayıma girmiyor",
+  CI.yontem_ozeti([{"cihaz": "X", "kw": None, "yontem": None}])[0] == "")
 c("boş ölçümde metin yok", CI.yontem_ozeti([])[0] == "")
+
+# Satirdaki nokta: yesil = dogrulandi, turuncu = dogrulanmadi
+c("doğrulanan satırda yeşil nokta",
+  "cg-dot-ok" in CI.satir_html("MCC-1", 10.0, "<svg/>", "register"))
+c("doğrulanmayan satırda turuncu nokta",
+  "cg-dot-bekle" in CI.satir_html("MCC-2", 10.0, "<svg/>", "sayac"))
+c("henüz doğrulanmamış da turuncu",
+  "cg-dot-bekle" in CI.satir_html("MCC-2", 10.0, "<svg/>", "register?"))
+c("okunamayan satırda nokta yok",
+  "cg-dot" not in CI.satir_html("MCC-3", None, "<svg/>", None))
+c("noktalar yanıp sönüyor", "animation:cgNabiz" in CI.STIL)
+c("iki nokta rengi de tanımlı",
+  ".cg-dot-ok{background:#0ca30c;}" in CI.STIL and ".cg-dot-bekle{background:#fab219;}" in CI.STIL)
+
+# ── 7b) Cizgi kalinligi her yerde AYNI ──────────────────────────────────
+# SVG yatayda esnetiliyor; kalem de esneyince dik inisler ince, yataya
+# yakin yerler kalin goruluyordu.
+c("çizgi kalınlığı esnemiyor",
+  "non-scaling-stroke" in CI.kivrim_svg([1.0, 9.0, 2.0, 8.0]))
+c("boş seride de esnemiyor", "non-scaling-stroke" in CI.kivrim_svg([]))
+
+# ── 7c) Kartlar esit boyda ──────────────────────────────────────────────
+# 15 satirlik MCC karti digerlerinden uzun duruyordu.
+c("kartlar en uzuna göre hizalanıyor (align-items:start YOK)",
+  "align-items:start" not in CI.STIL, CI.STIL[CI.STIL.index(".cg-sarmal"):][:120])
+c("kart dikey esnek, liste kalan yeri dolduruyor",
+  "flex-direction:column" in CI.STIL and "flex:1 1 auto" in CI.STIL)
 
 # ── 8) Durum metni ───────────────────────────────────────────────────────
 c("veri yokken beklendiği söyleniyor",

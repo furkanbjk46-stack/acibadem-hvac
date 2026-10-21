@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 3
+SURUM = 4
 
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
@@ -57,23 +57,27 @@ YONTEM_ETIKET = {
 }
 
 
+def dogrulandi_mi(yontem) -> bool:
+    """Değer, cihazın kendi kWh sayacıyla doğrulanmış mı?"""
+    return yontem == "register"
+
+
 def yontem_ozeti(olcumler: list) -> tuple:
-    """(metin, renk) — dört sayacın yöntemi aynıysa tek satır, değilse döküm."""
-    yontemler = {}
-    for o in olcumler or []:
-        if o.get("cihaz"):
-            yontemler.setdefault(o.get("yontem"), []).append(o["cihaz"])
-    if not yontemler:
+    """(metin, renk) — KISA sayım özeti.
+
+    İlk sürüm doğrulanan ve doğrulanmayan cihazların ADLARINI tek tek
+    yazıyordu; 27 sayaçta alt bant ekranı boydan boya dolduruyordu
+    (21.10.2026). Hangi sayacın hangi durumda olduğu artık SATIRINDAKİ
+    noktadan okunuyor; burada yalnızca sayılar var.
+    """
+    okunan = [o for o in (olcumler or []) if o.get("cihaz") and o.get("kw") is not None]
+    if not okunan:
         return "", "#46536b"
-    if len(yontemler) == 1:
-        y = next(iter(yontemler))
-        etiket, renk_ = YONTEM_ETIKET.get(y, ("okunamadı", "#d03b3b"))
-        return "Tüm sayaçlar: " + etiket, renk_
-    parcalar = []
-    for y, cihazlar in yontemler.items():
-        etiket, _ = YONTEM_ETIKET.get(y, ("okunamadı", "#d03b3b"))
-        parcalar.append("%s: %s" % (", ".join(sorted(cihazlar)), etiket))
-    return " · ".join(parcalar), "#c98500"
+    dogru = sum(1 for o in okunan if dogrulandi_mi(o.get("yontem")))
+    eksik = len(okunan) - dogru
+    if not eksik:
+        return "%d sayaç doğrulandı" % dogru, "#0ca30c"
+    return ("%d sayaç doğrulandı · %d sayaç doğrulanmadı" % (dogru, eksik)), "#c98500"
 
 
 def renk(cihaz: str, sirali_cihazlar: list) -> str:
@@ -277,7 +281,8 @@ def kivrim_svg(degerler: list, renk: str = "#2a78d6",
         return (f"<svg viewBox='0 0 {genislik} {yukseklik}' preserveAspectRatio='none' "
                 f"style='width:100%;height:{yukseklik}px;display:block;'>"
                 f"<line x1='0' y1='{yukseklik/2:.0f}' x2='{genislik}' y2='{yukseklik/2:.0f}' "
-                f"stroke='#d7dde7' stroke-width='1.4' stroke-dasharray='3 3'/></svg>")
+                f"stroke='#d7dde7' stroke-width='1.4' vector-effect='non-scaling-stroke' "
+                f"stroke-dasharray='3 3'/></svg>")
 
     n = len(degerler)
     alt, ust = min(gecerli), max(gecerli)
@@ -307,8 +312,13 @@ def kivrim_svg(degerler: list, renk: str = "#2a78d6",
         x, y = nokta(i, degerler[i]).split(",")
         parcalar = [["%.1f,%s" % (max(0.0, float(x) - 5), y), "%s,%s" % (x, y)]]
 
+    # vector-effect='non-scaling-stroke' ŞART: SVG yatayda esnetiliyor
+    # (preserveAspectRatio='none'), kalem de onunla esniyordu — dik inişler
+    # ince, yataya yakın yerler kalın görünüyordu (21.10.2026). Bu özellikle
+    # çizgi kalınlığı ekranda her yerde AYNI kalır.
     cizgiler = "".join(
-        f"<polyline fill='none' stroke='{renk}' stroke-width='1.8' "
+        f"<polyline fill='none' stroke='{renk}' stroke-width='1.6' "
+        f"vector-effect='non-scaling-stroke' "
         f"stroke-linejoin='round' stroke-linecap='round' points='{' '.join(p)}'/>"
         for p in parcalar)
     return (f"<svg viewBox='0 0 {genislik} {yukseklik}' preserveAspectRatio='none' "
@@ -333,9 +343,17 @@ def satir_html(cihaz: str, deger, cizgi_svg: str, yontem: str = None) -> str:
     dg_sinif = "cg-dg cg-dg-yok" if okunamadi else "cg-dg"
     ipucu = YONTEM_ETIKET.get(yontem, ("", ""))[0]
     baslik = f" title='{ipucu}'" if ipucu else ""
+
+    # Doğrulama durumu SATIRIN KENDİSİNDE: yeşil = kWh sayacıyla doğrulandı,
+    # turuncu = doğrulanmadı / sayaç farkından. Alt bantta isim listesi yok.
+    if okunamadi:
+        nokta = ""
+    else:
+        nokta = ("<span class='cg-dot cg-dot-ok'></span>" if dogrulandi_mi(yontem)
+                 else "<span class='cg-dot cg-dot-bekle'></span>")
     return (f"<div class='cg-satir'{baslik}><div class='{cip_sinif}'>{kisa_ad(cihaz)}</div>"
             f"<div class='cg-cizgi'>{cizgi_svg}</div>"
-            f"<div class='{dg_sinif}'>{dg}</div></div>")
+            f"<div class='{dg_sinif}'>{nokta}{dg}</div></div>")
 
 
 def toplam_satir_html(ad: str, deger, cizgi_svg: str) -> str:
@@ -407,10 +425,13 @@ STIL = """
 .cg-alt{font-size:12px; color:#46536b; margin-top:12px;}
 .cg-alt-ayrac{margin:0 8px; color:#c9d2e0;}
 
+/* align-items:stretch (varsayılan): kartlar EN UZUNUN boyunda durur.
+   Önceden 'start' idi ve 15 satırlık MCC kartı diğerlerinden uzun
+   görünüyordu (21.10.2026). Kart dikey flex; liste kalan yeri doldurur. */
 .cg-sarmal{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-  gap:12px; align-items:start;}
+  gap:12px;}
 .cg-grup{background:#fff; border:1px solid rgba(24,26,30,.10); border-radius:16px;
-  padding:11px 6px 9px 13px;
+  padding:11px 6px 9px 13px; display:flex; flex-direction:column;
   box-shadow:0 1px 1px rgba(20,22,26,.05),0 12px 26px -14px rgba(20,22,26,.25);}
 .cg-grup h4{margin:0 0 2px; font-size:12px; letter-spacing:1.4px; color:#133273;
   font-weight:700; padding-right:8px;}
@@ -418,7 +439,7 @@ STIL = """
 .cg-ack{font-size:9.5px; color:#46536b; margin-bottom:5px; padding-right:8px;}
 .cg-dip{font-size:9px; color:#9aa2b1; padding:6px 8px 0 0;
   border-top:1px solid rgba(24,26,30,.07); margin-top:3px;}
-.cg-liste{overflow-y:auto; padding-right:8px;
+.cg-liste{flex:1 1 auto; min-height:0; overflow-y:auto; padding-right:8px;
   scrollbar-width:thin; scrollbar-color:#cdd5e2 transparent;}
 .cg-liste::-webkit-scrollbar{width:7px;}
 .cg-liste::-webkit-scrollbar-thumb{background:#cdd5e2; border-radius:4px;}
@@ -435,6 +456,12 @@ STIL = """
 .cg-dg{font-size:15px; font-weight:700; color:#133273; text-align:right; white-space:nowrap;}
 .cg-dg.cg-dg-yok{font-size:10.5px; font-weight:600; color:#9aa2b1;}
 .cg-br{font-size:9.5px; font-weight:500; color:#46536b; margin-left:2px;}
+
+/* ── doğrulama noktası: değerin solunda, yanıp söner ── */
+.cg-dot{display:inline-block; width:7px; height:7px; border-radius:50%;
+  margin-right:6px; vertical-align:middle; animation:cgNabiz 2.2s ease-in-out infinite;}
+.cg-dot-ok{background:#0ca30c;}      /* kWh sayacıyla doğrulandı */
+.cg-dot-bekle{background:#fab219;}   /* doğrulanmadı / sayaç farkından */
 
 /* ── ölçülemeyen kalem: kesik çizgi + nedeni ── */
 .cg-bos{height:28px; display:flex; align-items:center; gap:7px;}

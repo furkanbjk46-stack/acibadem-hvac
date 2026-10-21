@@ -348,8 +348,12 @@ def dosyaya_yaz(olcumler: list, dosya: str = None) -> None:
     try:
         os.makedirs(os.path.dirname(dosya), exist_ok=True)
         gecici = dosya + ".tmp"
+        # Zaman damgası SAAT DİLİMİYLE yazılır (astimezone).
+        # Çıplak damga Supabase'in timestamptz sütununda UTC sayılıyordu;
+        # lokasyon UTC+3 olduğu için merkez ölçümü 3 saat GELECEKTE görüyor
+        # ve ekranda "son ölçüm -10766 sn önce" yazıyordu (21.10.2026).
         with open(gecici, "w", encoding="utf-8") as f:
-            json.dump({"zaman": datetime.now().isoformat(timespec="seconds"),
+            json.dump({"zaman": datetime.now().astimezone().isoformat(timespec="seconds"),
                        "olcumler": olcumler}, f, ensure_ascii=False)
         os.replace(gecici, dosya)          # yarım dosya okunmasın
     except Exception as e:
@@ -362,7 +366,10 @@ def son_olcum(dosya: str = None, azami_yas_sn: int = 120):
     try:
         with open(dosya, encoding="utf-8") as f:
             veri = json.load(f)
-        yas = (datetime.now() - datetime.fromisoformat(veri["zaman"])).total_seconds()
+        _t = datetime.fromisoformat(veri["zaman"])
+        # Eski dosyalar saat dilimsiz yazılmış olabilir — ikisini de karşıla
+        _simdi = datetime.now().astimezone() if _t.tzinfo else datetime.now()
+        yas = (_simdi - _t).total_seconds()
         if yas > azami_yas_sn:
             return None
         veri["yas_sn"] = round(yas, 1)
