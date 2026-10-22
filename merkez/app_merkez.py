@@ -100,9 +100,11 @@ header[data-testid="stHeader"] button    { display: none !important; }
         flex-basis: 100% !important;
         width: 100% !important;
     }
-    [data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > div:nth-child(2) iframe,
+    /* Yalnızca HARİTA çerçevesi (data: adresli); aynı kolondaki 0 px'lik
+       yardımcı bileşenler (canlı değer iletici) büyütülmez. */
+    [data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > div:nth-child(2) iframe[src^="data:"],
     [data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > div:nth-child(2)
-        [data-testid="stElementContainer"]:has(> iframe) {
+        [data-testid="stElementContainer"]:has(> iframe[src^="data:"]) {
         height: 62vh !important;
         min-height: 420px !important;
         flex: 0 0 auto !important;   /* Streamlit kabı 900px flex-basis veriyor */
@@ -510,6 +512,84 @@ def fetch_canli_guc(url, key, lokasyon_id):
         return satirlar, yas
     except Exception:
         return [], None
+
+
+# ── ANA EKRAN İÇİN ANLIK DEĞERLER (tüm lokasyonlar) ──────────────────────
+# Lokasyon kartları, harita penceresi ve Global Özet artık günlük kWh değil
+# canli_guc tablosundaki ANLIK kW'ı gösterir. Tek sorguda tüm lokasyonlar
+# alınır (lokasyon başına ayrı istek atılmaz).
+CANLI_BAYAT_SN = 300   # son ölçüm bundan eskiyse "canlı değil" sayılır
+
+@st.cache_data(ttl=12, show_spinner=False)
+def fetch_canli_tum(url, key):
+    try:
+        from supabase import create_client
+        c = create_client(url, key)
+        r = c.table("canli_guc").select("lokasyon_id,cihaz,kw,olcum_zamani").execute()
+        return r.data or []
+    except Exception:
+        return []
+
+
+def canli_ozet_hesapla(satirlar):
+    """{lokasyon_id: {"sebeke", "sogutma", "kojen", "yas"}} — kW, ölçülmeyen kalem None.
+
+    Şebeke = TRDP sayaçlarının toplamı, soğutma = chiller + kule (canlı izleme
+    panelindeki gruplarla aynı). Kojen sayacı canlı okunmuyor; ileride
+    "KOJEN..." adlı bir sayaç tabloya yazılırsa kendiliğinden dolar.
+    Son ölçümü CANLI_BAYAT_SN'den eski lokasyon "canlı değil" sayılır.
+    """
+    from datetime import timezone as _tz
+    try:
+        import canli_izleme as _ci
+        _grup = _ci.grup_bul
+    except Exception:
+        def _grup(ad):
+            ad = str(ad or "").upper()
+            if ad.startswith("TRDP-"):
+                return "enerji"
+            if ad.startswith(("CHILLER-", "CH-", "KULE-")):
+                return "sogutma"
+            return "diger"
+    ozet = {}
+    for s in satirlar or []:
+        lok = s.get("lokasyon_id")
+        kw = s.get("kw")
+        if not lok or kw is None:
+            continue
+        try:
+            kw = float(kw)
+        except (TypeError, ValueError):
+            continue
+        o = ozet.setdefault(lok, {"sebeke": None, "sogutma": None, "kojen": None, "yas": None})
+        try:
+            t = datetime.fromisoformat(str(s.get("olcum_zamani")).replace("Z", "+00:00"))
+            simdi = datetime.now(_tz.utc) if t.tzinfo else datetime.now()
+            y = (simdi - t).total_seconds()
+            o["yas"] = y if o["yas"] is None else min(o["yas"], y)
+        except Exception:
+            pass
+        ad = str(s.get("cihaz") or "").upper()
+        if ad.startswith("KOJEN"):
+            alan = "kojen"
+        else:
+            alan = {"enerji": "sebeke", "sogutma": "sogutma"}.get(_grup(ad))
+        if alan:
+            o[alan] = (o[alan] or 0.0) + kw
+    # Bayat lokasyonlar canlı sayılmaz
+    return {k: v for k, v in ozet.items()
+            if v["yas"] is None or v["yas"] <= CANLI_BAYAT_SN}
+
+
+def kw_metin(x, ond=0):
+    """1234.5 → '1.235' (ond=0) / '1.234,5' (ond=1); None → '—'."""
+    if x is None:
+        return "—"
+    s = f"{x:,.{ond}f}"
+    if ond:
+        tam, kesir = s.split(".")
+        return tam.replace(",", ".") + "," + kesir
+    return s.replace(",", ".")
 
 
 @st.cache_data(ttl=60, show_spinner=False)
@@ -1115,10 +1195,16 @@ with sol:
     # .ana-duzen-isaret: tablet CSS'inin ana 3'lü düzeni bulması için işaret
     st.markdown('<div class="sec"><span class="ana-duzen-isaret"></span>📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
 
-    # Tümünü tüketime göre sırala (veri olanlar önce, olmayanlar sona)
+    # ANLIK değerler: kartlar, harita penceresi ve Global Özet bunu kullanır
+    CANLI = canli_ozet_hesapla(fetch_canli_tum(url, key))
+
+    def anlik_sebeke(lok_id):
+        return (CANLI.get(lok_id) or {}).get("sebeke")
+
+    # En çok ANLIK şebeke çekenden aza; canlı ölçümü olmayanlar sona
     lok_sira = sorted(
         HASTANELER.items(),
-        key=lambda x: (dun_kwh(x[0]) or 0),
+        key=lambda x: (anlik_sebeke(x[0]) is not None, anlik_sebeke(x[0]) or 0),
         reverse=True
     )
 
@@ -1127,7 +1213,6 @@ with sol:
 
     for i, (lok_id, lok_info) in enumerate(lok_sira):
         online, fark_dk = online_bilgi(lok_id)
-        kwh      = dun_kwh(lok_id)
         renk     = lok_info["renk"]
         if fark_dk is None:
             card_cls   = "nk nk-gray"
@@ -1142,23 +1227,16 @@ with sol:
             durum_renk = "#d03b3b"
             durum_lbl  = "ÇEVRİMDIŞI"
 
-        kwh_str   = f"{kwh:,.0f}".replace(",", ".") if kwh else "—"
+        # Kartta ANLIK şebeke gücü (kW). Yoğunluk: W/m² (anlık kW × 1000 / alan)
+        kw_anlik  = anlik_sebeke(lok_id)
+        kwh_str   = kw_metin(kw_anlik)
         m2_lok    = lok_info.get("m2", 10000)
-        verim_str = f"{kwh/m2_lok:.2f}".replace(".", ",") if kwh else "—"
-        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#46536b;font-weight:700;">#{i+1}</span>' if i < 4 else ""
+        verim_str = (kw_metin(kw_anlik * 1000 / m2_lok, 1)
+                     if kw_anlik is not None and m2_lok else "—")
+        sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#46536b;font-weight:700;">#{i+1}</span>' if (i < 4 and kw_anlik is not None) else ""
 
-        # % değişim hesapla (dün vs önceki gün)
-        onceki_kwh = onceki_gun_kwh(lok_id)
-        if kwh and onceki_kwh and onceki_kwh > 0:
-            degisim_pct = (kwh - onceki_kwh) / onceki_kwh * 100
-            if degisim_pct > 2:
-                degisim_html = f'<span style="font-size:9px;color:#d03b3b;font-weight:700;">▲ {degisim_pct:.1f}%</span>'
-            elif degisim_pct < -2:
-                degisim_html = f'<span style="font-size:9px;color:#0ca30c;font-weight:700;">▼ {abs(degisim_pct):.1f}%</span>'
-            else:
-                degisim_html = f'<span style="font-size:9px;color:#6b7280;">≈ {degisim_pct:+.1f}%</span>'
-        else:
-            degisim_html = ""
+        # Dün/önceki gün % kıyası anlık değerde anlamsız → gösterilmez
+        degisim_html = ""
 
 
         rr = int(renk[1:3],16); rg = int(renk[3:5],16); rb = int(renk[5:7],16)
@@ -1191,13 +1269,13 @@ with sol:
             f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">'
             f'<span style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:16px;font-weight:900;'
             f'color:{renk};line-height:1;">{kwh_str}</span>'
-            f'<span style="font-size:8px;color:#46536b;">kWh</span>'
+            f'<span style="font-size:8px;color:#46536b;">kW</span>'
             f'<span style="margin-left:4px;">{degisim_html}</span>'
             f'</div>'
             f'<div style="display:inline-flex;align-items:center;gap:5px;'
             f'background:rgba(19,50,115,0.05);border-radius:5px;padding:3px 8px;'
             f'border:1px solid rgba(19,50,115,0.10);">'
-            f'<span style="font-size:7px;color:#46536b;text-transform:uppercase;letter-spacing:1px;">kWh/m²/gün</span>'
+            f'<span style="font-size:7px;color:#46536b;text-transform:uppercase;letter-spacing:1px;">W/m²</span>'
             f'<span style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:11px;color:#2a78d6;font-weight:700;">{verim_str}</span>'
             f'</div>'
             f'</div></div></a>'
@@ -1265,113 +1343,79 @@ with sol:
 
     st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
 
-    # ── Global Özet (Aylık + Trend) ──
-    _ay_tr = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
-              "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"]
-    _bu_yil = now.year
-    _bu_ay  = now.month
-    st.markdown(f'<div class="sec">⚡ GLOBAL ÖZET — {_ay_tr[_bu_ay-1].upper()} {_bu_yil}</div>', unsafe_allow_html=True)
-    if not df_all.empty:
-        # Dönem filtreleri
-        _bu_ay_bas   = pd.Timestamp(year=_bu_yil,   month=_bu_ay, day=1)
-        _gec_ay_yil  = _bu_yil - 1 if _bu_ay == 1 else _bu_yil
-        _gec_ay_no   = 12 if _bu_ay == 1 else _bu_ay - 1
-        _gec_ay_bas  = pd.Timestamp(year=_gec_ay_yil, month=_gec_ay_no, day=1)
-        _gec_ay_son  = _bu_ay_bas - pd.Timedelta(days=1)
-        _bu_yil_bas  = pd.Timestamp(year=_bu_yil,   month=1, day=1)
-        _gec_yil_bas = pd.Timestamp(year=_bu_yil-1, month=1, day=1)
-        _gec_yil_son = _bu_yil_bas - pd.Timedelta(days=1)
+    # ── Global Özet (ANLIK) ──
+    # Tüm lokasyonların canlı sayaçlarından ANLIK toplamlar (kW). Geçmiş /
+    # aylık değerler kaldırıldı (22.10.2026). Canlı sayacı olmayan kalemlerde
+    # sayı uydurulmaz: "canlı sayaç yok" yazılır; sayaç bağlanınca kendiliğinden dolar.
+    st.markdown('<div class="sec">⚡ GLOBAL ÖZET — ANLIK</div>', unsafe_allow_html=True)
 
-        _df_bu_ay   = df_all[df_all["Tarih"] >= _bu_ay_bas]
-        _df_gec_ay  = df_all[(df_all["Tarih"] >= _gec_ay_bas) & (df_all["Tarih"] <= _gec_ay_son)]
-        _df_bu_yil  = df_all[df_all["Tarih"] >= _bu_yil_bas]
-        _df_gec_yil = df_all[(df_all["Tarih"] >= _gec_yil_bas) & (df_all["Tarih"] <= _gec_yil_son)]
+    def _canli_topla(alan):
+        degerler = [v[alan] for v in CANLI.values() if v.get(alan) is not None]
+        return (sum(degerler), len(degerler)) if degerler else (None, 0)
 
-        # SYN-1 fix: % kıyası geçen ayın AYNI GÜN ARALIĞI ile yapılır — kısmi ay tam ayla
-        # kıyaslanınca ayın başında %80'lere varan sahte "düşüş" görünüyordu.
-        # (Trend satırındaki "Geçen ay: X" değeri tam ay olarak kalır, sadece % kıyası kırpılır.)
-        _bu_ay_son_gun = int(_df_bu_ay["Tarih"].max().day) if not _df_bu_ay.empty else now.day
-        _gec_ay_kiyas_son = min(_gec_ay_bas + pd.Timedelta(days=_bu_ay_son_gun - 1), _gec_ay_son)
-        _df_gec_ay_kiyas = df_all[(df_all["Tarih"] >= _gec_ay_bas) & (df_all["Tarih"] <= _gec_ay_kiyas_son)]
+    _sebeke_top, _sebeke_n = _canli_topla("sebeke")
+    _sog_top, _sog_n       = _canli_topla("sogutma")
+    _koj_top, _koj_n       = _canli_topla("kojen")
+    # Toplam enerji = şebeke + kojen üretimi (kojen canlı ölçülüyorsa)
+    _top_enerji = (None if _sebeke_top is None and _koj_top is None
+                   else (_sebeke_top or 0) + (_koj_top or 0))
+    _yaslar = [v["yas"] for v in CANLI.values() if v.get("yas") is not None]
 
-        def tr(sayi, ondalik=0):
-            fmt = f"{sayi:,.{ondalik}f}"
-            if ondalik > 0:
-                parts = fmt.split(".")
-                return parts[0].replace(",", ".") + "," + parts[1]
-            return fmt.replace(",", ".")
+    def _alt(n, ek=""):
+        return f"{n} lokasyon canlı{ek}" if n else ""
 
-        def _cs(df, col):
-            return df[col].sum() if col in df.columns else 0
+    # (etiket, değer kW | None, alt satır, tıklama anahtarı)
+    _metrikler = [
+        ("⚡ Toplam Enerji", _top_enerji,
+         _alt(_sebeke_n, "" if _koj_n else " · şebeke (kojen canlı ölçülmüyor)"), "enerji"),
+        ("🔥 Doğalgaz",      None, "", "dogalgaz"),
+        ("❄️ Soğutma",       _sog_top, _alt(_sog_n, " · chiller + kule"), "sogutma"),
+        ("💧 Su",             None, "", "su"),
+        ("⚙️ Kojen Üretim",  _koj_top, _alt(_koj_n), "kojen"),
+    ]
 
-        def _pct_html(bu, gec, artis_iyi=False):
-            """SYN-2 fix: tüketimde düşüş yeşil; üretim metriklerinde (artis_iyi=True) artış yeşil."""
-            if not gec or gec == 0: return ""
-            p = (bu - gec) / gec * 100
-            iyi  = (p >= 0) if artis_iyi else (p <= 0)
-            renk = "#0ca30c" if iyi else "#d03b3b"
-            yon  = "▼" if p <= 0 else "▲"
-            return f'<b style="color:{renk};font-size:10px;"> {yon}{abs(p):.1f}%</b>'
+    for _lbl, _deger, _alt_metin, _ozet_key in _metrikler:
+        if _deger is None:
+            _deger_html = ('<span style="font-size:10px;font-weight:600;color:#9aa3b2;">'
+                           'canlı sayaç yok</span>')
+        else:
+            _deger_html = (f'<span style="font-size:12px;font-weight:700;color:#2a78d6;'
+                           f'font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;">'
+                           f'{kw_metin(_deger)} kW</span>')
+        _alt_html = (f'<div style="font-size:9px;color:#46536b;margin-top:2px;">'
+                     f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;'
+                     f'background:#0ca30c;margin-right:4px;vertical-align:middle;"></span>{_alt_metin}</div>') if _alt_metin else ""
 
-        _gec_ay_label = _ay_tr[_gec_ay_no - 1]
+        # Tıklanabilir metrikler <a> ile sarılır (karşılaştırma sayfasını açar);
+        # JS gizli butona tıklatır → aynı oturumda rerun, sayfa yeniden yüklenmez.
+        _ic = f"""
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:11px; color:#46536b;">{_lbl}{
+                ' <span style="font-size:9px;color:#133273;">›</span>'
+                if _ozet_key else ''}</span>
+            {_deger_html}
+          </div>
+          {_alt_html}"""
+        _stil = ("padding:7px 10px; margin:3px 0; background:#fafaf8;"
+                 "border-radius:8px; border:1px solid rgba(19,50,115,0.1);"
+                 "display:block; text-decoration:none;")
+        if _ozet_key:
+            st.markdown(
+                f'<a class="ozet-kart" data-ozet="{_ozet_key}" href="?ozet={_ozet_key}" '
+                f'style="{_stil}cursor:pointer;">{_ic}</a>',
+                unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div style="{_stil}">{_ic}</div>', unsafe_allow_html=True)
 
-        # 5. eleman: tıklanınca karşılaştırma sayfasını açan metrik anahtarı.
-        # Karşılığı ozet_karsilastirma.py içindeki METRIKLER sözlüğündedir;
-        # ikisi OZET_METRIKLERI ile birlikte doğrulanır (test_ozet_karsilastirma).
-        _metrikler = [
-            ("⚡ Toplam Enerji", "Toplam_Hastane_Tuketim_kWh", "kWh", False, "enerji"),
-            ("🔥 Doğalgaz",      None,                         "m³",  False, "dogalgaz"),
-            ("❄️ Soğutma",       "Toplam_Sogutma_Tuketim_kWh","kWh", False, "sogutma"),
-            ("💧 Su",             "Su_Tuketimi_m3",             "m³",  False, "su"),
-            ("⚙️ Kojen Üretim",  "Kojen_Uretim_kWh",           "kWh", True,  "kojen"),  # üretimde artış iyidir
-        ]
+    # Not: ölçüm yaşı ekrana yazılmıyor — sahadaki saat dilimi kayması
+    # (olcum_zamani 3 saat ileri görünüyor) düzeltilene kadar yanlış çıkar.
+    if _yaslar:
+        st.markdown(
+            '<div style="font-size:9px;color:#6b7280;margin:2px 2px 0;">'
+            'Anlık değerler · 10 sn\'de bir yenilenir</div>',
+            unsafe_allow_html=True)
 
-        for _lbl, _col, _birim, _artis_iyi, _ozet_key in _metrikler:
-            if _col is None:  # Doğalgaz: kazan + kojen toplamı
-                _bu   = _cs(_df_bu_ay,   "Kazan_Dogalgaz_m3") + _cs(_df_bu_ay,   "Kojen_Dogalgaz_m3")
-                _ga   = _cs(_df_gec_ay,  "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay,  "Kojen_Dogalgaz_m3")
-                _gk   = _cs(_df_gec_ay_kiyas, "Kazan_Dogalgaz_m3") + _cs(_df_gec_ay_kiyas, "Kojen_Dogalgaz_m3")
-                _by   = _cs(_df_bu_yil,  "Kazan_Dogalgaz_m3") + _cs(_df_bu_yil,  "Kojen_Dogalgaz_m3")
-                _gy   = _cs(_df_gec_yil, "Kazan_Dogalgaz_m3") + _cs(_df_gec_yil, "Kojen_Dogalgaz_m3")
-            else:
-                _bu = _cs(_df_bu_ay,   _col)
-                _ga = _cs(_df_gec_ay,  _col)
-                _gk = _cs(_df_gec_ay_kiyas, _col)
-                _by = _cs(_df_bu_yil,  _col)
-                _gy = _cs(_df_gec_yil, _col)
-
-            _trend_parts = []
-            if _ga > 0: _trend_parts.append(f"{_gec_ay_label}: {tr(_ga)} {_birim}")
-            if _by > 0: _trend_parts.append(f"{_bu_yil} YTD: {tr(_by)} {_birim}")
-            if _gy > 0: _trend_parts.append(f"{_bu_yil-1}: {tr(_gy)} {_birim}")
-            _trend_html = (
-                f'<div style="font-size:9px;color:#46536b;margin-top:2px;">'
-                + " &nbsp;|&nbsp; ".join(_trend_parts) + "</div>"
-            ) if _trend_parts else ""
-
-            # Tıklanabilir metrikler <a> ile sarılır; lokasyon kartlarıyla aynı
-            # desen (JS gizli butona tıklatır → aynı oturumda rerun, sayfa
-            # yeniden yüklenmez). Bağlı olmayan metrikler düz <div> kalır.
-            _ic = f"""
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:11px; color:#46536b;">{_lbl}{
-                    ' <span style="font-size:9px;color:#133273;">›</span>'
-                    if _ozet_key else ''}</span>
-                <span style="font-size:12px; font-weight:700; color:#2a78d6;
-                             font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;">{tr(_bu)} {_birim}{_pct_html(_bu, _gk, _artis_iyi)}</span>
-              </div>
-              {_trend_html}"""
-            _stil = ("padding:7px 10px; margin:3px 0; background:#fafaf8;"
-                     "border-radius:8px; border:1px solid rgba(19,50,115,0.1);"
-                     "display:block; text-decoration:none;")
-            if _ozet_key:
-                st.markdown(
-                    f'<a class="ozet-kart" data-ozet="{_ozet_key}" href="?ozet={_ozet_key}" '
-                    f'style="{_stil}cursor:pointer;">{_ic}</a>',
-                    unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div style="{_stil}">{_ic}</div>', unsafe_allow_html=True)
-
+    if _metrikler:
         # Tıklanabilir metrikler için gizli butonlar + JS köprüsü
         _tiklanabilir = [k for *_, k in _metrikler if k]
         if _tiklanabilir:
@@ -1423,12 +1467,12 @@ with merkez:
         d_renk = "#0ca30c" if online else ("#6b7280" if fark_dk is None else "#d03b3b")
         boyut  = max(10, min(22, kwh / 1400)) if kwh > 0 else 9
         harita_js.append({
+            "id":    lok_id,
             "isim":  lok_info["isim"],
             "kisa":  lok_info["kisa"],
             "lat":   lok_info["lat"],
             "lon":   lok_info["lon"],
             "durum": durum,
-            "kwh":   f"{int(kwh):,}" if kwh else "—",
             "m2":    f"{lok_info['m2']:,}",
             "renk":  d_renk,
             "boyut": boyut,
@@ -1614,6 +1658,8 @@ if (window.ResizeObserver) {{
 }}
 
 var hospitals = {hjs};
+var CANLI_HARITA = {{}};   // lok_id → {{sebeke, kojen}} (kW metni ya da null)
+var POPUPLAR = [];
 
 hospitals.forEach(function(h) {{
     var s  = h.boyut;
@@ -1660,21 +1706,42 @@ hospitals.forEach(function(h) {{
         interactive:false, zIndexOffset:300
     }}).addTo(map);
 
-    // ── Popup ──
-    var kwh_bar = h.kwh !== '—'
-        ? '<div style="margin-top:8px;height:3px;background:rgba(19,50,115,0.15);border-radius:2px;"><div style="height:3px;background:'+c+';border-radius:2px;width:80%;"></div></div>'
-        : '';
-    dot.bindPopup(
-        '<div style="padding:14px 16px;min-width:170px;">' +
-        '<div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
-        '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
-        '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
-        '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
-        '<div style="font-size:12px;color:#24324d;margin-bottom:4px;">⚡ <b style="color:#0f1f3d;font-size:14px;">'+h.kwh+'</b> kWh</div>' +
-        '<div style="font-size:10px;color:#46536b;">📐 '+h.m2+' m²</div>' +
-        kwh_bar + '</div>',
-        {{ maxWidth:220, className:'' }}
-    );
+    // ── Popup: ANLIK şebeke + kojen ──
+    // Değerler haritaya ana sayfadan postMessage ile gelir (aşağıda). Harita
+    // HTML'i bu yüzden her yenilemede DEĞİŞMEZ: iframe yeniden yüklenmez,
+    // yakınlaştırma ve açık pencere kaybolmaz.
+    function popupIcerik() {{
+        var v = CANLI_HARITA[h.id] || {{}};
+        function satir(ikon, ad, deger) {{
+            var sag = (deger === null || deger === undefined)
+                ? '<span style="font-size:10px;color:#9aa3b2;font-weight:600;">canlı sayaç yok</span>'
+                : '<b style="color:#0f1f3d;font-size:14px;">'+deger+'</b> <span style="font-size:10px;color:#46536b;">kW</span>';
+            return '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:11px;color:#24324d;margin-bottom:5px;">'
+                 + '<span>'+ikon+' '+ad+'</span><span>'+sag+'</span></div>';
+        }}
+        return '<div style="padding:14px 16px;min-width:190px;">' +
+            '<div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:9px;color:'+c+';font-weight:700;letter-spacing:2px;margin-bottom:6px;">'+h.isim.toUpperCase()+'</div>' +
+            '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
+            '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
+            '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
+            satir('⚡', 'Şebeke', v.sebeke) +
+            satir('⚙️', 'Kojen üretim', v.kojen) +
+            '<div style="font-size:9px;color:#6b7280;margin-top:6px;">Anlık değer · 📐 '+h.m2+' m²</div>' +
+            '</div>';
+    }}
+    dot.bindPopup(popupIcerik, {{ maxWidth:240, className:'' }});
+    POPUPLAR.push({{ dot: dot, icerik: popupIcerik }});
+}});
+
+// Ana sayfadan gelen anlık değerler: {{tip:'synapse-canli', veri:{{lok:{{sebeke,kojen}}}}}}
+window.addEventListener('message', function(ev) {{
+    var m = ev.data;
+    if (!m || m.tip !== 'synapse-canli' || !m.veri) return;
+    CANLI_HARITA = m.veri;
+    POPUPLAR.forEach(function(p) {{
+        var pu = p.dot.getPopup();
+        if (pu && pu.isOpen()) {{ pu.setContent(p.icerik()); }}
+    }});
 }});
 </script>
 </body></html>"""
@@ -1683,6 +1750,31 @@ hospitals.forEach(function(h) {{
     import base64, streamlit.components.v1 as _cv1
     _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
     _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
+
+    # Haritaya ANLIK değerleri ilet (iframe yeniden yüklenmeden). Harita her
+    # yenilemede aynı kalır; değerler postMessage ile gider. İlk açılışta
+    # harita henüz yüklenmemiş olabilir → birkaç kez tekrar gönderilir.
+    _harita_canli = {
+        _lid: {"sebeke": (kw_metin(_v["sebeke"]) if _v.get("sebeke") is not None else None),
+               "kojen":  (kw_metin(_v["kojen"])  if _v.get("kojen")  is not None else None)}
+        for _lid, _v in CANLI.items()
+    }
+    _components.html("""
+<script>
+(function () {
+  var veri = %s;
+  function gonder() {
+    var d;
+    try { d = window.parent.document; } catch (e) { return; }
+    var cerceveler = d.querySelectorAll('iframe[src^="data:text/html;base64"]');
+    for (var i = 0; i < cerceveler.length; i++) {
+      try { cerceveler[i].contentWindow.postMessage({tip: 'synapse-canli', veri: veri}, '*'); } catch (e) {}
+    }
+  }
+  [0, 400, 1200, 3000].forEach(function (ms) { setTimeout(gonder, ms); });
+})();
+</script>
+""" % json.dumps(_harita_canli, ensure_ascii=False), height=0)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
@@ -2857,41 +2949,8 @@ with sag:
         _en_kotu    = _sirali[-1]
         _anormal_n  = sum(1 for v in _ai_metriks.values() if v["anormal"])
 
-        # ── Enerji Zekası Kartı ──
-        _ez_satirlar = ""
-        for _lid, _mv in _sirali:
-            _ez_renk = "#d03b3b" if _mv["anormal"] else "#2a78d6"
-            _flag    = " ⚠️" if _mv["anormal"] else ""
-            _ez_satirlar += (
-                f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                f"padding:5px 0;border-bottom:1px solid rgba(24,26,30,0.10);'>"
-                f"<span style='font-size:10px;font-weight:600;color:#24324d;'>"
-                f"{_mv['isim']}{_flag}</span>"
-                f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:10px;color:{_ez_renk};'>"
-                f"{_mv['kwh_m2']} kWh/m²/gün</span>"
-                f"</div>"
-            )
-
-        _anormal_html = ""
-        if _anormal_n > 0:
-            _anormal_isimler = ", ".join(v["isim"] for v in _ai_metriks.values() if v["anormal"])
-            _anormal_html = (
-                f"<div style='font-size:9px;color:#c98500;margin-top:6px;'>"
-                f"⚡ {_anormal_n} lokasyon normal dışı: {_anormal_isimler}</div>"
-            )
-
-        with st.container(key="enerji_zekasi_karti"):
-            st.markdown(
-                "<div>"
-                + _kart_basligi("🤖 ENERJİ ZEKASI")
-                + "<div style='margin-top:6px;'></div>"
-                + _ez_satirlar
-                + _anormal_html
-                + _KART_ALT
-                + "</div>",
-                unsafe_allow_html=True
-            )
-
+        # Enerji Zekası kartı kaldırıldı (22.10.2026). Metrikler aşağıdaki
+        # Otomatik Sabah Analizi için hesaplanmaya devam ediyor.
         # ── AI yetki kontrolü ──
         _api_key = _gizli_oku("anthropic", "api_key")
 

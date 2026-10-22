@@ -203,15 +203,15 @@ c("saha durumu kendi kartinda", "_saglik_html" in _mrk
 c("5 satirdan sonrasi kaydirmaya girer",
   "_SAHA_GORUNUR = 5" in _mrk and "_SAHA_SATIR_PX" in _mrk
   and "overflow-y:auto" in _mrk)
-# Sag kolondaki dort kart AYNI kalibi kullanir: cerceve kabin kendisinde,
+# Sag kolondaki kartlar AYNI kalibi kullanir (Enerji Zekasi 22.10.2026'da kaldirildi): cerceve kabin kendisinde,
 # baslik ortak fonksiyondan. Her kart kendi kutusunu cizdiginde kenarlik,
 # kose yaricapi ve baslik puntolari (8 px / 15 px) tutmuyordu.
-for _k in ("oto_set_karti", "dis_hava_karti", "enerji_zekasi_karti",
-           "sabah_analiz_karti"):
+for _k in ("oto_set_karti", "dis_hava_karti", "sabah_analiz_karti"):
     c("%s ortak kart kalibinda" % _k,
       ('st.container(key="%s")' % _k) in _mrk and (".st-key-%s" % _k) in _mrk)
+c("Enerji Zekasi karti kaldirildi", 'key="enerji_zekasi_karti"' not in _mrk)
 c("kart basligi TEK fonksiyondan uretilir",
-  _mrk.count("def _kart_basligi") == 1 and _mrk.count("_kart_basligi(") >= 5)
+  _mrk.count("def _kart_basligi") == 1 and _mrk.count("_kart_basligi(") >= 4)
 c("kartlar ayri kutu cizmiyor (eski 8 px cerceve kalmadi)",
   "border-radius:8px;padding:14px 16px" not in _mrk)
 c("yeniden analiz dugmesi kartin icinde (negatif margin hilesi yok)",
