@@ -12,6 +12,7 @@ doğruluğu tamamen buradaki saf fonksiyonlara bağlı:
     veri yoktur; çizgide BOŞLUK kalmalıdır
 """
 import os
+import re
 import sys
 from datetime import datetime, timedelta
 
@@ -74,8 +75,8 @@ s = CI.seri_guncelle(s, olcum(30, **{"TRDP-1": None, "TRDP-2": 310.0}), 300)
 c("okunamayan değer None olarak giriyor (0 DEĞİL)",
   s["cihazlar"]["TRDP-1"][-1] is None, s["cihazlar"]["TRDP-1"])
 c("diğer sayaç etkilenmiyor", s["cihazlar"]["TRDP-2"][-1] == 310.0)
-c("grafik boşlukları birleştirmiyor (satır grafiğinde ölçüldü)",
-  CI.kivrim_svg([10.0, 11.0, None, 14.0, 15.0]).count("polyline") == 2)
+c("okunamayan cihaz için çubuk DOLMUYOR (0 gibi görünmesin)",
+  "cg-dolgu" not in CI.bar_html(None, 100.0))
 
 # Sonradan görünen cihaz: geçmişi uydurulmamalı, hizalama bozulmamalı
 s = CI.seri_guncelle(s, olcum(45, **{"TRDP-1": 420.0, "TRDP-2": 315.0,
@@ -118,28 +119,71 @@ c("toplam hesaplanıyor", CI.toplam(son) == 710.5, CI.toplam(son))
 c("hiç değer yoksa toplam None", CI.toplam({"a": None}) is None)
 c("boş sözlükte toplam None", CI.toplam({}) is None)
 
-# ── 5) Satır grafiği (SVG) ───────────────────────────────────────────────
-# 27 cihaz icin 27 Plotly grafigi agirdi; satir grafigi duz SVG uretilir.
-bos = CI.kivrim_svg([])
-c("veri yokken kesik çizgi (sahte değer yok)",
-  "stroke-dasharray" in bos and "polyline" not in bos, bos[:90])
-c("boş seride de yükseklik korunuyor (satırlar kaymasın)", "height:26px" in bos)
+# ── 5) Yük çubuğu ───────────────────────────────────────────────────────
+# Satir grafigi yerine dolgulu yatay cubuk (kullanici karari 22.10.2026):
+# dalgali trend degil, anlik yukun ne kadar oldugunu gosteren duz dolgu.
+c("ölçek yoksa çubuk dolmuyor", "cg-dolgu" not in CI.bar_html(50.0, 0))
+c("okunamayan değerde çubuk dolmuyor", "cg-dolgu" not in CI.bar_html(None, 100.0))
+c("iz her durumda var (satırlar kaymasın)",
+  "cg-iz" in CI.bar_html(None, 0) and "cg-iz" in CI.bar_html(50.0, 100.0))
 
-dolu = CI.kivrim_svg([10.0, 12.0, 11.0, 14.0])
-c("dolu seri çizgi üretiyor", dolu.count("polyline") == 1, dolu[:120])
-c("çizgi verilen renkte", CI.kivrim_svg([1.0, 2.0], renk="#abcdef").count("#abcdef") == 1)
+_b = CI.bar_html(50.0, 100.0)
+c("yarı değer yarı dolu", "width:50.0%" in _b, _b[:120])
+c("ölçeğe eşit değer tam dolu", "width:100.0%" in CI.bar_html(127.4, 127.4))
+c("ölçeği aşan değer taşmıyor", "width:100.0%" in CI.bar_html(500.0, 100.0))
+c("çok küçük değer görünür kalıyor (0 genişlik değil)",
+  "width:0.1%" in CI.bar_html(0.1, 100.0) or "width:0.0%" in CI.bar_html(0.1, 100.0))
+c("ipucunda kW ve yüzde var", "kW" in _b and "%" in _b, _b[:90])
 
-c("boşluk çizgiyi KOPARIYOR (uydurma bağlantı yok)",
-  CI.kivrim_svg([10.0, 11.0, None, 14.0, 15.0]).count("polyline") == 2)
-c("tek nokta da görünür", CI.kivrim_svg([None, 12.0, None]).count("polyline") == 1)
-c("düz seri çökmüyor (sıfıra bölme yok)",
-  CI.kivrim_svg([7.0, 7.0, 7.0]).count("polyline") == 1)
+# ── 5b) ESIK RENKLERI (kullanici olcutu) ────────────────────────────────
+#   <500 yesil #22c55e · 500-700 yesil->turuncu · 700-800 turuncu->kirmizi
+#   >800 kirmizi #ef4444 — aralarda YUMUSAK gecis
+c("500 altı saf yeşil", CI.esik_rengi(312.9) == "rgb(34, 197, 94)", CI.esik_rengi(312.9))
+c("500 tam sınırda hâlâ yeşil", CI.esik_rengi(500) == "rgb(34, 197, 94)")
+c("800 üstü saf kırmızı", CI.esik_rengi(2049.5) == "rgb(239, 68, 68)")
+c("800 tam sınırda kırmızı", CI.esik_rengi(800) == "rgb(239, 68, 68)")
 
-# Her cihaz KENDI araligina olceklenir: kucuk sayacin hareketi de gorunur
-k_buyuk = CI.kivrim_svg([800.0, 900.0, 850.0])
-k_kucuk = CI.kivrim_svg([4.0, 5.0, 4.5])
-c("küçük sayacın hareketi de görünüyor (kendi ölçeğinde)",
-  k_buyuk.count("polyline") == 1 and k_kucuk.count("polyline") == 1)
+_orta = CI.esik_rengi(572.2)
+c("500-700 arası ara ton (ne yeşil ne turuncu)",
+  _orta not in ("rgb(34, 197, 94)", "rgb(245, 158, 11)"), _orta)
+c("572 kW referansla aynı ton", _orta == "rgb(110, 183, 64)", _orta)
+_ust = CI.esik_rengi(751.6)
+c("751 kW referansla aynı ton", _ust == "rgb(242, 112, 40)", _ust)
+
+def _r(metin):
+    return [int(x) for x in re.findall(r"\d+", metin)]
+
+
+# Gecis YUMUSAK olmali: kW arttikca kirmiziya tek yonde gitsin
+_ardisik = [CI.esik_rengi(k) for k in (450, 520, 600, 680, 720, 780, 850)]
+# "Isinma" tek yonlu olmali: yesil bileseni kW arttikca hep azalir.
+c("yük arttıkça yeşil bileşeni azalıyor (tek yönlü ısınma)",
+  all(_r(a)[1] >= _r(b)[1] for a, b in zip(_ardisik, _ardisik[1:])), _ardisik)
+# YUMUSAK gecisin asil olcutu: esik noktalarinda SICRAMA olmamasi.
+for _esik in (500, 700, 800):
+    _alt, _ust2 = CI.esik_rengi(_esik - 0.5), CI.esik_rengi(_esik + 0.5)
+    _fark = max(abs(x - y) for x, y in zip(_r(_alt), _r(_ust2)))
+    c("%d kW eşiğinde renk sıçraması yok" % _esik, _fark <= 3,
+      (_alt, _ust2, _fark))
+c("negatif değer de renklendiriliyor (şebekeye verme)",
+  CI.esik_rengi(-300) == "rgb(34, 197, 94)")
+c("değer yoksa nötr gri", CI.esik_rengi(None).startswith("rgb(203"))
+
+# ── 5c) Olcek: pencere TEPESI ───────────────────────────────────────────
+_s0 = CI.bos_seri()
+_s0 = CI.seri_guncelle(_s0, olcum(0, **{"A": 10.0, "B": 40.0}), 300)
+_s0 = CI.seri_guncelle(_s0, olcum(15, **{"A": 80.0, "B": 20.0}), 300)
+c("ölçek pencere tepesini alıyor (anlık en yüksek değil)",
+  CI.olcek_degeri(_s0, ["A", "B"]) == 80.0, CI.olcek_degeri(_s0, ["A", "B"]))
+c("gruba ait olmayan cihaz ölçeğe girmiyor",
+  CI.olcek_degeri(_s0, ["A"]) == 80.0 and CI.olcek_degeri(_s0, ["B"]) == 40.0)
+c("boş grupta ölçek 0", CI.olcek_degeri(_s0, []) == 0)
+
+# ── 5d) Animasyon ───────────────────────────────────────────────────────
+c("dolgu şeritleri akıyor", "animation:cgSerit" in CI.STIL and "@keyframes cgSerit" in CI.STIL)
+c("üstünden parıltı geçiyor", "cgParilti" in CI.STIL)
+c("genişlik ve renk yumuşak değişiyor", "transition:width" in CI.STIL)
+c("dalgalı trend çizgisi kalmadı", not hasattr(CI, "kivrim_svg"))
 
 # ── 6) Gruplama ──────────────────────────────────────────────────────────
 _c = ["TRDP-1", "TRDP-4", "CHILLER-1", "KULE-2", "MCC-3", "2BK-MCC-D01",
@@ -267,13 +311,6 @@ c("satır kendi ızgarasını kurmuyor",
 c("iki nokta rengi de tanımlı",
   ".cg-dot-ok{background:#0ca30c;}" in CI.STIL and ".cg-dot-bekle{background:#fab219;}" in CI.STIL)
 
-# ── 7b) Cizgi kalinligi her yerde AYNI ──────────────────────────────────
-# SVG yatayda esnetiliyor; kalem de esneyince dik inisler ince, yataya
-# yakin yerler kalin goruluyordu.
-c("çizgi kalınlığı esnemiyor",
-  "non-scaling-stroke" in CI.kivrim_svg([1.0, 9.0, 2.0, 8.0]))
-c("boş seride de esnemiyor", "non-scaling-stroke" in CI.kivrim_svg([]))
-
 # ── 7c) Kartlar esit boyda ──────────────────────────────────────────────
 # 15 satirlik MCC karti digerlerinden uzun duruyordu.
 c("kartlar en uzuna göre hizalanıyor (align-items:start YOK)",
@@ -313,7 +350,7 @@ c("fragment session_state'ten okuyor", 'st.session_state.get("canli_pencere"' in
 c("sayaç yoksa açıklanıyor", "canlı sayaç okuması yok" in SAYFA)
 c("satırlar modülden üretiliyor (sayfada kopya HTML yok)",
   "_CI.satir_html(" in SAYFA and "_CI.grup_html(" in SAYFA
-  and "_CI.kivrim_svg(" in SAYFA)
+  and "_CI.bar_html(" in SAYFA)
 c("gruplama modülden", "_CI.gruplara_ayir(" in SAYFA)
 c("stil tek yerden", "_CI.STIL" in SAYFA and "cg-grup" not in SAYFA)
 
@@ -327,13 +364,11 @@ c("detay penceresi iki sütunu da dönem verisiyle kullanıyor",
 # calismada diskten okunup exec ediliyor, canli_izleme modulu ise Streamlit
 # surecine BIR KEZ yukleniyor. Yayin sonrasi surec yeniden baslamazsa sayfa
 # yeni, modul eski kalir ve sayfa modulde olmayan bir islevi cagirir.
-import re as _re  # noqa: E402
-
 c("modülde sürüm damgası var", isinstance(getattr(CI, "SURUM", None), int), getattr(CI, "SURUM", None))
 c("sayfa sürümü kontrol ediyor", 'getattr(_CI, "SURUM", 0)' in SAYFA)
 c("tutmuyorsa modülü tazeliyor", "importlib.reload(_CI)" in SAYFA)
 
-_bekl = _re.search(r"_CI_GEREKEN_SURUM = (\d+)", SAYFA)
+_bekl = re.search(r"_CI_GEREKEN_SURUM = (\d+)", SAYFA)
 c("sayfa beklenen sürümü yazıyor", _bekl is not None)
 # Asil koruma: module yeni islev eklenip SURUM artirilmazsa ayrisma geri doner
 c("sayfanın beklediği sürüm modülünkiyle UYUMLU",
@@ -341,7 +376,7 @@ c("sayfanın beklediği sürüm modülünkiyle UYUMLU",
   (_bekl.group(1) if _bekl else None, CI.SURUM))
 
 # Sayfanin kullandigi HER _CI islevi modulde bulunmali (ayrisma testi)
-_kullanilan = set(_re.findall(r"_CI\.([A-Za-z_][A-Za-z_0-9]*)", SAYFA))
+_kullanilan = set(re.findall(r"_CI\.([A-Za-z_][A-Za-z_0-9]*)", SAYFA))
 _eksik = [a for a in _kullanilan if not hasattr(CI, a)]
 c("sayfanın çağırdığı her işlev modülde var", not _eksik, _eksik)
 

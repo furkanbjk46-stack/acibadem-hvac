@@ -1701,7 +1701,7 @@ with tab_canli:
     # ise sürece BİR KEZ yüklenir. Yayın sonrası süreç yeniden başlamazsa
     # sayfa yeni, modül eski kalır ve burada olmayan bir işlev çağrılır
     # (21.10.2026: ekranda AttributeError çıktı). Sürüm tutmuyorsa tazele.
-    _CI_GEREKEN_SURUM = 6
+    _CI_GEREKEN_SURUM = 7
     if getattr(_CI, "SURUM", 0) < _CI_GEREKEN_SURUM:
         import importlib
         _CI = importlib.reload(_CI)
@@ -1778,16 +1778,21 @@ with tab_canli:
                 "<span class='cg-br'>kW</span>", _alt, canli=(_an == "enerji")))
 
             # ── Grup gövdesi ─────────────────────────────────────────
+            # Çubukların ölçeği: bu gruptaki sayaçların pencere boyunca
+            # gördüğü EN YÜKSEK değer. Toplam satırı ölçeğe katılmaz,
+            # yoksa trafoların hepsi toplamın yanında cüce kalırdı.
+            _olcek = _CI.olcek_degeri(seri, _cihazlar)
             _satirlar = ""
             if _an == "enerji" and len(_cihazlar) > 1:
-                # Trafoların toplamı: "şebekeden o an ne çekiyoruz"
+                # Trafoların toplamı KENDİ ölçeğinde çizilir
+                _ust_olcek = max((v for v in _CI.toplam_seri(seri, _cihazlar)
+                                  if v is not None), default=0.0)
                 _satirlar += _CI.toplam_satir_html(
-                    "ŞEBEKE", _tp,
-                    _CI.kivrim_svg(_CI.toplam_seri(seri, _cihazlar), "#133273"))
+                    "ŞEBEKE", _tp, _CI.bar_html(_tp, _ust_olcek))
             for _c in _cihazlar:
                 _satirlar += _CI.satir_html(
                     _c, degerler.get(_c),
-                    _CI.kivrim_svg(seri["cihazlar"].get(_c, []), _CI.renk(_c, _cihazlar)),
+                    _CI.bar_html(degerler.get(_c), _olcek),
                     _yontemler.get(_c))
             _olcusuz = 0
             if _an == "enerji":

@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 6
+SURUM = 7
 
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
@@ -266,63 +266,69 @@ def toplam(degerler: dict):
     return round(sum(okunan), 1) if okunan else None
 
 
-# ── Satır içi mini grafik (SVG) ──────────────────────────────────────────
-# 27 cihaz için 27 Plotly grafiği çizmek ağır olurdu; satır grafiği düz SVG
-# olarak üretilir. Her cihaz KENDİ aralığına ölçeklenir: amaç sayaçları
-# birbiriyle kıyaslamak değil, o sayacın son dakikalarda ne yaptığını
-# göstermek — yoksa 4 kW'lık kulenin hareketi 880 kW'lık trafonun yanında
-# düz çizgi görünürdü.
+# ── Yük çubuğu (yatay dolgu) ─────────────────────────────────────────────
+# Satır grafiği yerine SCADA'daki gibi dolgulu çubuk: anlık yükün ne kadar
+# olduğu bir bakışta okunsun.
+#
+# ÇUBUK NEYE GÖRE DOLUYOR: cihazın "nominal kapasitesi" sistemde kayıtlı
+# değil (sayaçlar yalnızca anlık gücü veriyor). Bu yüzden ölçek, AYNI
+# GRUPTAKİ sayaçların seçili pencerede gördüğü EN YÜKSEK değerdir. Yani
+# çubuk "kapasitenin %x'i" demez, "bu gruptaki en yüksek yüke göre %x"
+# der — ekranda da böyle yazar. Pencere içindeki tepe kullanılır ki
+# lider değiştikçe bütün çubuklar zıplamasın.
+#
+# RENK ise MUTLAK kW eşiğine göredir (kullanıcı ölçütü): <500 yeşil,
+# 500-700 yeşilden turuncuya, 700-800 turuncudan kırmızıya, >800 kırmızı.
+# Trafolarda anlamlı bir uyarı verir; küçük panolar doğal olarak yeşil kalır.
 
-def kivrim_svg(degerler: list, renk: str = "#2a78d6",
-               genislik: int = 100, yukseklik: int = 26) -> str:
-    """Seriden mini çizgi. Okunamayan noktalar BOŞLUK bırakır."""
-    gecerli = [d for d in (degerler or []) if d is not None]
-    if not gecerli:
-        return (f"<svg viewBox='0 0 {genislik} {yukseklik}' preserveAspectRatio='none' "
-                f"style='width:100%;height:{yukseklik}px;display:block;'>"
-                f"<line x1='0' y1='{yukseklik/2:.0f}' x2='{genislik}' y2='{yukseklik/2:.0f}' "
-                f"stroke='#d7dde7' stroke-width='1.4' vector-effect='non-scaling-stroke' "
-                f"stroke-dasharray='3 3'/></svg>")
+ESIK_YESIL = (34, 197, 94)
+ESIK_TURUNCU = (245, 158, 11)
+ESIK_KIRMIZI = (239, 68, 68)
 
-    n = len(degerler)
-    alt, ust = min(gecerli), max(gecerli)
-    if ust - alt < 1e-9:                  # düz çizgi: ortada dursun
-        alt, ust = alt - 1.0, ust + 1.0
-    pay = (ust - alt) * 0.18
-    alt, ust = alt - pay, ust + pay
 
-    def nokta(i, v):
-        x = 0 if n < 2 else i * genislik / (n - 1)
-        y = yukseklik - (v - alt) / (ust - alt) * yukseklik
-        return "%.1f,%.1f" % (x, max(1.0, min(yukseklik - 1.0, y)))
+def _karistir(a, b, t):
+    return tuple(round(x + t * (y - x)) for x, y in zip(a, b))
 
-    # Boşluklara göre parçalara ayır — kopuk veri birleştirilmez
-    parcalar, parca = [], []
-    for i, v in enumerate(degerler):
-        if v is None:
-            if len(parca) > 1:
-                parcalar.append(parca)
-            parca = []
-        else:
-            parca.append(nokta(i, v))
-    if len(parca) > 1:
-        parcalar.append(parca)
-    if not parcalar:                      # tek nokta: kısa yatay iz
-        i = next(i for i, v in enumerate(degerler) if v is not None)
-        x, y = nokta(i, degerler[i]).split(",")
-        parcalar = [["%.1f,%s" % (max(0.0, float(x) - 5), y), "%s,%s" % (x, y)]]
 
-    # vector-effect='non-scaling-stroke' ŞART: SVG yatayda esnetiliyor
-    # (preserveAspectRatio='none'), kalem de onunla esniyordu — dik inişler
-    # ince, yataya yakın yerler kalın görünüyordu (21.10.2026). Bu özellikle
-    # çizgi kalınlığı ekranda her yerde AYNI kalır.
-    cizgiler = "".join(
-        f"<polyline fill='none' stroke='{renk}' stroke-width='1.6' "
-        f"vector-effect='non-scaling-stroke' "
-        f"stroke-linejoin='round' stroke-linecap='round' points='{' '.join(p)}'/>"
-        for p in parcalar)
-    return (f"<svg viewBox='0 0 {genislik} {yukseklik}' preserveAspectRatio='none' "
-            f"style='width:100%;height:{yukseklik}px;display:block;'>{cizgiler}</svg>")
+def esik_rengi(kw) -> str:
+    """Mutlak kW eşiğine göre çubuk rengi (aralıklarda yumuşak geçiş)."""
+    if kw is None:
+        return "rgb(203, 213, 225)"
+    kw = abs(float(kw))
+    if kw <= 500:
+        r = ESIK_YESIL
+    elif kw <= 700:
+        r = _karistir(ESIK_YESIL, ESIK_TURUNCU, (kw - 500) / 200.0)
+    elif kw <= 800:
+        r = _karistir(ESIK_TURUNCU, ESIK_KIRMIZI, (kw - 700) / 100.0)
+    else:
+        r = ESIK_KIRMIZI
+    return "rgb(%d, %d, %d)" % r
+
+
+def olcek_degeri(seri: dict, cihazlar: list) -> float:
+    """Grubun ölçeği: pencere boyunca görülen en yüksek değer.
+
+    Anlık en yüksek yerine PENCERE TEPESİ kullanılır; yoksa lider her
+    değiştiğinde bütün çubuklar yeniden ölçeklenip zıplardı.
+    """
+    tepe = 0.0
+    for c in cihazlar or []:
+        for d in (seri.get("cihazlar", {}).get(c) or []):
+            if d is not None and abs(d) > tepe:
+                tepe = abs(d)
+    return tepe
+
+
+def bar_html(deger, olcek, baslik: str = "") -> str:
+    """Yatay dolgu çubuğu. Ölçek yoksa/0 ise boş iz döner."""
+    if deger is None or not olcek or olcek <= 0:
+        return "<div class='cg-iz'></div>"
+    oran = max(0.0, min(100.0, abs(float(deger)) / float(olcek) * 100.0))
+    ipucu = baslik or ("%s kW · %%%.0f" % (tr_sayi(deger), oran))
+    return (f"<div class='cg-iz' title='{ipucu}'>"
+            f"<div class='cg-dolgu' style='width:{oran:.1f}%;"
+            f"background-color:{esik_rengi(deger)};'></div></div>")
 
 
 def tr_sayi(x, ond=1):
@@ -331,7 +337,7 @@ def tr_sayi(x, ond=1):
     return tam.replace(",", ".") + "," + kus
 
 
-def satir_html(cihaz: str, deger, cizgi_svg: str, yontem: str = None) -> str:
+def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None) -> str:
     """Tek cihaz satırı: ad · mini grafik · anlık kW.
 
     Okunamayan cihaz "0,0 kW" DEĞİL "okunamadı" yazar: sıfır, sayacın
@@ -356,15 +362,15 @@ def satir_html(cihaz: str, deger, cizgi_svg: str, yontem: str = None) -> str:
     # üzerine konan title görünmezdi.
     return (f"<div class='cg-satir'>"
             f"<div class='{cip_sinif}'{baslik}>{nokta}{kisa_ad(cihaz)}</div>"
-            f"<div class='cg-cizgi'>{cizgi_svg}</div>"
+            f"<div class='cg-cizgi'>{cubuk}</div>"
             f"<div class='{dg_sinif}'>{dg}</div></div>")
 
 
-def toplam_satir_html(ad: str, deger, cizgi_svg: str) -> str:
+def toplam_satir_html(ad: str, deger, cubuk: str) -> str:
     """Grubun TOPLAMINI gösteren vurgulu satır (ör. ŞEBEKE = 4 trafo)."""
     dg = "—" if deger is None else (tr_sayi(deger) + "<span class='cg-br'>kW</span>")
     return (f"<div class='cg-satir cg-ust-satir'><div class='cg-cip cg-cip-ust'>{ad}</div>"
-            f"<div class='cg-cizgi'>{cizgi_svg}</div>"
+            f"<div class='cg-cizgi'>{cubuk}</div>"
             f"<div class='cg-dg cg-dg-ust'>{dg}</div></div>")
 
 
@@ -465,7 +471,24 @@ STIL = """
 .cg-cip.cg-yok{color:#8b93a3; background:#f3f3f4; border-style:dashed;}
 .cg-cip-ust{font-weight:700; background:#eef3fb; border-color:#cddcf1; color:#133273;}
 .cg-dg-ust{font-size:16px;}
-.cg-cizgi{height:28px; overflow:hidden;}
+.cg-cizgi{height:28px; display:flex; align-items:center;}
+
+/* ── Yük çubuğu: iz + dolgu, şeritler akar, üstünden parıltı geçer ── */
+.cg-iz{width:100%; height:8px; background:#e2e8f0; border-radius:4px;
+  overflow:hidden; position:relative; box-shadow:inset 0 1px 2px rgba(0,0,0,.06);}
+.cg-dolgu{height:100%; border-radius:4px; position:relative; overflow:hidden;
+  transition:width .6s cubic-bezier(.4,0,.2,1), background-color .6s ease;
+  background-image:linear-gradient(45deg,
+    rgba(255,255,255,.24) 25%, transparent 25%, transparent 50%,
+    rgba(255,255,255,.24) 50%, rgba(255,255,255,.24) 75%, transparent 75%, transparent);
+  background-size:16px 16px; animation:cgSerit .85s linear infinite;}
+@keyframes cgSerit{0%{background-position:0 0;} 100%{background-position:16px 0;}}
+.cg-dolgu::after{content:""; position:absolute; top:0; left:0; right:0; bottom:0;
+  background:linear-gradient(90deg, rgba(255,255,255,0) 0%,
+    rgba(255,255,255,.45) 50%, rgba(255,255,255,0) 100%);
+  transform:translateX(-100%);
+  animation:cgParilti 2.2s infinite cubic-bezier(.4,0,.2,1); pointer-events:none;}
+@keyframes cgParilti{0%{transform:translateX(-100%);} 55%,100%{transform:translateX(100%);}}
 .cg-dg{font-size:15px; font-weight:700; color:#133273; text-align:right; white-space:nowrap;}
 .cg-dg.cg-dg-yok{font-size:10.5px; font-weight:600; color:#9aa2b1;}
 .cg-br{font-size:9.5px; font-weight:500; color:#46536b; margin-left:2px;}
