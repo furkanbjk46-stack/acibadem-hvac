@@ -481,6 +481,56 @@ def _ayarlar():
         return "", ""
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# İZLEYİCİ LİNKİ (şifresiz, SALT OKUNUR)
+# ═══════════════════════════════════════════════════════════════════════════
+# Başka bir programdaki butondan Synapse'e şifre sormadan girilebilsin diye.
+# Link: ...streamlit.app/?izle=<jeton>  (ör. &detay=maslak&sekme=canli ile)
+#
+# İzleyici tüm sayfaları ve tüm lokasyonları GÖRÜR, hiçbir şeyi DEĞİŞTİREMEZ:
+# yazma düğmeleri kapatılır, Ayarlar (Supabase anahtarı dahil) gizlenir ve
+# salt_okuma.py veritabanına giden her yazma isteğini en alt katmanda reddeder.
+#
+# Jeton, Streamlit secrets'taki [izleme] anahtar değerinden HMAC ile türetilir;
+# tahmin edilemez. Link sızarsa anahtarı değiştirmek eski linki anında
+# geçersiz kılar. [izleme] bölümü yoksa özellik KAPALIDIR (fail-closed).
+#
+#     [izleme]
+#     anahtar = "<uzun rastgele metin>"
+#
+# Linkteki jetonu üretmek için:  python merkez/giris.py --izleme-jetonu
+
+_IZLEME_ETIKET = b"synapse-izleyici-v1"
+
+
+def izleme_jetonu_uret(anahtar: str) -> str:
+    return hmac.new(anahtar.encode("utf-8"), _IZLEME_ETIKET,
+                    hashlib.sha256).hexdigest()[:32]
+
+
+def _izleme_anahtari() -> str:
+    import streamlit as st
+    v = os.environ.get("SYNAPSE_IZLEME_ANAHTAR", "").strip()   # yalnız sunum/test
+    if v:
+        return v
+    try:
+        return str((st.secrets.get("izleme", {}) or {}).get("anahtar", "") or "").strip()
+    except Exception:
+        return ""
+
+
+def izleme_jetonu_gecerli(jeton: str) -> bool:
+    anahtar = _izleme_anahtari()
+    if len(anahtar) < 16 or not jeton:       # kısa/boş anahtar → kapalı
+        return False
+    return hmac.compare_digest(str(jeton), izleme_jetonu_uret(anahtar))
+
+
+def izleyici_mi() -> bool:
+    import streamlit as st
+    return bool(st.session_state.get("izleyici"))
+
+
 def oturum_gecerli() -> bool:
     """Oturum açık ve süresi dolmamış mı?"""
     import streamlit as st
@@ -531,6 +581,29 @@ def giris_kapisi():
     if _tani == "1":
         _tani_ekrani(parola_hash)
         st.stop()
+
+    # ── İzleyici linki: şifresiz, salt okunur ──
+    try:
+        _izle = str(st.query_params.get("izle", "") or "")
+    except Exception:
+        _izle = ""
+    if _izle and izleme_jetonu_gecerli(_izle):
+        if not (st.session_state.get("giris_ok") and not izleyici_mi()):
+            # (Zaten tam yetkili giriş yapmış biri linke tıklarsa yetkisi düşürülmez)
+            st.session_state["giris_ok"] = True
+            st.session_state["izleyici"] = True
+            st.session_state["giris_son_hareket"] = time.time()
+        try:
+            del st.query_params["izle"]   # jeton adres çubuğunda kalmasın
+        except Exception:
+            pass
+
+    if izleyici_mi():
+        # İzleyiciye ASLA tam yetkili oturum çerezi yazılmaz; oturum yalnızca
+        # bu tarayıcı sekmesinde sürer (link her tıklamada jetonu yeniden getirir).
+        if oturum_gecerli():
+            return
+        st.session_state.pop("izleyici", None)
 
     if oturum_gecerli():
         # KENDİNİ ONARAN ÇEREZ YAZIMI:
@@ -798,7 +871,7 @@ def cikis_yap():
     # _cerez_beklendi BİLEREK sıfırlanmaz: sıfırlanırsa çıkıştan sonra
     # "Oturum denetleniyor…" ekranı bir kez daha görünür. O bekleme yalnızca
     # yeni bir sayfa açılışında (session_state zaten boşken) gereklidir.
-    for k in ("giris_ok", "giris_son_hareket", "giris_jeton"):
+    for k in ("giris_ok", "giris_son_hareket", "giris_jeton", "izleyici"):
         st.session_state.pop(k, None)
     st.session_state["giris_cikis"] = True
 
@@ -806,6 +879,17 @@ def cikis_yap():
 # ═══════════════════════════════════════════════════════════════════════════
 # KOMUT SATIRI — parola karması üretici
 # ═══════════════════════════════════════════════════════════════════════════
+
+if __name__ == "__main__" and len(sys.argv) >= 2 and sys.argv[1] == "--izleme-jetonu":
+    # Yeni izleme anahtarı + linkte kullanılacak jeton üretir.
+    _anahtar = sys.argv[2] if len(sys.argv) >= 3 else _secrets.token_hex(24)
+    print("\nStreamlit Cloud -> Settings -> Secrets icine ekleyin:\n")
+    print("[izleme]")
+    print('anahtar = "%s"\n' % _anahtar)
+    print("Izleyici linki (sifresiz, salt okunur):")
+    print("  https://acibadem-merkez.streamlit.app/?izle=%s" % izleme_jetonu_uret(_anahtar))
+    print("  Lokasyon canli izleme: ...&detay=maslak&sekme=canli\n")
+    sys.exit(0)
 
 if __name__ == "__main__":
     # Parola argüman olarak da verilebilir, ama TERCİH EDİLEN yol gizli sorudur:

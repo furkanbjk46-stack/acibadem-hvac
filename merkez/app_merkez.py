@@ -19,6 +19,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# İzleyici (salt okunur) oturumlarında veritabanına yazmayı en alt katmanda
+# engeller — bkz. salt_okuma.py. Diğer modüller içe aktarılmadan ÖNCE kurulur.
+import salt_okuma as _salt_okuma
+_salt_okuma.kur()
+
 from streamlit_autorefresh import st_autorefresh
 # Otomatik yenileme yalnızca GİRİŞ YAPILMIŞ portal ekranlarında çalışır.
 #   - QR bakım sayfasında: form doldurulurken sıfırlanmasın
@@ -875,6 +880,16 @@ if "bakim" in st.query_params:
 # service_role RLS'i bypass eder → portala erişebilen veritabanına tam yetkilidir.
 import giris
 giris.giris_kapisi()   # giriş yoksa giriş ekranını basar ve durdurur
+
+# İzleyici linkiyle gelindiyse: her şey görünür, hiçbir şey değiştirilemez
+_IZLEYICI = giris.izleyici_mi()
+if _IZLEYICI:
+    st.markdown(
+        "<div style='position:fixed;top:10px;left:50%;transform:translateX(-50%);"
+        "z-index:999999;background:#eef3fb;border:1px solid rgba(19,50,115,.25);"
+        "color:#133273;font-size:10px;font-weight:700;letter-spacing:1px;"
+        "padding:4px 12px;border-radius:999px;'>👁 İZLEYİCİ MODU — SALT OKUNUR</div>",
+        unsafe_allow_html=True)
 
 now = datetime.now()  # timezone-naive — pandas karsilastirmalari icin
 try:
@@ -2608,7 +2623,7 @@ with sag:
 
         with _k_sw:
             _sw_key = "oto_switch_on" if _oto_aktif_su else "oto_switch_off"
-            if st.button(" ", key=_sw_key, help=_sw_ipucu):
+            if st.button(" ", key=_sw_key, help=_sw_ipucu, disabled=_IZLEYICI):
                 _yeni_deger = "false" if _oto_aktif_su else "true"
                 if _demo_modu():
                     # Sunumda örnek veri sunucusuna yazılmaz; anahtar yine de
@@ -2713,7 +2728,7 @@ with sag:
         _p1, _p2 = st.columns(2)
         with _p1:
             if st.button("Kaydet", key="oto_saat_kaydet", use_container_width=True,
-                         type="primary", disabled=(_yeni_g == _yeni_ge or _demo_modu())):
+                         type="primary", disabled=(_yeni_g == _yeni_ge or _demo_modu() or _IZLEYICI)):
                 for _k, _v in (("oto_gunduz_saat", _yeni_g), ("oto_gece_saat", _yeni_ge)):
                     _oaur.urlopen(_oaur.Request(
                         url + "/rest/v1/ayarlar",
@@ -2999,7 +3014,7 @@ with sag:
             _yenile_btn = False  # varsayılan
 
             # Çalıştırma koşulu: DB'de bugün yoksa VEYA yenile butonuna basıldıysa
-            _calistir = (_sb_metin is None) or _yenile_btn
+            _calistir = ((_sb_metin is None) or _yenile_btn) and not _IZLEYICI
 
             if not _calistir:
                 _ai_metin  = _sb_metin
@@ -3404,7 +3419,7 @@ with sag:
                           "</div>",
                         unsafe_allow_html=True)
                     if st.button("🔄 Yeniden Analiz Et", key="btn_ai_yenile",
-                                 use_container_width=True):
+                                 use_container_width=True, disabled=_IZLEYICI):
                         _sb_metin = None
                         st.rerun()
 
@@ -3426,6 +3441,9 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ============ AYARLAR ============
+if _IZLEYICI:
+    st.stop()   # Ayarlar (bağlantı anahtarı, mesaj, uzaktan komut) izleyicide yok
+
 with st.expander("⚙️  Ayarlar", expanded=False):
     st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
 

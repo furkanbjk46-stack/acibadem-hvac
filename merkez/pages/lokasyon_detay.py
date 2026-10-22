@@ -1522,8 +1522,15 @@ with tab1:
             # Sunum modunda kontroller GÖRÜNÜR ama pasiftir: paneli göstermek
             # için demo'yu kapatmak gerekmesin, örnek veriye de yazılmasın.
             _demo = _demo_modu()
+            try:
+                import giris as _gr_iz
+                if _gr_iz.izleyici_mi():
+                    _demo = True   # izleyici: lokasyon saat ayarı salt okunur
+            except Exception:
+                pass
             if _demo:
-                st.caption("Sunum modu — ayar yazılmaz.")
+                st.caption("Salt okunur — ayar yazılmaz." if not _demo_modu()
+                           else "Sunum modu — ayar yazılmaz.")
             if not isinstance(_kg, int) or not isinstance(_kge, int):
                 st.caption("Lokasyon yürürlükteki kuralı henüz bildirmedi "
                            "(güncelleme uygulanınca ilk heartbeat'te gelir).")
