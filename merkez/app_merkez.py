@@ -910,6 +910,10 @@ if "detay" in st.query_params:
     _lok = st.query_params["detay"]
     if _lok in HASTANELER:
         st.session_state["detay_lokasyon"] = _lok
+        # Dış bağlantı: ?detay=maslak&sekme=canli → detay Canlı İzleme
+        # sekmesinde açılır (lokasyon_detay.py bayrağı bir kez kullanıp siler).
+        if (st.query_params.get("sekme") or "").strip().lower() == "canli":
+            st.session_state["detay_sekme"] = "canli"
         st.query_params.clear()
         st.rerun()
 

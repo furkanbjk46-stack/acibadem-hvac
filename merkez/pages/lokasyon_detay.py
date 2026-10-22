@@ -471,6 +471,35 @@ tab1, tab_canli, tab2, tab3, tab4 = st.tabs(
     ["📊 Dashboard", "⚡ Canlı İzleme", "📈 Trend & Tahmin",
      "📋 Veri Tablosu", "📄 Rapor Oluştur"])
 
+# Dış bağlantıyla gelindiyse (?detay=..&sekme=canli) Canlı İzleme sekmesini aç.
+# Streamlit sekmeyi koddan seçtirmiyor; sekme düğmesine bir kez tıklatılır.
+# Bayrak hemen silinir: 10 sn'lik yenilemelerde kullanıcı başka sekmeye
+# geçtiyse geri zorlanmaz (Streamlit seçili sekmeyi yenilemede korur).
+if st.session_state.pop("detay_sekme", None) == "canli":
+    import streamlit.components.v1 as _sekme_cv1
+    _sekme_cv1.html("""
+<script>
+(function () {
+  var deneme = 0;
+  function ac() {
+    var d;
+    try { d = window.parent.document; } catch (e) { return; }
+    // Eski Streamlit: [data-baseweb="tab"], yeni (1.5x+): [data-testid="stTab"] / role="tab"
+    var sekmeler = d.querySelectorAll(
+      '[data-testid="stTabs"] [data-baseweb="tab"], [data-testid="stTab"], [data-testid="stTabs"] [role="tab"]');
+    for (var i = 0; i < sekmeler.length; i++) {
+      if ((sekmeler[i].innerText || '').indexOf('Canlı İzleme') !== -1) {
+        sekmeler[i].click();
+        return;
+      }
+    }
+    if (++deneme < 40) { setTimeout(ac, 150); }   // sekmeler henüz çizilmediyse bekle
+  }
+  ac();
+})();
+</script>
+""", height=0)
+
 # ════════ TAB 1: DASHBOARD ════════
 with tab1:
     son_tarih_dt = pd.to_datetime(son_tarih_str)
