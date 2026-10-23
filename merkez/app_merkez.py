@@ -160,6 +160,10 @@ button span[data-testid="stIconMaterial"] {
 .nk-green { border-color:rgb(12,163,12) !important; }
 .nk-red   { border-color:rgb(208,59,59) !important; }
 .nk-gray  { border-color:#133273 !important; opacity: 0.65; }
+/* Lokasyon kartı çerçevesi lokasyonun KENDİ renginde (durum noktası ayrı) */
+.nk.lok-kart, .nk.lok-kart:hover { border:1.5px solid var(--lokrenk, #133273) !important;
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--lokrenk, #133273) 12%, transparent),
+               0 10px 20px -16px var(--lokrenk, #133273) !important; }
 .nk {
     display: block !important;
     text-decoration: none !important;
@@ -286,6 +290,10 @@ button span[data-testid="stIconMaterial"] {
 </style>
 """, unsafe_allow_html=True)
 
+
+# Animasyonlu simgeler: tek kaynak (ikonlar.py) — ana ekran ve Dashboard aynı
+import ikonlar as _ik
+st.markdown(_ik.CSS, unsafe_allow_html=True)
 
 # ============ SABİT VERİ ============
 HASTANELER = {
@@ -1263,7 +1271,7 @@ with sol:
             # href yine de duruyor: JS çalışmazsa eski tam sayfa yolu yedek kalır.
             f'<a class="{card_cls} lok-kart" data-lok="{lok_id}" '
             f'href="?detay={lok_id}" target="_self" title="{lok_info["kisa"]} detayına git" '
-            f'style="padding:14px;position:relative;">'
+            f'style="padding:14px;position:relative;--lokrenk:{renk};">'
             + sira_badge +
             f'<div style="display:flex;align-items:center;gap:14px;">'
             f'<div style="position:relative;width:58px;height:58px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">'
@@ -1381,12 +1389,12 @@ with sol:
 
     # (etiket, değer kW | None, alt satır, tıklama anahtarı)
     _metrikler = [
-        ("⚡ Toplam Enerji", _top_enerji,
+        ("Toplam Enerji", _top_enerji,
          _alt(_sebeke_n, "" if _koj_n else " · şebeke (kojen canlı ölçülmüyor)"), "enerji"),
-        ("🔥 Doğalgaz",      None, "", "dogalgaz"),
-        ("❄️ Soğutma",       _sog_top, _alt(_sog_n, " · chiller + kule"), "sogutma"),
-        ("💧 Su",             None, "", "su"),
-        ("⚙️ Kojen Üretim",  _koj_top, _alt(_koj_n), "kojen"),
+        ("Doğalgaz",      None, "", "dogalgaz"),
+        ("Soğutma",       _sog_top, _alt(_sog_n, " · chiller + kule"), "sogutma"),
+        ("Su",             None, "", "su"),
+        ("Kojen Üretim",  _koj_top, _alt(_koj_n), "kojen"),
     ]
 
     for _lbl, _deger, _alt_metin, _ozet_key in _metrikler:
@@ -1405,14 +1413,16 @@ with sol:
         # JS gizli butona tıklatır → aynı oturumda rerun, sayfa yeniden yüklenmez.
         _ic = f"""
           <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-size:11px; color:#46536b;">{_lbl}{
+            <span style="font-size:11px; color:#46536b; display:inline-flex; align-items:center; gap:7px;">{_ik.ikon(_ozet_key, 18)}{_lbl}{
                 ' <span style="font-size:9px;color:#133273;">›</span>'
                 if _ozet_key else ''}</span>
             {_deger_html}
           </div>
           {_alt_html}"""
-        _stil = ("padding:7px 10px; margin:3px 0; background:#fafaf8;"
-                 "border-radius:8px; border:1px solid rgba(19,50,115,0.1);"
+        _kr = _ik.renk(_ozet_key)
+        _stil = (f"--k:{_kr};padding:7px 10px; margin:3px 0; background:#fafaf8;"
+                 f"border-radius:8px; border:1.5px solid {_kr};"
+                 f"box-shadow:0 6px 14px -12px {_kr};"
                  "display:block; text-decoration:none;")
         if _ozet_key:
             st.markdown(
@@ -1440,7 +1450,7 @@ with sol:
                 position:fixed !important; left:-9999px !important; top:0 !important;
                 width:1px !important; height:1px !important; overflow:hidden !important;
             }
-            a.ozet-kart:hover{ border-color:#133273 !important; }
+            a.ozet-kart:hover{ border-color:var(--k,#133273) !important; filter:brightness(1.03); }
             </style>
             """, unsafe_allow_html=True)
             with st.container(key="gizli_ozet_butonlari"):
@@ -1834,7 +1844,8 @@ window.addEventListener('message', function(ev) {{
 # ════════════════════════════════
 with sag:
     # ── Canlı Uyarılar ──
-    st.markdown('<div class="sec">🚨 CANLI UYARILAR</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
+                + _ik.ikon("alarm", 16) + 'CANLI UYARILAR</div>', unsafe_allow_html=True)
 
     # Her lokasyon için uyarı listesi: {lok_id: [(severity, msg), ...]}
     lok_uyari_map = {lok_id: [] for lok_id in HASTANELER}
@@ -1944,8 +1955,7 @@ with sag:
                 f"border-radius:8px;padding:6px 10px;margin-bottom:5px;cursor:pointer;'>"
                 f"<summary style='list-style:none;display:flex;align-items:center;gap:6px;"
                 f"font-size:11px;font-weight:600;color:#24324d;'>"
-                f"<span style='width:7px;height:7px;border-radius:50%;background:{dot_renk};"
-                f"box-shadow:0 0 5px {dot_renk};flex-shrink:0;display:inline-block;'></span>"
+                + _ik.ikon("alarm", 15, dot_renk) +
                 f"{isim} — {len(uyarilar)} uyarı"
                 f"</summary>"
                 f"<div style='margin-top:4px;'>{satirlar}</div>"

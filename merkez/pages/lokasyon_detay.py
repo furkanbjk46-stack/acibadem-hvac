@@ -23,6 +23,8 @@ st.set_page_config(
 # (/lokasyon_detay) doğrudan açılabilir; app_merkez.py'deki kapı burayı
 # korumaz. Bu yüzden her sayfa kendi kapısını kurar.
 import giris
+import ikonlar as _ik
+st.markdown(_ik.CSS, unsafe_allow_html=True)
 giris.giris_kapisi()
 
 # ── CSS ──────────────────────────────────────────────
@@ -541,7 +543,8 @@ with tab1:
 
     # ──────────── SÜTUN 1: Stacked metrik kartlar ────────────
     with col_left:
-        st.markdown('<div class="sec">⚡ ÖZET</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
+                    + _ik.ikon("enerji", 15) + 'ÖZET</div>', unsafe_allow_html=True)
 
         def metric_card_v(ikon, baslik, deger, birim, renk_hex, alt_bilgi=""):
             r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
@@ -551,7 +554,7 @@ with tab1:
             ) if alt_bilgi else ""
             st.markdown(
                 f"""<div class="metric-card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;text-align:left;">
-                <div style='font-size:20px;flex-shrink:0;'>{ikon}</div>
+                {_ik.ikon(ikon, 26)}
                 <div style='min-width:0;'>
                   <div style='font-size:8px;color:#46536b;letter-spacing:1px;
                               text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>
@@ -563,23 +566,23 @@ with tab1:
                 unsafe_allow_html=True
             )
 
-        metric_card_v("⚡", f"Tüketim ({son_tarih_str})", f"{kwh_dun:,.0f}", "kWh", "#2a78d6")
-        metric_card_v("📐", "kWh/m²",     f"{verim_dun:.2f}", "kWh/m²", "#c98500")
+        metric_card_v("enerji", f"Tüketim ({son_tarih_str})", f"{kwh_dun:,.0f}", "kWh", "#2a78d6")
+        metric_card_v("verim", "kWh/m²",     f"{verim_dun:.2f}", "kWh/m²", "#c98500")
         metric_card_v(
-            "📅", f"{ay_adi} Toplam",
+            "takvim", f"{ay_adi} Toplam",
             f"{kwh_bu_ay:,.0f}", "kWh", "#0ca30c",
             alt_bilgi=f"{ay_bas_str} → {ay_bit_str}  ({ay_gun_sayi} gün)"
         )
-        metric_card_v("❄️", "Chiller Set", f"{ch_set:.1f}" if ch_set else "—", "°C", "#4a3aa7")
+        metric_card_v("chiller", "Chiller Set", f"{ch_set:.1f}" if ch_set else "—", "°C", "#4a3aa7")
 
         # Soğutma tüketimi
         if sog_tuk is not None and sog_tuk > 0:
-            metric_card_v("🧊", "Soğutma Tüketimi", f"{sog_tuk:,.0f}", "kWh", "#2a78d6")
+            metric_card_v("sogutma", "Soğutma Tüketimi", f"{sog_tuk:,.0f}", "kWh", "#2a78d6")
 
         # Kojen öz tüketim oranı
         if kojen_urt and kwh_dun and kwh_dun > 0:
             kojen_oran = min(kojen_urt / kwh_dun * 100, 100)
-            metric_card_v("⚙️", "Kojen Karşılama", f"{kojen_oran:.1f}", "%", "#0ca30c")
+            metric_card_v("kojen", "Kojen Karşılama", f"{kojen_oran:.1f}", "%", "#0ca30c")
 
 
     # ──────────── SÜTUN 2: Grafik seçici + dinamik grafik ────────────
@@ -1152,12 +1155,12 @@ with tab1:
     sebeke_str = f"{sebeke_tuk:,.0f}" if sebeke_tuk is not None else "—"
     mcc_str    = f"{mcc_tuk:,.0f}"    if mcc_tuk   is not None else "—"
 
-    def _kaynak_item(ikon, baslik, deger, birim, renk_hex):
+    def _kaynak_item(ikon, baslik, deger, birim, renk_hex, ikon_renk=None):
         r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
         return (
             f"<div style='background:#fafaf8;border:1px solid rgba(24,26,30,0.10);"
             f"border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;'>"
-            f"<div style='font-size:18px;flex-shrink:0;'>{ikon}</div>"
+            f"{_ik.ikon(ikon, 24, ikon_renk)}"
             f"<div>"
             f"<div style='font-size:8px;color:#46536b;letter-spacing:1px;"
             f"text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>"
@@ -1167,7 +1170,8 @@ with tab1:
             f"</div></div></div>"
         )
 
-    st.markdown('<div class="sec">⚙️ KOJEN & KAYNAK</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
+                + _ik.ikon("kojen", 15) + 'KOJEN & KAYNAK</div>', unsafe_allow_html=True)
 
     # ── TRDP Kırılımı (sadece Maslak) ──
     if lok_id == "maslak":
@@ -1177,18 +1181,18 @@ with tab1:
         trdp4_val = son_df["TRDP4_kWh"].sum() if "TRDP4_kWh" in son_df.columns else None
         _kaynak_items = [
             # Satır 1
-            _kaynak_item("🔥", "Kojen Doğalgaz", kgaz_str, "m³",  "#eb6834"),
-            _kaynak_item("⚙️", "Kojen Üretim",   kurt_str, "kWh", "#0ca30c"),
-            _kaynak_item("🔹", "TRDP-1 (Bina)", f"{trdp1_val:,.0f}" if trdp1_val else "—", "kWh", "#256abf"),
-            _kaynak_item("🔸", "TRDP-2 (Mek.)", f"{trdp2_val:,.0f}" if trdp2_val else "—", "kWh", "#c98500"),
+            _kaynak_item("dogalgaz", "Kojen Doğalgaz", kgaz_str, "m³",  "#eb6834"),
+            _kaynak_item("kojen", "Kojen Üretim",   kurt_str, "kWh", "#0ca30c"),
+            _kaynak_item("trdp", "TRDP-1 (Bina)", f"{trdp1_val:,.0f}" if trdp1_val else "—", "kWh", "#256abf", "#256abf"),
+            _kaynak_item("trdp", "TRDP-2 (Mek.)", f"{trdp2_val:,.0f}" if trdp2_val else "—", "kWh", "#c98500", "#c98500"),
             # Satır 2
-            _kaynak_item("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#4a3aa7"),
-            _kaynak_item("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#c98500"),
-            _kaynak_item("🔹", "TRDP-3 (Bina)", f"{trdp3_val:,.0f}" if trdp3_val else "—", "kWh", "#256abf"),
-            _kaynak_item("🔸", "TRDP-4 (Mek.)", f"{trdp4_val:,.0f}" if trdp4_val else "—", "kWh", "#c98500"),
+            _kaynak_item("sebeke", "Şebeke Tüketim", sebeke_str, "kWh", "#4a3aa7"),
+            _kaynak_item("mcc", "MCC Tüketim",   mcc_str,    "kWh", "#c98500"),
+            _kaynak_item("trdp", "TRDP-3 (Bina)", f"{trdp3_val:,.0f}" if trdp3_val else "—", "kWh", "#256abf", "#256abf"),
+            _kaynak_item("trdp", "TRDP-4 (Mek.)", f"{trdp4_val:,.0f}" if trdp4_val else "—", "kWh", "#c98500", "#c98500"),
             # Satır 3
-            _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str, "m³", "#d03b3b"),
-            _kaynak_item("💧", "Su Tüketimi",    su_str,   "m³", "#2a78d6"),
+            _kaynak_item("kazan", "Kazan Doğalgaz", kzan_str, "m³", "#d03b3b"),
+            _kaynak_item("su", "Su Tüketimi",    su_str,   "m³", "#2a78d6"),
         ]
     else:
         # Maslak DIŞI lokasyonlar: trafo kartları yalnızca sayacı dolu olanlar
@@ -1203,16 +1207,17 @@ with tab1:
             _v = pd.to_numeric(son_df.get(_c), errors="coerce").fillna(0).sum() \
                 if _c in son_df.columns else 0
             _trdp_kart.append(_kaynak_item(
-                "🔹" if int(_no) % 2 else "🔸", f"TRDP-{_no}",
+                "trdp", f"TRDP-{_no}",
                 f"{_v:,.0f}" if _v else "—", "kWh",
+                "#256abf" if int(_no) % 2 else "#c98500",
                 "#256abf" if int(_no) % 2 else "#c98500"))
         _kaynak_items = [
-            _kaynak_item("🔥", "Kojen Doğalgaz", kgaz_str,   "m³",  "#eb6834"),
-            _kaynak_item("⚙️", "Kojen Üretim",   kurt_str,   "kWh", "#0ca30c"),
-            _kaynak_item("🔌", "Şebeke Tüketim", sebeke_str, "kWh", "#4a3aa7"),
-            _kaynak_item("🏗️", "MCC Tüketim",   mcc_str,    "kWh", "#c98500"),
-            _kaynak_item("🏭", "Kazan Doğalgaz", kzan_str,   "m³",  "#d03b3b"),
-            _kaynak_item("💧", "Su Tüketimi",    su_str,     "m³",  "#2a78d6"),
+            _kaynak_item("dogalgaz", "Kojen Doğalgaz", kgaz_str,   "m³",  "#eb6834"),
+            _kaynak_item("kojen", "Kojen Üretim",   kurt_str,   "kWh", "#0ca30c"),
+            _kaynak_item("sebeke", "Şebeke Tüketim", sebeke_str, "kWh", "#4a3aa7"),
+            _kaynak_item("mcc", "MCC Tüketim",   mcc_str,    "kWh", "#c98500"),
+            _kaynak_item("kazan", "Kazan Doğalgaz", kzan_str,   "m³",  "#d03b3b"),
+            _kaynak_item("su", "Su Tüketimi",    su_str,     "m³",  "#2a78d6"),
         ] + _trdp_kart
 
     _cols_count = 4 if (lok_id == "maslak" or len(_kaynak_items) > 6) else 3
@@ -1227,7 +1232,8 @@ with tab1:
     # HVAC & BAKIM DURUMU
     # ══════════════════════════════════════════════════════
     st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="sec">🔧 HVAC & BAKIM DURUMU</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
+                + _ik.ikon("bakim", 15) + 'HVAC & BAKIM DURUMU</div>', unsafe_allow_html=True)
 
     arizali_list = bakim_ozet.get("arizali_cihazlar", [])
     bakim_list   = bakim_ozet.get("bakimda_cihazlar", [])
@@ -1312,8 +1318,10 @@ with tab1:
             "<details style='" + KART + "border:1px solid rgba(208,59,59,0.25);cursor:pointer;'>"
             "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>ARIZALI CIHAZLAR</div>"
+            "<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;'>"
+            + _ik.ikon("ariza", 34, ar_renk, sakin=(toplam_ariza == 0)) +
             "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:28px;font-weight:900;"
-            "color:" + ar_renk + ";margin-bottom:4px;'>" + str(toplam_ariza) + "</div>"
+            "color:" + ar_renk + ";'>" + str(toplam_ariza) + "</div></div>"
             "<div style='font-size:9px;color:#46536b;margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
             "<div style='margin-top:8px;'>" + rows + "</div>"
@@ -1334,8 +1342,10 @@ with tab1:
             "<details style='" + KART + "border:1px solid rgba(250,178,25,0.25);cursor:pointer;'>"
             "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>BAKIMDAKI CIHAZLAR</div>"
+            "<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;'>"
+            + _ik.ikon("bakim", 34, bk_renk, sakin=(toplam_bakim == 0)) +
             "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:28px;font-weight:900;"
-            "color:" + bk_renk + ";margin-bottom:4px;'>" + str(toplam_bakim) + "</div>"
+            "color:" + bk_renk + ";'>" + str(toplam_bakim) + "</div></div>"
             "<div style='font-size:9px;color:#46536b;margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
             "<div style='margin-top:8px;'>" + rows + "</div>"
@@ -1394,8 +1404,10 @@ with tab1:
             ",0.25);cursor:pointer;'>"
             "<summary style='list-style:none;outline:none;'>"
             "<div style='" + LBL + "'>HVAC ANALIZ DURUMU</div>"
+            "<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;'>"
+            + _ik.ikon("hvac", 34, _hv_renk, sakin=(_hv_sorun == 0)) +
             "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:28px;font-weight:900;"
-            "color:" + _hv_renk + ";margin-bottom:4px;'>" + str(_hv_sorun) + "</div>"
+            "color:" + _hv_renk + ";'>" + str(_hv_sorun) + "</div></div>"
             "<div style='font-size:10px;color:#46536b;margin-bottom:2px;'>"
             + (" · ".join(_hv_ozet) if _hv_ozet else "Tüm HVAC sistemleri normal") + "</div>"
             "<div style='font-size:9px;color:#46536b;margin-bottom:4px;'>"
@@ -1435,27 +1447,28 @@ with tab1:
                            _setler.get("ZON2_KLIMA_SANTRALI_SET"))
         _esik = _setler.get("esikler") or {}
 
-        def _set_kart(etiket, deger, alt):
+        def _set_kart(ikon, etiket, deger, alt):
             return ("<div style='" + KART + "'><div style='" + LBL + "'>" + etiket + "</div>"
-                    f"<div style='font-size:20px;font-weight:650;color:#133273;'>{deger}</div>"
+                    "<div style='display:flex;align-items:center;gap:10px;'>" + _ik.ikon(ikon, 28) +
+                    f"<div style='font-size:20px;font-weight:650;color:#133273;'>{deger}</div></div>"
                     f"<div style='font-size:10px;color:#46536b;margin-top:2px;'>{alt}</div></div>")
 
         _k1, _k2, _k3, _k4 = st.columns(4)
         with _k1:
-            st.markdown(_set_kart("❄️ CHILLER", _sd("chiller"), _ch_mod),
+            st.markdown(_set_kart("chiller", "CHILLER", _sd("chiller"), _ch_mod),
                         unsafe_allow_html=True)
         with _k2:
             st.markdown(_set_kart(
-                "🌀 KOLLEKTÖR",
+                "kollektor", "KOLLEKTÖR",
                 "%s / %s" % (_sd("GUNDUZ_KOLLEKTOR_SET"), _sd("GECE_KOLLEKTOR_SET")),
                 "gündüz / gece · %s" % _dig_mod), unsafe_allow_html=True)
         with _k3:
             st.markdown(_set_kart(
-                "🧊 FCU", ("%g°C" % _fcu) if isinstance(_fcu, (int, float)) else "—",
+                "fcu", "FCU", ("%g°C" % _fcu) if isinstance(_fcu, (int, float)) else "—",
                 "A/B blok"), unsafe_allow_html=True)
         with _k4:
             st.markdown(_set_kart(
-                "🏢 AHU", ("%g°C" % _ahu) if isinstance(_ahu, (int, float)) else "—",
+                "ahu", "AHU", ("%g°C" % _ahu) if isinstance(_ahu, (int, float)) else "—",
                 "Zon-1/2 santral"), unsafe_allow_html=True)
 
         _ck = _esik.get("chiller_sinir") or []
