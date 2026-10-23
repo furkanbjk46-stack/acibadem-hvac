@@ -21,7 +21,7 @@ CSS ile yapılır; "hareketi azalt" tercihi açık cihazlarda durur.
 
 # Modül sürümü: Streamlit modülleri süreç boyunca önbellekte tutar; sayfa
 # yeni sürümü isterken eski modül yüklü kalırsa yeniden yüklenir (bkz. çağıranlar).
-SURUM = 2
+SURUM = 3
 
 # Metrik → renk. Çerçeve, simge ve vurgu rengi her yerde AYNI.
 RENK = {
@@ -56,6 +56,9 @@ RENK = {
     "hata":      "#d03b3b",
     "geri":      "#133273",
     "grafik":    "#2a78d6",   # Dashboard sekmesi
+    "ayar":      "#133273",
+    "yonetim":   "#2a78d6",
+    "cikis":     "#d03b3b",
 }
 
 # Aynı şeyin farklı adları — hepsi aynı simgeye düşer
@@ -190,6 +193,18 @@ _SVG = {
              '<path d="m8.5 8.5 7 7M15.5 8.5l-7 7" stroke-width="2.4"/>'),
     # Geri — ok sola itilir
     "geri": '<path d="M19 12H5M11 6l-6 6 6 6" stroke-width="2.2"/>',
+    # Ayarlar — kaydırıcılar
+    "ayar": ('<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/>'
+             '<circle class="ai-dugme ai-dugme1" cx="15" cy="6" r="2"/>'
+             '<circle class="ai-dugme ai-dugme2" cx="9" cy="12" r="2"/>'
+             '<circle class="ai-dugme ai-dugme3" cx="17" cy="18" r="2"/>'),
+    # Yönetim — sunucu dolabı, ışıklar sırayla yanar
+    "yonetim": ('<rect x="4" y="3.5" width="16" height="7" rx="1.6"/><rect x="4" y="13.5" width="16" height="7" rx="1.6"/>'
+                '<circle class="ai-led ai-led1" cx="8" cy="7" r="1.1" fill="currentColor"/>'
+                '<circle class="ai-led ai-led2" cx="8" cy="17" r="1.1" fill="currentColor"/>'
+                '<path d="M12 7h5M12 17h5" stroke-opacity=".5"/>'),
+    # Çıkış — güç simgesi
+    "cikis": '<path d="M12 3v8"/><path d="M6.6 6.6a7.5 7.5 0 1 0 10.8 0"/>',
     # Grafik — çubuklar büyüyüp küçülür
     "grafik": ('<path d="M3 21h18" />'
                '<rect class="ai-cubuk ai-cubuk1" x="5" y="11" width="3.2" height="10" rx=".8" fill="currentColor" fill-opacity=".25"/>'
@@ -256,6 +271,7 @@ CSS = """
 @keyframes ai-boy{0%,100%{transform:scaleY(1);}50%{transform:scaleY(.55);}}
 @keyframes ai-civa{0%,100%{transform:scaleY(1);}50%{transform:scaleY(.55);}}
 @keyframes ai-nefes{0%,100%{transform:scale(1);}50%{transform:scale(1.12);}}
+@keyframes ai-kaydir{0%,100%{transform:translateX(0);}50%{transform:translateX(-3px);}}
 @keyframes ai-yazi{0%{stroke-dashoffset:8;opacity:.3;}50%,100%{stroke-dashoffset:0;opacity:1;}}
 
 .ai-oto .ai-anten{animation:ai-yanson 1.4s ease-in-out infinite;}
@@ -278,6 +294,10 @@ CSS = """
 .ai-tamam .ai-ciz{stroke-dasharray:16;animation:ai-ciz 2.4s ease-out infinite;}
 .ai-hata svg{animation:ai-salla 1.4s ease-in-out infinite;transform-origin:50% 50%;}
 .ai-geri svg{animation:ai-itis 1.4s ease-in-out infinite;}
+.ai-ayar .ai-dugme{animation:ai-kaydir 2.4s ease-in-out infinite;}
+.ai-ayar .ai-dugme2{animation-delay:.5s;animation-direction:reverse;} .ai-ayar .ai-dugme3{animation-delay:1s;}
+.ai-yonetim .ai-led{animation:ai-yanson 1.6s ease-in-out infinite;} .ai-yonetim .ai-led2{animation-delay:.8s;}
+.ai-cikis svg{animation:ai-parla 2s ease-in-out infinite;}
 .ai-grafik .ai-cubuk{animation:ai-boy 1.8s ease-in-out infinite;transform-origin:50% 100%;}
 .ai-grafik .ai-cubuk2{animation-delay:.3s;} .ai-grafik .ai-cubuk3{animation-delay:.6s;}
 
@@ -324,6 +344,12 @@ _ETIKET_ANIM = {
     "geri": "ai-itis 1.4s ease-in-out infinite", "grafik": "ai-nefes 1.8s ease-in-out infinite",
     "enerji": "ai-parla 1.8s ease-in-out infinite", "sogutma": "ai-don 9s linear infinite",
     "kojen": "ai-don 6s linear infinite", "oto": "ai-suz 2.6s ease-in-out infinite",
+    "ayar": "ai-salla 2.4s ease-in-out infinite", "yonetim": "ai-nefes 1.8s ease-in-out infinite",
+    "cikis": "ai-parla 2s ease-in-out infinite", "dogalgaz": "ai-titre 1.2s ease-in-out infinite",
+    "su": "ai-suz 2.2s ease-in-out infinite", "trdp": "ai-parla 2.6s ease-in-out infinite",
+    "takvim": "ai-nefes 2.4s ease-in-out infinite", "verim": "ai-nefes 2s ease-in-out infinite",
+    "sebeke": "ai-parla 1.6s ease-in-out infinite", "mcc": "ai-nefes 1.8s ease-in-out infinite",
+    "kazan": "ai-titre 1.2s ease-in-out infinite",
 }
 
 

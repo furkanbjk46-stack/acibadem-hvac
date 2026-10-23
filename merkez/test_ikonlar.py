@@ -21,7 +21,7 @@ def c(ad, kosul, ayrinti=""):
 METRIKLER = ["enerji", "dogalgaz", "sogutma", "su", "kojen", "sebeke", "mcc", "kazan",
              "trdp", "verim", "takvim", "kollektor", "fcu", "ahu", "ariza", "bakim",
              "hvac", "alarm", "oto", "zeka", "oneri", "saglik", "gunduz", "gece", "saat",
-             "kayit", "termometre", "tamam", "hata", "geri", "grafik"]
+             "kayit", "termometre", "tamam", "hata", "geri", "grafik", "ayar", "yonetim", "cikis"]
 
 for m in METRIKLER:
     h = ikonlar.ikon(m)
@@ -61,7 +61,7 @@ for k in ("chiller", "kollektor", "fcu", "ahu"):
 # Düğme / sekme etiketleri (SVG konamayan yerler) için maske simgesi
 _e = ikonlar.etiket_css(".x button p", "saat", 14)
 c("etiket simgesi maske + animasyon", "mask:url(" in _e and "animation:" in _e and ".x button p::before" in _e)
-c("modul surumu var (onbellek korumasi)", getattr(ikonlar, "SURUM", 0) >= 2)
+c("modul surumu var (onbellek korumasi)", getattr(ikonlar, "SURUM", 0) >= 3)
 c("atan nokta yardimcisi", "ai-nokta" in ikonlar.nokta())
 c("ana ekran surum korumasi", '_ik = _il_ik.reload(_ik)' in _m)
 c("dashboard surum korumasi", '_ik = _il_ik.reload(_ik)' in _l)
@@ -74,6 +74,20 @@ c("sistem sagligi simgeleri", all(('_ik.ikon("%s", 16)' % k) in _l for k in ("ot
 c("detay ust: geri / baslik / rozet", 'key="detay_geri"' in _l and "dz-baslik" in _l and '_ik.ikon("takvim", 13' in _l)
 c("detay sekmeleri simgeli", "st-key-detay_sekmeler" in _l)
 c("dashboard stili = canli izleme", ".dz-dg{font-size:26px;font-weight:700;color:#133273" in _l)
+
+# 23.10.2026 ikinci tur
+c("baslik: Canli Enerji Agi", "Canlı Enerji Ağı" in _m and "SYNAPSE // Merkezi" not in _m)
+c("sag ust: Ayarlar/Yonetim/Cikis hareketli", all(('etiket_css(".st-key-%s button p"' % k) in _m
+                                                  for k in ("ayarlar_btn", "yonetim_btn", "cikis_btn")))
+c("ayarlar sayfa altinda degil, pencerede", "with st.expander(\"⚙️  Ayarlar\"" not in _m and "@st.dialog(\"Sistem Ayarları\"" in _m)
+c("ayarlar penceresi acikken yenileme durur", 'not st.session_state.get("_ayarlar_acik")' in _m)
+c("sutun hizalama betigi", "__synapseHizala" in _m and "aOrta + 220" in _m)
+c("harita taban boyu kisaldi", "height=640, scrolling=False" in _m)
+c("grafik listesi emojisiz + simgeli", '"Tüketim":               "tuketim"' in _l and "_GRAFIK_IKON" in _l)
+c("KPI ozet satirlarinda tarih yok", "({_etiket})" not in _l)
+c("trafolar yan yana", 'barmode="group", bargap=0.22' in _l)
+c("grafik animasyonu", "dzBuyu" in _l and "dzCiz" in _l)
+c("HVAC satirlari okunur + hareketli", "dz-satir" in _l and "rgb(253,211,77)" not in _l)
 
 print("\n%d/%d PASS" % (sum(SONUC), len(SONUC)))
 sys.exit(0 if all(SONUC) else 1)

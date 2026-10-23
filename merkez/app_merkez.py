@@ -37,7 +37,8 @@ from streamlit_autorefresh import st_autorefresh
 #     durur (kapatınca tekrar başlar).
 if ("bakim" not in st.query_params and st.session_state.get("giris_ok")
         and not st.session_state.get("detay_ozet")
-        and not st.session_state.get("_oto_popup")):
+        and not st.session_state.get("_oto_popup")
+        and not st.session_state.get("_ayarlar_acik")):   # Ayarlar penceresi açıkken de durur
     st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
 # ============ CSS ============
@@ -295,7 +296,7 @@ button span[data-testid="stIconMaterial"] {
 
 # Animasyonlu simgeler: tek kaynak (ikonlar.py) — ana ekran ve Dashboard aynı
 import ikonlar as _ik
-if getattr(_ik, "SURUM", 0) < 2:          # yayın sonrası eski modül önbellekte kalmasın
+if getattr(_ik, "SURUM", 0) < 3:          # yayın sonrası eski modül önbellekte kalmasın
     import importlib as _il_ik
     _ik = _il_ik.reload(_ik)
 st.markdown(_ik.CSS, unsafe_allow_html=True)
@@ -922,11 +923,7 @@ st.markdown("""
   </div>
   <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif; font-size:34px; font-weight:600; color:#0f1f3d;
               letter-spacing:1px; line-height:1.3;">
-    SYNAPSE // Merkezi Veri Bağlantısı
-  </div>
-  <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif,sans-serif; font-size:11px; color:#2a78d6;
-              letter-spacing:2px; margin-top:6px; text-transform:uppercase;">
-    Operasyonel Zeka
+    Canlı Enerji Ağı
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -992,10 +989,26 @@ with st.container(key="cikis_kutusu"):
     # DIKKAT: burada st.columns KULLANILMAZ; kapsayici sabit konumlu bir
     # seritdir, sutun eklenince butonlar sayfa genisligine yayiliyor.
     # Yan yana dizilim CSS'te (flex-direction:row) yapilir.
-    if st.button("⚙", key="yonetim_btn", help="Yönetim — sunucu ve veri durumu"):
+    st.markdown(
+        "<style>"
+        + _ik.etiket_css(".st-key-ayarlar_btn button p", "ayar", 17)
+        + _ik.etiket_css(".st-key-yonetim_btn button p", "yonetim", 17)
+        + _ik.etiket_css(".st-key-cikis_btn button p", "cikis", 17)
+        + ".st-key-cikis_kutusu .stButton button p{font-size:0 !important;line-height:0 !important;margin:0 !important;}"
+        + ".st-key-cikis_kutusu .stButton button p::before{margin-right:0 !important;vertical-align:0 !important;}"
+        + ".st-key-cikis_kutusu .stButton button:hover p::before{background:#ffffff !important;}"
+        + "</style>", unsafe_allow_html=True)
+    if not _IZLEYICI:
+        if st.button("Ayarlar", key="ayarlar_btn", help="Sistem ayarları"):
+            st.session_state["_ayarlar_acik"] = True
+            # Pencere ana sayfada açılır: detay / yönetim ekranındaysa oraya dönülür
+            for _k in ("detay_lokasyon", "detay_ozet", "yonetim"):
+                st.session_state.pop(_k, None)
+            st.rerun()
+    if st.button("Yönetim", key="yonetim_btn", help="Yönetim — sunucu ve veri durumu"):
         st.session_state["yonetim"] = True
         st.rerun()
-    if st.button("⏻", key="cikis_btn", help="Oturumu kapat"):
+    if st.button("Çıkış", key="cikis_btn", help="Oturumu kapat"):
         giris.cikis_yap()
         st.rerun()
 
@@ -1779,7 +1792,9 @@ window.addEventListener('message', function(ev) {{
     st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
     import base64, streamlit.components.v1 as _cv1
     _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
-    _cv1.iframe(f"data:text/html;base64,{_b64}", height=900, scrolling=False)
+    # Taban boy 640 px (eskiden 900). Son boyu aşağıdaki hizalama betiği verir:
+    # üç sütunun alt kenarı aynı hizaya gelir.
+    _cv1.iframe(f"data:text/html;base64,{_b64}", height=640, scrolling=False)
 
     # Haritaya ANLIK değerleri ilet (iframe yeniden yüklenmeden). Harita her
     # yenilemede aynı kalır; değerler postMessage ile gider. İlk açılışta
@@ -2884,7 +2899,7 @@ with sag:
                 f"</div>"
             )
         _liste_ic = (
-            f"<div style='margin-top:10px;max-height:190px;overflow-y:auto;'>"
+            f"<div class='dis-hava-liste' style='margin-top:10px;max-height:190px;overflow-y:auto;'>"
             f"<div style='display:grid;grid-template-columns:1fr auto auto;"
             f"column-gap:6px;font-size:7px;letter-spacing:1px;white-space:nowrap;"
             f"color:#133273;padding-bottom:4px;'>"
@@ -3447,7 +3462,7 @@ with sag:
                                         ("<span style='display:inline-flex;align-items:center;gap:4px;'>"
                                          + _ik.ikon("saat", 11) + _ai_zaman_str + "</span>")
                                         if _ai_zaman_str else "")
-                        + "<div style='margin-top:10px;font-size:11px;color:#24324d;"
+                        + "<div class='sabah-kaydir' style='margin-top:10px;font-size:11px;color:#24324d;"
                           "line-height:1.7;max-height:220px;overflow-y:auto;"
                           "scrollbar-width:thin;scrollbar-color:#133273 transparent;'>"
                         + _ai_temiz.replace("\n", "<br>")
@@ -3478,11 +3493,95 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ============ SÜTUN HİZALAMA ============
+# Lokasyon durumu | harita | sağ paneller: üçünün ALT kenarı aynı hizada.
+# Hedef: en uzun sütun (sağ paneldeki sabah analizi metni gerekirse 160 px'e
+# kadar kısalır). Sol sütunda lokasyon listesi uzar, haritanın boyu ayarlanır,
+# sağda sabah analizi kutusu uzar/kısalır. Tablet/telefonda (sütunlar alt alta)
+# hiçbir şey yapılmaz. Her çizimde ve pencere boyu değişince yeniden hesaplanır.
+_components.html("""
+<script>
+(function () {
+  var d; try { d = window.parent.document; } catch (e) { return; }
+  var w = d.defaultView;
+  function alt(el) {
+    var b = 0;
+    el.querySelectorAll(':scope > div > [data-testid="stElementContainer"], :scope > [data-testid="stVerticalBlock"] > *').forEach(function (c) {
+      var r = c.getBoundingClientRect(); if (r.height > 1) b = Math.max(b, r.bottom);
+    });
+    return b;
+  }
+  function hizala() {
+    var blok = d.querySelector('[data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret)');
+    if (!blok) return;
+    var k = blok.children; if (k.length < 3) return;
+    var sol = k[0], orta = k[1], sag = k[2];
+    var liste = sol.querySelector('.lok-scroll');
+    var harita = orta.querySelector('iframe[src^="data:"]');
+    var hKap = harita ? harita.closest('[data-testid="stElementContainer"]') : null;
+    var sabah = sag.querySelector('.sabah-kaydir');
+    var hava = sag.querySelector('.dis-hava-liste');
+    var sagBlok = sag.querySelector(':scope > [data-testid="stVerticalBlock"]') || sag;
+    // sıfırla (önceki ayarlar ölçümü bozmasın)
+    if (liste) { liste.style.height = ''; liste.style.maxHeight = ''; }
+    if (harita) { harita.style.height = '640px'; if (hKap) hKap.style.height = '640px'; }
+    if (sabah) sabah.style.maxHeight = '';
+    if (hava) hava.style.maxHeight = '';
+    sagBlok.style.maxHeight = ''; sagBlok.style.overflowY = '';
+    // yan yana değilse (tablet/telefon) dur
+    var t0 = sol.getBoundingClientRect().top, t1 = sag.getBoundingClientRect().top;
+    if (Math.abs(t0 - t1) > 40 || w.innerWidth <= 1180) return;
+    var aSol = alt(sol), aOrta = alt(orta), aSag = alt(sag);
+    var esSabah = sabah ? Math.max(0, sabah.getBoundingClientRect().height - 160) : 0;
+    var esHava = hava ? Math.max(0, hava.getBoundingClientRect().height - 90) : 0;
+    // Harita en fazla 860 px'e uzar (taban 640 + 220): sağ panel çok uzunsa
+    // haritayı değil sağ paneli kısaltırız.
+    var hedef = Math.min(Math.max(aSol, aOrta, aSag - esSabah - esHava), aOrta + 220);
+    var fazla = aSag - hedef;
+    if (fazla > 0 && sabah) { var k1 = Math.min(fazla, esSabah); sabah.style.maxHeight = (sabah.getBoundingClientRect().height - k1) + 'px'; fazla -= k1; }
+    if (fazla > 0 && hava) { var k2 = Math.min(fazla, esHava); hava.style.maxHeight = (hava.getBoundingClientRect().height - k2) + 'px'; fazla -= k2; }
+    if (fazla > 0) {   // son çare: sağ sütun kendi içinde kayar
+      sagBlok.style.maxHeight = (hedef - sagBlok.getBoundingClientRect().top) + 'px';
+      sagBlok.style.overflowY = 'auto';
+    }
+    aSag = Math.min(alt(sag), hedef);
+    if (liste) {
+      var lh = liste.getBoundingClientRect().height;
+      liste.style.maxHeight = 'none';
+      liste.style.height = Math.max(160, lh + (hedef - aSol)) + 'px';
+    }
+    if (harita) {
+      var hh = 640 + (hedef - aOrta);
+      harita.style.height = hh + 'px'; if (hKap) hKap.style.height = hh + 'px';
+    }
+    if (sabah && hedef > aSag) {   // sağ panel kısaysa sabah analizi uzar
+      var sh = sabah.getBoundingClientRect().height;
+      sabah.style.maxHeight = (sh + (hedef - aSag)) + 'px';
+    }
+  }
+  [80, 500, 1500, 3500].forEach(function (ms) { setTimeout(hizala, ms); });
+  if (w.__synapseHizala) w.removeEventListener('resize', w.__synapseHizala);
+  w.__synapseHizala = function () { clearTimeout(w.__synapseHizalaZ); w.__synapseHizalaZ = setTimeout(hizala, 150); };
+  w.addEventListener('resize', w.__synapseHizala);
+})();
+</script>
+<!-- cizim: %s -->
+""" % now_display.strftime("%H%M%S"), height=0)
+
 # ============ AYARLAR ============
 if _IZLEYICI:
     st.stop()   # Ayarlar (bağlantı anahtarı, mesaj, uzaktan komut) izleyicide yok
 
-with st.expander("⚙️  Ayarlar", expanded=False):
+# Ayarlar artık sayfanın altında değil: sağ üstteki "Ayarlar" düğmesi bu
+# pencereyi açar. İçerik aynı; pencere fonksiyonu modül değişkenlerini
+# aynen kullanır (global bildirimi — eski açılır bölümle birebir davranış).
+def _ayarlar_kapandi():
+    st.session_state.pop("_ayarlar_acik", None)
+
+
+@st.dialog("Sistem Ayarları", width="large", on_dismiss=_ayarlar_kapandi)
+def _ayarlar_penceresi():
+    global _c, _cc, _durum_renk, _hata, _hm, _icon, _json, _k, _ktz, _lid, _linf, _lok_secenekler, _me, _msg_hedef, _msg_metin, _msg_oncelik, _uc_col1, _uc_col2, _uc_deger, _uc_g_col1, _uc_g_col2, _uc_lok_id, _uc_lok_isim, _uc_lok_sec, _uc_nokta_adi, _uc_nokta_label, _uc_nokta_map, _uc_noktalar_raw, _uc_son_komutlar, _ucc, _ucc2, _ucc_client, _uce, _zaman, ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6, cfg_yeni, di, dr, durum_icon_map, durum_renk_map, ex, f, gunc, isim, lok, lok_id, lok_info, mevcut_key, mevcut_m2, mevcut_url, ping, r, tarih, yeni_key, yeni_m2, yeni_url
     st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
 
     ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder", "🎛️ Uzaktan Kontrol"])
@@ -3723,3 +3822,7 @@ with st.expander("⚙️  Ayarlar", expanded=False):
                     )
             else:
                 st.caption("Henüz komut gönderilmedi.")
+
+
+if st.session_state.get("_ayarlar_acik") and not _IZLEYICI:
+    _ayarlar_penceresi()

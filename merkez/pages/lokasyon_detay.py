@@ -24,7 +24,7 @@ st.set_page_config(
 # korumaz. Bu yüzden her sayfa kendi kapısını kurar.
 import giris
 import ikonlar as _ik
-if getattr(_ik, "SURUM", 0) < 2:          # yayın sonrası eski modül önbellekte kalmasın
+if getattr(_ik, "SURUM", 0) < 3:          # yayın sonrası eski modül önbellekte kalmasın
     import importlib as _il_ik
     _ik = _il_ik.reload(_ik)
 st.markdown(_ik.CSS, unsafe_allow_html=True)
@@ -55,7 +55,42 @@ st.markdown("""
   animation:dzKay 6s linear infinite;}
 .dz-rozet{display:inline-flex;align-items:center;gap:5px;transition:transform .2s ease;}
 .dz-rozet:hover{transform:translateY(-1px);}
-@media (prefers-reduced-motion: reduce){.dz-baslik,.dz-ust{animation:none;}}
+/* ── HVAC / bakım listesi satırları: okunur renkler, sırayla kayarak gelir ── */
+@keyframes dzGir{from{opacity:0;transform:translateX(-8px);}to{opacity:1;transform:none;}}
+@keyframes dzSol{0%,100%{box-shadow:inset 3px 0 0 var(--k);}50%{box-shadow:inset 5px 0 0 var(--k), 0 0 0 3px color-mix(in srgb, var(--k) 12%, transparent);}}
+.dz-satir{background:color-mix(in srgb, var(--k) 7%, #fff);border:1px solid color-mix(in srgb, var(--k) 28%, transparent);
+  border-radius:10px;padding:9px 12px;margin-bottom:7px;box-shadow:inset 3px 0 0 var(--k);
+  animation:dzGir .45s ease both, dzSol 2.8s ease-in-out .6s infinite;}
+.dz-satir:nth-child(1){animation-delay:0.00s;}.dz-satir:nth-child(2){animation-delay:0.06s;}.dz-satir:nth-child(3){animation-delay:0.12s;}.dz-satir:nth-child(4){animation-delay:0.18s;}.dz-satir:nth-child(5){animation-delay:0.24s;}.dz-satir:nth-child(6){animation-delay:0.30s;}.dz-satir:nth-child(7){animation-delay:0.36s;}.dz-satir:nth-child(8){animation-delay:0.42s;}.dz-satir:nth-child(9){animation-delay:0.48s;}.dz-satir:nth-child(10){animation-delay:0.54s;}.dz-satir:nth-child(11){animation-delay:0.60s;}.dz-satir:nth-child(12){animation-delay:0.66s;}.dz-satir:nth-child(13){animation-delay:0.72s;}.dz-satir:nth-child(14){animation-delay:0.78s;}.dz-satir:nth-child(15){animation-delay:0.84s;}.dz-satir:nth-child(16){animation-delay:0.90s;}.dz-satir:nth-child(17){animation-delay:0.96s;}.dz-satir:nth-child(18){animation-delay:1.02s;}.dz-satir:nth-child(19){animation-delay:1.08s;}.dz-satir:nth-child(20){animation-delay:1.14s;}
+.dz-satir-ad{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:#0f1f3d;}
+.dz-cip{display:inline-block;background:color-mix(in srgb, var(--k) 13%, #fff);
+  border:1px solid color-mix(in srgb, var(--k) 40%, transparent);border-radius:999px;padding:2px 9px;
+  margin:5px 5px 0 0;font-size:10px;font-weight:600;color:color-mix(in srgb, var(--k) 70%, #1f2937);}
+.dz-not{font-size:10.5px;color:#46536b;margin-top:5px;font-style:italic;}
+.dz-etiket{display:inline-flex;align-items:center;gap:5px;min-width:74px;font-size:10px;font-weight:700;
+  letter-spacing:1px;color:var(--k);}
+
+/* ── Grafik seçici: Canlı İzleme yazı stili ── */
+.st-key-grafik_secim [data-baseweb="select"] > div{background:#fff !important;border:1px solid rgba(24,26,30,.12) !important;
+  border-radius:12px !important;box-shadow:0 6px 16px -12px rgba(20,22,26,.3);}
+.st-key-grafik_secim [data-baseweb="select"] *{font-size:13px !important;font-weight:600 !important;color:#133273 !important;}
+[data-baseweb="popover"] [role="option"]{font-size:12.5px !important;font-weight:600 !important;color:#24324d !important;}
+[data-baseweb="popover"] [role="option"]:hover{background:#eef3fb !important;}
+
+/* ── Grafikler: çubuklar alttan büyür, sonra soldan sağa hafif dalga;
+      çizgiler soldan sağa çizilir, noktalar atar ── */
+@keyframes dzBuyu{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+@keyframes dzDalga{0%,100%{opacity:1;}50%{opacity:.78;}}
+@keyframes dzCiz{from{stroke-dashoffset:3000;}to{stroke-dashoffset:0;}}
+@keyframes dzIsik{0%,100%{filter:drop-shadow(0 0 0 rgba(42,120,214,0));}50%{filter:drop-shadow(0 0 4px rgba(42,120,214,.55));}}
+@keyframes dzPop{from{transform:scale(.6);opacity:0;}to{transform:scale(1);opacity:1;}}
+.js-plotly-plot .barlayer .point path{transform-box:fill-box;transform-origin:50% 100%;
+  animation:dzBuyu .8s cubic-bezier(.2,.8,.2,1) both, dzDalga 3.6s ease-in-out 1s infinite;}
+.js-plotly-plot .barlayer .point:nth-child(1) path{animation-delay:0.00s,1.00s;}.js-plotly-plot .barlayer .point:nth-child(2) path{animation-delay:0.03s,1.12s;}.js-plotly-plot .barlayer .point:nth-child(3) path{animation-delay:0.05s,1.24s;}.js-plotly-plot .barlayer .point:nth-child(4) path{animation-delay:0.08s,1.36s;}.js-plotly-plot .barlayer .point:nth-child(5) path{animation-delay:0.10s,1.48s;}.js-plotly-plot .barlayer .point:nth-child(6) path{animation-delay:0.12s,1.60s;}.js-plotly-plot .barlayer .point:nth-child(7) path{animation-delay:0.15s,1.72s;}.js-plotly-plot .barlayer .point:nth-child(8) path{animation-delay:0.18s,1.84s;}.js-plotly-plot .barlayer .point:nth-child(9) path{animation-delay:0.20s,1.96s;}.js-plotly-plot .barlayer .point:nth-child(10) path{animation-delay:0.23s,2.08s;}.js-plotly-plot .barlayer .point:nth-child(11) path{animation-delay:0.25s,2.20s;}.js-plotly-plot .barlayer .point:nth-child(12) path{animation-delay:0.28s,2.32s;}.js-plotly-plot .barlayer .point:nth-child(13) path{animation-delay:0.30s,2.44s;}.js-plotly-plot .barlayer .point:nth-child(14) path{animation-delay:0.33s,2.56s;}.js-plotly-plot .barlayer .point:nth-child(15) path{animation-delay:0.35s,2.68s;}.js-plotly-plot .barlayer .point:nth-child(16) path{animation-delay:0.38s,2.80s;}.js-plotly-plot .barlayer .point:nth-child(17) path{animation-delay:0.40s,2.92s;}.js-plotly-plot .barlayer .point:nth-child(18) path{animation-delay:0.43s,3.04s;}.js-plotly-plot .barlayer .point:nth-child(19) path{animation-delay:0.45s,3.16s;}.js-plotly-plot .barlayer .point:nth-child(20) path{animation-delay:0.48s,3.28s;}.js-plotly-plot .barlayer .point:nth-child(21) path{animation-delay:0.50s,3.40s;}.js-plotly-plot .barlayer .point:nth-child(22) path{animation-delay:0.53s,3.52s;}.js-plotly-plot .barlayer .point:nth-child(23) path{animation-delay:0.55s,3.64s;}.js-plotly-plot .barlayer .point:nth-child(24) path{animation-delay:0.58s,3.76s;}.js-plotly-plot .barlayer .point:nth-child(25) path{animation-delay:0.60s,3.88s;}.js-plotly-plot .barlayer .point:nth-child(26) path{animation-delay:0.62s,4.00s;}.js-plotly-plot .barlayer .point:nth-child(27) path{animation-delay:0.65s,4.12s;}.js-plotly-plot .barlayer .point:nth-child(28) path{animation-delay:0.68s,4.24s;}.js-plotly-plot .barlayer .point:nth-child(29) path{animation-delay:0.70s,4.36s;}.js-plotly-plot .barlayer .point:nth-child(30) path{animation-delay:0.73s,4.48s;}.js-plotly-plot .barlayer .point:nth-child(31) path{animation-delay:0.75s,4.60s;}.js-plotly-plot .barlayer .point:nth-child(32) path{animation-delay:0.78s,4.72s;}.js-plotly-plot .barlayer .point:nth-child(33) path{animation-delay:0.80s,4.84s;}.js-plotly-plot .barlayer .point:nth-child(34) path{animation-delay:0.83s,4.96s;}.js-plotly-plot .barlayer .point:nth-child(35) path{animation-delay:0.85s,5.08s;}.js-plotly-plot .barlayer .point:nth-child(36) path{animation-delay:0.88s,5.20s;}.js-plotly-plot .barlayer .point:nth-child(37) path{animation-delay:0.90s,5.32s;}.js-plotly-plot .barlayer .point:nth-child(38) path{animation-delay:0.93s,5.44s;}.js-plotly-plot .barlayer .point:nth-child(39) path{animation-delay:0.95s,5.56s;}.js-plotly-plot .barlayer .point:nth-child(40) path{animation-delay:0.98s,5.68s;}
+.js-plotly-plot .scatterlayer .js-line{stroke-dasharray:3000;animation:dzCiz 1.8s ease-out both, dzIsik 3s ease-in-out 1.8s infinite;}
+.js-plotly-plot .scatterlayer .point{transform-box:fill-box;transform-origin:50% 50%;animation:dzPop .5s ease-out 1.2s both;}
+.js-plotly-plot .pielayer .slice path.surface{transform-box:view-box;animation:dzPop .7s cubic-bezier(.2,.8,.2,1) both;}
+@media (prefers-reduced-motion: reduce){.dz-baslik,.dz-ust,.dz-satir,.js-plotly-plot *{animation:none !important;}}
 </style>
 """, unsafe_allow_html=True)
 giris.giris_kapisi()
@@ -624,19 +659,24 @@ with tab1:
         st.markdown('<div class="sec">📊 GRAFİK</div>', unsafe_allow_html=True)
 
         grafik_secenekler = {
-            "📊 Tüketim":               "tuketim",
-            "❄️ Chiller Set Trendi":    "chiller",
-            "📐 kWh/m² Trendi":         "verimlilik",
-            "❄️ Soğutma Tüketimi":      "sogutma",
-            "💧 Su Tüketimi":            "su",
-            "⚙️ Kojen Üretim":          "kojen",
-            "🔌 Şebeke Tüketimi":       "sebeke",
-            "🏭 MCC Tüketimi":          "mcc",
-            "🔥 Kazan Doğalgaz":        "kazan",
-            "📆 Bu Ay vs Geçen Ay":     "ay_karsilastir",
-            "📋 KPI Özet":              "kpi_ozet",
-            "🥧 Enerji Kırılımı":       "enerji_kirilim",
+            "Tüketim":               "tuketim",
+            "Chiller Set Trendi":    "chiller",
+            "kWh/m² Trendi":         "verimlilik",
+            "Soğutma Tüketimi":      "sogutma",
+            "Su Tüketimi":           "su",
+            "Kojen Üretim":          "kojen",
+            "Şebeke Tüketimi":       "sebeke",
+            "MCC Tüketimi":          "mcc",
+            "Kazan Doğalgaz":        "kazan",
+            "Bu Ay vs Geçen Ay":     "ay_karsilastir",
+            "KPI Özet":              "kpi_ozet",
+            "Enerji Kırılımı":       "enerji_kirilim",
         }
+        # Her grafiğin simgesi — Dashboard kartlarındakiyle AYNI (ikonlar.py)
+        _GRAFIK_IKON = {"tuketim": "enerji", "chiller": "sogutma", "verimlilik": "verim",
+                        "sogutma": "sogutma", "su": "su", "kojen": "kojen", "sebeke": "sebeke",
+                        "mcc": "mcc", "kazan": "kazan", "ay_karsilastir": "takvim",
+                        "kpi_ozet": "kayit", "enerji_kirilim": "grafik", "trafo": "trdp"}
 
         # Trafolar (TRDP) — yalnızca sayacı bağlı lokasyonda seçeneğe eklenir.
         # Bugün bu yalnızca Maslak; diğer lokasyonlarda kaç trafo olduğu
@@ -647,7 +687,7 @@ with tab1:
              and pd.to_numeric(df[c], errors="coerce").fillna(0).sum() > 0],
             key=lambda c: int(re.findall(r"\d+", c)[0]))
         if _trafo_kolonlar:
-            grafik_secenekler["🔻 Trafolar (TRDP)"] = "trafo"
+            grafik_secenekler["Trafolar (TRDP)"] = "trafo"
 
         # Lokasyon değişince önceki seçim bu listede olmayabilir (ör. Maslak'ta
         # trafo grafiği seçiliyken trafosuz lokasyona geçmek); Streamlit böyle
@@ -657,7 +697,30 @@ with tab1:
 
         # ── Grafik seçici + Tarih aralığı (yan yana) ──
         _gc1, _gc2, _gc3 = st.columns([3, 1.5, 1.5])
+        # Açılır listede her satırın başında kendi hareketli simgesi. Liste
+        # yalnızca bu seçicide 12+ seçenekli olduğundan :has() ile ayırt edilir.
+        _gs_list = list(grafik_secenekler.items())
+        # Streamlit 1.5x+: liste sayfanın dibinde ayrı katmanda açılır
+        # (stSelectboxVirtualDropdown), seçenekler data-key ile sıralıdır.
+        # Yalnızca bu seçicinin listesi 12+ seçenekli → data-key="11" ile ayırt edilir.
+        _gs_css = "".join(
+            _ik.etiket_css('[data-testid="stSelectboxVirtualDropdown"]:has([data-key="11"]) '
+                           '[role="option"][data-key="%d"]' % _i, _GRAFIK_IKON.get(_t, "grafik"), 16)
+            for _i, (_ad, _t) in enumerate(_gs_list))
+        _secili_t = grafik_secenekler.get(st.session_state.get("grafik_sec"), _gs_list[0][1])
+        # Seçili değerin önündeki simge (kutu bir <input> olduğu için grubuna konur)
+        _gs_css += _ik.etiket_css('.st-key-grafik_secim [data-testid="stSelectbox"] [role="group"]',
+                                  _GRAFIK_IKON.get(_secili_t, "grafik"), 17)
+        st.markdown("<style>" + _gs_css
+                    + '.st-key-grafik_secim [data-testid="stSelectbox"] [role="group"]'
+                      '{display:flex;align-items:center;padding-left:12px;background:#fff;border-radius:12px;}'
+                    + '.st-key-grafik_secim [data-testid="stSelectbox"] input{font-size:13px !important;'
+                      'font-weight:600 !important;color:#133273 !important;}'
+                    + '[data-testid="stSelectboxVirtualDropdown"] [role="option"]{display:flex;align-items:center;'
+                      'font-size:12.5px;font-weight:600;color:#24324d;}'
+                    + "</style>", unsafe_allow_html=True)
         with _gc1:
+          with st.container(key="grafik_secim"):
             secim = st.selectbox(
                 "Grafik Seçin", list(grafik_secenekler.keys()),
                 key="grafik_sec", label_visibility="collapsed"
@@ -861,7 +924,7 @@ with tab1:
                         hovertemplate="<b>%{x}</b><br>%{y:,.0f} kWh<extra>%{fullData.name}</extra>",
                     ))
                 fig_tr.update_layout(
-                    barmode="stack",
+                    barmode="group", bargap=0.22, bargroupgap=0.06,   # trafolar yan yana
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
                     margin=dict(t=10, b=20, l=50, r=10), height=370,
@@ -1022,50 +1085,46 @@ with tab1:
         elif grafik_tip == "kpi_ozet":
             kpi_rows = []
             _kd = secili_df  # KPI için seçilen tarih aralığı
-            _etiket = tarih_aralik_str
+            _etiket = tarih_aralik_str   # (yalnızca üstteki başlıkta; satırlarda tarih yok)
             if "Toplam_Hastane_Tuketim_kWh" in _kd.columns:
-                kpi_rows.append((f"⚡ Elektrik Tüketimi ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum():,.0f} kWh", "#2a78d6"))
+                kpi_rows.append(("enerji", "Elektrik Tüketimi", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum():,.0f} kWh", "#2a78d6"))
             if "Kojen_Uretim_kWh" in _kd.columns:
-                kpi_rows.append((f"⚙️ Kojen Üretimi ({_etiket})", f"{_kd['Kojen_Uretim_kWh'].sum():,.0f} kWh", "#0ca30c"))
+                kpi_rows.append(("kojen", "Kojen Üretimi", f"{_kd['Kojen_Uretim_kWh'].sum():,.0f} kWh", "#0ca30c"))
             if "Kojen_Uretim_kWh" in _kd.columns and "Toplam_Hastane_Tuketim_kWh" in _kd.columns:
                 top = _kd["Toplam_Hastane_Tuketim_kWh"].sum()
                 ko  = _kd["Kojen_Uretim_kWh"].sum()
                 if top > 0:
-                    kpi_rows.append(("⚙️ Kojen Karşılama Oranı", f"%{ko/top*100:.1f}", "#0ca30c"))
+                    kpi_rows.append(("kojen", "Kojen Karşılama Oranı", f"%{ko/top*100:.1f}", "#0ca30c"))
             if "Kojen_Dogalgaz_m3" in _kd.columns:
-                kpi_rows.append((f"🔥 Kojen Doğalgaz ({_etiket})", f"{_kd['Kojen_Dogalgaz_m3'].sum():,.1f} m³", "#eb6834"))
+                kpi_rows.append(("dogalgaz", "Kojen Doğalgaz", f"{_kd['Kojen_Dogalgaz_m3'].sum():,.1f} m³", "#eb6834"))
             if "Kazan_Dogalgaz_m3" in _kd.columns:
-                kpi_rows.append((f"🏭 Kazan Doğalgaz ({_etiket})", f"{_kd['Kazan_Dogalgaz_m3'].sum():,.1f} m³", "#d03b3b"))
+                kpi_rows.append(("kazan", "Kazan Doğalgaz", f"{_kd['Kazan_Dogalgaz_m3'].sum():,.1f} m³", "#d03b3b"))
             if "Su_Tuketimi_m3" in _kd.columns:
-                kpi_rows.append((f"💧 Su Tüketimi ({_etiket})", f"{_kd['Su_Tuketimi_m3'].sum():,.1f} m³", "#2a78d6"))
+                kpi_rows.append(("su", "Su Tüketimi", f"{_kd['Su_Tuketimi_m3'].sum():,.1f} m³", "#2a78d6"))
             if "Sebeke_Tuketim_kWh" in _kd.columns:
-                kpi_rows.append((f"🔌 Şebeke Tüketimi ({_etiket})", f"{_kd['Sebeke_Tuketim_kWh'].sum():,.0f} kWh", "#4a3aa7"))
+                kpi_rows.append(("sebeke", "Şebeke Tüketimi", f"{_kd['Sebeke_Tuketim_kWh'].sum():,.0f} kWh", "#4a3aa7"))
             if "MCC_Tuketim_kWh" in _kd.columns:
-                kpi_rows.append((f"🏗️ MCC Tüketimi ({_etiket})", f"{_kd['MCC_Tuketim_kWh'].sum():,.0f} kWh", "#c98500"))
+                kpi_rows.append(("mcc", "MCC Tüketimi", f"{_kd['MCC_Tuketim_kWh'].sum():,.0f} kWh", "#c98500"))
             _sog_col_kpi = ("Toplam_Sogutma_Tuketim_kWh" if "Toplam_Sogutma_Tuketim_kWh" in _kd.columns
                             else ("Chiller_Tuketim_kWh" if "Chiller_Tuketim_kWh" in _kd.columns else None))
             if _sog_col_kpi:
-                kpi_rows.append((f"❄️ Soğutma Tüketimi ({_etiket})", f"{_kd[_sog_col_kpi].sum():,.0f} kWh", "#2a78d6"))
+                kpi_rows.append(("sogutma", "Soğutma Tüketimi", f"{_kd[_sog_col_kpi].sum():,.0f} kWh", "#2a78d6"))
             if m2 and "Toplam_Hastane_Tuketim_kWh" in _kd.columns and _kd["Toplam_Hastane_Tuketim_kWh"].sum() > 0:
-                kpi_rows.append((f"📐 kWh/m² ({_etiket})", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum()/m2:.2f}", "#c98500"))
+                kpi_rows.append(("verim", "kWh/m²", f"{_kd['Toplam_Hastane_Tuketim_kWh'].sum()/m2:.2f}", "#c98500"))
 
             if kpi_rows:
+                st.caption(tarih_aralik_str)
                 rows_html = ""
-                for baslik, deger, renk_hex in kpi_rows:
-                    r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
+                for ikon_ad, baslik, deger, renk_hex in kpi_rows:
                     rows_html += (
-                        f"<div style='display:flex;justify-content:space-between;align-items:center;"
-                        f"padding:10px 14px;border-bottom:1px solid rgba(42,120,214,0.07);'>"
-                        f"<span style='font-size:12px;color:#46536b;'>{baslik}</span>"
-                        f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:13px;font-weight:700;"
-                        f"color:{renk_hex};text-shadow:0 0 8px rgba({r2},{g2},{b2},0.5);'>{deger}</span>"
+                        f"<div class='dz-satir' style='--k:{renk_hex};display:flex;justify-content:space-between;"
+                        f"align-items:center;margin-bottom:6px;'>"
+                        f"<span class='dz-et' style='display:inline-flex;align-items:center;gap:10px;'>"
+                        f"{_ik.ikon(ikon_ad, 20)}{baslik}</span>"
+                        f"<span style='font-size:15px;font-weight:700;color:#133273;white-space:nowrap;'>{deger}</span>"
                         f"</div>"
                     )
-                st.markdown(
-                    f"<div style='background:#fafaf8;border:1px solid rgba(19,50,115,0.15);"
-                    f"border-radius:14px;overflow:hidden;'>{rows_html}</div>",
-                    unsafe_allow_html=True
-                )
+                st.markdown(f"<div class='dz-kart'>{rows_html}</div>", unsafe_allow_html=True)
             else:
                 st.info("KPI verisi bulunamadı.")
 
@@ -1290,26 +1349,17 @@ with tab1:
         # Bileşen badge'leri
         badge_html = ""
         if bilesenler:
-            badges = "".join(
-                f"<span style='display:inline-block;background:rgba(250,178,25,0.15);"
-                f"border:1px solid rgba(250,178,25,0.35);border-radius:4px;"
-                f"padding:2px 7px;margin:3px 3px 0 0;font-size:9px;"
-                f"color:rgb(253,211,77);letter-spacing:0.3px;'>{b}</span>"
-                for b in bilesenler
-            )
-            badge_html = f"<div style='margin-top:5px;padding-left:14px;'>{badges}</div>"
+            badges = "".join(f"<span class='dz-cip'>{b}</span>" for b in bilesenler)
+            badge_html = f"<div style='padding-left:18px;'>{badges}</div>"
 
         # Not
         not_html = (
-            f"<div style='font-size:10px;color:#46536b;"
-            f"margin-top:5px;padding-left:14px;font-style:italic;'>💬 {not_metni}</div>"
+            f"<div class='dz-not' style='padding-left:18px;'>{not_metni}</div>"
         ) if not_metni else ""
 
         return (
-            "<div style='background:" + bg + ";border-left:3px solid " + border + ";"
-            "border-radius:6px;padding:8px 12px;margin-bottom:6px;'>"
-            "<span style='font-size:12px;color:" + text_renk + ";font-weight:600;'>"
-            + chr(9679) + " " + ad + "</span>"
+            "<div class='dz-satir' style='--k:" + border + ";'>"
+            "<div class='dz-satir-ad'>" + _ik.nokta(border, 8) + ad + "</div>"
             + badge_html + not_html +
             "</div>"
         )
@@ -1325,13 +1375,10 @@ with tab1:
             "margin-top:3px;'>" + det + "</div>"
         ) if det else ""
         return (
-            "<div style='background:" + bg + ";border:1px solid " + border + ";"
-            "border-radius:7px;padding:8px 12px;margin-bottom:6px;'>"
-            "<div style='display:flex;align-items:center;gap:10px;'>"
-            "<span style='font-size:9px;font-weight:700;letter-spacing:1px;"
-            "color:" + badge_renk + ";min-width:52px;'>" + badge_text + "</span>"
-            "<span style='font-size:12px;color:" + text_renk + ";font-weight:600;'>"
-            + ad + "</span></div>" + det_part + "</div>"
+            "<div class='dz-satir' style='--k:" + badge_renk + ";'>"
+            "<div class='dz-satir-ad'>"
+            "<span class='dz-etiket'>" + _ik.ikon("ariza", 14, badge_renk) + badge_text + "</span>"
+            + ad + "</div>" + det_part + "</div>"
         )
 
     col_ar, col_bk, col_hv = st.columns([1, 1, 2])
@@ -1389,7 +1436,7 @@ with tab1:
         if hvac_kritik or hvac_uyari:
             hv_rows = "".join(
                 hvac_satir_html(c, "rgba(208,59,59,0.08)", "rgba(208,59,59,0.35)",
-                                "#d03b3b", "KRITIK", "#b42525")
+                                "#d03b3b", "KRİTİK", "#b42525")
                 for c in hvac_kritik
             ) + "".join(
                 hvac_satir_html(c, "rgba(250,178,25,0.08)", "rgba(250,178,25,0.30)",
@@ -1404,7 +1451,7 @@ with tab1:
         elif arizali_list:
             hv_rows = "".join(
                 hvac_satir_html(c, "rgba(208,59,59,0.08)", "rgba(208,59,59,0.35)",
-                                "#d03b3b", "KRITIK", "#b42525")
+                                "#d03b3b", "KRİTİK", "#b42525")
                 for c in arizali_list
             )
         else:

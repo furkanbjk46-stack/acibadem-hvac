@@ -38,14 +38,15 @@ except SyntaxError as e:
     c("sayfa sozdizimi gecerli", False, str(e))
 
 # ── Grafik listesinde trafo secenegi ──────────────────────────────────────
-c("trafo secenegi listede", '"🔻 Trafolar (TRDP)"' in _metin)
+c("trafo secenegi listede", '"Trafolar (TRDP)"' in _metin)
 c("trafo grafigi cizim dali var", 'grafik_tip == "trafo"' in _metin)
 c("secenek KOSULA bagli (trafosuz lokasyonda olu link olmasin)",
   "if _trafo_kolonlar:" in _metin)
 c("lokasyon degisince eski secim temizlenir (Streamlit hatasi)",
   'st.session_state.get("grafik_sec") not in grafik_secenekler' in _metin)
-c("trafolar yiginli cizilir (gunluk toplam okunur kalsin)",
-  'barmode="stack"' in _metin.split('grafik_tip == "trafo"')[1][:2000])
+# 23.10.2026: kullanıcı isteğiyle trafolar üst üste değil YAN YANA (gruplu) çizilir
+c("trafolar yan yana (gruplu) cizilir",
+  'barmode="group"' in _metin.split('grafik_tip == "trafo"')[1][:2000])
 c("eksik sayac kullaniciya soylenir",
   "henüz bağlı değil" in _metin.split('grafik_tip == "trafo"')[1][:2500])
 

@@ -139,8 +139,12 @@ c("koruma katmani app_merkez basinda kuruluyor",
 c("OTO SET anahtari izleyicide kapali", 'help=_sw_ipucu, disabled=_IZLEYICI' in _mrk)
 c("gecis saati kaydet izleyicide kapali", "_demo_modu() or _IZLEYICI" in _mrk)
 c("AI analizi izleyici tetiklemez", "_yenile_btn) and not _IZLEYICI" in _mrk)
+# Ayarlar artık sağ üstteki düğmeyle açılan pencere: izleyicide düğme yok,
+# pencere de açılmaz (ve sayfa sonunda izleyici için st.stop korunur)
 c("Ayarlar izleyicide gizli",
-  _mrk.index("if _IZLEYICI:\n    st.stop()") < _mrk.index('with st.expander("⚙️  Ayarlar"'))
+  'if not _IZLEYICI:\n        if st.button("Ayarlar", key="ayarlar_btn"' in _mrk
+  and 'if st.session_state.get("_ayarlar_acik") and not _IZLEYICI:' in _mrk
+  and _mrk.index("if _IZLEYICI:\n    st.stop()") < _mrk.index("def _ayarlar_penceresi"))
 _gr = open(os.path.join(_d, "giris.py"), encoding="utf-8").read()
 c("cikis izleyici bayragini siler", '"giris_jeton", "izleyici")' in _gr)
 
