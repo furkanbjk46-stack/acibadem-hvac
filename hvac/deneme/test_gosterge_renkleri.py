@@ -4,9 +4,16 @@
 KURAL: TÜKETİM ARTIŞI KÖTÜ HABERDİR.
 Streamlit'in varsayılanı tersidir (artı delta yeşil), bu yüzden tüketim
 kalemlerinde delta_color="inverse" verilir: ok yukarı -> KIRMIZI, aşağı ->
-YEŞİL. Delta bir büyüklük değil de etiketse (birim fiyat, "2025→2026",
-"Veri yok", kWh/m² değeri) renk anlam taşımamalı: "off".
+YEŞİL.
 Tasarruf bunun tersidir — artı tasarruf iyi haberdir, varsayılan kalır.
+
+KURAL 2: DELTA SADECE GERÇEK DEĞİŞİM İÇİNDİR.
+Etiket niteliğindeki yazılar (birim fiyat, "2025→2026", "(alan bazlı)",
+"Gelişiyor") eskiden delta diye verilip delta_color="off" ile renksizleştiri-
+liyordu. Streamlit delta'nın yanına HER ZAMAN bir ↑ oku koyar; "2,45 TL/kWh"
+yanındaki yukarı ok "arttı" demektir — yanlış bilgi. Üstelik "off" rengi
+rgba(15,31,61,0.6) soluk gridir, okunmuyordu (23.10.2026 bildirimi).
+Bu yazılar artık metrik_notlu() ile metriğin ALTINA nötr satır olarak basılır.
 
 Ayrıca: eskiden CSS'te [data-testid="stMetricDelta"]{color:...!important}
 vardı; Streamlit'in kırmızı/yeşilini eziyor, bütün oklar lacivert çıkıyordu.
@@ -69,6 +76,24 @@ for d in ast.walk(AGAC):
 
 c("st.metric çağrıları bulundu", len(metrikler) >= 40, len(metrikler))
 
+# ── metrik_notlu çağrıları (delta değil, altına nötr not) ────────────────
+notlular = []
+for d in ast.walk(AGAC):
+    if isinstance(d, ast.Call) and isinstance(d.func, ast.Name) \
+            and d.func.id == "metrik_notlu":
+        notlular.append({
+            "satir": d.lineno,
+            "etiket": _metin(d.args[0]) if d.args else "",
+            "not_var": len(d.args) >= 3 or "not_metni" in {k.arg for k in d.keywords},
+        })
+
+c("metrik_notlu yardımcısı tanımlı", "def metrik_notlu(" in KAYNAK)
+c("not satırının kendi CSS sınıfı var", ".metrik-not {" in KAYNAK)
+c("metrik_notlu kullanılıyor", len(notlular) >= 15, len(notlular))
+_notsuz = [n for n in notlular if not n["not_var"]]
+c("her metrik_notlu bir not metni alır", not _notsuz,
+  [(n["satir"], n["etiket"]) for n in _notsuz])
+
 # Delta'sı olan her metrik ya açıkça renk belirtir ya da TASARRUF'tur
 _belirsiz = [m for m in metrikler
              if m["delta"] and m["renk"] is None and "Tasarruf" not in m["etiket"]]
@@ -94,15 +119,39 @@ for _ad in _TUKETIM:
 # metric_yoy ortak yardımcısı (Toplam Hastane / Şebeke / Toplam Soğutma)
 c("özet göstergeler ters renkte", 'f" {unit}", delta,\n                          delta_color="inverse")' in KAYNAK)
 
-# Etiket niteliğindeki deltalar nötr
-_ETIKET = ["Ort. Chiller Set", "Toplam Değişim", "Şebeke Değişim",
-           "Chiller Değişim", "Toplam R² Skoru", "Beklenen Tüketim",
-           "Sistem Sağlığı"]
+# Etiket niteliğindeki yazılar delta DEĞİL, alt not olmalı
+_ETIKET = ["Toplam Değişim", "Şebeke Değişim", "Chiller Değişim",
+           "Toplam R² Skoru", "Beklenen Tüketim", "Sistem Sağlığı",
+           "Elektrik", "Doğalgaz", "Su", "Toplam Maliyet"]
 for _ad in _ETIKET:
-    _bul = [m for m in metrikler if _ad in m["etiket"] and m["delta"]]
-    c("etiket deltası nötr: %s" % _ad,
-      _bul and all(m["renk"] == "off" for m in _bul),
-      [(m["satir"], m["renk"]) for m in _bul])
+    _bul = [n for n in notlular if _ad in n["etiket"]]
+    c("etiket yazısı alt notta: %s" % _ad, _bul,
+      [(n["satir"], n["etiket"]) for n in notlular])
+    _hala = [m for m in metrikler if _ad in m["etiket"] and m["renk"] == "off"]
+    c("etiket yazısı artık delta değil: %s" % _ad, not _hala,
+      [(m["satir"], m["etiket"]) for m in _hala])
+
+# Gerçek değişim gösteren tek "off" delta: Ort. Chiller Set (yüzde değişim)
+_cs = [m for m in metrikler if "Ort. Chiller Set" in m["etiket"] and m["delta"]]
+c("gerçek değişimde delta kalır (Ort. Chiller Set)",
+  _cs and all(m["renk"] == "off" for m in _cs),
+  [(m["satir"], m["renk"]) for m in _cs])
+
+# ── ML parametre etki çubukları ─────────────────────────────────────────
+# Eskiden "█" karakteriyle çiziliyordu: en büyük satır tabloyu kaplayan dev
+# bir lacivert blok, %2 altındakilerde hiç çubuk yoktu.
+c("etki çubukları blok karakteriyle çizilmiyor", '"█" *' not in KAYNAK)
+c("etki çubukları HTML iz/dolgu ile", ".fi-dolgu{" in KAYNAK and ".fi-iz{" in KAYNAK)
+c("en küçük etki bile görünür (min-width)", "min-width:3px" in KAYNAK)
+
+# ── Sistem Sağlığı: ünite sayısına oranlı ───────────────────────────────
+# Eski mutlak ceza (kritik -15, uyarı -5) 55 AHU'luk tesiste 20 uyarıda
+# sıfırlanıyordu; gerçek rapor günlerinin hepsinde "%0 / Kritik" yazıyordu.
+c("mutlak ceza formülü kalmadı",
+  "(critical_count * 15) + (warning_count * 5)" not in KAYNAK)
+c("sağlık puanı ünite sayısına oranlı",
+  "_sorunlu / unit_count" in KAYNAK)
+c("payda analiz edilen ünite sayısı", "unit_count = max(" in KAYNAK)
 
 # ── CSS: delta rengi ezilmiyor ───────────────────────────────────────────
 c("stMetricDelta rengi CSS ile ezilmiyor",

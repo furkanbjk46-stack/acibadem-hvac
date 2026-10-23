@@ -286,16 +286,24 @@ st.markdown("""
         color: #24324d !important;
     }
 
-    /* Number input +/- butonları */
+    /* Number input +/- butonları.
+       Eskiden KOYU lacivert zemin (rgba(10,25,55,.9)) + mavi ikon vardı;
+       portal koyu temadayken kalmış bir artıktı. Açık formda yama gibi
+       duruyordu ve mavi ikon koyu zeminde okunmuyordu (kontrast ~3:1).
+       Artık kutuyla aynı aileden: açık zemin, lacivert ikon. */
     [data-testid="stNumberInput"] button {
-        background: rgba(10, 25, 55, 0.9) !important;
-        color: #2a78d6 !important;
-        border: none !important;
-        border-radius: 6px !important;
+        background: #f6f7f9 !important;
+        color: #24324d !important;
+        border: 1px solid rgba(24,26,30,0.12) !important;
+        border-radius: 8px !important;
     }
     [data-testid="stNumberInput"] button:hover {
-        background: rgba(42,120,214, 0.5) !important;
-        color: #0f1f3d !important;
+        background: #e8edf4 !important;
+        color: #133273 !important;
+        border-color: rgba(42,120,214,0.45) !important;
+    }
+    [data-testid="stNumberInput"] button:disabled {
+        opacity: 0.45 !important;
     }
 
     /* Selectbox dropdown */
@@ -1131,6 +1139,41 @@ def _bolum_karti(anahtar: str, baslik: str, aciklama: str = ""):
         st.markdown(f"<p><strong>{baslik}</strong>{_ek}</p>", unsafe_allow_html=True)
         yield
 
+
+def metrik_notlu(etiket: str, deger, not_metni=None, **kw):
+    """Altında NÖTR bir açıklama satırı olan metrik.
+
+    NEDEN AYRI: Bu açıklamalar (birim fiyat, "(alan bazlı)", "2025→2026",
+    "Gelişiyor" gibi) eskiden st.metric'e delta diye veriliyor, renk de
+    delta_color="off" ile kapatılıyordu. İki sorun çıkıyordu:
+      1) Streamlit delta'nın yanına HER ZAMAN bir ↑ oku koyar — "2,45 TL/kWh"
+         ya da "2025→2026" yanındaki yukarı ok "arttı" demek olur, yanlış bilgi.
+      2) "off" rengi rgba(15,31,61,0.6) — soluk gri; kullanıcı 23.10.2026'da
+         maliyet kartlarının altındaki yazıların okunmadığını bildirdi.
+    Gerçek bir değişim gösterilecekse st.metric'in kendi delta'sı kullanılır
+    (ok ve renk orada DOĞRU bilgidir); bu yardımcı sadece etiket/not içindir.
+    """
+    st.metric(etiket, deger, **kw)
+    if not_metni:
+        st.markdown(
+            "<div class='metrik-not'>%s</div>"
+            % str(not_metni).replace("&", "&amp;").replace("<", "&lt;"),
+            unsafe_allow_html=True,
+        )
+
+
+st.markdown("""
+<style>
+.metrik-not {
+    margin: -10px 0 2px 2px;
+    font-size: 0.80rem;
+    line-height: 1.3;
+    color: #4a5a78;              /* delta "off" grisinin okunur hali */
+    font-variant-numeric: tabular-nums;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ── BasEUI Dropdown Koyu Tema — components.html ile gerçek JS enjeksiyonu ──
 # st.markdown içindeki <script> tarayıcı tarafından çalıştırılmaz (innerHTML güvenliği).
 # components.html bir iframe oluşturur → window.parent.document ile parent DOM'a erişir.
@@ -1364,6 +1407,23 @@ TR_MAP = str.maketrans({
     "ö": "o", "Ö": "o",
     "ç": "c", "Ç": "c",
 })
+
+
+def sayi(deger, varsayilan: float = 0.0) -> float:
+    """Sayıya çevir; boş/bozuk/NaN ise varsayılanı ver.
+
+    NEDEN AYRI BİR YARDIMCI: "float(x) or 0" kalıbı NaN'ı YAKALAMAZ —
+    NaN Python'da doğru (truthy) sayılır, dolayısıyla `or 0` devreye
+    girmez ve NaN olduğu gibi akar. Ekranda "₺nan" diye göründü
+    (23.10.2026: su tüketimi boş olan günde Su ve Toplam Maliyet
+    kartları nan yazdı). Pandas'ın boş hücresi de NaN'dır, yani bu
+    tuzağa her boş alanda düşülür.
+    """
+    try:
+        d = float(deger)
+    except (TypeError, ValueError):
+        return varsayilan
+    return varsayilan if d != d else d          # d != d → NaN
 
 
 def norm_key(s: str) -> str:
@@ -1721,14 +1781,14 @@ def check_daily_anomalies(new_row: dict, df_old: pd.DataFrame,
     
     for col, label in metrics.items():
         try:
-            new_val = float(new_row.get(col, 0) or 0)
+            new_val = sayi(new_row.get(col, 0))
             
             if new_val == 0:
                 continue
             
             # ===== DÜNKÜ DEĞER KARŞILAŞTIRMASI =====
             if last_row is not None:
-                old_val = float(last_row.get(col, 0) or 0)
+                old_val = sayi(last_row.get(col, 0))
                 
                 if old_val > 0:
                     change_pct = (new_val - old_val) / old_val
@@ -1783,7 +1843,7 @@ def check_daily_anomalies(new_row: dict, df_old: pd.DataFrame,
             
             # ===== GEÇEN YIL AYNI GÜN KARŞILAŞTIRMASI =====
             if last_year_row is not None:
-                last_year_val = float(last_year_row.get(col, 0) or 0)
+                last_year_val = sayi(last_year_row.get(col, 0))
                 
                 if last_year_val > 0:
                     yoy_change_pct = (new_val - last_year_val) / last_year_val
@@ -3605,39 +3665,39 @@ with tab1:
         c1, c2, c3 = st.columns(3)
 
         with c1:
-            dis_hava = st.number_input("Dış Hava Sıcaklığı (°C)", value=_fv("Dis_Hava_Sicakligi_C", 0.0), step=0.5, key="entry_dis_hava")
-            chiller_load_pct = st.number_input("Chiller Çalışma Kapasitesi Yüzdesi (%)", value=_fv("Chiller_Load_Percent", 0.0), step=1.0, min_value=0.0, max_value=100.0, key="entry_chiller_load_pct", help="Chiller kapasite yüzdesini girin; COP otomatik hesaplanır.")
-            kar_eritme = st.checkbox("Kar Eritme Aktif (On/Off)", value=bool(_fv("Kar_Eritme_Aktif", False)), key="entry_kar")
+            dis_hava = st.number_input("Dış Hava Sıcaklığı (°C)", step=0.5, key="entry_dis_hava")
+            chiller_load_pct = st.number_input("Chiller Çalışma Kapasitesi Yüzdesi (%)", step=1.0, min_value=0.0, max_value=100.0, key="entry_chiller_load_pct", help="Chiller kapasite yüzdesini girin; COP otomatik hesaplanır.")
+            kar_eritme = st.checkbox("Kar Eritme Aktif (On/Off)", key="entry_kar")
 
         with c2:
             st.markdown("**Chiller / Kazan**")
-            ch_set = st.number_input("Chiller Set Temp (°C)", value=_fv("Chiller_Set_Temp_C", 6.5), step=0.5, key="entry_ch_set")
+            ch_set = st.number_input("Chiller Set Temp (°C)", step=0.5, key="entry_ch_set")
             st.caption(
                 "💡 **Chiller Set Önerisi:** "
                 "0–7°C → **8.0°C** | 7–23°C → **7.5°C** | 23–26°C → **7.0°C** | 26°C+ → **6.5°C**"
             )
-            ch_count = st.number_input("Chiller Adet (Çalışan)", value=_fv("Chiller_Adet", 0), step=1, min_value=0, key="entry_ch_count")
-            abs_count = st.number_input("Absorption Chiller Adet", value=_fv("Absorption_Chiller_Adet", 0), step=1, min_value=0, key="entry_abs_count")
-            kazan_count = st.number_input("Kazan Adet", value=_fv("Kazan_Adet", 0), step=1, min_value=0, key="entry_kazan_count")
+            ch_count = st.number_input("Chiller Adet (Çalışan)", step=1, min_value=0, key="entry_ch_count")
+            abs_count = st.number_input("Absorption Chiller Adet", step=1, min_value=0, key="entry_abs_count")
+            kazan_count = st.number_input("Kazan Adet", step=1, min_value=0, key="entry_kazan_count")
 
         with c3:
             # Lokasyona göre sıcaklık alanları
             if _has_dual_lines:
                 # Maslak: çift hat
                 st.markdown("**Mas-1 / Mas-2 Sıcaklıkları**")
-                mas1_h = st.number_input("Mas-1 Isıtma Temp", value=_fv("Mas1_Isitma_Temp", 0.0), step=0.5, key="entry_mas1_h")
-                mas1_k = st.number_input("Mas-1 Kazan Temp", value=_fv("Mas1_Kazan_Temp", 0.0), step=0.5, key="entry_mas1_k")
-                mas1_c = st.number_input("Mas-1 Soğutma Temp", value=_fv("Mas1_Sogutma_Temp", 0.0), step=0.5, key="entry_mas1_c")
-                mas2_h = st.number_input("Mas-2 Isıtma Temp", value=_fv("Mas2_Isitma_Temp", 0.0), step=0.5, key="entry_mas2_h")
-                mas2_k = st.number_input("Mas-2 Kazan Temp", value=_fv("Mas2_Kazan_Temp", 0.0), step=0.5, key="entry_mas2_k")
-                mas2_c = st.number_input("Mas-2 Soğutma Temp", value=_fv("Mas2_Sogutma_Temp", 0.0), step=0.5, key="entry_mas2_c")
+                mas1_h = st.number_input("Mas-1 Isıtma Temp", step=0.5, key="entry_mas1_h")
+                mas1_k = st.number_input("Mas-1 Kazan Temp", step=0.5, key="entry_mas1_k")
+                mas1_c = st.number_input("Mas-1 Soğutma Temp", step=0.5, key="entry_mas1_c")
+                mas2_h = st.number_input("Mas-2 Isıtma Temp", step=0.5, key="entry_mas2_h")
+                mas2_k = st.number_input("Mas-2 Kazan Temp", step=0.5, key="entry_mas2_k")
+                mas2_c = st.number_input("Mas-2 Soğutma Temp", step=0.5, key="entry_mas2_c")
             else:
                 # Altunizade vb.: tek hat
                 _single_labels = _energy_schema.get("single_labels", {})
                 st.markdown("**Sıcaklık Değerleri**")
-                single_h = st.number_input(_single_labels.get("heating_temp", "Isıtma Temp"), value=_fv("Isitma_Temp_C", 0.0), step=0.5, key="entry_single_h")
-                single_k = st.number_input(_single_labels.get("boiler_temp", "Kazan Temp"), value=_fv("Kazan_Temp_C", 0.0), step=0.5, key="entry_single_k")
-                single_c = st.number_input(_single_labels.get("cooling_temp", "Soğutma Temp"), value=_fv("Sogutma_Temp_C", 0.0), step=0.5, key="entry_single_c")
+                single_h = st.number_input(_single_labels.get("heating_temp", "Isıtma Temp"), step=0.5, key="entry_single_h")
+                single_k = st.number_input(_single_labels.get("boiler_temp", "Kazan Temp"), step=0.5, key="entry_single_k")
+                single_c = st.number_input(_single_labels.get("cooling_temp", "Soğutma Temp"), step=0.5, key="entry_single_c")
 
         st.divider()
         st.subheader("Tüketim / Üretim")
@@ -3645,19 +3705,19 @@ with tab1:
         a1, a2, a3 = st.columns(3)
         with a1:
             st.markdown("**Trafo Tüketimleri (TRDP)**")
-            trdp1 = st.number_input("TRDP-1 (kWh)", value=_fv("TRDP1_kWh", 0.0), step=50.0, min_value=0.0, key="entry_trdp1")
-            trdp2 = st.number_input("TRDP-2 (kWh)", value=_fv("TRDP2_kWh", 0.0), step=50.0, min_value=0.0, key="entry_trdp2")
-            trdp3 = st.number_input("TRDP-3 (kWh)", value=_fv("TRDP3_kWh", 0.0), step=50.0, min_value=0.0, key="entry_trdp3")
-            trdp4 = st.number_input("TRDP-4 (kWh)", value=_fv("TRDP4_kWh", 0.0), step=50.0, min_value=0.0, key="entry_trdp4")
-            koj = st.number_input("Kojen Üretim (kWh)", value=_fv("Kojen_Uretim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_kojen")
-            su = st.number_input("Su Tüketimi (m³)", value=_fv("Su_Tuketimi_m3", 0.0), step=1.0, min_value=0.0, key="entry_su")
+            trdp1 = st.number_input("TRDP-1 (kWh)", step=50.0, min_value=0.0, key="entry_trdp1")
+            trdp2 = st.number_input("TRDP-2 (kWh)", step=50.0, min_value=0.0, key="entry_trdp2")
+            trdp3 = st.number_input("TRDP-3 (kWh)", step=50.0, min_value=0.0, key="entry_trdp3")
+            trdp4 = st.number_input("TRDP-4 (kWh)", step=50.0, min_value=0.0, key="entry_trdp4")
+            koj = st.number_input("Kojen Üretim (kWh)", step=50.0, min_value=0.0, key="entry_kojen")
+            su = st.number_input("Su Tüketimi (m³)", step=1.0, min_value=0.0, key="entry_su")
         with a2:
-            kazan_gaz = st.number_input("Kazan Doğalgaz (m³)", value=_fv("Kazan_Dogalgaz_m3", 0.0), step=10.0, min_value=0.0, key="entry_kazan_gaz")
-            koj_gaz = st.number_input("Kojen Doğalgaz (m³)", value=_fv("Kojen_Dogalgaz_m3", 0.0), step=10.0, min_value=0.0, key="entry_kojen_gaz")
+            kazan_gaz = st.number_input("Kazan Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kazan_gaz")
+            koj_gaz = st.number_input("Kojen Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kojen_gaz")
         with a3:
-            ch_kwh = st.number_input("Chiller Tüketim (kWh)", value=_fv("Chiller_Tuketim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_ch_kwh")
-            mcc_kwh = st.number_input("MCC Tüketim (kWh)", value=_fv("MCC_Tuketim_kWh", 0.0), step=50.0, min_value=0.0, key="entry_mcc_kwh")
-            vrf_kwh = st.number_input("VRF/Split Tüketim (kWh) (varsa)", value=_fv("VRF_Split_Tuketim_kWh", 0.0), step=25.0, min_value=0.0, key="entry_vrf_kwh")
+            ch_kwh = st.number_input("Chiller Tüketim (kWh)", step=50.0, min_value=0.0, key="entry_ch_kwh")
+            mcc_kwh = st.number_input("MCC Tüketim (kWh)", step=50.0, min_value=0.0, key="entry_mcc_kwh")
+            vrf_kwh = st.number_input("VRF/Split Tüketim (kWh) (varsa)", step=25.0, min_value=0.0, key="entry_vrf_kwh")
 
         preview_bina_yuk = trdp1 + trdp3
         preview_mekanik = trdp2 + trdp4
@@ -3973,25 +4033,40 @@ with tab2:
                 if not yesterday_hvac.empty:
                     # En son kaydı al (aynı gün birden fazla analiz yapılmış olabilir)
                     latest = yesterday_hvac.iloc[-1]
-                    critical_count = int(latest.get("Kritik_Sorun_Adet", 0) or 0)
-                    warning_count = int(latest.get("Uyari_Adet", 0) or 0)
+                    critical_count = int(sayi(latest.get("Kritik_Sorun_Adet")))
+                    warning_count = int(sayi(latest.get("Uyari_Adet")))
+                    # Sağlık yüzdesinin paydası: o gün analiz edilen ünite sayısı.
+                    # Eski rapor satırlarında bulgular ünite başına değil BULGU
+                    # başına sayılmış (3+52+10=65 iken Toplam_AHU=55), o yüzden
+                    # ikisinin büyüğü alınır.
+                    unit_count = max(
+                        int(sayi(latest.get("Toplam_AHU"))) + int(sayi(latest.get("Toplam_FCU"))),
+                        critical_count + warning_count + int(sayi(latest.get("Optimal_Adet"))),
+                    )
                 else:
                     # Dün için HVAC verisi yok
                     critical_count = None
                     warning_count = None
+                    unit_count = 0
             else:
                 critical_count = None
                 warning_count = None
+                unit_count = 0
         except Exception:
             critical_count = None
             warning_count = None
-        
-        # Sistem Sağlık Durumu hesaplama (Kritik ve Uyarı sayılarına göre)
-        if critical_count is not None and warning_count is not None:
-            # Puan kırma: Her kritik -15, her uyarı -5
-            penalty = (critical_count * 15) + (warning_count * 5)
-            health_score = max(0, 100 - penalty)
-            
+            unit_count = 0
+
+        # Sistem Sağlık Durumu — ÜNİTE SAYISINA ORANLI
+        # Eskiden MUTLAK ceza vardı: her kritik -15, her uyarı -5. 55 AHU'luk
+        # bir tesiste 20 uyarı puanı sıfıra indiriyordu; 22.10.2026'da kart
+        # "%0 / Kritik" yazıyordu (3 kritik + 34 uyarı). Yani gösterge hep dipte
+        # kalıp hiçbir şey anlatmıyordu. Artık sorunlu ünitelerin TOPLAMA ORANI
+        # bakılıyor: kritik tam, uyarı 0,35 ağırlıkla sayılır.
+        if critical_count is not None and warning_count is not None and unit_count > 0:
+            _sorunlu = critical_count + warning_count * 0.35
+            health_score = int(round(max(0.0, min(1.0, 1 - _sorunlu / unit_count)) * 100))
+
             if health_score >= 80:
                 health_status = "İyi"
                 health_color = "🟢"
@@ -4032,9 +4107,15 @@ with tab2:
                         st.metric("⚪ Aktif Uyarılar", "Veri yok", help=f"{report_date.strftime('%d.%m.%Y')} için HVAC analizi bulunamadı")
                 with sc5:
                     if health_score is not None:
-                        st.metric(f"{health_color} Sistem Sağlığı", f"%{health_score}", delta=health_status, delta_color="off")
+                        metrik_notlu(
+                            f"{health_color} Sistem Sağlığı", f"%{health_score}",
+                            f"{health_status} · {unit_count} ünitenin "
+                            f"{critical_count + warning_count}'inde bulgu",
+                            help="Sorunlu ünitelerin toplam üniteye oranı. "
+                                 "Kritik bulgu tam, uyarı 0,35 ağırlıkla sayılır.",
+                        )
                     else:
-                        st.metric("⚪ Sistem Sağlığı", "--", delta="Veri yok", delta_color="off")
+                        metrik_notlu("⚪ Sistem Sağlığı", "--", "Veri yok")
         
         # Settings'i bir kez oku (m² ve maliyet bölümleri için)
         try:
@@ -4075,7 +4156,7 @@ with tab2:
             cost_gas = rep_gas * price_gas if price_gas > 0 else 0
             rep_water = 0
             if "Su_Tuketimi_m3" in report_data.columns:
-                rep_water = float(report_data.iloc[0].get("Su_Tuketimi_m3", 0) or 0)
+                rep_water = sayi(report_data.iloc[0].get("Su_Tuketimi_m3", 0))
             cost_water = rep_water * price_water if price_water > 0 else 0
             cost_total = cost_elec + cost_gas + cost_water
             
@@ -4086,20 +4167,20 @@ with tab2:
                 
                 if price_elec > 0:
                     with cost_cols[col_idx]:
-                        st.metric("⚡ Elektrik", f"₺{cost_elec:,.0f}".replace(",", "."),
-                                  delta=f"{price_elec:.2f} TL/kWh", delta_color="off")
+                        metrik_notlu("⚡ Elektrik", f"₺{cost_elec:,.0f}".replace(",", "."),
+                                     f"{price_elec:.2f} TL/kWh")
                     col_idx += 1
                 
                 if price_gas > 0:
                     with cost_cols[col_idx]:
-                        st.metric("🔥 Doğalgaz", f"₺{cost_gas:,.0f}".replace(",", "."),
-                                  delta=f"{price_gas:.2f} TL/m³", delta_color="off")
+                        metrik_notlu("🔥 Doğalgaz", f"₺{cost_gas:,.0f}".replace(",", "."),
+                                     f"{price_gas:.2f} TL/m³")
                     col_idx += 1
                 
                 if price_water > 0:
                     with cost_cols[col_idx]:
-                        st.metric("💧 Su", f"₺{cost_water:,.0f}".replace(",", "."),
-                                  delta=f"{price_water:.2f} TL/m³", delta_color="off")
+                        metrik_notlu("💧 Su", f"₺{cost_water:,.0f}".replace(",", "."),
+                                     f"{price_water:.2f} TL/m³")
                     col_idx += 1
                 
                 with cost_cols[col_idx]:
@@ -4515,26 +4596,26 @@ with tab5:
                             _cost_cols = st.columns(4)
                             with _cost_cols[0]:
                                 if _p_elec > 0:
-                                    st.metric("⚡ Elektrik Maliyeti", f"{_cost_elec:,.0f} ₺",
-                                              f"{_p_elec:.2f} TL/kWh", delta_color="off")
+                                    metrik_notlu("⚡ Elektrik Maliyeti", f"{_cost_elec:,.0f} ₺",
+                                                 f"{_p_elec:.2f} TL/kWh")
                                 else:
                                     st.metric("⚡ Elektrik Maliyeti", "Fiyat yok")
                             with _cost_cols[1]:
                                 if _p_gas > 0:
-                                    st.metric("🔥 Doğalgaz Maliyeti", f"{_cost_gas:,.0f} ₺",
-                                              f"{_p_gas:.2f} TL/m³", delta_color="off")
+                                    metrik_notlu("🔥 Doğalgaz Maliyeti", f"{_cost_gas:,.0f} ₺",
+                                                 f"{_p_gas:.2f} TL/m³")
                                 else:
                                     st.metric("🔥 Doğalgaz Maliyeti", "Fiyat yok")
                             with _cost_cols[2]:
                                 if _p_water > 0:
-                                    st.metric("💧 Su Maliyeti", f"{_cost_water:,.0f} ₺",
-                                              f"{_p_water:.2f} TL/m³", delta_color="off")
+                                    metrik_notlu("💧 Su Maliyeti", f"{_cost_water:,.0f} ₺",
+                                                 f"{_p_water:.2f} TL/m³")
                                 else:
                                     st.metric("💧 Su Maliyeti", "Fiyat yok")
                             with _cost_cols[3]:
                                 _daily_avg = _cost_total / _days if _days > 0 else 0
-                                st.metric("📊 Toplam Maliyet", f"{_cost_total:,.0f} ₺",
-                                          f"Ort. {_daily_avg:,.0f} ₺/gün", delta_color="off")
+                                metrik_notlu("📊 Toplam Maliyet", f"{_cost_total:,.0f} ₺",
+                                             f"Ort. {_daily_avg:,.0f} ₺/gün")
                         
                 except Exception:
                     pass
@@ -4556,11 +4637,10 @@ with tab5:
                             yc = st.columns(len(yearly))
                             for idx, ys in enumerate(yearly):
                                 with yc[idx]:
-                                    st.metric(
+                                    metrik_notlu(
                                         f"{ys['year']} ({ys['days']} gun)",
                                         f"{ys['total_kwh']:,.0f} kWh".replace(",", "."),
                                         f"{ys['kwh_per_m2']:.1f} kWh/m2" if b_area > 0 else None,
-                                        delta_color="off"
                                     )
                         
                             # Yıllar arası değişim
@@ -4571,19 +4651,16 @@ with tab5:
                             
                                 with trend_cols[0]:
                                     chg = (last_y['total_kwh'] - prev_y['total_kwh']) / prev_y['total_kwh'] * 100 if prev_y['total_kwh'] > 0 else 0
-                                    st.metric("Toplam Degisim", f"{chg:+.1f}%",
-                                              f"{prev_y['year']}->{last_y['year']}",
-                                              delta_color="off")
+                                    metrik_notlu("Toplam Degisim", f"{chg:+.1f}%",
+                                                 f"{prev_y['year']}->{last_y['year']}")
                                 with trend_cols[1]:
                                     chg_g = (last_y['grid_kwh'] - prev_y['grid_kwh']) / prev_y['grid_kwh'] * 100 if prev_y['grid_kwh'] > 0 else 0
-                                    st.metric("Sebeke Degisim", f"{chg_g:+.1f}%",
-                                              f"{prev_y['year']}->{last_y['year']}",
-                                              delta_color="off")
+                                    metrik_notlu("Sebeke Degisim", f"{chg_g:+.1f}%",
+                                                 f"{prev_y['year']}->{last_y['year']}")
                                 with trend_cols[2]:
                                     chg_c = (last_y['chiller_kwh'] - prev_y['chiller_kwh']) / prev_y['chiller_kwh'] * 100 if prev_y['chiller_kwh'] > 0 else 0
-                                    st.metric("Chiller Degisim", f"{chg_c:+.1f}%",
-                                              f"{prev_y['year']}->{last_y['year']}",
-                                              delta_color="off")
+                                    metrik_notlu("Chiller Degisim", f"{chg_c:+.1f}%",
+                                                 f"{prev_y['year']}->{last_y['year']}")
                         
                     
                     # 2. Aylık Tahmin Tablosu
@@ -4648,9 +4725,9 @@ with tab5:
                         
                             sv_cols = st.columns(4)
                             with sv_cols[0]:
-                                st.metric("Beklenen Tuketim",
-                                          f"{savings['expected_total']:,.0f} kWh".replace(",", "."),
-                                          "(alan bazli)", delta_color="off")
+                                metrik_notlu("Beklenen Tuketim",
+                                             f"{savings['expected_total']:,.0f} kWh".replace(",", "."),
+                                             "(alan bazli)")
                             with sv_cols[1]:
                                 st.metric("Gerceklesen",
                                           f"{savings['curr_total']:,.0f} kWh".replace(",", "."))
@@ -5047,11 +5124,10 @@ with tab6:
                 _yc = st.columns(len(_fc_yearly))
                 for _yi, _ys in enumerate(_fc_yearly):
                     with _yc[_yi]:
-                        st.metric(
+                        metrik_notlu(
                             f"{_ys['year']} ({_ys['days']} gün)",
                             f"{_ys['total_kwh']:,.0f} kWh".replace(",", "."),
                             f"{_ys['kwh_per_m2']:.1f} kWh/m²" if _fc_area > 0 else None,
-                            delta_color="off"
                         )
             
                 _tc = st.columns(3)
@@ -5059,16 +5135,13 @@ with tab6:
                 _py = _fc_yearly[-2]
                 with _tc[0]:
                     _ct = (_ly['total_kwh'] - _py['total_kwh']) / _py['total_kwh'] * 100 if _py['total_kwh'] > 0 else 0
-                    st.metric("Toplam Değişim", f"{_ct:+.1f}%", f"{_py['year']}→{_ly['year']}",
-                              delta_color="off")
+                    metrik_notlu("Toplam Değişim", f"{_ct:+.1f}%", f"{_py['year']}→{_ly['year']}")
                 with _tc[1]:
                     _cg = (_ly['grid_kwh'] - _py['grid_kwh']) / _py['grid_kwh'] * 100 if _py['grid_kwh'] > 0 else 0
-                    st.metric("Şebeke Değişim", f"{_cg:+.1f}%", f"{_py['year']}→{_ly['year']}",
-                              delta_color="off")
+                    metrik_notlu("Şebeke Değişim", f"{_cg:+.1f}%", f"{_py['year']}→{_ly['year']}")
                 with _tc[2]:
                     _cc = (_ly['chiller_kwh'] - _py['chiller_kwh']) / _py['chiller_kwh'] * 100 if _py['chiller_kwh'] > 0 else 0
-                    st.metric("Chiller Değişim", f"{_cc:+.1f}%", f"{_py['year']}→{_ly['year']}",
-                              delta_color="off")
+                    metrik_notlu("Chiller Değişim", f"{_cc:+.1f}%", f"{_py['year']}→{_ly['year']}")
             
         
         # ═══ 2. AYLIK TAHMİN TABLOSU ═══
@@ -5138,8 +5211,8 @@ with tab6:
             
                 _sv = st.columns(4)
                 with _sv[0]:
-                    st.metric("Beklenen Tüketim", f"{_fc_savings['expected_total']:,.0f} kWh".replace(",", "."),
-                              "(alan bazlı)", delta_color="off")
+                    metrik_notlu("Beklenen Tüketim", f"{_fc_savings['expected_total']:,.0f} kWh".replace(",", "."),
+                                 "(alan bazlı)")
                 with _sv[1]:
                     st.metric("Gerçekleşen", f"{_fc_savings['curr_total']:,.0f} kWh".replace(",", "."))
                 with _sv[2]:
@@ -5189,7 +5262,7 @@ with tab6:
                 with _mi[0]:
                     _r2t = _model_info.get("r2_total", 0)
                     _quality = "Mükemmel" if _r2t > 0.9 else "İyi" if _r2t > 0.7 else "Orta" if _r2t > 0.5 else "Gelişiyor"
-                    st.metric("Toplam R² Skoru", f"{_r2t:.3f}", _quality, delta_color="off")
+                    metrik_notlu("Toplam R² Skoru", f"{_r2t:.3f}", _quality)
                 with _mi[1]:
                     _r2g = _model_info.get("r2_grid", 0)
                     st.metric("Şebeke R² Skoru", f"{_r2g:.3f}")
@@ -5209,13 +5282,47 @@ with tab6:
                         "gun_sayisi": "Gun Sayisi", "absorption_adet": "Absorption Chiller",
                         "kojen_uretim": "Kojen Uretim", "kazan_dogalgaz": "Kazan Dogalgaz",
                     }
+                    # ÇUBUK NEDEN HTML: eskiden satırlar dolu blok karakteri
+                    # int(oran*50) kere yazılarak çiziliyordu. İki yanlışı vardı:
+                    #   1) %72,9 olan satır 36 blok yazıp tabloyu kaplayan dev
+                    #      bir lacivert slab oluyordu (23.10.2026 ekran görüntüsü),
+                    #   2) %2'nin altındaki satırlarda int(oran*50)=0 çıkıp
+                    #      HİÇ çubuk basılmıyordu — "etki yok" gibi görünüyordu.
+                    # Artık her satır kendi izinde orantılı çiziliyor; en küçük
+                    # değer bile min-width ile 3 px görünür kalıyor.
                     _fi_sorted = sorted(_fi.items(), key=lambda x: x[1], reverse=True)
-                    _fi_md = "| Parametre | Etki Oranı |\n|:---|---:|\n"
+                    _fi_enb = max((v for _, v in _fi_sorted), default=0) or 1
+                    _fi_satir = ""
                     for _fname, _fval in _fi_sorted:
                         _label = _fi_labels.get(_fname, _fname)
-                        _bar = "█" * int(_fval * 50)
-                        _fi_md += f"| {_label} | {_bar} {_fval*100:.1f}% |\n"
-                    st.markdown(_fi_md)
+                        _gen = _fval / _fi_enb * 100.0
+                        _fi_satir += (
+                            "<div class='fi-satir'>"
+                            f"<span class='fi-ad'>{_label}</span>"
+                            "<span class='fi-iz'>"
+                            f"<span class='fi-dolgu' style='width:{_gen:.1f}%'></span>"
+                            "</span>"
+                            f"<span class='fi-oran'>{_fval*100:.1f}%</span>"
+                            "</div>"
+                        )
+                    st.markdown(
+                        "<style>"
+                        ".fi-liste{display:flex;flex-direction:column;gap:6px;margin:6px 0 2px;}"
+                        ".fi-satir{display:grid;grid-template-columns:minmax(120px,max-content)"
+                        " 1fr 52px;align-items:center;gap:10px;}"
+                        ".fi-ad{font-size:0.86rem;color:#24324d;white-space:nowrap;}"
+                        ".fi-iz{height:10px;border-radius:6px;background:rgba(19,50,115,0.08);"
+                        "overflow:hidden;}"
+                        # min-width: %0,2'lik parametre bile 3 px görünür kalsın,
+                        # ama oranlar yüzdeyle verildiği için birbirinden ayrılsın.
+                        ".fi-dolgu{display:block;height:100%;border-radius:6px;min-width:3px;"
+                        "background:linear-gradient(90deg,#2a78d6,#133273);}"
+                        ".fi-oran{font-size:0.82rem;color:#4a5a78;text-align:right;"
+                        "font-variant-numeric:tabular-nums;}"
+                        "</style>"
+                        f"<div class='fi-liste'>{_fi_satir}</div>",
+                        unsafe_allow_html=True,
+                    )
             
                 # Yeniden eğit butonu
                 if st.button("🔄 Modeli Yeniden Eğit", key="retrain_ml"):
