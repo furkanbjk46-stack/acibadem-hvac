@@ -737,6 +737,80 @@ with tab1:
             )
         grafik_tip = grafik_secenekler[secim]
 
+        # ── Sütunların İÇİ hareketli: her kaleme özel akan desen ──────────────
+        # Çubuklar alttan büyüyerek gelir (CSS), ardından içleri kalemin kendi
+        # efektiyle akar: tüketim → çapraz akım, su → dalga, soğutma → buzlu
+        # parıltı, şebeke → şimşek, MCC → pano ışıkları, kazan → alev,
+        # kojen → yukarı akan oklar, trafolar → her trafo kendi renginde akım.
+        # Desenler sayfaya bir kez gömülen SVG <defs> içindedir (SMIL animasyon);
+        # çubuğun dolgusu CSS ile bu desene bağlanır. Saydamlık Plotly'den gelir.
+        def _desen_svg(did, efekt, c):
+            beyaz = "#ffffff"
+            if efekt == "akim":
+                return (f"<pattern id='{did}' width='16' height='16' patternUnits='userSpaceOnUse'>"
+                        f"<rect width='16' height='16' fill='{c}'/>"
+                        f"<path d='M-4 20 L20 -4 M-4 4 L4 -4 M12 20 L20 12' stroke='{beyaz}' stroke-opacity='.26' stroke-width='5'/>"
+                        "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='0 -16' dur='0.9s' repeatCount='indefinite'/></pattern>")
+            if efekt == "dalga":
+                return (f"<pattern id='{did}' width='40' height='18' patternUnits='userSpaceOnUse'>"
+                        f"<rect width='40' height='18' fill='{c}'/>"
+                        f"<path d='M0 7 Q10 2 20 7 T40 7' fill='none' stroke='{beyaz}' stroke-opacity='.38' stroke-width='2.2'/>"
+                        f"<path d='M0 14 Q10 10 20 14 T40 14' fill='none' stroke='{beyaz}' stroke-opacity='.18' stroke-width='1.6'/>"
+                        f"<circle cx='8' cy='11' r='1.2' fill='{beyaz}' fill-opacity='.45'/><circle cx='29' cy='4' r='0.9' fill='{beyaz}' fill-opacity='.4'/>"
+                        "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='-40 -18' dur='3s' repeatCount='indefinite'/></pattern>")
+            if efekt == "buz":
+                return (f"<linearGradient id='{did}' x1='0' y1='0' x2='0' y2='1' spreadMethod='repeat'>"
+                        f"<stop offset='0' stop-color='{c}'/><stop offset='.42' stop-color='{c}'/>"
+                        f"<stop offset='.5' stop-color='#d6e9ff'/><stop offset='.58' stop-color='{c}'/><stop offset='1' stop-color='{c}'/>"
+                        "<animateTransform attributeName='gradientTransform' type='translate' from='0 -1' to='0 1' dur='2.6s' repeatCount='indefinite'/></linearGradient>")
+            if efekt == "elektrik":
+                return (f"<pattern id='{did}' width='14' height='18' patternUnits='userSpaceOnUse'>"
+                        f"<rect width='14' height='18' fill='{c}'/>"
+                        f"<path d='M8 0 L3.5 8 L9.5 9.5 L5 18' fill='none' stroke='{beyaz}' stroke-opacity='.5' stroke-width='1.6'>"
+                        "<animate attributeName='stroke-opacity' values='.15;.65;.2;.55;.15' dur='0.8s' repeatCount='indefinite'/></path>"
+                        "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='0 -18' dur='0.7s' repeatCount='indefinite'/></pattern>")
+            if efekt == "led":
+                return (f"<pattern id='{did}' width='12' height='10' patternUnits='userSpaceOnUse'>"
+                        f"<rect width='12' height='10' fill='{c}'/>"
+                        f"<rect y='6' width='12' height='2.4' fill='{beyaz}' fill-opacity='.3'>"
+                        "<animate attributeName='fill-opacity' values='.08;.4;.08' dur='1.2s' repeatCount='indefinite'/></rect>"
+                        "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='0 -10' dur='1.4s' repeatCount='indefinite'/></pattern>")
+            if efekt == "alev":
+                return (f"<linearGradient id='{did}' x1='0' y1='0' x2='0' y2='1' spreadMethod='reflect'>"
+                        "<stop offset='0' stop-color='#f59e0b'/><stop offset='.35' stop-color='#eb6834'/>"
+                        f"<stop offset='.7' stop-color='{c}'/><stop offset='1' stop-color='#9f1d1d'/>"
+                        "<animateTransform attributeName='gradientTransform' type='translate' values='0 0;0 -0.18;0 0.05;0 0' dur='1.3s' repeatCount='indefinite'/></linearGradient>")
+            if efekt == "uretim":
+                return (f"<pattern id='{did}' width='20' height='14' patternUnits='userSpaceOnUse'>"
+                        f"<rect width='20' height='14' fill='{c}'/>"
+                        f"<path d='M3 11 L10 5 L17 11' fill='none' stroke='{beyaz}' stroke-opacity='.36' stroke-width='2.4' stroke-linecap='round'/>"
+                        "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='0 -14' dur='1.1s' repeatCount='indefinite'/></pattern>")
+            return ""
+
+        _TR_RENK = ["#4a3aa7", "#256abf", "#c98500", "#0ca30c", "#d03b3b", "#6da7ec"]
+        _EFEKT = {   # grafik → [(efekt, renk) — çubuk serisi sırasıyla]
+            "tuketim":        [("akim", renk)],
+            "su":             [("dalga", "#0ea5e9")],
+            "sogutma":        [("buz", "#2a78d6")],
+            "sebeke":         [("elektrik", "#4a3aa7")],
+            "mcc":            [("led", "#eb6834")],
+            "kazan":          [("alev", "#d03b3b")],
+            "kojen":          [("uretim", "#0ca30c")],
+            "trafo":          [("akim", _c) for _c in _TR_RENK],
+            "ay_karsilastir": [("akim", renk + "66"), ("akim", renk)],
+        }.get(grafik_tip, [])
+        if _EFEKT:
+            _defs = "".join(_desen_svg("dz_%s_%d" % (grafik_tip, _i), _e, _c)
+                            for _i, (_e, _c) in enumerate(_EFEKT))
+            _kural = "".join(
+                '[data-testid="stColumn"]:has(.st-key-grafik_secim) .js-plotly-plot .barlayer '
+                '.trace:nth-child(%d) .point path{fill:url(#dz_%s_%d) !important;}' % (_i + 1, grafik_tip, _i)
+                for _i in range(len(_EFEKT)))
+            st.markdown(
+                "<svg width='0' height='0' style='position:absolute;width:0;height:0;overflow:hidden' aria-hidden='true'>"
+                "<defs>" + _defs + "</defs></svg><style>" + _kural + "</style>",
+                unsafe_allow_html=True)
+
         # Seçilen tarih aralığına göre filtrele
         secili_df = df[
             (df["Tarih"].dt.date >= tarih_bas) &
@@ -1156,10 +1230,11 @@ with tab1:
                     fig = go.Figure(go.Pie(
                         labels=labels, values=values,
                         hole=0.58,
-                        marker=dict(colors=colors, line=dict(color="rgba(0,0,0,0.25)", width=1)),
+                        marker=dict(colors=colors, line=dict(color="#ffffff", width=2)),
                         textinfo="label+percent",
                         textposition="outside",
-                        outsidetextfont=dict(size=10, color="#c8e6ff"),
+                        outsidetextfont=dict(size=12, color="#133273"),
+                        texttemplate="<b>%{label}</b><br>%{percent}",
                         hovertemplate="<b>%{label}</b><br>%{value:,.0f} kWh<br>%{percent}<extra></extra>",
                         direction="clockwise", sort=True,
                     ))
@@ -1169,14 +1244,14 @@ with tab1:
                         margin=dict(t=52, b=28, l=10, r=10), height=360,
                         showlegend=False,
                         annotations=[dict(
-                            text=f"<b>{center_val:,.0f}</b><br><span style='font-size:9px'>{center_label}</span>",
-                            x=0.5, y=0.5, font_size=12, font_color="#2a78d6", showarrow=False,
+                            text=f"<b>{center_val:,.0f}</b><br><span style='font-size:11px;color:#46536b'>{center_label}</span>",
+                            x=0.5, y=0.5, font_size=16, font_color="#133273", showarrow=False,
                         )],
                     )
                     return fig
 
                 with _c1:
-                    st.markdown("<div style='text-align:center;font-size:11px;color:#46536b;margin-bottom:4px;'>⚡ KAYNAK KIRILIMLARI</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='dz-et' style='display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:4px;'>" + _ik.ikon("enerji", 16) + "KAYNAK KIRILIMLARI</div>", unsafe_allow_html=True)
                     _kaynak_labels = []
                     _kaynak_values = []
                     _kaynak_colors = []
@@ -1188,7 +1263,7 @@ with tab1:
                                         use_container_width=True, config={"displayModeBar": False})
 
                 with _c2:
-                    st.markdown("<div style='text-align:center;font-size:11px;color:#46536b;margin-bottom:4px;'>🏭 TÜKETİM KIRILIMLARI</div>", unsafe_allow_html=True)
+                    st.markdown("<div class='dz-et' style='display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:4px;'>" + _ik.ikon("mcc", 16) + "TÜKETİM KIRILIMLARI</div>", unsafe_allow_html=True)
                     _tuk_labels = []
                     _tuk_values = []
                     _tuk_colors = []

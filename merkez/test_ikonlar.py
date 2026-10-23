@@ -76,11 +76,14 @@ c("detay sekmeleri simgeli", "st-key-detay_sekmeler" in _l)
 c("dashboard stili = canli izleme", ".dz-dg{font-size:26px;font-weight:700;color:#133273" in _l)
 
 # 23.10.2026 ikinci tur
-c("baslik: Canli Enerji Agi", "Canlı Enerji Ağı" in _m and "SYNAPSE // Merkezi" not in _m)
-c("sag ust: Ayarlar/Yonetim/Cikis hareketli", all(('etiket_css(".st-key-%s button p"' % k) in _m
-                                                  for k in ("ayarlar_btn", "yonetim_btn", "cikis_btn")))
-c("ayarlar sayfa altinda degil, pencerede", "with st.expander(\"⚙️  Ayarlar\"" not in _m and "@st.dialog(\"Sistem Ayarları\"" in _m)
-c("ayarlar penceresi acikken yenileme durur", 'not st.session_state.get("_ayarlar_acik")' in _m)
+c("baslik: ACIBADEM SAGLIK GRUBU buyuk + Enerji Canli Izleme", 'class="bs-ana">ACIBADEM SAĞLIK GRUBU' in _m
+  and "Enerji Canlı İzleme" in _m and "bsAkis" in _m)
+c("sag ust: Ayarlar/Yonetim/Cikis hareketli", 'etiket_css(".st-key-cikis_kutusu a.ayar-ac"' in _m
+  and all(('etiket_css(".st-key-%s button p"' % k) in _m for k in ("yonetim_btn", "cikis_btn")))
+c("ayarlar sayfa altinda degil, panelde", "with st.expander(\"⚙️  Ayarlar\"" not in _m
+  and 'with st.container(key="ayarlar_panel")' in _m)
+c("ayarlar paneli tarayicida acilir (yeniden calistirma yok)", "ayarlar-acik" in _m and "__synapseAyarTik" in _m
+  and 'st.button("Ayarlar"' not in _m)
 c("sutun hizalama betigi", "__synapseHizala" in _m and "aOrta + 220" in _m)
 c("harita taban boyu kisaldi", "height=640, scrolling=False" in _m)
 c("grafik listesi emojisiz + simgeli", '"Tüketim":               "tuketim"' in _l and "_GRAFIK_IKON" in _l)
@@ -88,6 +91,10 @@ c("KPI ozet satirlarinda tarih yok", "({_etiket})" not in _l)
 c("trafolar yan yana", 'barmode="group", bargap=0.22' in _l)
 c("grafik animasyonu", "dzBuyu" in _l and "dzCiz" in _l)
 c("HVAC satirlari okunur + hareketli", "dz-satir" in _l and "rgb(253,211,77)" not in _l)
+
+c("her grafik kalemine ozel akan desen", all(("\"%s\":" % k) in _l for k in
+  ("tuketim", "su", "sogutma", "sebeke", "mcc", "kazan", "kojen", "trafo")) and "animateTransform" in _l)
+c("halka grafik yazilari okunur", 'outsidetextfont=dict(size=12, color="#133273")' in _l and "#c8e6ff" not in _l)
 
 print("\n%d/%d PASS" % (sum(SONUC), len(SONUC)))
 sys.exit(0 if all(SONUC) else 1)

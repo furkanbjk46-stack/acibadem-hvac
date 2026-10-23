@@ -37,8 +37,7 @@ from streamlit_autorefresh import st_autorefresh
 #     durur (kapatınca tekrar başlar).
 if ("bakim" not in st.query_params and st.session_state.get("giris_ok")
         and not st.session_state.get("detay_ozet")
-        and not st.session_state.get("_oto_popup")
-        and not st.session_state.get("_ayarlar_acik")):   # Ayarlar penceresi açıkken de durur
+        and not st.session_state.get("_oto_popup")):
     st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
 # ============ CSS ============
@@ -915,16 +914,29 @@ except ImportError:
 dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
 # ============ HEADER ============
+# "ACIBADEM SAĞLIK GRUBU" büyük; üzerinden lacivert→mavi parıltı akar.
+# Altında küçük "Enerji Canlı İzleme" + atan canlı noktası.
 st.markdown("""
-<div style="text-align:center; padding:12px 0 8px;">
-  <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif,sans-serif; font-size:11px; color:#46536b;
-              letter-spacing:3px; text-transform:uppercase;">
-    ACIBADEM SAĞLIK GRUBU
-  </div>
-  <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif; font-size:34px; font-weight:600; color:#0f1f3d;
-              letter-spacing:1px; line-height:1.3;">
-    Canlı Enerji Ağı
-  </div>
+<style>
+@keyframes bsAkis{0%{background-position:0% 50%;}100%{background-position:200% 50%;}}
+@keyframes bsYukselis{from{opacity:0;transform:translateY(6px);letter-spacing:6px;}to{opacity:1;transform:none;letter-spacing:4px;}}
+@keyframes bsCizgi{0%,100%{transform:scaleX(.35);opacity:.5;}50%{transform:scaleX(1);opacity:1;}}
+.bs-kutu{text-align:center;padding:12px 0 8px;}
+.bs-ana{display:inline-block;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:34px;
+  font-weight:800;letter-spacing:4px;line-height:1.25;
+  background:linear-gradient(90deg,#0f1f3d 0%,#133273 25%,#2a78d6 45%,#7fb2ee 50%,#2a78d6 55%,#133273 75%,#0f1f3d 100%);
+  background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  color:#0f1f3d;animation:bsYukselis .8s ease-out both, bsAkis 6s linear infinite;}
+.bs-cizgi{width:160px;height:2px;margin:6px auto 7px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,#2a78d6,transparent);animation:bsCizgi 3s ease-in-out infinite;}
+.bs-alt{display:inline-flex;align-items:center;gap:7px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;
+  font-size:12px;font-weight:600;color:#2a78d6;letter-spacing:2.5px;text-transform:uppercase;}
+@media (prefers-reduced-motion: reduce){.bs-ana,.bs-cizgi{animation:none;}}
+</style>
+<div class="bs-kutu">
+  <div class="bs-ana">ACIBADEM SAĞLIK GRUBU</div>
+  <div class="bs-cizgi"></div>
+  <div class="bs-alt">""" + _ik.nokta("#0ca30c", 7) + """Enerji Canlı İzleme</div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -991,20 +1003,29 @@ with st.container(key="cikis_kutusu"):
     # Yan yana dizilim CSS'te (flex-direction:row) yapilir.
     st.markdown(
         "<style>"
-        + _ik.etiket_css(".st-key-ayarlar_btn button p", "ayar", 17)
+        + _ik.etiket_css(".st-key-cikis_kutusu a.ayar-ac", "ayar", 17)
         + _ik.etiket_css(".st-key-yonetim_btn button p", "yonetim", 17)
         + _ik.etiket_css(".st-key-cikis_btn button p", "cikis", 17)
         + ".st-key-cikis_kutusu .stButton button p{font-size:0 !important;line-height:0 !important;margin:0 !important;}"
         + ".st-key-cikis_kutusu .stButton button p::before{margin-right:0 !important;vertical-align:0 !important;}"
         + ".st-key-cikis_kutusu .stButton button:hover p::before{background:#ffffff !important;}"
+        + ".st-key-cikis_kutusu [data-testid=stElementContainer]:has(a.ayar-ac){pointer-events:auto !important;}"
+        + ".st-key-cikis_kutusu a.ayar-ac{display:flex !important;align-items:center;justify-content:center;"
+          "width:34px;height:34px;border-radius:9px;border:1px solid rgba(19,50,115,0.28);"
+          "background:rgba(243,246,251,0.55);box-shadow:0 10px 22px -12px rgba(20,22,26,.22);"
+          "transition:background .18s ease;cursor:pointer;text-decoration:none !important;}"
+        + ".st-key-cikis_kutusu a.ayar-ac::before{margin-right:0 !important;vertical-align:0 !important;}"
+        + ".st-key-cikis_kutusu a.ayar-ac:hover{background:#133273;border-color:#133273;}"
+        + ".st-key-cikis_kutusu a.ayar-ac:hover::before{background:#ffffff !important;}"
+        # Ayarlar paneli yalnızca ana sayfada var; diğer ekranlarda düğme gizlenir
+        + "body:not(:has(.st-key-ayarlar_panel)) .st-key-cikis_kutusu a.ayar-ac{display:none !important;}"
         + "</style>", unsafe_allow_html=True)
     if not _IZLEYICI:
-        if st.button("Ayarlar", key="ayarlar_btn", help="Sistem ayarları"):
-            st.session_state["_ayarlar_acik"] = True
-            # Pencere ana sayfada açılır: detay / yönetim ekranındaysa oraya dönülür
-            for _k in ("detay_lokasyon", "detay_ozet", "yonetim"):
-                st.session_state.pop(_k, None)
-            st.rerun()
+        # Ayarlar paneli TARAYICIDA açılıp kapanır: düğme Streamlit butonu
+        # değil, düz bir bağlantı. Böylece açarken / kapatırken program baştan
+        # çalışmaz (önceki pencere sürümünde her tıklama sayfayı yeniliyordu).
+        st.markdown('<a class="ayar-ac" href="#" title="Sistem ayarları" aria-label="Sistem ayarları"></a>',
+                    unsafe_allow_html=True)
     if st.button("Yönetim", key="yonetim_btn", help="Yönetim — sunucu ve veri durumu"):
         st.session_state["yonetim"] = True
         st.rerun()
@@ -3572,17 +3593,31 @@ _components.html("""
 if _IZLEYICI:
     st.stop()   # Ayarlar (bağlantı anahtarı, mesaj, uzaktan komut) izleyicide yok
 
-# Ayarlar artık sayfanın altında değil: sağ üstteki "Ayarlar" düğmesi bu
-# pencereyi açar. İçerik aynı; pencere fonksiyonu modül değişkenlerini
-# aynen kullanır (global bildirimi — eski açılır bölümle birebir davranış).
-def _ayarlar_kapandi():
-    st.session_state.pop("_ayarlar_acik", None)
+# Ayarlar sayfanın altında değil: sağ üstteki "Ayarlar" düğmesi bu paneli
+# TARAYICIDA açar/kapatır (Streamlit yeniden çalışmaz, sayfa yenilenmez).
+# İçerik her çizimde gizli olarak hazırdır; panel açıkken 10 sn'lik yenileme
+# paneli kapatmaz (açık/kapalı bilgisi sayfadadır, sunucuda değil).
+st.markdown("""
+<style>
+.st-key-ayarlar_panel{display:none !important;}
+@keyframes ayarGir{from{opacity:0;transform:translate(-50%,-12px);}to{opacity:1;transform:translate(-50%,0);}}
+body.ayarlar-acik .st-key-ayarlar_panel{display:flex !important;flex-direction:column;position:fixed !important;
+  top:64px;left:50%;transform:translateX(-50%);width:min(1100px,94vw);max-height:calc(100vh - 90px);
+  overflow-y:auto;z-index:1000001;background:#fff;border-radius:16px;padding:16px 22px 20px;
+  border:1px solid rgba(24,26,30,.10);box-shadow:0 30px 80px -20px rgba(15,31,61,.45);animation:ayarGir .22s ease;}
+body.ayarlar-acik::after{content:"";position:fixed;inset:0;background:rgba(15,31,61,.32);z-index:1000000;}
+.ayar-ust{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.ayar-ust b{font-size:15px;font-weight:800;color:#133273;letter-spacing:1.2px;display:inline-flex;align-items:center;gap:8px;}
+.ayar-kapat{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  color:#46536b !important;text-decoration:none !important;font-size:20px;line-height:1;border:1px solid rgba(24,26,30,.12);}
+.ayar-kapat:hover{background:#d03b3b;color:#fff !important;border-color:#d03b3b;}
+</style>
+""", unsafe_allow_html=True)
 
-
-@st.dialog("Sistem Ayarları", width="large", on_dismiss=_ayarlar_kapandi)
-def _ayarlar_penceresi():
-    global _c, _cc, _durum_renk, _hata, _hm, _icon, _json, _k, _ktz, _lid, _linf, _lok_secenekler, _me, _msg_hedef, _msg_metin, _msg_oncelik, _uc_col1, _uc_col2, _uc_deger, _uc_g_col1, _uc_g_col2, _uc_lok_id, _uc_lok_isim, _uc_lok_sec, _uc_nokta_adi, _uc_nokta_label, _uc_nokta_map, _uc_noktalar_raw, _uc_son_komutlar, _ucc, _ucc2, _ucc_client, _uce, _zaman, ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6, cfg_yeni, di, dr, durum_icon_map, durum_renk_map, ex, f, gunc, isim, lok, lok_id, lok_info, mevcut_key, mevcut_m2, mevcut_url, ping, r, tarih, yeni_key, yeni_m2, yeni_url
-    st.markdown('<div class="sec">⚙️ SİSTEM AYARLARI</div>', unsafe_allow_html=True)
+with st.container(key="ayarlar_panel"):
+    st.markdown('<div class="ayar-ust"><b>' + _ik.ikon("ayar", 20) + 'SİSTEM AYARLARI</b>'
+                '<a class="ayar-kapat" href="#" title="Kapat" aria-label="Kapat">×</a></div>',
+                unsafe_allow_html=True)
 
     ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder", "🎛️ Uzaktan Kontrol"])
 
@@ -3824,5 +3859,24 @@ def _ayarlar_penceresi():
                 st.caption("Henüz komut gönderilmedi.")
 
 
-if st.session_state.get("_ayarlar_acik") and not _IZLEYICI:
-    _ayarlar_penceresi()
+# Panel aç / kapat: tamamen tarayıcıda (düğme, × , arka plan, Esc)
+_components.html("""
+<script>
+(function () {
+  var d; try { d = window.parent.document; } catch (e) { return; }
+  var w = d.defaultView;
+  function ac(v) { d.body.classList.toggle('ayarlar-acik', v); }
+  if (w.__synapseAyarTik) d.removeEventListener('click', w.__synapseAyarTik, true);
+  if (w.__synapseAyarTus) d.removeEventListener('keydown', w.__synapseAyarTus, true);
+  w.__synapseAyarTik = function (ev) {
+    var t = ev.target;
+    if (t.closest && t.closest('a.ayar-ac')) { ev.preventDefault(); ac(!d.body.classList.contains('ayarlar-acik')); return; }
+    if (t.closest && t.closest('a.ayar-kapat')) { ev.preventDefault(); ac(false); return; }
+    if (d.body.classList.contains('ayarlar-acik') && (t === d.body || t === d.documentElement)) ac(false);
+  };
+  w.__synapseAyarTus = function (ev) { if (ev.key === 'Escape') ac(false); };
+  d.addEventListener('click', w.__synapseAyarTik, true);
+  d.addEventListener('keydown', w.__synapseAyarTus, true);
+})();
+</script>
+""", height=0)
