@@ -20,7 +20,8 @@ def c(ad, kosul, ayrinti=""):
 
 METRIKLER = ["enerji", "dogalgaz", "sogutma", "su", "kojen", "sebeke", "mcc", "kazan",
              "trdp", "verim", "takvim", "kollektor", "fcu", "ahu", "ariza", "bakim",
-             "hvac", "alarm"]
+             "hvac", "alarm", "oto", "zeka", "oneri", "saglik", "gunduz", "gece", "saat",
+             "kayit", "termometre", "tamam", "hata", "geri", "grafik"]
 
 for m in METRIKLER:
     h = ikonlar.ikon(m)
@@ -49,13 +50,30 @@ c("global ozet simgesi ikonlar'dan", "_ik.ikon(_ozet_key" in _m)
 c("global ozet cercevesi kalemin rengi", "_ik.renk(_ozet_key)" in _m)
 c("canli uyarilar alarm simgesi", '_ik.ikon("alarm"' in _m)
 c("lokasyon karti cercevesi kendi renginde", "--lokrenk:{renk}" in _m and "var(--lokrenk" in _m)
-c("dashboard ozet kartlari ikonlar'dan", "_ik.ikon(ikon, 26)" in _l)
+c("dashboard ozet kartlari ikonlar'dan", "_ik.ikon(ikon, 28)" in _l)
 c("kojen&kaynak kartlarinda emoji kalmadi",
   not re.search(r'_kaynak_item\("[^a-z]', _l))
 for k in ("ariza", "bakim", "hvac"):
     c("HVAC karti: %s simgesi" % k, '_ik.ikon("%s", 34' % k in _l)
 for k in ("chiller", "kollektor", "fcu", "ahu"):
     c("yururlukteki setler: %s simgesi" % k, '"%s", "' % k in _l)
+
+# Düğme / sekme etiketleri (SVG konamayan yerler) için maske simgesi
+_e = ikonlar.etiket_css(".x button p", "saat", 14)
+c("etiket simgesi maske + animasyon", "mask:url(" in _e and "animation:" in _e and ".x button p::before" in _e)
+c("modul surumu var (onbellek korumasi)", getattr(ikonlar, "SURUM", 0) >= 2)
+c("atan nokta yardimcisi", "ai-nokta" in ikonlar.nokta())
+c("ana ekran surum korumasi", '_ik = _il_ik.reload(_ik)' in _m)
+c("dashboard surum korumasi", '_ik = _il_ik.reload(_ik)' in _l)
+c("OTO SET simgeleri", '_ik.ikon("oto", 22)' in _m and 'etiket_css(".st-key-oto_saat_kart' in _m)
+c("dis hava simgeleri", "_ik.ikon('termometre', 18)" in _m)
+c("sabah analizi simgesi", '_ik.ikon("zeka", 22)' in _m)
+c("OTO SET anahtari tasmaz (sabit sutun)", "flex:0 0 56px" in _m)
+c("lokasyon kartlari daralinca tek sira", "repeat(auto-fill, minmax(178px, 1fr))" in _m)
+c("sistem sagligi simgeleri", all(('_ik.ikon("%s", 16)' % k) in _l for k in ("oto", "zeka", "oneri")))
+c("detay ust: geri / baslik / rozet", 'key="detay_geri"' in _l and "dz-baslik" in _l and '_ik.ikon("takvim", 13' in _l)
+c("detay sekmeleri simgeli", "st-key-detay_sekmeler" in _l)
+c("dashboard stili = canli izleme", ".dz-dg{font-size:26px;font-weight:700;color:#133273" in _l)
 
 print("\n%d/%d PASS" % (sum(SONUC), len(SONUC)))
 sys.exit(0 if all(SONUC) else 1)

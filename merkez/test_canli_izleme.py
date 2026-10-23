@@ -333,7 +333,7 @@ c("pencere dolunca süre yazıyor", "son 5 dakika" in CI.durum_metni(s_dolu, 3, 
   CI.durum_metni(s_dolu, 3, 300))
 
 # ── 9) Sayfaya bağlanma ──────────────────────────────────────────────────
-c("sekme 2. sırada", '"📊 Dashboard", "⚡ Canlı İzleme"' in SAYFA)
+c("sekme 2. sırada", '"Dashboard", "Canlı İzleme"' in SAYFA)
 c("sekme gövdesi var", "with tab_canli:" in SAYFA)
 c("canlı veri çekiliyor", "fetch_canli_guc(url, key, lok_id)" in SAYFA)
 c("seri oturumda tutuluyor", "st.session_state[_seri_anahtar] = seri" in SAYFA)

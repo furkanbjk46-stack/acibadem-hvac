@@ -180,7 +180,9 @@ button span[data-testid="stIconMaterial"] {
     scrollbar-width: thin;
     scrollbar-color:#133273 rgba(243,246,251,0.6);
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    /* Sığdığı kadar sütun: yakınlaştırınca / dar ekranda TEK sıraya iner,
+       kartlar kesilip kaybolmaz */
+    grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
     gap: 10px;
 }
 .lok-scroll .nk { margin-bottom: 0 !important; }
@@ -293,6 +295,9 @@ button span[data-testid="stIconMaterial"] {
 
 # Animasyonlu simgeler: tek kaynak (ikonlar.py) — ana ekran ve Dashboard aynı
 import ikonlar as _ik
+if getattr(_ik, "SURUM", 0) < 2:          # yayın sonrası eski modül önbellekte kalmasın
+    import importlib as _il_ik
+    _ik = _il_ik.reload(_ik)
 st.markdown(_ik.CSS, unsafe_allow_html=True)
 
 # ============ SABİT VERİ ============
@@ -1804,7 +1809,11 @@ window.addEventListener('message', function(ev) {{
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
     dis_hava_val = fetch_dis_hava()
-    _dis_hava_kaynak = "🌐 Canlı" if dis_hava_val is not None else "📊 DB"
+    _CANLI_ROZET = ("<span style='display:inline-flex;align-items:center;gap:4px;'>"
+                    + _ik.nokta("#0ca30c", 6) + "Canlı</span>")
+    _DB_ROZET = ("<span style='display:inline-flex;align-items:center;gap:3px;'>"
+                 + _ik.ikon("grafik", 11) + "DB</span>")
+    _dis_hava_kaynak = _CANLI_ROZET if dis_hava_val is not None else _DB_ROZET
     if dis_hava_val is not None:
         _dis_hava_log_yaz(url, key, dis_hava_val, "lokasyon_pc")
     min_val = max_val = min_isim = max_isim = min_renk = max_renk = None
@@ -1827,7 +1836,7 @@ window.addEventListener('message', function(ev) {{
                 lok_sicaklik[lok_id] = {"set": _set, "dis": _dis}
             if dis_hava_val is None and _dis is not None:
                 dis_hava_val = _dis
-                _dis_hava_kaynak = "📊 DB"
+                _dis_hava_kaynak = _DB_ROZET
         if chiller_vals:
             min_lok = min(chiller_vals, key=chiller_vals.get)
             max_lok = max(chiller_vals, key=chiller_vals.get)
@@ -2168,7 +2177,7 @@ with sag:
     # sistemin şu an hangi durumda olduğunu görebilmeli.
     _simdi_saat  = now_display.hour   # İstanbul saati (yukarıda hesaplanıyor)
     _simdi_donem = _donem_hesapla(_simdi_saat, _g_saat, _ge_saat)
-    _sd_ikon     = "🌞" if _simdi_donem == "gunduz" else "🌙"
+    _sd_ikon     = _ik.ikon("gunduz" if _simdi_donem == "gunduz" else "gece", 13)
     _sd_ad       = "GÜNDÜZ" if _simdi_donem == "gunduz" else "GECE"
     _sd_renk     = "#c98500" if _simdi_donem == "gunduz" else "#818cf8"
     _sonraki     = ("%02d:00" % _ge_saat) if _simdi_donem == "gunduz" else ("%02d:00" % _g_saat)
@@ -2303,7 +2312,8 @@ with sag:
     _son_gecis_html = ""
     if _ml_gecisler:
         _ml_son = _ml_gecisler[0]
-        _son_tip = "🧊 Chiller" if _ml_son["tip"]=="chiller" else "🌀 Kol/FCU/AHU"
+        _son_tip = ((_ik.ikon("sogutma", 12) + " Chiller") if _ml_son["tip"] == "chiller"
+                    else (_ik.ikon("kollektor", 12) + " Kol/FCU/AHU"))
         try: _son_ok = _eski_yeni_ikon(_ml_son["eski_mod"], _ml_son["yeni_mod"])
         except: _son_ok = "↔️"
         _son_gecis_html = (
@@ -2419,7 +2429,8 @@ with sag:
             "<div style='display:flex;align-items:center;"
             "justify-content:space-between;gap:8px;margin-bottom:10px;'>"
             "<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;"
-            "font-size:15px;font-weight:800;color:#133273;letter-spacing:1.5px;'>"
+            "font-size:15px;font-weight:800;color:#133273;letter-spacing:1.5px;"
+            "display:inline-flex;align-items:center;gap:8px;'>"
             + metin + "</span>"
             + (f"<span style='font-size:9px;color:#46536b;white-space:nowrap;'>{sag}</span>"
                if sag else "")
@@ -2549,6 +2560,17 @@ with sag:
        kalıyor ve kutu rozetten aşağıda duruyordu. Blok seviyesine alınır. */
     .st-key-oto_set_karti .stButton { display:flex; line-height:0; }
     .st-key-oto_set_karti .stButton > button { display:flex !important; }
+    /* Anahtar sütunu anahtarın kendi genişliğinde SABİT: yakınlaştırınca
+       oransal sütun 54 px'ten dar kalıyor ve anahtar kart dışına taşıyordu */
+    .st-key-oto_set_karti [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child {
+        flex:0 0 56px !important; width:56px !important; min-width:56px !important; max-width:56px !important;
+    }
+    /* Kutular en az 84 px: kart daralınca (yakınlaştırma) sıkışıp "G…" diye
+       kesilmek yerine alt satıra geçer */
+    .st-key-oto_set_karti [data-testid="stHorizontalBlock"] { flex-wrap:wrap !important; row-gap:8px !important; }
+    .st-key-oto_set_karti [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:not(:first-child) {
+        min-width:84px !important; flex:1 1 84px !important;
+    }
     /* Anahtar 30 px: 52 px'lik kutuların ortasına hizalansın */
     .st-key-oto_switch_on button, .st-key-oto_switch_off button {
         margin-top:11px !important;
@@ -2597,6 +2619,8 @@ with sag:
     .st-key-oto_saat_kart button p, .st-key-oto_liste_kart button p {
         font-size:11px; font-weight:700; color:#133273; margin:0;
     }
+    """ + _ik.etiket_css(".st-key-oto_saat_kart button p:first-child", "saat", 14)
+        + _ik.etiket_css(".st-key-oto_liste_kart button p:first-child", "kayit", 14) + """
     .st-key-oto_saat_kart button:hover, .st-key-oto_liste_kart button:hover {
         border-color:rgba(19,50,115,0.45) !important;
         background:rgba(19,50,115,0.07) !important;
@@ -2613,7 +2637,7 @@ with sag:
             # ── Satır 1: KART BAŞLIĞI (ortak kalıp) ──
             # Durum metni ("AKTİF · Senaryo çalışıyor") kaldırıldı: aynı bilgiyi
             # başlığın altındaki anahtar rengiyle veriyoruz.
-            + _kart_basligi("🤖 OTO SET") +
+            + _kart_basligi(_ik.ikon("oto", 22) + "OTO SET") +
             f"</div>",
             unsafe_allow_html=True
         )
@@ -2658,7 +2682,8 @@ with sag:
                 f"border-radius:8px;padding:4px 10px;height:52px;box-sizing:border-box;"
                 f"display:flex;flex-direction:column;justify-content:center;"
                 f"overflow:hidden;'>"
-                f"<div style='font-size:11px;font-weight:700;color:{_sd_renk};'>"
+                f"<div style='font-size:11px;font-weight:700;color:{_sd_renk};"
+                f"display:flex;align-items:center;gap:3px;white-space:nowrap;'>"
                 f"{_sd_ikon} {_sd_ad}</div>"
                 f"<div style='font-size:9px;color:#46536b;margin-top:1px;'>"
                 f"sıradaki geçiş {_sonraki}</div>"
@@ -2669,7 +2694,7 @@ with sag:
             _saat_alt = "%02d:00 · %02d:00" % (_g_saat, _ge_saat)
             if _ozel_saatli:
                 _saat_alt += " · %d özel" % len(_ozel_saatli)
-            if st.button("🕐 Geçiş saatleri  \n%s" % _saat_alt,
+            if st.button("Saatler  \n%s" % _saat_alt,
                          key="oto_saat_kart", use_container_width=True):
                 st.session_state["_oto_popup"] = "saat"
                 st.rerun()
@@ -2681,7 +2706,7 @@ with sag:
                     f"margin-top:-4px;'>{_os_zaman}</div>", unsafe_allow_html=True)
 
         with _k_liste:
-            if st.button("📋 Geçiş kayıtları  \n%s" % ("%d kayıt" % len(_ml_data)
+            if st.button("Kayıtlar  \n%s" % ("%d kayıt" % len(_ml_data)
                                                       if _ml_data else "kayıt yok"),
                          key="oto_liste_kart", use_container_width=True,
                          disabled=not _ml_data):
@@ -2802,8 +2827,9 @@ with sag:
             f"<div style='display:flex;align-items:baseline;gap:6px;margin-bottom:8px;'>"
             f"<span style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:18px;font-weight:900;"
             f"color:#c98500;text-shadow:0 0 12px rgba(250,178,25,0.5);'>"
-            f"🌡️ {dis_hava_val:.1f}°C</span>"
-            f"<span style='font-size:9px;color:#46536b;'>Dış Hava İstanbul"
+            f"<span style='display:inline-flex;align-items:center;gap:4px;'>"
+            f"{_ik.ikon('termometre', 18)}{dis_hava_val:.1f}°C</span></span>"
+            f"<span style='font-size:9px;color:#46536b;display:inline-flex;align-items:center;gap:4px;'>Dış Hava İstanbul"
             f" &nbsp;·&nbsp; {_dis_hava_kaynak}</span>"
             f"</div>"
         )
@@ -2812,14 +2838,14 @@ with sag:
         _rozet_ic += (
             f"<div style='background:rgba(19,50,115,0.08);border:1px solid rgba(19,50,115,0.2);"
             f"border-radius:6px;padding:3px 10px;font-size:9px;color:#24324d;'>"
-            f"❄️ Min &nbsp;<b style='color:#2a78d6;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;'>{min_val:.1f}°C</b>"
+            f"<span style='display:inline-flex;align-items:center;gap:4px;'>{_ik.ikon('sogutma', 12)}Min</span> &nbsp;<b style='color:#2a78d6;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;'>{min_val:.1f}°C</b>"
             f"&nbsp;<span style='color:{min_renk};'>{min_isim}</span></div>"
         )
     if max_val is not None and max_isim != min_isim:
         _rozet_ic += (
             f"<div style='background:rgba(208,59,59,0.08);border:1px solid rgba(208,59,59,0.2);"
             f"border-radius:6px;padding:3px 10px;font-size:9px;color:#24324d;'>"
-            f"🔥 Max &nbsp;<b style='color:#d03b3b;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;'>{max_val:.1f}°C</b>"
+            f"<span style='display:inline-flex;align-items:center;gap:4px;'>{_ik.ikon('termometre', 12, '#d03b3b')}Max</span> &nbsp;<b style='color:#d03b3b;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;'>{max_val:.1f}°C</b>"
             f"&nbsp;<span style='color:{max_renk};'>{max_isim}</span></div>"
         )
     # ── Lokasyon lokasyon liste ──
@@ -2872,7 +2898,7 @@ with sag:
         with st.container(key="dis_hava_karti"):
             st.markdown(
                 "<div>"
-                + _kart_basligi("🌡️ DIŞ HAVA & CHİLLER SET")
+                + _kart_basligi(_ik.ikon("termometre", 22) + "DIŞ HAVA & CHİLLER SET")
                 + "<div style='margin-top:10px;'></div>"
                 + _ch_ic
                 + f"<div style='display:flex;gap:5px;flex-wrap:wrap;'>{_rozet_ic}</div>"
@@ -3417,8 +3443,10 @@ with sag:
                 with st.container(key="sabah_analiz_karti"):
                     st.markdown(
                         "<div>"
-                        + _kart_basligi("🤖 OTOMATİK SABAH ANALİZİ",
-                                        ("🕐 " + _ai_zaman_str) if _ai_zaman_str else "")
+                        + _kart_basligi(_ik.ikon("zeka", 22) + "OTOMATİK SABAH ANALİZİ",
+                                        ("<span style='display:inline-flex;align-items:center;gap:4px;'>"
+                                         + _ik.ikon("saat", 11) + _ai_zaman_str + "</span>")
+                                        if _ai_zaman_str else "")
                         + "<div style='margin-top:10px;font-size:11px;color:#24324d;"
                           "line-height:1.7;max-height:220px;overflow-y:auto;"
                           "scrollbar-width:thin;scrollbar-color:#133273 transparent;'>"

@@ -24,7 +24,40 @@ st.set_page_config(
 # korumaz. Bu yüzden her sayfa kendi kapısını kurar.
 import giris
 import ikonlar as _ik
+if getattr(_ik, "SURUM", 0) < 2:          # yayın sonrası eski modül önbellekte kalmasın
+    import importlib as _il_ik
+    _ik = _il_ik.reload(_ik)
 st.markdown(_ik.CSS, unsafe_allow_html=True)
+
+# ── Dashboard yazı stilleri = Canlı İzleme sekmesi (canli_izleme.STIL) ──
+# Kart: beyaz, 16 px köşe · etiket: 10 px / 600 / gri · değer: 26 px / 700 /
+# lacivert · alt satır: 10 px gri · bölüm başlığı: 12 px / 700 / lacivert.
+# Renk bilgisi değerde değil SİMGEDE taşınır; yalnızca durum bildiren
+# değerler (arıza sayısı, geçti/kaldı) durum rengini korur.
+st.markdown("""
+<style>
+.dz-kart{background:#fff;border:1px solid rgba(24,26,30,.10);border-radius:16px;padding:11px 15px;
+  box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22);}
+.dz-et{font-size:10px;letter-spacing:1.2px;color:#46536b;font-weight:600;text-transform:uppercase;}
+.dz-dg{font-size:26px;font-weight:700;color:#133273;line-height:1.15;margin-top:1px;}
+.dz-br{font-size:9.5px;font-weight:500;color:#46536b;margin-left:3px;}
+.dz-alt{font-size:10px;color:#46536b;margin-top:1px;}
+.sec{font-size:12px !important;font-weight:700 !important;letter-spacing:1.4px !important;color:#133273 !important;}
+/* Başlıktaki lokasyon adı: rengi üzerinde akan parıltı */
+@keyframes dzParilti{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.dz-baslik{background:linear-gradient(90deg,var(--r) 0%,var(--r) 38%,#ffffff 50%,var(--r) 62%,var(--r) 100%);
+  background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent !important;
+  -webkit-text-fill-color:transparent;animation:dzParilti 4.5s linear infinite;
+  filter:drop-shadow(0 0 14px color-mix(in srgb, var(--r) 45%, transparent));}
+@keyframes dzKay{0%{background-position:0 0;}100%{background-position:-200% 0;}}
+.dz-ust{background:linear-gradient(90deg,#2a78d6,#9cc3f2,#2a78d6);background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  animation:dzKay 6s linear infinite;}
+.dz-rozet{display:inline-flex;align-items:center;gap:5px;transition:transform .2s ease;}
+.dz-rozet:hover{transform:translateY(-1px);}
+@media (prefers-reduced-motion: reduce){.dz-baslik,.dz-ust{animation:none;}}
+</style>
+""", unsafe_allow_html=True)
 giris.giris_kapisi()
 
 # ── CSS ──────────────────────────────────────────────
@@ -424,37 +457,40 @@ else:
 _bagli = not df.empty
 _bagli_html = (
     f"<span style='background:rgba(12,163,12,0.15);border:1px solid rgba(12,163,12,0.35);"
-    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#0ca30c;font-weight:600;'>🟢 Bağlı</span>"
+    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#0ca30c;font-weight:600;' class='dz-rozet'>"
+    + _ik.nokta("#0ca30c", 8) + "Bağlı</span>"
     if _bagli else
     f"<span style='background:rgba(208,59,59,0.15);border:1px solid rgba(208,59,59,0.35);"
-    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#d03b3b;font-weight:600;'>🔴 Veri Yok</span>"
+    f"border-radius:6px;padding:2px 10px;font-size:10px;color:#d03b3b;font-weight:600;' class='dz-rozet'>"
+    + _ik.nokta("#d03b3b", 8) + "Veri Yok</span>"
 )
 _son_tarih_goster = son_tarih_str if _bagli else "—"
 _m2_goster = f"{m2:,.0f}".replace(",", ".")
 
 col_geri, col_baslik = st.columns([1, 9])
 with col_geri:
-    if st.button("⬅ Geri"):
+    st.markdown("<style>" + _ik.etiket_css(".st-key-detay_geri button p", "geri", 15)
+                + "</style>", unsafe_allow_html=True)
+    if st.button("Geri", key="detay_geri"):
         st.session_state.pop("detay_lokasyon", None)
         st.switch_page("app_merkez.py")
 with col_baslik:
     st.markdown(
         f"""<div style='display:flex;align-items:center;justify-content:space-between;padding:8px 0;flex-wrap:wrap;gap:8px;'>
           <div>
-            <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#2a78d6;
+            <div class='dz-ust' style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#2a78d6;
                         letter-spacing:5px;text-transform:uppercase;'>ACIBADEM SAĞLIK GRUBU — LOKASYON DETAY</div>
-            <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:22px;font-weight:900;
-                        color:{renk};text-shadow:0 0 25px rgba({rr},{rg},{rb},0.8);
-                        letter-spacing:3px;'>{lok_info["isim"].upper()}</div>
+            <div class='dz-baslik' style='--r:{renk};font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:22px;font-weight:900;
+                        color:{renk};letter-spacing:3px;'>{lok_info["isim"].upper()}</div>
           </div>
           <div style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>
-            <span style='background:rgba({rr},{rg},{rb},0.1);border:1px solid rgba({rr},{rg},{rb},0.3);
+            <span class='dz-rozet' style='background:rgba({rr},{rg},{rb},0.1);border:1px solid rgba({rr},{rg},{rb},0.3);
                          border-radius:6px;padding:2px 10px;font-size:10px;color:{renk};font-weight:600;'>
-              📐 {_m2_goster} m²
+              {_ik.ikon("verim", 13, renk)} {_m2_goster} m²
             </span>
-            <span style='background:rgba(42,120,214,0.08);border:1px solid rgba(42,120,214,0.2);
+            <span class='dz-rozet' style='background:rgba(42,120,214,0.08);border:1px solid rgba(42,120,214,0.2);
                          border-radius:6px;padding:2px 10px;font-size:10px;color:#2a78d6;font-weight:600;'>
-              📅 Son: {_son_tarih_goster}
+              {_ik.ikon("takvim", 13, "#2a78d6")} Son: {_son_tarih_goster}
             </span>
             {_bagli_html}
           </div>
@@ -470,7 +506,12 @@ if df.empty:
 
 # ── SEKMELER ─────────────────────────────────────────
 # Trend & Tahmin, Veri Tablosu ve Rapor Oluştur sekmeleri kaldırıldı (22.10.2026).
-tab1, tab_canli = st.tabs(["📊 Dashboard", "⚡ Canlı İzleme"])
+st.markdown("<style>"
+            + _ik.etiket_css('.st-key-detay_sekmeler [role="tab"]:nth-child(1) p', "grafik", 16)
+            + _ik.etiket_css('.st-key-detay_sekmeler [role="tab"]:nth-child(2) p', "enerji", 16)
+            + "</style>", unsafe_allow_html=True)
+with st.container(key="detay_sekmeler"):
+    tab1, tab_canli = st.tabs(["Dashboard", "Canlı İzleme"])
 
 # Dış bağlantıyla gelindiyse (?detay=..&sekme=canli) Canlı İzleme sekmesini aç.
 # Streamlit sekmeyi koddan seçtirmiyor; sekme düğmesine bir kez tıklatılır.
@@ -548,20 +589,13 @@ with tab1:
 
         def metric_card_v(ikon, baslik, deger, birim, renk_hex, alt_bilgi=""):
             r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
-            alt_html = (
-                f"<div style='font-size:8px;color:#46536b;margin-top:5px;"
-                f"letter-spacing:0.5px;'>{alt_bilgi}</div>"
-            ) if alt_bilgi else ""
+            alt_html = f"<div class='dz-alt'>{alt_bilgi}</div>" if alt_bilgi else ""
             st.markdown(
-                f"""<div class="metric-card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;text-align:left;">
-                {_ik.ikon(ikon, 26)}
+                f"""<div class="dz-kart" style="margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+                {_ik.ikon(ikon, 28)}
                 <div style='min-width:0;'>
-                  <div style='font-size:8px;color:#46536b;letter-spacing:1px;
-                              text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>
-                  <div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:16px;font-weight:900;
-                              color:{renk_hex};text-shadow:0 0 10px rgba({r2},{g2},{b2},0.6);line-height:1.2;'>
-                      {deger}<span style='font-size:8px;color:#46536b;margin-left:3px;'>{birim}</span>
-                  </div>{alt_html}
+                  <div class='dz-et'>{baslik}</div>
+                  <div class='dz-dg'>{deger}<span class='dz-br'>{birim}</span></div>{alt_html}
                 </div></div>""",
                 unsafe_allow_html=True
             )
@@ -1158,16 +1192,12 @@ with tab1:
     def _kaynak_item(ikon, baslik, deger, birim, renk_hex, ikon_renk=None):
         r2=int(renk_hex[1:3],16); g2=int(renk_hex[3:5],16); b2=int(renk_hex[5:7],16)
         return (
-            f"<div style='background:#fafaf8;border:1px solid rgba(24,26,30,0.10);"
-            f"border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:10px;'>"
-            f"{_ik.ikon(ikon, 24, ikon_renk)}"
-            f"<div>"
-            f"<div style='font-size:8px;color:#46536b;letter-spacing:1px;"
-            f"text-transform:uppercase;margin-bottom:2px;'>{baslik}</div>"
-            f"<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:14px;font-weight:900;"
-            f"color:{renk_hex};text-shadow:0 0 8px rgba({r2},{g2},{b2},0.5);line-height:1.2;'>"
-            f"{deger}<span style='font-size:8px;color:#46536b;margin-left:3px;'>{birim}</span>"
-            f"</div></div></div>"
+            f"<div class='dz-kart' style='display:flex;align-items:center;gap:12px;'>"
+            f"{_ik.ikon(ikon, 26, ikon_renk)}"
+            f"<div style='min-width:0;'>"
+            f"<div class='dz-et'>{baslik}</div>"
+            f"<div class='dz-dg'>{deger}<span class='dz-br'>{birim}</span></div>"
+            f"</div></div>"
         )
 
     st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
@@ -1243,10 +1273,11 @@ with tab1:
     hvac_uyari   = hvac_ozet.get("uyari",  [])
     hvac_normal  = hvac_ozet.get("normal", [])
 
-    KART  = ("background:#fafaf8;border:1px solid rgba(24,26,30,0.10);border-radius:14px;"
-             "padding:14px;box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22),inset 0 1px 0 rgba(255,255,255,.95);")
-    LBL   = ("font-size:8px;color:#46536b;letter-spacing:1.5px;"
-             "text-transform:uppercase;margin-bottom:8px;font-weight:700;")
+    # Canlı İzleme kartlarıyla aynı (.dz-kart / .dz-et)
+    KART  = ("background:#fff;border:1px solid rgba(24,26,30,0.10);border-radius:16px;"
+             "padding:11px 15px;box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22);")
+    LBL   = ("font-size:10px;color:#46536b;letter-spacing:1.2px;display:flex;align-items:center;gap:6px;"
+             "text-transform:uppercase;margin-bottom:6px;font-weight:600;")
 
     def cihaz_html(cihaz, bg, border, text_renk):
         if isinstance(cihaz, dict):
@@ -1320,7 +1351,7 @@ with tab1:
             "<div style='" + LBL + "'>ARIZALI CIHAZLAR</div>"
             "<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;'>"
             + _ik.ikon("ariza", 34, ar_renk, sakin=(toplam_ariza == 0)) +
-            "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:28px;font-weight:900;"
+            "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:26px;font-weight:700;line-height:1.15;"
             "color:" + ar_renk + ";'>" + str(toplam_ariza) + "</div></div>"
             "<div style='font-size:9px;color:#46536b;margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
@@ -1344,7 +1375,7 @@ with tab1:
             "<div style='" + LBL + "'>BAKIMDAKI CIHAZLAR</div>"
             "<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;'>"
             + _ik.ikon("bakim", 34, bk_renk, sakin=(toplam_bakim == 0)) +
-            "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:28px;font-weight:900;"
+            "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:26px;font-weight:700;line-height:1.15;"
             "color:" + bk_renk + ";'>" + str(toplam_bakim) + "</div></div>"
             "<div style='font-size:9px;color:#46536b;margin-bottom:4px;'>▼ detay için tıkla</div>"
             "</summary>"
@@ -1406,7 +1437,7 @@ with tab1:
             "<div style='" + LBL + "'>HVAC ANALIZ DURUMU</div>"
             "<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;'>"
             + _ik.ikon("hvac", 34, _hv_renk, sakin=(_hv_sorun == 0)) +
-            "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:28px;font-weight:900;"
+            "<div style='font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:26px;font-weight:700;line-height:1.15;"
             "color:" + _hv_renk + ";'>" + str(_hv_sorun) + "</div></div>"
             "<div style='font-size:10px;color:#46536b;margin-bottom:2px;'>"
             + (" · ".join(_hv_ozet) if _hv_ozet else "Tüm HVAC sistemleri normal") + "</div>"
@@ -1450,7 +1481,7 @@ with tab1:
         def _set_kart(ikon, etiket, deger, alt):
             return ("<div style='" + KART + "'><div style='" + LBL + "'>" + etiket + "</div>"
                     "<div style='display:flex;align-items:center;gap:10px;'>" + _ik.ikon(ikon, 28) +
-                    f"<div style='font-size:20px;font-weight:650;color:#133273;'>{deger}</div></div>"
+                    f"<div class='dz-dg'>{deger}</div></div>"
                     f"<div style='font-size:10px;color:#46536b;margin-top:2px;'>{alt}</div></div>")
 
         _k1, _k2, _k3, _k4 = st.columns(4)
@@ -1615,7 +1646,8 @@ with tab1:
 
     if _oto or _oz_test or _geri_bld:
         st.markdown("<div style='margin-top:18px'></div>", unsafe_allow_html=True)
-        st.markdown('<div class="sec">🩺 SİSTEM SAĞLIĞI</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
+                    + _ik.ikon("saglik", 15) + 'SİSTEM SAĞLIĞI</div>', unsafe_allow_html=True)
         sc1, sc2, sc3 = st.columns(3)
 
         # ── Oto-set: son turda ne yaptı? ──
@@ -1626,8 +1658,8 @@ with tab1:
                 _renk = "#0ca30c" if _iyi else "#d03b3b"
                 _zaman = str(_oto.get("zaman") or "")[11:16]
                 _govde = (
-                    f"<div style='font-size:13px;color:{_renk};font-weight:700;'>"
-                    f"{'✓' if _iyi else '✗'} {_oto.get('metin') or _sonuc or '—'}</div>"
+                    f"<div style='font-size:15px;color:{_renk};font-weight:700;display:flex;align-items:center;gap:7px;'>"
+                    f"{_ik.ikon('tamam' if _iyi else 'hata', 18, _renk)} {_oto.get('metin') or _sonuc or '—'}</div>"
                     + (f"<div style='font-size:10px;color:#46536b;"
                        f"margin-top:4px;'>son tur {_zaman}</div>" if _zaman else "")
                 )
@@ -1649,7 +1681,7 @@ with tab1:
             else:
                 _govde = ("<div style='font-size:12px;color:#46536b;'>"
                           "Bildirim gelmedi</div>")
-            st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>OTO-SET</div>"
+            st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>" + _ik.ikon("oto", 16) + "OTO-SET</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
 
         # ── Mekanik Zeka öz testi: lokasyonun KENDİ ayarlarıyla ──
@@ -1660,8 +1692,8 @@ with tab1:
                 _kalan = ", ".join(str(d).replace("test_", "").replace(".py", "")
                                    for d in (_oz_test.get("kalan_dosyalar") or [])[:2])
                 _govde = (
-                    f"<div style='font-size:13px;color:{_renk};font-weight:700;'>"
-                    f"{'✓' if _gecti else '✗'} {_oz_test.get('gecen')}/{_oz_test.get('toplam')} "
+                    f"<div style='font-size:15px;color:{_renk};font-weight:700;display:flex;align-items:center;gap:7px;'>"
+                    f"{_ik.ikon('tamam' if _gecti else 'hata', 18, _renk)} {_oz_test.get('gecen')}/{_oz_test.get('toplam')} "
                     f"{'geçti' if _gecti else 'KALDI'}</div>"
                     + (f"<div style='font-size:10px;color:#d03b3b;margin-top:4px;'>{_kalan}</div>"
                        if _kalan else "")
@@ -1671,7 +1703,7 @@ with tab1:
             else:
                 _govde = ("<div style='font-size:12px;color:#46536b;'>"
                           "Henüz çalışmadı</div>")
-            st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>MEKANİK ZEKA ÖZ TESTİ</div>"
+            st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>" + _ik.ikon("zeka", 16) + "MEKANİK ZEKA ÖZ TESTİ</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
 
         # ── Öneri geri bildirimi: öğrenme için yeterli veri var mı? ──
@@ -1679,10 +1711,10 @@ with tab1:
             if _geri_bld:
                 _hazir = _geri_bld.get("ogrenmeye_hazir_kural") or []
                 _govde = (
-                    f"<div style='font-size:13px;color:#24324d;font-weight:700;'>"
+                    f"<div style='font-size:15px;color:#133273;font-weight:700;display:flex;align-items:center;gap:6px;flex-wrap:wrap;'>"
                     f"{_geri_bld.get('geri_bildirim', 0)} geri bildirim "
-                    f"<span style='color:#0ca30c;'>✓{_geri_bld.get('uygulandi', 0)}</span> "
-                    f"<span style='color:#c98500;'>✗{_geri_bld.get('uygulanmadi', 0)}</span></div>"
+                    f"<span style='color:#0ca30c;display:inline-flex;align-items:center;gap:3px;'>{_ik.ikon('tamam', 15)}{_geri_bld.get('uygulandi', 0)}</span> "
+                    f"<span style='color:#c98500;display:inline-flex;align-items:center;gap:3px;'>{_ik.ikon('hata', 15, '#c98500')}{_geri_bld.get('uygulanmadi', 0)}</span></div>"
                     f"<div style='font-size:10px;color:#46536b;margin-top:4px;'>"
                     f"{_geri_bld.get('kayit', 0)} öneri kaydı</div>"
                 )
@@ -1699,7 +1731,7 @@ with tab1:
             else:
                 _govde = ("<div style='font-size:12px;color:#46536b;'>"
                           "Bildirim gelmedi</div>")
-            st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>ÖNERİ GERİ BİLDİRİMİ</div>"
+            st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>" + _ik.ikon("oneri", 16) + "ÖNERİ GERİ BİLDİRİMİ</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
 
 
