@@ -24,7 +24,14 @@
         "chart-bar": "grafik", "chart-line": "grafik",
         "clock": "saat", "clipboard-list": "kayit", "tasks": "kayit",
         "tachometer-alt": "verim", "shield-alt": "saglik",
-        "lira-sign": "enerji", "user-check": "oto"
+        "lira-sign": "enerji", "user-check": "oto", "fire": "kazan", "home": "harita"
+    };
+
+    var HAREKET = {
+        "cloud-download-alt": "syn-an-asagi", "file-download": "syn-an-asagi", "download": "syn-an-asagi",
+        "cloud-upload-alt": "syn-an-yukari", "upload": "syn-an-yukari", "file-upload": "syn-an-yukari",
+        "vial": "syn-an-sallan", "flask": "syn-an-sallan", "edit": "syn-an-sallan",
+        "sync-alt": "syn-an-don", "redo": "syn-an-don", "undo": "syn-an-don"
     };
 
     function ad(i) {
@@ -45,7 +52,11 @@
             // Marka başlığı: Synapse'te Mekanik Zeka'nın simgesi 'zeka' (mor, kıvılcımlı)
             var syn = i.closest && i.closest(".header h1") ? "zeka" : ESLE[ad(i)];
             var svg = syn && D.svg[syn];
-            if (!svg) { continue; }
+            if (!svg) {
+                // Synapse karşılığı olmayan simge: yine de hareketli olsun
+                i.classList.add(HAREKET[ad(i)] || "syn-an-nefes");
+                continue;
+            }
             var renk = getComputedStyle(i).color;
             var s = document.createElement("span");
             s.className = "ai ai-" + syn + " ai-mz";
@@ -74,6 +85,52 @@
             })(liste[k]);
         }
     }
+
+
+    // ── Kapasite göstergesi (ortalama vana %) ─────────────────────────────
+    window.synKapasite = function (tur, ort, renk) {
+        var bar = document.getElementById(tur + "CapacityBar");
+        var deger = document.getElementById(tur + "CapacityValue");
+        if (!bar) { return; }
+        if (ort === null || isNaN(ort)) {
+            bar.classList.add("syn-bos");
+            bar.style.width = "100%";
+            if (deger) { deger.style.setProperty("--c", "#c9d2e0"); }
+            return;
+        }
+        bar.classList.remove("syn-bos");
+        bar.style.setProperty("--c", renk);
+        bar.style.width = Math.max(2, Math.min(100, ort)) + "%";
+        if (deger) { deger.style.setProperty("--c", renk); }
+    };
+
+    // ── Talep / üretim kW: çubuk + sayı sayma animasyonu ──────────────────
+    function say(el, hedef) {
+        if (!el) { return; }
+        var bas = parseFloat(el.dataset.synV);
+        if (isNaN(bas)) { bas = 0; }
+        el.dataset.synV = hedef;
+        var t0 = null, sure = 700;
+        function adim(t) {
+            if (t0 === null) { t0 = t; }
+            var k = Math.min(1, (t - t0) / sure);
+            k = 1 - Math.pow(1 - k, 3);
+            el.textContent = Math.round(bas + (hedef - bas) * k) + " kW";
+            if (k < 1) { requestAnimationFrame(adim); }
+        }
+        requestAnimationFrame(adim);
+    }
+    window.synKw = function (tur, talep, uretim) {
+        var enb = Math.max(talep || 0, uretim || 0, 1);
+        if (talep !== null && talep !== undefined) {
+            say(document.getElementById(tur + "_kw_talep"), talep);
+            document.getElementById(tur + "_kw_talep_bar").style.width = (talep / enb * 100) + "%";
+        } else {
+            document.getElementById(tur + "_kw_talep_bar").style.width = "0%";
+        }
+        say(document.getElementById(tur + "_kw_uretim"), uretim || 0);
+        document.getElementById(tur + "_kw_uretim_bar").style.width = ((uretim || 0) / enb * 100) + "%";
+    };
 
     function basla() {
         degistir(document);

@@ -996,29 +996,35 @@
         <!-- Header -->
         <div class="header">
             <div class="header-content">
-                <h1>
-                    <i class="fas fa-wind"></i>
-                    Mekanik Zeka
-                </h1>
-                <div class="header-subtitle">Algoritmik Akış Kontrolü</div>
+                <div class="header-top">
+                    <div class="header-left">
+                        <h1>
+                            <i class="fas fa-wind"></i>
+                            Mekanik Zeka
+                        </h1>
+                        <div class="header-subtitle">Algoritmik Akış Kontrolü</div>
+                    </div>
+                    <div class="header-actions">
+                        <a class="btn btn-secondary hdr-btn" href="/">
+                            <i class="fas fa-home"></i> Ana Sayfa
+                        </a>
+                        <button class="btn btn-secondary hdr-btn" onclick="openSettingsModal()">
+                            <i class="fas fa-cog"></i> Ayarlar
+                        </button>
+                        <button class="btn btn-secondary hdr-btn hdr-bakim" onclick="openMaintenanceModal()">
+                            <i class="fas fa-wrench"></i> Bakım Kartları
+                        </button>
+                    </div>
+                </div>
 
                 <div class="status-bar">
                     <div class="status-indicator" id="connectionStatus">
                         <div class="status-dot"></div>
                         <span>Bağlantı kontrol ediliyor...</span>
                     </div>
-                    <select class="engine-select" id="engineSelect">
-                        <option value="v2">Motor v2 (Gelişmiş)</option>
-                        <option value="v1">Motor v1 (Basit)</option>
-                    </select>
-                    <button class="btn btn-secondary" onclick="openSettingsModal()"
-                        style="margin-left: 10px; padding: 8px 16px;">
-                        <i class="fas fa-cog"></i> Ayarlar
-                    </button>
-                    <button class="btn btn-secondary" onclick="openMaintenanceModal()"
-                        style="margin-left: 10px; padding: 8px 16px; background: rgba(250,178,25, 0.2); border-color: rgba(250,178,25, 0.5);">
-                        <i class="fas fa-wrench"></i> Bakım Kartları
-                    </button>
+                    <!-- Motor seçimi kaldırıldı: sahada hep v2 kullanılıyordu.
+                         Analiz istekleri engineSelect.value okuduğu için değer burada sabit. -->
+                    <input type="hidden" id="engineSelect" value="v2">
                 </div>
             </div>
         </div>
@@ -1026,35 +1032,35 @@
         <!-- KPI Cards -->
         <div class="kpi-grid">
             <div class="kpi-card critical">
-                <div class="kpi-label">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Kritik
+                <div class="kpi-label">Kritik</div>
+                <div class="kpi-satir">
+                    <i class="fas fa-exclamation-triangle kpi-ikon"></i>
+                    <div class="kpi-value" id="criticalCount">0</div>
                 </div>
-                <div class="kpi-value" id="criticalCount">0</div>
                 <div class="kpi-desc">Acil müdahale gerektiren</div>
             </div>
             <div class="kpi-card warning">
-                <div class="kpi-label">
-                    <i class="fas fa-exclamation-circle"></i>
-                    Uyarı
+                <div class="kpi-label">Uyarı</div>
+                <div class="kpi-satir">
+                    <i class="fas fa-exclamation-circle kpi-ikon"></i>
+                    <div class="kpi-value" id="warningCount">0</div>
                 </div>
-                <div class="kpi-value" id="warningCount">0</div>
                 <div class="kpi-desc">İzleme gerektiren</div>
             </div>
             <div class="kpi-card optimal">
-                <div class="kpi-label">
-                    <i class="fas fa-check-circle"></i>
-                    Optimal
+                <div class="kpi-label">Optimal</div>
+                <div class="kpi-satir">
+                    <i class="fas fa-check-circle kpi-ikon"></i>
+                    <div class="kpi-value" id="optimalCount">0</div>
                 </div>
-                <div class="kpi-value" id="optimalCount">0</div>
                 <div class="kpi-desc">Hedef bandında çalışan</div>
             </div>
             <div class="kpi-card total">
-                <div class="kpi-label">
-                    <i class="fas fa-chart-bar"></i>
-                    Toplam
+                <div class="kpi-label">Toplam</div>
+                <div class="kpi-satir">
+                    <i class="fas fa-chart-bar kpi-ikon"></i>
+                    <div class="kpi-value" id="totalCount">0</div>
                 </div>
-                <div class="kpi-value" id="totalCount">0</div>
                 <div class="kpi-desc">Analiz edilen ekipman</div>
             </div>
         </div>
@@ -1196,7 +1202,7 @@
                         <button id="onayBtn" class="btn btn-sm" onclick="onayVer()"
                                 style="display:none; background:#0ca30c; color: #0f1f3d; border:none;">
                             <i class="fas fa-check-double"></i>
-                            ✅ Kontrol Edildi &amp; Excel İndir
+                            Kontrol Edildi &amp; Excel İndir
                         </button>
                         <button class="btn btn-primary btn-sm" onclick="refreshResults()">
                             <i class="fas fa-sync-alt"></i>
@@ -1210,12 +1216,14 @@
                 <!-- AHU Kapasite Durumu (anlik) -->
                 <div id="capacityStatusContainer" style="display:none; gap: 12px; margin-bottom: 14px;" class="capacity-row">
                     <div id="coolingCapacityCard" style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
-                        <div style="font-size:12px; opacity:0.7;">❄️ Soğutma Kapasitesi (AHU Ort. Vana)</div>
-                        <div id="coolingCapacityValue" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
+                        <div class="syn-kart-baslik"><i class="fas fa-snowflake"></i> Soğutma Kapasitesi <span>AHU Ort. Vana</span></div>
+                        <div id="coolingCapacityValue" class="syn-kap-deger">-</div>
+                        <div class="syn-iz"><div class="syn-dolgu" id="coolingCapacityBar"></div></div>
                     </div>
                     <div id="heatingCapacityCard" style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
-                        <div style="font-size:12px; opacity:0.7;">🔥 Isıtma Kapasitesi (AHU Ort. Vana)</div>
-                        <div id="heatingCapacityValue" style="font-size:20px; font-weight:700; margin-top:4px;">-</div>
+                        <div class="syn-kart-baslik"><i class="fas fa-fire"></i> Isıtma Kapasitesi <span>AHU Ort. Vana</span></div>
+                        <div id="heatingCapacityValue" class="syn-kap-deger">-</div>
+                        <div class="syn-iz"><div class="syn-dolgu" id="heatingCapacityBar"></div></div>
                     </div>
                 </div>
 
@@ -1223,30 +1231,26 @@
                      üstteki oran kartlarıyla aynı hizada dursun -->
                 <div id="talepUretimKwContainer" style="display:none; gap: 12px; margin-bottom: 14px;" class="capacity-row">
                     <div id="coolingKwCard" style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
-                        <div style="font-size:12px; opacity:0.7;">❄️ Soğutma Talep / Üretim (kW)</div>
-                        <div style="display:flex; gap:18px; margin-top:4px;">
-                            <div>
-                                <div style="font-size:10px; opacity:0.6;">📥 Talep (AHU)</div>
-                                <div id="cool_kw_talep" style="font-size:20px; font-weight:700;">-</div>
-                            </div>
-                            <div>
-                                <div style="font-size:10px; opacity:0.6;">📤 Üretim (Chiller)</div>
-                                <div id="cool_kw_uretim" style="font-size:20px; font-weight:700;">-</div>
-                            </div>
+                        <div class="syn-kart-baslik"><i class="fas fa-snowflake"></i> Soğutma Talep / Üretim <span>kW</span></div>
+                        <div class="syn-kw-grid">
+                            <div class="syn-kw-etiket"><i class="fas fa-arrow-down syn-ok-asagi"></i> Talep (AHU)</div>
+                            <div id="cool_kw_talep" class="syn-kw-deger">-</div>
+                            <div class="syn-iz"><div class="syn-dolgu" id="cool_kw_talep_bar" style="--c:#2a78d6"></div></div>
+                            <div class="syn-kw-etiket"><i class="fas fa-arrow-up syn-ok-yukari"></i> Üretim (Chiller)</div>
+                            <div id="cool_kw_uretim" class="syn-kw-deger">-</div>
+                            <div class="syn-iz"><div class="syn-dolgu" id="cool_kw_uretim_bar" style="--c:#0ca30c"></div></div>
                         </div>
                         <div id="cool_kw_not" style="font-size:10px; color:#46536b; margin-top:6px;"></div>
                     </div>
                     <div id="heatingKwCard" style="flex:1; border-radius: 14px; padding:12px 16px; border:1px solid rgba(24,26,30,0.10);">
-                        <div style="font-size:12px; opacity:0.7;">🔥 Isıtma Talep / Üretim (kW)</div>
-                        <div style="display:flex; gap:18px; margin-top:4px;">
-                            <div>
-                                <div style="font-size:10px; opacity:0.6;">📥 Talep (AHU)</div>
-                                <div id="heat_kw_talep" style="font-size:20px; font-weight:700;">-</div>
-                            </div>
-                            <div>
-                                <div style="font-size:10px; opacity:0.6;">📤 Üretim (Kazan)</div>
-                                <div id="heat_kw_uretim" style="font-size:20px; font-weight:700;">-</div>
-                            </div>
+                        <div class="syn-kart-baslik"><i class="fas fa-fire"></i> Isıtma Talep / Üretim <span>kW</span></div>
+                        <div class="syn-kw-grid">
+                            <div class="syn-kw-etiket"><i class="fas fa-arrow-down syn-ok-asagi"></i> Talep (AHU)</div>
+                            <div id="heat_kw_talep" class="syn-kw-deger">-</div>
+                            <div class="syn-iz"><div class="syn-dolgu" id="heat_kw_talep_bar" style="--c:#eb6834"></div></div>
+                            <div class="syn-kw-etiket"><i class="fas fa-arrow-up syn-ok-yukari"></i> Üretim (Kazan)</div>
+                            <div id="heat_kw_uretim" class="syn-kw-deger">-</div>
+                            <div class="syn-iz"><div class="syn-dolgu" id="heat_kw_uretim_bar" style="--c:#d03b3b"></div></div>
                         </div>
                         <div id="heat_kw_not" style="font-size:10px; color:#46536b; margin-top:6px;"></div>
                     </div>
@@ -3274,6 +3278,10 @@
             }
 
             container.style.display = 'flex';
+            if (window.synKw) {
+                if (found) { synKw('cool', talep, _uretilenOverrideKw !== null ? _uretilenOverrideKw : uretim); }
+                if (isitmaVar) { synKw('heat', isitmaFound ? isitmaTalep : null, isitmaUretim); }
+            }
         }
 
         // AHU Kapasite Durumu (Soğutma/Isıtma) - ortalama vana açıklığına göre
@@ -3313,12 +3321,14 @@
             const heatCard = document.getElementById('heatingCapacityCard');
 
             document.getElementById('coolingCapacityValue').textContent =
-                avgCool !== null ? `${coolCap.emoji} ${coolCap.label} (%${avgCool.toFixed(1)})` : `${coolCap.emoji} ${coolCap.label}`;
+                avgCool !== null ? `${coolCap.label} (%${avgCool.toFixed(1)})` : `${coolCap.label}`;
             coolCard.style.borderColor = coolCap.color;
+            if (window.synKapasite) { synKapasite('cooling', avgCool, coolCap.color); }
 
             document.getElementById('heatingCapacityValue').textContent =
-                avgHeat !== null ? `${heatCap.emoji} ${heatCap.label} (%${avgHeat.toFixed(1)})` : `${heatCap.emoji} ${heatCap.label}`;
+                avgHeat !== null ? `${heatCap.label} (%${avgHeat.toFixed(1)})` : `${heatCap.label}`;
             heatCard.style.borderColor = heatCap.color;
+            if (window.synKapasite) { synKapasite('heating', avgHeat, heatCap.color); }
 
             container.style.display = 'flex';
         }

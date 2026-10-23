@@ -3253,10 +3253,12 @@ async def qr_config():
 @app.get("/hvac", include_in_schema=False)
 async def hvac_entry():
     """HVAC arayüzünü portal çerçevesinde aç."""
+    # ÇERÇEVE KALDIRILDI (23.10.2026): eskiden üstte "ACIBADEM SAĞLIK GRUBU —
+    # HVAC ΔT Öneri Motoru" + Ana Sayfa / Ayrı Sekmede Aç çubuğu vardı. Başlık
+    # gereksizdi, düğmeler artık arayüzün kendi başlığında (Ana Sayfa, Ayarlar,
+    # Bakım Kartları yan yana). Bu yüzden arayüz doğrudan açılır.
     _bootstrap_static_assets()
-    hvac_ui = "/static/index.html"
-    title = "HVAC ΔT Öneri Motoru"
-    return HTMLResponse(_iframe_wrapper_html(title=title, iframe_src=hvac_ui))
+    return RedirectResponse(url="/static/index.html", status_code=302)
 
 @app.get("/enerji", include_in_schema=False)
 async def enerji_entry():

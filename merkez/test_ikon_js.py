@@ -32,6 +32,19 @@ c("hareketi azalt tercihine uyuyor", "prefers-reduced-motion" in css)
 c("akan başlık + nabız + parıltı animasyonları var",
   all(k in css for k in ("@keyframes synAkis", "@keyframes synNabiz", "@keyframes synParilti")))
 
+# ── 2. tur: kullanıcı istekleri (23.10.2026) ──
+c("motor seçimi kaldırıldı, değer sabit v2",
+  '<select class="engine-select"' not in html and 'id="engineSelect" value="v2"' in html)
+c("üstteki 'ACIBADEM SAĞLIK GRUBU — HVAC' çerçevesi kalktı: /hvac arayüze yönlendirir",
+  "RedirectResponse(url=\"/static/index.html\"" in open(os.path.join(STATIC, "..", "main_portal.py"), encoding="utf-8").read())
+c("Ana Sayfa / Ayarlar / Bakım Kartları sağda yan yana", 'class="header-actions"' in html and 'href="/"' in html)
+c("KPI simgesi rakamın solunda", html.count('class="kpi-satir"') == 4)
+c("kapasite ve kW kartlarında hareketli çubuk",
+  all(k in html for k in ("coolingCapacityBar", "heat_kw_uretim_bar", "synKapasite(", "synKw(")))
+c("kapasite metninde emoji yok", "${coolCap.emoji}" not in html and "${heatCap.emoji}" not in html)
+c("yatay taşma düzeltmesi (1fr sütunu daralır)", ".main-layout > *, .results-section" in css)
+c("sayaç rozeti CSS'i simge span'ını boyamaz", ".filter-btn span[id]:not(:empty)" in css)
+
 hata = [a for a, k in T if not k]
 for a, k in T:
     print(("PASS " if k else "FAIL ") + a)

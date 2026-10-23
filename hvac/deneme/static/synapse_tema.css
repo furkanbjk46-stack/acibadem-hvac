@@ -141,6 +141,120 @@ th { font-weight: 700; color: #133273; }
 .kpi-label .ai.ai-mz { width: 1.3em; height: 1.3em; }
 .header h1 .ai.ai-mz { width: 1.05em; height: 1.05em; vertical-align: -0.12em; }
 
+/* ═════ 2. TUR: ÜST BAŞLIK, KPI, PANEL, KAPASİTE KARTLARI, FİLTRE DÜĞMELERİ ═════ */
+
+/* ── Başlık: solda başlık, SAĞDA yan yana düğmeler (Synapse düzeni) ── */
+.header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.header-actions .hdr-btn {
+    width: auto; margin: 0; padding: 8px 16px; text-decoration: none;
+    background: #fafaf8; color: #24324d; font-weight: 600; font-size: 12px;
+    border: 1px solid rgba(24,26,30,0.10); border-radius: 10px;
+}
+.header-actions .hdr-btn:hover { color: #133273; border-color: rgba(42,120,214,.45); background: #fff; }
+.header-actions .hdr-bakim { background: rgba(250,178,25,.16); border-color: rgba(201,133,0,.35); color: #8a5a00; }
+.header-actions .hdr-bakim:hover { background: rgba(250,178,25,.28); color: #6b4500; }
+.status-bar { margin-top: 14px; padding-top: 14px; justify-content: flex-start; }
+
+/* ── KPI: büyük simge solda, rakam yanında ── */
+.kpi-satir { display: flex; align-items: center; gap: 14px; margin: 2px 0 4px; }
+.kpi-satir .kpi-ikon { font-size: 30px; color: var(--kpi-color); }
+.kpi-satir .ai.ai-mz { width: 38px; height: 38px; vertical-align: middle; flex-shrink: 0; }
+.kpi-satir .kpi-value { font-size: 34px; margin-bottom: 0; }
+.kpi-label { margin-bottom: 6px; }
+
+/* ── Sol panel: hareketli bölümler ── */
+.control-section { animation: synGir .5s ease-out both; }
+.control-section:nth-of-type(1) { animation-delay: .1s; } .control-section:nth-of-type(2) { animation-delay: .18s; }
+.control-section:nth-of-type(3) { animation-delay: .26s; } .control-section:nth-of-type(4) { animation-delay: .34s; }
+#autoAnalysisBanner { animation: synNefes 2.6s ease-in-out infinite; --hale: rgba(12,163,12,.18); font-weight: 600; }
+.btn-secondary, .btn-primary, .btn-warning, .btn-success { position: relative; overflow: hidden; }
+.btn-primary::after, .btn-success::after {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.55) 50%, transparent 70%);
+    transform: translateX(-100%); animation: synParilti 3.2s ease-in-out infinite; pointer-events: none;
+}
+.file-upload-label { border: 1px dashed rgba(42,120,214,.4); }
+
+/* ── FA simgeleri için küçük hareketler (Synapse karşılığı olmayanlar) ── */
+@keyframes synYukari { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes synAsagi  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
+@keyframes synSallan { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(10deg); } }
+@keyframes synNefes2 { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.14); opacity: .8; } }
+@keyframes synDon    { to { transform: rotate(360deg); } }
+.syn-an-yukari { display: inline-block; animation: synYukari 1.8s ease-in-out infinite; }
+.syn-an-asagi  { display: inline-block; animation: synAsagi 1.8s ease-in-out infinite; }
+.syn-an-sallan { display: inline-block; animation: synSallan 2.2s ease-in-out infinite; transform-origin: 50% 80%; }
+.syn-an-nefes  { display: inline-block; animation: synNefes2 2.4s ease-in-out infinite; }
+.syn-an-don    { display: inline-block; animation: synDon 6s linear infinite; }
+.btn:hover .syn-an-don, .btn:active .syn-an-don { animation-duration: .7s; }
+.syn-ok-asagi  { animation: synAsagi 1.4s ease-in-out infinite; display: inline-block; }
+.syn-ok-yukari { animation: synYukari 1.4s ease-in-out infinite; display: inline-block; }
+
+/* ── İlerleme çubuğu (Canlı İzleme çubuğuyla aynı dil: şerit akışı + parıltı) ── */
+@keyframes synSerit { 0% { background-position: 0 0; } 100% { background-position: 16px 0; } }
+.syn-iz { height: 10px; border-radius: 6px; background: rgba(19,50,115,.08); overflow: hidden; position: relative; margin-top: 8px; }
+.syn-dolgu {
+    --c: #2a78d6; height: 100%; width: 0; border-radius: 6px; position: relative; overflow: hidden;
+    background: var(--c);
+    transition: width .8s cubic-bezier(.22,.8,.3,1), background .6s;
+}
+.syn-dolgu::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,.28) 0 6px, transparent 6px 12px);
+    background-size: 16px 16px; animation: synSerit .85s linear infinite;
+}
+.syn-dolgu::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.5) 50%, transparent 70%);
+    transform: translateX(-100%); animation: synParilti 2.2s ease-in-out infinite;
+}
+/* Veri yok: gri, şeritsiz, soluk nefes */
+.syn-dolgu.syn-bos { --c: #c9d2e0; width: 100% !important; opacity: .55; animation: synNefes2 2s ease-in-out infinite; }
+.syn-dolgu.syn-bos::before { animation: none; background: none; }
+
+/* ── Kapasite ve kW kartları ── */
+#capacityStatusContainer > div, #talepUretimKwContainer > div {
+    background: #fff; border: 1px solid rgba(24,26,30,.10) !important; border-left-width: 3px !important;
+    box-shadow: 0 1px 1px rgba(20,22,26,.05), 0 8px 18px -12px rgba(20,22,26,.22), inset 0 1px 0 rgba(255,255,255,.95);
+    transition: transform .2s, box-shadow .2s, border-color .6s;
+    animation: synGir .5s ease-out both;
+}
+#capacityStatusContainer > div:hover, #talepUretimKwContainer > div:hover { transform: translateY(-2px); }
+#coolingKwCard { border-left-color: #2a78d6 !important; } #heatingKwCard { border-left-color: #eb6834 !important; }
+.syn-kart-baslik { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #133273;
+    display: flex; align-items: center; gap: 8px; }
+.syn-kart-baslik span { font-weight: 500; letter-spacing: .3px; text-transform: none; color: #46536b; font-size: 10px; margin-left: auto; }
+.syn-kart-baslik .ai-mz { width: 20px; height: 20px; }
+.syn-kap-deger { font-size: 22px; font-weight: 800; margin-top: 6px; letter-spacing: -0.02em; color: #0f1f3d;
+    display: flex; align-items: center; gap: 8px; }
+.syn-kap-deger::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--c, #c9d2e0);
+    animation: synNabiz 1.6s ease-in-out infinite; --nokta: var(--c, #c9d2e0); flex-shrink: 0; }
+.syn-kw-grid { display: grid; grid-template-columns: max-content 1fr; column-gap: 14px; row-gap: 0; margin-top: 8px; align-items: baseline; }
+.syn-kw-etiket { font-size: 10px; color: #46536b; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+.syn-kw-deger { font-size: 22px; font-weight: 800; color: #0f1f3d; text-align: right; letter-spacing: -0.02em; font-feature-settings: "tnum" 1; }
+.syn-kw-grid .syn-iz { grid-column: 1 / -1; margin: 3px 0 10px; }
+
+/* ── Analiz sonuçları düğme sırası: hepsi aynı boy ── */
+.results-actions { align-items: center; gap: 8px; }
+.results-actions .btn, .results-actions .filter-btn {
+    font-size: 11px; font-weight: 600; padding: 7px 12px; border-radius: 10px; width: auto; margin: 0; height: 34px;
+}
+.results-actions .btn-secondary { margin-bottom: 0; }
+.filter-buttons { gap: 6px; flex-wrap: wrap; align-items: center; }
+.filter-btn.active { box-shadow: 0 0 0 2px rgba(42,120,214,.25), 0 6px 14px -8px rgba(19,50,115,.4); transform: translateY(-1px); }
+.filter-btn span[id]:not(:empty) {   /* yalnız sayaç rozetleri; simge span'ları (.ai) hariç */ background: rgba(19,50,115,.1); border-radius: 10px; padding: 0 7px; font-weight: 800; margin-left: 2px; }
+#onayBtn { background: #0ca30c !important; color: #fff !important; animation: synOnay 2s ease-in-out infinite; }
+@keyframes synOnay { 0%,100% { box-shadow: 0 0 0 0 rgba(12,163,12,.4); } 50% { box-shadow: 0 0 0 6px rgba(12,163,12,0); } }
+
+/* ── Yatay taşma düzeltmesi ──
+   Izgara sütunu "1fr" = minmax(auto, 1fr): içindeki geniş tablo sütunu
+   şişirip sayfayı 2197 px'e çıkarıyordu (1600 px ekranda); sağdaki düğmeler
+   ve sonuç tablosu ekran dışında kalıyordu. min-width:0 ile sütun daralır,
+   tablo kendi kutusunda (table-container) yatay kayar. */
+.main-layout > *, .results-section, .results-header { min-width: 0; }
+.results-actions { flex-wrap: wrap; }
+
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
     .header h1 { -webkit-text-fill-color: #0f1f3d; background: none; }
