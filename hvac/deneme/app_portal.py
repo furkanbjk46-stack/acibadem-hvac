@@ -5307,9 +5307,9 @@ with tab6:
                         )
                     st.markdown(
                         "<style>"
-                        ".fi-liste{display:flex;flex-direction:column;gap:6px;margin:6px 0 2px;}"
+                        ".fi-liste{display:flex;flex-direction:column;gap:6px;margin:6px 0 2px;max-width:760px;}"
                         ".fi-satir{display:grid;grid-template-columns:minmax(120px,max-content)"
-                        " 1fr 52px;align-items:center;gap:10px;}"
+                        " minmax(0,1fr) 48px;align-items:center;gap:10px;}"
                         ".fi-ad{font-size:0.86rem;color:#24324d;white-space:nowrap;}"
                         ".fi-iz{height:10px;border-radius:6px;background:rgba(19,50,115,0.08);"
                         "overflow:hidden;}"

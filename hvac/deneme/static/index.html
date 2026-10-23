@@ -987,6 +987,8 @@
             border-color: rgba(24,26,30,0.10);
         }
     </style>
+    <!-- Synapse tasarım katmanı: animasyon, yazı ağırlığı, simgeler (yukarıdaki stilden SONRA) -->
+    <link rel="stylesheet" href="/static/synapse_tema.css">
 </head>
 
 <body>
@@ -2592,7 +2594,7 @@
                     animation: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { display: true, position: 'top', labels: { color: 'white', font: { family: 'Inter', size: 11 } } }
+                        legend: { display: true, position: 'top', labels: { color: '#24324d', font: { family: 'Inter', size: 11 } } }
                     },
                     scales: {
                         x: { ticks: { color: '#24324d', maxTicksLimit: 12 }, grid: { color: '#e8e7e3' } },
@@ -2740,7 +2742,7 @@
                             display: true,
                             position: 'top',
                             labels: {
-                                color: 'white',
+                                color: '#24324d',
                                 font: { family: 'Inter', size: 12 }
                             }
                         },
@@ -2762,11 +2764,11 @@
                     scales: {
                         x: {
                             grid: { color: '#e8e7e3' },
-                            ticks: { color: 'white', font: { family: 'Inter' } }
+                            ticks: { color: '#24324d', font: { family: 'Inter' } }
                         },
                         y: {
                             beginAtZero: true,
-                            ticks: { stepSize: 1, color: 'white', font: { family: 'Inter' } },
+                            ticks: { stepSize: 1, color: '#24324d', font: { family: 'Inter' } },
                             grid: { color: '#e8e7e3' }
                         }
                     }
@@ -4713,6 +4715,8 @@
         }
 
     </script>
+    <script src="/static/synapse_ikon.js"></script>
+    <script src="/static/synapse_tema.js"></script>
 </body>
 
 </html>
