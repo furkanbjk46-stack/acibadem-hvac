@@ -24,7 +24,7 @@ st.set_page_config(
 # korumaz. Bu yüzden her sayfa kendi kapısını kurar.
 import giris
 import ikonlar as _ik
-if getattr(_ik, "SURUM", 0) < 3:          # yayın sonrası eski modül önbellekte kalmasın
+if getattr(_ik, "SURUM", 0) < 4:          # yayın sonrası eski modül önbellekte kalmasın
     import importlib as _il_ik
     _ik = _il_ik.reload(_ik)
 st.markdown(_ik.CSS, unsafe_allow_html=True)
@@ -658,36 +658,42 @@ with tab1:
     with col_mid:
         st.markdown('<div class="sec">📊 GRAFİK</div>', unsafe_allow_html=True)
 
-        grafik_secenekler = {
-            "Tüketim":               "tuketim",
-            "Chiller Set Trendi":    "chiller",
-            "kWh/m² Trendi":         "verimlilik",
-            "Soğutma Tüketimi":      "sogutma",
-            "Su Tüketimi":           "su",
-            "Kojen Üretim":          "kojen",
-            "Şebeke Tüketimi":       "sebeke",
-            "MCC Tüketimi":          "mcc",
-            "Kazan Doğalgaz":        "kazan",
-            "Bu Ay vs Geçen Ay":     "ay_karsilastir",
-            "KPI Özet":              "kpi_ozet",
-            "Enerji Kırılımı":       "enerji_kirilim",
-        }
+        # ── Grafik listesi KATEGORİLERE ayrılmış (başlık · simge · ad · birim) ──
+        # Trafolar (TRDP) yalnızca sayacı bağlı lokasyonda listelenir (bugün
+        # yalnızca Maslak); boş grafik açacak ölü seçenek gösterilmez.
+        _trafo_kolonlar = sorted(
+            [c for c in df.columns if re.fullmatch(r"TRDP\d+_kWh", str(c))
+             and pd.to_numeric(df[c], errors="coerce").fillna(0).sum() > 0],
+            key=lambda c: int(re.findall(r"\d+", c)[0]))
+        _GRAFIK_GRUPLARI = [
+            ("SU & ENERJİ KAYNAKLARI", [
+                ("Su Tüketimi", "su", "m³"),
+                ("Tüketim", "tuketim", "kWh"),
+                ("Şebeke Tüketimi", "sebeke", "kWh"),
+            ] + ([("Trafolar (TRDP)", "trafo", "kWh")] if _trafo_kolonlar else [])),
+            ("KOJENERASYON & GAZ SİSTEMLERİ", [
+                ("Kojen Üretim", "kojen", "kWh · m³"),
+                ("Kazan Doğalgaz", "kazan", "m³"),
+            ]),
+            ("SOĞUTMA & MEKANİK SİSTEMLER", [
+                ("Chiller Set Trendi", "chiller", "°C"),
+                ("Soğutma Tüketimi", "sogutma", "kWh"),
+                ("MCC Tüketimi", "mcc", "kWh"),
+                ("kWh/m² Trendi", "verimlilik", "kWh/m²"),
+            ]),
+            ("ÖZET & KARŞILAŞTIRMA", [
+                ("Bu Ay vs Geçen Ay", "ay_karsilastir", "kWh"),
+                ("KPI Özet", "kpi_ozet", "tablo"),
+                ("Enerji Kırılımı", "enerji_kirilim", "%"),
+            ]),
+        ]
+        grafik_secenekler = {_ad: _t for _, _ogeler in _GRAFIK_GRUPLARI for _ad, _t, _ in _ogeler}
+        _GRAFIK_BIRIM = {_t: _b for _, _ogeler in _GRAFIK_GRUPLARI for _, _t, _b in _ogeler}
         # Her grafiğin simgesi — Dashboard kartlarındakiyle AYNI (ikonlar.py)
         _GRAFIK_IKON = {"tuketim": "enerji", "chiller": "sogutma", "verimlilik": "verim",
                         "sogutma": "sogutma", "su": "su", "kojen": "kojen", "sebeke": "sebeke",
                         "mcc": "mcc", "kazan": "kazan", "ay_karsilastir": "takvim",
                         "kpi_ozet": "kayit", "enerji_kirilim": "grafik", "trafo": "trdp"}
-
-        # Trafolar (TRDP) — yalnızca sayacı bağlı lokasyonda seçeneğe eklenir.
-        # Bugün bu yalnızca Maslak; diğer lokasyonlarda kaç trafo olduğu
-        # bilinmediği için boş bir grafik açacak ölü seçenek gösterilmez.
-        # Sayaç bağlandıkça seçenek kendiliğinden belirir.
-        _trafo_kolonlar = sorted(
-            [c for c in df.columns if re.fullmatch(r"TRDP\d+_kWh", str(c))
-             and pd.to_numeric(df[c], errors="coerce").fillna(0).sum() > 0],
-            key=lambda c: int(re.findall(r"\d+", c)[0]))
-        if _trafo_kolonlar:
-            grafik_secenekler["Trafolar (TRDP)"] = "trafo"
 
         # Lokasyon değişince önceki seçim bu listede olmayabilir (ör. Maslak'ta
         # trafo grafiği seçiliyken trafosuz lokasyona geçmek); Streamlit böyle
@@ -697,17 +703,40 @@ with tab1:
 
         # ── Grafik seçici + Tarih aralığı (yan yana) ──
         _gc1, _gc2, _gc3 = st.columns([3, 1.5, 1.5])
-        # Açılır listede her satırın başında kendi hareketli simgesi. Liste
-        # yalnızca bu seçicide 12+ seçenekli olduğundan :has() ile ayırt edilir.
-        _gs_list = list(grafik_secenekler.items())
         # Streamlit 1.5x+: liste sayfanın dibinde ayrı katmanda açılır
         # (stSelectboxVirtualDropdown), seçenekler data-key ile sıralıdır.
         # Yalnızca bu seçicinin listesi 12+ seçenekli → data-key="11" ile ayırt edilir.
-        _gs_css = "".join(
-            _ik.etiket_css('[data-testid="stSelectboxVirtualDropdown"]:has([data-key="11"]) '
-                           '[role="option"][data-key="%d"]' % _i, _GRAFIK_IKON.get(_t, "grafik"), 16)
-            for _i, (_ad, _t) in enumerate(_gs_list))
-        _secili_t = grafik_secenekler.get(st.session_state.get("grafik_sec"), _gs_list[0][1])
+        # Satır düzeni: [kategori başlığı (grubun ilk satırında)] / simge · ad · birim
+        _gs_list = list(grafik_secenekler.items())
+        _L = '[data-testid="stSelectboxVirtualDropdown"]:has([data-key="11"])'
+        _ilk = {}
+        _sira = 0
+        for _baslik, _ogeler in _GRAFIK_GRUPLARI:
+            _ilk[_sira] = _baslik
+            _sira += len(_ogeler)
+        _gs_css = (
+            _L + ' [role="listbox"]{max-height:470px !important;overflow-y:auto !important;padding:4px 8px 8px;}'
+            + _L + '{max-height:520px !important;}'
+            + _L + ' [role="option"]{display:flex !important;flex-wrap:wrap;align-items:center;height:auto !important;'
+              'min-height:38px;padding:1px 0 !important;background:transparent !important;}'
+            + _L + ' [role="option"] > div{flex:1 1 auto;display:flex;align-items:center;min-height:36px;'
+              'padding:0 10px;border-radius:8px;font-size:12.5px;font-weight:600;color:#24324d;}'
+            + _L + ' [role="option"]:hover > div, ' + _L + ' [role="option"][data-focused="true"] > div'
+              '{background:#f3f6fb;}'
+            + _L + ' [role="option"][aria-selected="true"] > div{background:#eef3fb;color:#133273;'
+              'box-shadow:inset 3px 0 0 #2a78d6;}'
+            + _L + ' [role="option"] > div::after{margin-left:auto;padding-left:12px;font-family:ui-monospace,'
+              'SFMono-Regular,Menlo,monospace;font-size:10.5px;font-weight:600;color:#8b97ab;}'
+        )
+        for _i, (_ad, _t) in enumerate(_gs_list):
+            _sec = _L + ' [role="option"][data-key="%d"]' % _i
+            _gs_css += _ik.etiket_css(_sec + " > div", _GRAFIK_IKON.get(_t, "grafik"), 16)
+            _gs_css += _sec + ' > div::after{content:"%s";}' % _GRAFIK_BIRIM.get(_t, "")
+            if _i in _ilk:
+                _gs_css += (_sec + '::before{content:"%s";flex:0 0 100%%;order:-1;padding:%dpx 10px 5px;'
+                            'font-size:10.5px;font-weight:800;letter-spacing:1.1px;color:#8b97ab;}'
+                            % (_ilk[_i], 6 if _i == 0 else 12))
+        _secili_t = grafik_secenekler.get(st.session_state.get("grafik_sec"), "tuketim")
         # Seçili değerin önündeki simge (kutu bir <input> olduğu için grubuna konur)
         _gs_css += _ik.etiket_css('.st-key-grafik_secim [data-testid="stSelectbox"] [role="group"]',
                                   _GRAFIK_IKON.get(_secili_t, "grafik"), 17)
@@ -716,13 +745,12 @@ with tab1:
                       '{display:flex;align-items:center;padding-left:12px;background:#fff;border-radius:12px;}'
                     + '.st-key-grafik_secim [data-testid="stSelectbox"] input{font-size:13px !important;'
                       'font-weight:600 !important;color:#133273 !important;}'
-                    + '[data-testid="stSelectboxVirtualDropdown"] [role="option"]{display:flex;align-items:center;'
-                      'font-size:12.5px;font-weight:600;color:#24324d;}'
                     + "</style>", unsafe_allow_html=True)
         with _gc1:
           with st.container(key="grafik_secim"):
             secim = st.selectbox(
                 "Grafik Seçin", list(grafik_secenekler.keys()),
+                index=list(grafik_secenekler.keys()).index("Tüketim"),   # varsayılan: Tüketim
                 key="grafik_sec", label_visibility="collapsed"
             )
         with _gc2:

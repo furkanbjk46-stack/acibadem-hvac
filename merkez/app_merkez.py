@@ -295,7 +295,7 @@ button span[data-testid="stIconMaterial"] {
 
 # Animasyonlu simgeler: tek kaynak (ikonlar.py) — ana ekran ve Dashboard aynı
 import ikonlar as _ik
-if getattr(_ik, "SURUM", 0) < 3:          # yayın sonrası eski modül önbellekte kalmasın
+if getattr(_ik, "SURUM", 0) < 4:          # yayın sonrası eski modül önbellekte kalmasın
     import importlib as _il_ik
     _ik = _il_ik.reload(_ik)
 st.markdown(_ik.CSS, unsafe_allow_html=True)
@@ -916,12 +916,31 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 # ============ HEADER ============
 # "ACIBADEM SAĞLIK GRUBU" büyük; üzerinden lacivert→mavi parıltı akar.
 # Altında küçük "Enerji Canlı İzleme" + atan canlı noktası.
+# Lokasyon detayına girilince başlık gösterilmez (üstte boşluk kalmasın).
+#
+# ÜST BOŞLUK: görünmez yardımcı öğeler (stil blokları, 0 px bileşenler, gizli
+# düğmeler) üst düzeyde her biri 16 px aralık ekliyordu → üst düzey aralık
+# sıfırlanır, görünen bölümler kendi boşluğunu taşır.
 st.markdown("""
+<style>
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"]{ gap:0 !important; }
+[data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > [data-testid="stHorizontalBlock"]{ margin-top:14px; }
+/* Bölüm başlıkları (Lokasyon Durumu, Hastane Enerji Ağı, Canlı Uyarılar...) */
+.sec{ font-size:12px !important; font-weight:700 !important; letter-spacing:1.4px !important; color:#133273 !important;
+      display:flex !important; align-items:center; gap:7px; padding-bottom:7px !important; }
+/* Detay ekranında başlık yok: sağ üstteki 3 düğme rozetlerin ÜSTÜNDE durur */
+.st-key-detay_gecis_katmani{ padding-top:48px; gap:0 !important; }
+.st-key-detay_gecis_katmani > [data-testid="stLayoutWrapper"]:has(.st-key-detay_sekmeler){ margin-top:6px; }
+</style>
+""", unsafe_allow_html=True)
+
+if not st.session_state.get("detay_lokasyon"):
+  st.markdown("""
 <style>
 @keyframes bsAkis{0%{background-position:0% 50%;}100%{background-position:200% 50%;}}
 @keyframes bsYukselis{from{opacity:0;transform:translateY(6px);letter-spacing:6px;}to{opacity:1;transform:none;letter-spacing:4px;}}
 @keyframes bsCizgi{0%,100%{transform:scaleX(.35);opacity:.5;}50%{transform:scaleX(1);opacity:1;}}
-.bs-kutu{text-align:center;padding:12px 0 8px;}
+.bs-kutu{text-align:center;padding:2px 0 20px;}
 .bs-ana{display:inline-block;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:34px;
   font-weight:800;letter-spacing:4px;line-height:1.25;
   background:linear-gradient(90deg,#0f1f3d 0%,#133273 25%,#2a78d6 45%,#7fb2ee 50%,#2a78d6 55%,#133273 75%,#0f1f3d 100%);
@@ -954,7 +973,7 @@ st.markdown("""
    butonda tekrar acilir. */
 .st-key-cikis_kutusu{
     min-width:96px !important;
-    position:fixed !important; top:10px !important;
+    position:fixed !important; top:16px !important;
     left:0 !important; right:0 !important; width:100% !important;
     /* Streamlit'in kendi ust seridi (stHeader) z-index:999990 ve fixed;
        daha dusuk bir deger verilirse buton GORUNUR ama tiklama seride gider
@@ -1018,7 +1037,9 @@ with st.container(key="cikis_kutusu"):
         + ".st-key-cikis_kutusu a.ayar-ac:hover{background:#133273;border-color:#133273;}"
         + ".st-key-cikis_kutusu a.ayar-ac:hover::before{background:#ffffff !important;}"
         # Ayarlar paneli yalnızca ana sayfada var; diğer ekranlarda düğme gizlenir
-        + "body:not(:has(.st-key-ayarlar_panel)) .st-key-cikis_kutusu a.ayar-ac{display:none !important;}"
+        # Detay ekranında düğmeler biraz daha yukarıda (başlık yok; rozetlerin üstü)
+        + "body:has(.st-key-detay_gecis_katmani) div.st-key-cikis_kutusu{top:8px !important;}"
+        + ".st-key-ayar_ana_btn{position:fixed !important;left:-9999px !important;width:1px;height:1px;overflow:hidden;}"
         + "</style>", unsafe_allow_html=True)
     if not _IZLEYICI:
         # Ayarlar paneli TARAYICIDA açılıp kapanır: düğme Streamlit butonu
@@ -1026,12 +1047,57 @@ with st.container(key="cikis_kutusu"):
         # çalışmaz (önceki pencere sürümünde her tıklama sayfayı yeniliyordu).
         st.markdown('<a class="ayar-ac" href="#" title="Sistem ayarları" aria-label="Sistem ayarları"></a>',
                     unsafe_allow_html=True)
+        # Detay / yönetim ekranındayken Ayarlar: görünmez düğme ana sayfaya döner,
+        # panel orada kendiliğinden açılır (aşağıdaki betik).
+        if st.button("ana", key="ayar_ana_btn"):
+            for _k in ("detay_lokasyon", "detay_ozet", "yonetim", "detay_sekme"):
+                st.session_state.pop(_k, None)
+            st.rerun()
     if st.button("Yönetim", key="yonetim_btn", help="Yönetim — sunucu ve veri durumu"):
         st.session_state["yonetim"] = True
         st.rerun()
     if st.button("Çıkış", key="cikis_btn", help="Oturumu kapat"):
         giris.cikis_yap()
         st.rerun()
+
+# Ayarlar paneli aç / kapat: tamamen tarayıcıda (düğme, ×, arka plan, Esc).
+# Panel yalnızca ana sayfada var; başka ekrandan basılırsa ana sayfaya dönülür
+# ve panel orada açılır. Her çizimde yeniden bağlanır (bekleyen açma için).
+_components.html("""
+<script>
+(function () {
+  var d; try { d = window.parent.document; } catch (e) { return; }
+  var w = d.defaultView;
+  function ac(v) { d.body.classList.toggle('ayarlar-acik', v); }
+  function bekleyen() {
+    try {
+      if (w.sessionStorage.getItem('synapse_ayar_ac') && d.querySelector('.st-key-ayarlar_panel')) {
+        w.sessionStorage.removeItem('synapse_ayar_ac'); ac(true);
+      }
+    } catch (e) {}
+  }
+  [300, 1200, 2500].forEach(function (ms) { setTimeout(bekleyen, ms); });
+  if (w.__synapseAyarTik) d.removeEventListener('click', w.__synapseAyarTik, true);
+  if (w.__synapseAyarTus) d.removeEventListener('keydown', w.__synapseAyarTus, true);
+  w.__synapseAyarTik = function (ev) {
+    var t = ev.target;
+    if (t.closest && t.closest('a.ayar-ac')) {
+      ev.preventDefault();
+      if (d.querySelector('.st-key-ayarlar_panel')) { ac(!d.body.classList.contains('ayarlar-acik')); return; }
+      try { w.sessionStorage.setItem('synapse_ayar_ac', '1'); } catch (e) {}
+      var b = d.querySelector('.st-key-ayar_ana_btn button'); if (b) b.click();
+      return;
+    }
+    if (t.closest && t.closest('a.ayar-kapat')) { ev.preventDefault(); ac(false); return; }
+    if (d.body.classList.contains('ayarlar-acik') && (t === d.body || t === d.documentElement)) ac(false);
+  };
+  w.__synapseAyarTus = function (ev) { if (ev.key === 'Escape') ac(false); };
+  d.addEventListener('click', w.__synapseAyarTik, true);
+  d.addEventListener('keydown', w.__synapseAyarTus, true);
+})();
+</script>
+<!-- cizim: %s -->
+""" % datetime.now().strftime("%H%M%S%f"), height=0)
 
 # ── SUNUM/DEMO UYARISI ──
 # Simülasyon sunucusuna bağlıyken ekranda görünür bir işaret durur; böylece
@@ -1255,7 +1321,8 @@ sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 with sol:
     # ── Lokasyon Durumu ──
     # .ana-duzen-isaret: tablet CSS'inin ana 3'lü düzeni bulması için işaret
-    st.markdown('<div class="sec"><span class="ana-duzen-isaret"></span>📍 LOKASYON DURUMU</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec"><span class="ana-duzen-isaret"></span>' + _ik.ikon("konum", 17)
+                + 'LOKASYON DURUMU</div>', unsafe_allow_html=True)
 
     # ANLIK değerler: kartlar, harita penceresi ve Global Özet bunu kullanır
     CANLI = canli_ozet_hesapla(fetch_canli_tum(url, key))
@@ -1409,7 +1476,7 @@ with sol:
     # Tüm lokasyonların canlı sayaçlarından ANLIK toplamlar (kW). Geçmiş /
     # aylık değerler kaldırıldı (22.10.2026). Canlı sayacı olmayan kalemlerde
     # sayı uydurulmaz: "canlı sayaç yok" yazılır; sayaç bağlanınca kendiliğinden dolar.
-    st.markdown('<div class="sec">⚡ GLOBAL ÖZET — ANLIK</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec">' + _ik.ikon("enerji", 17) + 'GLOBAL ÖZET — ANLIK</div>', unsafe_allow_html=True)
 
     def _canli_topla(alan):
         degerler = [v[alan] for v in CANLI.values() if v.get(alan) is not None]
@@ -1810,7 +1877,7 @@ window.addEventListener('message', function(ev) {{
 </script>
 </body></html>"""
 
-    st.markdown('<div class="sec">🗺️ HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec">' + _ik.ikon("harita", 17) + 'HASTANE ENERJİ AĞI</div>', unsafe_allow_html=True)
     import base64, streamlit.components.v1 as _cv1
     _b64 = base64.b64encode(harita_html.encode("utf-8")).decode()
     # Taban boy 640 px (eskiden 900). Son boyu aşağıdaki hizalama betiği verir:
@@ -1890,7 +1957,7 @@ window.addEventListener('message', function(ev) {{
 with sag:
     # ── Canlı Uyarılar ──
     st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
-                + _ik.ikon("alarm", 16) + 'CANLI UYARILAR</div>', unsafe_allow_html=True)
+                + _ik.ikon("alarm", 17) + 'CANLI UYARILAR</div>', unsafe_allow_html=True)
 
     # Her lokasyon için uyarı listesi: {lok_id: [(severity, msg), ...]}
     lok_uyari_map = {lok_id: [] for lok_id in HASTANELER}
@@ -3859,24 +3926,4 @@ with st.container(key="ayarlar_panel"):
                 st.caption("Henüz komut gönderilmedi.")
 
 
-# Panel aç / kapat: tamamen tarayıcıda (düğme, × , arka plan, Esc)
-_components.html("""
-<script>
-(function () {
-  var d; try { d = window.parent.document; } catch (e) { return; }
-  var w = d.defaultView;
-  function ac(v) { d.body.classList.toggle('ayarlar-acik', v); }
-  if (w.__synapseAyarTik) d.removeEventListener('click', w.__synapseAyarTik, true);
-  if (w.__synapseAyarTus) d.removeEventListener('keydown', w.__synapseAyarTus, true);
-  w.__synapseAyarTik = function (ev) {
-    var t = ev.target;
-    if (t.closest && t.closest('a.ayar-ac')) { ev.preventDefault(); ac(!d.body.classList.contains('ayarlar-acik')); return; }
-    if (t.closest && t.closest('a.ayar-kapat')) { ev.preventDefault(); ac(false); return; }
-    if (d.body.classList.contains('ayarlar-acik') && (t === d.body || t === d.documentElement)) ac(false);
-  };
-  w.__synapseAyarTus = function (ev) { if (ev.key === 'Escape') ac(false); };
-  d.addEventListener('click', w.__synapseAyarTik, true);
-  d.addEventListener('keydown', w.__synapseAyarTus, true);
-})();
-</script>
-""", height=0)
+# (Panel aç / kapat betiği sağ üst düğmelerin yanında — her ekranda çalışır.)

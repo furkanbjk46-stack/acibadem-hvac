@@ -41,7 +41,7 @@ except SyntaxError as e:
 c("trafo secenegi listede", '"Trafolar (TRDP)"' in _metin)
 c("trafo grafigi cizim dali var", 'grafik_tip == "trafo"' in _metin)
 c("secenek KOSULA bagli (trafosuz lokasyonda olu link olmasin)",
-  "if _trafo_kolonlar:" in _metin)
+  'if _trafo_kolonlar else []' in _metin)
 c("lokasyon degisince eski secim temizlenir (Streamlit hatasi)",
   'st.session_state.get("grafik_sec") not in grafik_secenekler' in _metin)
 # 23.10.2026: kullanıcı isteğiyle trafolar üst üste değil YAN YANA (gruplu) çizilir

@@ -21,7 +21,7 @@ CSS ile yapılır; "hareketi azalt" tercihi açık cihazlarda durur.
 
 # Modül sürümü: Streamlit modülleri süreç boyunca önbellekte tutar; sayfa
 # yeni sürümü isterken eski modül yüklü kalırsa yeniden yüklenir (bkz. çağıranlar).
-SURUM = 3
+SURUM = 4
 
 # Metrik → renk. Çerçeve, simge ve vurgu rengi her yerde AYNI.
 RENK = {
@@ -59,6 +59,8 @@ RENK = {
     "ayar":      "#133273",
     "yonetim":   "#2a78d6",
     "cikis":     "#d03b3b",
+    "konum":     "#d03b3b",   # lokasyon durumu
+    "harita":    "#2a78d6",   # hastane enerji ağı
 }
 
 # Aynı şeyin farklı adları — hepsi aynı simgeye düşer
@@ -205,6 +207,18 @@ _SVG = {
                 '<path d="M12 7h5M12 17h5" stroke-opacity=".5"/>'),
     # Çıkış — güç simgesi
     "cikis": '<path d="M12 3v8"/><path d="M6.6 6.6a7.5 7.5 0 1 0 10.8 0"/>',
+    # Konum — iğne zıplar, altındaki halka genişler
+    "konum": ('<ellipse class="ai-halka" cx="12" cy="20.5" rx="5" ry="1.4" stroke-opacity=".45"/>'
+              '<g class="ai-igne"><path d="M12 19s-6-5.4-6-10a6 6 0 0 1 12 0c0 4.6-6 10-6 10z"'
+              ' fill="currentColor" fill-opacity=".16"/><path d="M12 19s-6-5.4-6-10a6 6 0 0 1 12 0c0 4.6-6 10-6 10z"/>'
+              '<circle cx="12" cy="9" r="2.2"/></g>'),
+    # Harita ağı — düğümler arasında akış, düğümler yanıp söner
+    "harita": ('<path class="ai-akim" d="M5 6 12 11 19 5M12 11 7 18M12 11l7 6"/>'
+               '<circle class="ai-led ai-led1" cx="5" cy="6" r="2" fill="currentColor"/>'
+               '<circle class="ai-led ai-led2" cx="19" cy="5" r="2" fill="currentColor"/>'
+               '<circle cx="12" cy="11" r="2.6" fill="currentColor" fill-opacity=".25"/><circle cx="12" cy="11" r="2.6"/>'
+               '<circle class="ai-led ai-led3" cx="7" cy="18" r="2" fill="currentColor"/>'
+               '<circle class="ai-led ai-led2" cx="19" cy="17" r="2" fill="currentColor"/>'),
     # Grafik — çubuklar büyüyüp küçülür
     "grafik": ('<path d="M3 21h18" />'
                '<rect class="ai-cubuk ai-cubuk1" x="5" y="11" width="3.2" height="10" rx=".8" fill="currentColor" fill-opacity=".25"/>'
@@ -298,6 +312,13 @@ CSS = """
 .ai-ayar .ai-dugme2{animation-delay:.5s;animation-direction:reverse;} .ai-ayar .ai-dugme3{animation-delay:1s;}
 .ai-yonetim .ai-led{animation:ai-yanson 1.6s ease-in-out infinite;} .ai-yonetim .ai-led2{animation-delay:.8s;}
 .ai-cikis svg{animation:ai-parla 2s ease-in-out infinite;}
+@keyframes ai-zipla{0%,100%{transform:translateY(0);}50%{transform:translateY(-2.5px);}}
+@keyframes ai-yay{0%,100%{transform:scale(.7);opacity:.3;}50%{transform:scale(1.15);opacity:.8;}}
+.ai-konum .ai-igne{animation:ai-zipla 1.4s ease-in-out infinite;}
+.ai-konum .ai-halka{animation:ai-yay 1.4s ease-in-out infinite;transform-origin:50% 50%;}
+.ai-harita .ai-akim{stroke-dasharray:3 3;animation:ai-kay 1.6s linear infinite;}
+.ai-harita .ai-led{animation:ai-yanson 1.8s ease-in-out infinite;}
+.ai-harita .ai-led2{animation-delay:.6s;} .ai-harita .ai-led3{animation-delay:1.2s;}
 .ai-grafik .ai-cubuk{animation:ai-boy 1.8s ease-in-out infinite;transform-origin:50% 100%;}
 .ai-grafik .ai-cubuk2{animation-delay:.3s;} .ai-grafik .ai-cubuk3{animation-delay:.6s;}
 
