@@ -163,9 +163,9 @@
                 chiller tüketimini günlük takip eder, anomalileri tespit eder ve maliyet düşürme
                 fırsatlarını otomatik olarak raporlar.
                 <br><br>
-                <strong>Sürüm v9.9 — 16 Ekim 2026</strong> &nbsp;|&nbsp; <code>app_portal.py</code> (Streamlit,
-                port 8501) &nbsp;|&nbsp; 22 Modbus analizör &nbsp;|&nbsp; 12 tasarruf kuralı &nbsp;|&nbsp;
-                GM Merkez'de lokasyon karşılaştırma
+                <strong>Sürüm v11.1 — 24 Ekim 2026</strong> &nbsp;|&nbsp; <code>app_portal.py</code> (Streamlit,
+                port 8501) &nbsp;|&nbsp; 27 Modbus analizör + canlı güç &nbsp;|&nbsp; günlük hava durumu
+                &nbsp;|&nbsp; 12 tasarruf kuralı &nbsp;|&nbsp; GM Merkez'de lokasyon karşılaştırma
             </div>
         </div>
 
@@ -221,17 +221,19 @@
                     </tr>
                 </tbody>
             </table>
-            <p>Enerji tarafının yardımcı modülleri: <code>data_collector.py</code> (Modbus okuma),
-                <code>data_bridge.py</code> (gece 23:45 aktarım), <code>daily_report.py</code>,
+            <p>Enerji tarafının yardımcı modülleri: <code>data_collector.py</code> (Modbus 07:00 ve BACnet
+                07:05 günlük okuma + 15 sn'lik canlı güç), <code>data_bridge.py</code> (her sabah 07:10
+                dünün satırını yazar), <code>hava_durumu.py</code> (lokasyonun kendi koordinatından günlük
+                hava), <code>veri_alarm.py</code> (veri toplama alarmları), <code>daily_report.py</code>,
                 <code>monthly_summary_report.py</code> ve <code>monthly_report/</code> klasöründeki
-                aylık rapor motoru (3.921 satır).</p>
+                aylık rapor ve tahmin motoru (3.921 satır).</p>
         </div>
 
         <!-- ========== 2. TAKİP EDİLEN VERİLER ========== -->
         <div class="section">
             <h2>📊 Takip Edilen Enerji Verileri</h2>
-            <p>Modül, Modbus üzerinden 22 enerji analizöründen ve manuel girişlerden gelen verileri günlük
-                olarak kaydeder.</p>
+            <p>Modül, Modbus üzerinden 27 enerji analizöründen, BACnet'ten (52 nokta), internetten
+                (günlük hava) ve manuel girişlerden gelen verileri günlük olarak kaydeder.</p>
 
             <div class="kpi-strip">
                 <div class="kpi-item">
@@ -308,8 +310,33 @@
                         <td>—</td>
                         <td>Chiller yük dengeleme</td>
                     </tr>
+                    <tr>
+                        <td>Kojen Adet <span class="badge badge-purple">YENİ</span></td>
+                        <td>adet</td>
+                        <td>—</td>
+                        <td>BACnet KOJEN-1..4 durumu. Isıtma gazı tahmininde en güçlü girdi: kojen çalışınca
+                            atık ısısı kazanın yerini tutar</td>
+                    </tr>
+                    <tr>
+                        <td>Dış Hava Nem (sensör) <span class="badge badge-purple">YENİ</span></td>
+                        <td>%</td>
+                        <td>—</td>
+                        <td>BACnet "DIS HAVA NEM", sabah 07:05 anlık değer</td>
+                    </tr>
+                    <tr>
+                        <td>Günlük Hava Durumu <span class="badge badge-purple">YENİ</span></td>
+                        <td>°C, %, mm, kWh/m²</td>
+                        <td>—</td>
+                        <td>Sıcaklık ort/en yüksek/en düşük, nem, yağış, bulut, güneş radyasyonu, rüzgâr,
+                            hava durumu — lokasyonun kendi koordinatından internetten (Open-Meteo)</td>
+                    </tr>
                 </tbody>
             </table>
+            <div class="alert alert-info">
+                <strong>Sensör ve internet ayrı tutulur.</strong> <code>Dis_Hava_Sicakligi_C</code> bina
+                sensörünün 07:05 anlık değeridir (Maslak'ta günlük ortalamadan ~2 °C yüksek); internet verisi
+                günlük özettir. İkisi yan yana durunca sensör arızası da kendiliğinden ortaya çıkar.
+            </div>
         </div>
 
         <!-- ========== 3. ANOMALİ TESPİTİ ========== -->
@@ -646,6 +673,117 @@
             </div>
         </div>
 
+        <!-- ========== 16-24 EKIM GUNCELLEMELERI ========== -->
+        <div class="section page-break">
+            <h2>🆕 16 Ekim'den Bu Yana Ne Değişti? (v9.9 → v11.1)</h2>
+
+            <h3>1. 34 günlük BACnet donması bulundu ve giderildi <span class="badge badge-critical">kritik düzeltme</span></h3>
+            <div class="alert alert-warning">
+                <strong>Ne oldu:</strong> Maslak'ta 21.09–23.10 arasında enerji tablosundaki dış hava (her gün
+                19,88 °C), chiller yükü ve adedi, kazan adedi, MAS-1/MAS-2 sıcaklıkları her gün
+                <strong>aynı değerle</strong> yazıldı. Bir ay boyunca fark edilmedi.<br>
+                <strong>Sebep:</strong> BACnet okuma şablonu <code>configs/</code> altına alınmıştı;
+                <code>data_collector.py</code> onu yalnız kök klasörde arıyordu ve okumayı hiç başlatmadı.
+                <code>data_bridge.py</code> ise dosyanın tarihine bakmadan eski değerleri her sabah yeniden
+                yazdı. Mekanik Zeka BACnet'i kendi okuduğu için analizler aksamadı.<br>
+                <strong>Nasıl bulundu:</strong> lokasyona gönderilen salt okuma teşhis dosyası
+                (<code>saha_teshis.py</code>) birkaç dakikada "şablon configs'te, toplayıcı kökte arıyor,
+                gateway 5/5 cevaplı" raporladı.
+            </div>
+            <table>
+                <thead><tr><th>Düzeltme</th><th>Ne yapıyor</th></tr></thead>
+                <tbody>
+                    <tr><td>Şablon yolu</td><td>Önce <code>configs/</code>, yoksa kök — Mekanik Zeka ile aynı sıra</td></tr>
+                    <tr><td>Bayat veri yazılmaz</td><td>BACnet dosyası 20 saatten eskiyse değerler kullanılmaz;
+                        alanlar boş kalır. Chiller/kazan adedi artık <strong>0 değil boş</strong> — "hiç chiller
+                        çalışmıyor" gibi yanlış bilgi üretilmez</td></tr>
+                    <tr><td>Geçmiş temizlendi</td><td>Donmuş 33 gün (21.09–23.10) boşaltıldı; ilk gün (gerçek okuma),
+                        elle girilmiş aylık veriler ve kWh sütunları korundu; önce yedek alındı</td></tr>
+                    <tr><td>Kalıcı alarmlar</td><td><code>bacnet_bayat</code> (okuma 26 saatten eski, KRİTİK),
+                        <code>donmus_deger</code> (ölçüm 4+ gün aynı, UYARI), <code>sensor_tutarsiz</code>
+                        (sensör internetteki havayla 5 günün 3'ünde tutmuyor, UYARI) — bildirim çubuğunda ve
+                        Synapse canlı uyarılarında</td></tr>
+                    <tr><td>Bulut senkronu</td><td>Boş hücre yüzünden adetler "2.0" olarak gidecekti; Supabase'in
+                        tamsayı sütunları bunu reddeder ve toplu gönderim düşerdi. Gönderim öncesi 2.0 → 2</td></tr>
+                </tbody>
+            </table>
+            <p>Kaybolan 33 günün chiller/kazan/MAS değerleri geri gelmez (BACnet geçmiş tutmaz); dış hava
+                için internetten alınan gerçek günlük hava bu boşluğu doldurur.</p>
+
+            <h3>2. Günlük hava durumu ve yeni veri alanları</h3>
+            <ul>
+                <li>Her lokasyon <strong>kendi koordinatının</strong> günlük havasını internetten alır
+                    (<code>configs/lokasyon_profili.json</code>); oto-set ve Mekanik Zeka aynı servisi zaten
+                    kullanıyordu</li>
+                <li>Her sabah dünün havası satıra yazılır; internet yoksa alanlar boş kalır, bir sonraki açılışta
+                    geriye dönük doldurulur. İlk çalışmada geçmişin tamamı (Maslak: 1.220 gün) tek istekte doldu</li>
+                <li><strong>Veri girişi formu:</strong> yeni "Hava Durumu" bölümü (9 alan + hava durumu seçimi) ve
+                    Chiller/Kazan sütununda <strong>Kojen Adet</strong>. Hava alanları 0 değil boş başlar; boş
+                    bırakılan alan kaydedilmez, internetten gelen değer korunur</li>
+                <li>Supabase <code>energy_data</code>'ya 11 sütun eklendi (SQL'ler <code>merkez/</code> altında);
+                    portal, listesinde olmayan sütunu her açılışta sildiği için liste tek kaynaktan
+                    (<code>hava_durumu.py</code>) okunur</li>
+            </ul>
+
+            <h3>3. Canlı güç ve Synapse Canlı İzleme</h3>
+            <ul>
+                <li><code>canli_guc.py</code>: 27 sayacın anlık kW değeri ~15 sn'de bir okunur; okumalar paralel,
+                    kilit cihaz başına; üst üste 3 kez cevap vermeyen sayaç 10 tur atlanır ama ekranda
+                    "okunamadı" olarak durur (27 sayaç: 25,3 sn → 0,4 sn)</li>
+                <li>Güç register adresleri üretici kılavuzlarından doğrulandı; her turda kWh sayacının farkıyla
+                    karşılaştırılarak "makul ama yanlış" okuma ayıklanır</li>
+                <li>Supabase'de satır sayısı sabit (lokasyon × cihaz başına tek satır, üzerine yazılır) — tablo şişmez</li>
+            </ul>
+
+            <h3>4. Görsel düzeltmeler</h3>
+            <table>
+                <thead><tr><th>Konu</th><th>Eski</th><th>Yeni</th></tr></thead>
+                <tbody>
+                    <tr><td>Maliyet kartları</td><td>Su tüketimi boş günde "₺nan"</td><td>Boş/bozuk değer 0 sayılır</td></tr>
+                    <tr><td>Takvim, +/− düğmeleri</td><td>Koyu tema kalıntısı: siyah bloklar, lacivert yamalar</td><td>Açık tema</td></tr>
+                    <tr><td>Metrik altı yazıları</td><td>Birim fiyat, "2025→2026", "Gelişiyor" yanında yanlış ↑ ok, soluk gri</td>
+                        <td>Ok yok, okunur not satırı; ok yalnız gerçek değişimde</td></tr>
+                    <tr><td>Sistem Sağlığı</td><td>Mutlak ceza (kritik −15, uyarı −5): 55 AHU'lu tesiste her gün %0</td>
+                        <td>Sorunlu ünitenin toplama oranı — gerçek günlerde %63–%98</td></tr>
+                    <tr><td>ML etki sıralaması</td><td>"█" karakteriyle dev blok; %2 altı satırlar boş</td>
+                        <td>Orantılı çubuklar, en küçüğü de görünür</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ========== TUKETIM TAHMINI ========== -->
+        <div class="section page-break">
+            <h2>📈 Tüketim Tahmini — Gerçek Başarı ve Yeni Model</h2>
+            <p>Portaldaki Tahmin &amp; Trend ekranı bir GradientBoosting modeli kullanır. Ekrandaki "Sapma"
+                sütunu modelin <strong>eğitimde gördüğü</strong> aylarla kıyaslandığı için gerçek başarıyı
+                göstermez. Gerçek başarı, her ayın yalnızca kendinden önceki veriyle eğitilip tahmin
+                edildiği <strong>ileriye dönük sınamayla</strong> ölçüldü (gerçek Maslak verisi):</p>
+            <table>
+                <thead><tr><th>Yöntem (aylık toplam tüketim)</th><th>Ortalama hata</th><th>Sistematik sapma</th></tr></thead>
+                <tbody>
+                    <tr><td>Portaldaki ML</td><td>%4,0</td><td>−%2,3</td></tr>
+                    <tr><td>Basit kural: geçen yılın aynı ayı</td><td>%3,6</td><td>−%1,7</td></tr>
+                    <tr><td><strong>Yeni model</strong> (günlük, hava + takvim + seviye düzeltmesi, geçen yılla birleşik)</td>
+                        <td><strong>%2,8</strong></td><td>−%1,1</td></tr>
+                </tbody>
+            </table>
+            <p>ASHRAE Guideline 14'ün aylık ölçütünü (net sapma ±%5, CV(RMSE) ≤%15) hepsi geçiyor. Kalemler ayrı:</p>
+            <ul>
+                <li><strong>Soğutma (chiller kWh):</strong> %22,6 (geçen yılın aynı ayı %36) — hava burada belirleyici</li>
+                <li><strong>Isıtma gazı:</strong> %53 → <strong>kojen planı verilince %30</strong> — kazan gazını asıl
+                    kojen belirliyor (Nisan–Haziran 2026'da kojen durunca gaz 3–4 katına çıktı)</li>
+                <li><strong>Şebeke:</strong> kojen planı yokken %35, kojen kWh planı verilince %5,3</li>
+            </ul>
+            <div class="alert alert-info">
+                Yeni model <code>disa_aktarim/tuketim_tahmin/</code> altında, başka programlarda kullanılmak
+                üzere bağımsız paket olarak duruyor (veri kalite kontrolü, Türkiye bayram takvimi, GES/kojen/şebeke
+                ayrımı, hasta ve ameliyat sayısı için hazır girdiler). Dışarıdan önerilen bir alternatif (Gemini
+                "v2") aynı adil düzenekte ölçüldü: başa baş çıktı (%3,29'a karşı %3,35), işe yarayan fikirleri
+                (bayram takvimi, Cumartesi/Pazar ayrımı, üç veri hatası türü) pakete alındı. Portal henüz eski
+                modeli kullanıyor; sırada yeni modelin portala kıyaslamalı eklenmesi var.
+            </div>
+        </div>
+
         <!-- ========== 6. KULLANIM ========== -->
         <div class="section page-break">
             <h2>👤 Kullanım — Operasyon Ekibi İçin</h2>
@@ -710,10 +848,11 @@
         <!-- FOOTER -->
         <div class="footer">
             <strong>Enerji ve Verimlilik</strong> — Synapse (SYN) Enerji Modülü — Acıbadem Hastanesi<br>
-            Sürüm <strong>v9.9</strong> — 16 Ekim 2026 | <code>app_portal.py</code> (5.275 satır) +
-            aylık rapor motoru (3.921 satır) | 22 Modbus analizör | 12 tasarruf kuralı<br>
-            Synapse portal tarafında otomatik kontroller (veri, karşılaştırma, giriş, gösterge renkleri,
-            oto-mod) yayından önce çalıştırılır; lokasyon tarafında 197 kontrollük öz test açılışta koşar.<br>
+            Sürüm <strong>v11.1</strong> — 24 Ekim 2026 | <code>app_portal.py</code> (5.453 satır) +
+            aylık rapor ve tahmin motoru (3.921 satır) | 27 Modbus analizör + 52 BACnet noktası | günlük hava
+            durumu | 12 tasarruf kuralı<br>
+            Lokasyon tarafında 26 test dosyasında 1.103 kontrol yayından önce çalıştırılır; açılışta 197
+            kontrollük öz test ve veri toplama zincirinin saha teşhisi koşar.<br>
             <em>Bu belge modülün güncel davranışını anlatır; birim fiyatlar ve eşikler ayarlar panelinden
             değiştirilebilir.</em>
         </div>

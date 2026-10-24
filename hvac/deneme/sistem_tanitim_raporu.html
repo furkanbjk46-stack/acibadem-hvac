@@ -445,9 +445,9 @@
                 BACnet/Modbus entegrasyonu, Supabase bulut altyapısı, çok lokasyon (Maslak + Altunizade) yönetimi
                 ve GM Merkez portalı ile hastane konforunu koruyarak enerji maliyetlerini düşürme hedefi.
                 <br><br>
-                <strong>Sürüm v9.9 — 16 Ekim 2026</strong> &nbsp;|&nbsp; 62.004 satır kod &nbsp;|&nbsp;
+                <strong>Sürüm v11.1 — 24 Ekim 2026</strong> &nbsp;|&nbsp; 73.266 satır kod &nbsp;|&nbsp;
                 35 teşhis + 12 tasarruf kuralı &nbsp;|&nbsp; otonom set gönderimi (oto-set) aktif &nbsp;|&nbsp;
-                canlı çıkış denetimi + 197 kontrollük lokasyon öz testi
+                27 sayaç canlı izleme &nbsp;|&nbsp; günlük hava durumu &nbsp;|&nbsp; 1.103 kontrol + saha teşhisi
             </div>
         </div>
 
@@ -462,12 +462,13 @@
                 graph TD
                 subgraph "🏭 Saha Katmanı"
                 BACNET["BACnet/IP<br/>Desigo BMS<br/>56 AHU/FCU"]
-                MODBUS["Modbus TCP<br/>22 Analizör<br/>Janitza + Siemens"]
+                MODBUS["Modbus TCP<br/>27 Analizör<br/>Janitza + Siemens"]
+                WEB["Open-Meteo<br/>Günlük hava"]
                 end
 
                 subgraph "🖥️ Lokasyon PC (Maslak / Altunizade)"
                 COLL["ahu_collector.py<br/>BACnet Okuma (08:30)"]
-                DC["data_collector.py<br/>Modbus (30 dk)"]
+                DC["data_collector.py<br/>Günlük 07:00/07:05<br/>+ canlı güç 15 sn"]
                 PORTAL["FastAPI Portal<br/>HVAC Analiz UI"]
                 DASH["Streamlit Dashboard<br/>Enerji Rapor"]
                 SYNC["cloud_sync.py<br/>Heartbeat + Güncelleme"]
@@ -485,6 +486,7 @@
 
                 BACNET -->|"BACnet UDP"| COLL
                 MODBUS -->|"TCP/502"| DC
+                WEB -->|"HTTPS"| DASH
                 COLL --> PORTAL
                 DC --> DASH
                 SYNC -->|"kontrol"| GUNC
@@ -495,6 +497,7 @@
 
                 style BACNET fill:#3b82f6,stroke:#1e40af,color:#fff
                 style MODBUS fill:#3b82f6,stroke:#1e40af,color:#fff
+                style WEB fill:#3b82f6,stroke:#1e40af,color:#fff
                 style COLL fill:#f59e0b,stroke:#92400e,color:#fff
                 style DC fill:#f59e0b,stroke:#92400e,color:#fff
                 style PORTAL fill:#10b981,stroke:#065f46,color:#fff
@@ -541,13 +544,15 @@
                     <tr><td>Bulut senkron</td><td><code>cloud_sync.py</code></td><td>—</td>
                         <td>Heartbeat, uzak yama, analiz tetikleyici</td></tr>
                     <tr><td>Veri toplayıcı</td><td><code>data_collector.py</code></td><td>—</td>
-                        <td>Modbus (22 analizör) + BACnet</td></tr>
+                        <td>Modbus (27 analizör) 07:00 + BACnet (52 nokta) 07:05 günlük okuma; 27 sayacın
+                            canlı gücü ~15 sn'de bir</td></tr>
                     <tr><td>Veri köprüsü</td><td><code>data_bridge.py</code></td><td>—</td>
-                        <td>Gece 23:45 günlük veri aktarımı</td></tr>
+                        <td>Her sabah 07:10 dünün satırı + internetten günlük hava; bayat BACnet verisini yazmaz</td></tr>
                 </tbody>
             </table>
-            <p>Portal açılışında ayrıca <strong>Mekanik Zeka öz testi</strong> arka planda çalışır
-                (197 kontrol, ~20 sn) ve sonucu heartbeat ile Synapse'e bildirilir.</p>
+            <p>Portal açılışında ayrıca <strong>Mekanik Zeka öz testi</strong> (197 kontrol) ve
+                <strong>saha teşhisi</strong> (veri toplama zinciri) arka planda çalışır; sonuç heartbeat ile
+                Synapse'e bildirilir.</p>
         </div>
 
         <!-- ========== 8. HEDEFLER ========== -->
@@ -1109,7 +1114,7 @@
             <div class="info-grid">
                 <div class="info-card">
                     <div class="icon">🧪</div>
-                    <div class="value">180</div>
+                    <div class="value">197</div>
                     <div class="label">Öz test kontrolü — lokasyonun kendi ayarlarıyla, portal açılışında</div>
                 </div>
                 <div class="info-card">
@@ -1119,8 +1124,8 @@
                 </div>
                 <div class="info-card">
                     <div class="icon">📋</div>
-                    <div class="value">466</div>
-                    <div class="label">Toplam otomatik kontrol (lokasyon + merkez)</div>
+                    <div class="value">1.103</div>
+                    <div class="label">Lokasyon tarafı otomatik kontrol (26 test dosyası, 24.10.2026'da tamamı geçiyor)</div>
                 </div>
             </div>
 
@@ -1140,12 +1145,22 @@
                         <td>Portal açılışında ve her güncellemeden sonra</td>
                         <td>Lokasyonun kendi ayarlarıyla motorun doğru karar verdiği; bozuk yama/ayar
                             dosyası açılışta yakalanır</td></tr>
+                    <tr><td><strong>Saha teşhisi</strong></td>
+                        <td>Portal açılışında, öz testle birlikte</td>
+                        <td>Veri toplama zinciri: BACnet dosyası tazeliği, şablonun yeri, toplayıcı süreci,
+                            canlı deneme okuması, donmuş ölçüm taraması — salt okuma</td></tr>
                     <tr><td><strong>Diğer paketler</strong></td>
                         <td>Yayından önce</td>
-                        <td>Oto-set (103), BACnet yazma (55), heartbeat (20), kilit (20),
-                            Synapse portal (220)</td></tr>
+                        <td>Oto-set (175), canlı güç (82), ısıtma talep/üretim (64), simülasyon (69), BACnet
+                            yazma (55), veri köprüsü (39), veri alarmı (39), heartbeat (33), hava durumu (31),
+                            BACnet donma (26), saha teşhisi (24), kilit (21), senkron tamsayı (10)…</td></tr>
                 </tbody>
             </table>
+            <div class="alert alert-warning">
+                <strong>Açık kalem:</strong> Maslak'ın öz testi 21.10'dan beri <strong>192 / 197</strong>
+                (kural kataloğu, tutarlılık ve öncelik paketlerinde 5 kontrol). Aynı paketler geliştirme
+                makinesinde tam geçtiği için fark Maslak'ın kendi ayar dosyalarındadır; inceleniyor.
+            </div>
 
             <div class="alert alert-info">
                 <strong>Tutarsız filtresi:</strong> Çıkış denetimi bir çelişki bulursa sonucu değiştirmez —
@@ -1157,43 +1172,47 @@
         <!-- ========== KOD İSTATİSTİKLERİ ========== -->
         <div class="section">
             <h2>📦 Kod ve Dosya İstatistikleri</h2>
-            <p>16 Ekim 2026 itibarıyla sistemin büyüklüğü (git'in takip ettiği dosyalar; üretilen CSV/log
-                dosyaları ve veri klasörleri hariç):</p>
+            <p>24 Ekim 2026 itibarıyla sistemin büyüklüğü (git'in takip ettiği dosyalar; üretilen CSV/log
+                dosyaları ve veri klasörleri hariç). Kod + yapılandırma sayımı: py, html, js, css, sql, bat, md,
+                json, toml.</p>
 
             <div class="kpi-strip">
-                <div class="kpi-item"><div class="val">171</div><div class="lbl">Takipli dosya</div></div>
-                <div class="kpi-item"><div class="val">141</div><div class="lbl">Kod dosyası</div></div>
-                <div class="kpi-item"><div class="val">62.004</div><div class="lbl">Ham satır</div></div>
-                <div class="kpi-item"><div class="val">51.575</div><div class="lbl">Net satır</div></div>
-                <div class="kpi-item"><div class="val">5.932</div><div class="lbl">Test satırı</div></div>
+                <div class="kpi-item"><div class="val">212</div><div class="lbl">Takipli dosya</div></div>
+                <div class="kpi-item"><div class="val">181</div><div class="lbl">Kod + yapılandırma</div></div>
+                <div class="kpi-item"><div class="val">73.266</div><div class="lbl">Ham satır</div></div>
+                <div class="kpi-item"><div class="val">49.894</div><div class="lbl">Python satırı</div></div>
+                <div class="kpi-item"><div class="val">8.345</div><div class="lbl">Test satırı (40 dosya)</div></div>
             </div>
+            <p>16 Ekim'e göre (aynı yöntemle): Python 42.125 → 49.894, test dosyası 27 → 40,
+                test satırı 5.932 → 8.345.</p>
 
             <table>
                 <thead>
                     <tr><th>Dosya</th><th>Satır</th><th>Görev</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td><code>hvac/deneme/main_portal.py</code></td><td>5.430</td>
+                    <tr><td><code>hvac/deneme/main_portal.py</code></td><td>5.479</td>
                         <td>Mekanik Zeka — kural motoru + portal girişi</td></tr>
-                    <tr><td><code>hvac/deneme/app_portal.py</code></td><td>5.275</td>
+                    <tr><td><code>hvac/deneme/app_portal.py</code></td><td>5.453</td>
                         <td>Enerji ve Verimlilik — Streamlit uygulaması</td></tr>
-                    <tr><td><code>hvac/deneme/static/index.html</code></td><td>4.347</td>
+                    <tr><td><code>hvac/deneme/static/index.html</code></td><td>4.732</td>
                         <td>Mekanik Zeka arayüzü (filtreler, talimat, PDF)</td></tr>
-                    <tr><td><code>merkez/app_merkez.py</code></td><td>3.502</td>
+                    <tr><td><code>merkez/app_merkez.py</code></td><td>3.929</td>
                         <td>Synapse GM Merkez portalı</td></tr>
-                    <tr><td><code>hvac/deneme/static/qrcode_generator.js</code></td><td>2.297</td>
-                        <td>QR bakım kartı üretimi (hazır kütüphane)</td></tr>
-                    <tr><td><code>merkez/pages/lokasyon_detay.py</code></td><td>1.794</td>
-                        <td>Lokasyon detay sayfası — setler, eşikler, oto-set durumu</td></tr>
-                    <tr><td><code>hvac/deneme/ahu_collector.py</code></td><td>1.172</td>
-                        <td>BACnet okuma → analiz motoru beslemesi</td></tr>
-                    <tr><td><code>hvac/deneme/oto_set.py</code></td><td>853</td>
-                        <td>Oto-set karar motoru — eşikler, histerezis, doğrulama</td></tr>
+                    <tr><td><code>merkez/pages/lokasyon_detay.py</code></td><td>2.037</td>
+                        <td>Lokasyon detay sayfası — Dashboard + Canlı İzleme</td></tr>
+                    <tr><td><code>hvac/deneme/ahu_collector.py</code></td><td>1.339</td>
+                        <td>BACnet okuma → analiz motoru beslemesi, ısıtma talep/üretim</td></tr>
+                    <tr><td><code>hvac/deneme/cloud_sync.py</code></td><td>1.027</td>
+                        <td>Heartbeat, uzak yama, enerji senkronu, canlı güç aktarımı</td></tr>
+                    <tr><td><code>hvac/deneme/data_bridge.py</code></td><td>772</td>
+                        <td>Günlük satır, hava doldurma, BACnet bayat/donma koruması</td></tr>
+                    <tr><td><code>merkez/canli_izleme.py</code> + <code>ikonlar.py</code></td><td>923</td>
+                        <td>Canlı İzleme çubukları ve animasyonlu simgeler (tek kaynak)</td></tr>
+                    <tr><td><code>disa_aktarim/tuketim_tahmin/</code></td><td>1.153</td>
+                        <td>Bağımsız tüketim tahmini paketi (başka programlara)</td></tr>
                 </tbody>
             </table>
-            <p><strong>Klasör dağılımı:</strong> lokasyon programı (<code>hvac/deneme</code>) ~35.200 satır,
-                Synapse merkez portalı (<code>merkez</code>) ~13.800, arayüz (<code>static</code>) ~6.800,
-                aylık rapor motoru (<code>monthly_report</code>) ~3.900 satır.</p>
         </div>
 
         <!-- ========== 5. ENERJİ MODÜLÜ ========== -->
@@ -1277,6 +1296,19 @@
                         <td>adet / °C</td>
                         <td>—</td>
                         <td>Chiller yük dengeleme</td>
+                    </tr>
+                    <tr>
+                        <td>Kojen Adet <span class="badge badge-purple">YENİ</span></td>
+                        <td>adet</td>
+                        <td>—</td>
+                        <td>BACnet KOJEN-1..4 durumu — ısıtma gazı tahmininin ana girdisi</td>
+                    </tr>
+                    <tr>
+                        <td>Günlük Hava + Nem <span class="badge badge-purple">YENİ</span></td>
+                        <td>°C, %, mm, kWh/m²</td>
+                        <td>—</td>
+                        <td>İnternetten lokasyonun kendi koordinatıyla (sıcaklık, nem, yağış, bulut, radyasyon,
+                            rüzgâr, durum) + BACnet dış hava nem sensörü</td>
                     </tr>
                 </tbody>
             </table>
@@ -1593,9 +1625,13 @@
                     <ul>
                         <li>Streamlit Cloud'da otomatik deploy (GitHub push → canlı)</li>
                         <li>Maslak + Altunizade lokasyonlarını tek ekranda göster</li>
-                        <li>Yıl-üzeri-yıl (YoY) tüketim karşılaştırma badge'leri</li>
-                        <li>Harita görünümü ile lokasyon seçimi</li>
-                        <li>İnternetle her yerden erişim</li>
+                        <li>Ana ekran <strong>anlık</strong> değerlerle: lokasyon kartlarında anlık şebeke kW ve W/m²</li>
+                        <li><strong>Canlı İzleme</strong> sekmesi: 27 sayacın anlık gücü, animasyonlu yük çubukları
+                            (500 / 700 / 800 kW eşiklerinde yeşil → turuncu → kırmızı)</li>
+                        <li>Animasyonlu simgeler tek kaynaktan (<code>ikonlar.py</code>); lokasyon renkli kartlar</li>
+                        <li><strong>İzleyici linki</strong>: şifresiz, salt okunur erişim (<code>?izle=&lt;jeton&gt;</code>)
+                            — yazma işlemleri en alt katmanda reddedilir</li>
+                        <li>Dış bağlantı: <code>?detay=&lt;lok&gt;&amp;sekme=canli</code> doğrudan Canlı İzleme'yi açar</li>
                     </ul>
                 </div>
                 <div class="feature-card" style="border-left: 4px solid var(--red);">
@@ -1661,10 +1697,22 @@
                         <td>Günlük analiz özeti (Synapse'in lokasyon kartlarını beslediği kayıt)</td>
                         <td>"51 AHU, 5 kritik, 23 uyarı"</td>
                     </tr>
+                    <tr>
+                        <td>⚡ <strong>energy_data</strong></td>
+                        <td>Günlük enerji satırları — lokasyondaki CSV kaynaktır, her sabah 08:00'de buluta aynalanır.
+                            24.10'da 11 sütun eklendi (hava + nem + kojen adedi)</td>
+                        <td>"2026-10-23: 58.854 kWh, 16,9 °C, yağmurlu"</td>
+                    </tr>
+                    <tr>
+                        <td>🔌 <strong>canli_guc</strong></td>
+                        <td>Sayaçların anlık kW değeri — lokasyon × cihaz başına tek satır, üzerine yazılır
+                            (tablo büyümez)</td>
+                        <td>"maslak / TRDP-1: 474 kW, 12 sn önce"</td>
+                    </tr>
                 </tbody>
             </table>
 
-            <h3>Sürüm Geçmişi (Eylül 2026)</h3>
+            <h3>Sürüm Geçmişi (Eylül–Ekim 2026)</h3>
             <table>
                 <thead>
                     <tr><th>Sürüm</th><th>İçerik</th></tr>
@@ -1699,6 +1747,19 @@
                         geçti; otomatik bakım raporu ekrandaki PDF ile aynı kalıpta</td></tr>
                     <tr><td><strong>v9.9</strong></td><td>Kollektör/FCU/AHU kuralı <strong>iki eşiğe</strong>
                         döndü (23 ve 15 °C, üç bölge); oto-set algoritması ve bütün eşikler belgelendi</td></tr>
+                    <tr><td><strong>v10.0 – v10.4</strong></td><td>Mekanik Zeka Ayarlar → Kaydet düzeltildi
+                        (ekran/sunucu aralıkları tek kaynak); ısıtma talep/üretim kartları (54 AHU + kazan);
+                        canlı trafo gücü ve 27 sayaçlı Canlı İzleme</td></tr>
+                    <tr><td><strong>v10.5 – v10.7</strong></td><td>Enerji portalı görsel düzeltmeleri (₺nan, açık tema,
+                        yanlış ok, oranlı sistem sağlığı); Mekanik Zeka Synapse tasarım katmanı, başlık ve düğmeler,
+                        motor seçimi kaldırıldı. v10.5/v10.6 CRLF satır sonu yüzünden sahada syntax error verdi,
+                        v10.7 ile aynı gün giderildi; artık her yama göndermeden önce derlenerek doğrulanıyor</td></tr>
+                    <tr><td><strong>v10.8 – v10.9</strong></td><td>Saha teşhisi; Maslak'ta 34 günlük BACnet donmasının
+                        kök sebebi (şablon yolu) bulundu ve düzeltildi; bayat BACnet verisi artık yazılmıyor,
+                        donmuş 33 gün temizlendi; BACnet alarmları</td></tr>
+                    <tr><td><strong>v11.0 – v11.1</strong></td><td>Her lokasyon kendi koordinatının günlük havasını
+                        internetten alır; dış hava nem sensörü ve Kojen Adet; veri girişi formunda Hava Durumu
+                        bölümü; bulut senkronunda tamsayı düzeltmesi</td></tr>
                 </tbody>
             </table>
         </div>
@@ -1733,7 +1794,8 @@
                 <div>
                     <h4>Enerji Dashboardı (Streamlit — Lokasyon PC)</h4>
                     <ul style="font-size:13px; padding-left:18px; color:var(--text-light);">
-                        <li>Modbus analizörler 30 dakikada bir otomatik okunur</li>
+                        <li>Modbus (07:00) ve BACnet (07:05) günlük okunur; 07:10'da dünün satırı ve günlük
+                            hava yazılır; sayaçların canlı gücü ~15 sn'de bir</li>
                         <li>KPI kartları: Tüketim, Chiller, Gaz, Su, MCC</li>
                         <li>Trend grafikleri + YoY karşılaştırma</li>
                         <li>Tasarruf önerilerini gözden geçir</li>
@@ -1746,11 +1808,11 @@
 
         <!-- FOOTER -->
         <div class="footer">
-            <strong>Synapse (SYN)</strong> — Acıbadem Hastanesi — Sürüm v9.9, 16 Ekim 2026<br>
-            2 Lokasyon (Maslak + Altunizade) | 56 AHU BACnet | 22 Modbus Analizör | 35 teşhis + 12 tasarruf kuralı |
-            90+ özellik | 62.004 satır kod<br>
-            BACnet/IP (okuma + yazma) + Modbus TCP + Supabase Bulut + GM Merkez Portalı + Lisans Sistemi<br>
-            736 otomatik kontrol (lokasyon tarafı) | canlı çıkış denetimi | 197 kontrollük lokasyon öz testi<br>
+            <strong>Synapse (SYN)</strong> — Acıbadem Hastanesi — Sürüm v11.1, 24 Ekim 2026<br>
+            2 Lokasyon (Maslak + Altunizade) | 56 AHU BACnet | 27 Modbus Analizör (canlı) | 35 teşhis + 12 tasarruf kuralı |
+            90+ özellik | 73.266 satır kod<br>
+            BACnet/IP (okuma + yazma) + Modbus TCP + günlük hava (internet) + Supabase Bulut + GM Merkez Portalı + Lisans Sistemi<br>
+            1.103 otomatik kontrol (lokasyon tarafı) | canlı çıkış denetimi | 197 kontrollük öz test + saha teşhisi<br>
             <em>Yapay zeka destekli otomatik hastane enerji optimizasyonu — Konfor + Tasarruf + Proaktif Bakım</em> 🏥⚡🧠
         </div>
 

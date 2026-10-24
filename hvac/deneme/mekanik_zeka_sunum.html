@@ -167,9 +167,9 @@
                 Eşanjör ekipmanlarının sıcaklık/vana verilerini her gün otomatik analiz eder, sorunları teşhis eder
                 ve sahaya uygulanabilir aksiyon önerileri üretir.
                 <br><br>
-                <strong>Sürüm v9.9 — 16 Ekim 2026</strong> &nbsp;|&nbsp; 35 teşhis kuralı &nbsp;|&nbsp;
+                <strong>Sürüm v11.1 — 24 Ekim 2026</strong> &nbsp;|&nbsp; 35 teşhis kuralı &nbsp;|&nbsp;
                 talep esaslı mod çözümü &nbsp;|&nbsp; çıkış denetimi (15 değişmez kural) &nbsp;|&nbsp;
-                197 kontrollük öz test
+                197 kontrollük öz test + saha teşhisi
             </div>
         </div>
 
@@ -825,17 +825,39 @@
             <p>Her lokasyonun <strong>kendi ayarları</strong> vardır (üfleme bandı, tolerans, chiller hedefi).
                 Aynı kod farklı ayarla farklı karar verir — bu yüzden 197 kontrol lokasyon PC'sinde de koşar.
                 Sonuç heartbeat ile Synapse'e gider ve lokasyon kartında görünür:</p>
-            <div class="alert alert-green">
-                🧪 <strong>öz test: 2 lokasyon 197/197 geçti</strong> — kalan varsa kırmızı satır ve hangi
-                paketin kaldığı yazılır.
+            <div class="alert alert-warning">
+                🧪 <strong>Maslak, 24.10.2026: 192 / 197</strong> — kural kataloğu, kural tutarlılığı ve
+                öncelik matrisi paketlerinde 5 kontrol <strong>21.10'dan beri sahada kalıyor</strong>.
+                Aynı paketler geliştirme makinesinde tam geçiyor (lokasyon tarafı 1.103 / 1.103); fark
+                Maslak'ın kendi ayar dosyalarından geliyor ve açık kalem olarak inceleniyor. Öz testin
+                amacı tam olarak budur: "bende yeşildi" ile "sahada yeşil" aynı şey değildir.
             </div>
             <p>Böylece bozuk bir yama, bozulmuş bir ayar dosyası veya motoru anlamsız bir noktaya iten bir
                 lokasyon ayarı açılışta yakalanır.</p>
+
+            <h3>4. Saha Teşhisi (portal açılışında, öz testle birlikte) <span class="badge badge-purple">YENİ v10.8</span></h3>
+            <p>Öz test motorun <em>karar</em> doğruluğunu ölçer; saha teşhisi (<code>saha_teshis.py</code>)
+                ayrı bir soru sorar: <strong>"veri doğru geliyor mu?"</strong>. Salt okumadır — dosya
+                değiştirmez, süreç başlatmaz, BACnet'e yazmaz. Sonuç heartbeat ile Synapse'e gider:</p>
+            <ul>
+                <li>BACnet enerji dosyasının son okuma zamanı, kaç noktanın OK olduğu, hata türleri</li>
+                <li>BACnet okuma şablonunun yeri ve veri toplayıcının onu <strong>bulup bulamadığı</strong></li>
+                <li>Veri toplayıcı süreci çalışıyor mu, kaç kopya</li>
+                <li>Canlı deneme okuması — gateway şu an cevap veriyor mu (ağ mı, yazılım mı ayrımı)</li>
+                <li>Enerji tablosunda hangi ölçümün kaç gündür birebir aynı kaldığı (donma taraması)</li>
+            </ul>
+            <div class="alert alert-info">
+                <strong>İlk sahada kullanımı (24.10.2026):</strong> Maslak'ta enerji tablosundaki dış hava,
+                chiller yükü ve MAS sıcaklıkları 34 gündür aynı değerdeydi. Teşhis birkaç dakikada
+                sebebi buldu: şablon <code>configs/</code> altındaydı, veri toplayıcı yalnız kök klasörde
+                arıyordu; gateway 5/5 cevap veriyordu. Mekanik Zeka kendi BACnet okumasını yaptığı için
+                (iki klasöre de bakar) analizler hiç aksamadı — sorun yalnız enerji tablosundaydı.
+            </div>
         </div>
 
         <!-- ========== 5. kW KARTLARI ========== -->
         <div class="section page-break">
-            <h2>❄️ Talep Edilen / Üretilen Soğutma kW Kartları</h2>
+            <h2>❄️🔥 Talep Edilen / Üretilen Soğutma ve Isıtma kW Kartları</h2>
             <p>Mekanik Zeka, tüm AHU'ların anlık vana ve ΔT verisinden iki canlı kW kartı üretir; bu kartlar
                 sistemin <strong>ne kadar soğutma talep ettiğini</strong> ve <strong>ne kadar soğutma
                     üretebildiğini</strong> karşılaştırarak kapasite yetersizliğini görünür kılar.</p>
@@ -852,6 +874,20 @@
                     yetersizliği</strong> durumundadır — bu durum NOT_COOLING / NOT_HEATING kurallarıyla
                 AHU bazında da raporlanır.
             </div>
+
+            <h3>Isıtma Talep / Üretim <span class="badge badge-purple">YENİ v10.1</span></h3>
+            <ul>
+                <li><strong>Talep (AHU)</strong> = Σ (AHU ısıtma tasarım kapasitesi × Isıtma Vana %) —
+                    soğutmayla aynı formül; kapasiteler <code>configs/ahu_tasarim_isitma_kapasiteleri.json</code>
+                    (54 AHU, toplam 4.590 kW)</li>
+                <li><strong>Üretim (Kazan)</strong>: kazanlarda chiller'daki "çalışma yüzdesi" noktası yok;
+                    bu yüzden kazan giriş-çıkış ΔT'sinden tahmin edilir. Yöntem ekranda yazar; yüzde noktası
+                    eklenince chiller gibi gerçek yükten hesaplanacak</li>
+                <li>Talep yalnız AHU'yu kapsar — FCU ısıtma, kar eritme ve kullanım sıcak suyu ölçülmediği
+                    için <strong>üretimin talepten yüksek olması normaldir</strong></li>
+            </ul>
+            <p>Kartlar v11'de Synapse tasarım diline geçti: ortalama vana yüzdesi ve talep/üretim kW'ı
+                akan şeritli çubukla gösterilir, rakamlar sayarak değişir, veri yokken gri çubuk nefes alır.</p>
         </div>
 
         <!-- ========== 6. KULLANIM ========== -->
@@ -969,6 +1005,84 @@
             </div>
         </div>
 
+        <!-- ========== 16-24 EKIM GUNCELLEMELERI ========== -->
+        <div class="section page-break">
+            <h2>🆕 16 Ekim'den Bu Yana Ne Değişti? (v9.9 → v11.1)</h2>
+            <p>Teşhis motorunun <strong>35 kuralı, eşikleri ve mod çözümü yine değişmedi</strong>.
+                Değişenler: ayarların kaydedilmesi, ısıtma tarafının görünürlüğü, arayüz ve veri
+                güvenilirliği.</p>
+
+            <table>
+                <thead>
+                    <tr><th>Konu</th><th>Ne değişti</th><th>Neden</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Ayarlar → Kaydet</strong></td>
+                        <td>Ekranın kabul ettiği aralıklar sunucununkiyle aynı kaynaktan geliyor; ret sebebi
+                            (hangi alan, hangi aralık) ekranda yazıyor; ret olunca hiçbir ayar yarım
+                            kaydedilmiyor</td>
+                        <td>Ekran 1–20 kabul ederken sunucu 4–8 istiyordu — her kayıt reddediliyor, mesaj
+                            "undefined" diyordu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Isıtma talep/üretim</strong></td>
+                        <td>Soğutmadaki kırılım ısıtma için de yapıldı (54 AHU + kazan)</td>
+                        <td>Kışın kapasite sorunu görünmüyordu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Arayüz</strong></td>
+                        <td>Synapse tasarım katmanı: akan lacivert başlık, nabız atan durum noktası, KPI
+                            şeritlerinde parıltı, kart giriş/hover animasyonları, Synapse'in animasyonlu
+                            simgeleri (tek kaynak <code>merkez/ikonlar.py</code>'den üretilir); Ana Sayfa /
+                            Ayarlar / Bakım Kartları başlıkta sağda; KPI simgesi rakamın solunda</td>
+                        <td>Synapse ile görsel bütünlük</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Motor seçimi kaldırıldı</strong></td>
+                        <td>Sahada hep v2 kullanılıyordu; seçim kutusu yerine sabit v2</td>
+                        <td>Gereksiz ve yanlış seçime açık bir kontrol</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Üst çerçeve kaldırıldı</strong></td>
+                        <td><code>/hvac</code> artık arayüzü doğrudan açar</td>
+                        <td>"ACIBADEM SAĞLIK GRUBU — HVAC Öneri Motoru" çubuğu gereksizdi</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Yatay taşma</strong></td>
+                        <td>Sonuç tablosu kendi kutusunda kayar</td>
+                        <td>1600 px ekranda sayfa 2.197 px'e şişiyor, sağdaki düğmeler ekran dışına
+                            düşüyordu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Grafik yazıları</strong></td>
+                        <td>Canlı soğutma/ısıtma grafiklerinin lejant ve eksen yazıları koyu</td>
+                        <td>Beyazdı; açık zeminde lejantlar boş kutu görünüyordu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Test sahası</strong></td>
+                        <td><code>simulasyon_sunucu.py</code> / <code>TEST_BASLAT.bat</code>: portal +
+                            sahte saha birlikte; hesap zincirinin hiçbir parçası taklit edilmez, yalnız en
+                            alttaki BACnet okuması</td>
+                        <td>Saha verisi olmadan arayüz ve ısıtma hesabı denenemiyordu</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Saha teşhisi</strong></td>
+                        <td>Öz testle birlikte veri toplama zinciri de kontrol ediliyor (yukarıda)</td>
+                        <td>Enerji tablosundaki 34 günlük BACnet donması kimse fark etmeden geçmişti</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="alert alert-info">
+                <strong>Yama yöntemi:</strong> 23.10'da gönderilen iki yama sahada "syntax error" verdi:
+                dosyalar Windows satır sonlarıyla (CRLF) okunup gönderilmişti, lokasyon bir <code>\r</code>
+                daha ekleyince Python'un satır devamları kırıldı. Aynı gün v10.7 ile giderildi. O günden beri
+                her yama göndermeden önce <strong>lokasyonun yazma şekli taklit edilip derlenerek</strong>
+                doğrulanıyor.
+            </div>
+        </div>
+
         <!-- ========== KOD VE DOSYA ========== -->
         <div class="section">
             <h2>📦 Mekanik Zeka — Kod ve Dosya Yapısı</h2>
@@ -981,37 +1095,44 @@
                     <tr><th>Dosya</th><th>Satır</th><th>Görev</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td><code>main_portal.py</code></td><td>5.430</td><td>Kural motoru, ΔT/hedef/skor,
+                    <tr><td><code>main_portal.py</code></td><td>5.479</td><td>Kural motoru, ΔT/hedef/skor,
                         talimat rehberi, API uçları, portal girişi</td></tr>
-                    <tr><td><code>static/index.html</code></td><td>4.347</td><td>Analiz arayüzü, filtreler,
+                    <tr><td><code>static/index.html</code></td><td>4.732</td><td>Analiz arayüzü, filtreler,
                         talimat penceresi, PDF üretimi</td></tr>
-                    <tr><td><code>ahu_collector.py</code></td><td>1.172</td><td>BACnet okuma → motora besleme,
-                        ek ekipman satırları (kollektör/chiller/kazan)</td></tr>
+                    <tr><td><code>static/synapse_tema.css / .js / synapse_ikon.js</code></td><td>415 + üretilen</td>
+                        <td>Synapse tasarım katmanı ve animasyonlu simgeler (<code>merkez/ikon_js_uret.py</code>
+                        ile <code>ikonlar.py</code>'den üretilir)</td></tr>
+                    <tr><td><code>ahu_collector.py</code></td><td>1.339</td><td>BACnet okuma → motora besleme,
+                        ek ekipman satırları (kollektör/chiller/kazan), ısıtma talep/üretim</td></tr>
+                    <tr><td><code>saha_teshis.py</code></td><td>302</td><td>Veri toplama zincirinin salt okuma
+                        teşhisi — öz testle birlikte heartbeat'e</td></tr>
                     <tr><td><code>bakim_raporu.py</code></td><td>485</td><td>Aylık bakım raporu PDF'i —
                         ekrandaki bakım kartı PDF'i ile aynı kalıpta</td></tr>
                     <tr><td><code>on_kosul.py</code></td><td>441</td><td>Ön koşul kapısı: start/stop, kanal
                         basıncı, sensör aralığı (2/3 – 3/3 onay)</td></tr>
                     <tr><td><code>kural_denetim.py</code></td><td>169</td><td>15 değişmez kural — motor ve
                         testler için tek kaynak</td></tr>
-                    <tr><td><code>oz_test.py</code></td><td>128</td><td>Lokasyon öz testi (197 kontrol) ve
-                        sonucun heartbeat'e aktarılması</td></tr>
+                    <tr><td><code>oz_test.py</code></td><td>144</td><td>Lokasyon öz testi (197 kontrol) +
+                        saha teşhisi, sonucun heartbeat'e aktarılması</td></tr>
                     <tr><td>Test dosyaları (6 paket)</td><td>1.334</td><td>Golden, katalog, tutarlılık, mod,
                         öncelik, değişmez kurallar</td></tr>
                 </tbody>
             </table>
 
             <div class="alert alert-green">
-                <strong>Sistem geneli (16.10.2026):</strong> 171 takipli dosya, 141 kod dosyası,
-                <strong>62.004 ham satır</strong> (yorum ve boş satırlar çıkarılınca 51.575 net satır),
-                bunun 42.125'i Python. 27 test dosyasında 5.932 satır test kodu.
+                <strong>Sistem geneli (24.10.2026):</strong> 212 takipli dosya; Python
+                <strong>49.894 satır</strong> (16.10'da 42.125); kod + yapılandırma dosyaları
+                (py, html, js, css, sql, bat, md, json, toml — 181 dosya) <strong>73.266 ham satır</strong>.
+                40 test dosyasında 8.345 satır test kodu (16.10'da 27 dosya / 5.932). Lokasyon tarafının
+                26 test dosyasında <strong>1.103 kontrolün tamamı</strong> geçiyor.
             </div>
         </div>
 
         <!-- FOOTER -->
         <div class="footer">
             <strong>Mekanik Zeka</strong> — Synapse (SYN) HVAC Analiz Modülü — Acıbadem Hastanesi<br>
-            Sürüm <strong>v9.9</strong> — 16 Ekim 2026 | 35 kural | 52 ayar eşiği | 617 karar dalı |
-            197 kontrollük öz test | 15 değişmez kuralla canlı çıkış denetimi<br>
+            Sürüm <strong>v11.1</strong> — 24 Ekim 2026 | 35 kural | 52 ayar eşiği | 617 karar dalı |
+            197 kontrollük öz test + saha teşhisi | 15 değişmez kuralla canlı çıkış denetimi<br>
             <em>Bu belge motorun güncel davranışını anlatır; kural eşikleri ayarlar panelinden değiştirilebilir.</em>
         </div>
     </div>

@@ -337,7 +337,7 @@
     <h1>Synapse (SYN)</h1>
     <div class="subtitle">Gelecek Vizyon Belgesi</div>
     <div class="meta">
-      <span>📅 Son Güncelleme: 16 Ekim 2026 (v9.9)</span>
+      <span>📅 Son Güncelleme: 24 Ekim 2026 (v11.1)</span>
       <span>🚀 Proje Başlangıcı: 5 Ağustos 2025</span>
       <span>⏱️ Toplam Süre: ~14,5 ay (kavramdan üretime)</span>
     </div>
@@ -377,7 +377,7 @@ graph LR
         <tr class="phase-row-done"><td><strong>5.5</strong></td><td><span class="badge badge-done">✅</span></td><td>Nis-May 2026</td><td><strong>BACnet otomasyon (56 AHU), GM Merkez portal, Supabase bulut, Lisans sistemi, YoY badge, Personel bildirim + onay</strong></td></tr>
         <tr class="phase-row-done"><td><strong>6</strong></td><td><span class="badge badge-done">✅</span></td><td>May-Eyl 2026</td><td><strong>BACnet write aktif: oto-set ile chiller/kollektör setleri geçiş saatlerinde otomatik gönderiliyor, geri okuma ile doğrulanıyor</strong></td></tr>
         <tr class="phase-row-done"><td><strong>7</strong></td><td><span class="badge badge-done">✅</span></td><td>Eylül 2026</td><td><strong>Doğrulama ve Güvence: test altyapısı, canlı çıkış denetimi, lokasyon öz testi (197 kontrol)</strong></td></tr>
-        <tr class="phase-row-active"><td><strong>8</strong></td><td><span class="badge badge-active">🔄</span></td><td>Ekim 2026</td><td><strong>Çok lokasyon ve görünürlük: her hastane kendi koordinatı/saati/setleriyle; sabah analizinde kıyas zemini ve trend; enerji portalında veri kaybı giderildi, bildirim çubuğu ve kart düzeni</strong> — sırada saha verisiyle regresyon</td></tr>
+        <tr class="phase-row-active"><td><strong>8</strong></td><td><span class="badge badge-active">🔄</span></td><td>Ekim 2026</td><td><strong>Çok lokasyon, görünürlük ve veri güvenilirliği: her hastane kendi koordinatı/saati/setleriyle; 27 sayaç canlı izleme; günlük hava durumu internetten; saha teşhisi ve BACnet donma alarmları; tüketim tahmininin gerçek başarısı ölçüldü, yeni model ayrı paket olarak hazır</strong> — sırada yeni modelin portala eklenmesi ve Altunizade</td></tr>
       </tbody>
     </table>
 
@@ -441,8 +441,12 @@ graph LR
         <tr>
           <td><strong>ML Tüketim Tahmini</strong></td>
           <td><span class="badge badge-done">ÇALIŞIYOR</span></td>
-          <td>GradientBoosting modeli, veri biriktikçe <strong>kendini otomatik yeniden eğitiyor</strong>;
-            aylık tahmin ve senaryo tahmini üretiyor (<code>forecast_engine.py</code>)</td>
+          <td>GradientBoosting modeli aylık tahmin ve senaryo tahmini üretiyor (<code>forecast_engine.py</code>).
+            <strong>24.10'da gerçek başarısı ölçüldü</strong> (her ay yalnız önceki veriyle): ortalama hata
+            <strong>%4,0</strong> — "geçen yılın aynı ayı" kuralı da %3,6 veriyor, yani model şu an bir
+            satırlık kuraldan iyi değil. Ekrandaki "Sapma" eğitimde görülen aylarla kıyaslandığı için
+            olduğundan iyi görünüyor; yeniden eğitim koşulu da veri azalınca tetiklenmiyor.
+            Yeni model (günlük, hava + takvim + kojen planı) ayrı pakette <strong>%2,8</strong></td>
         </tr>
         <tr>
           <td><strong>Geri Bildirim Filtresi</strong></td>
@@ -452,14 +456,19 @@ graph LR
         </tr>
         <tr>
           <td>İstatistiksel Anomali</td>
-          <td><span class="badge badge-future">YOK</span></td>
-          <td>Mevcut anomali tespiti yüzde farkı bazlı (dün / geçen yıl aynı gün); z-score + mevsimsel
-            desen analizi yazılmadı</td>
+          <td><span class="badge badge-active">KISMİ</span></td>
+          <td>Tüketim anomalisi hâlâ yüzde farkı bazlı (z-score + mevsimsel desen yazılmadı). Ama
+            <strong>veri anomalisi</strong> artık yakalanıyor: donmuş sensör (4+ gün aynı değer), bayat
+            BACnet okuması, sensör–internet tutarsızlığı, sıfır/çift gün, şebekesi 0 yazılmış gün, ani
+            düşük toplam, tek günlük sensör sıçraması</td>
         </tr>
         <tr>
           <td>Hava Durumu API</td>
-          <td><span class="badge badge-future">YOK</span></td>
-          <td>Dış hava BMS'ten okunuyor; ileriye dönük tahmin için harici API bağlanmadı</td>
+          <td><span class="badge badge-done">BAĞLANDI</span></td>
+          <td>Oto-set dış hava <em>tahminini</em> zaten internetten alıyordu; 24.10'dan beri her lokasyon kendi
+            koordinatının <strong>günlük hava geçmişini</strong> de (sıcaklık, nem, yağış, bulut, radyasyon,
+            rüzgâr, durum) enerji tablosuna yazıyor. <em>Not: <code>ai_progress.py</code>'de bu özellik henüz
+            "pasif" işaretli — puan güncellenmedi</em></td>
         </tr>
       </tbody>
     </table>
@@ -630,8 +639,8 @@ graph TD
       <thead><tr><th>Özellik</th><th>Açıklama</th><th>Bağımlılık</th></tr></thead>
       <tbody>
         <tr><td>İstatistiksel Anomali</td><td>z-score + mevsimsel desen</td><td>900+ veri ✅</td></tr>
-        <tr><td>Hava Durumu API</td><td>Proaktif uyarı</td><td>API key</td></tr>
-        <tr><td>Tüketim Tahmini</td><td>ML Motor (GradientBoosting) + Senaryo — veri arttıkça kendini eğitir</td><td>✅ Çalışıyor</td></tr>
+        <tr><td>Hava Durumu API</td><td>Günlük hava geçmişi + oto-set tahmini (Open-Meteo, anahtar gerekmez)</td><td>✅ Bağlandı (24.10)</td></tr>
+        <tr><td>Tüketim Tahmini</td><td>ML Motor (GradientBoosting) + Senaryo; yeni günlük model ayrı pakette (toplam %2,8, soğutma %22,6, kojen planıyla ısıtma gazı %30)</td><td>✅ Çalışıyor — yeni model portala eklenecek</td></tr>
         <tr><td>Geri Bildirim Filtresi</td><td>Reddedileni gizle, öne çıkar</td><td>⚠️ <strong>Kurulmadı</strong> — kayıt var, kullanım yok</td></tr>
       </tbody>
     </table>
@@ -700,7 +709,7 @@ graph LR
         <tr><td>Kurallar</td><td>⚙️ 12 tasarruf + 35 teşhis kuralı aktif</td><td>⚙️ Feedback bazlı yeni kurallar</td></tr>
         <tr><td>Öğrenme</td><td>📝 Feedback <strong>kaydediliyor</strong> (henüz karara dönüşmüyor)</td><td>🤖 Reddedileni bastır + eşik kişiselleştirme</td></tr>
         <tr><td>Öneri</td><td>💡 Dinamik + bağlamsal öneriler</td><td>💡 Tam kişiselleştirilmiş</td></tr>
-        <tr><td>Tahmin</td><td>✅ ML Motor (GradientBoosting) aktif</td><td>📈 Hava API + proaktif uyarı</td></tr>
+        <tr><td>Tahmin</td><td>✅ ML Motor aktif (gerçek hata %4,0); yeni günlük model hazır (%2,8)</td><td>📈 Yeni model portalda + hava tahminiyle haftalık/günlük tahmin</td></tr>
         <tr><td>Otomasyon</td><td>✅ BACnet okuma 08:30 otomatik</td><td>🤖 BACnet write + FCU kilitleme</td></tr>
       </tbody>
     </table>
@@ -1058,7 +1067,6 @@ gantt
         <li>Lisans sistemi dev-ortam istisnası (config yoksa geliştirme PC'sinde çalışır)</li>
       </ul>
     </div>
-  </div>
 
     <h3 style="color:var(--orange-dark); margin-top: 30px;">🤖 Faz 6 + 7: Otonom Kontrol ve Doğrulama (Ağustos – Eylül 2026)</h3>
 
@@ -1153,23 +1161,55 @@ gantt
         <li>Oto-set algoritması ve bütün eşikler belgelendi (<code>OTO_SET_KURALLARI.md</code>); tablolar koddan kopyalanmadı, gerçek fonksiyonlarla 47 sınır değeri koşularak doğrulandı</li>
       </ul>
     </div>
+
+    <div class="log-entry">
+      <h4>📌 17–19 Ekim 2026 — Ayarlar ve ısıtma tarafı</h4>
+      <ul>
+        <li><strong>Mekanik Zeka Ayarlar → Kaydet çalışmıyordu:</strong> ekran 1–20 kabul ederken sunucu 4–8 istiyordu; her kayıt reddediliyor ve sebep "undefined" görünüyordu. Aralıklar tek kaynaktan, ret sebebi ekranda, yarım kayıt yok</li>
+        <li><strong>Isıtma talep/üretim:</strong> soğutmadaki kırılım ısıtma için de (54 AHU, 4.590 kW tasarım; kazan üretimi ΔT'den tahmin, yöntem ekranda yazar)</li>
+        <li>Saha verisi olmadan test için sahte saha sunucusu (hesap zinciri taklit edilmez, yalnız BACnet okuması)</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 20–23 Ekim 2026 — Canlı izleme ve Synapse görünümü</h4>
+      <ul>
+        <li><strong>27 sayacın anlık gücü</strong> ~15 sn'de bir; paralel okuma (25,3 sn → 0,4 sn), arızalı sayaç atlanır ama "okunamadı" olarak görünür; güç register'ları üretici kılavuzlarından doğrulandı. Bulutta tablo büyümez (cihaz başına tek satır)</li>
+        <li>Synapse ana ekranı anlık değerlere geçti; lokasyon detayında <strong>Canlı İzleme</strong> sekmesi, animasyonlu yük çubukları (500/700/800 kW eşikleri)</li>
+        <li><strong>İzleyici linki:</strong> şifresiz, salt okunur erişim; yazma en alt katmanda reddedilir</li>
+        <li>Animasyonlu simgeler tek kaynaktan (Synapse ve Mekanik Zeka aynı simgeyi kullanır); Ayarlar paneli tarayıcıda açılır</li>
+        <li>Enerji portalında ₺nan, koyu tema kalıntıları, yanlış ↑ oklar giderildi; <strong>Sistem Sağlığı</strong> oranlı oldu (eski formül 55 AHU'lu tesiste her gün %0 veriyordu)</li>
+        <li>Mekanik Zeka Synapse tasarımına geçti; motor seçimi kaldırıldı</li>
+        <li>İki yama sahada "syntax error" verdi (CRLF satır sonu); aynı gün giderildi, artık her yama göndermeden önce lokasyonun yazma şekli taklit edilip derleniyor</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 24 Ekim 2026 — Veri güvenilirliği ve tahminin gerçek başarısı</h4>
+      <ul>
+        <li><strong>34 günlük sessiz arıza bulundu:</strong> Maslak'ta 21.09'dan beri enerji tablosundaki dış hava (19,88 °C), chiller yükü/adedi ve MAS sıcaklıkları her gün aynıydı. Lokasyona gönderilen salt okuma <strong>saha teşhisi</strong> birkaç dakikada kök sebebi buldu (BACnet şablonu configs/ altında, veri toplayıcı kökte arıyordu); düzeltildi, bayat veri artık yazılmıyor, donmuş günler temizlendi, alarmlar eklendi</li>
+        <li><strong>Günlük hava durumu:</strong> her lokasyon kendi koordinatının havasını internetten alıyor; dış hava nem sensörü ve kojen adedi BACnet'ten; veri girişi formunda Hava Durumu bölümü</li>
+        <li><strong>Tüketim tahmininin gerçek başarısı ölçüldü:</strong> portal modeli %4,0, "geçen yılın aynı ayı" %3,6, yeni günlük model %2,8. Isıtma gazında belirleyici kojen (kojen planıyla %53 → %30). Dışarıdan önerilen alternatif model adil düzenekte başa baş çıktı; işe yarayan fikirleri alındı</li>
+        <li>Bulut senkronunda boş hücreli adet sütunlarının "2.0" gitmesi (toplu gönderimi düşürecekti) yarın sabahki senkrondan önce giderildi</li>
+      </ul>
+    </div>
   </div>
 
   <!-- KOD İSTATİSTİKLERİ -->
   <div class="section">
-    <h2>📦 Sistem Büyüklüğü (16 Ekim 2026)</h2>
+    <h2>📦 Sistem Büyüklüğü (24 Ekim 2026)</h2>
     <div class="progress-grid">
       <div class="progress-item">
-        <div class="label"><span>📄 Kod satırı (ham)</span><span class="score" style="color:var(--blue);">62.004</span></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Yorum ve boş satırlar çıkarılınca 51.575 net satır</div>
+        <div class="label"><span>📄 Kod satırı (ham)</span><span class="score" style="color:var(--blue);">73.266</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Kod + yapılandırma (py, html, js, css, sql, bat, md, json, toml), 181 dosya</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🐍 Python</span><span class="score" style="color:var(--green);">42.125</span></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">141 kod dosyası, 171 takipli dosya</div>
+        <div class="label"><span>🐍 Python</span><span class="score" style="color:var(--green);">49.894</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">16.10'da 42.125; 212 takipli dosya</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🧪 Test kodu</span><span class="score" style="color:var(--purple);">5.932</span></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">27 test dosyası; lokasyon tarafında 736 kontrol, öz testte 197'si açılışta koşar</div>
+        <div class="label"><span>🧪 Test kodu</span><span class="score" style="color:var(--purple);">8.345</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">40 test dosyası (16.10'da 27); lokasyon tarafında 1.103 kontrolün tamamı geçiyor, öz testte 197'si açılışta koşar</div>
       </div>
       <div class="progress-item">
         <div class="label"><span>⚙️ Teşhis kuralı</span><span class="score" style="color:var(--orange);">35</span></div>
@@ -1179,14 +1219,15 @@ gantt
     <table>
       <thead><tr><th>Bileşen</th><th>Satır</th><th>Görev</th></tr></thead>
       <tbody>
-        <tr><td>main_portal.py</td><td>5.430</td><td>Mekanik Zeka motoru + portal girişi</td></tr>
-        <tr><td>app_portal.py</td><td>5.275</td><td>Enerji ve Verimlilik uygulaması</td></tr>
-        <tr><td>static/index.html</td><td>4.347</td><td>Mekanik Zeka arayüzü</td></tr>
-        <tr><td>merkez/app_merkez.py</td><td>3.502</td><td>Synapse GM Merkez portalı</td></tr>
-        <tr><td>merkez/pages/ (4 sayfa)</td><td>3.523</td><td>Lokasyon detayı, karşılaştırma, rapor, yönetim</td></tr>
-        <tr><td>monthly_report/</td><td>3.921</td><td>Aylık rapor motoru</td></tr>
-        <tr><td>ahu_collector.py</td><td>1.172</td><td>BACnet okuma ve ekipman satırları</td></tr>
-        <tr><td>oto_set.py</td><td>853</td><td>Oto-set karar motoru (lokasyon tarafı)</td></tr>
+        <tr><td>main_portal.py</td><td>5.479</td><td>Mekanik Zeka motoru + portal girişi</td></tr>
+        <tr><td>app_portal.py</td><td>5.453</td><td>Enerji ve Verimlilik uygulaması</td></tr>
+        <tr><td>static/index.html</td><td>4.732</td><td>Mekanik Zeka arayüzü</td></tr>
+        <tr><td>merkez/app_merkez.py</td><td>3.929</td><td>Synapse GM Merkez portalı</td></tr>
+        <tr><td>monthly_report/</td><td>3.921</td><td>Aylık rapor ve tahmin motoru</td></tr>
+        <tr><td>merkez/pages/lokasyon_detay.py</td><td>2.037</td><td>Lokasyon detayı — Dashboard + Canlı İzleme</td></tr>
+        <tr><td>ahu_collector.py</td><td>1.339</td><td>BACnet okuma, ekipman satırları, ısıtma talep/üretim</td></tr>
+        <tr><td>disa_aktarim/tuketim_tahmin/</td><td>1.153</td><td>Bağımsız tüketim tahmini paketi (başka programlara)</td></tr>
+        <tr><td>cloud_sync.py</td><td>1.027</td><td>Heartbeat, uzak yama, enerji senkronu, canlı güç</td></tr>
       </tbody>
     </table>
   </div>
@@ -1271,6 +1312,19 @@ gantt
         </ul>
       </div>
       <div class="feature-card">
+        <h4>9. Canlı İzleme ve Veri Güvenilirliği (8 özellik) <span class="badge badge-done">YENİ</span></h4>
+        <ul>
+          <li>27 sayacın anlık gücü, Synapse Canlı İzleme</li>
+          <li>İzleyici linki (salt okunur, şifresiz)</li>
+          <li>Günlük hava durumu (lokasyonun kendi koordinatı)</li>
+          <li>Dış hava nem sensörü, Kojen Adet</li>
+          <li>Saha teşhisi (veri toplama zinciri, salt okuma)</li>
+          <li>BACnet bayat / donma / sensör tutarsızlığı alarmları</li>
+          <li>Bayat veri yazılmaz; donmuş günler temizlenir</li>
+          <li>Bağımsız tüketim tahmini paketi + dürüst sınama</li>
+        </ul>
+      </div>
+      <div class="feature-card">
         <h4>6. Bulut Altyapı + GM Merkez (9 özellik)</h4>
         <ul>
           <li>Supabase güncellemeler — uzak yama mekanizması</li>
@@ -1293,12 +1347,13 @@ gantt
     ~5 ay Faz 0 kavram doğrulama (ChatGPT), ardından Faz 1-5 tam geliştirme,
     Faz 5.5 (BACnet + Supabase bulut + GM Merkez), <strong>Faz 6 (otonom set gönderimi)</strong> ve
     <strong>Faz 7 (doğrulama ve güvence)</strong>.
-    Toplam <strong>~14,5 ayda 90+ özellik</strong> aktif, <strong>62.004 satır kod</strong>.
+    Toplam <strong>~14,5 ayda 90+ özellik</strong> aktif, <strong>73.266 satır kod</strong>.
     AI olgunluk puanı lokasyona göre <strong>%60–85</strong> (kodun kendi hesabı); öğrenen tek bileşen
-    ML tüketim tahminidir, geri bildirim döngüsü henüz açık maddedir.
-    56 AHU BACnet okuma + yazma, uzak yama, lisans sistemi, GM Merkez portalı, 35 teşhis kuralı ve
-    736 otomatik kontrol üretimde.
-    Sırada: saha verisiyle regresyon ve Altunizade BACnet entegrasyonu! 🤖🚀
+    ML tüketim tahminidir (gerçek hata %4,0; yeni günlük model %2,8), geri bildirim döngüsü henüz açık maddedir.
+    56 AHU BACnet okuma + yazma, 27 sayaç canlı izleme, günlük hava durumu, uzak yama, lisans sistemi,
+    GM Merkez portalı, 35 teşhis kuralı ve 1.103 otomatik kontrol üretimde.
+    Sırada: yeni tahmin modelinin portala eklenmesi, Maslak öz testindeki 5 kontrolün incelenmesi ve
+    Altunizade BACnet entegrasyonu! 🤖🚀
   </div>
 
 </div>
