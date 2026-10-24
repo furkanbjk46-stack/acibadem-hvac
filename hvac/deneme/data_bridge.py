@@ -46,6 +46,32 @@ SNAPSHOT_HOUR   = 7
 SNAPSHOT_MINUTE = 10
 
 # ================================================================
+# BACNET TAZELIK / DONMA KORUMASI (24.10.2026)
+# Maslak'ta data_collector BACnet sablonunu bulamayinca hedefli_enerji_verileri.csv
+# 21.09.2026'dan sonra hic guncellenmedi; bu kopru dosyanin tarihine BAKMADIGI
+# icin ayni degerleri 34 gun boyunca her sabah yeniden yazdi (dis hava 19,88 C,
+# chiller yuku, kazan sicakliklari...). Artik:
+#   * dosya BACNET_TAZELIK_SAAT'ten eskiyse degerleri KULLANILMAZ — alanlar bos
+#     kalir (yanlis veri yerine eksik veri; veri_alarm bunu KRITIK bildirir)
+#   * acilista energy_data.csv'de gecmiste kalmis donmus bloklar bosaltilir
+# ================================================================
+BACNET_TAZELIK_SAAT = 20       # 07:05 okumasi ile 07:10 yazimi arasi dakikalar; 20 saat bol pay
+DONMA_GUN = 4                  # olcum bu kadar gun birebir ayniysa donmus sayilir
+# energy_data'da BACnet'ten gelen (ya da ondan turetilen) tum sutunlar
+BACNET_SUTUNLARI = [
+    "Dis_Hava_Sicakligi_C", "Chiller_Set_Temp_C", "Chiller_Adet", "Absorption_Chiller_Adet",
+    "Kazan_Adet", "Chiller_Load_Percent",
+    "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
+    "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
+]
+# Donma TESPITI yalniz ondalikli OLCUMLERLE yapilir: chiller set ve cihaz adedi
+# haftalarca ayni kalabilir, bu normaldir.
+DONMA_OLCUMLERI = [
+    "Dis_Hava_Sicakligi_C", "Chiller_Load_Percent", "Mas1_Isitma_Temp", "Mas1_Kazan_Temp",
+    "Mas1_Sogutma_Temp", "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
+]
+
+# ================================================================
 # ANALIZOR GRUPLARI
 # ================================================================
 CHILLER_ANALYZERS = {
@@ -144,23 +170,35 @@ def read_modbus_csv():
     return result
 
 
-def read_bacnet_csv():
-    """hedefli_enerji_verileri.csv -> {point_name: float_value}"""
+def read_bacnet_csv(simdi=None):
+    """hedefli_enerji_verileri.csv -> {point_name: float_value}
+
+    Dosyadaki EN YENI okuma BACNET_TAZELIK_SAAT'ten eskiyse bos sozluk doner:
+    eski degeri bugunun degeri gibi yazmak, eksik birakmaktan kotudur.
+    """
     result = {}
     if not os.path.exists(BACNET_CSV):
         logger.warning("BACnet CSV bulunamadi: %s", BACNET_CSV)
         return result
     try:
         with open(BACNET_CSV, newline="", encoding="utf-8") as f:
-            for row in csv.DictReader(f):
-                name = row.get("Point_Name", "").strip()
-                status = row.get("Status", "")
-                if status != "OK":
-                    continue
-                try:
-                    result[name] = float(row.get("Value", ""))
-                except (ValueError, TypeError):
-                    pass
+            satirlar = list(csv.DictReader(f))
+        zamanlar = [r.get("Timestamp", "") for r in satirlar if r.get("Timestamp")]
+        son = datetime.strptime(max(zamanlar), "%Y-%m-%d %H:%M:%S") if zamanlar else None
+        if son is None or ((simdi or datetime.now()) - son).total_seconds() / 3600 > BACNET_TAZELIK_SAAT:
+            logger.warning("BACnet verisi BAYAT (son okuma: %s) — degerler KULLANILMIYOR, "
+                           "BACnet alanlari bos yazilacak. data_collector BACnet okumasini kontrol edin.",
+                           son.strftime("%d.%m.%Y %H:%M") if son else "yok")
+            return {}
+        for row in satirlar:
+            name = row.get("Point_Name", "").strip()
+            status = row.get("Status", "")
+            if status != "OK":
+                continue
+            try:
+                result[name] = float(row.get("Value", ""))
+            except (ValueError, TypeError):
+                pass
     except Exception as e:
         logger.error("BACnet CSV okuma hatasi: %s", e)
     return result
@@ -310,14 +348,15 @@ def build_daily_row(today_str, bacnet, daily_kwh):
 
     # --- Hesaplamalar ---
 
-    # Kac chiller calisiyor
-    ch_adet = sum(1 for i in range(1, 6) if data.get(f"_ch_dur_{i}", 0) >= 1.0)
-
-    # Absorption chiller
-    abs_adet = int(data.get("_abs_dur", 0) or 0)
-
-    # Kac kazan calisiyor
-    kaz_adet = sum(1 for i in range(1, 4) if data.get(f"_kaz_dur_{i}", 0) >= 1.0)
+    # Kac chiller / kazan calisiyor. BACnet verisi YOKSA (bayat/okunamadi)
+    # adetler BOS kalir — eskiden 0 yaziliyordu, yani "hic chiller calismiyor"
+    # gibi yanlis bir bilgi uretiliyordu.
+    if data:
+        ch_adet = sum(1 for i in range(1, 6) if data.get(f"_ch_dur_{i}", 0) >= 1.0)
+        abs_adet = int(data.get("_abs_dur", 0) or 0)
+        kaz_adet = sum(1 for i in range(1, 4) if data.get(f"_kaz_dur_{i}", 0) >= 1.0)
+    else:
+        ch_adet = abs_adet = kaz_adet = ""
 
     # Chiller yukleme yuzdesi: sadece calisan chillerlerin ortalamasi
     ch_yuz_vals = [
@@ -432,6 +471,98 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     return row
 
 
+def donmus_bacnet_temizle(yol=None, yedek_dizin=None) -> dict:
+    """energy_data.csv'de BACnet degerlerinin DONMUS kaldigi gunleri bosaltir.
+
+    Donmus blok: dis hava DONMA_GUN+ gun birebir ayni VE (baska olcum varsa)
+    ayni gunlerde en az bir baska olcum de ayni. Blogun ILK gunu gercek
+    okumadir, korunur; sonraki gunlerin BACNET_SUTUNLARI bosaltilir.
+    TEK BIR TAKVIM AYI icinde kalan bloklara DOKUNULMAZ, yalniz raporlanir:
+    Maslak'ta 2023-06 ve 2026-04 sonundaki kisa bloklar elle girilmis veri
+    (aylik ortalama) — silinseydi gercek kayit kaybolurdu. Ileriye donuk yeni
+    donma zaten olusmaz (read_bacnet_csv bayat dosyayi kullanmiyor); bu temizlik
+    GECMISTE kalmis, ay sinirini asan BACnet donmalari icindir.
+    Degisiklik varsa once yedek alinir, yazim atomiktir. Tekrar calistirilirsa
+    bir sey bulamaz. kWh / tuketim sutunlarina DOKUNMAZ.
+    """
+    import pandas as pd
+    import shutil
+    import tempfile
+    yol = yol or ENERGY_CSV
+    if not os.path.exists(yol):
+        return {"temizlenen_gun": 0}
+    df = pd.read_csv(yol, dtype=str, keep_default_na=False)   # bicim aynen korunur
+    if "Tarih" not in df.columns or df.empty:
+        return {"temizlenen_gun": 0}
+    tarih = pd.to_datetime(df["Tarih"].str[:10], errors="coerce")
+    sira = tarih.sort_values(kind="stable").index
+    supheli = []          # tek ay icinde kalan bloklar: dokunulmaz, raporlanir
+
+    def donmus_satirlar(sutun):
+        """sutun icin donmus bloklarin ILK GUN HARIC satir indeksleri"""
+        if sutun not in df.columns:
+            return set()
+        bulunan, blok = set(), []
+
+        def bitir():
+            if len(blok) >= DONMA_GUN:
+                t = tarih.loc[blok]
+                if t.dt.to_period("M").nunique() > 1:
+                    bulunan.update(blok[1:])
+                elif sutun == "Dis_Hava_Sicakligi_C":
+                    # Ayin tamami tek degerse beklenen durum (elle girilmis aylik
+                    # ortalama) — rapora bile yazilmaz; ayin bir PARCASI ise yazilir.
+                    tam_ay = t.min().day == 1 and t.max().day >= t.max().days_in_month - 1
+                    if not tam_ay and len(supheli) < 10:
+                        supheli.append("%s..%s" % (t.min().date(), t.max().date()))
+
+        for i in sira:
+            v = str(df.at[i, sutun]).strip()
+            if v and blok and v == str(df.at[blok[-1], sutun]).strip():
+                blok.append(i)
+            else:
+                bitir()
+                blok = [i] if v else []
+        bitir()
+        return bulunan
+
+    bloklar = {c: donmus_satirlar(c) for c in DONMA_OLCUMLERI}
+    dolu = [c for c in DONMA_OLCUMLERI if c in df.columns and (df[c].astype(str).str.strip() != "").any()]
+    ana = bloklar.get("Dis_Hava_Sicakligi_C", set())
+    diger = [c for c in dolu if c != "Dis_Hava_Sicakligi_C"]
+    hedef = sorted(ana & set().union(*(bloklar[c] for c in diger))) if diger else sorted(ana)
+    if not hedef:
+        return {"temizlenen_gun": 0, "dokunulmayan": supheli}
+
+    tarihler = sorted(df.loc[hedef, "Tarih"].str[:10])
+    try:
+        yedek_dizin = yedek_dizin or os.path.join(BASE_DIR, "configs")
+        os.makedirs(yedek_dizin, exist_ok=True)
+        shutil.copy2(yol, os.path.join(yedek_dizin, "energy_data_yedek_bacnet_donma_%s.csv"
+                                       % datetime.now().strftime("%Y%m%d_%H%M%S")))
+    except Exception as e:
+        logger.error("Donma temizligi: yedek alinamadi (%s) — temizlik YAPILMADI", e)
+        return {"temizlenen_gun": 0, "hata": "yedek alinamadi"}
+    for c in BACNET_SUTUNLARI:
+        if c in df.columns:
+            df.loc[hedef, c] = ""
+    _fd, _gecici = tempfile.mkstemp(suffix=".tmp", prefix="energy_",
+                                    dir=os.path.dirname(os.path.abspath(yol)) or ".")
+    os.close(_fd)
+    df.to_csv(_gecici, index=False)
+    os.replace(_gecici, yol)
+    sonuc = {"temizlenen_gun": len(hedef), "bas": tarihler[0], "son": tarihler[-1],
+             "dokunulmayan": supheli, "zaman": datetime.now().isoformat(timespec="seconds")}
+    logger.warning("Donmus BACnet verisi temizlendi: %d gun (%s -> %s), yedek configs/ altinda",
+                   len(hedef), tarihler[0], tarihler[-1])
+    try:
+        with open(os.path.join(yedek_dizin, "bacnet_donma_temizlik.json"), "w", encoding="utf-8") as f:
+            json.dump(sonuc, f, ensure_ascii=False, indent=1)
+    except Exception:
+        pass
+    return sonuc
+
+
 # ================================================================
 # GUNLUK SNAPSHOT
 # ================================================================
@@ -529,6 +660,12 @@ def bridge_loop():
             logger.warning("Modbus CSV bos veya okunamadi — ref olusturulamadi.")
 
     last_run_date = None
+
+    # Gecmiste donmus kalmis BACnet gunlerini bosalt (bir kez bulur; sonra bos doner)
+    try:
+        donmus_bacnet_temizle()
+    except Exception as e:
+        logger.error("Donmus BACnet temizligi yapilamadi: %s", e)
 
     # E-3 fix: Kacirilan gun telafisi — acilista saat 07:10'u gecmisse ve dun'un
     # satiri energy_data.csv'de yoksa snapshot'i hemen calistir (PC o saatte
