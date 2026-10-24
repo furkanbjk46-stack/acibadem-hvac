@@ -121,6 +121,14 @@ c("öz test özeti teşhisi taşıyor (heartbeat alanı)", "teshis" in oz_test.s
 c("teşhis modülü salt okuma: dosyaya yazdığı TEK yer kendi sonuç dosyası",
   open(os.path.join(BURASI, "saha_teshis.py"), encoding="utf-8").read().count('open(gecici, "w"') == 1)
 
+# ── Kök sebep düzeltmesi: data_collector şablonu configs/'te de bulmalı ──
+import data_collector as DC  # noqa: E402
+c("data_collector önce configs/ yolunu dener",
+  DC._EXCEL_FILE_CONFIGS.endswith(os.path.join("configs", "hedefli_okuma_sablonu_2.xlsx")))
+c("data_collector ve ahu_collector aynı sırayla arar",
+  "configs" in open(os.path.join(BURASI, "ahu_collector.py"), encoding="utf-8").read().split("_ENERGY_EXCEL_CONFIGS")[1][:80])
+c("geliştirme PC'sinde şablon artık bulunuyor (configs/)", os.path.exists(DC.EXCEL_FILE), DC.EXCEL_FILE)
+
 hata = [x for x in T if not x[1]]
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)[:300]))
