@@ -1351,6 +1351,15 @@ SCHEMA = [
     "MCC_CK_F01_kWh",
 ]
 
+# Hava sütunları (bina nem sensörü + lokasyonun internetten aldığı günlük hava).
+# Liste TEK YERDE (hava_durumu.py): ensure_schema listede olmayan sütunu her
+# açılışta sildiği için burada ayrıca yazılmaz — ayrışırsa veri kaybolur.
+try:
+    from hava_durumu import HAVA_SUTUNLARI as _HAVA_SUTUNLARI, SAYISAL_SUTUNLAR as _HAVA_SAYISAL
+except Exception:
+    _HAVA_SUTUNLARI, _HAVA_SAYISAL = [], []
+SCHEMA = SCHEMA + _HAVA_SUTUNLARI
+
 NUMERIC_COLS = [
     "Chiller_Set_Temp_C",
     "Chiller_Adet",
@@ -1397,7 +1406,7 @@ NUMERIC_COLS = [
     "MCC_CK_D01_kWh",
     "MCC_CK_E01_kWh",
     "MCC_CK_F01_kWh",
-]
+] + _HAVA_SAYISAL
 
 TR_MAP = str.maketrans({
     "ş": "s", "Ş": "s",

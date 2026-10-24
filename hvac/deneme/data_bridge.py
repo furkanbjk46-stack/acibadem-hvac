@@ -22,6 +22,13 @@ import time
 import logging
 from datetime import datetime, date, timedelta
 
+try:
+    import hava_durumu
+    from hava_durumu import HAVA_SUTUNLARI
+except Exception:                     # modül yoksa köprü yine çalışır, hava alanları olmaz
+    hava_durumu = None
+    HAVA_SUTUNLARI = []
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [BRIDGE] %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -59,7 +66,8 @@ BACNET_TAZELIK_SAAT = 20       # 07:05 okumasi ile 07:10 yazimi arasi dakikalar;
 DONMA_GUN = 4                  # olcum bu kadar gun birebir ayniysa donmus sayilir
 # energy_data'da BACnet'ten gelen (ya da ondan turetilen) tum sutunlar
 BACNET_SUTUNLARI = [
-    "Dis_Hava_Sicakligi_C", "Chiller_Set_Temp_C", "Chiller_Adet", "Absorption_Chiller_Adet",
+    "Dis_Hava_Sicakligi_C", "Dis_Hava_Nem_Yuzde",
+    "Chiller_Set_Temp_C", "Chiller_Adet", "Absorption_Chiller_Adet",
     "Kazan_Adet", "Chiller_Load_Percent",
     "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
     "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
@@ -67,7 +75,7 @@ BACNET_SUTUNLARI = [
 # Donma TESPITI yalniz ondalikli OLCUMLERLE yapilir: chiller set ve cihaz adedi
 # haftalarca ayni kalabilir, bu normaldir.
 DONMA_OLCUMLERI = [
-    "Dis_Hava_Sicakligi_C", "Chiller_Load_Percent", "Mas1_Isitma_Temp", "Mas1_Kazan_Temp",
+    "Dis_Hava_Sicakligi_C", "Dis_Hava_Nem_Yuzde", "Chiller_Load_Percent", "Mas1_Isitma_Temp", "Mas1_Kazan_Temp",
     "Mas1_Sogutma_Temp", "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
 ]
 
@@ -97,6 +105,7 @@ MCC_ONLY_ANALYZERS = ALL_ANALYZERS - CHILLER_ANALYZERS
 # ================================================================
 BACNET_MAP = {
     "DIS HAVA":                "Dis_Hava_Sicakligi_C",
+    "DIS HAVA NEM":            "Dis_Hava_Nem_Yuzde",     # 24.10.2026: AI 32 (cihaz 2098211)
     "CH SET":                  "Chiller_Set_Temp_C",
     "MAS-1 ISITMA SICAKLIK":   "Mas1_Isitma_Temp",
     "MAS-2 ISITMA SICAKLIK":   "Mas2_Isitma_Temp",
@@ -142,7 +151,7 @@ ENERGY_SCHEMA = [
     "MCC_2BK_D01_kWh", "MCC_2BK_D02_kWh",
     "MCC_4BK_E01_kWh", "MCC_4BK_E02_kWh", "MCC_4BK_F01_kWh",
     "MCC_CK_D01_kWh", "MCC_CK_E01_kWh", "MCC_CK_F01_kWh",
-]
+] + HAVA_SUTUNLARI   # bina nem sensörü + internetten günlük hava (hava_durumu.py)
 
 # ================================================================
 # YARDIMCI FONKSIYONLAR
@@ -438,6 +447,7 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "MCC_Tuketim_kWh":            mcc_kwh,      # CH HARİÇ tüm analizörler
         "VRF_Split_Tuketim_kWh":      0,            # Sahada henuz yok
         "Dis_Hava_Sicakligi_C":       data.get("Dis_Hava_Sicakligi_C", ""),
+        "Dis_Hava_Nem_Yuzde":         data.get("Dis_Hava_Nem_Yuzde", ""),
         "Chiller_Load_Percent":       ch_load,
         "Toplam_Hastane_Tuketim_kWh": sebeke_kwh if sebeke_kwh != "" else total_kwh,  # Sebeke+Kojen (Kojen=0 simdilik)
         "Toplam_Sogutma_Tuketim_kWh": chiller_kwh,  # CH analizörleri = soğutma
@@ -469,6 +479,50 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "MCC_CK_F01_kWh":             daily_kwh.get("CK-MCC-F01", "") if daily_kwh else "",
     }
     return row
+
+
+def hava_doldur(yol=None, bugun=None) -> dict:
+    """energy_data.csv'de internet hava alanlari BOS olan gunleri doldurur.
+
+    Ilk calismada butun gecmisi (arsiv tek istekte), sonra yalniz eksik kalan
+    gunleri (internet kesildigi gunler) tamamlar. Yalniz Hava_* sutunlarina yazar;
+    bina sensoru ve tuketim sutunlarina dokunmaz. Atomik yazim.
+    """
+    import pandas as pd
+    import tempfile
+    if hava_durumu is None:
+        return {"doldurulan": 0}
+    yol = yol or ENERGY_CSV
+    if not os.path.exists(yol):
+        return {"doldurulan": 0}
+    df = pd.read_csv(yol, dtype=str, keep_default_na=False)
+    if "Tarih" not in df.columns or df.empty:
+        return {"doldurulan": 0}
+    for c in hava_durumu.INTERNET_SUTUNLARI:
+        if c not in df.columns:
+            df[c] = ""
+    dun = ((bugun or date.today()) - timedelta(days=1)).isoformat()
+    tarih = df["Tarih"].str[:10]
+    bos = (df["Hava_Sicaklik_Ort_C"].astype(str).str.strip() == "") & (tarih <= dun) & (tarih != "")
+    if not bos.any():
+        return {"doldurulan": 0}
+    veri = hava_durumu.gunluk_hava(tarih[bos].min(), tarih[bos].max(), bugun=bugun)
+    say = 0
+    for i in df.index[bos]:
+        v = veri.get(tarih[i])
+        if v:
+            for c, x in v.items():
+                df.at[i, c] = "" if x is None else str(x)
+            say += 1
+    if say == 0:
+        return {"doldurulan": 0, "eksik": int(bos.sum())}
+    _fd, _gecici = tempfile.mkstemp(suffix=".tmp", prefix="energy_",
+                                    dir=os.path.dirname(os.path.abspath(yol)) or ".")
+    os.close(_fd)
+    df.to_csv(_gecici, index=False)
+    os.replace(_gecici, yol)
+    logger.info("Hava verisi dolduruldu: %d gun (%s -> %s)", say, tarih[bos].min(), tarih[bos].max())
+    return {"doldurulan": say, "eksik": int(bos.sum()) - say}
 
 
 def donmus_bacnet_temizle(yol=None, yedek_dizin=None) -> dict:
@@ -606,6 +660,10 @@ def run_daily_snapshot():
 
     # 6. Satiri olustur (dun'un tarihi ile) ve yaz
     row = build_daily_row(yesterday_str, bacnet_now, modbus_data)
+    # Lokasyonun kendi koordinatından dünün günlük hava özeti (internet yoksa boş
+    # kalır; hava_doldur bir sonraki açılışta tamamlar)
+    if hava_durumu is not None:
+        row.update(hava_durumu.gunluk_hava(yesterday_str, yesterday_str).get(yesterday_str, {}))
     write_to_energy_csv(row)
 
     logger.info("Otomatik: MCC=%.1f kWh | Chiller=%.1f kWh | Dis Hava=%.1f C",
@@ -666,6 +724,12 @@ def bridge_loop():
         donmus_bacnet_temizle()
     except Exception as e:
         logger.error("Donmus BACnet temizligi yapilamadi: %s", e)
+
+    # Hava alani bos kalmis gecmis gunleri internetten doldur (ilk calismada tum gecmis)
+    try:
+        hava_doldur()
+    except Exception as e:
+        logger.error("Hava verisi doldurulamadi: %s", e)
 
     # E-3 fix: Kacirilan gun telafisi — acilista saat 07:10'u gecmisse ve dun'un
     # satiri energy_data.csv'de yoksa snapshot'i hemen calistir (PC o saatte

@@ -55,6 +55,13 @@ ISITMA_TABAN = 15.0    # °C altı ısıtma derece-günü (hastane iç yükü y�
 ISTEGE_BAGLI = ["hasta_sayisi", "ameliyat_sayisi", "yagis_mm", "bulut_yuzde", "gunes_radyasyon",
                 "durum_yagmurlu", "durum_karli"]
 DOLULUK_ESIGI = 0.8
+# energy_data içindeki hava sütunları (lokasyon portalı hava_durumu.py) → iç adlar
+ENERJI_HAVA_SUTUNLARI = {
+    "sicaklik_ort": "Hava_Sicaklik_Ort_C", "sicaklik_max": "Hava_Sicaklik_Max_C",
+    "sicaklik_min": "Hava_Sicaklik_Min_C", "yagis_mm": "Hava_Yagis_mm",
+    "bulut_yuzde": "Hava_Bulut_Yuzde", "gunes_radyasyon": "Hava_Gunes_Radyasyon_kWh_m2",
+    "hava_durumu": "Hava_Durumu",
+}
 SEVIYE_GUN = 90
 EGITIM_GUN = 730
 
@@ -72,6 +79,16 @@ def birlestir(gunluk: pd.DataFrame, hava: Optional[pd.DataFrame] = None,
               haric: Optional[List[Dict]] = None):
     """Ana tablo + ek veriler → modelin iç tablosu. Döner (tablo, kalite_raporu)."""
     k = dict(KOLONLAR, **(kolonlar or {}))
+    # Lokasyon portalı (24.10.2026'dan beri) günlük havayı energy_data'nın içine
+    # yazıyor (Hava_* sütunları, hava_durumu.py). Ayrı hava dosyası verilmediyse
+    # oradan alınır — başka programda da aynı sütun adlarıyla çalışır.
+    if hava is None and ENERJI_HAVA_SUTUNLARI["sicaklik_ort"] in gunluk.columns:
+        hava = pd.DataFrame({"Tarih": gunluk[k["tarih"]]})
+        for ic, dis in ENERJI_HAVA_SUTUNLARI.items():
+            if dis in gunluk.columns:
+                hava[ic] = gunluk[dis].values
+        if "Dis_Hava_Nem_Yuzde" in gunluk.columns and "nem_yuzde" not in hava.columns:
+            hava["nem_yuzde"] = gunluk["Dis_Hava_Nem_Yuzde"].values
     d, rapor = veri_kalite.kontrol(gunluk, k, haric=haric)
     g = pd.DataFrame({"tarih": d[k["tarih"]]})
     for ic, dis in (("toplam", "toplam"), ("sebeke", "sebeke"), ("kojen", "kojen_uretim"), ("ges", "ges_uretim")):

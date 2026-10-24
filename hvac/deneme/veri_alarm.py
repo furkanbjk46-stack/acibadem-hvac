@@ -23,6 +23,8 @@ durdu, energy_data'ya bir ay boyunca aynı değerler yazıldı ve bu modül SESS
 kaldı — yalnız Modbus'a bakıyordu. Artık iki BACnet alarmı da var:
   bacnet_bayat : hedefli_enerji_verileri.csv 26 saatten eski (okuma yapılmıyor) — KRİTİK
   donmus_deger : BACnet ölçümleri energy_data'da 4+ gündür birebir aynı — UYARI
+  sensor_tutarsiz : dış hava / nem sensörü, lokasyonun internetten aldığı günlük
+                 hava ile son 5 günün 3'ünde tutmuyor (hava_durumu.py) — UYARI
 
 ÖNEM: Trafo ve chiller eksikse KRİTİK — şebeke ve soğutma hesabı bozulur
 (27.09'daki çift sayım tam bu yüzden fark edilmemişti). MCC/kule eksikse
@@ -175,6 +177,53 @@ def bacnet_alarmlari(simdi=None, bacnet_csv=None, energy_csv=None, tarih=None) -
     return alarmlar
 
 
+def sensor_tutarlilik_alarmlari(energy_csv=None, tarih=None, gun=5, esik_gun=3) -> list:
+    """Bina sensörü ↔ lokasyonun internetten aldığı hava: uzun süre tutmuyorsa UYARI.
+
+    Sensör 07:05 ANLIK değerdir, internet günlük özettir; bu yüzden kıyas
+    günün en düşük–en yüksek aralığına ±4 °C pay bırakarak yapılır. Nemde
+    günlük ortalamaya ±30 puan. Son `gun` günün `esik_gun`'ünde tutmazsa
+    sensör arızası / yanlış nokta / donma şüphesi bildirilir.
+    """
+    import csv as _csv
+    energy_csv = energy_csv or ENERGY_CSV
+    tarih = tarih or datetime.now().strftime("%Y-%m-%d")
+    if not os.path.exists(energy_csv):
+        return []
+    try:
+        with open(energy_csv, newline="", encoding="utf-8") as f:
+            satir = list(_csv.DictReader(f))[-gun:]
+    except Exception:
+        return []
+
+    def sayi(r, k):
+        try:
+            return float(r.get(k, ""))
+        except (TypeError, ValueError):
+            return None
+
+    alarmlar = []
+    sic_tutmayan, nem_tutmayan = [], []
+    for r in satir:
+        s, mn, mx = sayi(r, "Dis_Hava_Sicakligi_C"), sayi(r, "Hava_Sicaklik_Min_C"), sayi(r, "Hava_Sicaklik_Max_C")
+        if None not in (s, mn, mx) and not (mn - 4 <= s <= mx + 4):
+            sic_tutmayan.append("%s: sensör %.1f, internet %.1f–%.1f" % (r.get("Tarih"), s, mn, mx))
+        n, no = sayi(r, "Dis_Hava_Nem_Yuzde"), sayi(r, "Hava_Nem_Ort_Yuzde")
+        if None not in (n, no) and abs(n - no) > 30:
+            nem_tutmayan.append("%s: sensör %%%.0f, internet %%%.0f" % (r.get("Tarih"), n, no))
+    if len(sic_tutmayan) >= esik_gun:
+        alarmlar.append({"tur": "sensor_tutarsiz", "grup": "bacnet", "onem": "uyari", "tarih": tarih,
+                         "cihazlar": ["Dis_Hava_Sicakligi_C"],
+                         "mesaj": "Dış hava sensörü internetteki hava ile %d/%d gün tutmuyor (son: %s)"
+                                  % (len(sic_tutmayan), len(satir), sic_tutmayan[-1])})
+    if len(nem_tutmayan) >= esik_gun:
+        alarmlar.append({"tur": "sensor_tutarsiz", "grup": "bacnet", "onem": "uyari", "tarih": tarih,
+                         "cihazlar": ["Dis_Hava_Nem_Yuzde"],
+                         "mesaj": "Dış hava nem sensörü internetteki nem ile %d/%d gün tutmuyor (son: %s)"
+                                  % (len(nem_tutmayan), len(satir), nem_tutmayan[-1])})
+    return alarmlar
+
+
 def ozet(alarmlar) -> dict:
     """Heartbeat'e konacak KÜÇÜK özet (bakim_ozet JSONB'si şişmesin)."""
     alarmlar = alarmlar or []
@@ -293,7 +342,7 @@ def kontrol_et(daily_kwh, tarih=None, sb_url=None, sb_key=None, lokasyon_id=None
     except Exception:
         analizorler = []
     alarmlar = alarm_uret(analizorler, csv_durumlari(), daily_kwh, tarih)
-    alarmlar = sorted(alarmlar + bacnet_alarmlari(tarih=tarih),
+    alarmlar = sorted(alarmlar + bacnet_alarmlari(tarih=tarih) + sensor_tutarlilik_alarmlari(tarih=tarih),
                       key=lambda a: (a["onem"] != "kritik", a["tur"], a["grup"]))
     o = kaydet(alarmlar)
     if alarmlar and sb_url and sb_key and lokasyon_id:
