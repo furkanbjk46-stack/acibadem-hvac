@@ -158,13 +158,18 @@ r = _analiz(_prof(mode="COOLING", sat=21.0, ret=23.71, room=23.71, setp=23.0, cv
 c("[Ahu-13] vana %20 kısık, düşük ΔT → LOW_DT değil", r.rule != "LOW_DT", r.rule)
 r = _analiz(_prof(mode="COOLING", sat=22.0, ret=24.0, room=24.0, setp=23.0, cv=80))
 c("vana %80 açık, düşük ΔT → LOW_DT (veya daha ağır) korunur", r.rule != "NORMAL", r.rule)
-r = _analiz(_prof(mode="COOLING", sat=16.0, ret=26.2, room=26.2, setp=23.0, cv=40))
-c("sapma 3.2 → COMFORT_OVERRIDE (değişmedi)", r.rule == "COMFORT_OVERRIDE", r.rule)
-r = _analiz(_prof(mode="COOLING", sat=16.0, ret=36.06, room=36.06, setp=23.0, cv=40))
-c("sapma 13, vana %40 → COMFORT_CONTROL_FAULT KRİTİK",
+# Konfor sapmaları lokasyonun kendi eşiklerinden (Ayarlar ekranı) türetilir
+_UY = float(mp.CONFIG["COMFORT_DEPARTURE"])
+_KR = float(mp.CONFIG["COMFORT_CRITICAL_DEPARTURE"])
+_S_UYARI = round(_UY + 0.2, 2)             # uyarı eşiğinin hemen üstü
+_S_KRITIK = _KR + 3.0
+r = _analiz(_prof(mode="COOLING", sat=16.0, ret=23.0 + _S_UYARI, room=23.0 + _S_UYARI, setp=23.0, cv=40))
+c("sapma %g → COMFORT_OVERRIDE (değişmedi)" % _S_UYARI, r.rule == "COMFORT_OVERRIDE", r.rule)
+r = _analiz(_prof(mode="COOLING", sat=16.0, ret=23.0 + _S_KRITIK, room=23.0 + _S_KRITIK, setp=23.0, cv=40))
+c("sapma %g, vana %%40 → COMFORT_CONTROL_FAULT KRİTİK" % _S_KRITIK,
   r.rule == "COMFORT_CONTROL_FAULT" and r.severity == "CRITICAL", (r.rule, r.severity))
-r = _analiz(_prof(mode="COOLING", sat=16.0, ret=36.06, room=36.06, setp=23.0, cv=95))
-c("sapma 13, vana %95 → COMFORT_CAPACITY_FAULT KRİTİK",
+r = _analiz(_prof(mode="COOLING", sat=16.0, ret=23.0 + _S_KRITIK, room=23.0 + _S_KRITIK, setp=23.0, cv=95))
+c("sapma %g, vana %%95 → COMFORT_CAPACITY_FAULT KRİTİK" % _S_KRITIK,
   r.rule == "COMFORT_CAPACITY_FAULT" and r.severity == "CRITICAL", (r.rule, r.severity))
 
 for cv in (13, 20, 35):

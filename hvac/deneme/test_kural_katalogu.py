@@ -193,16 +193,25 @@ susmali("[KRİTİK] sağlıklı soğutmada bu teşhisler çıkmaz",
 
 # ══ 12. KONFOR DERECELENDİRMESİ ═════════════════════════════════════════
 kapsa("COMFORT_OVERRIDE", "COMFORT_CAPACITY_FAULT", "COMFORT_CONTROL_FAULT")
-bekle("[KONFOR] sapma 4°C → konfor önceliği (uyarı)",
-      prof(mode="COOLING", sat=16.0, ret=27.0, room=27.0, setp=23.0, cv=50), "COMFORT_OVERRIDE")
-bekle("[KONFOR] sapma 10°C, vana %95 → kapasite yetersiz (kritik)",
-      prof(mode="COOLING", sat=16.0, ret=33.0, room=33.0, setp=23.0, cv=95),
+# Sapmalar lokasyonun KENDİ eşiklerinden türetilir: konfor eşikleri Ayarlar
+# ekranından değiştirilebilir (Maslak: uyarı 5, kritik 10). Sabit 4/10°C ile
+# yazılan senaryolar, bilinçli seçilmiş ayarı motor hatası gibi gösteriyordu.
+_UY = float(mp.CONFIG["COMFORT_DEPARTURE"])
+_KR = float(mp.CONFIG["COMFORT_CRITICAL_DEPARTURE"])
+_S_UYARI = round((_UY + _KR) / 2, 2)       # uyarı bandının ortası
+_S_KRITIK = _KR + 3.0                      # kritik eşiğin net üstü
+_S_ALTI = max(_UY - 0.5, 0.0)              # uyarı eşiğinin altı
+bekle("[KONFOR] sapma %g°C (uyarı bandı) → konfor önceliği (uyarı)" % _S_UYARI,
+      prof(mode="COOLING", sat=16.0, ret=23.0 + _S_UYARI, room=23.0 + _S_UYARI, setp=23.0, cv=50),
+      "COMFORT_OVERRIDE")
+bekle("[KONFOR] sapma %g°C, vana %%95 → kapasite yetersiz (kritik)" % _S_KRITIK,
+      prof(mode="COOLING", sat=16.0, ret=23.0 + _S_KRITIK, room=23.0 + _S_KRITIK, setp=23.0, cv=95),
       "COMFORT_CAPACITY_FAULT")
-bekle("[KONFOR] sapma 10°C, vana %50 → kontrol/set sorunu (kritik)",
-      prof(mode="COOLING", sat=16.0, ret=33.0, room=33.0, setp=23.0, cv=50),
+bekle("[KONFOR] sapma %g°C, vana %%50 → kontrol/set sorunu (kritik)" % _S_KRITIK,
+      prof(mode="COOLING", sat=16.0, ret=23.0 + _S_KRITIK, room=23.0 + _S_KRITIK, setp=23.0, cv=50),
       "COMFORT_CONTROL_FAULT")
-susmali("[KONFOR] sınır: sapma 2.5°C (eşik altı) → konfor kuralı çıkmaz",
-        prof(mode="COOLING", sat=16.5, ret=25.5, room=25.5, setp=23.0, cv=50),
+susmali("[KONFOR] sınır: sapma %g°C (eşik altı) → konfor kuralı çıkmaz" % _S_ALTI,
+        prof(mode="COOLING", sat=16.5, ret=23.0 + _S_ALTI, room=23.0 + _S_ALTI, setp=23.0, cv=50),
         ("COMFORT_OVERRIDE", "COMFORT_CAPACITY_FAULT", "COMFORT_CONTROL_FAULT"))
 
 # ══ 13. VERİ EKSİKLİĞİ ══════════════════════════════════════════════════

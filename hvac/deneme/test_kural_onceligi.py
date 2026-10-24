@@ -122,11 +122,16 @@ c("[BAKIM] üfleme sensörü arızalıyken üflemeye dayanan kritik teşhis üre
 _KART = {}
 
 # ══ 6) KONFOR: uyarı ağır kuralı ezmez, kritik konfor ΔT'yi ezer ═══════
-r = kural(prof(mode="HEATING", sat=30.0, ret=26.0, room=26.5, setp=23.0, hv=60))
-c("[KONFOR] sapma 3.5°C (uyarı) düşük ΔT bulgusunu maskeleyebilir ama önem uyarıdır",
+# Konfor sapmaları lokasyonun kendi eşiklerinden (Ayarlar ekranı) türetilir
+_UY = float(mp.CONFIG["COMFORT_DEPARTURE"])
+_KR = float(mp.CONFIG["COMFORT_CRITICAL_DEPARTURE"])
+_S_UYARI = round(_UY + 0.5, 2)
+_S_KRITIK = _KR + 3.0
+r = kural(prof(mode="HEATING", sat=30.0, ret=26.0, room=23.0 + _S_UYARI, setp=23.0, hv=60))
+c("[KONFOR] sapma %g°C (uyarı) düşük ΔT bulgusunu maskeleyebilir ama önem uyarıdır" % _S_UYARI,
   SIDDET[r.severity] <= 2, (r.rule, r.severity))
-kazanan("[KONFOR] sapma 10°C + vana %50 → kontrol sorunu (kritik) yazılır",
-        prof(mode="COOLING", sat=16.0, ret=33.0, room=33.0, setp=23.0, cv=50),
+kazanan("[KONFOR] sapma %g°C + vana %%50 → kontrol sorunu (kritik) yazılır" % _S_KRITIK,
+        prof(mode="COOLING", sat=16.0, ret=23.0 + _S_KRITIK, room=23.0 + _S_KRITIK, setp=23.0, cv=50),
         "COMFORT_CONTROL_FAULT", "COMFORT_OVERRIDE")
 
 # ══ 7) GENEL KURAL: sonuç, eşzamanlı geçerli en ağır bulgudan hafif olamaz
