@@ -18,6 +18,12 @@ diğerlerinin sessizce ayrışması demekti. Tespit burada, gösterim orada.
   veri_yok : cihaz okundu ama günlük tüketim hesaplanamadı (referans yok,
              sayaç sıfırlandı, tarih uyumsuz) — veri boş kalır
 
+BACNET (24.10.2026 eklendi): Maslak'ta BACnet günlük okuması 20.09'dan sonra
+durdu, energy_data'ya bir ay boyunca aynı değerler yazıldı ve bu modül SESSİZ
+kaldı — yalnız Modbus'a bakıyordu. Artık iki BACnet alarmı da var:
+  bacnet_bayat : hedefli_enerji_verileri.csv 26 saatten eski (okuma yapılmıyor) — KRİTİK
+  donmus_deger : BACnet ölçümleri energy_data'da 4+ gündür birebir aynı — UYARI
+
 ÖNEM: Trafo ve chiller eksikse KRİTİK — şebeke ve soğutma hesabı bozulur
 (27.09'daki çift sayım tam bu yüzden fark edilmemişti). MCC/kule eksikse
 UYARI: kırılım eksilir ama toplam hesabı ayakta kalır.
@@ -29,6 +35,10 @@ from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODBUS_CSV = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
+BACNET_CSV = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+ENERGY_CSV = os.path.join(BASE_DIR, "energy_data.csv")
+BACNET_BAYAT_SAAT = 26
+DONMA_GUN = 4
 DURUM_DOSYA = os.path.join(BASE_DIR, "configs", "veri_alarmlari.json")
 
 # Cihaz adından grup: önem ve mesaj bundan belirlenir
@@ -39,7 +49,7 @@ GRUPLAR = (
     ("MCC", "mcc", "uyari"),
 )
 GRUP_ETIKET = {"trafo": "Trafo", "chiller": "Chiller", "kule": "Soğutma kulesi",
-               "mcc": "MCC panosu", "diger": "Analizör"}
+               "mcc": "MCC panosu", "bacnet": "BACnet", "diger": "Analizör"}
 
 
 def _grup(cihaz_adi: str):
@@ -114,6 +124,54 @@ def alarm_uret(analizorler, csv_durum, daily_kwh, tarih=None) -> list:
             })
     # Kritikler önce
     alarmlar.sort(key=lambda a: (a["onem"] != "kritik", a["tur"], a["grup"]))
+    return alarmlar
+
+
+def bacnet_alarmlari(simdi=None, bacnet_csv=None, energy_csv=None, tarih=None) -> list:
+    """BACnet zinciri: dosya bayat mı, değerler donmuş mu. Modbus alarmlarından bağımsız."""
+    import csv as _csv
+    simdi = simdi or datetime.now()
+    tarih = tarih or simdi.strftime("%Y-%m-%d")
+    bacnet_csv, energy_csv = bacnet_csv or BACNET_CSV, energy_csv or ENERGY_CSV
+    alarmlar = []
+    try:
+        son = None
+        if os.path.exists(bacnet_csv):
+            with open(bacnet_csv, newline="", encoding="utf-8") as f:
+                zamanlar = [r.get("Timestamp", "") for r in _csv.DictReader(f) if r.get("Timestamp")]
+            if zamanlar:
+                son = datetime.strptime(max(zamanlar), "%Y-%m-%d %H:%M:%S")
+        if son is None or (simdi - son).total_seconds() / 3600 > BACNET_BAYAT_SAAT:
+            ne_zaman = son.strftime("%d.%m.%Y %H:%M") if son else "hiç"
+            alarmlar.append({"tur": "bacnet_bayat", "grup": "bacnet", "onem": "kritik", "tarih": tarih,
+                             "cihazlar": ["BACnet okuması"],
+                             "mesaj": "BACnet günlük okuması yapılmıyor (son okuma: %s) — dış hava, "
+                                      "chiller ve kazan değerleri güncellenmiyor" % ne_zaman})
+    except Exception:
+        pass
+    try:
+        if os.path.exists(energy_csv):
+            with open(energy_csv, newline="", encoding="utf-8") as f:
+                satir = list(_csv.DictReader(f))[-30:]
+            donmus = []
+            # Ondalıklı ÖLÇÜMLER: günlerce birebir aynı kalmaları olanaksız.
+            # (Chiller set / cihaz adedi bilerek yok — sabit kalmaları normal.)
+            for c in ("Dis_Hava_Sicakligi_C", "Chiller_Load_Percent", "Mas1_Isitma_Temp", "Mas2_Isitma_Temp"):
+                v = [r.get(c, "") for r in satir if r.get(c, "") not in ("", None)]
+                if len(v) >= DONMA_GUN and len(set(v[-DONMA_GUN:])) == 1:
+                    n = 0
+                    for x in reversed(v):
+                        if x != v[-1]:
+                            break
+                        n += 1
+                    donmus.append((c, n, v[-1]))
+            if donmus:
+                en = max(donmus, key=lambda d: d[1])
+                alarmlar.append({"tur": "donmus_deger", "grup": "bacnet", "onem": "uyari", "tarih": tarih,
+                                 "cihazlar": [d[0] for d in donmus],
+                                 "mesaj": "BACnet değerleri donmuş: %s %d gündür %s" % (en[0], en[1], en[2])})
+    except Exception:
+        pass
     return alarmlar
 
 
@@ -235,6 +293,8 @@ def kontrol_et(daily_kwh, tarih=None, sb_url=None, sb_key=None, lokasyon_id=None
     except Exception:
         analizorler = []
     alarmlar = alarm_uret(analizorler, csv_durumlari(), daily_kwh, tarih)
+    alarmlar = sorted(alarmlar + bacnet_alarmlari(tarih=tarih),
+                      key=lambda a: (a["onem"] != "kritik", a["tur"], a["grup"]))
     o = kaydet(alarmlar)
     if alarmlar and sb_url and sb_key and lokasyon_id:
         bildirim_gonder(sb_url, sb_key, lokasyon_id, alarmlar)

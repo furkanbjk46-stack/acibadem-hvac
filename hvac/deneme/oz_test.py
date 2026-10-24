@@ -96,6 +96,13 @@ def calistir() -> dict:
             json.dump(sonuc, f, ensure_ascii=False, indent=1)
     except Exception:
         pass          # sonucu yazamamak öz testi başarısız saymaz
+    # Saha teşhisi (veri toplama zinciri). Motor testlerinden AYRI bir soru
+    # sorar: "veri doğru geliyor mu?". Kendi içinde kapalı — hata öz testi bozmaz.
+    try:
+        import saha_teshis
+        saha_teshis.calistir()
+    except Exception:
+        pass
     return sonuc
 
 
@@ -112,7 +119,16 @@ def son_sonuc() -> dict:
         "toplam": s.get("toplam"),
         "durum": s.get("durum"),
         "kalan_dosyalar": s.get("kalan_dosyalar") or [],
+        "teshis": _teshis_ozet(),
     }
+
+
+def _teshis_ozet() -> dict:
+    try:
+        import saha_teshis
+        return saha_teshis.son_ozet()
+    except Exception:
+        return {}
 
 
 if __name__ == "__main__":
