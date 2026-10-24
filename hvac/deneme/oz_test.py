@@ -120,7 +120,34 @@ def son_sonuc() -> dict:
         "durum": s.get("durum"),
         "kalan_dosyalar": s.get("kalan_dosyalar") or [],
         "teshis": _teshis_ozet(),
+        **_kalanlar_ve_ayarlar(s),
     }
+
+
+def _kalanlar_ve_ayarlar(s: dict) -> dict:
+    """Test KALDIYSA: kalan kontrollerin metni + lokasyonun motor ayarları.
+
+    NEDEN: Maslak 21.10'dan beri 192/197 veriyordu; aynı testler geliştirme
+    makinesinde tam geçiyordu. Heartbeat'te yalnız dosya adı vardı — hangi
+    kontrol, hangi ayarla kaldı görülemiyordu. Testler lokasyonun KENDİ
+    ayarlarıyla koştuğu için ayar dosyaları da gönderilir (yalnız eşik
+    değerleri; ikisi birlikte ~2 KB). Test geçerken hiçbiri eklenmez.
+    """
+    if s.get("durum") == "GECTI":
+        return {}
+    kalanlar = []
+    for t in s.get("detay") or []:
+        if t.get("durum") != "GECTI":
+            for satir in (t.get("kalanlar") or [])[:3]:
+                kalanlar.append("%s: %s" % (t.get("dosya"), str(satir)[:200]))
+    ayarlar = {}
+    for ad in ("hvac_settings.json", "chiller_fcu_ayarlari.json"):
+        try:
+            with open(os.path.join(BURASI, "configs", ad), encoding="utf-8") as f:
+                ayarlar[ad] = json.load(f)
+        except Exception as e:
+            ayarlar[ad] = "okunamadı: %s" % type(e).__name__
+    return {"kalanlar": kalanlar[:10], "ayarlar": ayarlar}
 
 
 def _teshis_ozet() -> dict:
