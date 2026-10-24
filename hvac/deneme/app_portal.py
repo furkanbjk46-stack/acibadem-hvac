@@ -1361,6 +1361,16 @@ except Exception:
     _HAVA_SUTUNLARI, _HAVA_SAYISAL = [], []
 SCHEMA = SCHEMA + _HAVA_SUTUNLARI
 
+# Günlük veri girişi formundaki hava alanları: (session_state anahtarı, sütun)
+_HAVA_FORM_ALANLARI = [
+    ("entry_hava_ort", "Hava_Sicaklik_Ort_C"), ("entry_hava_max", "Hava_Sicaklik_Max_C"),
+    ("entry_hava_min", "Hava_Sicaklik_Min_C"), ("entry_hava_nem", "Hava_Nem_Ort_Yuzde"),
+    ("entry_nem_sensor", "Dis_Hava_Nem_Yuzde"), ("entry_hava_yagis", "Hava_Yagis_mm"),
+    ("entry_hava_bulut", "Hava_Bulut_Yuzde"), ("entry_hava_rad", "Hava_Gunes_Radyasyon_kWh_m2"),
+    ("entry_hava_ruzgar", "Hava_Ruzgar_Ort_kmh"),
+]
+_HAVA_DURUMLARI = ["", "güneşli", "bulutlu", "yağmurlu", "karlı", "sisli"]   # hava_durumu.durum_metni ile aynı
+
 NUMERIC_COLS = [
     "Chiller_Set_Temp_C",
     "Chiller_Adet",
@@ -3600,6 +3610,17 @@ with tab1:
         _set_ss("entry_ch_count",         "Chiller_Adet",             0)
         _set_ss("entry_abs_count",        "Absorption_Chiller_Adet",  0)
         _set_ss("entry_kazan_count",      "Kazan_Adet",               0)
+        _set_ss("entry_kojen_count",      "Kojen_Adet",               0)
+        # Hava alanları BOŞ başlar (0 değil): kayıtta boş bırakılan alan yazılmaz,
+        # lokasyonun internetten aldığı değer korunur. 0 °C / %0 nem yanlış veri olurdu.
+        for _hk, _hc in _HAVA_FORM_ALANLARI:
+            _hv = _ex_pre.get(_hc) if _ex_pre is not None else None
+            try:
+                st.session_state[_hk] = None if _hv is None or pd.isna(_hv) else float(_hv)
+            except (TypeError, ValueError):
+                st.session_state[_hk] = None
+        _hd = _ex_pre.get("Hava_Durumu") if _ex_pre is not None else None
+        st.session_state["entry_hava_durumu"] = _hd if isinstance(_hd, str) and _hd in _HAVA_DURUMLARI else ""
         _set_ss("entry_mas1_h",           "Mas1_Isitma_Temp",         0.0)
         _set_ss("entry_mas1_k",           "Mas1_Kazan_Temp",          0.0)
         _set_ss("entry_mas1_c",           "Mas1_Sogutma_Temp",        0.0)
@@ -3690,6 +3711,9 @@ with tab1:
             ch_count = st.number_input("Chiller Adet (Çalışan)", step=1, min_value=0, key="entry_ch_count")
             abs_count = st.number_input("Absorption Chiller Adet", step=1, min_value=0, key="entry_abs_count")
             kazan_count = st.number_input("Kazan Adet", step=1, min_value=0, key="entry_kazan_count")
+            kojen_count = st.number_input("Kojen Adet (Çalışan)", step=1, min_value=0, max_value=4,
+                                          key="entry_kojen_count",
+                                          help="BACnet KOJEN-1..4 durumundan her sabah otomatik yazılır.")
 
         with c3:
             # Lokasyona göre sıcaklık alanları
@@ -3709,6 +3733,31 @@ with tab1:
                 single_h = st.number_input(_single_labels.get("heating_temp", "Isıtma Temp"), step=0.5, key="entry_single_h")
                 single_k = st.number_input(_single_labels.get("boiler_temp", "Kazan Temp"), step=0.5, key="entry_single_k")
                 single_c = st.number_input(_single_labels.get("cooling_temp", "Soğutma Temp"), step=0.5, key="entry_single_c")
+
+        st.divider()
+        st.subheader("Hava Durumu")
+        st.caption("Lokasyon bu alanları her sabah kendi konumunun internetteki günlük hava verisinden "
+                   "doldurur; nem sensörü BACnet'ten gelir. Boş bırakılan alan kaydedilmez.")
+        h1, h2, h3 = st.columns(3)
+        with h1:
+            hava_ort = st.number_input("Ortalama Sıcaklık (°C)", step=0.5, value=None, key="entry_hava_ort")
+            hava_max = st.number_input("En Yüksek Sıcaklık (°C)", step=0.5, value=None, key="entry_hava_max")
+            hava_min = st.number_input("En Düşük Sıcaklık (°C)", step=0.5, value=None, key="entry_hava_min")
+        with h2:
+            hava_nem = st.number_input("Ortalama Nem (%)", step=1.0, min_value=0.0, max_value=100.0,
+                                       value=None, key="entry_hava_nem")
+            nem_sensor = st.number_input("Dış Hava Nem Sensörü (%)", step=1.0, min_value=0.0, max_value=100.0,
+                                         value=None, key="entry_nem_sensor")
+            hava_yagis = st.number_input("Yağış (mm)", step=0.5, min_value=0.0, value=None, key="entry_hava_yagis")
+        with h3:
+            hava_bulut = st.number_input("Bulutluluk (%)", step=5.0, min_value=0.0, max_value=100.0,
+                                         value=None, key="entry_hava_bulut")
+            hava_rad = st.number_input("Güneş Radyasyonu (kWh/m²)", step=0.1, min_value=0.0, value=None,
+                                       key="entry_hava_rad")
+            hava_ruzgar = st.number_input("Ortalama Rüzgâr (km/sa)", step=0.5, min_value=0.0, value=None,
+                                          key="entry_hava_ruzgar")
+            hava_durumu = st.selectbox("Hava Durumu", _HAVA_DURUMLARI, key="entry_hava_durumu",
+                                       format_func=lambda v: v.capitalize() if v else "—")
 
         st.divider()
         st.subheader("Tüketim / Üretim")
@@ -3766,7 +3815,18 @@ with tab1:
                 "Chiller_Adet": int(ch_count),
                 "Absorption_Chiller_Adet": int(abs_count),
                 "Kazan_Adet": int(kazan_count),
+                "Kojen_Adet": int(kojen_count),
             }
+            # Hava: yalnız DOLU alanlar yazılır — boş alan mevcut (internetten gelen) değeri korur
+            for _sutun, _deger in (("Hava_Sicaklik_Ort_C", hava_ort), ("Hava_Sicaklik_Max_C", hava_max),
+                                   ("Hava_Sicaklik_Min_C", hava_min), ("Hava_Nem_Ort_Yuzde", hava_nem),
+                                   ("Dis_Hava_Nem_Yuzde", nem_sensor), ("Hava_Yagis_mm", hava_yagis),
+                                   ("Hava_Bulut_Yuzde", hava_bulut), ("Hava_Gunes_Radyasyon_kWh_m2", hava_rad),
+                                   ("Hava_Ruzgar_Ort_kmh", hava_ruzgar)):
+                if _deger is not None:
+                    new_row[_sutun] = float(_deger)
+            if hava_durumu:
+                new_row["Hava_Durumu"] = hava_durumu
             # Lokasyona göre sıcaklık sütunları
             if _has_dual_lines:
                 new_row.update({

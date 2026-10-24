@@ -131,6 +131,16 @@ c("nem 4/5 gün tutmuyor → UYARI", len(a) == 1 and "nem" in a[0]["mesaj"], a)
 c("tek günlük sapma uyarı vermez", tutarlilik([35, 15, 15, 15, 15], [70] * 5) == [])
 c("hava sütunları yoksa (eski dosya) sessiz", VA.sensor_tutarlilik_alarmlari(energy_csv=ec) == [])
 
+# ── Veri girişi formu: hava alanları + Kojen Adet ──
+c("formda her hava sütununun alanı var",
+  all('"%s"' % s in kaynak for s in HD.HAVA_SUTUNLARI) and "_HAVA_FORM_ALANLARI" in kaynak)
+c("formda Kojen Adet alanı var ve kaydediliyor",
+  'key="entry_kojen_count"' in kaynak and '"Kojen_Adet": int(kojen_count)' in kaynak)
+c("boş hava alanı kaydedilmiyor (internet değeri korunur)", "if _deger is not None:" in kaynak)
+c("hava alanları 0 değil BOŞ başlıyor", "st.session_state[_hk] = None if" in kaynak)
+c("hava durumu seçenekleri hava_durumu.py ile aynı",
+  all(HD.durum_metni(k, 5) in ["", "güneşli", "bulutlu", "yağmurlu", "karlı", "sisli"] for k in (0, 2, 45, 61, 73)))
+
 hata = [x for x in T if not x[1]]
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)[:300]))
