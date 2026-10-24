@@ -8,3 +8,6 @@ __pycache__/
 # ile üretilen örnek veri). Depoya girmesi sahte veriyi lokasyonlara taşır.
 hvac/deneme/energy_data.csv
 hvac/deneme/energy_data_ilk_yedek.csv
+
+# Yerel veri yedekleri (gercek lokasyon verisi icerebilir)
+hvac/deneme/yedekler/

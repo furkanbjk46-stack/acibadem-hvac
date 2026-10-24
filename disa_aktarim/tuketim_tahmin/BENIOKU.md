@@ -91,6 +91,24 @@ ASHRAE Guideline 14 aylık ölçütü: NMBE ±%5, CV(RMSE) ≤%15.
   geçmişi geldiğinde derece-gün etkisi doğru öğrenilecek. Bu dosyanın sonuçlarını hava verisi
   gelince yeniden ölçün.
 
+### Günlük hava verisi eklenince (24.10.2026)
+
+Hava `hava_indir.py` ile Open-Meteo arşivinden indirildi: `lokasyonlar/maslak_hava.csv`,
+1241 gün. 2026'da bina sensörüyle korelasyon 0,88. Bina sensörü ortalama ~2 °C yüksek okuyor,
+çünkü 07:05'teki anlık okuma; günlük ortalama değil.
+
+| Yöntem (15 temiz ay) | Havasız | Günlük hava ile | Ayın **gerçek** havası bilinseydi |
+|---|---|---|---|
+| Günlük model | %3,5 | %3,2 | %3,3 |
+| Birleşik | %2,8 | %3,0 | %2,8 |
+
+**Sonuç:** Aylık TOPLAM tüketimde hava neredeyse fark yaratmıyor. Kusursuz hava tahmini bile
+sonucu iyileştirmiyor. Maslak'ın yükünü baz yük (hastane işletmesi) ve mevsim belirliyor;
+mevsim etkisini model zaten takvimden öğreniyor. Hava verisinin asıl değeri şu üç yerde olacak:
+- **GES üretimi** (radyasyon ve bulut doğrudan belirler),
+- **günlük / haftalık** tahmin,
+- **soğutma ve ısıtma kırılımı.**
+
 ## Ek veri dosyaları
 
 Şablonlar `sablonlar/` klasöründe. Hepsinin ortak sütunu `Tarih` (YYYY-AA-GG), günlük satır.
