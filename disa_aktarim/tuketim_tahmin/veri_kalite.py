@@ -108,6 +108,25 @@ def kontrol(gunluk: pd.DataFrame, kolonlar: Dict[str, str], haric: Optional[List
                 r.ekle("ÇİFT GÜN", t[j], t[j], 1,
                        "%.0f kWh ≈ normalin %.1f katı; yanındaki gün 0 — iki gün birleşmiş" % (y[j], y[j] / med[j]))
 
+    # 3b) Bileşeni sıfır yazılmış gün: şebeke 0 ama toplam dolu → toplam yalnız kojen
+    #     (Maslak 08–10.08.2026; bulan: Gemini v2 incelemesi, veriyle doğrulandı)
+    if k["sebeke"] in d.columns:
+        sb = d[k["sebeke"]]
+        m_sb = (sb == 0) & (y > 0) & d["_hedef_gecerli"]
+        for i in d.index[m_sb]:
+            d.loc[i, "_hedef_gecerli"] = False
+            r.ekle("ŞEBEKE 0", t[i], t[i], 1, "şebeke 0 yazılmış, toplam (%.0f kWh) yalnız kojen" % y[i])
+
+    # 3c) Ani düşük toplam: komşu günlerin medyanının %60'ının altı (sayaç / kayıt kopması;
+    #     Maslak 31.08.2026: kojen 0, toplam yalnız şebeke 29 bin kWh). Eşik oransaldır —
+    #     binaya özel sabit kWh sınırı YOK, başka tesiste de aynı çalışır.
+    komsu = y.where(y > 0).rolling(15, center=True, min_periods=7).median()
+    m_dus = (y > 0) & (y < 0.6 * komsu) & d["_hedef_gecerli"]
+    for i in d.index[m_dus]:
+        d.loc[i, "_hedef_gecerli"] = False
+        r.ekle("DÜŞÜK TOPLAM", t[i], t[i], 1,
+               "%.0f kWh, komşu günlerin %%%.0f'i — kayıt/sayaç kopması" % (y[i], 100 * y[i] / komsu[i]))
+
     # 4) Kojen kaybı: kojen normalde var, sonra boş/0 kalmış → toplam eksik sayılır
     if k["kojen_uretim"] in d.columns:
         kj = d[k["kojen_uretim"]]
@@ -120,8 +139,15 @@ def kontrol(gunluk: pd.DataFrame, kolonlar: Dict[str, str], haric: Optional[List
                 r.ekle("KOJEN YOK", t[bas], t[son], n,
                        "kojen üretimi okunmuyor; toplam = yalnız şebeke, gerçeğin altında")
 
-    # 5) Dış hava: aylık ortalama mı girilmiş, sensör mü donmuş?
+    # 5) Dış hava: aylık ortalama mı girilmiş, sensör mü donmuş, tek gün mü sıçramış?
     if k["dis_hava"] in d.columns:
+        hv = d[k["dis_hava"]]
+        # Tek günlük kopma: komşu günlerin medyanından 12 °C+ sapma (Maslak: 24.07, 08–09.08.2026 = 0,00 °C)
+        med_h = hv.rolling(7, center=True, min_periods=4).median()
+        m_sic = hv.notna() & ((hv - med_h).abs() > 12)
+        for i in d.index[m_sic]:
+            r.ekle("SENSÖR SIÇRAMA", t[i], t[i], 1, "dış hava %.1f °C, komşu günler ~%.1f °C" % (hv[i], med_h[i]))
+        d.loc[m_sic, k["dis_hava"]] = np.nan
         hv = d[k["dis_hava"]]
         for bas, son, n, deger in _kosular(hv):
             if n < donma_gun:

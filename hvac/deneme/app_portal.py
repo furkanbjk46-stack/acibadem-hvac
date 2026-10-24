@@ -1307,6 +1307,7 @@ SCHEMA = [
     "Chiller_Adet",
     "Absorption_Chiller_Adet",
     "Kazan_Adet",
+    "Kojen_Adet",        # BACnet KOJEN-1..4 DURUM (data_bridge); listede olmazsa portal SİLER
 ] + _TEMP_COLS_SCHEMA + [
     "Kar_Eritme_Aktif",
     "TRDP1_kWh",
@@ -1365,6 +1366,7 @@ NUMERIC_COLS = [
     "Chiller_Adet",
     "Absorption_Chiller_Adet",
     "Kazan_Adet",
+    "Kojen_Adet",
 ] + _TEMP_COLS_SCHEMA + [
     "TRDP1_kWh",
     "TRDP2_kWh",

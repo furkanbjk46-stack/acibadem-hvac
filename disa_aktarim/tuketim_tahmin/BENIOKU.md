@@ -109,6 +109,57 @@ mevsim etkisini model zaten takvimden öğreniyor. Hava verisinin asıl değeri 
 - **günlük / haftalık** tahmin,
 - **soğutma ve ısıtma kırılımı.**
 
+### Soğutma ve ısıtma ayrı tahmin (24.10.2026)
+
+Kullanım: `GunlukTahminModeli(hedef="sogutma")` (chiller kWh) ya da `hedef="isitma_gaz"`
+(kazan m³). Sınama ileriye dönük, son 24 ay. Hata, aylık ortalamaya oranla verildi; yazın
+gaz ~0 olduğu için yüzde hata anlamsız.
+
+| Kalem | Geçen yılın aynı ayı | Model | Model + ayın gerçek havası | Model + kojen planı |
+|---|---|---|---|---|
+| Soğutma | %36 | %22,6 | %18 | %22,6 (katkısı yok) |
+| Isıtma gazı | %68 | %53 | %42 | **%30** |
+
+- **Soğutma:** Hava burada gerçekten belirleyici. Kalan hata işletmeden geliyor: 2024–25
+  kışında chiller tüketimi bir önceki yılın üçte birine düştü.
+- **Isıtma gazı:** Asıl belirleyen **kojen**. Kojen çalışınca atık ısısı kazanın yerini
+  tutuyor. 04–06.2026'da kojen durunca kazan gazı 3–4 katına çıktı. Bu yüzden ısıtmada kojen
+  planı girdi olarak kullanılıyor. Lokasyon 24.10.2026'dan itibaren günlük `Kojen_Adet`
+  (BACnet KOJEN-1..4 DURUM) yazacak; geçmiş biriktikçe plan "kaç kojen çalışacak" olarak
+  verilebilecek.
+- **Geçen yılla ortalama alınmaz:** Bu ortalama yalnız toplam tüketimde kullanılıyor. Soğutma
+  ve ısıtmada geçen yılın aynı ayı tek başına çok kötü; işletme düzeni yıldan yıla değişiyor.
+
+## Gemini v2 paketinin incelemesi (24.10.2026)
+
+Gemini'nin önerdiği paketin rapordaki sonucu: ham veride %3,36, "temizlenmiş" veride %1,87.
+
+**Adil karşılaştırma:**
+- **Düzenek:** Aynı temiz aylar kullanıldı ve kimsenin değiştirmediği kayıtlı gerçek
+  değerle kıyaslandı. İki dönem ölçüldü: Gemini'nin raporlamadığı 07.2024–06.2025 ve
+  raporladığı 07.2025–08.2026.
+
+| 25 temiz ay | MAPE | NMBE (sistematik sapma) |
+|---|---|---|
+| Gemini v2 | %3,29 | −%1,50 |
+| Bu paket (birleşik) | %3,35 | **−%0,59** |
+| Geçen yılın aynı ayı | %4,16 | −%2,17 |
+
+- **%1,87 gerçek değil:** O sınamada gerçekleşen değerin kendisi, Gemini'nin temizlik
+  kuralıyla değiştirilmiş. Ağustos 2026: 2.094.350 → 2.204.689, tahmine yaklaştırılmış.
+- **Gerçek seviye eşit:** İki model başa baş. Gemini raporladığı dönemde biraz önde, öncekinde
+  geride; sabitlerinin o döneme göre ayarlandığına işaret ediyor.
+- **Alınanlar** (veriyle doğrulandı):
+  - Türkiye bayram/resmi tatil takvimi (`takvim.py`).
+  - Cumartesi/Pazar ayrımı. Aynı ayın hafta içine göre Cmt %94, Pzr %90, tatil %90.
+  - Üç veri hatası türü: şebeke 0 yazılmış gün, ani düşük toplam, tek günlük sensör sıçraması.
+    Doğru tespitlerdi ve geçmişte 6 gün daha bu yüzden bozuk çıktı.
+- **Alınmayanlar:**
+  - Maslak'a özel sabitler (44.500–91.500 kWh "bozuk" sınırı, 1600 kWh/derece-gün, 58.500
+    baz yük). Başka binada çalışmaz.
+  - Sabit aylık nem tablosu. Gerçek günlük nem artık internetten geliyor.
+  - sklearn'süz yedek GradientBoosting kodu. Gereksiz.
+
 ## Ek veri dosyaları
 
 Şablonlar `sablonlar/` klasöründe. Hepsinin ortak sütunu `Tarih` (YYYY-AA-GG), günlük satır.

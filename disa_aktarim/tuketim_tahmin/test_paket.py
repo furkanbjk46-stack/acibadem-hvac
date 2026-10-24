@@ -97,6 +97,37 @@ g3, _ = birlestir(ana.drop(columns=["GES_Uretim_kWh"]))
 m3 = GunlukTahminModeli(); m3.egit(g3, bitis=pd.Timestamp("2026-08-01"))
 c("GES sütunu yoksa GES = 0", m3.ay_tahmini(2026, 8)["ges"] == 0)
 
+# ── Takvim (Gemini incelemesinden alınan, veriyle doğrulanan fikir) ──
+import takvim  # noqa: E402
+c("Kurban 2026 ilk gün tam tatil", takvim.tatil_degeri("2026-05-27") == 1.0)
+c("bayram arifesi yarım gün", takvim.tatil_degeri("2026-05-26") == 0.5)
+c("29 Ekim resmi tatil, 28 Ekim yarım", takvim.tatil_degeri("2026-10-29") == 1.0 and takvim.tatil_degeri("2026-10-28") == 0.5)
+c("sıradan gün tatil değil", takvim.tatil_degeri("2026-10-21") == 0.0)
+c("2023–2030 bayramları kapsanıyor", all(takvim.kapsiyor_mu(y) for y in range(2023, 2031)))
+
+# ── Yeni kalite kuralları ──
+kb = ana.copy()
+kb.loc[400, "Sebeke_Tuketim_kWh"] = 0                                   # şebeke 0, toplam = kojen
+kb.loc[401, "Toplam_Hastane_Tuketim_kWh"] = 0.4 * tuketim[401]          # ani düşük toplam
+kb.loc[402, "Dis_Hava_Sicakligi_C"] = 0.0 if sic[402] > 14 else 30.0   # tek günlük sensör sıçraması
+_, rk = veri_kalite.kontrol(kb, KOLONLAR)
+tk = {b["tur"] for b in rk.bulgular}
+c("kalite: ŞEBEKE 0 yakalanıyor", "ŞEBEKE 0" in tk, rk.ozet())
+c("kalite: DÜŞÜK TOPLAM yakalanıyor", "DÜŞÜK TOPLAM" in tk, rk.ozet())
+c("kalite: SENSÖR SIÇRAMA yakalanıyor", "SENSÖR SIÇRAMA" in tk, rk.ozet())
+
+# ── Hedef seçimi ──
+try:
+    GunlukTahminModeli(hedef="yanlis"); c("bilinmeyen hedef reddediliyor", False)
+except ValueError:
+    c("bilinmeyen hedef reddediliyor", True)
+gaz = ana.assign(Kazan_Dogalgaz_m3=np.clip(900 * hdd - 0.02 * kojen, 0, None))
+gg, _ = birlestir(gaz, hava, None)
+mg = GunlukTahminModeli(hedef="isitma_gaz"); mg.egit(gg, bitis=pd.Timestamp("2026-08-01"))
+c("ısıtma gazında kojen planı özellik olarak seçiliyor", "kojen" in mg.secilen, mg.secilen)
+c("ısıtma gazı kojen planını kullanıyor (planlı ≠ plansız)",
+  mg.ay_tahmini(2026, 3, kojen_plan_kwh=0)["tuketim"] != mg.ay_tahmini(2026, 3, kojen_plan_kwh=1.3e6)["tuketim"])
+
 hata = [x for x in T if not x[1]]
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))

@@ -108,6 +108,22 @@ c("yedek alındı", any(f.startswith("energy_data_yedek_bacnet_donma_") for f in
 c("ikinci çalıştırma bir şey bulmuyor (idempotent)", DB.donmus_bacnet_temizle(yol=ec, yedek_dizin=tmp)["temizlenen_gun"] == 0)
 c("satır sayısı değişmedi", len(sonra) == len(once))
 
+# ── Kojen adedi (KOJEN-1..4 DURUM BILGISI) ──
+k = DB.build_daily_row("2026-10-24", {"DIS HAVA": 15.0, "KOJEN-1 DURUM BILGISI": 1.0, "KOJEN-2 DURUM BILGISI": 0.0,
+                                      "KOJEN-3 DURUM BILGISI": 1.0, "KOJEN-4 DURUM BILGISI": 1.0}, None)
+c("kojen adedi çalışanları sayıyor (3/4)", k["Kojen_Adet"] == 3, k["Kojen_Adet"])
+k0 = DB.build_daily_row("2026-10-24", {"DIS HAVA": 15.0, "KOJEN-1 DURUM BILGISI": 0.0, "KOJEN-2 DURUM BILGISI": 0.0}, None)
+c("hepsi kapalıysa 0 (gerçek bilgi)", k0["Kojen_Adet"] == 0, k0["Kojen_Adet"])
+c("kojen noktası şablonda yoksa BOŞ (0 değil)",
+  DB.build_daily_row("2026-10-24", {"DIS HAVA": 15.0}, None)["Kojen_Adet"] == "")
+c("BACnet bayatken kojen adedi BOŞ", DB.build_daily_row("2026-10-24", {}, None)["Kojen_Adet"] == "")
+c("Kojen_Adet şemada ve donma temizliğinde",
+  "Kojen_Adet" in DB.ENERGY_SCHEMA and "Kojen_Adet" in DB.BACNET_SUTUNLARI)
+_kaynak = open(os.path.join(BURASI, "app_portal.py"), encoding="utf-8").read()
+c("portal SCHEMA ve NUMERIC_COLS Kojen_Adet içeriyor (yoksa portal SİLER)",
+  _kaynak.count('"Kojen_Adet"') >= 2)
+c("Supabase SQL'i hazır", os.path.exists(os.path.join(BURASI, "..", "..", "merkez", "energy_data_kojen_adet.sql")))
+
 hata = [x for x in T if not x[1]]
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)[:300]))

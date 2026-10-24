@@ -68,7 +68,7 @@ DONMA_GUN = 4                  # olcum bu kadar gun birebir ayniysa donmus sayil
 BACNET_SUTUNLARI = [
     "Dis_Hava_Sicakligi_C", "Dis_Hava_Nem_Yuzde",
     "Chiller_Set_Temp_C", "Chiller_Adet", "Absorption_Chiller_Adet",
-    "Kazan_Adet", "Chiller_Load_Percent",
+    "Kazan_Adet", "Kojen_Adet", "Chiller_Load_Percent",
     "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
     "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
 ]
@@ -123,6 +123,12 @@ BACNET_MAP = {
     "KAZAN-1 DURUM BILGISI":   "_kaz_dur_1",
     "KAZAN-2 DURUM BILGISI":   "_kaz_dur_2",
     "KAZAN-3 DURUM BILGISI":   "_kaz_dur_3",
+    # 24.10.2026: kojen durumları (BI 52-55, cihaz 2098215). Kojen çalışınca atık
+    # ısısı kazanın yerini tutar — ısıtma gazı tahmininde en güçlü girdi (hata %42 → %22)
+    "KOJEN-1 DURUM BILGISI":   "_kojen_dur_1",
+    "KOJEN-2 DURUM BILGISI":   "_kojen_dur_2",
+    "KOJEN-3 DURUM BILGISI":   "_kojen_dur_3",
+    "KOJEN-4 DURUM BILGISI":   "_kojen_dur_4",
     # Chiller calisma yuzdesi
     "CH-1 CALISMA YUZDELIK":   "_ch_yuz_1",
     "CH-2 CALISMA YUZDELIK":   "_ch_yuz_2",
@@ -133,7 +139,7 @@ BACNET_MAP = {
 
 ENERGY_SCHEMA = [
     "Tarih", "Chiller_Set_Temp_C", "Chiller_Adet", "Absorption_Chiller_Adet",
-    "Kazan_Adet",
+    "Kazan_Adet", "Kojen_Adet",
     "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
     "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
     "Kar_Eritme_Aktif",
@@ -364,8 +370,11 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         ch_adet = sum(1 for i in range(1, 6) if data.get(f"_ch_dur_{i}", 0) >= 1.0)
         abs_adet = int(data.get("_abs_dur", 0) or 0)
         kaz_adet = sum(1 for i in range(1, 4) if data.get(f"_kaz_dur_{i}", 0) >= 1.0)
+        # Kojen noktaları şablonda yoksa (eski kurulum) adet BOŞ kalır, 0 yazılmaz
+        kojen_okunan = [data[f"_kojen_dur_{i}"] for i in range(1, 5) if f"_kojen_dur_{i}" in data]
+        kojen_adet = sum(1 for v in kojen_okunan if v >= 1.0) if kojen_okunan else ""
     else:
-        ch_adet = abs_adet = kaz_adet = ""
+        ch_adet = abs_adet = kaz_adet = kojen_adet = ""
 
     # Chiller yukleme yuzdesi: sadece calisan chillerlerin ortalamasi
     ch_yuz_vals = [
@@ -448,6 +457,7 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "VRF_Split_Tuketim_kWh":      0,            # Sahada henuz yok
         "Dis_Hava_Sicakligi_C":       data.get("Dis_Hava_Sicakligi_C", ""),
         "Dis_Hava_Nem_Yuzde":         data.get("Dis_Hava_Nem_Yuzde", ""),
+        "Kojen_Adet":                 kojen_adet,
         "Chiller_Load_Percent":       ch_load,
         "Toplam_Hastane_Tuketim_kWh": sebeke_kwh if sebeke_kwh != "" else total_kwh,  # Sebeke+Kojen (Kojen=0 simdilik)
         "Toplam_Sogutma_Tuketim_kWh": chiller_kwh,  # CH analizörleri = soğutma
