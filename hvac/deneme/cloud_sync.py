@@ -136,6 +136,13 @@ def sync_energy_data(client, lokasyon_id: str):
                     clean[k] = None
                 else:
                     clean[k] = v
+                # Tam sayı olan ondalık → tamsayı (2.0 → 2). Boş hücresi olan sütunu
+                # pandas float okur; Supabase'deki INTEGER sütunlar (Chiller_Adet,
+                # Kazan_Adet, Kojen_Adet...) "2.0"ı reddeder ve toplu insert TAMAMEN
+                # düşer. 24.10.2026: donmuş BACnet günleri boşaltılınca adetler ilk kez
+                # boş hücre içerdi. real sütunlar tamsayıyı zaten kabul eder.
+                if isinstance(clean[k], float) and clean[k].is_integer():
+                    clean[k] = int(clean[k])
             clean_records.append(clean)
 
         # Güvenli sync: önce mevcut ID'leri sayfalayarak al (1000 limit yok),
