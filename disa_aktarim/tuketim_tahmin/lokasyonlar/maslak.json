@@ -1,0 +1,12 @@
+{
+  "ad": "Acıbadem Maslak",
+  "enlem": 41.1273,
+  "boylam": 29.0246,
+  "haric": [
+    {
+      "bas": "2026-09-01",
+      "son": "2026-09-30",
+      "neden": "kojen/şebeke hesap yöntemi değişti, ay fazla çıktı (kullanıcı kararı 24.10.2026)"
+    }
+  ]
+}

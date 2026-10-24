@@ -1,103 +1,114 @@
-# Aylık Tüketim Tahmini — algoritma, gerçek başarı, geliştirme yolu
+# Enerji Tüketim Tahmini — bağımsız paket
 
-Kaynak: `hvac/deneme/monthly_report/forecast_engine.py` (Enerji ve Verimlilik → Tahmin & Trend).
-Bu klasördeki kod aynı algoritmanın bağımsız hâlidir. Orijinalle aynı veride 12 ayın tahmini
-birebir aynı çıktı (fark 0 kWh).
+Başka bir programa taşınmak üzere hazırlandı. Şu an Maslak verisiyle geliştiriliyor.
+Lokasyon yamasına girmez; lokasyon verisi bu klasöre konmaz.
 
 | Dosya | İş |
 |---|---|
-| `tahmin_motoru.py` | Model: eğitim, tahmin, senaryo, kaydet/yükle |
-| `sinama.py` | İleriye dönük sınama + basit yöntemlerle kıyas + ASHRAE G14 |
+| `gunluk_model.py` | **Önerilen model.** Günlük tüketim, GES/kojen/şebeke ayrımı, aylık birleşik tahmin |
+| `veri_kalite.py` | Eğitimden önce bozuk günleri bayraklar (donmuş sensör, sıfır/çift gün, kojen kaybı, elle hariç) |
+| `tahmin_motoru.py` | Portaldaki mevcut algoritmanın birebir kopyası (aylık GBM). Kıyas için duruyor |
+| `sinama.py` | İleriye dönük sınama: bütün yöntemler + ASHRAE G14 |
+| `test_paket.py` | Doğrusu bilinen yapay veriyle 20 kontrol |
+| `lokasyonlar/maslak.json` | Lokasyona özel ayar: koordinat, hariç tutulan dönemler |
+| `sablonlar/*.csv` | Ek veri dosyalarının sütun şablonları |
 
 Bağımlılık: `pandas`, `numpy`, `scikit-learn`.
 
+## Kullanım
+
 ```python
-from tahmin_motoru import TuketimTahminModeli
-m = TuketimTahminModeli()                      # sütun adları farklıysa kolonlar={...}
-m.egit(gunluk_df)                              # günlük tablo
-m.tahmin_gecmisten(gunluk_df, 2026, 11)        # ekrandaki "Tahmin (kWh)"
-m.tahmin(2026, 11, {"dis_hava": 12, "chiller_adet": 1, ...})   # senaryo
+import pandas as pd
+from gunluk_model import GunlukTahminModeli, birlestir
+import veri_kalite
+
+ayar = veri_kalite.lokasyon_ayari("maslak")
+g, kalite = birlestir(pd.read_csv("enerji.csv"),
+                      hava=pd.read_csv("hava.csv"),            # isteğe bağlı
+                      operasyon=pd.read_csv("operasyon.csv"),  # isteğe bağlı
+                      haric=ayar["haric"])
+print(kalite.ozet())
+
+m = GunlukTahminModeli()
+m.egit(g)
+m.ay_tahmini(2026, 11)                           # kojen planı yok → varsayım
+m.ay_tahmini(2026, 11, kojen_calisma_gun=26)     # ya da kojen_plan_kwh=1_150_000
+m.gunluk_tahmin("2026-11-01", "2026-11-07", hava=hava_tahmini_df)
 ```
 
-## 1. Nasıl çalışıyor
+`ay_tahmini` çıktısı şu alanları verir: `tuketim`, `ges`, `kojen`, `sebeke`, `kojen_kaynak`
+(`plan_kwh` | `plan_gun` | `varsayim`). Ayrıca iki bileşen ayrı ayrı döner:
+`tuketim_gunluk_model` ve `tuketim_gecen_yil_duzeltmeli`.
 
-1. **Günlük → aylık.** Tüketim, kojen ve gaz ay içinde toplanır. Dış hava, chiller set ve
-   cihaz adetlerinin ortalaması alınır. 15 günden az verisi olan ay atılır. Eğitim için en az
-   12 ay gerekir.
-2. **11 özellik.** Ay, sin/cos(ay) (Aralık ile Ocak'ın komşu olduğunu modele anlatır), gün
-   sayısı, dış hava, chiller set, chiller / absorption / kazan adedi, kojen üretimi, kazan gazı.
-3. **İki GradientBoosting modeli.** Biri toplam, biri şebeke tüketimi için. Ayarlar: 150 ağaç,
-   derinlik 5, öğrenme hızı 0,1. Her ağaç bir öncekinin hatasını düzeltir.
-4. **Tahmin anı.** Gelecek ayın dış havası ve chiller adedi henüz bilinmediği için **geçmişte
-   aynı ayın ortalama koşulları** girilir. Örneğin Kasım tahmini, geçmiş Kasımların
-   ortalamasıyla yapılır.
+## Model nasıl çalışıyor
 
-## 2. Ekrandaki "Sapma %1–9" ne demek — ve ne demek değil
+1. **Veri kalitesi.** Bozuk günler silinmez, bayraklanır.
+   - Tüketim bozuksa gün eğitime girmez.
+   - Yalnız sensör bozuksa o değer boşaltılır. Dışarıdan hava verisi gelirse onunla doldurulur.
+2. **Tüketim (yük).** Günlük doğrusal model (Ridge). Girdiler:
+   - soğutma derece-günü (18 °C üstü), ısıtma derece-günü (15 °C altı),
+   - hafta sonu, tatil, mevsim,
+   - **isteğe bağlı:** hasta sayısı, ameliyat sayısı, yağış, bulut, güneş radyasyonu, hava durumu
+     (yağmurlu/karlı).
 
-- **Ekran görüntüleri sentetik veriden.** Paylaşılan ekranlar (987 gün, R² 0,380, Ocak
-  gerçekleşen 1.995.872) geliştirme PC'sindeki **örnek (sentetik) veriden**. Bu veri
-  `ornek_veri_uret.py` ile üretildi. Gerçek Maslak Ocak 2026 değeri 1.792.966 kWh.
-- **"Sapma" sütunu başarı ölçüsü değil.** O sütun, modelin **eğitimde gördüğü** aylarla
-  kıyaslanır. Gerçek başarı, modelin hiç görmediği ayı tahmin edip etmediğidir.
-- **Yerel model bayat.** Yerel model 02.05.2026'da 987 günle eğitilmiş. Yeniden eğitim koşulu
-  `kayıt sayısı > eğitim + 20`. Mevcut dosya 730 satır olduğu için model hiç yenilenmiyor.
+   İsteğe bağlı bir sütun eğitim döneminin %80'inde dolu değilse model onu kendiliğinden
+   kullanmaz. Veri boş kalsa da çalışır; veri gelince yeniden eğitmek yeter.
+3. **Seviye düzeltmesi.** Son 90 günün gerçek/tahmin oranı uygulanır (±%15 ile sınırlı). Yeni
+   bölüm açılması gibi kalıcı değişimleri yakalar.
+4. **GES.** Radyasyon, bulut ve yağıştan öğrenilir. Yağmurlu günde GES düşer, açık şebekeye
+   yazılır. GES verisi yoksa GES = 0.
+5. **Kojen = plan (girdi).** Kojen hava ya da takvimle değil, işletme kararıyla çalışıyor.
+   Maslak'ta 2026 Nisan–Haziran neredeyse hiç çalışmadı, Aralık 2025'te 11 gün çalıştı. Plan
+   verilmezse son 90 günün çalışma düzeni varsayılır.
+6. **Şebeke = tüketim − GES − kojen** (enerji dengesi).
+7. **Aylık birleşik tahmin** = (günlük modelin ay toplamı + hava/seviye düzeltmeli geçen yılın
+   aynı ayı) / 2.
 
-## 3. Gerçek Maslak verisiyle dürüst sınama
+## Gerçek Maslak verisiyle sonuç
 
-Veri: 1220 gün (22.06.2023 → 23.10.2026). Her hedef ay için model yalnızca o aydan **önceki**
-veriyle eğitildi. Değerlendirme son 15 tam ay üzerinde (07.2025 – 09.2026).
+Sınama ileriye dönük: her ay yalnız kendinden önceki veriyle eğitildi. 15 temiz ay ölçüldü.
+Eylül 2026 kullanıcı kararıyla hariç tutuldu.
 
-| Yöntem | MAPE | NMBE | CV(RMSE) | En kötü ay | ASHRAE G14 |
+| Yöntem | MAPE | NMBE | CV(RMSE) | En kötü | ASHRAE G14 |
 |---|---|---|---|---|---|
-| **ML (bu algoritma)** | **%4,4** | −%0,6 | %6,2 | %14,8 | Geçer |
-| Basit: geçen yılın aynı ayı | %4,0 | %0,0 | %6,1 | %14,1 | Geçer |
-| Basit: geçen yıl × son 3 ay değişimi | %4,5 | +%1,0 | %6,9 | %17,3 | Geçer |
-| ML, ayın **gerçek** koşullarıyla (üst sınır) | %6,7 | −%2,3 | %8,2 | %17,6 | Geçer |
+| Portaldaki ML (aylık GBM) | %4,0 | −%2,3 | %4,7 | %8,5 | Geçer |
+| Geçen yılın aynı ayı | %3,6 | −%1,7 | %4,8 | %11,1 | Geçer |
+| Günlük model | %3,5 | −%1,0 | %4,4 | %9,1 | Geçer |
+| **Birleşik (önerilen)** | **%2,8** | −%1,1 | %4,0 | %8,0 | Geçer |
+| Şebeke — kojen planı yokken | %35,2 | | | | Kalır |
+| Şebeke — kojen çalışma günü verilince | %16,3 | | | | Kalır |
+| **Şebeke — kojen kWh planı verilince** | **%5,3** | −%2,0 | %7,0 | %18,6 | Geçer |
 
-Modelin kendi çapraz doğrulama R² değeri gerçek veride: toplam 0,17, şebeke −0,03.
+ASHRAE Guideline 14 aylık ölçütü: NMBE ±%5, CV(RMSE) ≤%15.
 
-**Sonuç:**
-- **Doğruluk gerçek.** İleriye dönük %4,4 ortalama hata, ASHRAE Guideline 14 aylık ölçütünü
-  geçiyor (NMBE ±%5, CV(RMSE) ≤%15). "%20 kabul edilir" sınırının çok altında.
-- **Ama başarı algoritmadan gelmiyor.** "Geçen yılın aynı ayı" gibi bir satırlık bir kural
-  aynı (hatta biraz daha iyi) sonucu veriyor. Hastanenin yükü yıldan yıla çok kararlı; düşük
-  hata tesisin özelliği.
-- **Model havayı öğrenmemiş.** Ayın gerçek dış havası verilince tahmin **kötüleşiyor**
-  (%4,4 → %6,7). Model aslında "bu ay genelde ne kadar" sorusunu ezberliyor. Ekranda dış
-  havanın %73 etkili görünmesinin sebebi, sıcaklığın ayın yerine geçmesi.
-- **Büyük değişimleri ikisi de kaçırıyor.** 09.2026'da ML +%17, basit kural +%21 kaçırdı.
-  Tüketim bir önceki Eylül'e göre +%16 arttı.
+**Yorum:**
+- **Toplam tüketim.** Birleşik yöntem portaldaki modelden ortalama 1,2 puan iyi. 15 ay küçük bir
+  örnek; fark yön olarak tutarlı ama kesin kanıt değil.
+- **Şebeke.** Tahminin kalitesi tamamen **kojen planına** bağlı. Kojen kWh planı verilirse
+  şebeke de ölçütü geçiyor.
+- **Hava.** Maslak verisinde 2025 sonuna kadar dış hava aylık ortalama olarak girilmiş;
+  20.09.2026'dan beri de donmuş. Yani modelin henüz **gerçek günlük havası yok**. Günlük hava
+  geçmişi geldiğinde derece-gün etkisi doğru öğrenilecek. Bu dosyanın sonuçlarını hava verisi
+  gelince yeniden ölçün.
 
-Bu yüzden başka bir programa "%1–9 tutturan ML" diye taşımak doğru olmaz. Doğru ifade şu:
-"aylık tahmin %4–5 hatayla çalışıyor, bu seviyeyi basit bir kural da veriyor."
+## Ek veri dosyaları
 
-## 4. Geliştirme yolu (öneri — öncelik sırasıyla)
+Şablonlar `sablonlar/` klasöründe. Hepsinin ortak sütunu `Tarih` (YYYY-AA-GG), günlük satır.
 
-1. **Kıyas çizgisini zorunlu yap.** Her ölçümde `sinama.py` ile "geçen yılın aynı ayı"
-   kuralını yen. Yenemeyen model değer katmıyor.
-2. **Sızıntılı özellikleri çıkar.** Kojen üretimi, kazan gazı ve chiller adedi ay bitmeden
-   bilinmez; üstelik tüketimin sonucudur, sebebi değil. Önceden bilinebilecek özellikler:
-   takvim, tatil/bayram günü, dış hava, derece-gün.
-3. **Havayı doğru öğret.** Ortalama sıcaklık yerine soğutma/ısıtma **derece-gün** kullan
-   (ör. 18 °C tabanlı). Fizik yasası gibi doğrusal davranır, az veriyle öğrenilir.
-   Hava tahmini servisiyle birleşince gelecek ay için anlamlı girdi olur.
-4. **Günlük modele geç.** Aylık modelde 40 satır var; GradientBoosting için çok az. Günlük
-   modelde 1200+ satır olur, aylık tahmin günlerin toplamı olarak çıkar.
-5. **Değişimi yakala.** Son 3 ayın yıllık değişim oranını özellik olarak ekle. 09.2026 gibi
-   kalıcı yük artışlarını ancak bu yakalar.
-6. **Doğru doğrulama.** Karıştırmasız k-katlı CV yerine zaman sıralı doğrulama kullan
-   (`TimeSeriesSplit` ya da `sinama.py`'deki ileriye dönük yöntem).
-7. **Belirsizlik ver.** Tek sayı yerine aralık ver (ör. %80 güven bandı). Quantile
-   GradientBoosting ya da geçmiş hata dağılımı kullanılabilir.
-8. **Portaldaki iki hata** (bu pakette değil, `forecast_engine.py`'de):
-   - Yeniden eğitim koşulu veri azalınca hiç tetiklenmiyor.
-   - "Sapma" sütunu eğitimde görülmüş aylarla kıyaslıyor; ileriye dönük sapma gösterilmeli.
+| Dosya | Sütunlar | Not |
+|---|---|---|
+| hava | `sicaklik_ort, sicaklik_max, sicaklik_min, yagis_mm, bulut_yuzde, gunes_radyasyon, hava_durumu` | Geçmiş + gelecek (hava tahmini). Radyasyon kWh/m²/gün. Durum metni: güneşli / bulutlu / yağmurlu / karlı |
+| operasyon | `hasta_sayisi, ameliyat_sayisi, tatil` | `tatil` 0/1. Boş hücre olabilir |
+| GES | `GES_Uretim_kWh` | Ana enerji tablosuna sütun olarak eklenir |
 
-## 5. Sınamayı tekrarlamak
+## Sınamayı tekrarlamak
 
 ```bash
-python sinama.py gunluk_veri.csv --ay 15
+python test_paket.py
+python sinama.py enerji.csv --lokasyon maslak
+python sinama.py enerji.csv --lokasyon maslak --hava hava.csv --operasyon operasyon.csv --ay 18
 ```
 
-CSV sütunları `VARSAYILAN_KOLONLAR` adlarıyla olmalı, ya da `TuketimTahminModeli(kolonlar=...)`
-ile eşlenmeli. Lokasyon verisi bu klasöre konmaz.
+Yeni bir lokasyon için `lokasyonlar/<ad>.json` açılır: koordinat ve hariç tutulacak dönemler.
+Her model değişikliği `sinama.py` ile **portaldaki ML'e ve "geçen yılın aynı ayı" kuralına
+karşı** ölçülür. Bu ikisini yenemeyen değişiklik alınmaz.
