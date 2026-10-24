@@ -1,0 +1,10 @@
+{
+  "_aciklama": "Gunluk tahmin modelinin LOKASYONA OZEL ayari. 'haric': modelin egitimde ve sapma olcumunde KULLANMAYACAGI donemler (veri yontemi degisen, bozuk aylar). Gunler silinmez, yalniz modele girmez.",
+  "haric": [
+    {
+      "bas": "2026-09-01",
+      "son": "2026-09-30",
+      "neden": "kojen/sebeke hesap yontemi degisti, ay fazla cikti (kullanici karari 24.10.2026)"
+    }
+  ]
+}

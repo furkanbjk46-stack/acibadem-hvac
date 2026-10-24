@@ -75,6 +75,28 @@ def _get_forecast_engine():
     from monthly_report.forecast_engine import ConsumptionForecastEngine
     return ConsumptionForecastEngine()
 
+
+def _veri_imzasi() -> float:
+    """energy_data.csv değişince günlük model önbelleği tazelensin."""
+    try:
+        return os.path.getmtime(DATA_FILE)
+    except OSError:
+        return 0.0
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def _gunluk_model_ozeti(yil: int, hedef: str, veri_imzasi: float) -> dict:
+    """Günlük modelin yıl özeti (tuketim_tahmin/portal_ozet). Geçmiş her ay
+    ileriye dönük eğitildiği için ~1-2 sn sürer; veri değişmedikçe önbellekten."""
+    from tuketim_tahmin import portal_ozet
+    return portal_ozet.yil_ozeti(load_data(), yil, hedef)
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def _gunluk_model_gelecek_ay(yil: int, ay: int, kojen_gun, veri_imzasi: float) -> dict:
+    from tuketim_tahmin import portal_ozet
+    return portal_ozet.gelecek_ay(load_data(), yil, ay, kojen_calisma_gun=kojen_gun)
+
 # Custom Dark Theme CSS
 st.markdown("""
 <style>
@@ -5273,8 +5295,97 @@ with tab6:
                 with _fs[2]:
                     if _fc_area > 0:
                         st.metric("Tahmini kWh/m²", f"{_tf/_fc_area:.1f} kWh/m²")
-            
-        
+
+        # ═══ 2b. GÜNLÜK MODEL (YENİ) ═══
+        # Eski modelin yanında, kıyaslanabilsin diye. Yukarıdaki "Sapma" modelin
+        # eğitimde gördüğü aylarla kıyaslanıyor; burada her geçmiş ay yalnız o
+        # aydan ÖNCEKİ veriyle tahmin edilir — sapma gerçek başarıyı gösterir.
+        with _bolum_karti("kart_tahmin_gunluk_model", "🧪 Günlük Model Tahmini (yeni)",
+                          "Hava + takvim + kojen planı; geçmiş aylar ileriye dönük sınanır"):
+            _gm_hedefler = {"toplam": "Toplam tüketim", "sogutma": "Soğutma (chiller kWh)",
+                            "isitma_gaz": "Isıtma gazı (kazan m³)"}
+            _gm_hedef = st.radio("Tahmin edilen", list(_gm_hedefler), format_func=_gm_hedefler.get,
+                                 horizontal=True, key="gm_hedef")
+            try:
+                with st.spinner("Günlük model hesaplanıyor..."):
+                    _gm = _gunluk_model_ozeti(int(_fc_year), _gm_hedef, _veri_imzasi())
+            except Exception as _gm_e:
+                _gm = {"hata": f"Model çalıştırılamadı: {type(_gm_e).__name__}: {_gm_e}"}
+            if _gm.get("hata"):
+                st.info(_gm["hata"])
+            else:
+                _gb = _gm["birim"]
+                # Ay NUMARASIYLA eşlenir: eski motor adları ASCII yazıyor ("Subat", "Mayis")
+                _eski = {f["month"]: f["forecast_total"] for f in (_fc_monthly or [])} \
+                    if _gm_hedef == "toplam" else {}
+                _sayi = lambda v: "-" if v is None else f"{v:,.0f}".replace(",", ".")
+                if _eski:
+                    _gmd = f"| Ay | Mevcut model ({_gb}) | Yeni model ({_gb}) | Gerçekleşen | Yeni model sapması |\n"
+                    _gmd += "|:---|---:|---:|---:|:---:|\n"
+                else:
+                    _gmd = f"| Ay | Yeni model ({_gb}) | Gerçekleşen | Sapma |\n|:---|---:|---:|:---:|\n"
+                for _a in _gm["aylar"]:
+                    _gc = _sayi(_a["gercek"])
+                    if _a["gercek"] is not None and _a["not"]:
+                        _gc += f" ({_a['not']})"
+                    elif _a["gercek"] is None and _a["not"]:
+                        _gc = _a["not"]
+                    _sp = f"{_a['sapma']:+.1f}%" if _a["sapma"] is not None else "-"
+                    if _eski:
+                        _gmd += f"| {_a['ad']} | {_sayi(_eski.get(_a['ay']))} | {_sayi(_a['tahmin'])} | {_gc} | {_sp} |\n"
+                    else:
+                        _gmd += f"| {_a['ad']} | {_sayi(_a['tahmin'])} | {_gc} | {_sp} |\n"
+                st.markdown(_gmd)
+                st.caption("Sapma = (gerçekleşen − tahmin) / tahmin. Yalnız verisi tam ve temiz aylar "
+                           "ölçülür; hariç tutulan dönemler configs/tuketim_tahmin.json'da. "
+                           f"Son veri: {_gm['son_veri']}.")
+
+                _go = _gm.get("olcut")
+                if _go:
+                    _gk = st.columns(4)
+                    with _gk[0]:
+                        metrik_notlu("Ortalama sapma", f"%{_go['MAPE']:.1f}".replace(".", ","),
+                                     f"{_go['n']} ay, mutlak")
+                    with _gk[1]:
+                        metrik_notlu("Net sapma", f"%{_go['NMBE']:+.1f}".replace(".", ","),
+                                     "yıl toplamında (NMBE)")
+                    with _gk[2]:
+                        _gkt = max((a for a in _gm["aylar"] if a["sapma"] is not None),
+                                   key=lambda a: abs(a["sapma"]))
+                        metrik_notlu("En kötü ay", f"%{_go['en_kotu']:.1f}".replace(".", ","), _gkt["ad"])
+                    with _gk[3]:
+                        metrik_notlu("ASHRAE G14", "Geçer" if _go["ashrae_g14"] else "Kalır",
+                                     "NMBE ±%5, CV(RMSE) ≤%15")
+
+                # Gelecek ay + kojen planı (yalnız toplamda: şebeke = tüketim − GES − kojen)
+                if _gm_hedef == "toplam":
+                    _bugun = pd.Timestamp.today()
+                    _gy, _ga = (_bugun.year + 1, 1) if _bugun.month == 12 else (_bugun.year, _bugun.month + 1)
+                    from tuketim_tahmin.portal_ozet import AYLAR as _GM_AYLAR
+                    st.markdown(f"**Gelecek ay: {_GM_AYLAR[_ga - 1]} {_gy}**")
+                    _kg = st.number_input("Kojen planı: bu ay kaç gün çalışacak? (boş = son 90 günün düzeni)",
+                                          min_value=0, max_value=31, value=None, step=1, key="gm_kojen_gun")
+                    try:
+                        _gt = _gunluk_model_gelecek_ay(_gy, _ga, None if _kg is None else int(_kg), _veri_imzasi())
+                        _gn = st.columns(3)
+                        with _gn[0]:
+                            metrik_notlu("Beklenen toplam", f"{_sayi(float(_gt['tuketim']))} kWh",
+                                         "ort. hava " + f"{_gt['ort_sicaklik']:.1f} °C".replace(".", ","))
+                        with _gn[1]:
+                            metrik_notlu("Kojen", f"{_sayi(float(_gt['kojen']))} kWh",
+                                         "plan" if _gt["kojen_kaynak"] != "varsayim" else "son 90 günün düzeni")
+                        with _gn[2]:
+                            metrik_notlu("Beklenen şebeke", f"{_sayi(float(_gt['sebeke']))} kWh",
+                                         "toplam − GES − kojen")
+                    except Exception as _gt_e:
+                        st.info(f"Gelecek ay hesaplanamadı: {type(_gt_e).__name__}")
+
+                if _gm.get("kalite"):
+                    with st.expander(f"Veri kalitesi: {len(_gm['kalite'])} bulgu (modele girmeyen günler)"):
+                        for _b in _gm["kalite"][:60]:
+                            st.markdown(f"- **{_b['tur']}** {_b['bas']} → {_b['son']} ({_b['gun']} gün): {_b['aciklama']}")
+
+
         # ═══ 3. TASARRUF ÖZETİ ═══
         if _fc_savings and _fc_savings.get("savings_total_kwh") is not None:
             with _bolum_karti("kart_tasarruf_ozeti", "💰 Beklenen vs Gerçekleşen Tasarruf"):
