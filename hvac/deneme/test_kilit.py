@@ -76,6 +76,9 @@ with kilit.kisa_kilit(AD + "_h") as a:
 import cloud_sync
 
 baslatilan = []
+# cloud_sync.start() her döngüyü TEK kez başlatmalı. 20.10.2026: canlı trafo gücü için
+# "canli-guc-sync" döngüsü eklendi (beklenti güncellendi; tek kopya kuralı aynı).
+BEKLENEN_DONGULER = ["canli-guc-sync", "cloud-sync", "heartbeat"]
 
 
 class SahteThread:
@@ -100,7 +103,7 @@ try:
         cloud_sync.start_background_sync()
     c("[sync] ilk cagri True doner", s1 is True, s1)
     c("[sync] 6 cagriya ragmen dongu thread'leri YALNIZCA 1 kez baslar",
-      sorted(baslatilan) == ["cloud-sync", "heartbeat"], baslatilan)
+      sorted(baslatilan) == BEKLENEN_DONGULER, baslatilan)
 
     # Esanli cagrilar (iki Streamlit oturumu ayni anda)
     baslatilan.clear()
@@ -121,7 +124,7 @@ try:
     for t in _is:
         t.join()
     c("[sync] 8 esanli cagride de YALNIZCA 1 baslatma",
-      sorted(baslatilan) == ["cloud-sync", "heartbeat"], baslatilan)
+      sorted(baslatilan) == BEKLENEN_DONGULER, baslatilan)
 
     # Baska surec sahipken
     baslatilan.clear()
@@ -132,7 +135,7 @@ try:
     c("[sync] kilit baska surecteyse HIC dongu baslamaz", baslatilan == [], baslatilan)
     kilit.surec_kilidi_al = lambda ad: True
     s3 = cloud_sync.start_background_sync()
-    c("[sync] kilit bosalinca devralinir", s3 is True and len(baslatilan) == 2, (s3, baslatilan))
+    c("[sync] kilit bosalinca devralinir", s3 is True and sorted(baslatilan) == BEKLENEN_DONGULER, (s3, baslatilan))
 finally:
     kilit.surec_kilidi_al = _orj_al
     cloud_sync.load_config, cloud_sync.get_supabase_client, cloud_sync.threading.Thread = _orj
