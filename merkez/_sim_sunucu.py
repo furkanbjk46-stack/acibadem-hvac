@@ -450,46 +450,107 @@ VERI = veri_uret()
 KILIT = threading.Lock()
 
 
-def canli_guc_tazele(simdi=None):
-    """Canli TRDP gucunu HER ISTEKTE yeniden uretir.
+# Maslak'taki 27 analizorun tamami (21.10.2026). Tabanlar gercek 19 gunluk
+# kWh toplamlarinin saate bolunmesiyle secildi. KOJEN / DOGALGAZ / SU
+# sayaclari sahada CANLI OKUNMUYOR; asagidakiler yalnizca SUNUM icindir.
+MASLAK_CANLI_TABAN = {
+    "TRDP-1": 878.0, "TRDP-2": 702.0, "TRDP-3": 327.0, "TRDP-4": 499.0,
+    "CHILLER-1": 109.0, "CHILLER-2": 0.0, "CHILLER-3": 72.0,
+    "CHILLER-4": 0.6, "CHILLER-5": 10.0,
+    "KULE-1": 15.6, "KULE-2": 4.3, "KULE-3": 3.9,
+    "MCC-1": 106.0, "MCC-2": 49.0, "MCC-3": 11.0, "MCC-4": 13.0,
+    "MCC-5": 5.0, "MCC-6": 64.0, "MCC-7": 27.0,
+    "2BK-MCC-D01": 16.5, "2BK-MCC-D02": 7.4,
+    "4BK-MCC-E01": 19.2, "4BK-MCC-E02": 33.4, "4BK-MCC-F01": 20.5,
+    "CK-MCC-D01": 20.7, "CK-MCC-E01": 32.6, "CK-MCC-F01": 15.9,
+    # Gercek Maslak: gunde ~46.000 kWh kojen, dort makineden ikisi calisir
+    "KOJEN-1": 960.0, "KOJEN-2": 945.0, "KOJEN-3": 0.0, "KOJEN-4": 0.0,
+    "DOGALGAZ-ANA": 470.0,   # m3/h (kazan + kojen)
+    "SU-ANA": 12.5,          # m3/h
+}
 
-    NEDEN HER ISTEKTE: panel 10 saniyede bir soruyor; deger sabit kalirsa
+# Gunduz profilinin gun ortalamasi: gunluk kWh/24 tabanini bununla bolunce
+# canli degerlerin gun toplami gunluk kayitla tutarli kalir.
+_GUNDUZ_ORT = 0.55 + 0.45 / math.pi
+
+
+def _canli_tabanlari():
+    """SUNUM: her calisan lokasyon icin sayac -> taban (kW, gaz/su m3/h).
+
+    Maslak gercek sayac listesini kullanir. Digerleri kendi son gunluk
+    kaydindan turetilir (TRDPn_kWh, ChillerN_kWh, KuleN_kWh, MCCN_kWh,
+    kojen, gaz, su / 24); boylece kart, harita, karsilastirma ve gunluk
+    tablo ayni hastane icin ayni buyuklugu gosterir.
+    Kurulmamis (Bodrum) ve cevrimdisi (Kartal) lokasyon canli veri vermez.
+    """
+    son = {}
+    for r in VERI["energy_data"]:
+        if r["Tarih"] > son.get(r["lokasyon_id"], {}).get("Tarih", ""):
+            son[r["lokasyon_id"]] = r
+    tabanlar = {"maslak": dict(MASLAK_CANLI_TABAN)}
+    for lok_id, _kisa, _m2 in LOKASYONLAR:
+        if lok_id == "maslak" or lok_id not in son:
+            continue
+        if SENARYO.get(lok_id, ("normal", ""))[0] in ("kurulmadi", "cevrimdisi"):
+            continue
+        r = son[lok_id]
+        t = {}
+        for onek, ad in (("TRDP%d_kWh", "TRDP-%d"), ("Chiller%d_kWh", "CHILLER-%d"),
+                         ("Kule%d_kWh", "KULE-%d"), ("MCC%d_kWh", "MCC-%d")):
+            i = 1
+            while (onek % i) in r:
+                t[ad % i] = float(r[onek % i] or 0) / 24.0
+                i += 1
+        kojen = float(r.get("Kojen_Uretim_kWh") or 0) / 24.0
+        if kojen > 0:
+            t["KOJEN-1"], t["KOJEN-2"] = kojen * 0.55, kojen * 0.45
+        t["DOGALGAZ-ANA"] = (float(r.get("Kazan_Dogalgaz_m3") or 0)
+                             + float(r.get("Kojen_Dogalgaz_m3") or 0)) / 24.0
+        t["SU-ANA"] = float(r.get("Su_Tuketimi_m3") or 0) / 24.0
+        tabanlar[lok_id] = t
+    return tabanlar
+
+
+_CANLI_TABAN = {}
+
+
+def canli_guc_tazele(simdi=None):
+    """Canli sayac degerlerini HER ISTEKTE yeniden uretir (SADECE SUNUM).
+
+    NEDEN HER ISTEKTE: panel birkac saniyede bir soruyor; deger sabit kalirsa
     sunumda "canli" oldugu anlasilmaz. Degerler gercekci bir bantta yavasca
     salinir (saat + kucuk gurultu), sayac ani sicramaz.
 
-    Yalnizca sayaci bagli lokasyonda (Maslak) dolu doner — gercek sistemde
-    de boyle: trafo sayaci olmayan hastanede canli panel bos kalir.
+    Sunum icin calisan butun lokasyonlar canli gorunur; gercek sistemde
+    yalnizca sayaci bagli lokasyon (Maslak, elektrik) yazar. Bu sunucu
+    127.0.0.1'de bellekte calisir, canli Supabase'e dokunmaz.
     """
     simdi = simdi or datetime.now(IST)
+    if not _CANLI_TABAN:
+        _CANLI_TABAN.update(_canli_tabanlari())
     t = simdi.hour + simdi.minute / 60.0
     # Gunduz yuku yuksek, gece dusuk (gercek trafo profiline benzer)
     gunduz = 0.55 + 0.45 * max(0.0, math.sin((t - 6) / 24 * 2 * math.pi))
-    # Sahadaki 27 analizorun tamami (21.10.2026). Tabanlar gercek 19 gunluk
-    # kWh toplamlarinin saate bolunmesiyle secildi.
-    taban = {
-        "TRDP-1": 878.0, "TRDP-2": 702.0, "TRDP-3": 327.0, "TRDP-4": 499.0,
-        "CHILLER-1": 109.0, "CHILLER-2": 0.0, "CHILLER-3": 72.0,
-        "CHILLER-4": 0.6, "CHILLER-5": 10.0,
-        "KULE-1": 15.6, "KULE-2": 4.3, "KULE-3": 3.9,
-        "MCC-1": 106.0, "MCC-2": 49.0, "MCC-3": 11.0, "MCC-4": 13.0,
-        "MCC-5": 5.0, "MCC-6": 64.0, "MCC-7": 27.0,
-        "2BK-MCC-D01": 16.5, "2BK-MCC-D02": 7.4,
-        "4BK-MCC-E01": 19.2, "4BK-MCC-E02": 33.4, "4BK-MCC-F01": 20.5,
-        "CK-MCC-D01": 20.7, "CK-MCC-E01": 32.6, "CK-MCC-F01": 15.9,
-    }
+    zaman = simdi.isoformat(timespec="seconds")
     satirlar = []
-    for ad, tb in taban.items():
-        # Saniyeye bagli kucuk salinim: her istekte biraz farkli
-        salinim = math.sin(simdi.second / 60.0 * 2 * math.pi + len(ad))
-        kw = 0.0 if tb <= 0 else tb * gunduz * (1.0 + 0.04 * salinim)
-        satirlar.append({
-            "lokasyon_id": "maslak",
-            "cihaz": ad,
-            "kw": round(kw, 1),
-            "yontem": "register",
-            "aciklama": None,
-            "olcum_zamani": simdi.isoformat(timespec="seconds"),
-        })
+    for lok_id, taban in _CANLI_TABAN.items():
+        # Maslak tabanlari zaten saatlik gercek ortalama; digerleri gunluk/24
+        profil = gunduz if lok_id == "maslak" else gunduz / _GUNDUZ_ORT
+        for ad, tb in taban.items():
+            # Saniyeye bagli kucuk salinim: her istekte biraz farkli; lokasyon
+            # adiyla faz kaydirilir ki 19 hastane ayni anda inip cikmasin.
+            salinim = math.sin(simdi.second / 60.0 * 2 * math.pi + len(ad) + len(lok_id))
+            # Kojen ve su gun icinde pek degismez; gaz ve elektrik profile uyar
+            p = 1.0 if ad.startswith(("KOJEN", "SU-")) else profil
+            kw = 0.0 if tb <= 0 else tb * p * (1.0 + 0.04 * salinim)
+            satirlar.append({
+                "lokasyon_id": lok_id,
+                "cihaz": ad,
+                "kw": round(kw, 1),
+                "yontem": "register",
+                "aciklama": None,
+                "olcum_zamani": zaman,
+            })
     with KILIT:
         VERI["canli_guc"] = satirlar
 

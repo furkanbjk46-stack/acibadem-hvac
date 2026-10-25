@@ -386,6 +386,63 @@ c("canlı bölüm hatası sekmede kalıyor (sayfa kırmızıya boyanmıyor)",
 c("hata gizlenmiyor, ayrıntı gösteriliyor",
   "Teknik ayrıntı" in SAYFA and "st.code(" in SAYFA)
 
+# ── SUNUM: tüm lokasyonlar canlı görünür, gerçek sisteme etkisi yok ───────
+# Sunum (demo) için örnek veri sunucusu her çalışan lokasyona sayaç üretir.
+# Gerçek sistemde bu satırları yazan YOK: kojen/gaz/su grupları ancak böyle
+# adla satır gelirse görünür, gelmezse eski ekran aynen kalır.
+import _sim_sunucu as S  # noqa: E402
+S.canli_guc_tazele(datetime(2026, 10, 25, 14, 0, 5))
+_cg = S.VERI["canli_guc"]
+_lok = {r["lokasyon_id"] for r in _cg}
+_calisan = {l for l, _, _ in S.LOKASYONLAR
+            if S.SENARYO.get(l, ("normal", ""))[0] not in ("kurulmadi", "cevrimdisi")}
+c("[sunum] çalışan her lokasyonun canlı sayacı var", _lok == _calisan, _calisan ^ _lok)
+c("[sunum] kurulmamış/çevrimdışı lokasyon canlı veri vermez",
+  not ({"bodrum", "kartal"} & _lok))
+_ms = {r["cihaz"]: r["kw"] for r in _cg if r["lokasyon_id"] == "maslak"}
+c("[sunum] Maslak gerçek 27 elektrik sayacı + kojen/gaz/su",
+  sum(1 for k in _ms if k.startswith(("TRDP-", "CHILLER-", "KULE-", "MCC-", "2BK-", "4BK-", "CK-"))) == 27
+  and "KOJEN-1" in _ms and "DOGALGAZ-ANA" in _ms and "SU-ANA" in _ms, sorted(_ms))
+# Canlı şebeke, aynı lokasyonun günlük kaydıyla aynı büyüklükte (kart ve tablo çelişmesin)
+_son = {}
+for _r in S.VERI["energy_data"]:
+    if _r["Tarih"] > _son.get(_r["lokasyon_id"], {}).get("Tarih", ""):
+        _son[_r["lokasyon_id"]] = _r
+_tutarsiz = []
+for _l in _calisan - {"maslak"}:
+    _canli = sum(r["kw"] for r in _cg if r["lokasyon_id"] == _l and r["cihaz"].startswith("TRDP-"))
+    _gunluk = _son[_l]["Sebeke_Tuketim_kWh"] / 24.0
+    if not (0.5 * _gunluk < _canli < 1.8 * _gunluk):
+        _tutarsiz.append((_l, round(_canli), round(_gunluk)))
+c("[sunum] canlı şebeke günlük kaydın saatlik ortalamasıyla tutarlı", not _tutarsiz, _tutarsiz)
+c("[sunum] değerler her istekte değişir (canlı görünür)",
+  S.canli_guc_tazele(datetime(2026, 10, 25, 14, 0, 20)) is None
+  and {r["cihaz"]: r["kw"] for r in S.VERI["canli_guc"] if r["lokasyon_id"] == "maslak"} != _ms)
+c("[sunum] kojen yalnız kojeni olan lokasyonda",
+  {r["lokasyon_id"] for r in S.VERI["canli_guc"] if r["cihaz"].startswith("KOJEN")}
+  == {l for l, r in _son.items() if l in _calisan and (r.get("Kojen_Uretim_kWh") or 0) > 0} | {"maslak"})
+
+_gr = {a: c_ for a, _, c_ in CI.gruplara_ayir(["TRDP-1", "KOJEN-1", "DOGALGAZ-ANA", "SU-ANA"])}
+c("kojen / doğalgaz / su kendi gruplarında", set(_gr) == {"enerji", "kojen", "dogalgaz", "su"}, _gr)
+c("gaz ve su m³/h, diğerleri kW",
+  CI.birim("dogalgaz") == "m³/h" and CI.birim("su") == "m³/h" and CI.birim("kojen") == "kW")
+c("satırda birim yazılır", "m³/h" in CI.satir_html("SU-ANA", 12.0, "", birim="m³/h"))
+c("grup başlığında birim yazılır", "m³/h" in CI.grup_html("SU", "", "", 12.0, 1, birim="m³/h"))
+_RAPOR = open(os.path.join(BURASI, "pages", "rapor_olustur.py"), encoding="utf-8").read()
+c("[sunum] Geri butonu demoda app_demo.py'ye döner (sabit app_merkez.py hata veriyordu)",
+  'switch_page("app_merkez.py")' not in SAYFA + _RAPOR
+  and '"app_demo.py" if os.environ.get("SYNAPSE_DEMO") == "1"' in SAYFA
+  and '"app_demo.py" if os.environ.get("SYNAPSE_DEMO") == "1"' in _RAPOR)
+c("kojen/gaz/su çubuğu yük eşiğiyle kırmızıya boyanmaz",
+  CI.ESIKSIZ_RENK in CI.bar_html(1900.0, 2000.0, esikli=False)
+  and CI.esik_rengi(1900.0) in CI.bar_html(1900.0, 2000.0)
+  and "esikli=_an not in _CI.ESIKSIZ_GRUPLAR" in SAYFA)
+c("[gerçek sistem] yalnız elektrik sayacı varsa yeni grup çıkmaz",
+  {a for a, _, _ in CI.gruplara_ayir(["TRDP-1", "CHILLER-1", "MCC-1"])} == {"enerji", "sogutma", "mcc"})
+c("canlı grubu olan kalem 'ölçülmüyor' diye ayrıca yazılmaz",
+  "_CI.OLCULMEYEN_GRUP.get(a) not in _canli_gruplar" in SAYFA
+  and set(CI.OLCULMEYEN_GRUP) == {a for a, _, _ in CI.OLCULMEYEN})
+
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))
 _g = sum(1 for _, ok, _ in T if ok)

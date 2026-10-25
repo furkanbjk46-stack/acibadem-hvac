@@ -579,7 +579,8 @@ def canli_ozet_hesapla(satirlar):
             kw = float(kw)
         except (TypeError, ValueError):
             continue
-        o = ozet.setdefault(lok, {"sebeke": None, "sogutma": None, "kojen": None, "yas": None})
+        o = ozet.setdefault(lok, {"sebeke": None, "sogutma": None, "kojen": None,
+                                  "dogalgaz": None, "su": None, "yas": None})
         try:
             t = datetime.fromisoformat(str(s.get("olcum_zamani")).replace("Z", "+00:00"))
             simdi = datetime.now(_tz.utc) if t.tzinfo else datetime.now()
@@ -588,8 +589,14 @@ def canli_ozet_hesapla(satirlar):
         except Exception:
             pass
         ad = str(s.get("cihaz") or "").upper()
+        # Kojen / gaz (m³/h) / su (m³/h) sahada bugün canlı okunmuyor; bu
+        # adlarla satır gelirse (bugün yalnız sunum verisi) kendiliğinden dolar.
         if ad.startswith("KOJEN"):
             alan = "kojen"
+        elif ad.startswith("DOGALGAZ-"):
+            alan = "dogalgaz"
+        elif ad.startswith("SU-"):
+            alan = "su"
         else:
             alan = {"enerji": "sebeke", "sogutma": "sogutma"}.get(_grup(ad))
         if alan:
@@ -1485,6 +1492,8 @@ with sol:
     _sebeke_top, _sebeke_n = _canli_topla("sebeke")
     _sog_top, _sog_n       = _canli_topla("sogutma")
     _koj_top, _koj_n       = _canli_topla("kojen")
+    _gaz_top, _gaz_n       = _canli_topla("dogalgaz")
+    _su_top, _su_n         = _canli_topla("su")
     # Toplam enerji = şebeke + kojen üretimi (kojen canlı ölçülüyorsa)
     _top_enerji = (None if _sebeke_top is None and _koj_top is None
                    else (_sebeke_top or 0) + (_koj_top or 0))
@@ -1493,24 +1502,26 @@ with sol:
     def _alt(n, ek=""):
         return f"{n} lokasyon canlı{ek}" if n else ""
 
-    # (etiket, değer kW | None, alt satır, tıklama anahtarı)
+    # (etiket, değer | None, alt satır, birim, tıklama anahtarı) — anahtar SONDA
+    # kalır: test_ozet_karsilastirma kart listesini buradan okur.
     _metrikler = [
         ("Toplam Enerji", _top_enerji,
-         _alt(_sebeke_n, "" if _koj_n else " · şebeke (kojen canlı ölçülmüyor)"), "enerji"),
-        ("Doğalgaz",      None, "", "dogalgaz"),
-        ("Soğutma",       _sog_top, _alt(_sog_n, " · chiller + kule"), "sogutma"),
-        ("Su",             None, "", "su"),
-        ("Kojen Üretim",  _koj_top, _alt(_koj_n), "kojen"),
+         _alt(_sebeke_n, " · şebeke + kojen" if _koj_n else " · şebeke (kojen canlı ölçülmüyor)"),
+         "kW", "enerji"),
+        ("Doğalgaz",      _gaz_top, _alt(_gaz_n, " · kazan + kojen"), "m³/h", "dogalgaz"),
+        ("Soğutma",       _sog_top, _alt(_sog_n, " · chiller + kule"), "kW", "sogutma"),
+        ("Su",            _su_top, _alt(_su_n), "m³/h", "su"),
+        ("Kojen Üretim",  _koj_top, _alt(_koj_n), "kW", "kojen"),
     ]
 
-    for _lbl, _deger, _alt_metin, _ozet_key in _metrikler:
+    for _lbl, _deger, _alt_metin, _birim, _ozet_key in _metrikler:
         if _deger is None:
             _deger_html = ('<span style="font-size:10px;font-weight:600;color:#9aa3b2;">'
                            'canlı sayaç yok</span>')
         else:
             _deger_html = (f'<span style="font-size:12px;font-weight:700;color:#2a78d6;'
                            f'font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;">'
-                           f'{kw_metin(_deger)} kW</span>')
+                           f'{kw_metin(_deger)} {_birim}</span>')
         _alt_html = (f'<div style="font-size:9px;color:#46536b;margin-top:2px;">'
                      f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;'
                      f'background:#0ca30c;margin-right:4px;vertical-align:middle;"></span>{_alt_metin}</div>') if _alt_metin else ""

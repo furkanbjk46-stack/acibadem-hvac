@@ -95,13 +95,28 @@ GRUPLAR = [
     ("enerji",  "ENERJİ KAYNAĞI",   ("TRDP-",)),
     ("sogutma", "SOĞUTMA SİSTEMİ",  ("CHILLER-", "CH-", "KULE-")),
     ("mcc",     "MCC YÜKÜ",         ("MCC-", "2BK-", "4BK-", "CK-")),
+    # Sahada bugün canlı okunmayan kalemler. Bu adlarla bir sayaç tabloya
+    # yazılırsa (bugün yalnız sunum verisi yazıyor) kendi grubunda görünür;
+    # yazılmıyorsa grup hiç çıkmaz, OLCULMEYEN satırı gösterilir.
+    ("kojen",    "KOJEN ÜRETİMİ",   ("KOJEN-",)),
+    ("dogalgaz", "DOĞALGAZ",        ("DOGALGAZ-",)),
+    ("su",       "SU",              ("SU-",)),
 ]
 GRUP_ACIKLAMA = {
     "enerji":  "Şebeke trafoları · canlı sayaçtan",
     "sogutma": "Chiller'lar ve soğutma kuleleri · canlı sayaçtan",
     "mcc":     "Ana panolar ve blok panoları · canlı sayaçtan",
+    "kojen":   "Kojen jeneratörleri · canlı sayaçtan",
+    "dogalgaz": "Kazan + kojen gaz girişi · canlı sayaçtan",
+    "su":      "Şebeke suyu girişi · canlı sayaçtan",
     "diger":   "Gruplanmamış sayaçlar",
 }
+# Tablo sütununun adı "kw" olsa da gaz ve su debi olarak (m³/h) yazılır
+BIRIM = {"dogalgaz": "m³/h", "su": "m³/h"}
+
+
+def birim(grup: str) -> str:
+    return BIRIM.get(grup, "kW")
 
 
 def grup_bul(cihaz: str) -> str:
@@ -191,6 +206,8 @@ OLCULMEYEN = [
     ("DOĞALGAZ", "Kazan_Dogalgaz_m3", "m³ sayacı canlı okunmuyor"),
     ("SU",       "Su_Tuketimi_m3",    "m³ sayacı canlı okunmuyor"),
 ]
+# Kalemin canlı grubu: o grup ekranda varsa "ölçülmüyor" satırı basılmaz
+OLCULMEYEN_GRUP = {"KOJEN": "kojen", "DOĞALGAZ": "dogalgaz", "SU": "su"}
 
 
 def _zaman_coz(deger):
@@ -320,15 +337,22 @@ def olcek_degeri(seri: dict, cihazlar: list) -> float:
     return tepe
 
 
-def bar_html(deger, olcek, baslik: str = "") -> str:
+# Yük eşiği (yeşil→kırmızı) yalnız TÜKETEN sayaçlar için anlamlı. Kojen
+# üretimi yüksekken kırmızı "alarm" gibi görünürdü; gaz/su debisi kW değil.
+ESIKSIZ_GRUPLAR = ("kojen", "dogalgaz", "su")
+ESIKSIZ_RENK = "rgb(42, 120, 214)"
+
+
+def bar_html(deger, olcek, baslik: str = "", birim: str = "kW", esikli: bool = True) -> str:
     """Yatay dolgu çubuğu. Ölçek yoksa/0 ise boş iz döner."""
     if deger is None or not olcek or olcek <= 0:
         return "<div class='cg-iz'></div>"
     oran = max(0.0, min(100.0, abs(float(deger)) / float(olcek) * 100.0))
-    ipucu = baslik or ("%s kW · %%%.0f" % (tr_sayi(deger), oran))
+    ipucu = baslik or ("%s %s · %%%.0f" % (tr_sayi(deger), birim, oran))
+    renk = esik_rengi(deger) if esikli else ESIKSIZ_RENK
     return (f"<div class='cg-iz' title='{ipucu}'>"
             f"<div class='cg-dolgu' style='width:{oran:.1f}%;"
-            f"background-color:{esik_rengi(deger)};'></div></div>")
+            f"background-color:{renk};'></div></div>")
 
 
 def tr_sayi(x, ond=1):
@@ -337,14 +361,14 @@ def tr_sayi(x, ond=1):
     return tam.replace(",", ".") + "," + kus
 
 
-def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None) -> str:
+def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None, birim: str = "kW") -> str:
     """Tek cihaz satırı: ad · mini grafik · anlık kW.
 
     Okunamayan cihaz "0,0 kW" DEĞİL "okunamadı" yazar: sıfır, sayacın
     durduğunu söyler; okunamamak başka bir şeydir.
     """
     okunamadi = deger is None
-    dg = "okunamadı" if okunamadi else (tr_sayi(deger) + "<span class='cg-br'>kW</span>")
+    dg = "okunamadı" if okunamadi else (tr_sayi(deger) + f"<span class='cg-br'>{birim}</span>")
     cip_sinif = "cg-cip cg-yok" if okunamadi else "cg-cip"
     dg_sinif = "cg-dg cg-dg-yok" if okunamadi else "cg-dg"
     ipucu = YONTEM_ETIKET.get(yontem, ("", ""))[0]
@@ -388,9 +412,9 @@ def olculmeyen_satir_html(ad: str, aciklama: str) -> str:
 
 
 def grup_html(baslik: str, aciklama: str, satirlar: str, toplam_kw,
-              okunan: int, olcusuz: int = 0, yukseklik: int = 430) -> str:
+              okunan: int, olcusuz: int = 0, yukseklik: int = 430, birim: str = "kW") -> str:
     """Bir grup kartı. Liste uzarsa KART değil liste kayar."""
-    ust = f"<div class='cg-toplam'>{'—' if toplam_kw is None else tr_sayi(toplam_kw) + ' kW'}</div>"
+    ust = f"<div class='cg-toplam'>{'—' if toplam_kw is None else tr_sayi(toplam_kw) + ' ' + birim}</div>"
     dip = "%d kalem canlı okunuyor" % okunan
     if olcusuz:
         dip += " · %d kalemde sayaç yok" % olcusuz

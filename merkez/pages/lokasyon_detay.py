@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 import os, sys, json, re
+# Ana sayfa: demo app_demo.py ile açılır; "app_merkez.py"ye geçiş orada
+# StreamlitAPIException veriyordu (Geri butonu sunumda kırmızı hata basıyordu).
+_ANA_SAYFA = "app_demo.py" if os.environ.get("SYNAPSE_DEMO") == "1" else "app_merkez.py"
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -361,7 +364,7 @@ if not lok_id or lok_id not in HASTANELER:
     st.error("Lokasyon seçilmedi. Ana sayfaya dönün.")
     if st.button("⬅ Ana Sayfaya Dön"):
         st.session_state.pop("detay_lokasyon", None)
-        st.switch_page("app_merkez.py")
+        st.switch_page(_ANA_SAYFA)
     st.stop()
 
 lok_info = HASTANELER[lok_id]
@@ -508,7 +511,7 @@ with col_geri:
                 + "</style>", unsafe_allow_html=True)
     if st.button("Geri", key="detay_geri"):
         st.session_state.pop("detay_lokasyon", None)
-        st.switch_page("app_merkez.py")
+        st.switch_page(_ANA_SAYFA)
 with col_baslik:
     st.markdown(
         f"""<div style='display:flex;align-items:center;justify-content:space-between;padding:8px 0;flex-wrap:wrap;gap:8px;'>
@@ -1906,11 +1909,11 @@ with tab_canli:
     # Canlı sayacı olmayan kalemlerden HANGİLERİ bu binada var?
     # Sütun hiç dolmuyorsa o sistem burada yok demektir; kojeni olmayan
     # hastanede "kojen verisi çekilemiyor" yazmak yanlış olurdu.
-    _olculmeyen = []
+    _olculmeyen_tum = []
     for _ad, _kolon, _neden in _CI.OLCULMEYEN:
         try:
             if _kolon in df.columns and float(df[_kolon].fillna(0).abs().sum()) > 0:
-                _olculmeyen.append((_ad, _neden))
+                _olculmeyen_tum.append((_ad, _neden))
         except Exception:
             pass
 
@@ -1946,12 +1949,17 @@ with tab_canli:
         _gruplar = _CI.gruplara_ayir(list(degerler))
         _aralik = _CI.olcum_araligi_sn(seri)
         _okunan_top = sum(1 for v in degerler.values() if v is not None)
+        # Canlı sayacı gelen kalem "ölçülmüyor" diye ayrıca yazılmaz
+        _canli_gruplar = {g for g, _, _ in _gruplar}
+        _olculmeyen = [(a, n) for a, n in _olculmeyen_tum
+                       if _CI.OLCULMEYEN_GRUP.get(a) not in _canli_gruplar]
 
         # ── Üst şerit ────────────────────────────────────────────────
         _kartlar, _grup_govde = [], []
         for _an, _bas, _cihazlar in _gruplar:
             _tp = _CI.grup_toplami(seri, _cihazlar)
             _ok = sum(1 for _c in _cihazlar if degerler.get(_c) is not None)
+            _br = _CI.birim(_an)
 
             if _an == "enerji":
                 _etiket, _alt = "ŞEBEKEDEN ÇEKİLEN", "%d trafo" % len(_cihazlar)
@@ -1963,6 +1971,11 @@ with tab_canli:
                 _ku = sum(1 for _c in _cihazlar
                           if _c.upper().startswith("KULE") and (degerler.get(_c) or 0) >= 1)
                 _etiket, _alt = _bas, "%d chiller + %d kule çalışıyor" % (_ch, _ku)
+            elif _an == "kojen":
+                _calisan = sum(1 for _c in _cihazlar if (degerler.get(_c) or 0) >= 1)
+                _etiket, _alt = _bas, "%d / %d kojen çalışıyor" % (_calisan, len(_cihazlar))
+            elif _an in ("dogalgaz", "su"):
+                _etiket, _alt = _bas, "anlık debi · %d sayaç" % len(_cihazlar)
             else:
                 _etiket = _bas
                 _alt = "%d pano" % len(_cihazlar)
@@ -1970,7 +1983,7 @@ with tab_canli:
                     _alt += " · %d sn'de bir okunuyor" % _aralik
             _kartlar.append(_CI.ozet_kart_html(
                 _etiket, "—" if _tp is None else _CI.tr_sayi(_tp) +
-                "<span class='cg-br'>kW</span>", _alt, canli=(_an == "enerji")))
+                f"<span class='cg-br'>{_br}</span>", _alt, canli=(_an == "enerji")))
 
             # ── Grup gövdesi ─────────────────────────────────────────
             # Çubukların ölçeği: bu gruptaki sayaçların pencere boyunca
@@ -1987,8 +2000,9 @@ with tab_canli:
             for _c in _cihazlar:
                 _satirlar += _CI.satir_html(
                     _c, degerler.get(_c),
-                    _CI.bar_html(degerler.get(_c), _olcek),
-                    _yontemler.get(_c))
+                    _CI.bar_html(degerler.get(_c), _olcek, birim=_br,
+                                 esikli=_an not in _CI.ESIKSIZ_GRUPLAR),
+                    _yontemler.get(_c), birim=_br)
             _olcusuz = 0
             if _an == "enerji":
                 for _ad, _neden in _olculmeyen:
@@ -2000,7 +2014,7 @@ with tab_canli:
                 _ack = ("Şebeke trafoları canlı sayaçtan; " +
                         ", ".join(a.lower() for a, _ in _olculmeyen) +
                         " kalemlerinde canlı sayaç yok")
-            _grup_govde.append(_CI.grup_html(_bas, _ack, _satirlar, _tp, _ok, _olcusuz))
+            _grup_govde.append(_CI.grup_html(_bas, _ack, _satirlar, _tp, _ok, _olcusuz, birim=_br))
 
         _kartlar.append(_CI.ozet_kart_html(
             "OKUNABİLEN SAYAÇ",

@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 import os, sys, json, io, tempfile
+# Ana sayfa: demo app_demo.py ile açılır; "app_merkez.py"ye geçiş orada
+# StreamlitAPIException veriyordu (Geri butonu sunumda kırmızı hata basıyordu).
+_ANA_SAYFA = "app_demo.py" if os.environ.get("SYNAPSE_DEMO") == "1" else "app_merkez.py"
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
@@ -148,7 +151,7 @@ lok_id = st.session_state.get("rapor_lokasyon", None)
 if not lok_id or lok_id not in HASTANELER:
     st.error("⚠️ Lokasyon secilmedi veya tanimli degil. Ana sayfaya donun.")
     if st.button("⬅ Ana Sayfaya Don"):
-        st.switch_page("app_merkez.py")
+        st.switch_page(_ANA_SAYFA)
     st.stop()
 
 lok_info = HASTANELER[lok_id]
