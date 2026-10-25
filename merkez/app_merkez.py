@@ -35,15 +35,15 @@ from streamlit_autorefresh import st_autorefresh
 #   - OTO SET pop-up'ı açıkken: modal pencere yenilemede kapanıyor, saat
 #     girilirken kullanıcının elinden kayıyordu. Pop-up açıkken yenileme
 #     durur (kapatınca tekrar başlar).
-#   - SUNUMDA lokasyon detayı açıkken: Canlı İzleme kendi bloğunu saniyede
-#     bir yeniler; 1,5-3 sn süren tam sayfa yenilemesi o akışı her 10 sn'de
-#     durduruyordu. Detaydaki diğer veriler günlük, tam yenilemeye gerek yok.
-_SUNUM_DETAY = (os.environ.get("SYNAPSE_DEMO", "").strip() == "1"
-                and st.session_state.get("detay_lokasyon"))
+#   - Lokasyon detayı açıkken (demo VE canlı, 25.10.2026): Canlı İzleme
+#     kendi bloğunu kendisi yeniler. 1,5-3 sn süren tam sayfa yenilemesi
+#     hem o akışı her 10 sn'de durduruyor hem de bu sırada yapılan
+#     tıklamaları (sekme, Geri) bekletiyordu — geçişler geç açılıyordu.
+#     Detaydaki diğer veriler günlük; tam yenilemeye gerek yok.
 if ("bakim" not in st.query_params and st.session_state.get("giris_ok")
         and not st.session_state.get("detay_ozet")
         and not st.session_state.get("_oto_popup")
-        and not _SUNUM_DETAY):
+        and not st.session_state.get("detay_lokasyon")):
     st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
 # ============ CSS ============

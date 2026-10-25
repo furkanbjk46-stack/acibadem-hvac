@@ -437,9 +437,12 @@ c("[sunum] ana ekran saniyelik akış betiği YALNIZ demoda yüklenir",
 c("[sunum] önbellek demoda 0,5 sn, gerçekte 12 sn",
   "_CANLI_TTL = 0.5 if _demo_modu() else 12" in _MRK
   and _MRK.count("@st.cache_data(ttl=_CANLI_TTL") == 2)
-c("[sunum] detay açıkken tam sayfa yenilemesi akışı kesmez (yalnız demoda)",
-  'os.environ.get("SYNAPSE_DEMO", "").strip() == "1"\n                and st.session_state.get("detay_lokasyon"))' in _MRK
-  and "and not _SUNUM_DETAY):" in _MRK)
+# Detay açıkken tam sayfa yenilemesi YOK (demo ve canlı): canlı blok kendi
+# yenilenir; tam yenileme akışı durduruyor, tıklamaları bekletiyordu.
+_ar_if = _MRK.split("st_autorefresh(interval")[0]
+_ar_if = _ar_if[_ar_if.rindex('if ("bakim"'):]
+c("detay açıkken tam sayfa yenilemesi yok (demo VE canlı)",
+  'and not st.session_state.get("detay_lokasyon")):' in _ar_if and "SYNAPSE_DEMO" not in _ar_if, _ar_if)
 c("[sunum] detay sayfasında da akış betiği yalnız demoda",
   "    if _demo_modu():\n        import streamlit.components.v1 as _cmp_akis" in SAYFA)
 c("[sunum] satır / grup / özet sayıları akış için işaretli",
