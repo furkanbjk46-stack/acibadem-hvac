@@ -122,7 +122,7 @@ def _bol(toplam, agirliklar):
 # Karsilastirma sayfasindaki "hedef" esikleri (sunum icin ornek degerler).
 # ikinci gostergenin biriminde: enerji kWh/m2/gun, dogalgaz kazan m3/m2/gun,
 # su L/m2/gun, sogutma ve kojen %. Kojende hedef ALT sinirdir (uretimde yuksek iyi).
-HEDEF_ESIKLERI = {"enerji": 1.60, "dogalgaz": 0.060, "su": 9.0,
+HEDEF_ESIKLERI = {"enerji": 4.20, "dogalgaz": 0.130, "su": 30.0,
                   "sogutma": 24.0, "kojen": 33.0}
 
 
@@ -266,7 +266,11 @@ def veri_uret():
         # Tuketim m2 ile olceklenir: aksi halde 5.000 m2'lik Adana Ortopedia da
         # 20.000 m2'lik Atakent de ~45.000 kWh tuketiyor gorunuyor ve
         # kWh/m2/gun gostergesi anlamsizlasiyordu (kucuk hastane 9, buyuk 2).
-        taban = round(lok_m2 * (1.05 + 0.55 * rnd.random()))
+        # GERCEK MASLAK OLCEGI (25.10.2026): Maslak'in 09.2025-08.2026 gercek
+        # ortalamasi 15.000 m2'de gunde 62 MWh (~4,1 kWh/m2/gun). Ilk surum
+        # 1,3 kWh/m2/gun uretiyordu; sunumda hastaneler gercegin ucte biri
+        # gorunuyordu. Hastaneler bu seviyenin %85-%115'i arasinda dagilir.
+        taban = round(lok_m2 * 4.1 * (0.85 + 0.30 * rnd.random()))
 
         # Lokasyona ozgu katsayilar. Bunlar olmadan soğutma payi ve kojen
         # karsilama orani 21 hastanede BIREBIR AYNI cikiyor (%23,2 / %35,0)
@@ -304,7 +308,8 @@ def veri_uret():
             yaz = _mevsim(gun)                         # 0 = kis, 1 = yaz
             gunluk = 0.92 + 0.16 * rnd.random()        # gunden gune dalgalanma
             hafta_sonu = 0.93 if gun.weekday() >= 5 else 1.0
-            toplam = round(taban * (0.82 + 0.38 * yaz) * gunluk * hafta_sonu)
+            # Gercek Maslak: kis ~56 MWh, temmuz ~73 MWh (yaz/kis ~1,3)
+            toplam = round(taban * (0.88 + 0.26 * yaz) * gunluk * hafta_sonu)
 
             # Sogutma yazin artar, kazan dogalgazi kisin.
             # GERCEKCI SEVIYELER (25.10.2026, sunum oncesi): hastanede soguma
@@ -312,15 +317,15 @@ def veri_uret():
             sogutma_pay = (0.08 + 0.24 * yaz) * kat_sogutma
             chiller = round(toplam * sogutma_pay * 0.85)
             vrf = round(toplam * sogutma_pay * 0.15)
-            mcc = round(toplam * 0.22)
+            mcc = round(toplam * 0.15)          # gercek Maslak MCC payi ~%15
             kojen_var = lok_id in ("maslak", "izmir", "ankara")
             kojen = round(toplam * oran_kojen) if kojen_var else 0
             sebeke = toplam - kojen
-            # Kazan gazi m2'ye baglidir (elektrige degil): kisin ~0,09, yazin
-            # ~0,015 m3/m2/gun (sicak su, sterilizasyon buhari) → yilda ~19
-            # m3/m2. Kojenli hastanede atik isi kazanin ~%40'ini karsilar.
-            kazan = round(lok_m2 * (0.015 + 0.075 * (1 - yaz)) * kat_kazan
-                          * (0.6 if kojen_var else 1.0) * gunluk)
+            # Kazan gazi m2'ye baglidir (elektrige degil). Gercek Maslak
+            # (kojenli): kisin ~0,16, yazin ~0,02 m3/m2/gun, yillik ort. 0,117.
+            # Kojensiz hastanede atik isi yok, kazan ~%30 fazla yakar.
+            kazan = round(lok_m2 * (0.02 + 0.17 * (1 - yaz)) * kat_kazan
+                          * (1.0 if kojen_var else 1.3) * gunluk)
 
             # Dis hava sehre gore kayar (Adana sicak, Kayseri soguk).
             #
@@ -374,10 +379,10 @@ def veri_uret():
                 "Diger_Yuk_kWh": max(0, toplam - mcc - chiller - vrf - kule),
                 **satir_kirilim,
                 "Kazan_Dogalgaz_m3": kazan,
-                # Gaz motoru: 1 m3 gazdan ~3,8 kWh elektrik (%36 verim)
-                "Kojen_Dogalgaz_m3": round(kojen / 3.8) if kojen else 0,
-                # Hastane suyu ~5-11 L/m2/gun (yilda 2-4 m3/m2), yazin biraz fazla
-                "Su_Tuketimi_m3": round(lok_m2 * (0.0065 + 0.002 * yaz) * kat_su
+                # Gaz motoru: 1 m3 gazdan ~4,0 kWh elektrik (gercek Maslak 25.383 / 6.377)
+                "Kojen_Dogalgaz_m3": round(kojen / 4.0) if kojen else 0,
+                # Gercek Maslak suyu ~29 L/m2/gun (kis 21, yaz 37)
+                "Su_Tuketimi_m3": round(lok_m2 * (0.021 + 0.016 * yaz) * kat_su
                                         * gunluk * hafta_sonu, 1),
                 "Dis_Hava_Sicakligi_C": dis_hava,
                 "Chiller_Set_Temp_C": ch_set,

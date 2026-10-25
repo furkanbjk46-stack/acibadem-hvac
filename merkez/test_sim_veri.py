@@ -99,9 +99,10 @@ m2 = {l: m for l, _, m in S.LOKASYONLAR}
 son = max(tarihler)
 yogunluk = {r["lokasyon_id"]: r["Toplam_Hastane_Tuketim_kWh"] / m2[r["lokasyon_id"]]
             for r in en if r["Tarih"] == son}
-c("kWh/m2/gun 0.8-2.5 araliginda",
-  all(0.8 <= v <= 2.5 for v in yogunluk.values()),
-  {k: round(v, 2) for k, v in yogunluk.items() if not 0.8 <= v <= 2.5})
+# Gercek Maslak ~4,1 kWh/m2/gun (09.2025-08.2026 ortalamasi)
+c("kWh/m2/gun 2.5-6.5 araliginda",
+  all(2.5 <= v <= 6.5 for v in yogunluk.values()),
+  {k: round(v, 2) for k, v in yogunluk.items() if not 2.5 <= v <= 6.5})
 
 # ── Senaryolar ────────────────────────────────────────────────────────────
 dun = (S._bugun() - S.timedelta(days=1)).isoformat()
@@ -185,11 +186,11 @@ c("kojen karsilama orani makul (%25-%45)",
   all(0.25 <= v <= 0.45 for v in _koj.values()), _koj)
 
 _su_yog = {k: v["Su_Tuketimi_m3"] / m2[k] * 1000 for k, v in son_gun.items() if m2[k]}
-# Gercekci hastane suyu: yilda 2-4 m3/m2 → gunde ~5-11 L/m2 (25.10.2026)
-c("su yogunlugu gercekci (3-15 L/m2/gun)",
-  all(3.0 <= v <= 15.0 for v in _su_yog.values()),
+# Gercek Maslak suyu ~29 L/m2/gun (kis 21, yaz 37)
+c("su yogunlugu gercekci (12-50 L/m2/gun)",
+  all(12.0 <= v <= 50.0 for v in _su_yog.values()),
   {k: round(v, 2) for k, v in list(_su_yog.items())[:4]})
-# Kazan gazi: yilda ~12-25 m3/m2 (son 365 gun, kojensiz hastaneler)
+# Kazan gazi: gercek Maslak yilda ~43 m3/m2; kojensizde daha fazla (son 365 gun)
 _yil_bas = max(r["Tarih"] for r in en)
 from datetime import date as _date, timedelta as _td
 _yil_bas = (_date.fromisoformat(_yil_bas) - _td(days=364)).isoformat()
@@ -198,8 +199,8 @@ for r in en:
     if r["Tarih"] >= _yil_bas and r["Kojen_Uretim_kWh"] == 0:
         _gaz_yil[r["lokasyon_id"]] += r["Kazan_Dogalgaz_m3"]
 _gaz_yog = {k: v / m2[k] for k, v in _gaz_yil.items() if m2.get(k)}
-c("kazan gazi gercekci (yilda 12-25 m3/m2)",
-  _gaz_yog and all(12 <= v <= 25 for v in _gaz_yog.values()),
+c("kazan gazi gercekci (yilda 35-80 m3/m2)",
+  _gaz_yog and all(35 <= v <= 80 for v in _gaz_yog.values()),
   {k: round(v, 1) for k, v in list(_gaz_yog.items())[:5]})
 c("su yogunlugu lokasyona gore farklilasiyor",
   len({round(v, 2) for v in _su_yog.values()}) > 5)
