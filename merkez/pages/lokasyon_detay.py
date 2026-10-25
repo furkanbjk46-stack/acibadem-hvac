@@ -1917,7 +1917,10 @@ with tab_canli:
         except Exception:
             pass
 
-    @st.fragment(run_every="3s")
+    # Sunumda sürekli akış: blok ~1 sn'de çiziliyor, bekleme 0,5 sn → ekran
+    # saniyede bir değişir (1 sn bekleme 2 sn'lik adım veriyordu). Gerçek
+    # sistemde 3 sn — saha 15 sn'de bir yazıyor, daha sık sormak boşa trafik.
+    @st.fragment(run_every="0.5s" if _demo_modu() else "3s")
     def _canli_izleme_blok():
         try:
             _canli_izleme_ciz()
@@ -1982,7 +1985,7 @@ with tab_canli:
                 if _aralik:
                     _alt += " · %d sn'de bir okunuyor" % _aralik
             _kartlar.append(_CI.ozet_kart_html(
-                _etiket, "—" if _tp is None else _CI.tr_sayi(_tp) +
+                _etiket, "—" if _tp is None else _CI.akan(_tp, 1, "grup-" + _bas) +
                 f"<span class='cg-br'>{_br}</span>", _alt, canli=(_an == "enerji")))
 
             # ── Grup gövdesi ─────────────────────────────────────────
@@ -1996,7 +1999,7 @@ with tab_canli:
                 _ust_olcek = max((v for v in _CI.toplam_seri(seri, _cihazlar)
                                   if v is not None), default=0.0)
                 _satirlar += _CI.toplam_satir_html(
-                    "ŞEBEKE", _tp, _CI.bar_html(_tp, _ust_olcek))
+                    "ŞEBEKE", _tp, _CI.bar_html(_tp, _ust_olcek), faz="grup-" + _bas)
             for _c in _cihazlar:
                 _satirlar += _CI.satir_html(
                     _c, degerler.get(_c),
@@ -2036,6 +2039,11 @@ with tab_canli:
             unsafe_allow_html=True)
 
     _canli_izleme_blok()
+    # SUNUM: blok ~1-1,5 sn'de bir çiziliyor; aradaki saniyelerde sayılar
+    # tarayıcıda akar (canli_izleme.akis_betigi). Gerçek sistemde yüklenmez.
+    if _demo_modu():
+        import streamlit.components.v1 as _cmp_akis
+        _cmp_akis.html(_CI.akis_betigi(), height=0)
 
     # Pencere seçimi FRAGMENT DIŞINDA ve altta: kendi kendine yenilenen bir
     # bölümün içindeki widget her turda yeniden kurulur ve seçim elden kayar.

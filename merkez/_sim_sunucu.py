@@ -575,17 +575,21 @@ def canli_guc_tazele(simdi=None):
     # Gunduz yuku yuksek, gece dusuk (gercek trafo profiline benzer)
     gunduz = 0.55 + 0.45 * max(0.0, math.sin((t - 6) / 24 * 2 * math.pi))
     zaman = simdi.isoformat(timespec="seconds")
+    ts = simdi.timestamp()
     satirlar = []
     # Tabanlar gunluk/24 (saatlik ortalama); profil ortalamasi 1 olacak sekilde
     profil = gunduz / _GUNDUZ_ORT
     for lok_id, taban in _CANLI_TABAN.items():
         for ad, tb in taban.items():
-            # Saniyeye bagli kucuk salinim: her istekte biraz farkli; lokasyon
-            # adiyla faz kaydirilir ki 19 hastane ayni anda inip cikmasin.
-            salinim = math.sin(simdi.second / 60.0 * 2 * math.pi + len(ad) + len(lok_id))
+            # Ekran SANIYEDE BIR soruyor: deger her saniye kipirdamali ama
+            # sicramamali. Uc farkli periyotlu (9, 2.7, 1.1 sn) yumusak dalga;
+            # faz sayac+lokasyon adindan, 19 hastane ayni anda inip cikmasin.
+            f = (sum(map(ord, ad + lok_id)) % 100) / 100.0 * 2 * math.pi
+            salinim = (0.025 * math.sin(ts / 9.0 + f) + 0.012 * math.sin(ts / 2.7 + 2 * f)
+                       + 0.006 * math.sin(ts / 1.1 + 3 * f))
             # Kojen ve su gun icinde pek degismez; gaz ve elektrik profile uyar
             p = 1.0 if ad.startswith(("KOJEN", "SU-")) else profil
-            kw = 0.0 if tb <= 0 else tb * p * (1.0 + 0.04 * salinim)
+            kw = 0.0 if tb <= 0 else tb * p * (1.0 + salinim)
             satirlar.append({
                 "lokasyon_id": lok_id,
                 "cihaz": ad,

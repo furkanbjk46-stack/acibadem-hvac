@@ -242,7 +242,8 @@ _sat_yok = CI.satir_html("MCC-5", None, "<svg/>", None)
 c("okunamayan satır 0 YAZMIYOR", "okunamadı" in _sat_yok and "0,0" not in _sat_yok)
 
 _gh = CI.grup_html("MCC YÜKÜ", "açıklama", "<i></i>", 456.2, 14, 15)
-c("grup başlığında toplam", "456,2 kW" in _gh)
+# Görünen metin üzerinden: sayı artık akış için ayrı bir span içinde
+c("grup başlığında toplam", "456,2 kW" in re.sub(r"<[^>]+>", "", _gh))
 c("grup dibinde okunan kalem sayısı", "14 kalem canlı okunuyor" in _gh, _gh[-160:])
 _gh2 = CI.grup_html("ENERJİ", "a", "<i></i>", 100.0, 5, 3)
 c("ölçülemeyen kalem sayısı da yazıyor", "3 kalemde sayaç yok" in _gh2, _gh2[-160:])
@@ -338,7 +339,8 @@ c("sekme gövdesi var", "with tab_canli:" in SAYFA)
 c("canlı veri çekiliyor", "fetch_canli_guc(url, key, lok_id)" in SAYFA)
 c("seri oturumda tutuluyor", "st.session_state[_seri_anahtar] = seri" in SAYFA)
 c("seri lokasyona göre ayrı", '"canli_seri_" + str(lok_id)' in SAYFA)
-c("kendi kendine yenileniyor", '@st.fragment(run_every="3s")' in SAYFA)
+c("kendi kendine yenileniyor (gerçekte 3 sn, sunumda ~1 sn)",
+  '@st.fragment(run_every="0.5s" if _demo_modu() else "3s")' in SAYFA)
 # Widget fragment GOVDESINDE olmamali: kendi kendine yenilenen bolumde her
 # turda yeniden kurulur ve secim elden kayar. (Konum ust/alt onemli degil,
 # ONEMLI OLAN govdenin icinde olmamasi.)
@@ -428,6 +430,26 @@ c("gaz ve su m³/h, diğerleri kW",
   CI.birim("dogalgaz") == "m³/h" and CI.birim("su") == "m³/h" and CI.birim("kojen") == "kW")
 c("satırda birim yazılır", "m³/h" in CI.satir_html("SU-ANA", 12.0, "", birim="m³/h"))
 c("grup başlığında birim yazılır", "m³/h" in CI.grup_html("SU", "", "", 12.0, 1, birim="m³/h"))
+_MRK = open(os.path.join(BURASI, "app_merkez.py"), encoding="utf-8").read()
+c("[sunum] ana ekran saniyelik akış betiği YALNIZ demoda yüklenir",
+  "    if _demo_modu():\n        _akis_taban" in _MRK
+  and _MRK.count("_canli_akis_betigi(") == 2)
+c("[sunum] önbellek demoda 0,5 sn, gerçekte 12 sn",
+  "_CANLI_TTL = 0.5 if _demo_modu() else 12" in _MRK
+  and _MRK.count("@st.cache_data(ttl=_CANLI_TTL") == 2)
+c("[sunum] detay açıkken tam sayfa yenilemesi akışı kesmez (yalnız demoda)",
+  'os.environ.get("SYNAPSE_DEMO", "").strip() == "1"\n                and st.session_state.get("detay_lokasyon"))' in _MRK
+  and "and not _SUNUM_DETAY):" in _MRK)
+c("[sunum] detay sayfasında da akış betiği yalnız demoda",
+  "    if _demo_modu():\n        import streamlit.components.v1 as _cmp_akis" in SAYFA)
+c("[sunum] satır / grup / özet sayıları akış için işaretli",
+  "canli-sayi" in CI.satir_html("TRDP-1", 12.0, "") and "canli-sayi" in CI.grup_html("X", "", "", 5.0, 1)
+  and "data-faz='grup-X'" in CI.grup_html("X", "", "", 5.0, 1)
+  and '_CI.akan(_tp, 1, "grup-" + _bas)' in SAYFA)
+c("[sunum] okunamayan sayaç akmaz ('okunamadı' yazar)", "canli-sayi" not in CI.satir_html("TRDP-1", None, ""))
+c("akış betiği önceki sayacı kapatır (üst üste çalışmaz)", "clearInterval(W.__synAkis)" in CI.akis_betigi())
+c("[sunum] kart kW / W/m² / özet değerleri akış için işaretli",
+  _MRK.count('class="canli-sayi"') >= 3)
 _RAPOR = open(os.path.join(BURASI, "pages", "rapor_olustur.py"), encoding="utf-8").read()
 c("[sunum] Geri butonu demoda app_demo.py'ye döner (sabit app_merkez.py hata veriyordu)",
   'switch_page("app_merkez.py")' not in SAYFA + _RAPOR

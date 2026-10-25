@@ -200,8 +200,12 @@ c("merkez demo sayfasini YALNIZCA demo modunda secer",
 _ar_kosul = _merkez.split("st_autorefresh(interval")[0].split("from streamlit_autorefresh")[-1]
 c("karsilastirma sayfasinda otomatik yenileme durur",
   'not st.session_state.get("detay_ozet")' in _ar_kosul, _ar_kosul[-200:])
+# Kosulda demoya ozel AYRI bir madde var (sunumda detay acikken akis kesilmesin,
+# _SUNUM_DETAY); karsilastirma maddesi ise kendi basina, demoya bagli degil.
+_if_satiri = _ar_kosul[_ar_kosul.index('if ("bakim"'):]
 c("yenileme durdurma demo moduna bagli DEGIL",
-  "SYNAPSE_DEMO" not in _ar_kosul, _ar_kosul[-200:])
+  '\n        and not st.session_state.get("detay_ozet")\n' in _if_satiri
+  and "SYNAPSE_DEMO" not in _if_satiri, _if_satiri[-300:])
 c("giris ekraninda yenileme yok (yazilan parola silinmesin)",
   'st.session_state.get("giris_ok")' in _ar_kosul)
 c("QR bakim sayfasinda yenileme yok", '"bakim" not in st.query_params' in _ar_kosul)

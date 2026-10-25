@@ -368,7 +368,7 @@ def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None, birim: str = "
     durduğunu söyler; okunamamak başka bir şeydir.
     """
     okunamadi = deger is None
-    dg = "okunamadı" if okunamadi else (tr_sayi(deger) + f"<span class='cg-br'>{birim}</span>")
+    dg = "okunamadı" if okunamadi else (akan(deger, 1, cihaz) + f"<span class='cg-br'>{birim}</span>")
     cip_sinif = "cg-cip cg-yok" if okunamadi else "cg-cip"
     dg_sinif = "cg-dg cg-dg-yok" if okunamadi else "cg-dg"
     ipucu = YONTEM_ETIKET.get(yontem, ("", ""))[0]
@@ -390,9 +390,9 @@ def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None, birim: str = "
             f"<div class='{dg_sinif}'>{dg}</div></div>")
 
 
-def toplam_satir_html(ad: str, deger, cubuk: str) -> str:
+def toplam_satir_html(ad: str, deger, cubuk: str, faz: str = "") -> str:
     """Grubun TOPLAMINI gösteren vurgulu satır (ör. ŞEBEKE = 4 trafo)."""
-    dg = "—" if deger is None else (tr_sayi(deger) + "<span class='cg-br'>kW</span>")
+    dg = "—" if deger is None else (akan(deger, 1, faz or ad) + "<span class='cg-br'>kW</span>")
     return (f"<div class='cg-satir cg-ust-satir'><div class='cg-cip cg-cip-ust'>{ad}</div>"
             f"<div class='cg-cizgi'>{cubuk}</div>"
             f"<div class='cg-dg cg-dg-ust'>{dg}</div></div>")
@@ -414,7 +414,7 @@ def olculmeyen_satir_html(ad: str, aciklama: str) -> str:
 def grup_html(baslik: str, aciklama: str, satirlar: str, toplam_kw,
               okunan: int, olcusuz: int = 0, yukseklik: int = 430, birim: str = "kW") -> str:
     """Bir grup kartı. Liste uzarsa KART değil liste kayar."""
-    ust = f"<div class='cg-toplam'>{'—' if toplam_kw is None else tr_sayi(toplam_kw) + ' ' + birim}</div>"
+    ust = f"<div class='cg-toplam'>{'—' if toplam_kw is None else akan(toplam_kw, 1, 'grup-' + baslik) + ' ' + birim}</div>"
     dip = "%d kalem canlı okunuyor" % okunan
     if olcusuz:
         dip += " · %d kalemde sayaç yok" % olcusuz
@@ -546,3 +546,56 @@ def durum_metni(seri: dict, yas_sn=None, pencere_sn: int = 300) -> str:
     if yas_sn is not None:
         parcalar.append("son ölçüm %.0f sn önce" % yas_sn)
     return " · ".join(parcalar)
+
+# ── SUNUM: saniyelik akış ────────────────────────────────────────────────
+# Sunucu ekranı ~1-10 sn'de bir çiziyor (sayfaya göre). Sunumda tarayıcı,
+# .canli-sayi ile işaretli sayıları sunucunun verdiği değerin ETRAFINDA her
+# saniye yumuşakça oynatır. Betik yalnız demoda yüklenir; işaretli span'lar
+# gerçek sistemde zararsızdır (betik yoksa sayı olduğu gibi kalır).
+
+def akan(deger, ond: int = 1, faz: str = "") -> str:
+    """Sayıyı akış betiğinin bulacağı span içinde yazar."""
+    return (f"<span class='canli-sayi' data-deger='{float(deger):.3f}' "
+            f"data-ond='{ond}' data-faz='{faz}'>{tr_sayi(deger, ond)}</span>")
+
+
+def akis_betigi(harita_taban: dict = None) -> str:
+    """.canli-sayi öğelerini (ve verilirse harita penceresini) saniyede bir oynatır.
+
+    Değer = data-deger × (1 + üç yumuşak dalga). Faz data-faz'dan gelir:
+    aynı fazlı sayılar (kartın kW'ı ile W/m²'si) birlikte iner çıkar.
+    Betik her çizimde yeniden kurulur; önceki aralık kapatılır.
+    """
+    import json
+    taban = harita_taban or {}
+    return """
+<script>
+(function () {
+  var taban = %s;
+  var W = window.parent;
+  if (W.__synAkis) { W.clearInterval(W.__synAkis); }
+  function faz(s) { var h = 0; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) %% 1000; } return h / 1000 * 6.2832; }
+  function carpan(s, t) { var p = faz(s); return 1 + 0.025 * Math.sin(t / 9 + p) + 0.012 * Math.sin(t / 2.7 + 2 * p) + 0.006 * Math.sin(t / 1.1 + 3 * p); }
+  function yaz(x, ond) { return x.toLocaleString('tr-TR', {minimumFractionDigits: ond, maximumFractionDigits: ond}); }
+  function adim() {
+    var d; try { d = W.document; } catch (e) { return; }
+    var t = Date.now() / 1000;
+    d.querySelectorAll('.canli-sayi').forEach(function (el) {
+      var v = parseFloat(el.getAttribute('data-deger'));
+      if (isNaN(v)) { return; }
+      el.textContent = yaz(v * carpan(el.getAttribute('data-faz') || '', t), parseInt(el.getAttribute('data-ond') || '0', 10));
+    });
+    var veri = {};
+    Object.keys(taban).forEach(function (lok) {
+      var c = carpan(lok, t), s = taban[lok].sebeke, k = taban[lok].kojen;
+      veri[lok] = {sebeke: s == null ? null : yaz(s * c, 0), kojen: k == null ? null : yaz(k * c, 0)};
+    });
+    d.querySelectorAll('iframe[src^="data:text/html;base64"]').forEach(function (f) {
+      try { f.contentWindow.postMessage({tip: 'synapse-canli', veri: veri}, '*'); } catch (e) {}
+    });
+  }
+  adim();
+  W.__synAkis = W.setInterval(adim, 1000);
+})();
+</script>
+""" % json.dumps(taban, ensure_ascii=False)

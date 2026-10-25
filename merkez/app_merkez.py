@@ -35,9 +35,15 @@ from streamlit_autorefresh import st_autorefresh
 #   - OTO SET pop-up'ı açıkken: modal pencere yenilemede kapanıyor, saat
 #     girilirken kullanıcının elinden kayıyordu. Pop-up açıkken yenileme
 #     durur (kapatınca tekrar başlar).
+#   - SUNUMDA lokasyon detayı açıkken: Canlı İzleme kendi bloğunu saniyede
+#     bir yeniler; 1,5-3 sn süren tam sayfa yenilemesi o akışı her 10 sn'de
+#     durduruyordu. Detaydaki diğer veriler günlük, tam yenilemeye gerek yok.
+_SUNUM_DETAY = (os.environ.get("SYNAPSE_DEMO", "").strip() == "1"
+                and st.session_state.get("detay_lokasyon"))
 if ("bakim" not in st.query_params and st.session_state.get("giris_ok")
         and not st.session_state.get("detay_ozet")
-        and not st.session_state.get("_oto_popup")):
+        and not st.session_state.get("_oto_popup")
+        and not _SUNUM_DETAY):
     st_autorefresh(interval=10000, key="autorefresh")  # 10 saniye
 
 # ============ CSS ============
@@ -497,7 +503,12 @@ def fetch_lokasyonlar(url, key):
     except:
         return []
 
-@st.cache_data(ttl=12, show_spinner=False)
+# Sunumda (demo) ekran saniyede bir akar; önbellek yarım sn (1 sn olunca her
+# ikinci yenileme aynı değeri getiriyordu, akış 2 sn'ye düşüyordu). Gerçekte 12.
+_CANLI_TTL = 0.5 if _demo_modu() else 12
+
+
+@st.cache_data(ttl=_CANLI_TTL, show_spinner=False)
 def fetch_canli_guc(url, key, lokasyon_id):
     """Lokasyonun canlı sayaç gücü (kW) — (olcumler, yas_sn).
 
@@ -538,7 +549,7 @@ def fetch_canli_guc(url, key, lokasyon_id):
 # alınır (lokasyon başına ayrı istek atılmaz).
 CANLI_BAYAT_SN = 300   # son ölçüm bundan eskiyse "canlı değil" sayılır
 
-@st.cache_data(ttl=12, show_spinner=False)
+@st.cache_data(ttl=_CANLI_TTL, show_spinner=False)
 def fetch_canli_tum(url, key):
     try:
         from supabase import create_client
@@ -604,6 +615,12 @@ def canli_ozet_hesapla(satirlar):
     # Bayat lokasyonlar canlı sayılmaz
     return {k: v for k, v in ozet.items()
             if v["yas"] is None or v["yas"] <= CANLI_BAYAT_SN}
+
+
+def _canli_akis_betigi(taban: dict) -> str:
+    """SUNUM: saniyelik akış betiği (canli_izleme.akis_betigi; detay sayfası da kullanır)."""
+    import canli_izleme as _ci
+    return _ci.akis_betigi(taban)
 
 
 def kw_metin(x, ond=0):
@@ -1369,6 +1386,11 @@ with sol:
         m2_lok    = lok_info.get("m2", 10000)
         verim_str = (kw_metin(kw_anlik * 1000 / m2_lok, 1)
                      if kw_anlik is not None and m2_lok else "—")
+        # Sunumda bu iki sayı tarayıcıda saniyede bir akar (_canli_akis_betigi)
+        _akis_kw = (f' class="canli-sayi" data-deger="{kw_anlik:.1f}" data-ond="0" data-faz="{lok_id}"'
+                    if kw_anlik is not None else "")
+        _akis_wm2 = (f' class="canli-sayi" data-deger="{kw_anlik * 1000 / m2_lok:.2f}" data-ond="1" data-faz="{lok_id}"'
+                     if kw_anlik is not None and m2_lok else "")
         sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#46536b;font-weight:700;">#{i+1}</span>' if (i < 4 and kw_anlik is not None) else ""
 
         # Dün/önceki gün % kıyası anlık değerde anlamsız → gösterilmez
@@ -1404,7 +1426,7 @@ with sol:
             f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:5px;">{durum_lbl}</div>'
             f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">'
             f'<span style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:16px;font-weight:900;'
-            f'color:{renk};line-height:1;">{kwh_str}</span>'
+            f'color:{renk};line-height:1;"><span{_akis_kw}>{kwh_str}</span></span>'
             f'<span style="font-size:8px;color:#46536b;">kW</span>'
             f'<span style="margin-left:4px;">{degisim_html}</span>'
             f'</div>'
@@ -1412,7 +1434,7 @@ with sol:
             f'background:rgba(19,50,115,0.05);border-radius:5px;padding:3px 8px;'
             f'border:1px solid rgba(19,50,115,0.10);">'
             f'<span style="font-size:7px;color:#46536b;text-transform:uppercase;letter-spacing:1px;">W/m²</span>'
-            f'<span style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:11px;color:#2a78d6;font-weight:700;">{verim_str}</span>'
+            f'<span style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:11px;color:#2a78d6;font-weight:700;"><span{_akis_wm2}>{verim_str}</span></span>'
             f'</div>'
             f'</div></div></a>'
         )
@@ -1521,7 +1543,8 @@ with sol:
         else:
             _deger_html = (f'<span style="font-size:12px;font-weight:700;color:#2a78d6;'
                            f'font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;">'
-                           f'{kw_metin(_deger)} {_birim}</span>')
+                           f'<span class="canli-sayi" data-deger="{_deger:.2f}" data-ond="0" '
+                           f'data-faz="ozet-{_ozet_key}">{kw_metin(_deger)}</span> {_birim}</span>')
         _alt_html = (f'<div style="font-size:9px;color:#46536b;margin-top:2px;">'
                      f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;'
                      f'background:#0ca30c;margin-right:4px;vertical-align:middle;"></span>{_alt_metin}</div>') if _alt_metin else ""
@@ -1554,7 +1577,9 @@ with sol:
     if _yaslar:
         st.markdown(
             '<div style="font-size:9px;color:#6b7280;margin:2px 2px 0;">'
-            'Anlık değerler · 10 sn\'de bir yenilenir</div>',
+            'Anlık değerler · '
+            + ("her saniye güncellenir" if _demo_modu() else "10 sn'de bir yenilenir")
+            + '</div>',
             unsafe_allow_html=True)
 
     if _metrikler:
@@ -1919,6 +1944,17 @@ window.addEventListener('message', function(ev) {{
 })();
 </script>
 """ % json.dumps(_harita_canli, ensure_ascii=False), height=0)
+
+    # ── SUNUM: saniyelik akış ──
+    # Ana sayfanın tamamı 1,5-3 sn'de çiziliyor; saniyede bir yeniden çizmek
+    # ekranı sürekli "çalışıyor" bırakırdı. Sunumda bunun yerine tarayıcı,
+    # sunucunun 10 sn'de bir verdiği değerin ETRAFINDA (±%4) her saniye
+    # yumuşakça oynatır: kartlar, W/m², global özet ve harita penceresi.
+    # Gerçek sistemde bu betik HİÇ YÜKLENMEZ.
+    if _demo_modu():
+        _akis_taban = {_lid: {"sebeke": _v.get("sebeke"), "kojen": _v.get("kojen")}
+                       for _lid, _v in CANLI.items()}
+        _components.html(_canli_akis_betigi(_akis_taban), height=0)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}
