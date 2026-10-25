@@ -67,11 +67,15 @@ yaz = [v for k, v in sirali if k[5:7] in ("07", "08") and k in tam]
 kis = [v for k, v in sirali if k[5:7] in ("01", "02") and k in tam]
 c("yaz tuketimi kistan yuksek", min(yaz) > max(kis), "yaz=%s kis=%s" % (min(yaz), max(kis)))
 
-sog = defaultdict(int)
-gaz = defaultdict(int)
+# GUNLUK ORTALAMA ile kiyaslanir: 430 gunluk gecmiste bazi aylar (eylul,
+# ekim) iki kez yer aliyor; toplamla bakilinca zirve o aylara kayiyordu.
+sog, gaz, _gs = defaultdict(int), defaultdict(int), defaultdict(int)
 for r in en:
     sog[r["Tarih"][5:7]] += r["Toplam_Sogutma_Tuketim_kWh"]
     gaz[r["Tarih"][5:7]] += r["Kazan_Dogalgaz_m3"]
+    _gs[r["Tarih"][5:7]] += 1
+sog = {k: v / _gs[k] for k, v in sog.items()}
+gaz = {k: v / _gs[k] for k, v in gaz.items()}
 c("sogutma yazin zirve yapar", max(sog, key=sog.get) in ("07", "08"), max(sog, key=sog.get))
 c("kazan dogalgazi kisin zirve yapar", max(gaz, key=gaz.get) in ("12", "01", "02"),
   max(gaz, key=gaz.get))
@@ -181,9 +185,22 @@ c("kojen karsilama orani makul (%25-%45)",
   all(0.25 <= v <= 0.45 for v in _koj.values()), _koj)
 
 _su_yog = {k: v["Su_Tuketimi_m3"] / m2[k] * 1000 for k, v in son_gun.items() if m2[k]}
-c("su yogunlugu litre olarak okunabilir (0.3-3 L/m2/gun)",
-  all(0.3 <= v <= 3.0 for v in _su_yog.values()),
+# Gercekci hastane suyu: yilda 2-4 m3/m2 → gunde ~5-11 L/m2 (25.10.2026)
+c("su yogunlugu gercekci (3-15 L/m2/gun)",
+  all(3.0 <= v <= 15.0 for v in _su_yog.values()),
   {k: round(v, 2) for k, v in list(_su_yog.items())[:4]})
+# Kazan gazi: yilda ~12-25 m3/m2 (son 365 gun, kojensiz hastaneler)
+_yil_bas = max(r["Tarih"] for r in en)
+from datetime import date as _date, timedelta as _td
+_yil_bas = (_date.fromisoformat(_yil_bas) - _td(days=364)).isoformat()
+_gaz_yil = defaultdict(float)
+for r in en:
+    if r["Tarih"] >= _yil_bas and r["Kojen_Uretim_kWh"] == 0:
+        _gaz_yil[r["lokasyon_id"]] += r["Kazan_Dogalgaz_m3"]
+_gaz_yog = {k: v / m2[k] for k, v in _gaz_yil.items() if m2.get(k)}
+c("kazan gazi gercekci (yilda 12-25 m3/m2)",
+  _gaz_yog and all(12 <= v <= 25 for v in _gaz_yog.values()),
+  {k: round(v, 1) for k, v in list(_gaz_yog.items())[:5]})
 c("su yogunlugu lokasyona gore farklilasiyor",
   len({round(v, 2) for v in _su_yog.values()}) > 5)
 

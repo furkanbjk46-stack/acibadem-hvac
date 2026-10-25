@@ -409,7 +409,7 @@ for _r in S.VERI["energy_data"]:
     if _r["Tarih"] > _son.get(_r["lokasyon_id"], {}).get("Tarih", ""):
         _son[_r["lokasyon_id"]] = _r
 _tutarsiz = []
-for _l in _calisan - {"maslak"}:
+for _l in _calisan:   # Maslak dahil: gerçek sayaç adları, kendi günlük kaydına ölçekli
     _canli = sum(r["kw"] for r in _cg if r["lokasyon_id"] == _l and r["cihaz"].startswith("TRDP-"))
     _gunluk = _son[_l]["Sebeke_Tuketim_kWh"] / 24.0
     if not (0.5 * _gunluk < _canli < 1.8 * _gunluk):

@@ -122,7 +122,7 @@ def _bol(toplam, agirliklar):
 # Karsilastirma sayfasindaki "hedef" esikleri (sunum icin ornek degerler).
 # ikinci gostergenin biriminde: enerji kWh/m2/gun, dogalgaz kazan m3/m2/gun,
 # su L/m2/gun, sogutma ve kojen %. Kojende hedef ALT sinirdir (uretimde yuksek iyi).
-HEDEF_ESIKLERI = {"enerji": 1.60, "dogalgaz": 0.0045, "su": 1.50,
+HEDEF_ESIKLERI = {"enerji": 1.60, "dogalgaz": 0.060, "su": 9.0,
                   "sogutma": 24.0, "kojen": 33.0}
 
 
@@ -307,14 +307,20 @@ def veri_uret():
             toplam = round(taban * (0.82 + 0.38 * yaz) * gunluk * hafta_sonu)
 
             # Sogutma yazin artar, kazan dogalgazi kisin.
-            sogutma_pay = (0.05 + 0.20 * yaz) * kat_sogutma
+            # GERCEKCI SEVIYELER (25.10.2026, sunum oncesi): hastanede soguma
+            # yazin elektrigin ~%30-38'i, kisin ~%8'i (sogutma payi).
+            sogutma_pay = (0.08 + 0.24 * yaz) * kat_sogutma
             chiller = round(toplam * sogutma_pay * 0.85)
             vrf = round(toplam * sogutma_pay * 0.15)
             mcc = round(toplam * 0.22)
-            kojen = round(toplam * oran_kojen) \
-                if lok_id in ("maslak", "izmir", "ankara") else 0
+            kojen_var = lok_id in ("maslak", "izmir", "ankara")
+            kojen = round(toplam * oran_kojen) if kojen_var else 0
             sebeke = toplam - kojen
-            kazan = round(toplam * (0.010 - 0.008 * yaz) * kat_kazan)
+            # Kazan gazi m2'ye baglidir (elektrige degil): kisin ~0,09, yazin
+            # ~0,015 m3/m2/gun (sicak su, sterilizasyon buhari) → yilda ~19
+            # m3/m2. Kojenli hastanede atik isi kazanin ~%40'ini karsilar.
+            kazan = round(lok_m2 * (0.015 + 0.075 * (1 - yaz)) * kat_kazan
+                          * (0.6 if kojen_var else 1.0) * gunluk)
 
             # Dis hava sehre gore kayar (Adana sicak, Kayseri soguk).
             #
@@ -368,8 +374,11 @@ def veri_uret():
                 "Diger_Yuk_kWh": max(0, toplam - mcc - chiller - vrf - kule),
                 **satir_kirilim,
                 "Kazan_Dogalgaz_m3": kazan,
-                "Kojen_Dogalgaz_m3": round(kojen / 6.2) if kojen else 0,
-                "Su_Tuketimi_m3": round(toplam * 0.0009 * kat_su, 1),
+                # Gaz motoru: 1 m3 gazdan ~3,8 kWh elektrik (%36 verim)
+                "Kojen_Dogalgaz_m3": round(kojen / 3.8) if kojen else 0,
+                # Hastane suyu ~5-11 L/m2/gun (yilda 2-4 m3/m2), yazin biraz fazla
+                "Su_Tuketimi_m3": round(lok_m2 * (0.0065 + 0.002 * yaz) * kat_su
+                                        * gunluk * hafta_sonu, 1),
                 "Dis_Hava_Sicakligi_C": dis_hava,
                 "Chiller_Set_Temp_C": ch_set,
                 "Chiller_Load_Percent": max(0, min(100, ch_yuk)),
@@ -477,23 +486,27 @@ _GUNDUZ_ORT = 0.55 + 0.45 / math.pi
 def _canli_tabanlari():
     """SUNUM: her calisan lokasyon icin sayac -> taban (kW, gaz/su m3/h).
 
-    Maslak gercek sayac listesini kullanir. Digerleri kendi son gunluk
-    kaydindan turetilir (TRDPn_kWh, ChillerN_kWh, KuleN_kWh, MCCN_kWh,
-    kojen, gaz, su / 24); boylece kart, harita, karsilastirma ve gunluk
-    tablo ayni hastane icin ayni buyuklugu gosterir.
+    Her lokasyon kendi son gunluk kaydindan turetilir (TRDPn_kWh,
+    ChillerN_kWh, KuleN_kWh, MCCN_kWh, kojen, gaz, su / 24); boylece kart,
+    harita, karsilastirma ve gunluk tablo ayni hastane icin ayni buyuklugu
+    gosterir. Maslak gercek sayac ADLARINI ve aralarindaki ORANLARI korur,
+    toplamlari yine kendi gunluk kaydina olceklenir.
     Kurulmamis (Bodrum) ve cevrimdisi (Kartal) lokasyon canli veri vermez.
     """
     son = {}
     for r in VERI["energy_data"]:
         if r["Tarih"] > son.get(r["lokasyon_id"], {}).get("Tarih", ""):
             son[r["lokasyon_id"]] = r
-    tabanlar = {"maslak": dict(MASLAK_CANLI_TABAN)}
+    tabanlar = {}
     for lok_id, _kisa, _m2 in LOKASYONLAR:
-        if lok_id == "maslak" or lok_id not in son:
+        if lok_id not in son:
             continue
         if SENARYO.get(lok_id, ("normal", ""))[0] in ("kurulmadi", "cevrimdisi"):
             continue
         r = son[lok_id]
+        if lok_id == "maslak":
+            tabanlar[lok_id] = _maslak_olcekle(r)
+            continue
         t = {}
         for onek, ad in (("TRDP%d_kWh", "TRDP-%d"), ("Chiller%d_kWh", "CHILLER-%d"),
                          ("Kule%d_kWh", "KULE-%d"), ("MCC%d_kWh", "MCC-%d")):
@@ -509,6 +522,31 @@ def _canli_tabanlari():
         t["SU-ANA"] = float(r.get("Su_Tuketimi_m3") or 0) / 24.0
         tabanlar[lok_id] = t
     return tabanlar
+
+
+def _maslak_olcekle(r):
+    """Maslak'in gercek sayac listesi, gruplari kendi gunluk kaydina olcekli.
+
+    Gercek tabanlar (gunde ~100 MWh) ornek verideki 15.000 m2'lik Maslak'tan
+    (~20 MWh) cok buyuk; olceklenmeden kart W/m2'si diger hastanelerin iki
+    kati cikiyor, canli deger ile gunluk tablo celisiyordu.
+    """
+    gruplar = {
+        "TRDP-": float(r.get("Sebeke_Tuketim_kWh") or 0),
+        "CHILLER-": float(r.get("Chiller_Tuketim_kWh") or 0),
+        "KULE-": float(sum(v for k, v in r.items() if k.startswith("Kule") and isinstance(v, (int, float)))),
+        ("MCC-", "2BK-", "4BK-", "CK-"): float(r.get("MCC_Tuketim_kWh") or 0),
+        "KOJEN-": float(r.get("Kojen_Uretim_kWh") or 0),
+        "DOGALGAZ-": float(r.get("Kazan_Dogalgaz_m3") or 0) + float(r.get("Kojen_Dogalgaz_m3") or 0),
+        "SU-": float(r.get("Su_Tuketimi_m3") or 0),
+    }
+    t = {}
+    for onek, gunluk in gruplar.items():
+        adlar = [a for a in MASLAK_CANLI_TABAN if a.startswith(onek)]
+        top = sum(MASLAK_CANLI_TABAN[a] for a in adlar) or 1.0
+        for a in adlar:
+            t[a] = MASLAK_CANLI_TABAN[a] / top * gunluk / 24.0
+    return t
 
 
 _CANLI_TABAN = {}
@@ -533,9 +571,9 @@ def canli_guc_tazele(simdi=None):
     gunduz = 0.55 + 0.45 * max(0.0, math.sin((t - 6) / 24 * 2 * math.pi))
     zaman = simdi.isoformat(timespec="seconds")
     satirlar = []
+    # Tabanlar gunluk/24 (saatlik ortalama); profil ortalamasi 1 olacak sekilde
+    profil = gunduz / _GUNDUZ_ORT
     for lok_id, taban in _CANLI_TABAN.items():
-        # Maslak tabanlari zaten saatlik gercek ortalama; digerleri gunluk/24
-        profil = gunduz if lok_id == "maslak" else gunduz / _GUNDUZ_ORT
         for ad, tb in taban.items():
             # Saniyeye bagli kucuk salinim: her istekte biraz farkli; lokasyon
             # adiyla faz kaydirilir ki 19 hastane ayni anda inip cikmasin.
