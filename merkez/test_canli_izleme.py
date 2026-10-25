@@ -431,9 +431,9 @@ c("gaz ve su m³/h, diğerleri kW",
 c("satırda birim yazılır", "m³/h" in CI.satir_html("SU-ANA", 12.0, "", birim="m³/h"))
 c("grup başlığında birim yazılır", "m³/h" in CI.grup_html("SU", "", "", 12.0, 1, birim="m³/h"))
 _MRK = open(os.path.join(BURASI, "app_merkez.py"), encoding="utf-8").read()
-c("[sunum] ana ekran saniyelik akış betiği YALNIZ demoda yüklenir",
-  "    if _demo_modu():\n        _akis_taban" in _MRK
-  and _MRK.count("_canli_akis_betigi(") == 2)
+c("ana ekran akışı: sunumda dalga, gerçekte gerçek ölçüm geçişi",
+  '_canli_akis_betigi(_akis_taban, "dalga")' in _MRK
+  and '_canli_akis_betigi(_akis_taban, "gecis")' in _MRK)
 c("[sunum] önbellek demoda 0,5 sn, gerçekte 12 sn",
   "_CANLI_TTL = 0.5 if _demo_modu() else 12" in _MRK
   and _MRK.count("@st.cache_data(ttl=_CANLI_TTL") == 2)
@@ -443,12 +443,12 @@ _ar_if = _MRK.split("st_autorefresh(interval")[0]
 _ar_if = _ar_if[_ar_if.rindex('if ("bakim"'):]
 c("detay açıkken tam sayfa yenilemesi yok (demo VE canlı)",
   'and not st.session_state.get("detay_lokasyon")):' in _ar_if and "SYNAPSE_DEMO" not in _ar_if, _ar_if)
-c("[sunum] detay sayfasında da akış betiği yalnız demoda",
-  "    if _demo_modu():\n        import streamlit.components.v1 as _cmp_akis" in SAYFA)
+c("detay akışı: sunumda dalga, gerçekte gerçek ölçüm geçişi",
+  '_CI.akis_betigi(mod="dalga" if _demo_modu() else "gecis")' in SAYFA)
 c("[sunum] satır / grup / özet sayıları akış için işaretli",
   "canli-sayi" in CI.satir_html("TRDP-1", 12.0, "") and "canli-sayi" in CI.grup_html("X", "", "", 5.0, 1)
   and "data-faz='grup-X'" in CI.grup_html("X", "", "", 5.0, 1)
-  and '_CI.akan(_tp, 1, "grup-" + _bas)' in SAYFA)
+  and '_tp, 1, "grup-" + _bas, *(_CI.grup_gecis(' in SAYFA)
 c("[sunum] okunamayan sayaç akmaz ('okunamadı' yazar)", "canli-sayi" not in CI.satir_html("TRDP-1", None, ""))
 c("akış betiği önceki sayacı kapatır (üst üste çalışmaz)", "clearInterval(W.__synAkis)" in CI.akis_betigi())
 c("[sunum] kart kW / W/m² / özet değerleri akış için işaretli",
@@ -467,6 +467,62 @@ c("[gerçek sistem] yalnız elektrik sayacı varsa yeni grup çıkmaz",
 c("canlı grubu olan kalem 'ölçülmüyor' diye ayrıca yazılmaz",
   "_CI.OLCULMEYEN_GRUP.get(a) not in _canli_gruplar" in SAYFA
   and set(CI.OLCULMEYEN_GRUP) == {a for a, _, _ in CI.OLCULMEYEN})
+
+# ── GERÇEK SİSTEM: saniyelik geçiş UYDURMA DEĞER ÜRETMEZ ─────────────────
+# Kullanıcı kararı (25.10.2026): Maslak'tan gelen veri gerçek; ekranda iki
+# gerçek ölçümün dışında hiçbir değer görünmemeli.
+_d = {}
+c("[geçiş] ilk ölçümde önceki yok → sayı sabit",
+  CI.gecis_izle(_d, "x", 100.0, 1000.0) == {"o": None, "d": 100.0, "t": 1000.0, "s": None})
+c("[geçiş] aynı ölçüm tekrar gelince yeni sayılmaz",
+  CI.gecis_izle(_d, "x", 100.0, 1000.0)["o"] is None)
+_g = CI.gecis_izle(_d, "x", 130.0, 1015.0)
+c("[geçiş] yeni ölçüm: önceki = eski son, süre = ölçüm aralığı",
+  _g == {"o": 100.0, "d": 130.0, "t": 1015.0, "s": 15.0}, _g)
+c("[geçiş] sayfa yeniden çizilince geçiş bozulmaz",
+  CI.gecis_izle(_d, "x", 130.0, 1015.0) == _g)
+c("[geçiş] değer yoksa geçiş yok", CI.gecis_izle(_d, "y", None, 1015.0) is None)
+c("[geçiş] süre makul banda kırpılır",
+  CI.gecis_suresi(0, 1) == CI.GECIS_SURE_ALT and CI.gecis_suresi(0, 999) == CI.GECIS_SURE_UST
+  and CI.gecis_suresi(5, 5) is None and CI.gecis_suresi(None, 5) is None)
+
+# Tarayıcıdaki hesabın Python karşılığı: f = clamp((şimdi - başlangıç) / süre, 0, 1)
+def _goster(o, d, s, gecen):
+    f = min(1.0, max(0.0, gecen / s))
+    return o + (d - o) * f
+_vals = [_goster(100.0, 130.0, 15.0, g) for g in range(0, 40)]
+c("[geçiş] gösterilen HER değer iki gerçek ölçümün arasında",
+  all(100.0 <= v <= 130.0 for v in _vals))
+c("[geçiş] son ölçüme varınca durur, ileri GİTMEZ", _vals[15:] == [130.0] * 25)
+_js = CI.akis_betigi(mod="gecis")
+c("[geçiş] tarayıcı hesabı 0-1 arasına kırpılı (son ölçümü aşmaz)",
+  "Math.min(1, Math.max(0, (simdi - b.bas) / s))" in _js)
+c("[geçiş] gerçek kipte dalga uygulanmaz",
+  "if (MOD === 'dalga') { el.textContent = yaz(v * carpan(fz, simdi), ond); return; }" in _js
+  and '"gecis"' in _js)
+c("[geçiş] önceki ölçüm yoksa sayı olduğu gibi kalır",
+  "if (o == null || t == null || !s) { return d; }" in _js)
+c("[geçiş] açık ekranda bellek büyümez (anahtar başına son ölçüm)",
+  "b.t !== String(t)" in _js)
+
+# Detay: serideki son iki ölçüm
+_sr = CI.bos_seri()
+for _i, _v in enumerate((50.0, 60.0)):
+    _sr = CI.seri_guncelle(_sr, [{"cihaz": "TRDP-1", "kw": _v, "olcum_zamani": T0 + timedelta(seconds=15 * _i)},
+                                 {"cihaz": "TRDP-2", "kw": None if _i == 0 else 9.0,
+                                  "olcum_zamani": T0 + timedelta(seconds=15 * _i)}], 300, simdi=T0 + timedelta(seconds=15 * _i))
+_on, _ts, _su = CI.seri_gecis(_sr)
+c("[geçiş] detay: önceki ölçüm seriden", _on == {"TRDP-1": 50.0} and _su == 15.0, (_on, _su))
+c("[geçiş] detay: önceki okunamayan sayaç geçmez (son değeriyle durur)", "TRDP-2" not in _on)
+c("[geçiş] detay: grup önceki toplamı = önceki + (önceki yoksa son)",
+  CI.grup_gecis(_on, {"TRDP-1": 60.0, "TRDP-2": 9.0}, ["TRDP-1", "TRDP-2"], _ts, _su)[0] == 59.0)
+c("[geçiş] detay: tek ölçümde geçiş yok", CI.seri_gecis(CI.seri_guncelle(CI.bos_seri(),
+  [{"cihaz": "A", "kw": 1.0, "olcum_zamani": T0}], 300, simdi=T0)) == ({}, None, None))
+_sh = CI.satir_html("TRDP-1", 60.0, "", gecis=(50.0, _ts, _su))
+c("[geçiş] satırda önceki ölçüm işaretli", "data-onceki='50.000'" in _sh and "data-sure='15.0'" in _sh)
+c("[geçiş] ana ekran: kart / özet / harita gerçek ölçüm geçişiyle",
+  "gecis_ozellik(_g_seb)" in _MRK and "gecis_ozellik(_g_ozet)" in _MRK
+  and 'GECIS = canli_gecis_hesapla(CANLI, st.session_state.setdefault("_canli_gecis", {}))' in _MRK)
 
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))

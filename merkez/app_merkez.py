@@ -591,12 +591,15 @@ def canli_ozet_hesapla(satirlar):
         except (TypeError, ValueError):
             continue
         o = ozet.setdefault(lok, {"sebeke": None, "sogutma": None, "kojen": None,
-                                  "dogalgaz": None, "su": None, "yas": None})
+                                  "dogalgaz": None, "su": None, "yas": None, "t": None})
         try:
             t = datetime.fromisoformat(str(s.get("olcum_zamani")).replace("Z", "+00:00"))
             simdi = datetime.now(_tz.utc) if t.tzinfo else datetime.now()
             y = (simdi - t).total_seconds()
             o["yas"] = y if o["yas"] is None else min(o["yas"], y)
+            # Son ölçümün zamanı (epoch): ekrandaki geçiş bununla eşlenir
+            _te = t.timestamp()
+            o["t"] = _te if o["t"] is None else max(o["t"], _te)
         except Exception:
             pass
         ad = str(s.get("cihaz") or "").upper()
@@ -617,10 +620,48 @@ def canli_ozet_hesapla(satirlar):
             if v["yas"] is None or v["yas"] <= CANLI_BAYAT_SN}
 
 
-def _canli_akis_betigi(taban: dict) -> str:
-    """SUNUM: saniyelik akış betiği (canli_izleme.akis_betigi; detay sayfası da kullanır)."""
+def _canli_akis_betigi(taban: dict, mod: str = "dalga") -> str:
+    """Saniyelik akış betiği (canli_izleme.akis_betigi; detay sayfası da kullanır).
+    mod="gecis": gerçek sistem — önceki → son gerçek ölçüm arası geçiş.
+    mod="dalga": yalnız sunum."""
     import canli_izleme as _ci
-    return _ci.akis_betigi(taban)
+    return _ci.akis_betigi(taban, mod)
+
+
+CANLI_ALANLAR = ("sebeke", "sogutma", "kojen", "dogalgaz", "su")
+
+
+def canli_gecis_hesapla(canli: dict, durum: dict) -> dict:
+    """{(lok, alan): {"o","d","t","s"}} — her kalemin önceki ve son GERÇEK ölçümü.
+    durum oturumda saklanır (st.session_state); aynı ölçüm iki kez "yeni" sayılmaz."""
+    import canli_izleme as _ci
+    sonuc = {}
+    for lok, v in (canli or {}).items():
+        for alan in CANLI_ALANLAR:
+            g = _ci.gecis_izle(durum, (lok, alan), v.get(alan), v.get("t"))
+            if g:
+                sonuc[(lok, alan)] = g
+    return sonuc
+
+
+def gecis_toplami(gecisler: list):
+    """Birden çok kalemin toplam geçişi. Önceki toplam = her kalemin önceki
+    ölçümü (yoksa son ölçümü); gösterilen toplam da iki gerçek toplamın
+    arasında kalır. Hiçbirinin önceki ölçümü yoksa None (sayı sabit durur)."""
+    gecisler = [g for g in gecisler if g]
+    if not gecisler or all(g["o"] is None or not g["s"] for g in gecisler):
+        return None
+    return {"o": sum(g["o"] if g["o"] is not None else g["d"] for g in gecisler),
+            "d": sum(g["d"] for g in gecisler), "t": max(g["t"] for g in gecisler),
+            "s": max(g["s"] for g in gecisler if g["s"])}
+
+
+def gecis_ozellik(g, carpan: float = 1.0) -> str:
+    """Akış betiği için HTML öznitelikleri (önceki ölçüm yoksa boş)."""
+    if not g or g.get("o") is None or not g.get("s"):
+        return ""
+    return (f' data-onceki="{g["o"] * carpan:.3f}" data-t="{g["t"]:.3f}"'
+            f' data-sure="{g["s"]:.1f}"')
 
 
 def kw_metin(x, ond=0):
@@ -1350,6 +1391,8 @@ with sol:
 
     # ANLIK değerler: kartlar, harita penceresi ve Global Özet bunu kullanır
     CANLI = canli_ozet_hesapla(fetch_canli_tum(url, key))
+    # Önceki/son gerçek ölçüm (ekrandaki saniyelik geçiş için)
+    GECIS = canli_gecis_hesapla(CANLI, st.session_state.setdefault("_canli_gecis", {}))
 
     def anlik_sebeke(lok_id):
         return (CANLI.get(lok_id) or {}).get("sebeke")
@@ -1386,11 +1429,13 @@ with sol:
         m2_lok    = lok_info.get("m2", 10000)
         verim_str = (kw_metin(kw_anlik * 1000 / m2_lok, 1)
                      if kw_anlik is not None and m2_lok else "—")
-        # Sunumda bu iki sayı tarayıcıda saniyede bir akar (_canli_akis_betigi)
+        # Bu iki sayı tarayıcıda saniyede bir akar (_canli_akis_betigi): gerçekte
+        # önceki → son ölçüm geçişi, sunumda dalga. İkisi aynı fazda.
+        _g_seb = GECIS.get((lok_id, "sebeke"))
         _akis_kw = (f' class="canli-sayi" data-deger="{kw_anlik:.1f}" data-ond="0" data-faz="{lok_id}"'
-                    if kw_anlik is not None else "")
+                    + gecis_ozellik(_g_seb) if kw_anlik is not None else "")
         _akis_wm2 = (f' class="canli-sayi" data-deger="{kw_anlik * 1000 / m2_lok:.2f}" data-ond="1" data-faz="{lok_id}"'
-                     if kw_anlik is not None and m2_lok else "")
+                     + gecis_ozellik(_g_seb, 1000.0 / m2_lok) if kw_anlik is not None and m2_lok else "")
         sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#46536b;font-weight:700;">#{i+1}</span>' if (i < 4 and kw_anlik is not None) else ""
 
         # Dün/önceki gün % kıyası anlık değerde anlamsız → gösterilmez
@@ -1536,7 +1581,13 @@ with sol:
         ("Kojen Üretim",  _koj_top, _alt(_koj_n), "kW", "kojen"),
     ]
 
+    # Özet kaleminin geçişi: hangi canlı alanların toplamı olduğu
+    _OZET_ALAN = {"enerji": ("sebeke", "kojen"), "dogalgaz": ("dogalgaz",),
+                  "sogutma": ("sogutma",), "su": ("su",), "kojen": ("kojen",)}
+
     for _lbl, _deger, _alt_metin, _birim, _ozet_key in _metrikler:
+        _g_ozet = gecis_toplami([GECIS.get((_l, _a)) for _l in CANLI
+                                 for _a in _OZET_ALAN.get(_ozet_key, ())])
         if _deger is None:
             _deger_html = ('<span style="font-size:10px;font-weight:600;color:#9aa3b2;">'
                            'canlı sayaç yok</span>')
@@ -1544,7 +1595,8 @@ with sol:
             _deger_html = (f'<span style="font-size:12px;font-weight:700;color:#2a78d6;'
                            f'font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;">'
                            f'<span class="canli-sayi" data-deger="{_deger:.2f}" data-ond="0" '
-                           f'data-faz="ozet-{_ozet_key}">{kw_metin(_deger)}</span> {_birim}</span>')
+                           f'data-faz="ozet-{_ozet_key}"{gecis_ozellik(_g_ozet)}>'
+                           f'{kw_metin(_deger)}</span> {_birim}</span>')
         _alt_html = (f'<div style="font-size:9px;color:#46536b;margin-top:2px;">'
                      f'<span style="display:inline-block;width:6px;height:6px;border-radius:50%;'
                      f'background:#0ca30c;margin-right:4px;vertical-align:middle;"></span>{_alt_metin}</div>') if _alt_metin else ""
@@ -1945,16 +1997,22 @@ window.addEventListener('message', function(ev) {{
 </script>
 """ % json.dumps(_harita_canli, ensure_ascii=False), height=0)
 
-    # ── SUNUM: saniyelik akış ──
+    # ── Saniyelik akış ──
     # Ana sayfanın tamamı 1,5-3 sn'de çiziliyor; saniyede bir yeniden çizmek
-    # ekranı sürekli "çalışıyor" bırakırdı. Sunumda bunun yerine tarayıcı,
-    # sunucunun 10 sn'de bir verdiği değerin ETRAFINDA (±%4) her saniye
-    # yumuşakça oynatır: kartlar, W/m², global özet ve harita penceresi.
-    # Gerçek sistemde bu betik HİÇ YÜKLENMEZ.
+    # ekranı sürekli "çalışıyor" bırakırdı. Bunun yerine tarayıcı kartları,
+    # W/m²'yi, global özeti ve harita penceresini her saniye günceller:
+    #   GERÇEK SİSTEM: sahadan gelen önceki ölçümden son ölçüme geçiş — her
+    #   değer iki gerçek ölçümün arasında, yeni değer UYDURULMAZ.
+    #   SUNUM: örnek değerin etrafında ±%4 dalga.
     if _demo_modu():
         _akis_taban = {_lid: {"sebeke": _v.get("sebeke"), "kojen": _v.get("kojen")}
                        for _lid, _v in CANLI.items()}
-        _components.html(_canli_akis_betigi(_akis_taban), height=0)
+        _components.html(_canli_akis_betigi(_akis_taban, "dalga"), height=0)
+    else:
+        _akis_taban = {_lid: {_a: (GECIS.get((_lid, _a)) if gecis_ozellik(GECIS.get((_lid, _a)))
+                                   else _v.get(_a)) for _a in ("sebeke", "kojen")}
+                       for _lid, _v in CANLI.items()}
+        _components.html(_canli_akis_betigi(_akis_taban, "gecis"), height=0)
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}

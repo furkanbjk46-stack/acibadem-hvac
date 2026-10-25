@@ -361,14 +361,16 @@ def tr_sayi(x, ond=1):
     return tam.replace(",", ".") + "," + kus
 
 
-def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None, birim: str = "kW") -> str:
+def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None, birim: str = "kW",
+               gecis: tuple = None) -> str:
     """Tek cihaz satırı: ad · mini grafik · anlık kW.
 
     Okunamayan cihaz "0,0 kW" DEĞİL "okunamadı" yazar: sıfır, sayacın
     durduğunu söyler; okunamamak başka bir şeydir.
     """
     okunamadi = deger is None
-    dg = "okunamadı" if okunamadi else (akan(deger, 1, cihaz) + f"<span class='cg-br'>{birim}</span>")
+    dg = "okunamadı" if okunamadi else (akan(deger, 1, cihaz, *(gecis or ()))
+                                        + f"<span class='cg-br'>{birim}</span>")
     cip_sinif = "cg-cip cg-yok" if okunamadi else "cg-cip"
     dg_sinif = "cg-dg cg-dg-yok" if okunamadi else "cg-dg"
     ipucu = YONTEM_ETIKET.get(yontem, ("", ""))[0]
@@ -390,9 +392,10 @@ def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None, birim: str = "
             f"<div class='{dg_sinif}'>{dg}</div></div>")
 
 
-def toplam_satir_html(ad: str, deger, cubuk: str, faz: str = "") -> str:
+def toplam_satir_html(ad: str, deger, cubuk: str, faz: str = "", gecis: tuple = None) -> str:
     """Grubun TOPLAMINI gösteren vurgulu satır (ör. ŞEBEKE = 4 trafo)."""
-    dg = "—" if deger is None else (akan(deger, 1, faz or ad) + "<span class='cg-br'>kW</span>")
+    dg = "—" if deger is None else (akan(deger, 1, faz or ad, *(gecis or ()))
+                                    + "<span class='cg-br'>kW</span>")
     return (f"<div class='cg-satir cg-ust-satir'><div class='cg-cip cg-cip-ust'>{ad}</div>"
             f"<div class='cg-cizgi'>{cubuk}</div>"
             f"<div class='cg-dg cg-dg-ust'>{dg}</div></div>")
@@ -412,9 +415,11 @@ def olculmeyen_satir_html(ad: str, aciklama: str) -> str:
 
 
 def grup_html(baslik: str, aciklama: str, satirlar: str, toplam_kw,
-              okunan: int, olcusuz: int = 0, yukseklik: int = 430, birim: str = "kW") -> str:
+              okunan: int, olcusuz: int = 0, yukseklik: int = 430, birim: str = "kW",
+              gecis: tuple = None) -> str:
     """Bir grup kartı. Liste uzarsa KART değil liste kayar."""
-    ust = f"<div class='cg-toplam'>{'—' if toplam_kw is None else akan(toplam_kw, 1, 'grup-' + baslik) + ' ' + birim}</div>"
+    _t = '—' if toplam_kw is None else akan(toplam_kw, 1, 'grup-' + baslik, *(gecis or ())) + ' ' + birim
+    ust = f"<div class='cg-toplam'>{_t}</div>"
     dip = "%d kalem canlı okunuyor" % okunan
     if olcusuz:
         dip += " · %d kalemde sayaç yok" % olcusuz
@@ -547,48 +552,145 @@ def durum_metni(seri: dict, yas_sn=None, pencere_sn: int = 300) -> str:
         parcalar.append("son ölçüm %.0f sn önce" % yas_sn)
     return " · ".join(parcalar)
 
-# ── SUNUM: saniyelik akış ────────────────────────────────────────────────
-# Sunucu ekranı ~1-10 sn'de bir çiziyor (sayfaya göre). Sunumda tarayıcı,
-# .canli-sayi ile işaretli sayıları sunucunun verdiği değerin ETRAFINDA her
-# saniye yumuşakça oynatır. Betik yalnız demoda yüklenir; işaretli span'lar
-# gerçek sistemde zararsızdır (betik yoksa sayı olduğu gibi kalır).
+# ── Saniyelik akış ───────────────────────────────────────────────────────
+# Sunucu ekranı 3-10 sn'de bir çiziyor (sayfaya göre); saha 15 sn'de bir
+# ölçüm yazıyor. Tarayıcı .canli-sayi ile işaretli sayıları her saniye
+# günceller. İki kip var:
+#
+#   "gecis" (GERÇEK SİSTEM) — sayı, sahadan gelen ÖNCEKİ ölçümden SON ölçüme
+#       iki ölçüm arasındaki süre boyunca saniye saniye ilerler, son ölçüme
+#       varınca durur. Ekranda görünen her değer iki gerçek ölçümün arasında
+#       kalır; yeni değer UYDURULMAZ (kullanıcı kararı 25.10.2026). Bedeli:
+#       ekran son ölçüme en geç bir ölçüm aralığı (~15 sn) içinde ulaşır.
+#       Önceki ölçüm bilinmiyorsa (sayfa yeni açıldı) sayı olduğu gibi durur.
+#   "dalga" (YALNIZ SUNUM) — örnek veri sunucunun değeri etrafında yumuşakça
+#       oynatılır. Gerçek sistemde kullanılmaz.
 
-def akan(deger, ond: int = 1, faz: str = "") -> str:
-    """Sayıyı akış betiğinin bulacağı span içinde yazar."""
+GECIS_SURE_ALT, GECIS_SURE_UST = 3.0, 60.0   # ölçüm aralığı bu bandın dışındaysa kırpılır
+
+
+def gecis_suresi(t_onceki, t_son):
+    """İki ölçüm arasındaki süre (sn), makul banda kırpılmış. Bilinmiyorsa None."""
+    if t_onceki is None or t_son is None or t_son <= t_onceki:
+        return None
+    return max(GECIS_SURE_ALT, min(GECIS_SURE_UST, float(t_son - t_onceki)))
+
+
+def seri_gecis(seri: dict):
+    """Serideki son iki GERÇEK ölçüm: ({cihaz: önceki değer}, son zaman, süre).
+
+    Seri aynı ölçüm zamanını iki kez eklemediği için son iki nokta sahadan
+    gelen son iki ayrı ölçümdür. Yetersizse ({}, None, None) — sayı sabit kalır.
+    """
+    zamanlar = seri.get("zamanlar") or []
+    if len(zamanlar) < 2:
+        return {}, None, None
+    t_son, t_onc = zamanlar[-1].timestamp(), zamanlar[-2].timestamp()
+    sure = gecis_suresi(t_onc, t_son)
+    if not sure:
+        return {}, None, None
+    onceki = {c: d[-2] for c, d in (seri.get("cihazlar") or {}).items()
+              if len(d) >= 2 and d[-2] is not None and d[-1] is not None}
+    return onceki, t_son, sure
+
+
+def grup_gecis(onceki: dict, degerler: dict, cihazlar: list, t, sure):
+    """Grubun (önceki toplam, t, süre) geçişi — önceki ölçümü olmayan sayaç
+    son değeriyle sayılır; önceki hiç yoksa None."""
+    if not t or not any(c in onceki for c in cihazlar):
+        return None
+    oku = [c for c in cihazlar if degerler.get(c) is not None]
+    if not oku:
+        return None
+    return (sum(onceki.get(c, degerler[c]) for c in oku), t, sure)
+
+
+def gecis_izle(durum: dict, anahtar, deger, t) -> dict:
+    """Bir kalemin ÖNCEKİ ve SON gerçek ölçümünü tutar. SAF fonksiyon.
+
+    durum: oturumda saklanan sözlük (yerinde güncellenir).
+    Döner {"o": önceki, "d": son, "t": son ölçüm zamanı, "s": geçiş süresi};
+    ölçüm zamanı değişmediyse önceki/son korunur (sayfa yeniden çizilse de
+    aynı ölçüm "yeni" sayılmaz). Değer yoksa None.
+    """
+    if deger is None or t is None:
+        return None
+    eski = durum.get(anahtar)
+    if eski is None:
+        yeni = {"o": None, "d": float(deger), "t": float(t), "ot": None}
+    elif eski["t"] != float(t):
+        yeni = {"o": eski["d"], "d": float(deger), "t": float(t), "ot": eski["t"]}
+    else:
+        yeni = eski
+    durum[anahtar] = yeni
+    return {"o": yeni["o"], "d": yeni["d"], "t": yeni["t"], "s": gecis_suresi(yeni["ot"], yeni["t"])}
+
+
+def akan(deger, ond: int = 1, faz: str = "", onceki=None, t=None, sure=None) -> str:
+    """Sayıyı akış betiğinin bulacağı span içinde yazar.
+
+    onceki/t/sure verilirse (gerçek ölçüm geçişi) "gecis" kipi sayıyı
+    onceki → deger arasında ilerletir; verilmezse sayı sabit kalır.
+    """
+    ek = ""
+    if onceki is not None and t is not None and sure:
+        ek = f" data-onceki='{float(onceki):.3f}' data-t='{float(t):.3f}' data-sure='{float(sure):.1f}'"
     return (f"<span class='canli-sayi' data-deger='{float(deger):.3f}' "
-            f"data-ond='{ond}' data-faz='{faz}'>{tr_sayi(deger, ond)}</span>")
+            f"data-ond='{ond}' data-faz='{faz}'{ek}>{tr_sayi(deger, ond)}</span>")
 
 
-def akis_betigi(harita_taban: dict = None) -> str:
-    """.canli-sayi öğelerini (ve verilirse harita penceresini) saniyede bir oynatır.
+def akis_betigi(harita_taban: dict = None, mod: str = "dalga") -> str:
+    """.canli-sayi öğelerini (ve verilirse harita penceresini) saniyede bir günceller.
 
-    Değer = data-deger × (1 + üç yumuşak dalga). Faz data-faz'dan gelir:
-    aynı fazlı sayılar (kartın kW'ı ile W/m²'si) birlikte iner çıkar.
-    Betik her çizimde yeniden kurulur; önceki aralık kapatılır.
+    harita_taban: {lok: {"sebeke": x, "kojen": y}} — x/y ya sayı ya da
+    {"o": önceki, "d": son, "t": ölçüm zamanı (epoch), "s": geçiş süresi}.
+    Betik her çizimde yeniden kurulur; önceki aralık kapatılır ki iki sayaç
+    üst üste çalışmasın. Geçiş başlangıçları sayfa yeniden çizilse de korunur.
     """
     import json
     taban = harita_taban or {}
     return """
 <script>
 (function () {
-  var taban = %s;
+  var taban = %s, MOD = %s;
   var W = window.parent;
   if (W.__synAkis) { W.clearInterval(W.__synAkis); }
+  W.__synGecisBas = W.__synGecisBas || {};
   function faz(s) { var h = 0; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) %% 1000; } return h / 1000 * 6.2832; }
   function carpan(s, t) { var p = faz(s); return 1 + 0.025 * Math.sin(t / 9 + p) + 0.012 * Math.sin(t / 2.7 + 2 * p) + 0.006 * Math.sin(t / 1.1 + 3 * p); }
   function yaz(x, ond) { return x.toLocaleString('tr-TR', {minimumFractionDigits: ond, maximumFractionDigits: ond}); }
+  // GERÇEK: önceki → son ölçüm arası doğrusal geçiş; son ölçümden ileri GİTMEZ
+  function gecis(anahtar, o, d, t, s, simdi) {
+    if (o == null || t == null || !s) { return d; }
+    // Anahtar başına YALNIZ son ölçüm tutulur (uzun açık ekranda bellek büyümesin)
+    var b = W.__synGecisBas[anahtar];
+    if (!b || b.t !== String(t)) { b = W.__synGecisBas[anahtar] = {t: String(t), bas: simdi}; }
+    var f = Math.min(1, Math.max(0, (simdi - b.bas) / s));
+    return o + (d - o) * f;
+  }
+  function harita_deger(lok, alan, x, simdi) {
+    if (x == null) { return null; }
+    if (typeof x === 'number') { return MOD === 'dalga' ? x * carpan(lok, simdi) : x; }
+    return gecis('harita|' + lok + '|' + alan, x.o, x.d, x.t, x.s, simdi);
+  }
   function adim() {
     var d; try { d = W.document; } catch (e) { return; }
-    var t = Date.now() / 1000;
+    var simdi = Date.now() / 1000;
     d.querySelectorAll('.canli-sayi').forEach(function (el) {
       var v = parseFloat(el.getAttribute('data-deger'));
       if (isNaN(v)) { return; }
-      el.textContent = yaz(v * carpan(el.getAttribute('data-faz') || '', t), parseInt(el.getAttribute('data-ond') || '0', 10));
+      var ond = parseInt(el.getAttribute('data-ond') || '0', 10), fz = el.getAttribute('data-faz') || '';
+      if (MOD === 'dalga') { el.textContent = yaz(v * carpan(fz, simdi), ond); return; }
+      var o = el.getAttribute('data-onceki');
+      el.textContent = yaz(gecis(fz, o == null ? null : parseFloat(o), v,
+                                 el.getAttribute('data-t'), parseFloat(el.getAttribute('data-sure')), simdi), ond);
     });
+    var lokler = Object.keys(taban);
+    if (!lokler.length) { return; }
     var veri = {};
-    Object.keys(taban).forEach(function (lok) {
-      var c = carpan(lok, t), s = taban[lok].sebeke, k = taban[lok].kojen;
-      veri[lok] = {sebeke: s == null ? null : yaz(s * c, 0), kojen: k == null ? null : yaz(k * c, 0)};
+    lokler.forEach(function (lok) {
+      var s = harita_deger(lok, 'sebeke', taban[lok].sebeke, simdi), k = harita_deger(lok, 'kojen', taban[lok].kojen, simdi);
+      veri[lok] = {sebeke: s == null ? null : yaz(s, 0), kojen: k == null ? null : yaz(k, 0)};
     });
     d.querySelectorAll('iframe[src^="data:text/html;base64"]').forEach(function (f) {
       try { f.contentWindow.postMessage({tip: 'synapse-canli', veri: veri}, '*'); } catch (e) {}
@@ -598,4 +700,4 @@ def akis_betigi(harita_taban: dict = None) -> str:
   W.__synAkis = W.setInterval(adim, 1000);
 })();
 </script>
-""" % json.dumps(taban, ensure_ascii=False)
+""" % (json.dumps(taban, ensure_ascii=False), json.dumps(mod))

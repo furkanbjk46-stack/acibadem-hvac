@@ -1943,6 +1943,8 @@ with tab_canli:
         st.session_state[_seri_anahtar] = seri
 
         degerler = _CI.son_degerler(seri)
+        # Son iki gerçek ölçüm: sayılar tarayıcıda önceki → son arası ilerler
+        _onc, _t_son, _sure = _CI.seri_gecis(seri)
         if not degerler and not olcumler:
             st.info("Bu lokasyonda canlı sayaç okuması yok. Sayaçlar bağlı "
                     "değilse ya da lokasyon çevrimdışıysa bu bölüm boş kalır.")
@@ -1985,7 +1987,8 @@ with tab_canli:
                 if _aralik:
                     _alt += " · %d sn'de bir okunuyor" % _aralik
             _kartlar.append(_CI.ozet_kart_html(
-                _etiket, "—" if _tp is None else _CI.akan(_tp, 1, "grup-" + _bas) +
+                _etiket, "—" if _tp is None else _CI.akan(
+                    _tp, 1, "grup-" + _bas, *(_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure) or ())) +
                 f"<span class='cg-br'>{_br}</span>", _alt, canli=(_an == "enerji")))
 
             # ── Grup gövdesi ─────────────────────────────────────────
@@ -1999,13 +2002,15 @@ with tab_canli:
                 _ust_olcek = max((v for v in _CI.toplam_seri(seri, _cihazlar)
                                   if v is not None), default=0.0)
                 _satirlar += _CI.toplam_satir_html(
-                    "ŞEBEKE", _tp, _CI.bar_html(_tp, _ust_olcek), faz="grup-" + _bas)
+                    "ŞEBEKE", _tp, _CI.bar_html(_tp, _ust_olcek), faz="grup-" + _bas,
+                    gecis=_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure))
             for _c in _cihazlar:
                 _satirlar += _CI.satir_html(
                     _c, degerler.get(_c),
                     _CI.bar_html(degerler.get(_c), _olcek, birim=_br,
                                  esikli=_an not in _CI.ESIKSIZ_GRUPLAR),
-                    _yontemler.get(_c), birim=_br)
+                    _yontemler.get(_c), birim=_br,
+                    gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None)
             _olcusuz = 0
             if _an == "enerji":
                 for _ad, _neden in _olculmeyen:
@@ -2017,7 +2022,9 @@ with tab_canli:
                 _ack = ("Şebeke trafoları canlı sayaçtan; " +
                         ", ".join(a.lower() for a, _ in _olculmeyen) +
                         " kalemlerinde canlı sayaç yok")
-            _grup_govde.append(_CI.grup_html(_bas, _ack, _satirlar, _tp, _ok, _olcusuz, birim=_br))
+            _grup_govde.append(_CI.grup_html(
+                _bas, _ack, _satirlar, _tp, _ok, _olcusuz, birim=_br,
+                gecis=_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure)))
 
         _kartlar.append(_CI.ozet_kart_html(
             "OKUNABİLEN SAYAÇ",
@@ -2039,11 +2046,12 @@ with tab_canli:
             unsafe_allow_html=True)
 
     _canli_izleme_blok()
-    # SUNUM: blok ~1-1,5 sn'de bir çiziliyor; aradaki saniyelerde sayılar
-    # tarayıcıda akar (canli_izleme.akis_betigi). Gerçek sistemde yüklenmez.
-    if _demo_modu():
-        import streamlit.components.v1 as _cmp_akis
-        _cmp_akis.html(_CI.akis_betigi(), height=0)
+    # Saniyelik akış (canli_izleme.akis_betigi): blok birkaç saniyede bir
+    # çiziliyor, aradaki saniyelerde sayılar tarayıcıda ilerler.
+    #   GERÇEK SİSTEM: önceki → son gerçek ölçüm geçişi (değer uydurulmaz).
+    #   SUNUM: örnek değerin etrafında dalga.
+    import streamlit.components.v1 as _cmp_akis
+    _cmp_akis.html(_CI.akis_betigi(mod="dalga" if _demo_modu() else "gecis"), height=0)
 
     # Pencere seçimi FRAGMENT DIŞINDA ve altta: kendi kendine yenilenen bir
     # bölümün içindeki widget her turda yeniden kurulur ve seçim elden kayar.
