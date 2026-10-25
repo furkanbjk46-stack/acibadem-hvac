@@ -13,8 +13,9 @@
   },
 
   "weather_api": {
-    "active": false,
-    "_neden": "Hava durumu API entegrasyonu yok. Dis hava sicakligi BMS'ten okunuyor; ileriye donuk tahmin/proaktif uyari icin harici API baglanmadi."
+    "active": true,
+    "_kanit": "hava_durumu.py — gunluk_hava(): Open-Meteo arsiv + tahmin servisinden lokasyonun kendi koordinatiyla (configs/lokasyon_profili.json) gunluk sicaklik, yagis, bulut, radyasyon, hava durumu. data_bridge.hava_doldur() her gun energy_data'ya yazar (Hava_* sutunlari). Maslak'ta 25.10.2026 itibariyla 1221/1221 gun dolu. Gunluk tahmin modeli (tuketim_tahmin/) bu sutunlari kullanir.",
+    "_acik_20261025": true
   },
 
   "feedback_filtering": {

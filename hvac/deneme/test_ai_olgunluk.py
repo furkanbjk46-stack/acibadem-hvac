@@ -61,7 +61,8 @@ KANIT = {
         (os.path.join(BURASI, "monthly_report", "savings_engine.py"), "z_score"),
     ],
     "weather_api": [
-        (os.path.join(BURASI, "data_collector.py"), "weather"),
+        (os.path.join(BURASI, "hava_durumu.py"), "def gunluk_hava"),
+        (os.path.join(BURASI, "data_bridge.py"), "def hava_doldur"),
     ],
 }
 
