@@ -342,12 +342,12 @@ HASTANELER = {
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "merkez_config.json")
 
-# ── SUNUM haritası: Genel Müdürlük (Ataşehir) + lokasyonlardan gelen akan oklar ──
-# Harita HTML'ine YALNIZCA demo modunda eklenir. Düz metin (f-string değil):
+# ── Harita: Genel Müdürlük (Ataşehir) + çevrimiçi lokasyonlardan gelen akan oklar ──
+# Demo ve gerçek haritada çalışır (gerçekte lejantta "SİMÜLASYON" yazmaz). Düz metin (f-string değil):
 # süslü parantezler tek yazılır. Oklar kendi Leaflet panesinde, işaretçilerin
 # ALTINDA çizilir; kaydırmada/yakınlaştırmada yeniden hesaplanır.
 _SALDIRI_JS = r"""
-// ══ SUNUM: GENEL MÜDÜRLÜK + SALDIRI OKLARI (yalnız demo) ══
+// ══ GENEL MÜDÜRLÜK + MERKEZ BAĞLANTI OKLARI ══
 (function () {
   var GM_ID = 'atasehir';
   var GM = hospitals.filter(function (h) { return h.id === GM_ID; })[0];
@@ -1909,12 +1909,13 @@ with merkez:
     else:
         _odak = "null"   # İstanbul'da lokasyon yoksa Türkiye geneli görünümü kalır
 
-    # ── SUNUM: Genel Müdürlük + lokasyonlardan gelen hareketli kavisli oklar ──
-    # YALNIZCA demo/simülasyon modunda haritaya eklenir (üretim haritası aynı kalır).
+    # ── Genel Müdürlük + lokasyonlardan gelen hareketli kavisli oklar ──
+    # 26.10.2026: önce demoda denendi, ardından gerçek Synapse'e de alındı.
     # Ataşehir'e genel müdürlük binası konur; diğer her lokasyondan oraya kavisli,
     # akan bir ok çizilir — YALNIZCA çevrimiçi lokasyonlardan (turkuaz).
     # Çevrimdışı ve kurulmamış lokasyonlardan ok çıkmaz.
-    _saldiri_js = _SALDIRI_JS if _demo_modu() else ""
+    _saldiri_js = (_SALDIRI_JS if _demo_modu()
+                   else _SALDIRI_JS.replace("MERKEZ BAĞLANTILARI · SİMÜLASYON", "MERKEZ BAĞLANTILARI"))
 
     harita_html = f"""<!DOCTYPE html>
 <html><head>

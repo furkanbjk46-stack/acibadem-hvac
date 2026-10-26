@@ -102,8 +102,8 @@ c("her grafik kalemine ozel akan desen", all(("\"%s\":" % k) in _l for k in
 c("halka grafik yazilari okunur", 'outsidetextfont=dict(size=12, color="#133273")' in _l and "#c8e6ff" not in _l)
 
 # 26.10.2026 — sunum haritası: genel müdürlük + akan oklar (YALNIZ demo)
-c("saldiri oklari yalniz demoda", '_saldiri_js = _SALDIRI_JS if _demo_modu() else ""' in _m
-  and "{_saldiri_js}" in _m)
+c("oklar gercek haritada da var (lejantta simulasyon yazmaz)", "{_saldiri_js}" in _m
+  and '_SALDIRI_JS.replace("MERKEZ BAĞLANTILARI · SİMÜLASYON", "MERKEZ BAĞLANTILARI")' in _m)
 c("genel mudurluk Atasehir'de", "var GM_ID = 'atasehir';" in _m and "GENEL MÜDÜRLÜK" in _m)
 c("ok yalniz cevrimici lokasyonlardan", "h.durum !== 'Çevrimiçi') return;" in _m)
 c("lejantta 'saldiri' yazmiyor", "saldırı</div>" not in _m)
