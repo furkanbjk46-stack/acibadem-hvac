@@ -1899,7 +1899,7 @@ with tab_canli:
     # ise sürece BİR KEZ yüklenir. Yayın sonrası süreç yeniden başlamazsa
     # sayfa yeni, modül eski kalır ve burada olmayan bir işlev çağrılır
     # (21.10.2026: ekranda AttributeError çıktı). Sürüm tutmuyorsa tazele.
-    _CI_GEREKEN_SURUM = 7
+    _CI_GEREKEN_SURUM = 8
     if getattr(_CI, "SURUM", 0) < _CI_GEREKEN_SURUM:
         import importlib
         _CI = importlib.reload(_CI)
@@ -1959,6 +1959,19 @@ with tab_canli:
         _olculmeyen = [(a, n) for a, n in _olculmeyen_tum
                        if _CI.OLCULMEYEN_GRUP.get(a) not in _canli_gruplar]
 
+        # ── Kojenler ENERJİ KAYNAĞI kartında, "ÜRETİM" başlığı altında ──
+        # (26.10.2026) Canlı kojen sayacı gelirse ayrı kart açılmaz, trafoların
+        # altına girer. Gelmeyen KOJEN-1..4 "sayaç bekleniyor" satırıyla durur.
+        # Bina kojenli değilse (günlük kayıtta kojen üretimi hiç yok) hiç çıkmaz.
+        _kojen_canli = []
+        if "enerji" in _canli_gruplar:
+            _kojen_canli = next((c for a, _, c in _gruplar if a == "kojen"), [])
+            _gruplar = [g for g in _gruplar if g[0] != "kojen"]
+        _kojen_var = bool(_kojen_canli) or any(a == "KOJEN" for a, _ in _olculmeyen_tum)
+        _kojen_bekleyen = _CI.kojen_bekleyenler(_kojen_canli) if _kojen_var else []
+        _olculmeyen = [(a, n) for a, n in _olculmeyen if a != "KOJEN"]
+        _kp = _CI.grup_toplami(seri, _kojen_canli) if _kojen_canli else None
+
         # ── Üst şerit ────────────────────────────────────────────────
         _kartlar, _grup_govde = [], []
         for _an, _bas, _cihazlar in _gruplar:
@@ -1967,9 +1980,26 @@ with tab_canli:
             _br = _CI.birim(_an)
 
             if _an == "enerji":
-                _etiket, _alt = "ŞEBEKEDEN ÇEKİLEN", "%d trafo" % len(_cihazlar)
+                # Tek kart, iki iç kart: TRAFO TOPLAM | ÜRETİM TOPLAM (kojen)
+                _alt = "%d trafo" % len(_cihazlar)
                 if yas is not None:
                     _alt += " · son ölçüm %.0f sn önce" % yas
+                _trafo_dg = ("—" if _tp is None else _CI.akan(
+                    _tp, 1, "grup-" + _bas, *(_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure) or ()))
+                    + "<span class='cg-br'>kW</span>")
+                _parcalar = [("TRAFO TOPLAM", _trafo_dg, _alt, True)]
+                if _kojen_var:
+                    if _kp is not None:
+                        _kc = sum(1 for _c in _kojen_canli if (degerler.get(_c) or 0) >= 1)
+                        _uretim_dg = (_CI.akan(_kp, 1, "grup-uretim",
+                                               *(_CI.grup_gecis(_onc, degerler, _kojen_canli, _t_son, _sure) or ()))
+                                      + "<span class='cg-br'>kW</span>")
+                        _uretim_alt = "%d / %d kojen çalışıyor" % (_kc, len(_kojen_canli) + len(_kojen_bekleyen))
+                    else:
+                        _uretim_dg = "—<span class='cg-br'>kW</span>"
+                        _uretim_alt = "%d kojen · canlı sayaç bekleniyor" % len(_kojen_bekleyen)
+                    _parcalar.append(("ÜRETİM TOPLAM", _uretim_dg, _uretim_alt, _kp is not None))
+                _kartlar.append(_CI.ozet_ikili_kart_html(_parcalar))
             elif _an == "sogutma":
                 _ch = sum(1 for _c in _cihazlar
                           if _CI.kisa_ad(_c).startswith("CH-") and (degerler.get(_c) or 0) >= 1)
@@ -1986,10 +2016,11 @@ with tab_canli:
                 _alt = "%d pano" % len(_cihazlar)
                 if _aralik:
                     _alt += " · %d sn'de bir okunuyor" % _aralik
-            _kartlar.append(_CI.ozet_kart_html(
-                _etiket, "—" if _tp is None else _CI.akan(
-                    _tp, 1, "grup-" + _bas, *(_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure) or ())) +
-                f"<span class='cg-br'>{_br}</span>", _alt, canli=(_an == "enerji")))
+            if _an != "enerji":
+                _kartlar.append(_CI.ozet_kart_html(
+                    _etiket, "—" if _tp is None else _CI.akan(
+                        _tp, 1, "grup-" + _bas, *(_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure) or ())) +
+                    f"<span class='cg-br'>{_br}</span>", _alt))
 
             # ── Grup gövdesi ─────────────────────────────────────────
             # Çubukların ölçeği: bu gruptaki sayaçların pencere boyunca
@@ -2002,7 +2033,7 @@ with tab_canli:
                 _ust_olcek = max((v for v in _CI.toplam_seri(seri, _cihazlar)
                                   if v is not None), default=0.0)
                 _satirlar += _CI.toplam_satir_html(
-                    "ŞEBEKE", _tp, _CI.bar_html(_tp, _ust_olcek), faz="grup-" + _bas,
+                    "TRAFO", _tp, _CI.bar_html(_tp, _ust_olcek), faz="grup-" + _bas,
                     gecis=_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure))
             for _c in _cihazlar:
                 _satirlar += _CI.satir_html(
@@ -2012,30 +2043,58 @@ with tab_canli:
                     _yontemler.get(_c), birim=_br,
                     gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None)
             _olcusuz = 0
+            _kart_toplam, _kart_gecis = _tp, _CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure)
             if _an == "enerji":
+                # ── ÜRETİM: kojenler (canlı olanlar + sayacı beklenenler) ──
+                if _kojen_var:
+                    _ky = [v for v in _CI.toplam_seri(seri, _kojen_canli) if v is not None] if _kojen_canli else []
+                    if _kp is not None:
+                        _satirlar += _CI.toplam_satir_html(
+                            "ÜRETİM", _kp, _CI.bar_html(_kp, max(_ky, default=0.0), esikli=False),
+                            faz="grup-uretim",
+                            gecis=_CI.grup_gecis(_onc, degerler, _kojen_canli, _t_son, _sure))
+                    else:
+                        _satirlar += _CI.olculmeyen_satir_html("ÜRETİM", "kojen toplamı", sag="bekleniyor")
+                    _kolcek = _CI.olcek_degeri(seri, _kojen_canli)
+                    for _c in sorted(_kojen_canli + _kojen_bekleyen,
+                                     key=lambda c: _CI._sira_anahtari(c, ("KOJEN-",))):
+                        if _c in _kojen_canli:
+                            _satirlar += _CI.satir_html(
+                                _c, degerler.get(_c),
+                                _CI.bar_html(degerler.get(_c), _kolcek, esikli=False),
+                                _yontemler.get(_c),
+                                gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None)
+                        else:
+                            _satirlar += _CI.olculmeyen_satir_html(_c, _CI.KOJEN_BEKLEME_NOTU, sag="bekleniyor")
+                    _ok += sum(1 for _c in _kojen_canli if degerler.get(_c) is not None)
+                    if _kp is not None:
+                        _kart_toplam = round((_tp or 0) + _kp, 1)
+                        _kart_gecis = _CI.grup_gecis(_onc, degerler, _cihazlar + _kojen_canli, _t_son, _sure)
                 for _ad, _neden in _olculmeyen:
                     _satirlar += _CI.olculmeyen_satir_html(_ad, _neden)
-                _olcusuz = len(_olculmeyen)
+                _olcusuz = len(_olculmeyen) + len(_kojen_bekleyen)
 
             _ack = _CI.GRUP_ACIKLAMA.get(_an, "")
-            if _an == "enerji" and _olculmeyen:
-                _ack = ("Şebeke trafoları canlı sayaçtan; " +
-                        ", ".join(a.lower() for a, _ in _olculmeyen) +
-                        " kalemlerinde canlı sayaç yok")
+            if _an == "enerji":
+                _ack = "Trafolar" + (" ve kojen üretimi" if _kojen_var else "") + " · canlı sayaçtan"
+                if _kojen_bekleyen:
+                    _ack += "; kojen sayaçları yakında eklenecek"
+                if _olculmeyen:
+                    _ack += "; " + ", ".join(a.lower() for a, _ in _olculmeyen) + " kalemlerinde canlı sayaç yok"
             _grup_govde.append(_CI.grup_html(
-                _bas, _ack, _satirlar, _tp, _ok, _olcusuz, birim=_br,
-                gecis=_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure)))
+                _bas, _ack, _satirlar, _kart_toplam, _ok, _olcusuz, birim=_br,
+                gecis=_kart_gecis))
 
         _kartlar.append(_CI.ozet_kart_html(
             "OKUNABİLEN SAYAÇ",
-            "%d<span class='cg-br'>/ %d</span>" % (_okunan_top, len(degerler) + len(_olculmeyen)),
-            "%d kalem canlı ölçülmüyor" % len(_olculmeyen) if _olculmeyen
-            else "tüm kalemler ölçülüyor"))
+            "%d<span class='cg-br'>/ %d</span>" % (_okunan_top, len(degerler) + len(_olculmeyen) + len(_kojen_bekleyen)),
+            "%d kalem canlı ölçülmüyor" % (len(_olculmeyen) + len(_kojen_bekleyen))
+            if (_olculmeyen or _kojen_bekleyen) else "tüm kalemler ölçülüyor"))
 
         _yontem_metin, _yontem_renk = _CI.yontem_ozeti(olcumler)
         _ozet_metin = "%d sayaç okunuyor" % _okunan_top
-        if _olculmeyen:
-            _ozet_metin += ", %d kalemde canlı sayaç yok" % len(_olculmeyen)
+        if _olculmeyen or _kojen_bekleyen:
+            _ozet_metin += ", %d kalemde canlı sayaç yok" % (len(_olculmeyen) + len(_kojen_bekleyen))
         if yas is not None:
             _ozet_metin += " · son ölçüm %.0f sn önce" % yas
 

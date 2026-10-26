@@ -524,6 +524,23 @@ c("[geçiş] ana ekran: kart / özet / harita gerçek ölçüm geçişiyle",
   "gecis_ozellik(_g_seb)" in _MRK and "gecis_ozellik(_g_ozet)" in _MRK
   and 'GECIS = canli_gecis_hesapla(CANLI, st.session_state.setdefault("_canli_gecis", {}))' in _MRK)
 
+# ── 26.10.2026: TRAFO / ÜRETİM düzeni ──
+c("kojen adlari KOJEN-1..4", CI.kojen_adlari() == ["KOJEN-1", "KOJEN-2", "KOJEN-3", "KOJEN-4"])
+c("canli gelen kojen bekleyenlerden duser", CI.kojen_bekleyenler(["KOJEN-1", "kojen-3"]) == ["KOJEN-2", "KOJEN-4"])
+c("hic canli kojen yoksa dordu de bekler", len(CI.kojen_bekleyenler([])) == 4)
+_ik = CI.ozet_ikili_kart_html([("TRAFO TOPLAM", "1", "4 trafo", True), ("ÜRETİM TOPLAM", "—", "bekleniyor", False)])
+c("ozet karti iki ic kartli", _ik.count("class='cg-ic'") == 2 and "TRAFO TOPLAM" in _ik and "ÜRETİM TOPLAM" in _ik
+  and _ik.count("cg-nabiz") == 1)
+c("bekleyen satir 'bekleniyor' yazar, 0 kW yazmaz",
+  "bekleniyor" in CI.olculmeyen_satir_html("KOJEN-1", CI.KOJEN_BEKLEME_NOTU, sag="bekleniyor")
+  and "kW" not in CI.olculmeyen_satir_html("KOJEN-1", CI.KOJEN_BEKLEME_NOTU, sag="bekleniyor"))
+c("olcusuz satir notu tasmaz", "text-overflow:ellipsis" in CI.STIL and ".cg-bos{height:28px; display:flex; align-items:center; gap:7px; min-width:0" in CI.STIL)
+_sy = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pages", "lokasyon_detay.py"), encoding="utf-8").read()
+c("sayfa: SEBEKEDEN CEKILEN / SEBEKE adi kalmadi", "ŞEBEKEDEN ÇEKİLEN" not in _sy and '"ŞEBEKE", _tp' not in _sy)
+c("sayfa: TRAFO toplam satiri + URETIM", '"TRAFO", _tp' in _sy and '"ÜRETİM", _kp' in _sy and "ozet_ikili_kart_html" in _sy)
+c("sayfa: kojen ayri kart degil, enerji kartinda", '_gruplar = [g for g in _gruplar if g[0] != "kojen"]' in _sy)
+c("sayfa modul surumu 8 istiyor", "_CI_GEREKEN_SURUM = 8" in _sy and CI.SURUM >= 8)
+
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))
 _g = sum(1 for _, ok, _ in T if ok)

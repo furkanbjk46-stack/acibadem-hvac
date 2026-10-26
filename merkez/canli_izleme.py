@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 7
+SURUM = 8
 
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
@@ -103,7 +103,7 @@ GRUPLAR = [
     ("su",       "SU",              ("SU-",)),
 ]
 GRUP_ACIKLAMA = {
-    "enerji":  "Şebeke trafoları · canlı sayaçtan",
+    "enerji":  "Trafolar · canlı sayaçtan",
     "sogutma": "Chiller'lar ve soğutma kuleleri · canlı sayaçtan",
     "mcc":     "Ana panolar ve blok panoları · canlı sayaçtan",
     "kojen":   "Kojen jeneratörleri · canlı sayaçtan",
@@ -208,6 +208,23 @@ OLCULMEYEN = [
 ]
 # Kalemin canlı grubu: o grup ekranda varsa "ölçülmüyor" satırı basılmaz
 OLCULMEYEN_GRUP = {"KOJEN": "kojen", "DOĞALGAZ": "dogalgaz", "SU": "su"}
+
+# Kojenler ENERJİ KAYNAĞI kartında "ÜRETİM" başlığı altında (26.10.2026).
+# Canlı sayaçları sahaya yakında eklenecek; gelene kadar her biri "sayaç
+# bekleniyor" satırıyla görünür (0 kW yazılmaz). KOJEN-1 ... KOJEN-n adıyla
+# canli_guc'a yazılmaya başlayınca satır kendiliğinden canlı değere döner.
+KOJEN_ADET = 4
+KOJEN_BEKLEME_NOTU = "canlı sayaç yakında eklenecek"
+
+
+def kojen_adlari(adet: int = KOJEN_ADET) -> list:
+    return ["KOJEN-%d" % i for i in range(1, adet + 1)]
+
+
+def kojen_bekleyenler(canli_kojenler: list, adet: int = KOJEN_ADET) -> list:
+    """Henüz canlı okunmayan kojenler (sırayla). Canlı gelen listeden düşer."""
+    canli = {str(c).upper() for c in (canli_kojenler or [])}
+    return [k for k in kojen_adlari(adet) if k not in canli]
 
 
 def _zaman_coz(deger):
@@ -401,7 +418,7 @@ def toplam_satir_html(ad: str, deger, cubuk: str, faz: str = "", gecis: tuple = 
             f"<div class='cg-dg cg-dg-ust'>{dg}</div></div>")
 
 
-def olculmeyen_satir_html(ad: str, aciklama: str) -> str:
+def olculmeyen_satir_html(ad: str, aciklama: str, sag: str = "veri çekilemiyor") -> str:
     """Canlı sayacı OLMAYAN kalem: kesik çizgi + nedeni.
 
     Bu satırlar "0 kW" göstermez. Sıfır, tüketimin durduğunu söyler;
@@ -411,7 +428,7 @@ def olculmeyen_satir_html(ad: str, aciklama: str) -> str:
             f"<div class='cg-bos'><span class='cg-tire'></span>"
             f"<span class='cg-bos-not'>{aciklama}</span>"
             f"<span class='cg-tire'></span></div>"
-            f"<div class='cg-dg cg-dg-yok'>veri çekilemiyor</div></div>")
+            f"<div class='cg-dg cg-dg-yok'>{sag}</div></div>")
 
 
 def grup_html(baslik: str, aciklama: str, satirlar: str, toplam_kw,
@@ -434,6 +451,19 @@ def ozet_kart_html(etiket: str, deger: str, alt: str, canli: bool = False) -> st
     return (f"<div class='cg-ozet'><div class='cg-ozet-et'>{nokta}{etiket}</div>"
             f"<div class='cg-ozet-dg'>{deger}</div>"
             f"<div class='cg-ozet-alt'>{alt}</div></div>")
+
+
+def ozet_ikili_kart_html(parcalar: list) -> str:
+    """Tek kart içinde yan yana iç kartlar (ör. TRAFO TOPLAM | ÜRETİM TOPLAM).
+
+    parcalar: [(etiket, deger_html, alt, canli), ...]
+    """
+    nabiz = "<span class='cg-nabiz'></span>"
+    ic = "".join(
+        "<div class='cg-ic'><div class='cg-ozet-et'>" + (nabiz if canli else "") + etiket + "</div>"
+        "<div class='cg-ozet-dg'>" + deger + "</div><div class='cg-ozet-alt'>" + alt + "</div></div>"
+        for etiket, deger, alt, canli in parcalar)
+    return f"<div class='cg-ozet cg-ozet-ikili'>{ic}</div>"
 
 
 def ozet_serit_html(kartlar: list) -> str:
@@ -459,6 +489,10 @@ STIL = """
 .cg-nabiz{display:inline-block; width:7px; height:7px; border-radius:50%;
   background:#0ca30c; margin-right:5px; animation:cgNabiz 1.6s ease-in-out infinite;}
 @keyframes cgNabiz{0%,100%{opacity:1; transform:scale(1);} 50%{opacity:.35; transform:scale(.8);}}
+/* İki iç kartlı özet (TRAFO TOPLAM | ÜRETİM TOPLAM): şeritte iki sütun kaplar */
+.cg-ozet-ikili{grid-column:span 2; display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:7px;}
+.cg-ic{background:#f6f8fc; border:1px solid rgba(24,26,30,.08); border-radius:12px; padding:7px 11px; min-width:0;}
+@media (max-width:560px){ .cg-ozet-ikili{grid-column:span 1; grid-template-columns:1fr;} }
 
 /* ── alt bant ── */
 .cg-alt{font-size:12px; color:#46536b; margin-top:12px;}
@@ -529,9 +563,12 @@ STIL = """
 .cg-dot-bekle{background:#fab219;}   /* doğrulanmadı / sayaç farkından */
 
 /* ── ölçülemeyen kalem: kesik çizgi + nedeni ── */
-.cg-bos{height:28px; display:flex; align-items:center; gap:7px;}
-.cg-bos .cg-tire{flex:1; border-top:1.6px dashed #cfd5df;}
-.cg-bos-not{font-size:10px; color:#9aa2b1; white-space:nowrap;}
+/* min-width:0 + kesme: uzun not sağdaki "veri çekilemiyor" yazısının
+   üstüne taşıyordu (26.10.2026). */
+.cg-bos{height:28px; display:flex; align-items:center; gap:7px; min-width:0; overflow:hidden;}
+.cg-bos .cg-tire{flex:1 1 8px; min-width:8px; border-top:1.6px dashed #cfd5df;}
+.cg-bos-not{font-size:10px; color:#9aa2b1; white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; min-width:0; flex:0 1 auto;}
 </style>
 """
 
