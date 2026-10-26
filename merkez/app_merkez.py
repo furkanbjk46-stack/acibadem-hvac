@@ -368,16 +368,15 @@ _SALDIRI_JS = r"""
     '.sd-grup{filter:drop-shadow(0 0 3px currentColor)}' +
     '@keyframes sdAkis{to{stroke-dashoffset:-26}}' +
     '@keyframes sdHalka{0%{transform:scale(.35);opacity:.75}100%{transform:scale(2.3);opacity:0}}' +
-    '@keyframes sdBina{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}' +
-    '@keyframes sdPencere{0%,100%{opacity:.35}50%{opacity:1}}' +
+    '@keyframes sdLogo{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.04)}}' +
+    '@keyframes sdLogoParla{0%,100%{filter:drop-shadow(0 2px 4px rgba(19,50,115,.35)) drop-shadow(0 0 4px ' + gmRenk + '55)}' +
+      '50%{filter:drop-shadow(0 2px 4px rgba(19,50,115,.35)) drop-shadow(0 0 11px ' + gmRenk + 'aa)}}' +
     '.gm-kap{position:relative;width:64px;height:78px;pointer-events:auto}' +
     '.gm-halka{position:absolute;left:12px;top:30px;width:40px;height:40px;border-radius:50%;' +
       'border:2px solid ' + gmRenk + ';animation:sdHalka 2.4s ease-out infinite}' +
     '.gm-halka.h2{animation-delay:.8s}.gm-halka.h3{animation-delay:1.6s}' +
-    '.gm-bina{position:absolute;left:16px;top:6px;width:32px;height:44px;animation:sdBina 3s ease-in-out infinite;' +
-      'filter:drop-shadow(0 2px 4px rgba(19,50,115,.35)) drop-shadow(0 0 8px ' + gmRenk + '66)}' +
-    '.gm-bina .pc{animation:sdPencere 2.2s ease-in-out infinite}' +
-    '.gm-bina .pc.g1{animation-delay:.4s}.gm-bina .pc.g2{animation-delay:.9s}.gm-bina .pc.g3{animation-delay:1.4s}' +
+    '.gm-logo{position:absolute;left:14px;top:8px;width:36px;height:36px;' +
+      'animation:sdLogo 3s ease-in-out infinite, sdLogoParla 3s ease-in-out infinite}' +
     '.gm-etiket{position:absolute;left:50%;top:54px;transform:translateX(-50%);white-space:nowrap;' +
       'font:800 8px Inter,system-ui,sans-serif;letter-spacing:1.4px;color:#133273;background:rgba(250,250,248,.92);' +
       'border:1px solid ' + gmRenk + ';border-radius:6px;padding:2px 6px;box-shadow:0 0 8px ' + gmRenk + '55}' +
@@ -390,19 +389,32 @@ _SALDIRI_JS = r"""
     '.sd-lejant div{margin-top:3px}';
   document.head.appendChild(css);
 
-  // ── Genel Müdürlük binası (Ataşehir) ──
+  // ── Genel Müdürlük logosu (Ataşehir): lacivert zemin üzerinde beyaz "A" ──
+  // Hareket: rozet hafifçe süzülür ve parlar; A'nın üstünden ışık geçer,
+  // kenarı boyunca ince bir ışık çizgisi dolaşır.
+  var GM_A = 'M17.8 83L50.1 17L82.3 83L73.4 83L50.1 35.5L26.9 83Z';
   var binaSvg =
-    '<svg class="gm-bina" viewBox="0 0 32 44" xmlns="http://www.w3.org/2000/svg">' +
-      '<rect x="3" y="40" width="26" height="3" rx="1" fill="#0f1f3d"/>' +
-      '<path d="M5 40V12l11-8 11 8v28z" fill="#133273"/>' +
-      '<path d="M16 4l11 8v28H16z" fill="#0f2a63"/>' +
-      '<rect x="13" y="1" width="6" height="4" rx="1" fill="' + gmRenk + '"/>' +
-      '<g fill="#7dd3fc">' +
-        '<rect class="pc" x="8" y="15" width="4" height="4" rx=".6"/><rect class="pc g2" x="14" y="15" width="4" height="4" rx=".6"/><rect class="pc g1" x="20" y="15" width="4" height="4" rx=".6"/>' +
-        '<rect class="pc g3" x="8" y="22" width="4" height="4" rx=".6"/><rect class="pc g1" x="14" y="22" width="4" height="4" rx=".6"/><rect class="pc g2" x="20" y="22" width="4" height="4" rx=".6"/>' +
-        '<rect class="pc g2" x="8" y="29" width="4" height="4" rx=".6"/><rect class="pc g3" x="20" y="29" width="4" height="4" rx=".6"/>' +
+    '<svg class="gm-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<clipPath id="gmAKes"><path d="' + GM_A + '"/></clipPath>' +
+        '<linearGradient id="gmIsik" x1="0" x2="1" y1="0" y2="0">' +
+          '<stop offset="0" stop-color="#7dd3fc" stop-opacity="0"/>' +
+          '<stop offset=".5" stop-color="#e0f2fe" stop-opacity=".95"/>' +
+          '<stop offset="1" stop-color="#7dd3fc" stop-opacity="0"/>' +
+        '</linearGradient>' +
+      '</defs>' +
+      '<rect x="2" y="2" width="96" height="96" rx="20" fill="#1f2559"/>' +
+      '<rect x="2" y="2" width="96" height="96" rx="20" fill="none" stroke="' + gmRenk + '" stroke-opacity=".55" stroke-width="2.5"/>' +
+      '<path d="' + GM_A + '" fill="#ffffff"/>' +
+      '<g clip-path="url(#gmAKes)">' +
+        '<rect x="-40" y="0" width="34" height="100" fill="url(#gmIsik)" transform="skewX(-18)">' +
+          '<animateTransform attributeName="transform" type="translate" additive="sum" values="0 0;150 0;150 0" keyTimes="0;.55;1" dur="3.2s" repeatCount="indefinite"/>' +
+        '</rect>' +
       '</g>' +
-      '<rect x="13.5" y="31" width="5" height="9" rx=".8" fill="' + gmRenk + '"/>' +
+      '<path d="' + GM_A + '" fill="none" stroke="#7dd3fc" stroke-width="2" stroke-linejoin="round" ' +
+        'pathLength="300" stroke-dasharray="46 254">' +
+        '<animate attributeName="stroke-dashoffset" from="0" to="-300" dur="4s" repeatCount="indefinite"/>' +
+      '</path>' +
     '</svg>';
   L.marker([GM.lat, GM.lon], {
     icon: L.divIcon({

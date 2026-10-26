@@ -105,6 +105,8 @@ c("halka grafik yazilari okunur", 'outsidetextfont=dict(size=12, color="#133273"
 c("oklar gercek haritada da var (lejantta simulasyon yazmaz)", "{_saldiri_js}" in _m
   and '_SALDIRI_JS.replace("MERKEZ BAĞLANTILARI · SİMÜLASYON", "MERKEZ BAĞLANTILARI")' in _m)
 c("genel mudurluk Atasehir'de", "var GM_ID = 'atasehir';" in _m and "GENEL MÜDÜRLÜK" in _m)
+c("genel mudurluk logosu hareketli A", "var GM_A = 'M17.8 83L50.1 17L82.3 83L73.4 83L50.1 35.5L26.9 83Z';" in _m
+  and "gm-logo" in _m and "animateTransform" in _m and "gm-bina" not in _m)
 c("ok yalniz cevrimici lokasyonlardan", "h.durum !== 'Çevrimiçi') return;" in _m)
 c("lejantta 'saldiri' yazmiyor", "saldırı</div>" not in _m)
 c("ok ve durum renkleri ayni kod", "'Çevrimiçi': '#0ca30c', 'Çevrimdışı': '#d03b3b', 'Kurulmadı': '#6b7280'" in _m
