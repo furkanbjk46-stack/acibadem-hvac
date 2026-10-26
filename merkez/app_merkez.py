@@ -1962,12 +1962,12 @@ body {{ background:#fafaf8; }}
 }}
 .leaflet-control-attribution a {{ color:#133273 !important; text-decoration:none; }}
 @keyframes breathe-outer {{
-    0%,100% {{ opacity:0.10; transform:scale(0.92); }}
-    50%      {{ opacity:0.28; transform:scale(1.20); }}
+    0%,100% {{ opacity:0.08; transform:scale(0.94); }}
+    50%      {{ opacity:0.20; transform:scale(1.10); }}
 }}
 @keyframes breathe-inner {{
-    0%,100% {{ opacity:0.22; transform:scale(0.96); }}
-    50%     {{ opacity:0.50; transform:scale(1.10); }}
+    0%,100% {{ opacity:0.18; transform:scale(0.97); }}
+    50%     {{ opacity:0.38; transform:scale(1.06); }}
 }}
 </style>
 </head><body>
@@ -2082,8 +2082,8 @@ hospitals.forEach(function(h) {{
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="width:'+(s*3.8)+'px;height:'+(s*3.8)+'px;background:'+c+';border-radius:50%;animation:breathe-outer 3s ease-in-out infinite;"></div>',
-            iconSize:[s*3.8, s*3.8], iconAnchor:[s*1.9, s*1.9]
+            html:'<div style="width:'+(s*2.2)+'px;height:'+(s*2.2)+'px;background:'+c+';border-radius:50%;animation:breathe-outer 3s ease-in-out infinite;"></div>',
+            iconSize:[s*2.2, s*2.2], iconAnchor:[s*1.1, s*1.1]
         }}),
         interactive:false, zIndexOffset:-200
     }}).addTo(map);
@@ -2092,8 +2092,8 @@ hospitals.forEach(function(h) {{
     L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="width:'+(s*2)+'px;height:'+(s*2)+'px;background:'+c+';border-radius:50%;animation:breathe-inner 3s ease-in-out infinite;"></div>',
-            iconSize:[s*2, s*2], iconAnchor:[s, s]
+            html:'<div style="width:'+(s*1.5)+'px;height:'+(s*1.5)+'px;background:'+c+';border-radius:50%;animation:breathe-inner 3s ease-in-out infinite;"></div>',
+            iconSize:[s*1.5, s*1.5], iconAnchor:[s*0.75, s*0.75]
         }}),
         interactive:false, zIndexOffset:-100
     }}).addTo(map);
