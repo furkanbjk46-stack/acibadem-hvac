@@ -292,8 +292,6 @@ HASTANELER = {
     "bayindir":        {"isim": "Acıbadem Bayındır Söğütözü", "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
     # ── Bursa ──
     "bursa":           {"isim": "Acıbadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#c98500"},
-    # ── Kocaeli ──
-    "kocaeli":         {"isim": "Acıbadem Kocaeli",           "kisa": "KOCAELİ",     "m2": 10000, "renk": "#0ca30c"},
     # ── Eskişehir ──
     "eskisehir":       {"isim": "Acıbadem Eskişehir",         "kisa": "ESKİŞEHİR",   "m2":  9000, "renk": "#818cf8"},
     # ── İzmir ──
@@ -309,6 +307,43 @@ HASTANELER = {
 
 # ── Config & Lokasyon seç ────────────────────────────
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs", "merkez_config.json")
+
+# Ay adları TÜRKÇE: strftime("%B") sunucunun diline göre "October" yazıyordu
+# (Streamlit Cloud İngilizce, 26.10.2026).
+_AY_TR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",
+          "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+_AY_KISA_TR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+
+
+def _tr_tarih(dt, bicim: str) -> str:
+    """strftime, ama %B / %b Türkçe ay adıyla."""
+    bicim = bicim.replace("%B", _AY_TR[dt.month - 1]).replace("%b", _AY_KISA_TR[dt.month - 1])
+    return dt.strftime(bicim)
+
+
+def _tr_buyuk(s: str) -> str:
+    """Türkçe büyük harf: "Ekim" → "EKİM" (str.upper / CSS "EKIM" yazıyordu)."""
+    return s.replace("i", "İ").replace("ı", "I").upper()
+
+
+def _tr_eksen(fig):
+    """Tarih eksenli grafikte ay adı yazılmasın: grafik kütüphanesi "Oct 6"
+    gibi İngilizce yazıyordu (26.10.2026). Tarih ekseni "06.10" olur."""
+    try:
+        import datetime as _dtm
+        for _tr in fig.data:
+            _x = getattr(_tr, "x", None)
+            if _x is None or not len(_x):
+                continue
+            # pandas tarihleri grafikte numpy datetime64 dizisi olarak durur
+            if ("datetime" in str(getattr(_x, "dtype", ""))
+                    or isinstance(_x[0], (_dtm.date, _dtm.datetime)) or hasattr(_x[0], "strftime")):
+                fig.update_xaxes(tickformat="%d.%m", hoverformat="%d.%m.%Y")
+                break
+    except Exception:
+        pass
+    return fig
+
 
 def _demo_modu() -> bool:
     """Sunum modu açık mı? app_merkez._demo_modu ile aynı kural."""
@@ -597,9 +632,9 @@ with tab1:
     kwh_bu_ay  = bu_ay_df["Toplam_Hastane_Tuketim_kWh"].sum() \
                  if "Toplam_Hastane_Tuketim_kWh" in bu_ay_df.columns else 0
     ay_gun_sayi = len(bu_ay_df["Tarih"].dt.date.unique()) if not bu_ay_df.empty else 0
-    ay_bas_str  = ay_bas_dt.strftime("%d %b %Y")
-    ay_bit_str  = son_tarih_dt.strftime("%d %b %Y")
-    ay_adi      = son_tarih_dt.strftime("%B %Y")   # örn: "Nisan 2026"
+    ay_bas_str  = _tr_tarih(ay_bas_dt, "%d %b %Y")
+    ay_bit_str  = _tr_tarih(son_tarih_dt, "%d %b %Y")
+    ay_adi      = _tr_tarih(son_tarih_dt, "%B %Y")   # örn: "Nisan 2026"
 
     # Özet değerler
     kwh_dun    = son_df["Toplam_Hastane_Tuketim_kWh"].sum() if "Toplam_Hastane_Tuketim_kWh" in son_df.columns else 0
@@ -641,7 +676,7 @@ with tab1:
         metric_card_v("enerji", f"Tüketim ({son_tarih_str})", f"{kwh_dun:,.0f}", "kWh", "#2a78d6")
         metric_card_v("verim", "kWh/m²",     f"{verim_dun:.2f}", "kWh/m²", "#c98500")
         metric_card_v(
-            "takvim", f"{ay_adi} Toplam",
+            "takvim", f"{_tr_buyuk(ay_adi)} TOPLAM",
             f"{kwh_bu_ay:,.0f}", "kWh", "#0ca30c",
             alt_bilgi=f"{ay_bas_str} → {ay_bit_str}  ({ay_gun_sayi} gün)"
         )
@@ -685,7 +720,7 @@ with tab1:
                 ("kWh/m² Trendi", "verimlilik", "kWh/m²"),
             ]),
             ("ÖZET & KARŞILAŞTIRMA", [
-                ("Bu Ay vs Geçen Ay", "ay_karsilastir", "kWh"),
+                ("Bu Ay vs Geçen Yılın Aynı Ayı", "ay_karsilastir", "kWh"),
                 ("KPI Özet", "kpi_ozet", "tablo"),
                 ("Enerji Kırılımı", "enerji_kirilim", "%"),
             ]),
@@ -848,8 +883,8 @@ with tab1:
             (df["Tarih"].dt.date <= tarih_bit)
         ].copy()
         tarih_aralik_str = (
-            f"{pd.Timestamp(tarih_bas).strftime('%d %b')} → "
-            f"{pd.Timestamp(tarih_bit).strftime('%d %b %Y')}"
+            f"{_tr_tarih(pd.Timestamp(tarih_bas), '%d %b')} → "
+            f"{_tr_tarih(pd.Timestamp(tarih_bit), '%d %b %Y')}"
         )
 
         def _bar_chart(veri_df, baslik=""):
@@ -879,7 +914,7 @@ with tab1:
                 yaxis=dict(gridcolor="rgba(19,50,115,0.07)", showgrid=True,
                            title=dict(text="kWh", font=dict(size=10))),
             )
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(_tr_eksen(fig), use_container_width=True, config={"displayModeBar": False})
 
         # ── Geçen Yıl Aynı Dönem Karşılaştırma Badge'i (sadece 5 grafik için) ──
         def _yoy_badge(col, s_df, full_df, t_bas, t_bit):
@@ -937,7 +972,7 @@ with tab1:
                                 overlaying="y", side="right"),
                     legend=dict(orientation="h", y=1.12, font=dict(size=10)),
                 )
-                st.plotly_chart(fig_ch, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_ch), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Chiller Set verisi bulunamadı.")
 
@@ -962,7 +997,7 @@ with tab1:
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh/m²", font=dict(size=10))),
                 )
-                st.plotly_chart(fig_v, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_v), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Verimlilik verisi bulunamadı.")
 
@@ -986,7 +1021,7 @@ with tab1:
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="m³", font=dict(size=10))),
                 )
-                st.plotly_chart(fig_su, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_su), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Su tüketimi verisi bulunamadı.")
 
@@ -1009,7 +1044,7 @@ with tab1:
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                 )
-                st.plotly_chart(fig_sb, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_sb), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Şebeke tüketim verisi bulunamadı.")
 
@@ -1039,7 +1074,7 @@ with tab1:
                     legend=dict(orientation="h", y=1.08, x=0, font=dict(size=10),
                                 bgcolor="rgba(0,0,0,0)"),
                 )
-                st.plotly_chart(fig_tr, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_tr), use_container_width=True, config={"displayModeBar": False})
 
                 # Trafo toplamı şebekeyi karşılıyor mu — eksik sayaç gizlenmesin.
                 _tr_top = sum(pd.to_numeric(secili_df[c], errors="coerce").fillna(0).sum()
@@ -1077,7 +1112,7 @@ with tab1:
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                 )
-                st.plotly_chart(fig_mcc, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_mcc), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("MCC tüketim verisi bulunamadı.")
 
@@ -1103,7 +1138,7 @@ with tab1:
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
                 )
-                st.plotly_chart(fig_sog, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_sog), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Soğutma tüketim verisi bulunamadı.")
 
@@ -1127,16 +1162,19 @@ with tab1:
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="m³", font=dict(size=10))),
                 )
-                st.plotly_chart(fig_kaz, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_kaz), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Kazan doğalgaz verisi bulunamadı.")
 
-        # ── Bu Ay vs Geçen Ay ──
+        # ── Bu Ay vs Geçen Yılın Aynı Ayı ──
+        # Geçen ayla kıyas mevsim farkını tüketim değişimi gibi gösteriyordu
+        # (Eylül soğutma ↔ Ekim); doğru kıyas geçen yılın AYNI ayı (26.10.2026).
         elif grafik_tip == "ay_karsilastir":
             if "Toplam_Hastane_Tuketim_kWh" in df.columns and not df.empty:
+                import calendar as _cal
                 bu_ay_bas  = now.replace(day=1)
-                gec_ay_bit = bu_ay_bas - timedelta(days=1)
-                gec_ay_bas = gec_ay_bit.replace(day=1)
+                gec_ay_bas = bu_ay_bas.replace(year=bu_ay_bas.year - 1)
+                gec_ay_bit = gec_ay_bas.replace(day=_cal.monthrange(gec_ay_bas.year, gec_ay_bas.month)[1])
                 bu_ay_df  = df[df["Tarih"] >= pd.Timestamp(bu_ay_bas)]
                 gec_ay_df = df[(df["Tarih"] >= pd.Timestamp(gec_ay_bas)) & (df["Tarih"] <= pd.Timestamp(gec_ay_bit))]
                 bu_gun  = bu_ay_df.groupby(bu_ay_df["Tarih"].dt.day)["Toplam_Hastane_Tuketim_kWh"].sum()
@@ -1144,13 +1182,13 @@ with tab1:
                 fig_ay = go.Figure()
                 fig_ay.add_trace(go.Bar(
                     x=gec_gun.index, y=gec_gun.values,
-                    name=f"{gec_ay_bas.strftime('%B %Y')}",
+                    name=_tr_tarih(gec_ay_bas, "%B %Y"),
                     marker=dict(color=f"rgba({rr},{rg},{rb},0.4)"),
                     hovertemplate="Gün %{x}: %{y:,.0f} kWh<extra></extra>",
                 ))
                 fig_ay.add_trace(go.Bar(
                     x=bu_gun.index, y=bu_gun.values,
-                    name=f"{bu_ay_bas.strftime('%B %Y')}",
+                    name=_tr_tarih(bu_ay_bas, "%B %Y"),
                     marker=dict(color=f"rgba({rr},{rg},{rb},0.9)"),
                     hovertemplate="Gün %{x}: %{y:,.0f} kWh<extra></extra>",
                 ))
@@ -1163,7 +1201,7 @@ with tab1:
                     barmode="group",
                     legend=dict(orientation="h", y=1.1, font=dict(size=10)),
                 )
-                # Toplam fark özeti — SYN-5 fix: geçen ay AYNI GÜN ARALIĞINA kırpılır
+                # Toplam fark özeti — SYN-5 fix: geçen yılın ayı AYNI GÜN ARALIĞINA kırpılır
                 # (kısmi ay tam ayla kıyaslanınca ayın başında sahte "az tüketim" görünüyordu)
                 bu_top = bu_gun.sum()
                 gec_kiyas = gec_gun[gec_gun.index <= bu_gun.index.max()] if not bu_gun.empty else gec_gun
@@ -1174,11 +1212,11 @@ with tab1:
                     fark_yon  = "▲" if fark_pct > 0 else "▼"
                     st.markdown(
                         f"<div style='text-align:center;font-size:11px;color:{fark_renk};margin-bottom:4px;'>"
-                        f"{fark_yon} Bu ay şimdiye kadar, geçen ayın aynı dönemine (ilk {int(bu_gun.index.max())} gün) göre "
+                        f"{fark_yon} Bu ay şimdiye kadar, geçen yılın aynı ayının aynı dönemine (ilk {int(bu_gun.index.max())} gün) göre "
                         f"<b>{abs(fark_pct):.1f}%</b> {'fazla' if fark_pct>0 else 'az'} tüketim</div>",
                         unsafe_allow_html=True
                     )
-                st.plotly_chart(fig_ay, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_ay), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Ay karşılaştırma verisi bulunamadı.")
 
@@ -1342,7 +1380,7 @@ with tab1:
                     legend=dict(orientation="h", y=1.12, font=dict(size=10)),
                     barmode="group",
                 )
-                st.plotly_chart(fig_kj, use_container_width=True, config={"displayModeBar": False})
+                st.plotly_chart(_tr_eksen(fig_kj), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Kojen verisi bulunamadı.")
 

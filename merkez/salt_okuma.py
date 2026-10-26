@@ -28,6 +28,7 @@ IZINLI_RPC = {"synapse_kullanim"}
 _YAZMA_METODLARI = {"POST", "PATCH", "PUT", "DELETE"}
 _kuruldu = False
 _kilit = threading.Lock()
+_kilit_istemci = threading.Lock()
 
 
 def izleyici_mi() -> bool:
@@ -98,8 +99,21 @@ def kur():
         try:
             import supabase as _sb
             _asil_create = _sb.create_client
+            # HIZ (26.10.2026): istemci (url, anahtar) başına BİR KEZ kurulur.
+            # Ölçüm: ana sayfanın her çiziminde ~2,3 sn'nin ~1,65 sn'si her
+            # sorgu için sıfırdan HTTPS istemcisi + SSL bağlamı kurmaktı.
+            # İstemci (httpx) iş parçacıkları arasında paylaşılabilir; izleyici
+            # engeli sarmalayıcıda her çağrıda O ANKİ oturuma bakar, önbellek
+            # onu etkilemez.
+            _istemciler = {}
 
             def _create_client(*a, **k):
+                if not k and len(a) == 2 and all(isinstance(x, str) for x in a):
+                    with _kilit_istemci:
+                        ic = _istemciler.get(a)
+                        if ic is None:
+                            ic = _istemciler[a] = _asil_create(*a)
+                    return _SaltOkunurIstemci(ic)
                 return _SaltOkunurIstemci(_asil_create(*a, **k))
 
             _create_client.__wrapped__ = _asil_create

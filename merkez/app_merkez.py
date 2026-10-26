@@ -40,7 +40,14 @@ from streamlit_autorefresh import st_autorefresh
 #     hem o akışı her 10 sn'de durduruyor hem de bu sırada yapılan
 #     tıklamaları (sekme, Geri) bekletiyordu — geçişler geç açılıyordu.
 #     Detaydaki diğer veriler günlük; tam yenilemeye gerek yok.
-if ("bakim" not in st.query_params and st.session_state.get("giris_ok")
+#
+# 26.10.2026: ANA SAYFADA DA KALDIRILDI (kullanıcı: "kasıyor"). Ana sayfanın
+# tamamı 1,5-3 sn'de çiziliyor; 10 sn'de bir baştan çizmek ekranı sürekli
+# meşgul ediyordu. Canlı değerler (kartlar, W/m², global özet, harita) artık
+# küçük bir parça ile 15 sn'de bir tazelenir (_canli_tazele, sayfa yeniden
+# çizilmez). Diğer bölümler sayfa açılınca / bir tıklamada güncellenir.
+_TAM_YENILEME = False
+if (_TAM_YENILEME and "bakim" not in st.query_params and st.session_state.get("giris_ok")
         and not st.session_state.get("detay_ozet")
         and not st.session_state.get("_oto_popup")
         and not st.session_state.get("detay_lokasyon")):
@@ -325,8 +332,6 @@ HASTANELER = {
     "bayindir":       {"isim": "Acıbadem Bayındır Söğütözü","kisa": "BAYINDIR",    "lat": 39.8980, "lon": 32.8240, "m2": 12000, "renk": "#f43f5e"},
     # ── Bursa ──
     "bursa":          {"isim": "Acıbadem Bursa",            "kisa": "BURSA",        "lat": 40.2090, "lon": 28.9790, "m2": 13000, "renk": "#c98500"},
-    # ── Kocaeli ──
-    "kocaeli":        {"isim": "Acıbadem Kocaeli",          "kisa": "KOCAELİ",      "lat": 40.7654, "lon": 29.9408, "m2": 10000, "renk": "#0ca30c"},
     # ── Eskişehir ──
     "eskisehir":      {"isim": "Acıbadem Eskişehir",        "kisa": "ESKİŞEHİR",    "lat": 39.7767, "lon": 30.5206, "m2":  9000, "renk": "#818cf8"},
     # ── İzmir ──
@@ -643,8 +648,17 @@ def fetch_dis_hava() -> float | None:
     return None
 
 
+_DIS_HAVA_LOG_KONTROL = {}   # süreç içi: son kontrol zamanı (url → epoch)
+
+
 def _dis_hava_log_yaz(sb_url: str, sb_key: str, derece: float, kaynak: str = "api"):
     """Dış hava değerini dis_hava_log tablosuna yaz. Saatte 1'den fazla yazmaz."""
+    # HIZ (26.10.2026): her sayfa çiziminde "son kayıt ne zaman?" diye
+    # veritabanına soruluyordu. Süreç içinde 10 dk'da bir kontrol yeter.
+    import time as _time
+    if _time.time() - _DIS_HAVA_LOG_KONTROL.get(sb_url, 0) < 600:
+        return
+    _DIS_HAVA_LOG_KONTROL[sb_url] = _time.time()
     try:
         from supabase import create_client as _cc
         _c = _cc(sb_url, sb_key)
@@ -704,6 +718,9 @@ def fetch_lokasyonlar(url, key):
         return r.data or []
     except:
         return []
+
+# Ana sayfada canlı değerlerin tazelenme aralığı (sn): saha 15 sn'de bir yazıyor.
+CANLI_TAZELE_SN = 15
 
 # Sunumda (demo) ekran saniyede bir akar; önbellek yarım sn (1 sn olunca her
 # ikinci yenileme aynı değeri getiriyordu, akış 2 sn'ye düşüyordu). Gerçekte 12.
@@ -915,6 +932,9 @@ def save_m2_supabase(url, key, m2_dict):
 # zamanla ayrışırsa portal başka, saha başka değer gösterecekti.
 
 
+# HIZ (26.10.2026): Open-Meteo her sayfa çiziminde yeniden soruluyordu
+# (~0,25 sn, ağ yavaşsa 8 sn'ye kadar). Tahmin 15 dk'da bir yeterince taze.
+@st.cache_data(ttl=900, show_spinner=False)
 def _fetch_tahmin() -> dict | None:
     """Open-Meteo'dan bugünün ve yarının max/min sıcaklıklarını döner.
 
@@ -1637,6 +1657,7 @@ with sol:
         _akis_kw = (f' class="canli-sayi" data-deger="{kw_anlik:.1f}" data-ond="0" data-faz="{lok_id}"'
                     + gecis_ozellik(_g_seb) if kw_anlik is not None else "")
         _akis_wm2 = (f' class="canli-sayi" data-deger="{kw_anlik * 1000 / m2_lok:.2f}" data-ond="1" data-faz="{lok_id}"'
+                     f' data-carpan="{1000.0 / m2_lok:.6f}"'
                      + gecis_ozellik(_g_seb, 1000.0 / m2_lok) if kw_anlik is not None and m2_lok else "")
         sira_badge = f'<span style="position:absolute;top:8px;left:10px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#46536b;font-weight:700;">#{i+1}</span>' if (i < 4 and kw_anlik is not None) else ""
 
@@ -2225,6 +2246,36 @@ window.addEventListener('message', function(ev) {{
                                    else _v.get(_a)) for _a in ("sebeke", "kojen")}
                        for _lid, _v in CANLI.items()}
         _components.html(_canli_akis_betigi(_akis_taban, "gecis"), height=0)
+
+    # ── Canlı değer tazeleme (tam sayfa yenilemesinin yerine) ──
+    # Yalnız bu parça 15 sn'de bir çalışır: canlı sorguyu yapar ve kartların,
+    # özetin, haritanın altındaki değeri yeniler. Sayfa yeniden çizilmez.
+    @st.fragment(run_every=CANLI_TAZELE_SN)
+    def _canli_tazele():
+        import canli_izleme as _ci_t
+        _c = canli_ozet_hesapla(fetch_canli_tum(url, key))
+        _g = canli_gecis_hesapla(_c, st.session_state.setdefault("_canli_gecis", {}))
+
+        def _gv(g, d):
+            if d is None:
+                return None
+            return g if (g and g.get("o") is not None and g.get("s")) else {"d": d, "o": None, "t": None, "s": None}
+
+        _kart = {_l: _gv(_g.get((_l, "sebeke")), _v.get("sebeke")) for _l, _v in _c.items()}
+        _ozet = {}
+        for _k, _alanlar in _OZET_ALAN.items():
+            _dlist = [_v.get(_a) for _v in _c.values() for _a in _alanlar if _v.get(_a) is not None]
+            if _dlist:
+                _ozet[_k] = (gecis_toplami([_g.get((_l, _a)) for _l in _c for _a in _alanlar])
+                             or {"d": sum(_dlist), "o": None, "t": None, "s": None})
+        if _demo_modu():
+            _hb = {_l: {"sebeke": _v.get("sebeke"), "kojen": _v.get("kojen")} for _l, _v in _c.items()}
+        else:
+            _hb = {_l: {_a: (_g.get((_l, _a)) if gecis_ozellik(_g.get((_l, _a))) else _v.get(_a))
+                        for _a in ("sebeke", "kojen")} for _l, _v in _c.items()}
+        _components.html(_ci_t.tazele_betigi({"kart": _kart, "ozet": _ozet, "harita": _hb}), height=0)
+
+    _canli_tazele()
 
     # ── Veri hazırlığı: Chiller Set & Dış Hava (sağ kolonda gösterilecek) ──
     chiller_vals = {}

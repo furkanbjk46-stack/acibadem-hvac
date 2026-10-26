@@ -202,7 +202,7 @@ c("karsilastirma sayfasinda otomatik yenileme durur",
   'not st.session_state.get("detay_ozet")' in _ar_kosul, _ar_kosul[-200:])
 # Kosulda demoya ozel AYRI bir madde var (sunumda detay acikken akis kesilmesin,
 # _SUNUM_DETAY); karsilastirma maddesi ise kendi basina, demoya bagli degil.
-_if_satiri = _ar_kosul[_ar_kosul.index('if ("bakim"'):]
+_if_satiri = _ar_kosul[_ar_kosul.index('"bakim" not in st.query_params'):]
 c("yenileme durdurma demo moduna bagli DEGIL",
   '\n        and not st.session_state.get("detay_ozet")\n' in _if_satiri
   and "SYNAPSE_DEMO" not in _if_satiri, _if_satiri[-300:])

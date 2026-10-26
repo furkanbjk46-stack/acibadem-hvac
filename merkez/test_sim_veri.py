@@ -282,8 +282,9 @@ c("[ping] Kartal senaryo geregi CEVRIMDISI kalir (>10 dk)",
   _yas_dk(_lok["kartal"]["ping_zamani"]) > 10, _lok["kartal"]["ping_zamani"])
 c("[ping] Bodrum KURULMADI (ping yok)", _lok["bodrum"]["ping_zamani"] is None)
 _cevrimici = sum(1 for r in _lok.values() if r["ping_zamani"] and _yas_dk(r["ping_zamani"]) < 10)
-c("[ping] 21 lokasyonun 19'u cevrimici, 1 cevrimdisi, 1 kurulmadi",
-  (_cevrimici, sum(1 for r in _lok.values() if r["ping_zamani"] is None)) == (19, 1),
+# 20 lokasyon (Kocaeli yok, 26.10.2026)
+c("[ping] 20 lokasyonun 18'i cevrimici, 1 cevrimdisi, 1 kurulmadi",
+  (_cevrimici, sum(1 for r in _lok.values() if r["ping_zamani"] is None)) == (18, 1),
   (_cevrimici, len(_lok)))
 
 c("lokasyon filtresi calisiyor",

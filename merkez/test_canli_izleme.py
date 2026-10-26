@@ -440,7 +440,7 @@ c("[sunum] önbellek demoda 0,5 sn, gerçekte 12 sn",
 # Detay açıkken tam sayfa yenilemesi YOK (demo ve canlı): canlı blok kendi
 # yenilenir; tam yenileme akışı durduruyor, tıklamaları bekletiyordu.
 _ar_if = _MRK.split("st_autorefresh(interval")[0]
-_ar_if = _ar_if[_ar_if.rindex('if ("bakim"'):]
+_ar_if = _ar_if[_ar_if.rindex('"bakim" not in st.query_params'):]
 c("detay açıkken tam sayfa yenilemesi yok (demo VE canlı)",
   'and not st.session_state.get("detay_lokasyon")):' in _ar_if and "SYNAPSE_DEMO" not in _ar_if, _ar_if)
 c("detay akışı: sunumda dalga, gerçekte gerçek ölçüm geçişi",
@@ -560,6 +560,45 @@ c("ic kartli grup duz sutun", "cg-liste-blok" in CI.grup_html("E", "", _ak, 1.0,
   and "cg-liste-blok" not in CI.grup_html("E", "", "", 1.0, 1))
 c("sayfa: kojen ayri kart degil, enerji kartinda", '_gruplar = [g for g in _gruplar if g[0] != "kojen"]' in _sy)
 c("sayfa modul surumu 10 istiyor", "_CI_GEREKEN_SURUM = 10" in _sy and CI.SURUM >= 10)
+
+# ── 26.10.2026: ana sayfada tam yenileme yok, canlı değerler küçük parçayla ──
+c("ana sayfada 10 sn'lik tam sayfa yenilemesi kapali", "_TAM_YENILEME = False" in _MRK
+  and "if (_TAM_YENILEME and" in _MRK)
+c("canli degerler 15 sn'de bir kucuk parcayla tazelenir",
+  "CANLI_TAZELE_SN = 15" in _MRK and "@st.fragment(run_every=CANLI_TAZELE_SN)" in _MRK
+  and "_canli_tazele()" in _MRK)
+_tz = CI.tazele_betigi({"kart": {"maslak": {"d": 2000.0, "o": 1900.0, "t": 1.0, "s": 15.0}},
+                        "ozet": {"enerji": {"d": 5.0, "o": None, "t": None, "s": None}}, "harita": {}})
+c("tazeleme betigi deger/onceki/zaman/sureyi yeniler",
+  "setAttribute('data-deger'" in _tz and "setAttribute('data-onceki'" in _tz
+  and '"maslak": {"d": 2000.0' in _tz)
+c("tazeleme: onceki olcum yoksa gecis ozellikleri silinir (deger uydurulmaz)",
+  "removeAttribute(a)" in _tz)
+c("tazeleme W/m2 carpanini korur", "data-carpan" in _tz and 'data-carpan="{1000.0 / m2_lok:.6f}"' in _MRK)
+c("harita tazelenen degeri okur", "W.__synHaritaTaban || taban" in CI.akis_betigi())
+
+# ── 26.10.2026: Türkçe ay adları, geçen yılın aynı ayı, Kocaeli yok ──
+_ns = {}
+exec(SAYFA[SAYFA.index("_AY_TR = ["):SAYFA.index("def _demo_modu()")], _ns)
+c("ay adlari Turkce", _ns["_tr_tarih"](datetime(2026, 10, 25), "%B %Y") == "Ekim 2026"
+  and _ns["_tr_tarih"](datetime(2026, 10, 1), "%d %b %Y") == "01 Eki 2026")
+c("sayfada Ingilizce ay bicimi kalmadi (aciklama satirlari haric)",
+  not any(re.search(r"strftime\([\"'][^\"']*%[bB]", l) for l in SAYFA.splitlines()
+          if not l.strip().startswith("#")))
+exec(SAYFA[SAYFA.index("def _tr_buyuk("):SAYFA.index("def _demo_modu()")], _ns)
+c("Turkce buyuk harf (EKIM degil EKİM)", _ns["_tr_buyuk"]("Ekim 2026") == "EKİM 2026")
+c("tarih eksenli grafiklerde ay adi yazilmaz (Oct 6 yerine 06.10)",
+  not re.search(r"st\.plotly_chart\(\s*fig\w*\s*[,)]", SAYFA)
+  and SAYFA.count("st.plotly_chart(_tr_eksen(") >= 10)
+c("ay karsilastirmasi gecen yilin ayni ayiyla",
+  '("Bu Ay vs Geçen Yılın Aynı Ayı", "ay_karsilastir", "kWh")' in SAYFA
+  and "gec_ay_bas = bu_ay_bas.replace(year=bu_ay_bas.year - 1)" in SAYFA
+  and "Bu Ay vs Geçen Ay\"" not in SAYFA)
+_RAP = open(os.path.join(BURASI, "pages", "rapor_olustur.py"), encoding="utf-8").read()
+# (haritadaki "İstanbul sınırı ... Kocaeli" coğrafi notu lokasyon değil)
+c("Kocaeli hicbir lokasyon listesinde yok",
+  all('"kocaeli":' not in m for m in (_MRK, SAYFA, _RAP))
+  and "kocaeli" not in {l for l, _, _ in S.LOKASYONLAR} and "kocaeli" not in S.SIM_KONUM)
 
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))

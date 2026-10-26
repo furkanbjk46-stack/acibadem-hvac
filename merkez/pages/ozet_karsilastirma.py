@@ -21,6 +21,30 @@ import sys as _sys
 
 import pandas as _pd
 
+
+def _tr_buyuk(s: str) -> str:
+    """Türkçe büyük harf: "Ekim" → "EKİM" (str.upper / CSS "EKIM" yazıyordu)."""
+    return s.replace("i", "İ").replace("ı", "I").upper()
+
+
+def _tr_eksen(fig):
+    """Tarih eksenli grafikte ay adı yazılmasın: grafik kütüphanesi "Oct 6"
+    gibi İngilizce yazıyordu (26.10.2026). Tarih ekseni "06.10" olur."""
+    try:
+        import datetime as _dtm
+        for _tr in fig.data:
+            _x = getattr(_tr, "x", None)
+            if _x is None or not len(_x):
+                continue
+            # pandas tarihleri grafikte numpy datetime64 dizisi olarak durur
+            if ("datetime" in str(getattr(_x, "dtype", ""))
+                    or isinstance(_x[0], (_dtm.date, _dtm.datetime)) or hasattr(_x[0], "strftime")):
+                fig.update_xaxes(tickformat="%d.%m", hoverformat="%d.%m.%Y")
+                break
+    except Exception:
+        pass
+    return fig
+
 # exec ile app_merkez globals'i icinde calistigi icin __file__ = app_merkez.py;
 # dirname'i merkez/ klasoru → ortak moduller buradan gelir.
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
@@ -386,7 +410,7 @@ with _sol:
                         font=dict(size=9), bgcolor="rgba(0,0,0,0)"),
             clickmode="event+select",
         )
-        _olay = st.plotly_chart(_f, use_container_width=True,
+        _olay = st.plotly_chart(_tr_eksen(_f), use_container_width=True,
                                 key=f"ozet_bar_kirilim_{_metrik_key}",
                                 on_select="rerun", selection_mode="points")
     else:

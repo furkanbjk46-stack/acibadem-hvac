@@ -155,7 +155,7 @@ def _ozet_coz(l):
 
 _lok_ozet = {l["lokasyon_id"]: _ozet_coz(l) for l in S.veri_uret()["lokasyonlar"]}
 _konumlu = {k: v["konum"] for k, v in _lok_ozet.items() if v.get("konum")}
-c("simulasyonda her aktif lokasyon konum bildirir", len(_konumlu) >= 20, len(_konumlu))
+c("simulasyonda her aktif lokasyon konum bildirir", len(_konumlu) >= 19, len(_konumlu))
 c("simulasyonda konumlar lokasyona gore farkli",
   len({(k["enlem"], k["boylam"]) for k in _konumlu.values()}) >= 5,
   len({(k["enlem"], k["boylam"]) for k in _konumlu.values()}))

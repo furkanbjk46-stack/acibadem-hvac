@@ -50,7 +50,7 @@ LOKASYONLAR = [
     ("international", "INTERNAT.", 18000), ("kadikoy", "KADİKÖY", 8000),
     ("kartal", "KARTAL", 11000), ("ankara", "ANKARA", 16000),
     ("bayindir", "BAYINDIR", 12000), ("bursa", "BURSA", 13000),
-    ("kocaeli", "KOCAELİ", 10000), ("eskisehir", "ESKİŞEHİR", 9000),
+    ("eskisehir", "ESKİŞEHİR", 9000),
     ("izmir", "İZMİR", 15000), ("kayseri", "KAYSERİ", 11000),
     ("adana", "ADANA", 12000), ("adana_ortopedia", "ADANA ORT.", 5000),
     ("bodrum", "BODRUM", 7000),
@@ -62,7 +62,7 @@ LOKASYONLAR = [
 # aksi halde 21 hastane de ayni sicakligi gosteriyordu.
 SEHIR_SICAKLIK_FARKI = {
     "adana": 4.5, "adana_ortopedia": 4.5, "bodrum": 3.5, "izmir": 2.5,
-    "bursa": 0.5, "kocaeli": 0.0, "eskisehir": -3.0, "ankara": -2.5,
+    "bursa": 0.5, "eskisehir": -3.0, "ankara": -2.5,
     "bayindir": -2.5, "kayseri": -4.5,
 }
 
@@ -79,7 +79,7 @@ DIG_NOKTALAR = ["GUNDUZ_KOLLEKTOR_SET", "GECE_KOLLEKTOR_SET", "A_BLOK_FCU_SET",
 # Listede olmayan lokasyon Istanbul merkezine dusurulur.
 SIM_KONUM = {
     "ankara": (39.9334, 32.8597), "bayindir": (39.9334, 32.8597),
-    "bursa": (40.1885, 29.0610), "kocaeli": (40.7654, 29.9408),
+    "bursa": (40.1885, 29.0610),
     "eskisehir": (39.7767, 30.5206), "izmir": (38.4237, 27.1428),
     "kayseri": (38.7312, 35.4787), "adana": (37.0000, 35.3213),
     "adana_ortopedia": (37.0000, 35.3213), "bodrum": (37.0344, 27.4305),

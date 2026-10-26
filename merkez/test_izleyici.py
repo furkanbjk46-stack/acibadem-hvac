@@ -98,6 +98,12 @@ c("izleyici: yazan rpc engelli", engellendi_mi(lambda: cl.rpc("veri_sil")))
 c("izleyici: okuma rpc serbest", not engellendi_mi(lambda: cl.rpc("synapse_kullanim")))
 c("izleyici: REST GET serbest",
   not engellendi_mi(lambda: urllib.request.urlopen(istek("/rest/v1/ayarlar?key=eq.x"))))
+# HIZ (26.10.2026): istemci (url, anahtar) başına bir kez kurulur. Yönetici
+# oturumunda kurulan istemci önbellekten gelse de izleyici engeli işlemeli
+# (yukarıdaki izleyici kontrolleri zaten önbellekteki istemciyle çalıştı).
+c("istemci tekrar kullanilir (her sorguda yeni HTTPS istemcisi kurulmaz)",
+  create_client(U, "k")._ic is create_client(U, "k")._ic)
+c("farkli anahtar ayri istemci", create_client(U, "k")._ic is not create_client(U, "k2")._ic)
 for m in ("POST", "PATCH", "PUT", "DELETE"):
     c("izleyici: REST %s engelli" % m,
       engellendi_mi(lambda m=m: urllib.request.urlopen(istek("/rest/v1/ayarlar", m, b"{}"))))

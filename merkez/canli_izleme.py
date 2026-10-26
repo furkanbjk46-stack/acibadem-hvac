@@ -723,6 +723,41 @@ def akan(deger, ond: int = 1, faz: str = "", onceki=None, t=None, sure=None) -> 
             f"data-ond='{ond}' data-faz='{faz}'{ek}>{tr_sayi(deger, ond)}</span>")
 
 
+def tazele_betigi(veri: dict) -> str:
+    """Ana sayfadaki canlı sayıların ALTINDAKİ değeri yeniler (sayfa yeniden çizilmez).
+
+    veri = {"kart": {lok: g}, "ozet": {anahtar: g}, "harita": {lok: {...}}}
+    g = {"d": son, "o": önceki|None, "t": zaman, "s": süre|None}. Kart/özet
+    span'larının data-deger / data-onceki / data-t / data-sure öznitelikleri
+    güncellenir; saniyelik akış (akis_betigi) yeni değerlerle devam eder.
+    data-carpan (W/m² = kW × 1000/m²) korunur.
+    """
+    import json
+    return """
+<script>
+(function () {
+  var veri = %s, W = window.parent, d;
+  try { d = W.document; } catch (e) { return; }
+  d.querySelectorAll('.canli-sayi[data-faz]').forEach(function (el) {
+    var fz = el.getAttribute('data-faz');
+    var g = fz.indexOf('ozet-') === 0 ? (veri.ozet || {})[fz.slice(5)] : (veri.kart || {})[fz];
+    if (!g || g.d == null) { return; }
+    var c = parseFloat(el.getAttribute('data-carpan') || '1');
+    el.setAttribute('data-deger', (g.d * c).toFixed(3));
+    if (g.o != null && g.s) {
+      el.setAttribute('data-onceki', (g.o * c).toFixed(3));
+      el.setAttribute('data-t', Number(g.t).toFixed(3));
+      el.setAttribute('data-sure', Number(g.s).toFixed(1));
+    } else {
+      ['data-onceki', 'data-t', 'data-sure'].forEach(function (a) { el.removeAttribute(a); });
+    }
+  });
+  if (veri.harita) { W.__synHaritaTaban = veri.harita; }
+})();
+</script>
+""" % json.dumps(veri, ensure_ascii=False)
+
+
 def akis_betigi(harita_taban: dict = None, mod: str = "dalga") -> str:
     """.canli-sayi öğelerini (ve verilirse harita penceresini) saniyede bir günceller.
 
@@ -740,6 +775,8 @@ def akis_betigi(harita_taban: dict = None, mod: str = "dalga") -> str:
   var W = window.parent;
   if (W.__synAkis) { W.clearInterval(W.__synAkis); }
   W.__synGecisBas = W.__synGecisBas || {};
+  // Harita değerleri: tazele_betigi 15 sn'de bir yenisini buraya koyar
+  W.__synHaritaTaban = taban;
   function faz(s) { var h = 0; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) %% 1000; } return h / 1000 * 6.2832; }
   function carpan(s, t) { var p = faz(s); return 1 + 0.025 * Math.sin(t / 9 + p) + 0.012 * Math.sin(t / 2.7 + 2 * p) + 0.006 * Math.sin(t / 1.1 + 3 * p); }
   function yaz(x, ond) { return x.toLocaleString('tr-TR', {minimumFractionDigits: ond, maximumFractionDigits: ond}); }
@@ -769,11 +806,12 @@ def akis_betigi(harita_taban: dict = None, mod: str = "dalga") -> str:
       el.textContent = yaz(gecis(fz, o == null ? null : parseFloat(o), v,
                                  el.getAttribute('data-t'), parseFloat(el.getAttribute('data-sure')), simdi), ond);
     });
-    var lokler = Object.keys(taban);
+    var hb = W.__synHaritaTaban || taban;
+    var lokler = Object.keys(hb);
     if (!lokler.length) { return; }
     var veri = {};
     lokler.forEach(function (lok) {
-      var s = harita_deger(lok, 'sebeke', taban[lok].sebeke, simdi), k = harita_deger(lok, 'kojen', taban[lok].kojen, simdi);
+      var s = harita_deger(lok, 'sebeke', hb[lok].sebeke, simdi), k = harita_deger(lok, 'kojen', hb[lok].kojen, simdi);
       veri[lok] = {sebeke: s == null ? null : yaz(s, 0), kojen: k == null ? null : yaz(k, 0)};
     });
     d.querySelectorAll('iframe[src^="data:text/html;base64"]').forEach(function (f) {

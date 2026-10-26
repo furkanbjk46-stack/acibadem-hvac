@@ -101,8 +101,6 @@ HASTANELER = {
     "bayindir":        {"isim": "Acibadem Bayindir Sogutozu", "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
     # ── Bursa ──
     "bursa":           {"isim": "Acibadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#c98500"},
-    # ── Kocaeli ──
-    "kocaeli":         {"isim": "Acibadem Kocaeli",           "kisa": "KOCAELI",     "m2": 10000, "renk": "#0ca30c"},
     # ── Eskişehir ──
     "eskisehir":       {"isim": "Acibadem Eskisehir",         "kisa": "ESKISEHIR",   "m2":  9000, "renk": "#818cf8"},
     # ── İzmir ──
