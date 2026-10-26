@@ -107,6 +107,8 @@ c("saldiri oklari yalniz demoda", '_saldiri_js = _SALDIRI_JS if _demo_modu() els
 c("genel mudurluk Atasehir'de", "var GM_ID = 'atasehir';" in _m and "GENEL MÜDÜRLÜK" in _m)
 c("ok yalniz cevrimici lokasyonlardan", "h.durum !== 'Çevrimiçi') return;" in _m)
 c("lejantta 'saldiri' yazmiyor", "saldırı</div>" not in _m)
+c("ok ve durum renkleri ayni kod", "'Çevrimiçi': '#0ca30c', 'Çevrimdışı': '#d03b3b', 'Kurulmadı': '#6b7280'" in _m
+  and 'd_renk = "#0ca30c" if online else ("#6b7280" if fark_dk is None else "#d03b3b")' in _m)
 
 print("\n%d/%d PASS" % (sum(SONUC), len(SONUC)))
 sys.exit(0 if all(SONUC) else 1)

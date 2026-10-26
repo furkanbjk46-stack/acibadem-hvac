@@ -353,9 +353,10 @@ _SALDIRI_JS = r"""
   var GM = hospitals.filter(function (h) { return h.id === GM_ID; })[0];
   if (!GM) return;
   var NS = 'http://www.w3.org/2000/svg';
-  var RENK = { 'Çevrimiçi': '#12c79a', 'Çevrimdışı': '#ff3b30', 'Kurulmadı': '#9aa3b2' };
+  // Haritadaki lokasyon durum renkleriyle AYNI (Python: d_renk)
+  var RENK = { 'Çevrimiçi': '#0ca30c', 'Çevrimdışı': '#d03b3b', 'Kurulmadı': '#6b7280' };
   var azHareket = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var gmRenk = '#12c79a';
+  var gmRenk = RENK['Çevrimiçi'];
 
   var css = document.createElement('style');
   css.textContent =
@@ -435,7 +436,7 @@ _SALDIRI_JS = r"""
   hospitals.forEach(function (h, i) {
     // Ok YALNIZCA çevrimiçi lokasyonlardan çıkar
     if (h.id === GM_ID || h.durum !== 'Çevrimiçi') return;
-    var renk = RENK['Çevrimiçi'];
+    var renk = h.renk || RENK['Çevrimiçi'];   // noktanın kendi rengi
     var aktif = true;
     var saldiri = false;
     var g = document.createElementNS(NS, 'g');
