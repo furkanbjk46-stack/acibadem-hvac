@@ -342,6 +342,191 @@ HASTANELER = {
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "merkez_config.json")
 
+# ── SUNUM haritası: Genel Müdürlük (Ataşehir) + lokasyonlardan gelen akan oklar ──
+# Harita HTML'ine YALNIZCA demo modunda eklenir. Düz metin (f-string değil):
+# süslü parantezler tek yazılır. Oklar kendi Leaflet panesinde, işaretçilerin
+# ALTINDA çizilir; kaydırmada/yakınlaştırmada yeniden hesaplanır.
+_SALDIRI_JS = r"""
+// ══ SUNUM: GENEL MÜDÜRLÜK + SALDIRI OKLARI (yalnız demo) ══
+(function () {
+  var GM_ID = 'atasehir';
+  var GM = hospitals.filter(function (h) { return h.id === GM_ID; })[0];
+  if (!GM) return;
+  var NS = 'http://www.w3.org/2000/svg';
+  var RENK = { 'Çevrimiçi': '#12c79a', 'Çevrimdışı': '#ff3b30', 'Kurulmadı': '#9aa3b2' };
+  var azHareket = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var saldiriVar = hospitals.some(function (h) { return h.id !== GM_ID && h.durum === 'Çevrimdışı'; });
+  var gmRenk = saldiriVar ? '#ff3b30' : '#12c79a';
+
+  var css = document.createElement('style');
+  css.textContent =
+    '.sd-taban{fill:none;stroke-width:2;stroke-linecap:round;opacity:.55}' +
+    '.sd-akis{fill:none;stroke-width:2;stroke-linecap:round;stroke-dasharray:2 11;animation:sdAkis 1.1s linear infinite;opacity:.95}' +
+    '.sd-akis.hizli{animation-duration:.6s}' +
+    '.sd-kuyruk{fill:none;stroke-width:3.4;stroke-linecap:round}' +
+    '.sd-ok{filter:drop-shadow(0 0 4px currentColor)}' +
+    '.sd-grup{filter:drop-shadow(0 0 3px currentColor)}' +
+    '@keyframes sdAkis{to{stroke-dashoffset:-26}}' +
+    '@keyframes sdHalka{0%{transform:scale(.35);opacity:.75}100%{transform:scale(2.3);opacity:0}}' +
+    '@keyframes sdBina{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}' +
+    '@keyframes sdPencere{0%,100%{opacity:.35}50%{opacity:1}}' +
+    '.gm-kap{position:relative;width:64px;height:78px;pointer-events:auto}' +
+    '.gm-halka{position:absolute;left:12px;top:30px;width:40px;height:40px;border-radius:50%;' +
+      'border:2px solid ' + gmRenk + ';animation:sdHalka 2.4s ease-out infinite}' +
+    '.gm-halka.h2{animation-delay:.8s}.gm-halka.h3{animation-delay:1.6s}' +
+    '.gm-bina{position:absolute;left:16px;top:6px;width:32px;height:44px;animation:sdBina 3s ease-in-out infinite;' +
+      'filter:drop-shadow(0 2px 4px rgba(19,50,115,.35)) drop-shadow(0 0 8px ' + gmRenk + '66)}' +
+    '.gm-bina .pc{animation:sdPencere 2.2s ease-in-out infinite}' +
+    '.gm-bina .pc.g1{animation-delay:.4s}.gm-bina .pc.g2{animation-delay:.9s}.gm-bina .pc.g3{animation-delay:1.4s}' +
+    '.gm-etiket{position:absolute;left:50%;top:54px;transform:translateX(-50%);white-space:nowrap;' +
+      'font:800 8px Inter,system-ui,sans-serif;letter-spacing:1.4px;color:#133273;background:rgba(250,250,248,.92);' +
+      'border:1px solid ' + gmRenk + ';border-radius:6px;padding:2px 6px;box-shadow:0 0 8px ' + gmRenk + '55}' +
+    '.sd-lejant{position:absolute;left:10px;bottom:10px;z-index:800;background:rgba(250,250,248,.92);' +
+      'border:1px solid rgba(19,50,115,.14);border-radius:10px;padding:8px 10px;font:600 10px Inter,system-ui,sans-serif;' +
+      'color:#24324d;box-shadow:0 6px 16px -10px rgba(20,22,26,.35);pointer-events:none}' +
+    '.sd-lejant b{display:block;font-size:8px;letter-spacing:1.6px;color:#133273;margin-bottom:5px}' +
+    '.sd-lejant i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}' +
+    '.sd-lejant div{margin-top:3px}';
+  document.head.appendChild(css);
+
+  // ── Genel Müdürlük binası (Ataşehir) ──
+  var binaSvg =
+    '<svg class="gm-bina" viewBox="0 0 32 44" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="3" y="40" width="26" height="3" rx="1" fill="#0f1f3d"/>' +
+      '<path d="M5 40V12l11-8 11 8v28z" fill="#133273"/>' +
+      '<path d="M16 4l11 8v28H16z" fill="#0f2a63"/>' +
+      '<rect x="13" y="1" width="6" height="4" rx="1" fill="' + gmRenk + '"/>' +
+      '<g fill="#7dd3fc">' +
+        '<rect class="pc" x="8" y="15" width="4" height="4" rx=".6"/><rect class="pc g2" x="14" y="15" width="4" height="4" rx=".6"/><rect class="pc g1" x="20" y="15" width="4" height="4" rx=".6"/>' +
+        '<rect class="pc g3" x="8" y="22" width="4" height="4" rx=".6"/><rect class="pc g1" x="14" y="22" width="4" height="4" rx=".6"/><rect class="pc g2" x="20" y="22" width="4" height="4" rx=".6"/>' +
+        '<rect class="pc g2" x="8" y="29" width="4" height="4" rx=".6"/><rect class="pc g3" x="20" y="29" width="4" height="4" rx=".6"/>' +
+      '</g>' +
+      '<rect x="13.5" y="31" width="5" height="9" rx=".8" fill="' + gmRenk + '"/>' +
+    '</svg>';
+  L.marker([GM.lat, GM.lon], {
+    icon: L.divIcon({
+      className: '',
+      html: '<div class="gm-kap"><div class="gm-halka"></div><div class="gm-halka h2"></div><div class="gm-halka h3"></div>' +
+            binaSvg + '<div class="gm-etiket">GENEL MÜDÜRLÜK</div></div>',
+      iconSize: [64, 78], iconAnchor: [32, 50]
+    }),
+    zIndexOffset: 1000
+  }).addTo(map).bindTooltip('Acıbadem Genel Müdürlük · Ataşehir', { direction: 'top', offset: [0, -48] });
+
+  // ── Lejant ──
+  var lej = document.createElement('div');
+  lej.className = 'sd-lejant';
+  lej.innerHTML = '<b>MERKEZ BAĞLANTILARI · SİMÜLASYON</b>' +
+    '<div><i style="background:' + RENK['Çevrimiçi'] + '"></i>Çevrimiçi</div>' +
+    '<div><i style="background:' + RENK['Çevrimdışı'] + '"></i>Çevrimdışı · saldırı</div>' +
+    '<div><i style="background:' + RENK['Kurulmadı'] + '"></i>Kurulmadı</div>';
+  map.getContainer().appendChild(lej);
+
+  // ── Ok katmanı: kendi panesinde, işaretçilerin altında ──
+  var pane = map.createPane('saldiriPane');
+  pane.style.zIndex = 450;
+  pane.style.pointerEvents = 'none';
+  var svg = document.createElementNS(NS, 'svg');
+  svg.style.position = 'absolute';
+  svg.style.overflow = 'visible';
+  pane.appendChild(svg);
+
+  var OKLAR = [];
+  hospitals.forEach(function (h, i) {
+    if (h.id === GM_ID) return;
+    var renk = RENK[h.durum] || RENK['Kurulmadı'];
+    var aktif = h.durum !== 'Kurulmadı';
+    var saldiri = h.durum === 'Çevrimdışı';
+    var g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'sd-grup');
+    g.style.color = renk;
+    function yol(sinif) {
+      var p = document.createElementNS(NS, 'path');
+      p.setAttribute('class', sinif);
+      p.setAttribute('stroke', renk);
+      g.appendChild(p);
+      return p;
+    }
+    var taban = yol('sd-taban');
+    if (!aktif) { taban.setAttribute('stroke-dasharray', '3 6'); }
+    var akis = aktif ? yol('sd-akis' + (saldiri ? ' hizli' : '')) : null;
+    var kuyruk = null, ok = null;
+    if (aktif && !azHareket) {
+      kuyruk = yol('sd-kuyruk');
+      ok = document.createElementNS(NS, 'path');
+      ok.setAttribute('d', 'M8 0L-5 -5.5L-2 0L-5 5.5Z');
+      ok.setAttribute('fill', renk);
+      ok.setAttribute('class', 'sd-ok');
+      g.appendChild(ok);
+    }
+    svg.appendChild(g);
+    OKLAR.push({
+      h: h, taban: taban, akis: akis, kuyruk: kuyruk, ok: ok, uzunluk: 0,
+      sure: saldiri ? 1500 + (i % 4) * 180 : 2600 + (i % 5) * 260,
+      faz: (i * 0.37) % 1
+    });
+  });
+
+  function ciz() {
+    var boyut = map.getSize();
+    var solUst = map.containerPointToLayerPoint([0, 0]);
+    L.DomUtil.setPosition(svg, solUst);
+    svg.setAttribute('width', boyut.x);
+    svg.setAttribute('height', boyut.y);
+    var hedef = map.latLngToContainerPoint([GM.lat, GM.lon]);
+    hedef = L.point(hedef.x, hedef.y - 6);
+    OKLAR.forEach(function (o) {
+      var kaynak = map.latLngToContainerPoint([o.h.lat, o.h.lon]);
+      var dx = hedef.x - kaynak.x, dy = hedef.y - kaynak.y;
+      var d = Math.sqrt(dx * dx + dy * dy) || 1;
+      var nx = -dy / d, ny = dx / d;
+      if (ny > 0) { nx = -nx; ny = -ny; }              // kavis hep yukarı
+      var yuk = Math.max(14, Math.min(d * 0.38, 320));
+      var cx = (kaynak.x + hedef.x) / 2 + nx * yuk, cy = (kaynak.y + hedef.y) / 2 + ny * yuk;
+      var dStr = 'M' + kaynak.x.toFixed(1) + ' ' + kaynak.y.toFixed(1) +
+                 ' Q' + cx.toFixed(1) + ' ' + cy.toFixed(1) +
+                 ' ' + hedef.x.toFixed(1) + ' ' + hedef.y.toFixed(1);
+      o.taban.setAttribute('d', dStr);
+      if (o.akis) o.akis.setAttribute('d', dStr);
+      if (o.kuyruk) {
+        o.kuyruk.setAttribute('d', dStr);
+        o.uzunluk = o.kuyruk.getTotalLength();
+      }
+    });
+    animasyon(performance.now());
+  }
+
+  function animasyon(simdi) {
+    OKLAR.forEach(function (o) {
+      if (!o.kuyruk || o.uzunluk < 4) {
+        if (o.kuyruk) { o.kuyruk.style.opacity = 0; o.ok.style.opacity = 0; }
+        return;
+      }
+      var L_ = o.uzunluk;
+      var t = ((simdi / o.sure) + o.faz) % 1;
+      var s = t * L_;
+      var kuyrukBoy = Math.min(70, L_ * 0.45);
+      o.kuyruk.setAttribute('stroke-dasharray', kuyrukBoy + ' ' + (L_ + kuyrukBoy));
+      o.kuyruk.setAttribute('stroke-dashoffset', (kuyrukBoy - s).toFixed(1));
+      var sol = t < 0.1 ? t / 0.1 : (t > 0.9 ? (1 - t) / 0.1 : 1);   // uçta yumuşak giriş/çıkış
+      o.kuyruk.style.opacity = (0.95 * sol).toFixed(2);
+      var p = o.kuyruk.getPointAtLength(s);
+      var q = o.kuyruk.getPointAtLength(Math.max(0, s - 1.5));
+      var aci = Math.atan2(p.y - q.y, p.x - q.x) * 180 / Math.PI;
+      o.ok.setAttribute('transform', 'translate(' + p.x.toFixed(1) + ' ' + p.y.toFixed(1) + ') rotate(' + aci.toFixed(1) + ')');
+      o.ok.style.opacity = sol.toFixed(2);
+    });
+  }
+
+  function dongu(simdi) { animasyon(simdi); requestAnimationFrame(dongu); }
+  map.on('zoomstart', function () { pane.style.opacity = 0; });
+  map.on('zoomend', function () { ciz(); pane.style.transition = 'opacity .25s'; pane.style.opacity = 1; });
+  map.on('move resize viewreset', ciz);
+  [0, 150, 450, 1300].forEach(function (ms) { setTimeout(ciz, ms); });
+  if (!azHareket) requestAnimationFrame(dongu);
+})();
+"""
+
 @st.cache_resource(show_spinner=False)
 def _demo_sunucusu_baslat():
     """Sunum modunda örnek veri sunucusunu UYGULAMA İÇİNDE başlatır.
@@ -1721,6 +1906,13 @@ with merkez:
     else:
         _odak = "null"   # İstanbul'da lokasyon yoksa Türkiye geneli görünümü kalır
 
+    # ── SUNUM: Genel Müdürlük + lokasyonlardan gelen hareketli kavisli oklar ──
+    # YALNIZCA demo/simülasyon modunda haritaya eklenir (üretim haritası aynı kalır).
+    # Ataşehir'e genel müdürlük binası konur; diğer her lokasyondan oraya kavisli,
+    # akan bir ok çizilir. Renk lokasyonun durumuna göre: çevrimiçi turkuaz,
+    # çevrimdışı kırmızı (saldırı), kurulmadı gri (hareketsiz, soluk).
+    _saldiri_js = _SALDIRI_JS if _demo_modu() else ""
+
     harita_html = f"""<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
@@ -1951,6 +2143,7 @@ hospitals.forEach(function(h) {{
     dot.bindPopup(popupIcerik, {{ maxWidth:240, className:'' }});
     POPUPLAR.push({{ dot: dot, icerik: popupIcerik }});
 }});
+{_saldiri_js}
 
 // Ana sayfadan gelen anlık değerler: {{tip:'synapse-canli', veri:{{lok:{{sebeke,kojen}}}}}}
 window.addEventListener('message', function(ev) {{

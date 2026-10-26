@@ -101,5 +101,11 @@ c("her grafik kalemine ozel akan desen", all(("\"%s\":" % k) in _l for k in
   ("tuketim", "su", "sogutma", "sebeke", "mcc", "kazan", "kojen", "trafo")) and "animateTransform" in _l)
 c("halka grafik yazilari okunur", 'outsidetextfont=dict(size=12, color="#133273")' in _l and "#c8e6ff" not in _l)
 
+# 26.10.2026 — sunum haritası: genel müdürlük + akan oklar (YALNIZ demo)
+c("saldiri oklari yalniz demoda", '_saldiri_js = _SALDIRI_JS if _demo_modu() else ""' in _m
+  and "{_saldiri_js}" in _m)
+c("genel mudurluk Atasehir'de", "var GM_ID = 'atasehir';" in _m and "GENEL MÜDÜRLÜK" in _m)
+c("ok rengi duruma gore", all(k in _m for k in ("'Çevrimiçi': '#12c79a'", "'Çevrimdışı': '#ff3b30'", "'Kurulmadı': '#9aa3b2'")))
+
 print("\n%d/%d PASS" % (sum(SONUC), len(SONUC)))
 sys.exit(0 if all(SONUC) else 1)
