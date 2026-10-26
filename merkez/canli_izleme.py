@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 8
+SURUM = 9
 
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
@@ -431,10 +431,25 @@ def olculmeyen_satir_html(ad: str, aciklama: str, sag: str = "veri çekilemiyor"
             f"<div class='cg-dg cg-dg-yok'>{sag}</div></div>")
 
 
+def alt_kart_html(baslik: str, toplam_html: str, satirlar: str, bekliyor: bool = False) -> str:
+    """Grup kartının İÇİNDE ayrı kart (ör. ENERJİ KAYNAĞI → TRAFO | KOJEN ÜRETİM).
+
+    Kendi başlığı ve toplamı vardır; satırları ana listeyle AYNI sütun
+    düzenindedir ki iki iç kartın çubukları alt alta hizalı dursun.
+    """
+    sinif = "cg-altkart cg-altkart-bekle" if bekliyor else "cg-altkart"
+    return (f"<div class='{sinif}'><div class='cg-altkart-bas'><span>{baslik}</span>"
+            f"<span class='cg-altkart-tp'>{toplam_html}</span></div>"
+            f"<div class='cg-liste cg-liste-ic'>{satirlar}</div></div>")
+
+
 def grup_html(baslik: str, aciklama: str, satirlar: str, toplam_kw,
               okunan: int, olcusuz: int = 0, yukseklik: int = 430, birim: str = "kW",
-              gecis: tuple = None) -> str:
-    """Bir grup kartı. Liste uzarsa KART değil liste kayar."""
+              gecis: tuple = None, ic_kartli: bool = False) -> str:
+    """Bir grup kartı. Liste uzarsa KART değil liste kayar.
+
+    ic_kartli: satırlar alt_kart_html bloklarıysa liste ızgara değil düz
+    sütundur (iç kartlar kendi ızgarasını taşır)."""
     _t = '—' if toplam_kw is None else akan(toplam_kw, 1, 'grup-' + baslik, *(gecis or ())) + ' ' + birim
     ust = f"<div class='cg-toplam'>{_t}</div>"
     dip = "%d kalem canlı okunuyor" % okunan
@@ -442,7 +457,7 @@ def grup_html(baslik: str, aciklama: str, satirlar: str, toplam_kw,
         dip += " · %d kalemde sayaç yok" % olcusuz
     return (f"<div class='cg-grup'><h4>{baslik}{ust}</h4>"
             f"<div class='cg-ack'>{aciklama}</div>"
-            f"<div class='cg-liste' style='max-height:{yukseklik}px'>{satirlar}</div>"
+            f"<div class='cg-liste{' cg-liste-blok' if ic_kartli else ''}' style='max-height:{yukseklik}px'>{satirlar}</div>"
             f"<div class='cg-dip'>{dip}</div></div>")
 
 
@@ -526,6 +541,17 @@ STIL = """
    adlar sabit 104px'e sığmayıp "2BK-MCC-D0…" diye kesiliyordu (21.10.2026).
    Çizgiye en az 60px bırakılır ki uzun bir ad grafiği yutmasın. */
 .cg-satir{display:contents;}
+/* ── Grup içinde iç kartlar (ENERJİ KAYNAĞI → TRAFO | KOJEN ÜRETİM) ── */
+.cg-liste.cg-liste-blok{display:flex; flex-direction:column; align-items:stretch; gap:9px;}
+.cg-altkart{background:#f8fafd; border:1px solid rgba(24,26,30,.09); border-radius:13px;
+  padding:7px 10px 3px; flex:0 0 auto;}
+.cg-altkart-bas{display:flex; justify-content:space-between; align-items:baseline;
+  font-size:10.5px; font-weight:700; letter-spacing:1.3px; color:#133273;
+  padding:2px 0 4px; border-bottom:1px solid rgba(24,26,30,.07);}
+.cg-altkart-tp{font-size:14px; letter-spacing:0;}
+.cg-altkart-bekle .cg-altkart-tp{font-size:10.5px; font-weight:600; color:#9aa2b1;}
+.cg-liste.cg-liste-ic{overflow:visible; max-height:none; padding-right:0; flex:0 0 auto;}
+.cg-liste-ic > .cg-satir > *{padding:7px 0;}
 .cg-liste > .cg-satir > *{padding:10px 0; border-bottom:1px solid rgba(24,26,30,.06);}
 .cg-liste > .cg-satir:last-child > *{border-bottom:0;}
 .cg-cip{font-size:11px; font-weight:600; color:#0f1f3d; background:#f6f7f9;

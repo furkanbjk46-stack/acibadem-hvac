@@ -1899,7 +1899,7 @@ with tab_canli:
     # ise sürece BİR KEZ yüklenir. Yayın sonrası süreç yeniden başlamazsa
     # sayfa yeni, modül eski kalır ve burada olmayan bir işlev çağrılır
     # (21.10.2026: ekranda AttributeError çıktı). Sürüm tutmuyorsa tazele.
-    _CI_GEREKEN_SURUM = 8
+    _CI_GEREKEN_SURUM = 9
     if getattr(_CI, "SURUM", 0) < _CI_GEREKEN_SURUM:
         import importlib
         _CI = importlib.reload(_CI)
@@ -2028,15 +2028,9 @@ with tab_canli:
             # yoksa trafoların hepsi toplamın yanında cüce kalırdı.
             _olcek = _CI.olcek_degeri(seri, _cihazlar)
             _satirlar = ""
-            if _an == "enerji" and len(_cihazlar) > 1:
-                # Trafoların toplamı KENDİ ölçeğinde çizilir
-                _ust_olcek = max((v for v in _CI.toplam_seri(seri, _cihazlar)
-                                  if v is not None), default=0.0)
-                _satirlar += _CI.toplam_satir_html(
-                    "TRAFO", _tp, _CI.bar_html(_tp, _ust_olcek), faz="grup-" + _bas,
-                    gecis=_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure))
+            _cihaz_satirlari = ""
             for _c in _cihazlar:
-                _satirlar += _CI.satir_html(
+                _cihaz_satirlari += _CI.satir_html(
                     _c, degerler.get(_c),
                     _CI.bar_html(degerler.get(_c), _olcek, birim=_br,
                                  esikli=_an not in _CI.ESIKSIZ_GRUPLAR),
@@ -2044,34 +2038,46 @@ with tab_canli:
                     gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None)
             _olcusuz = 0
             _kart_toplam, _kart_gecis = _tp, _CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure)
-            if _an == "enerji":
-                # ── ÜRETİM: kojenler (canlı olanlar + sayacı beklenenler) ──
+            if _an != "enerji":
+                _satirlar = _cihaz_satirlari
+            else:
+                # ENERJİ KAYNAĞI içinde iki ayrı kart (26.10.2026):
+                #   TRAFO        → TRDP-1..4, başlıkta trafoların toplamı
+                #   KOJEN ÜRETİM → KOJEN-1..4, başlıkta üretim toplamı
+                _trafo_tp = ("—" if _tp is None else _CI.akan(
+                    _tp, 1, "grup-" + _bas, *(_kart_gecis or ())) + "<span class='cg-br'>kW</span>")
+                _satirlar += _CI.alt_kart_html("TRAFO", _trafo_tp, _cihaz_satirlari)
                 if _kojen_var:
-                    _ky = [v for v in _CI.toplam_seri(seri, _kojen_canli) if v is not None] if _kojen_canli else []
-                    if _kp is not None:
-                        _satirlar += _CI.toplam_satir_html(
-                            "ÜRETİM", _kp, _CI.bar_html(_kp, max(_ky, default=0.0), esikli=False),
-                            faz="grup-uretim",
-                            gecis=_CI.grup_gecis(_onc, degerler, _kojen_canli, _t_son, _sure))
-                    else:
-                        _satirlar += _CI.olculmeyen_satir_html("ÜRETİM", "kojen toplamı", sag="bekleniyor")
                     _kolcek = _CI.olcek_degeri(seri, _kojen_canli)
+                    _kojen_satirlari = ""
                     for _c in sorted(_kojen_canli + _kojen_bekleyen,
                                      key=lambda c: _CI._sira_anahtari(c, ("KOJEN-",))):
                         if _c in _kojen_canli:
-                            _satirlar += _CI.satir_html(
+                            _kojen_satirlari += _CI.satir_html(
                                 _c, degerler.get(_c),
                                 _CI.bar_html(degerler.get(_c), _kolcek, esikli=False),
                                 _yontemler.get(_c),
                                 gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None)
                         else:
-                            _satirlar += _CI.olculmeyen_satir_html(_c, _CI.KOJEN_BEKLEME_NOTU, sag="bekleniyor")
+                            _kojen_satirlari += _CI.olculmeyen_satir_html(
+                                _c, _CI.KOJEN_BEKLEME_NOTU, sag="bekleniyor")
+                    if _kp is not None:
+                        _kojen_tp = (_CI.akan(_kp, 1, "grup-uretim",
+                                              *(_CI.grup_gecis(_onc, degerler, _kojen_canli, _t_son, _sure) or ()))
+                                     + "<span class='cg-br'>kW</span>")
+                    else:
+                        _kojen_tp = "sayaç bekleniyor"
+                    _satirlar += _CI.alt_kart_html("KOJEN ÜRETİM", _kojen_tp, _kojen_satirlari,
+                                                   bekliyor=_kp is None)
                     _ok += sum(1 for _c in _kojen_canli if degerler.get(_c) is not None)
                     if _kp is not None:
                         _kart_toplam = round((_tp or 0) + _kp, 1)
                         _kart_gecis = _CI.grup_gecis(_onc, degerler, _cihazlar + _kojen_canli, _t_son, _sure)
-                for _ad, _neden in _olculmeyen:
-                    _satirlar += _CI.olculmeyen_satir_html(_ad, _neden)
+                # Canlı sayacı olmayan doğalgaz / su: iki kartın altında
+                if _olculmeyen:
+                    _satirlar += ("<div class='cg-liste cg-liste-ic'>" +
+                                  "".join(_CI.olculmeyen_satir_html(_ad, _neden) for _ad, _neden in _olculmeyen) +
+                                  "</div>")
                 _olcusuz = len(_olculmeyen) + len(_kojen_bekleyen)
 
             _ack = _CI.GRUP_ACIKLAMA.get(_an, "")
@@ -2083,7 +2089,8 @@ with tab_canli:
                     _ack += "; " + ", ".join(a.lower() for a, _ in _olculmeyen) + " kalemlerinde canlı sayaç yok"
             _grup_govde.append(_CI.grup_html(
                 _bas, _ack, _satirlar, _kart_toplam, _ok, _olcusuz, birim=_br,
-                gecis=_kart_gecis))
+                gecis=_kart_gecis, ic_kartli=(_an == "enerji"),
+                yukseklik=600 if _an == "enerji" else 430))
 
         _kartlar.append(_CI.ozet_kart_html(
             "OKUNABİLEN SAYAÇ",
