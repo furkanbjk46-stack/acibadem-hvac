@@ -134,6 +134,30 @@ def ozet_metni(veri: dict, hatalar: dict, kaynak: str, zaman: datetime) -> str:
     return "\n".join(satir) + "\n"
 
 
+def indir_dugmesi(st, etiket: str, uret, dosya: str, mime: str, anahtar: str, **kw):
+    """Tek tıkla indirme; eski Streamlit'te iki adım (Hazırla → İndir).
+
+    Tek tık, verinin düğmeye basıldığı ANDA üretilmesine (download_button'a
+    işlev verilmesine) dayanır; bu özellik yeni Streamlit sürümlerinde var.
+    Eski sürüm (ör. 1.42) işlevi reddedip hata fırlatıyor ve Ayarlar paneli
+    her çizimde arka planda kurulduğu için Uzaktan Kontrol sekmesi de hiç
+    çizilmiyordu (26.10.2026). Hata yakalanır, iki adımlı yola geçilir.
+    """
+    try:
+        return st.download_button(etiket, uret, file_name=dosya, mime=mime, key=anahtar,
+                                  on_click="ignore", **kw)
+    except Exception:
+        pass
+    veri_anahtari = anahtar + "_veri"
+    if st.button("Hazırla · " + etiket.replace("⬇️", "").strip(), key=anahtar + "_hazirla",
+                 disabled=kw.get("disabled", False),
+                 use_container_width=kw.get("use_container_width", False)):
+        st.session_state[veri_anahtari] = uret()
+    if veri_anahtari in st.session_state:
+        return st.download_button(etiket, st.session_state[veri_anahtari], file_name=dosya,
+                                  mime=mime, key=anahtar + "_indir", **kw)
+
+
 def paket(veri: dict, hatalar: dict, bicim: str, kaynak: str = "", zaman: datetime = None) -> tuple:
     """(dosya adı, bayt, mime). bicim: 'json' | 'csv'."""
     zaman = zaman or datetime.now()

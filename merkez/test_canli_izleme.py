@@ -528,6 +528,21 @@ c("[geçiş] ana ekran: kart / özet / harita gerçek ölçüm geçişiyle",
 c("kojen adlari KOJEN-1..4", CI.kojen_adlari() == ["KOJEN-1", "KOJEN-2", "KOJEN-3", "KOJEN-4"])
 c("canli gelen kojen bekleyenlerden duser", CI.kojen_bekleyenler(["KOJEN-1", "kojen-3"]) == ["KOJEN-2", "KOJEN-4"])
 c("hic canli kojen yoksa dordu de bekler", len(CI.kojen_bekleyenler([])) == 4)
+# Kojen sayısı lokasyona göre (sabit 4, 2 kojenli hastanede olmayan KOJEN-3/4'ü
+# "bekleniyor" gösteriyordu)
+c("Maslak kojen sayisi sahada sayilmis (4)", CI.kojen_adedi("maslak") == 4)
+c("diger lokasyonda gunluk kayittaki en yuksek Kojen_Adet", CI.kojen_adedi("izmir", 2.0) == 2)
+c("kojen sayisi bilinmiyorsa None", CI.kojen_adedi("izmir", None) is None and CI.kojen_adedi("x", 0) is None)
+c("2 kojenli lokasyonda KOJEN-3/4 beklemez", CI.kojen_bekleyenler([], 2) == ["KOJEN-1", "KOJEN-2"])
+c("sayi bilinmiyor + canli kojen var: bekleyen uydurulmaz", CI.kojen_bekleyenler(["KOJEN-1", "KOJEN-2"], None) == [])
+c("sayi bilinmiyor + canli yok: tek KOJEN satiri", CI.kojen_bekleyenler([], None) == ["KOJEN"])
+c("detay sayfasi kojen sayisini lokasyondan alir",
+  "_CI.kojen_bekleyenler(_kojen_canli, _kojen_adet)" in SAYFA and "_CI.kojen_adedi(" in SAYFA)
+# Genel Müdürlük logosu Ataşehir hastanesinin noktasını örtmesin
+c("GM logosunun kabi tiklamayi gecirir, yalniz logo tiklanir",
+  "'.gm-kap{position:relative;width:64px;height:78px;pointer-events:none}'" in _MRK
+  and "sdLogoParla 3s ease-in-out infinite;pointer-events:auto}" in _MRK
+  and "zIndexOffset: 1000, interactive: false" in _MRK)
 _ik = CI.ozet_ikili_kart_html([("TRAFO TOPLAM", "1", "4 trafo", True), ("ÜRETİM TOPLAM", "—", "bekleniyor", False)])
 c("ozet karti iki ic kartli", _ik.count("class='cg-ic'") == 2 and "TRAFO TOPLAM" in _ik and "ÜRETİM TOPLAM" in _ik
   and _ik.count("cg-nabiz") == 1)
@@ -544,7 +559,7 @@ c("ic kart: baslik + toplam + kendi listesi", "cg-altkart-bas" in _ak and "cg-li
 c("ic kartli grup duz sutun", "cg-liste-blok" in CI.grup_html("E", "", _ak, 1.0, 1, ic_kartli=True)
   and "cg-liste-blok" not in CI.grup_html("E", "", "", 1.0, 1))
 c("sayfa: kojen ayri kart degil, enerji kartinda", '_gruplar = [g for g in _gruplar if g[0] != "kojen"]' in _sy)
-c("sayfa modul surumu 9 istiyor", "_CI_GEREKEN_SURUM = 9" in _sy and CI.SURUM >= 9)
+c("sayfa modul surumu 10 istiyor", "_CI_GEREKEN_SURUM = 10" in _sy and CI.SURUM >= 10)
 
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))

@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 9
+SURUM = 10
 
 # Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
 PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
@@ -215,15 +215,36 @@ OLCULMEYEN_GRUP = {"KOJEN": "kojen", "DOĞALGAZ": "dogalgaz", "SU": "su"}
 # canli_guc'a yazılmaya başlayınca satır kendiliğinden canlı değere döner.
 KOJEN_ADET = 4
 KOJEN_BEKLEME_NOTU = "canlı sayaç yakında eklenecek"
+# Kojen sayısı LOKASYONA göre değişir; sabit 4, 2 kojenli hastanede olmayan
+# KOJEN-3/4'ü "bekleniyor" diye gösteriyordu. Sahada sayılmış olanlar burada;
+# yoksa günlük kayıttaki en yüksek Kojen_Adet kullanılır.
+KOJEN_ADET_BILINEN = {"maslak": 4}
+
+
+def kojen_adedi(lok_id: str, gunluk_en_cok=None):
+    """Lokasyondaki kojen sayısı; bilinmiyorsa None."""
+    if lok_id in KOJEN_ADET_BILINEN:
+        return KOJEN_ADET_BILINEN[lok_id]
+    try:
+        n = int(float(gunluk_en_cok))
+    except (TypeError, ValueError):
+        return None
+    return n if n > 0 else None
 
 
 def kojen_adlari(adet: int = KOJEN_ADET) -> list:
     return ["KOJEN-%d" % i for i in range(1, adet + 1)]
 
 
-def kojen_bekleyenler(canli_kojenler: list, adet: int = KOJEN_ADET) -> list:
-    """Henüz canlı okunmayan kojenler (sırayla). Canlı gelen listeden düşer."""
+def kojen_bekleyenler(canli_kojenler: list, adet=KOJEN_ADET) -> list:
+    """Henüz canlı okunmayan kojenler (sırayla). Canlı gelen listeden düşer.
+
+    adet=None (sayı bilinmiyor): numara uydurulmaz — hiç canlı kojen yoksa tek
+    bir "KOJEN" satırı bekler, varsa bekleyen gösterilmez.
+    """
     canli = {str(c).upper() for c in (canli_kojenler or [])}
+    if adet is None:
+        return [] if canli else ["KOJEN"]
     return [k for k in kojen_adlari(adet) if k not in canli]
 
 

@@ -371,12 +371,14 @@ _SALDIRI_JS = r"""
     '@keyframes sdLogo{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-2px) scale(1.04)}}' +
     '@keyframes sdLogoParla{0%,100%{filter:drop-shadow(0 2px 4px rgba(19,50,115,.35)) drop-shadow(0 0 4px ' + gmRenk + '55)}' +
       '50%{filter:drop-shadow(0 2px 4px rgba(19,50,115,.35)) drop-shadow(0 0 11px ' + gmRenk + 'aa)}}' +
-    '.gm-kap{position:relative;width:64px;height:78px;pointer-events:auto}' +
+    // Kap tıklamayı GEÇİRİR: logo Ataşehir hastanesinin noktasının üstünde;
+    // 64x78 px'lik kap yakalarsa hastanenin penceresi açılmıyordu (26.10.2026).
+    '.gm-kap{position:relative;width:64px;height:78px;pointer-events:none}' +
     '.gm-halka{position:absolute;left:12px;top:30px;width:40px;height:40px;border-radius:50%;' +
       'border:2px solid ' + gmRenk + ';animation:sdHalka 2.4s ease-out infinite}' +
     '.gm-halka.h2{animation-delay:.8s}.gm-halka.h3{animation-delay:1.6s}' +
     '.gm-logo{position:absolute;left:14px;top:8px;width:36px;height:36px;' +
-      'animation:sdLogo 3s ease-in-out infinite, sdLogoParla 3s ease-in-out infinite}' +
+      'animation:sdLogo 3s ease-in-out infinite, sdLogoParla 3s ease-in-out infinite;pointer-events:auto}' +
     '.gm-etiket{position:absolute;left:50%;top:54px;transform:translateX(-50%);white-space:nowrap;' +
       'font:800 8px Inter,system-ui,sans-serif;letter-spacing:1.4px;color:#133273;background:rgba(250,250,248,.92);' +
       'border:1px solid ' + gmRenk + ';border-radius:6px;padding:2px 6px;box-shadow:0 0 8px ' + gmRenk + '55}' +
@@ -395,6 +397,7 @@ _SALDIRI_JS = r"""
   var GM_A = 'M17.8 83L50.1 17L82.3 83L73.4 83L50.1 35.5L26.9 83Z';
   var binaSvg =
     '<svg class="gm-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">' +
+      '<title>Acıbadem Genel Müdürlük · Ataşehir</title>' +
       '<defs>' +
         '<clipPath id="gmAKes"><path d="' + GM_A + '"/></clipPath>' +
         '<linearGradient id="gmIsik" x1="0" x2="1" y1="0" y2="0">' +
@@ -423,8 +426,8 @@ _SALDIRI_JS = r"""
             binaSvg + '<div class="gm-etiket">GENEL MÜDÜRLÜK</div></div>',
       iconSize: [64, 78], iconAnchor: [32, 50]
     }),
-    zIndexOffset: 1000
-  }).addTo(map).bindTooltip('Acıbadem Genel Müdürlük · Ataşehir', { direction: 'top', offset: [0, -48] });
+    zIndexOffset: 1000, interactive: false   // isim: logodaki <title>
+  }).addTo(map);
 
   // ── Lejant ──
   var lej = document.createElement('div');
@@ -4148,15 +4151,14 @@ with st.container(key="ayarlar_panel"):
             _damga = datetime.now().strftime("%Y%m%d_%H%M")
             _vb1, _vb2, _ = st.columns([1, 1, 2])
             with _vb1:
-                st.download_button("⬇️ JSON indir (tek dosya)", lambda: _vda_uret("json"),
-                                   file_name="synapse_yedek_%s.json" % _damga, mime="application/json",
-                                   key="vda_json", on_click="ignore", type="primary",
-                                   disabled=not _vda_sec, use_container_width=True)
+                # Eski Streamlit'te tek tık yerine Hazırla → İndir (bkz. indir_dugmesi)
+                _vda.indir_dugmesi(st, "⬇️ JSON indir (tek dosya)", lambda: _vda_uret("json"),
+                                   "synapse_yedek_%s.json" % _damga, "application/json", "vda_json",
+                                   type="primary", disabled=not _vda_sec, use_container_width=True)
             with _vb2:
-                st.download_button("⬇️ CSV indir (ZIP)", lambda: _vda_uret("csv"),
-                                   file_name="synapse_yedek_%s_csv.zip" % _damga, mime="application/zip",
-                                   key="vda_csv", on_click="ignore", disabled=not _vda_sec,
-                                   use_container_width=True)
+                _vda.indir_dugmesi(st, "⬇️ CSV indir (ZIP)", lambda: _vda_uret("csv"),
+                                   "synapse_yedek_%s_csv.zip" % _damga, "application/zip", "vda_csv",
+                                   disabled=not _vda_sec, use_container_width=True)
             st.caption("JSON: bütün tablolar tek dosyada. CSV: her tablo ayrı dosya (Excel'de açılır, "
                        "ayraç ;), yanında satır sayılarını gösteren ozet.txt. Okunamayan tablo olursa "
                        "dosyanın içinde yazar.")

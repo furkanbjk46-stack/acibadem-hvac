@@ -1899,7 +1899,7 @@ with tab_canli:
     # ise sürece BİR KEZ yüklenir. Yayın sonrası süreç yeniden başlamazsa
     # sayfa yeni, modül eski kalır ve burada olmayan bir işlev çağrılır
     # (21.10.2026: ekranda AttributeError çıktı). Sürüm tutmuyorsa tazele.
-    _CI_GEREKEN_SURUM = 9
+    _CI_GEREKEN_SURUM = 10
     if getattr(_CI, "SURUM", 0) < _CI_GEREKEN_SURUM:
         import importlib
         _CI = importlib.reload(_CI)
@@ -1968,7 +1968,11 @@ with tab_canli:
             _kojen_canli = next((c for a, _, c in _gruplar if a == "kojen"), [])
             _gruplar = [g for g in _gruplar if g[0] != "kojen"]
         _kojen_var = bool(_kojen_canli) or any(a == "KOJEN" for a, _ in _olculmeyen_tum)
-        _kojen_bekleyen = _CI.kojen_bekleyenler(_kojen_canli) if _kojen_var else []
+        # Kojen sayısı lokasyona göre (sabit 4 değil): sahada sayılmış ya da
+        # günlük kayıttaki en yüksek Kojen_Adet; bilinmiyorsa numara uydurulmaz.
+        _kojen_adet = _CI.kojen_adedi(
+            lok_id, df["Kojen_Adet"].max() if "Kojen_Adet" in df.columns else None)
+        _kojen_bekleyen = _CI.kojen_bekleyenler(_kojen_canli, _kojen_adet) if _kojen_var else []
         _olculmeyen = [(a, n) for a, n in _olculmeyen if a != "KOJEN"]
         _kp = _CI.grup_toplami(seri, _kojen_canli) if _kojen_canli else None
 

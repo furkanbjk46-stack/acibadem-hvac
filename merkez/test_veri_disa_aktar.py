@@ -75,7 +75,32 @@ c("modul yazma istegi yapmaz", 'method="GET"' in _kaynak and not any(m in _kayna
 _m = open(os.path.join(os.path.dirname(V.__file__), "app_merkez.py"), encoding="utf-8").read()
 c("Ayarlar'da Veri sekmesi", '"💾 Veri"' in _m and "with ayar_tab7:" in _m)
 c("tek tik indirme: ertelenmis veri, sayfa yenilenmez", 'lambda: _vda_uret("json")' in _m and 'lambda: _vda_uret("csv")' in _m
-  and _m.count('on_click="ignore"') >= 2)
+  and _m.count("_vda.indir_dugmesi(st,") == 2 and 'on_click="ignore"' in _kaynak)
+
+# Kurulu Streamlit'te (eski ya da yeni) düğme HATA VERMEZ ve sonrasındaki
+# içerik çizilir. Eski sürümde (1.42) işlevli indirme reddediliyor, Ayarlar
+# panelinde Uzaktan Kontrol sekmesi hiç çizilmiyordu (26.10.2026).
+from streamlit.testing.v1 import AppTest  # noqa: E402
+# Betik ASCII: AppTest onu sistem kodlamasıyla yazıyor, yol Türkçe karakterli
+os.environ["VDA_DIZIN"] = os.path.dirname(os.path.abspath(__file__))
+_at = AppTest.from_string('''
+import os, sys
+sys.path.insert(0, os.environ["VDA_DIZIN"])
+import streamlit as st
+import veri_disa_aktar as V
+V.indir_dugmesi(st, "JSON indir", lambda: b"{}", "a.json", "application/json", "k1", type="primary")
+st.write("SONRAKI_ICERIK")
+''')
+_at.run()
+c("indirme dugmesi kurulu Streamlit'te hata vermez", not _at.exception, [e.value[:150] for e in _at.exception])
+c("dugmeden sonraki icerik cizilir", any("SONRAKI_ICERIK" in m.value for m in _at.markdown))
+_hazirla = [b for b in _at.button if b.key == "k1_hazirla"]
+if _hazirla:   # eski Streamlit: iki adım
+    _hazirla[0].click().run()
+    c("eski Streamlit: Hazirla sonrasi veri hazir, hata yok",
+      not _at.exception and _at.session_state["k1_veri"] == b"{}")
+else:
+    c("yeni Streamlit: tek tik dugmesi kullaniliyor", True)
 c("Veri sekmesi izleyicide yok (st.stop sonrasi)",
   _m.index("if _IZLEYICI:\n    st.stop()") < _m.index("with ayar_tab7:"))
 
