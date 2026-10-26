@@ -4000,7 +4000,7 @@ with st.container(key="ayarlar_panel"):
                 '<a class="ayar-kapat" href="#" title="Kapat" aria-label="Kapat">×</a></div>',
                 unsafe_allow_html=True)
 
-    ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder", "🎛️ Uzaktan Kontrol"])
+    ayar_tab1, ayar_tab2, ayar_tab3, ayar_tab4, ayar_tab5, ayar_tab6, ayar_tab7 = st.tabs(["🔗 Bağlantı", "📦 Güncellemeler", "🏥 Hastaneler", "📐 Alan (m²)", "📢 Mesaj Gönder", "🎛️ Uzaktan Kontrol", "💾 Veri"])
 
     # ── Bağlantı ──
     with ayar_tab1:
@@ -4123,6 +4123,43 @@ with st.container(key="ayarlar_panel"):
                     st.success(f"✅ Mesaj gönderildi → {_msg_hedef}")
                 except Exception as _me:
                     st.error(f"❌ Gönderilemedi: {_me}")
+
+    # ── Veri: tüm tabloları tek tıkla indir (yalnız OKUR) ──
+    with ayar_tab7:
+        import veri_disa_aktar as _vda
+        st.markdown("**💾 Veritabanı Yedeği İndir**")
+        st.caption("Supabase'deki tablolar okunur ve tek dosya olarak indirilir. Hiçbir veri "
+                   "değiştirilmez. Dosya bağlantı ayarları, komut geçmişi ve lisans bilgisi de "
+                   "içerebilir — güvenli bir yerde saklayın, paylaşmayın.")
+        if not (url and key):
+            st.warning("Önce Bağlantı sekmesinden Supabase bilgilerini girin.")
+        else:
+            _vda_tum = _vda.tablolari_bul(url, key) if "vda_tablolar" not in st.session_state \
+                else st.session_state["vda_tablolar"]
+            st.session_state["vda_tablolar"] = _vda_tum
+            _vda_sec = st.multiselect("Tablolar", _vda_tum, default=_vda_tum, key="vda_sec")
+            # TEK TIK: veri, indirme düğmesine basıldığı ANDA okunur (Streamlit'in
+            # ertelenmiş indirme özelliği). Ayrı "hazırla" düğmesi kullanılmadı:
+            # ana sayfa 10 sn'de bir yenilendiği için o tıklama arada
+            # kaybolabiliyordu. on_click="ignore" → indirirken sayfa yenilenmez.
+            def _vda_uret(bicim, _sec=tuple(_vda_sec), _u=url, _k=key):
+                _v, _h = _vda.hepsini_oku(_u, _k, list(_sec))
+                return _vda.paket(_v, _h, bicim, kaynak=_u.split("//")[-1].split("/")[0])[1]
+            _damga = datetime.now().strftime("%Y%m%d_%H%M")
+            _vb1, _vb2, _ = st.columns([1, 1, 2])
+            with _vb1:
+                st.download_button("⬇️ JSON indir (tek dosya)", lambda: _vda_uret("json"),
+                                   file_name="synapse_yedek_%s.json" % _damga, mime="application/json",
+                                   key="vda_json", on_click="ignore", type="primary",
+                                   disabled=not _vda_sec, use_container_width=True)
+            with _vb2:
+                st.download_button("⬇️ CSV indir (ZIP)", lambda: _vda_uret("csv"),
+                                   file_name="synapse_yedek_%s_csv.zip" % _damga, mime="application/zip",
+                                   key="vda_csv", on_click="ignore", disabled=not _vda_sec,
+                                   use_container_width=True)
+            st.caption("JSON: bütün tablolar tek dosyada. CSV: her tablo ayrı dosya (Excel'de açılır, "
+                       "ayraç ;), yanında satır sayılarını gösteren ozet.txt. Okunamayan tablo olursa "
+                       "dosyanın içinde yazar.")
 
     # ── Uzaktan Kontrol ──
     with ayar_tab6:
