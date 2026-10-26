@@ -45,13 +45,13 @@ for %%F in (energy_data.csv ml_training_data.json hvac_analysis_history.csv savi
 )
 
 :: ─── configs klasöründeki KULLANICI VERİLERİ (JSON ayarlar) ───
-mkdir "!YEDEK!\configs" 2>nul
-for %%F in (configs\hvac_settings.json configs\maintenance_cards.json configs\report_notifications.json configs\ml_forecast_model.pkl) do (
-    if exist "%%F" (
-        copy /Y "%%F" "!YEDEK!\%%F" >nul
-        echo       ✓ %%F
-        set /a SAYAC+=1
-    )
+:: configs klasörünün TAMAMI yedeklenir (26.10.2026). Eskiden yalnız 4 dosya
+:: korunuyordu; lokasyona özel ayarlar (lokasyon_profili, BACnet okuma şablonu,
+:: chiller/FCU ayarları, tahmin ayarı...) paketteki geliştirme kopyasıyla ezilirdi.
+if exist "configs" (
+    xcopy /E /I /Y /Q "configs" "!YEDEK!\configs" >nul
+    echo       ✓ configs\ (tamamı)
+    set /a SAYAC+=1
 )
 
 :: ─── monthly_report klasöründeki SADECE VERİ dosyaları ───
@@ -103,11 +103,11 @@ for %%F in (energy_data.csv ml_training_data.json hvac_analysis_history.csv savi
 )
 
 :: ─── configs: sadece kullanıcı ayar dosyaları ───
-for %%F in (configs\hvac_settings.json configs\maintenance_cards.json configs\report_notifications.json configs\ml_forecast_model.pkl) do (
-    if exist "!YEDEK!\%%F" (
-        copy /Y "!YEDEK!\%%F" "%%F" >nul
-        echo       ✓ %%F (geri yüklendi)
-    )
+:: Lokasyonda ÖNCEDEN olan her ayar dosyası geri konur (lokasyonun ayarı kazanır);
+:: pakette YENİ gelen ayar dosyaları yerinde kalır.
+if exist "!YEDEK!\configs" (
+    xcopy /E /I /Y /Q "!YEDEK!\configs" "configs" >nul
+    echo       ✓ configs\ (lokasyon ayarları geri yüklendi)
 )
 
 :: ─── monthly_report: sadece veri dosyaları (.csv, .json) ───
@@ -143,7 +143,7 @@ set "HATA=0"
 
 :: Kritik KOD dosyası kontrolü
 echo       ─────── Kod Dosyaları ───────
-for %%F in (main_portal.py app_portal.py run_portal.py ai_progress.py daily_report.py monthly_summary_report.py location_manager.py cloud_sync.py portal_watchdog.py) do (
+for %%F in (portal_watchdog.py main_portal.py app_portal.py cloud_sync.py data_collector.py data_bridge.py ahu_collector.py oto_set.py on_kosul.py canli_guc.py bacnet_writer.py kilit.py lisans.py hava_durumu.py veri_alarm.py saha_teshis.py oz_test.py bakim_dosyasi.py ai_progress.py daily_report.py monthly_summary_report.py location_manager.py) do (
     if exist "%%F" (
         echo       ✅ %%F — mevcut
     ) else (
@@ -173,7 +173,7 @@ for %%F in (rules\location_config.py rules\temperature_cascade.py) do (
 )
 
 :: Kritik klasör kontrolü
-for %%D in (rules configs static .streamlit monthly_report fonts) do (
+for %%D in (rules configs static .streamlit monthly_report tuketim_tahmin fonts) do (
     if exist "%%D" (
         echo       ✅ %%D\ — mevcut
     ) else (
@@ -201,7 +201,7 @@ for %%F in (energy_data.csv ml_training_data.json hvac_analysis_history.csv) do 
         echo       ⚠️  %%F — bulunamadı
     )
 )
-for %%F in (configs\hvac_settings.json configs\maintenance_cards.json configs\report_notifications.json) do (
+for %%F in (configs\hvac_settings.json configs\maintenance_cards.json configs\lokasyon_profili.json configs\hedefli_okuma_sablonu_2.xlsx configs\chiller_fcu_ayarlari.json) do (
     if exist "%%F" (
         echo       💾 %%F — korundu ✓
     ) else (

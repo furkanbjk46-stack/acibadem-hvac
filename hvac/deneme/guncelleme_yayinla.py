@@ -11,32 +11,37 @@ import json
 import subprocess
 from datetime import datetime
 
-# Yayınlanabilir dosyaların tam listesi (değişse bile buradan kontrol edilir)
-IZIN_VERILEN_DOSYALAR = {
-    "app_portal.py",
-    "cloud_sync.py",
-    "main_portal.py",
-    "run_portal.py",
-    "ai_progress.py",
-    "daily_report.py",
-    "monthly_summary_report.py",
-    "location_manager.py",
-    "portal_watchdog.py",
-    "monthly_report/pdf_generator.py",
-    "monthly_report/savings_engine.py",
-    "monthly_report/data_merger.py",
-    "monthly_report/hvac_history.py",
-    "monthly_report/yoy_analyzer.py",
-    "monthly_report/forecast_engine.py",
-    "monthly_report/daily_comparison.py",
-    "monthly_report/training_data.py",
-    "rules/location_config.py",
-    "rules/temperature_cascade.py",
-    "static/index.html",
-    "static/portal.html",
-    "static/qrcode_generator.js",
-    "GUNCELLE.bat",
-}
+# Yayınlanabilir dosyalar — SABİT LİSTE DEĞİL, KURAL (26.10.2026).
+# Eski sabit liste yalnız 23 dosyayı tanıyordu; on_kosul.py, oto_set.py,
+# canli_guc.py, data_bridge.py, tuketim_tahmin/ gibi yeni modüller sessizce
+# atlanıyordu. Kural: kod ve arayüz dosyaları yayınlanır; lokasyona özel
+# ayarlar, veriler, çıktılar ve gizli bilgiler ASLA yayınlanmaz.
+YAYINLANAN_UZANTILAR = (".py", ".html", ".js", ".css", ".bat")
+YAYINLANMAYAN_KLASORLER = ("configs/", "yedekler/", "static/outputs/", "collected_data/",
+                           "daily_reports/", "monthly_reports_summary/", "daily_snapshots/",
+                           "ahu_data/", "fonts/", "__pycache__/", ".streamlit/")
+YAYINLANMAYAN_DOSYALAR = {"guncelleme_yayinla.py", "supabase_config.json", "supabase_secret.json"}
+
+
+def yayinlanabilir_mi(yol: str) -> bool:
+    """Bu dosya lokasyonlara yama olarak gönderilebilir mi?"""
+    y = yol.replace("\\", "/")
+    if ".." in y.split("/") or y.startswith("/") or ":" in y:
+        return False                       # program klasörünün dışına çıkan yol
+    while y.startswith("./"):
+        y = y[2:]
+    if not y or y in YAYINLANMAYAN_DOSYALAR:
+        return False
+    if any(y.startswith(k) or ("/" + k) in ("/" + y) for k in YAYINLANMAYAN_KLASORLER):
+        return False
+    return y.lower().endswith(YAYINLANAN_UZANTILAR)
+
+
+def git_izlenen_dosyalar(base_dir: str) -> list:
+    """base_dir altında git'in izlediği tüm dosyalar (base_dir'e göre göreli)."""
+    r = subprocess.run(["git", "ls-files"], cwd=base_dir, capture_output=True, text=True, encoding="utf-8")
+    return sorted(x.strip().replace("\\", "/") for x in r.stdout.splitlines() if x.strip())
+
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "supabase_config.json")
 SECRET_FILE = os.path.join(os.path.dirname(__file__), "supabase_secret.json")
@@ -159,13 +164,8 @@ def main():
     print("\nDeğişen dosyalar tespit ediliyor (git diff)...")
     degisen = git_degisen_dosyalar(base_dir)
 
-    # İzin verilenlerle kesişim al (yol ayraçlarını normalize et)
-    izin_normalize = {d.replace("\\", "/") for d in IZIN_VERILEN_DOSYALAR}
-    gonderilecek = []
-    for d in degisen:
-        d_norm = d.replace("\\", "/")
-        if d_norm in izin_normalize:
-            gonderilecek.append(d_norm)
+    # Yayınlanabilir olanları al (kural: yayinlanabilir_mi)
+    gonderilecek = [d.replace("\\", "/") for d in degisen if yayinlanabilir_mi(d)]
 
     if not gonderilecek:
         print("\n⚠️  Git'e göre değişen yayınlanabilir dosya yok.")
@@ -175,8 +175,8 @@ def main():
             print("İptal edildi.")
             input("\nDevam etmek için Enter'a basın...")
             return
-        # Tüm listeyi gönder (zorunlu mod)
-        gonderilecek = sorted(izin_normalize)
+        # Zorunlu mod: git'in izlediği tüm yayınlanabilir dosyalar
+        gonderilecek = [d for d in git_izlenen_dosyalar(base_dir) if yayinlanabilir_mi(d)]
 
     # Dosya içeriklerini oku
     print(f"\nGönderilecek dosyalar ({len(gonderilecek)} adet):")

@@ -639,25 +639,27 @@ def run_daily_snapshot():
     yesterday_str = yesterday.isoformat()  # energy_data.csv'ye yazilacak tarih
 
     logger.info("=== Gunluk snapshot basliyor ===")
-    logger.info("Bugun 08:30 okumasi: %s | Yazilacak tarih: %s", today_str, yesterday_str)
+    logger.info("Bugun %02d:%02d okumasi: %s | Yazilacak tarih: %s",
+                SNAPSHOT_HOUR, SNAPSHOT_MINUTE, today_str, yesterday_str)
 
     # 1. CSV'leri oku (data_collector'in en son yazdigi degerler)
     modbus_now = read_modbus_csv()
     bacnet_now = read_bacnet_csv()
     logger.info("Modbus: %d cihaz | BACnet: %d nokta", len(modbus_now), len(bacnet_now))
 
-    # 2. Dunku referansi yukle (dun 08:30'daki okumalar)
+    # 2. Dunku referansi yukle (dun SNAPSHOT saatindeki okumalar)
     ref = load_ref()
     daily_kwh = calc_daily_kwh(modbus_now, ref)
 
-    # 3. Bugunun 08:30 okumalarini yarin icin referans olarak kaydet
+    # 3. Bugunun okumalarini yarin icin referans olarak kaydet
     if modbus_now:
         save_ref(today_str, modbus_now)
 
     # 4. Ilk calistirma — referans kaydedildi, dun icin veri yazilamaz
     if daily_kwh is None:
         logger.info("Ilk calistirma: bugunun referansi kaydedildi.")
-        logger.info("Yarin 08:30'da dun'un (%s) verisi otomatik yazilacak.", today_str)
+        logger.info("Yarin %02d:%02d'da dun'un (%s) verisi otomatik yazilacak.",
+                    SNAPSHOT_HOUR, SNAPSHOT_MINUTE, today_str)
         return
 
     # daily_kwh=False → tarih uyumsuzlugu, Modbus alanlari bos ama BACnet yazilacak

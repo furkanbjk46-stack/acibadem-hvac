@@ -734,37 +734,6 @@ class HastaneRaporPDF:
             except Exception:
                 pass
 
-    def add_chart_pair(self, left_bytes: bytes, right_bytes: bytes,
-                       left_w_ratio=0.62, h=60):
-        """Iki grafigi yan yana koy."""
-        if left_bytes is None and right_bytes is None:
-            return
-        p   = self.pdf
-        lw  = 190 * left_w_ratio
-        rw  = 190 * (1 - left_w_ratio) - 4
-        y0  = p.get_y()
-
-        for img, x, iw in [
-            (left_bytes,  10,      lw),
-            (right_bytes, 10+lw+4, rw),
-        ]:
-            if img is None:
-                continue
-            tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
-            try:
-                tmp.write(img)
-                tmp.close()
-                p.image(tmp.name, x=x, y=y0, w=iw, h=h)
-            except Exception:
-                pass
-            finally:
-                try:
-                    os.unlink(tmp.name)
-                except Exception:
-                    pass
-
-        p.set_y(y0 + h + 5)
-
     # ── Ana üretici ─────────────────────────────────────
 
     def build(self, period_df: pd.DataFrame, m2: int,

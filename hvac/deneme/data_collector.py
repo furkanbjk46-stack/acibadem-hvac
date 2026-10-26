@@ -90,7 +90,6 @@ def cihaz_kilidi(dev):
             kilit = threading.Lock()
             _MODBUS_KILITLER[ad] = kilit
         return kilit
-READ_INTERVAL  = 1800  # 30 dakika (saniye) — artık kullanılmıyor, saat 07:00 tetikler
 READ_SAAT      = 7    # Günlük Modbus okuma saati
 READ_DAKIKA    = 0    # Günlük Modbus okuma dakikası
 BACNET_SAAT    = 7    # Günlük BACnet okuma saati
@@ -421,7 +420,7 @@ if __name__ == "__main__":
     logger.info("=" * 55)
     logger.info("  Veri Toplayici baslatiliyor")
     logger.info("  Modbus: %d analizor | BACnet: Excel'den", len(ANALYZERS))
-    logger.info("  Okuma araligi: %d dakika", READ_INTERVAL // 60)
+    logger.info("  Gunluk okuma: Modbus %02d:%02d, BACnet %02d:%02d", READ_SAAT, READ_DAKIKA, BACNET_SAAT, BACNET_DAKIKA)
     logger.info("=" * 55)
 
     start()

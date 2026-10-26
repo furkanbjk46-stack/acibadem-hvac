@@ -44,6 +44,7 @@ CIHAZ_ADI_REGEX = re.compile(r"^[A-Z0-9]+(-[A-Z0-9]+)+$")
 # lokasyonda Hat1->Mas1, Hat2->Mas2 olarak kullanilir — lokasyon adiyla ilgisi yoktur)
 ROL_TO_ANAHTAR = {
     "Dis Hava Sicakligi":        "Dis_Hava_Sicakligi_C",
+    "Dis Hava Nem":              "Dis_Hava_Nem_Yuzde",   # 26.10.2026 (Maslak: AI 32)
     "Chiller Set Sicakligi":     "Chiller_Set_Temp_C",
     "Hat1 Isitma Sicakligi":     "Mas1_Isitma_Temp",
     "Hat1 Sogutma Sicakligi":    "Mas1_Sogutma_Temp",
@@ -59,6 +60,9 @@ for _i in range(1, 6):
     ROL_TO_ANAHTAR[f"Chiller-{_i} Yuzde"] = f"_ch_yuz_{_i}"
 for _i in range(1, 4):
     ROL_TO_ANAHTAR[f"Kazan-{_i} Durum"] = f"_kaz_dur_{_i}"
+# Kojen çalışma durumu → energy_data Kojen_Adet (data_bridge _kojen_dur_n okur)
+for _i in range(1, 5):
+    ROL_TO_ANAHTAR[f"Kojen-{_i} Durum"] = f"_kojen_dur_{_i}"
 
 
 def lokasyon_profili_oku(ws):

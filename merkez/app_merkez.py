@@ -621,11 +621,6 @@ def load_config():
             return json.load(f)
     return {}
 
-def hex_rgba(h, a=0.1):
-    h = h.lstrip("#")
-    r,g,b = int(h[0:2],16), int(h[2:4],16), int(h[4:6],16)
-    return f"rgba({r},{g},{b},{a})"
-
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_dis_hava() -> float | None:
     """İstanbul anlık sıcaklık. Önce Open-Meteo, olmadı wttr.in."""
@@ -1529,73 +1524,6 @@ def dun_kwh(lok_id):
     if not d.empty and "Toplam_Hastane_Tuketim_kWh" in d.columns:
         return d["Toplam_Hastane_Tuketim_kWh"].sum()
     return 0
-
-def onceki_gun_kwh(lok_id):
-    """Kartta gösterilen günün bir önceki VERİLİ gününün kWh değeri (% değişim için).
-    SYN-3 fix: dun_kwh dün yoksa son mevcut güne düşer — burada da aynı referans gün
-    bulunup ondan önceki son verili gün alınır; eskiden sabit (bugün-2) kullanılıyordu
-    ve yanlış gün çifti kıyaslanabiliyordu."""
-    if df_all.empty or lok_id not in aktif_loklar:
-        return 0
-    lok_df = df_all[df_all["lokasyon_id"] == lok_id]
-    if lok_df.empty or "Toplam_Hastane_Tuketim_kWh" not in lok_df.columns:
-        return 0
-    # dun_kwh ile aynı referans günü belirle (dün varsa dün, yoksa son verili gün)
-    gunler = sorted(lok_df["Tarih"].dropna().dt.strftime("%Y-%m-%d").unique())
-    if not gunler:
-        return 0
-    ref = dun if dun in gunler else gunler[-1]
-    oncekiler = [g for g in gunler if g < ref]
-    if not oncekiler:
-        return 0
-    d = lok_df[lok_df["Tarih"].dt.strftime("%Y-%m-%d") == oncekiler[-1]]
-    return d["Toplam_Hastane_Tuketim_kWh"].sum()
-
-def sparkline_svg(values, renk, w=75, h=28):
-    """Verilen değerlerden mini SVG sparkline üret."""
-    if not values or len(values) < 2:
-        return f'<svg width="{w}" height="{h}"></svg>'
-    mn, mx = min(values), max(values)
-    span = mx - mn if mx != mn else 1
-    pts = []
-    for i, v in enumerate(values):
-        x = i / (len(values) - 1) * w
-        y = h - ((v - mn) / span) * (h - 4) - 2
-        pts.append(f"{x:.1f},{y:.1f}")
-    path = " ".join(pts)
-    # Alan dolgusu için kapat
-    fill_path = f"M{pts[0]} " + " ".join(f"L{p}" for p in pts[1:]) + f" L{w},{ h} L0,{h} Z"
-    return f'''<svg width="{w}" height="{h}" viewBox="0 0 {w} {h}">
-      <defs>
-        <linearGradient id="sg_{renk[1:]}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="{renk}" stop-opacity="0.3"/>
-          <stop offset="100%" stop-color="{renk}" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <path d="{fill_path}" fill="url(#sg_{renk[1:]})" />
-      <polyline points="{path}" fill="none" stroke="{renk}" stroke-width="1.5"
-                stroke-linejoin="round" stroke-linecap="round"/>
-    </svg>'''
-
-def son7_kwh(lok_id):
-    """Son 7 günün günlük kWh listesini döndür."""
-    if df_all.empty or "Toplam_Hastane_Tuketim_kWh" not in df_all.columns:
-        return []
-    son7_bas = (now - timedelta(days=7)).strftime("%Y-%m-%d")
-    d = df_all[(df_all["lokasyon_id"] == lok_id) & (df_all["Tarih"].dt.strftime("%Y-%m-%d") >= son7_bas)]
-    if d.empty:
-        return []
-    return d.groupby(d["Tarih"].dt.strftime("%Y-%m-%d"))["Toplam_Hastane_Tuketim_kWh"].sum().tolist()
-
-def hvac_yuzdesi(lok_id):
-    """Dünkü ortalama Chiller Load %"""
-    if df_all.empty or "Chiller_Load_Percent" not in df_all.columns:
-        return None
-    d = df_all[(df_all["lokasyon_id"] == lok_id) & (df_all["Tarih"].dt.strftime("%Y-%m-%d") == dun)]
-    if d.empty:
-        return None
-    val = d["Chiller_Load_Percent"].mean()
-    return round(val, 1) if pd.notna(val) else None
 
 # ============================================================
 # ANA LAYOUT: sol | harita | sağ

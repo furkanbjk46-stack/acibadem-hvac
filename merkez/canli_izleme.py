@@ -171,21 +171,6 @@ def grup_toplami(seri: dict, cihazlar: list):
     return toplam({c: son.get(c) for c in cihazlar})
 
 
-def toplam_seri(seri: dict, cihazlar: list) -> list:
-    """Cihazların zaman İÇİNDE toplamı — ŞEBEKE gibi birleşik satırlar için.
-
-    Bir anda hiçbir cihaz okunamadıysa o nokta None kalır; okunanların
-    toplamı alınır (eksik sayaç yüzünden toplam sıfıra düşmesin).
-    """
-    diziler = [seri.get("cihazlar", {}).get(c) or [] for c in cihazlar]
-    n = len(seri.get("zamanlar") or [])
-    sonuc = []
-    for i in range(n):
-        degerler = [d[i] for d in diziler if i < len(d) and d[i] is not None]
-        sonuc.append(round(sum(degerler), 1) if degerler else None)
-    return sonuc
-
-
 def olcum_araligi_sn(seri: dict):
     """Ölçümler kaç saniyede bir geliyor (ortanca). Yetersiz veri → None."""
     zamanlar = seri.get("zamanlar") or []
@@ -428,15 +413,6 @@ def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None, birim: str = "
             f"<div class='{cip_sinif}'{baslik}>{nokta}{kisa_ad(cihaz)}</div>"
             f"<div class='cg-cizgi'>{cubuk}</div>"
             f"<div class='{dg_sinif}'>{dg}</div></div>")
-
-
-def toplam_satir_html(ad: str, deger, cubuk: str, faz: str = "", gecis: tuple = None) -> str:
-    """Grubun TOPLAMINI gösteren vurgulu satır (ör. ŞEBEKE = 4 trafo)."""
-    dg = "—" if deger is None else (akan(deger, 1, faz or ad, *(gecis or ()))
-                                    + "<span class='cg-br'>kW</span>")
-    return (f"<div class='cg-satir cg-ust-satir'><div class='cg-cip cg-cip-ust'>{ad}</div>"
-            f"<div class='cg-cizgi'>{cubuk}</div>"
-            f"<div class='cg-dg cg-dg-ust'>{dg}</div></div>")
 
 
 def olculmeyen_satir_html(ad: str, aciklama: str, sag: str = "veri çekilemiyor") -> str:

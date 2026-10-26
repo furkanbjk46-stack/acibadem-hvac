@@ -11,3 +11,6 @@ hvac/deneme/energy_data_ilk_yedek.csv
 
 # Yerel veri yedekleri (gercek lokasyon verisi icerebilir)
 hvac/deneme/yedekler/
+
+# Mekanik Zeka analiz çıktıları (her çalıştırmada üretilir, makineye özel)
+hvac/deneme/static/outputs/

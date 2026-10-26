@@ -241,18 +241,6 @@ def _get_maintenance_file(location_id: str = None) -> str:
     """Bakım kartı dosyası yolunu döndür."""
     return os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
 
-def _get_daily_reports_dir(location_id: str = None) -> str:
-    """Günlük rapor klasörü yolunu döndür."""
-    path = os.path.join(os.path.dirname(__file__), "daily_reports")
-    os.makedirs(path, exist_ok=True)
-    return path
-
-def _get_monthly_reports_dir(location_id: str = None) -> str:
-    """Aylık rapor klasörü yolunu döndür."""
-    path = os.path.join(os.path.dirname(__file__), "monthly_reports_summary")
-    os.makedirs(path, exist_ok=True)
-    return path
-
 # ================ BAKIM KARTI YÖNETİMİ ================
 MAINTENANCE_COMPONENTS = [
     "heating_valve_body", "heating_valve_signal",

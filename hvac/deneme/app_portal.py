@@ -58,7 +58,7 @@ except ImportError:
 # cloud_sync.py süreci çalıştırıyor. Önceden burada da başlatılıyordu ve
 # Streamlit bu dosyayı her sayfa açılışında baştan çalıştırdığı için döngüler
 # çoğalıyor, oto-set aynı geçişi 2-3 kez uyguluyordu. Watchdog olmadan
-# (run_portal.py vb.) eski davranış sürer; tek kopyayı cloud_sync'teki kilit korur.
+# (portalı tek başına çalıştırma: streamlit run app_portal.py) eski davranış sürer; tek kopyayı cloud_sync'teki kilit korur.
 if os.environ.get("HVAC_WATCHDOG") != "1":
     try:
         from cloud_sync import start_background_sync
@@ -3335,48 +3335,6 @@ def _ed_val(row, col):
         return None
 
 
-def _ed_chip(ad, deger, hastane_genel, genislik=None):
-    """Tek sayaç çipi: ad + günlük kWh + Hastane Genel Toplam'a oran (%).
-    Renkler ID-scoped CSS sınıflarıyla verilir (global 'div{color:!important}' kuralını yener).
-    genislik verilirse (flex kapsayıcılarda) çipe sabit genişlik uygular."""
-    if deger is None:
-        vcls, val_txt, pct_txt = "v0", "veri yok", ""
-    elif deger <= 0:
-        vcls, val_txt, pct_txt = "v0", "0", "%0"
-    else:
-        vcls = "v"
-        val_txt = _ed_num(deger)
-        pct = (deger / hastane_genel * 100) if hastane_genel and hastane_genel > 0 else 0
-        pct_txt = f"%{pct:.1f}".replace(".", ",")
-    _w = f"width:{genislik};" if genislik else ""
-    return (
-        f"<div style='{_w}background:rgba(250,250,248,0.85);border:1px solid rgba(42,120,214,0.25);"
-        f"border-radius:8px;padding:9px 4px 7px;text-align:center;'>"
-        f"<div class='nm' style='font-size:11px;font-weight:700;margin-bottom:4px;letter-spacing:0.3px;"
-        f"white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'>{ad}</div>"
-        f"<div class='{vcls}' style='font-family:Inter,system-ui,sans-serif;font-size:17px;line-height:1.05;'>{val_txt}</div>"
-        f"<div class='pc' style='font-size:11px;margin-top:3px;height:12px;'>{pct_txt}</div>"
-        f"</div>"
-    )
-
-
-# Sabit-genişlik uniform çip ızgarası (esneyip iç içe geçmez)
-_ED_CHIP_GRID = "display:grid;grid-template-columns:repeat(auto-fill,100px);gap:8px;justify-content:center;"
-# Ağaç bağlantı çizgisi rengi
-_ED_LINE = "rgba(42,120,214,0.35)"
-
-
-def _ed_split_connector():
-    """Kök → iki dal (¬ʇ¬) bağlantı çizgisi. Dallar 2 sütunlu grid (merkezler %25 / %75)."""
-    c = _ED_LINE
-    return (
-        "<div style='position:relative;height:20px;'>"
-        f"<div style='position:absolute;left:50%;top:0;width:2px;height:10px;background:{c};transform:translateX(-1px);'></div>"
-        f"<div style='position:absolute;left:25%;right:25%;top:10px;height:2px;background:{c};'></div>"
-        f"<div style='position:absolute;left:25%;top:10px;width:2px;height:10px;background:{c};'></div>"
-        f"<div style='position:absolute;left:75%;top:10px;width:2px;height:10px;background:{c};'></div>"
-        "</div>"
-    )
 
 
 def _enerji_diyagrami_render(df_kaynak, lok_id):

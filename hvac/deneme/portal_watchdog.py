@@ -68,7 +68,7 @@ def start_portals():
         [sys.executable, "data_bridge.py"],
         cwd=BASE_DIR, env=_COCUK_ENV
     )
-    logger.info(f"✅ Data Bridge başlatıldı (PID: {p5.pid}) — her gece 23:45 energy_data.csv'ye yazar")
+    logger.info(f"✅ Data Bridge başlatıldı (PID: {p5.pid}) — her sabah 07:10'da dünün satırını energy_data.csv'ye yazar (data_bridge.SNAPSHOT_HOUR/MINUTE)")
     procs.append(p5)
 
     _oz_test_baslat()

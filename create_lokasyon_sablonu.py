@@ -1,3 +1,4 @@
+import os
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -271,32 +272,25 @@ for i in range(4, 55):
         ws3.cell(row=i, column=col).alignment = Alignment(horizontal='left', vertical='center')
 
 # Sistem Rolu dropdown: I4:I54
-roller = (
-    'Dis Hava Sicakligi,'
-    'Chiller Set Sicakligi,'
-    'Hat1 Isitma Sicakligi,'
-    'Hat1 Sogutma Sicakligi,'
-    'Hat1 Kazan Sicakligi,'
-    'Hat2 Isitma Sicakligi,'
-    'Hat2 Sogutma Sicakligi,'
-    'Hat2 Kazan Sicakligi,'
-    'Chiller-1 Durum,'
-    'Chiller-2 Durum,'
-    'Chiller-3 Durum,'
-    'Chiller-4 Durum,'
-    'Chiller-5 Durum,'
-    'Chiller-1 Yuzde,'
-    'Chiller-2 Yuzde,'
-    'Chiller-3 Yuzde,'
-    'Chiller-4 Yuzde,'
-    'Chiller-5 Yuzde,'
-    'Absorpsiyon Chiller Durum,'
-    'Kazan-1 Durum,'
-    'Kazan-2 Durum,'
-    'Kazan-3 Durum,'
-    'Kullanilmayacak'
-)
-dv_rol = DataValidation(type='list', formula1=f'"{roller}"', showDropDown=False)
+# Roller GİZLİ 'Roller' sayfasında tutulur. Eskiden virgüllü tek metin olarak
+# yazılıyordu (416 karakter); Excel satır içi listeyi 255 karakterle sınırlar ve
+# dosyayı açarken listeyi silip "onarım" uyarısı verir (26.10.2026).
+# lokasyon_kurulum_otomasyon.py ROL_TO_ANAHTAR ile AYNI olmalı.
+roller = [
+    'Dis Hava Sicakligi', 'Dis Hava Nem', 'Chiller Set Sicakligi',
+    'Hat1 Isitma Sicakligi', 'Hat1 Sogutma Sicakligi', 'Hat1 Kazan Sicakligi',
+    'Hat2 Isitma Sicakligi', 'Hat2 Sogutma Sicakligi', 'Hat2 Kazan Sicakligi',
+] + ['Chiller-%d Durum' % i for i in range(1, 6)] \
+  + ['Chiller-%d Yuzde' % i for i in range(1, 6)] \
+  + ['Absorpsiyon Chiller Durum'] \
+  + ['Kazan-%d Durum' % i for i in range(1, 4)] \
+  + ['Kojen-%d Durum' % i for i in range(1, 5)] \
+  + ['Kullanilmayacak']
+ws_rol = wb.create_sheet('Roller')
+for _i, _r in enumerate(roller, 1):
+    ws_rol.cell(row=_i, column=1, value=_r)
+ws_rol.sheet_state = 'hidden'
+dv_rol = DataValidation(type='list', formula1="=Roller!$A$1:$A$%d" % len(roller), showDropDown=False)
 dv_rol.sqref = 'I4:I54'
 ws3.add_data_validation(dv_rol)
 
@@ -530,6 +524,7 @@ for i, (adim, text) in enumerate(talimatlar, 3):
     c2.alignment = Alignment(horizontal='left', vertical='center')
 
 # Kaydet
-dosya = r'C:\Users\furka\OneDrive\Masaüstü\hvac deneme ve gelıstırme program dosyası\yeni_lokasyon_kurulum_sablonu.xlsx'
+# Script'in yanına kaydedilir (geliştirici bilgisayarına sabit yol yazılmaz)
+dosya = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'yeni_lokasyon_kurulum_sablonu.xlsx')
 wb.save(dosya)
 print('Olusturuldu:', dosya)
