@@ -105,7 +105,8 @@ c("halka grafik yazilari okunur", 'outsidetextfont=dict(size=12, color="#133273"
 c("saldiri oklari yalniz demoda", '_saldiri_js = _SALDIRI_JS if _demo_modu() else ""' in _m
   and "{_saldiri_js}" in _m)
 c("genel mudurluk Atasehir'de", "var GM_ID = 'atasehir';" in _m and "GENEL MÜDÜRLÜK" in _m)
-c("ok rengi duruma gore", all(k in _m for k in ("'Çevrimiçi': '#12c79a'", "'Çevrimdışı': '#ff3b30'", "'Kurulmadı': '#9aa3b2'")))
+c("ok yalniz cevrimici lokasyonlardan", "h.durum !== 'Çevrimiçi') return;" in _m)
+c("lejantta 'saldiri' yazmiyor", "saldırı</div>" not in _m)
 
 print("\n%d/%d PASS" % (sum(SONUC), len(SONUC)))
 sys.exit(0 if all(SONUC) else 1)

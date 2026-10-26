@@ -355,8 +355,7 @@ _SALDIRI_JS = r"""
   var NS = 'http://www.w3.org/2000/svg';
   var RENK = { 'Çevrimiçi': '#12c79a', 'Çevrimdışı': '#ff3b30', 'Kurulmadı': '#9aa3b2' };
   var azHareket = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var saldiriVar = hospitals.some(function (h) { return h.id !== GM_ID && h.durum === 'Çevrimdışı'; });
-  var gmRenk = saldiriVar ? '#ff3b30' : '#12c79a';
+  var gmRenk = '#12c79a';
 
   var css = document.createElement('style');
   css.textContent =
@@ -386,6 +385,7 @@ _SALDIRI_JS = r"""
       'color:#24324d;box-shadow:0 6px 16px -10px rgba(20,22,26,.35);pointer-events:none}' +
     '.sd-lejant b{display:block;font-size:8px;letter-spacing:1.6px;color:#133273;margin-bottom:5px}' +
     '.sd-lejant i{display:inline-block;width:16px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}' +
+    '.sd-lejant i.n{width:8px;height:8px;border-radius:50%;margin:0 10px 0 4px}' +
     '.sd-lejant div{margin-top:3px}';
   document.head.appendChild(css);
 
@@ -418,8 +418,8 @@ _SALDIRI_JS = r"""
   lej.className = 'sd-lejant';
   lej.innerHTML = '<b>MERKEZ BAĞLANTILARI · SİMÜLASYON</b>' +
     '<div><i style="background:' + RENK['Çevrimiçi'] + '"></i>Çevrimiçi</div>' +
-    '<div><i style="background:' + RENK['Çevrimdışı'] + '"></i>Çevrimdışı · saldırı</div>' +
-    '<div><i style="background:' + RENK['Kurulmadı'] + '"></i>Kurulmadı</div>';
+    '<div><i class="n" style="background:' + RENK['Çevrimdışı'] + '"></i>Çevrimdışı</div>' +
+    '<div><i class="n" style="background:' + RENK['Kurulmadı'] + '"></i>Kurulmadı</div>';
   map.getContainer().appendChild(lej);
 
   // ── Ok katmanı: kendi panesinde, işaretçilerin altında ──
@@ -433,10 +433,11 @@ _SALDIRI_JS = r"""
 
   var OKLAR = [];
   hospitals.forEach(function (h, i) {
-    if (h.id === GM_ID) return;
-    var renk = RENK[h.durum] || RENK['Kurulmadı'];
-    var aktif = h.durum !== 'Kurulmadı';
-    var saldiri = h.durum === 'Çevrimdışı';
+    // Ok YALNIZCA çevrimiçi lokasyonlardan çıkar
+    if (h.id === GM_ID || h.durum !== 'Çevrimiçi') return;
+    var renk = RENK['Çevrimiçi'];
+    var aktif = true;
+    var saldiri = false;
     var g = document.createElementNS(NS, 'g');
     g.setAttribute('class', 'sd-grup');
     g.style.color = renk;
@@ -1909,8 +1910,8 @@ with merkez:
     # ── SUNUM: Genel Müdürlük + lokasyonlardan gelen hareketli kavisli oklar ──
     # YALNIZCA demo/simülasyon modunda haritaya eklenir (üretim haritası aynı kalır).
     # Ataşehir'e genel müdürlük binası konur; diğer her lokasyondan oraya kavisli,
-    # akan bir ok çizilir. Renk lokasyonun durumuna göre: çevrimiçi turkuaz,
-    # çevrimdışı kırmızı (saldırı), kurulmadı gri (hareketsiz, soluk).
+    # akan bir ok çizilir — YALNIZCA çevrimiçi lokasyonlardan (turkuaz).
+    # Çevrimdışı ve kurulmamış lokasyonlardan ok çıkmaz.
     _saldiri_js = _SALDIRI_JS if _demo_modu() else ""
 
     harita_html = f"""<!DOCTYPE html>
