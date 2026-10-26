@@ -1870,7 +1870,8 @@ with merkez:
         kwh = dun_kwh(lok_id)
         durum  = "Çevrimiçi" if online else ("Kurulmadı" if fark_dk is None else "Çevrimdışı")
         d_renk = "#0ca30c" if online else ("#6b7280" if fark_dk is None else "#d03b3b")
-        boyut  = max(10, min(22, kwh / 1400)) if kwh > 0 else 9
+        # Nokta boyu minimal (26.10.2026): eskiden 10-22 px, şimdi 7-12 px
+        boyut  = max(7, min(12, kwh / 2500)) if kwh > 0 else 6
         harita_js.append({
             "id":    lok_id,
             "isim":  lok_info["isim"],
@@ -2102,7 +2103,7 @@ hospitals.forEach(function(h) {{
     var dot = L.marker([h.lat, h.lon], {{
         icon: L.divIcon({{
             className:'',
-            html:'<div style="width:'+s+'px;height:'+s+'px;background:'+c+';border-radius:50%;border:2px solid rgba(19,50,115,0.28);box-shadow:0 0 10px '+c+',0 0 3px rgba(19,50,115,0.25);"></div>',
+            html:'<div style="width:'+s+'px;height:'+s+'px;background:'+c+';border-radius:50%;border:1.5px solid rgba(19,50,115,0.28);box-shadow:0 0 6px '+c+',0 0 3px rgba(19,50,115,0.25);"></div>',
             iconSize:[s, s], iconAnchor:[hs, hs]
         }}),
         zIndexOffset:100
