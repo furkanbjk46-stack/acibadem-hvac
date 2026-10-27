@@ -92,6 +92,35 @@ def _gunluk_model_ozeti(yil: int, hedef: str, veri_imzasi: float) -> dict:
     return portal_ozet.yil_ozeti(load_data(), yil, hedef)
 
 
+def _durust_tahmin_verisi(yil: int) -> dict:
+    """Aylık rapor ve PDF için tahmin verisi: eski motorun yapısı korunur, ama
+    aylık "Tahmin" ve "Sapma" günlük modelin İLERİYE DÖNÜK sonucuyla değiştirilir.
+
+    NEDEN (H-04, 26.10.2026 denetimi): eski motorun sapması, modelin eğitimde
+    GÖRDÜĞÜ aylarla hesaplanıyordu — gerçek başarı değildi, PDF'te de öyle
+    basılıyordu. Günlük model her geçmiş ayı yalnız o aydan önceki veriyle
+    tahmin eder. Yeni model çalışmazsa eski veri olduğu gibi döner.
+    """
+    veri = _get_forecast_engine().full_analysis(yil)
+    try:
+        from tuketim_tahmin import portal_ozet
+        oz = portal_ozet.yil_ozeti(load_data(), int(yil), "toplam")
+        if oz.get("hata"):
+            return veri
+        aylar = {a["ay"]: a for a in oz["aylar"]}
+        for fc in veri.get("monthly_forecast") or []:
+            a = aylar.get(fc.get("month"))
+            if not a or a.get("tahmin") is None:
+                continue
+            fc["forecast_total"] = a["tahmin"]
+            fc["deviation_total_pct"] = a["sapma"]
+        veri["yontem_notu"] = ("Tahmin ve sapma: günlük model, her ay yalnız o aydan önceki "
+                               "veriyle (ileriye dönük). Sapma = (gerçek − tahmin) / tahmin.")
+    except Exception:
+        pass
+    return veri
+
+
 @st.cache_data(show_spinner=False, ttl=3600)
 def _gunluk_model_gelecek_ay(yil: int, ay: int, kojen_gun, veri_imzasi: float) -> dict:
     from tuketim_tahmin import portal_ozet
@@ -1338,6 +1367,10 @@ SCHEMA = [
     "TRDP4_kWh",
     "Sebeke_Tuketim_kWh",
     "Kojen_Uretim_kWh",
+    "Kojen1_kWh",        # 27.10.2026: kojen sayaçları (Kojen_Uretim = toplamı, enerji_hesap)
+    "Kojen2_kWh",
+    "Kojen3_kWh",
+    "Kojen4_kWh",
     "Kazan_Dogalgaz_m3",
     "Kojen_Dogalgaz_m3",
     "Su_Tuketimi_m3",
@@ -1406,6 +1439,10 @@ NUMERIC_COLS = [
     "TRDP4_kWh",
     "Sebeke_Tuketim_kWh",
     "Kojen_Uretim_kWh",
+    "Kojen1_kWh",        # 27.10.2026: kojen sayaçları (Kojen_Uretim = toplamı, enerji_hesap)
+    "Kojen2_kWh",
+    "Kojen3_kWh",
+    "Kojen4_kWh",
     "Kazan_Dogalgaz_m3",
     "Kojen_Dogalgaz_m3",
     "Su_Tuketimi_m3",
@@ -1494,6 +1531,10 @@ def infer_canonical_col(col_name: str) -> str | None:
 
     if ("sebeke" in k or "grid" in k) and ("tuket" in k or "consum" in k):
         return "Sebeke_Tuketim_kWh"
+
+    _kn = re.search(r"kojen ?([1-4])\b", k)
+    if _kn and "gaz" not in k and "adet" not in k:
+        return "Kojen%s_kWh" % _kn.group(1)          # "Kojen-3 Üretim" → Kojen3_kWh
 
     if ("kojen" in k or "cogen" in k or "cogeneration" in k) and ("uret" in k or "produc" in k or "gen" in k):
         return "Kojen_Uretim_kWh"
@@ -3378,9 +3419,23 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
     # ölçer, kojen çalışırken yükü kojen besler; şebekeye eklenip üstüne kojen
     # de toplanınca aynı enerji iki kez sayılıyordu (recalc() açıklaması).
     bina_mekanik = trdp2 + trdp4
-    sebeke = bina_genel + bina_mekanik
+    trafo_toplam = bina_genel + bina_mekanik
+    # Kojen = Kojen-1..4 toplamı (recalc / enerji_hesap, 27.10.2026). Kojen OG
+    # baradan trafolara karışık beslenir: dört trafo ölçülmüşse trafo toplamı
+    # hastane geneli, şebeke = trafo − kojen. Eksik trafoda eski kural.
     kojen = _ed_val(row, "Kojen_Uretim_kWh") or 0
-    hastane_genel = sebeke + kojen
+    if all((_ed_val(row, k) or 0) > 0 for k in _enerji_hesap.TRDP_KOLONLARI):
+        hastane_genel = trafo_toplam
+        sebeke = trafo_toplam - kojen
+        _sebeke_lbl = "Şebeke (trafo − kojen)"
+    else:
+        sebeke = trafo_toplam
+        hastane_genel = sebeke + kojen
+        _sebeke_lbl = "Şebeke (TRDP 1-4)"
+    # Kojen kırılımı: yalnız değeri olan kojenler (okunmayan uydurulmaz)
+    _kojen_kirilim = " · ".join(
+        f"K{_i} {_ed_num(_ed_val(row, f'Kojen{_i}_kWh'))}"
+        for _i in range(1, 5) if (_ed_val(row, f"Kojen{_i}_kWh") or 0) > 0)
 
     def _pct(x):
         return f"%{(x / hastane_genel * 100):.1f}".replace(".", ",") if hastane_genel > 0 else "—"
@@ -3512,12 +3567,14 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         "<div class='chead'>HASTANE GENEL TOPLAM · GÜNLÜK</div>"
         f"<div class='mainv' style='margin:12px 0 18px;'>{_ed_num(hastane_genel)} <span class='u'>kWh</span></div>"
         "<div style='display:flex;justify-content:space-between;border-top:1px solid rgba(24,26,30,0.10);padding-top:16px;'>"
-        "<div style='text-align:left;'><div class='bdlbl'>Şebeke (TRDP 1-4)</div>"
+        f"<div style='text-align:left;'><div class='bdlbl'>{_sebeke_lbl}</div>"
         f"<div class='vblue' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(sebeke)} "
         f"<span style='font-size:11px;'>{_pct(sebeke)}</span></div></div>"
         "<div style='text-align:right;'><div class='bdlbl'>Kojen Üretim</div>"
         f"<div class='vemr' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(kojen)} "
-        f"<span style='font-size:11px;'>{_pct(kojen)}</span></div></div>"
+        f"<span style='font-size:11px;'>{_pct(kojen)}</span></div>"
+        + (f"<div class='bdlbl' style='margin-top:3px;'>{_kojen_kirilim}</div>" if _kojen_kirilim else "")
+        + "</div>"
         "</div></div></div>"
         # ── 2. Seviye: iki sütun ──
         "<div style='display:flex;gap:22px;align-items:flex-start;'>"
@@ -3615,7 +3672,10 @@ with tab1:
         _set_ss("entry_trdp3",            "TRDP3_kWh",                0.0)
         _set_ss("entry_trdp4",            "TRDP4_kWh",                0.0)
         _set_ss("entry_sebeke",           "Sebeke_Tuketim_kWh",       0.0)
-        _set_ss("entry_kojen",            "Kojen_Uretim_kWh",         0.0)
+        _set_ss("entry_kojen1",           "Kojen1_kWh",               0.0)
+        _set_ss("entry_kojen2",           "Kojen2_kWh",               0.0)
+        _set_ss("entry_kojen3",           "Kojen3_kWh",               0.0)
+        _set_ss("entry_kojen4",           "Kojen4_kWh",               0.0)
         _set_ss("entry_su",               "Su_Tuketimi_m3",           0.0)
         _set_ss("entry_kazan_gaz",        "Kazan_Dogalgaz_m3",        0.0)
         _set_ss("entry_kojen_gaz",        "Kojen_Dogalgaz_m3",        0.0)
@@ -3742,19 +3802,30 @@ with tab1:
         st.divider()
         st.subheader("Tüketim / Üretim")
 
-        a1, a2, a3 = st.columns(3)
+        a1, a2, a3, a4 = st.columns(4)
         with a1:
             st.markdown("**Trafo Tüketimleri (TRDP)**")
             trdp1 = st.number_input("TRDP-1 (kWh)", step=50.0, min_value=0.0, key="entry_trdp1")
             trdp2 = st.number_input("TRDP-2 (kWh)", step=50.0, min_value=0.0, key="entry_trdp2")
             trdp3 = st.number_input("TRDP-3 (kWh)", step=50.0, min_value=0.0, key="entry_trdp3")
             trdp4 = st.number_input("TRDP-4 (kWh)", step=50.0, min_value=0.0, key="entry_trdp4")
-            koj = st.number_input("Kojen Üretim (kWh)", step=50.0, min_value=0.0, key="entry_kojen")
-            su = st.number_input("Su Tüketimi (m³)", step=1.0, min_value=0.0, key="entry_su")
         with a2:
+            # KOJEN-3/4 her sabah sayaçtan otomatik yazılır (data_bridge);
+            # henüz bağlı olmayan kojenler buradan elle girilir.
+            st.markdown("**Kojen Üretimleri**")
+            koj1 = st.number_input("Kojen-1 Üretim (kWh)", step=50.0, min_value=0.0, key="entry_kojen1")
+            koj2 = st.number_input("Kojen-2 Üretim (kWh)", step=50.0, min_value=0.0, key="entry_kojen2")
+            koj3 = st.number_input("Kojen-3 Üretim (kWh)", step=50.0, min_value=0.0, key="entry_kojen3",
+                                   help="Sayaçtan (PAC3200) her sabah otomatik yazılır.")
+            koj4 = st.number_input("Kojen-4 Üretim (kWh)", step=50.0, min_value=0.0, key="entry_kojen4",
+                                   help="Sayaçtan (PAC3200) her sabah otomatik yazılır.")
+        with a3:
+            st.markdown("**Doğalgaz / Su**")
             kazan_gaz = st.number_input("Kazan Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kazan_gaz")
             koj_gaz = st.number_input("Kojen Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kojen_gaz")
-        with a3:
+            su = st.number_input("Su Tüketimi (m³)", step=1.0, min_value=0.0, key="entry_su")
+        with a4:
+            st.markdown("**Alt Sayaçlar**")
             ch_kwh = st.number_input("Chiller Tüketim (kWh)", step=50.0, min_value=0.0, key="entry_ch_kwh")
             mcc_kwh = st.number_input("MCC Tüketim (kWh)", step=50.0, min_value=0.0, key="entry_mcc_kwh")
             vrf_kwh = st.number_input("VRF/Split Tüketim (kWh) (varsa)", step=25.0, min_value=0.0, key="entry_vrf_kwh")
@@ -3762,19 +3833,37 @@ with tab1:
         preview_bina_yuk = trdp1 + trdp3
         preview_mekanik = trdp2 + trdp4
         preview_total_cool = ch_kwh + vrf_kwh
-        # Şebeke = girilen TRDP'lerin toplamı (MCC/Chiller yedeği YOK — çift
-        # sayım üretiyordu, recalc() açıklamasına bakınız).
-        sebeke = trdp1 + trdp2 + trdp3 + trdp4
+        # Kural enerji_hesap.py'de (27.10.2026): Kojen = Kojen-1..4 toplamı
+        # (hiçbiri girilmediyse eski elle girilmiş toplam); dört trafo varsa
+        # Toplam = trafo toplamı, Şebeke = trafo − kojen. Önizleme aynı kuralı
+        # aynı modülden hesaplar — kaydedilen değerle ayrışmasın.
+        _on = _enerji_hesap.yeniden_hesapla(pd.DataFrame([{
+            "TRDP1_kWh": trdp1, "TRDP2_kWh": trdp2, "TRDP3_kWh": trdp3, "TRDP4_kWh": trdp4,
+            "Kojen1_kWh": koj1, "Kojen2_kWh": koj2, "Kojen3_kWh": koj3, "Kojen4_kWh": koj4,
+            # Eski (elle girilmiş) toplam yalnız o gün kojen sayaçları hiç
+            # yazılmamışsa korunur; sayaçlı günde hepsi 0'a çekilirse üretim 0'dır.
+            "Kojen_Uretim_kWh": (_fv("Kojen_Uretim_kWh", 0.0)
+                                 if not any(_fv("Kojen%d_kWh" % _i, 0.0) > 0 for _i in range(1, 5))
+                                 else 0.0),
+            "Sebeke_Tuketim_kWh": _fv("Sebeke_Tuketim_kWh", 0.0),
+            "MCC_Tuketim_kWh": mcc_kwh, "Chiller_Tuketim_kWh": ch_kwh, "VRF_Split_Tuketim_kWh": vrf_kwh,
+        }])).iloc[0]
+        koj = float(_on["Kojen_Uretim_kWh"])
+        sebeke = float(_on["Sebeke_Tuketim_kWh"])
+        preview_total_h = float(_on["Toplam_Hastane_Tuketim_kWh"])
+        trafo_toplam = trdp1 + trdp2 + trdp3 + trdp4
         _eksik = [a for a, v in (("TRDP-1", trdp1), ("TRDP-2", trdp2),
                                  ("TRDP-3", trdp3), ("TRDP-4", trdp4)) if v <= 0]
         mekanik_not = (" ⚠️ %s girilmedi — şebeke eksik ölçülüyor" % ", ".join(_eksik)) \
             if _eksik else ""
-        preview_total_h = sebeke + koj
+        _ihrac_not = " (eksi: şebekeye verildi)" if sebeke < 0 else ""
         preview_other = max(0.0, preview_mekanik - (ch_kwh + mcc_kwh))
         st.info(
             f"**Otomatik Hesap Önizleme:** "
-            f"Şebeke = **{sebeke:,.0f} kWh**{mekanik_not} | "
-            f"Toplam Hastane = **{preview_total_h:,.0f} kWh** | "
+            f"Trafo Toplamı = **{trafo_toplam:,.0f} kWh**{mekanik_not} | "
+            f"Kojen Üretim (1-4) = **{koj:,.0f} kWh** | "
+            f"Şebeke (trafo − kojen) = **{sebeke:,.0f} kWh**{_ihrac_not} | "
+            f"Toplam Hastane (şebeke + kojen) = **{preview_total_h:,.0f} kWh** | "
             f"Bina Yükü (1+3) = **{preview_bina_yuk:,.0f} kWh** | "
             f"Mekanik (2+4) = **{preview_mekanik:,.0f} kWh** | "
             f"Toplam Soğutma = **{preview_total_cool:,.0f} kWh**"
@@ -3831,6 +3920,10 @@ with tab1:
                 "TRDP4_kWh": trdp4,
                 "Sebeke_Tuketim_kWh": sebeke,
                 "Kojen_Uretim_kWh": koj,
+                "Kojen1_kWh": koj1,
+                "Kojen2_kWh": koj2,
+                "Kojen3_kWh": koj3,
+                "Kojen4_kWh": koj4,
                 "Kazan_Dogalgaz_m3": kazan_gaz,
                 "Kojen_Dogalgaz_m3": koj_gaz,
                 "Su_Tuketimi_m3": su,
@@ -4672,8 +4765,8 @@ with tab5:
                     pass
                 # ═══ TAHMİN VE TREND ANALİZİ ═══
                 try:
-                    forecast_engine = _get_forecast_engine()
-                    forecast_data = forecast_engine.full_analysis(report_year)
+                    # Tahmin/sapma ileriye dönük günlük modelden (H-04)
+                    forecast_data = _durust_tahmin_verisi(report_year)
                     
                     yearly = forecast_data.get("yearly_summary", [])
                     monthly_fc = forecast_data.get("monthly_forecast", [])
@@ -4940,8 +5033,7 @@ with tab5:
                         # PDF Oluştur (tahmin verisiyle)
                         pdf_gen = MonthlyReportPDFGenerator()
                         try:
-                            _fc_engine = _get_forecast_engine()
-                            _fc_data = _fc_engine.full_analysis(report_year)
+                            _fc_data = _durust_tahmin_verisi(report_year)
                         except Exception:
                             _fc_data = None
                         pdf_bytes = pdf_gen.generate(report_year, report_month, unified_data, yoy_analysis, recommendations, charts=pdf_charts, forecast_data=_fc_data)
@@ -5207,12 +5299,12 @@ with tab6:
                     st.caption("Önceki yıllar arası trende göre konservatif projeksiyon")
                     _prev_y = str(_fc_monthly[0]['prev_year'])
                     _last_y = str(_fc_monthly[0]['last_year'])
-                    _md = f"| Ay | {_prev_y} (kWh) | {_last_y} (kWh) | Trend | Tahmin (kWh) | Gerçekleşen | Sapma |\n"
+                    _md = f"| Ay | {_prev_y} (kWh) | {_last_y} (kWh) | Trend | Tahmin (kWh) | Gerçekleşen | Sapma (eğitim içi) |\n"
                     _md += "|:---|---:|---:|:---:|---:|---:|:---:|\n"
                 else:
                     st.caption("Kıyas sütunları yok: trend için en az iki TAM yıl "
                                "(yılda 300+ günlük veri) gerekiyor. Tahmin ML modelinden geliyor.")
-                    _md = "| Ay | Tahmin (kWh) | Gerçekleşen | Sapma |\n"
+                    _md = "| Ay | Tahmin (kWh) | Gerçekleşen | Sapma (eğitim içi) |\n"
                     _md += "|:---|---:|---:|:---:|\n"
 
                 for _fm in _fc_monthly:
@@ -5237,6 +5329,9 @@ with tab6:
                         _md += f"| {_ay} | {_th} | {_gc} | {_sp} |\n"
 
                 st.markdown(_md)
+                st.caption("Bu tablodaki sapma, modelin eğitimde gördüğü aylarla hesaplanır; "
+                           "gerçek tahmin başarısını göstermez. Ölçülmüş başarı için aşağıdaki "
+                           "Günlük Model kartına bakın.")
             
                 _tf = sum(f["forecast_total"] for f in _fc_monthly)
                 _ta = sum(f["actual_total"] or 0 for f in _fc_monthly)

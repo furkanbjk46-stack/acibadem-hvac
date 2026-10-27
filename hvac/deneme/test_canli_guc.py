@@ -155,18 +155,20 @@ try:
 finally:
     cg._float_oku = _orj_float
 
+import data_collector as _dc  # noqa: E402
+import data_bridge as _db  # noqa: E402
+# Enerji: günlük okuma ve canlı çapraz denetim AYNI okuyucu (data_collector)
 _enerji = {801: 1_000.0, 809: 5_000_000.0}                       # Wh (Giren, Verilen)
-_orj_double = cg._double_oku
-cg._double_oku = lambda ip, adres, timeout=2.0: _enerji.get(adres)
+_orj_double = _dc._siemens_double
+_dc._siemens_double = lambda ip, adres: _enerji.get(adres)
 try:
     c("kojen enerjisi Giren + Verilen toplamı", cg._sayac_oku(KOJ) == 5001.0, cg._sayac_oku(KOJ))
+    c("günlük okuma da aynı değeri verir", _dc.modbus_get_kwh(KOJ) == 5001.0)
     _enerji[809] = None
     c("biri okunamazsa kojen enerjisi None (yarım değer yok)", cg._sayac_oku(KOJ) is None)
 finally:
-    cg._double_oku = _orj_double
+    _dc._siemens_double = _orj_double
 
-import data_collector as _dc  # noqa: E402
-import data_bridge as _db  # noqa: E402
 _koj = [d for d in _dc.ANALYZERS if d["name"].startswith("KOJEN-")]
 c("KOJEN-3/4 canlı okunacak listede",
   {d["name"]: d["ip"] for d in _koj} == {"KOJEN-3": "192.168.1.19", "KOJEN-4": "192.168.1.18"}, _koj)

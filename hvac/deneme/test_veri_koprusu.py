@@ -115,6 +115,26 @@ c("hiç trafo yoksa şebeke BOŞ bırakılır (uydurma toplam yok)",
 c("MCC toplamı TRDP-4 eklenmeden önceki ile aynı", r["MCC_Tuketim_kWh"] == round(_mcc, 1),
   (r["MCC_Tuketim_kWh"], _mcc))
 
+# ── 3b) Kojen sayaçları (27.10.2026): trafo toplamı kojeni içerir ────────
+_kj = db.build_daily_row("2026-10-28", {}, {
+    "TRDP-1": 22000.0, "TRDP-2": 16000.0, "TRDP-3": 8000.0, "TRDP-4": 12000.0,
+    "KOJEN-3": 11000.0, "KOJEN-4": 10500.0, **{n: 100.0 for n in db.ALL_ANALYZERS}})
+c("Kojen3/4 günlük satıra yazılır", (_kj["Kojen3_kWh"], _kj["Kojen4_kWh"]) == (11000.0, 10500.0))
+c("bağlı olmayan Kojen1/2 BOŞ kalır (0 yazılmaz)", (_kj["Kojen1_kWh"], _kj["Kojen2_kWh"]) == ("", ""))
+c("kojen üretim = okunan kojenlerin toplamı", _kj["Kojen_Uretim_kWh"] == 21500.0, _kj["Kojen_Uretim_kWh"])
+c("dört trafo: toplam hastane = trafo toplamı", _kj["Toplam_Hastane_Tuketim_kWh"] == 58000.0,
+  _kj["Toplam_Hastane_Tuketim_kWh"])
+c("dört trafo: şebeke = trafo − kojen", _kj["Sebeke_Tuketim_kWh"] == 58000.0 - 21500.0,
+  _kj["Sebeke_Tuketim_kWh"])
+c("kojen sayaçları ENERGY_SCHEMA'da (satırdan düşmez)",
+  all("Kojen%d_kWh" % i in db.ENERGY_SCHEMA for i in range(1, 5)))
+import enerji_hesap as _eh  # noqa: E402
+import pandas as _pd  # noqa: E402
+_eh_r = _eh.yeniden_hesapla(_pd.DataFrame([_kj])).iloc[0]
+c("köprü ile enerji_hesap AYNI sonucu verir",
+  (_eh_r["Sebeke_Tuketim_kWh"], _eh_r["Toplam_Hastane_Tuketim_kWh"], _eh_r["Kojen_Uretim_kWh"])
+  == (_kj["Sebeke_Tuketim_kWh"], _kj["Toplam_Hastane_Tuketim_kWh"], _kj["Kojen_Uretim_kWh"]))
+
 # ── 4) İlk gün: referansta TRDP-4 yok → boş kalır, çökmez ──────────────
 _dun = (date.today() - timedelta(days=1)).isoformat()
 _ref_eski = {"date": _dun, "readings": {"TRDP-1": 1000, "TRDP-3": 2000}}   # TRDP-4 yok

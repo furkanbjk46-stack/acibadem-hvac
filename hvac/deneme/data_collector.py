@@ -67,8 +67,9 @@ ANALYZERS = [
     {"ip": "172.17.91.123", "name": "TRDP-4",       "brand": "siemens"},
     # KOJEN-3 / KOJEN-4 — Siemens PAC3200, 27.10.2026'da canlı izlemeye alındı
     # (Synapse "KOJEN ÜRETİMİ"). ÜRETİM sayacıdır: data_bridge'de ALL_ANALYZERS'a
-    # EKLENMEZ (tüketim toplamına girmez). "uretim": canli_guc gücün yönünden
-    # bağımsız okur (akım trafosu yönü sahada doğrulanmadı).
+    # EKLENMEZ (tüketim toplamına girmez); günlük farkı Kojen3/4_kWh'e yazılır.
+    # "uretim": güç ve enerji akım trafosu yönünden bağımsız okunur
+    # (URETIM_ENERJI_REG, canli_guc.guc_oku).
     {"ip": "192.168.1.19",  "name": "KOJEN-3",      "brand": "siemens", "uretim": True},
     {"ip": "192.168.1.18",  "name": "KOJEN-4",      "brand": "siemens", "uretim": True},
 ]
@@ -122,7 +123,44 @@ PROP_PRESENT_VALUE = 85
 # MODBUS FONKSİYONLARI
 # ================================================================
 
+# ÜRETİM sayaçları ("uretim": True — kojen), 27.10.2026:
+# Jeneratör çıkışındaki analizörde akım trafosu yönü sahada doğrulanmadı;
+# ters bağlıysa enerji "Giren" (801) yerine "Verilen" (809) sayacında birikir.
+# Yön varsayılmaz: Giren + Verilen toplamı alınır (ikisi de ölçülen değer;
+# boştaki kojenin çektiği küçük iç tüketim bu toplamda ihmal edilebilir).
+# Adresler: SENTRON PAC3200 Modbus tablosu — Aktif enerji Giren/Verilen T1, Double, Wh.
+URETIM_ENERJI_REG = {"siemens": (801, 809)}
+
+
+def _siemens_double(ip, adres):
+    """Siemens PAC: tek double (4 register) oku. Hata → None."""
+    s = None
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(2.5)
+        s.connect((ip, MODBUS_PORT))
+        s.send(struct.pack(">HHHBBHH", 1, 0, 6, 1, 3, int(adres), 4))
+        resp = s.recv(1024)
+        if len(resp) >= 17 and resp[7] == 3:
+            return struct.unpack('>d', resp[9:17])[0]
+    except Exception:
+        pass
+    finally:
+        try:
+            if s:
+                s.close()
+        except Exception:
+            pass
+    return None
+
+
 def modbus_get_kwh(device):
+    regler = URETIM_ENERJI_REG.get(device.get("brand")) if device.get("uretim") else None
+    if regler:
+        okunan = [_siemens_double(device["ip"], r) for r in regler]
+        if any(v is None for v in okunan):
+            return None                      # yarım değer yazılmaz
+        return round(sum(okunan) / 1000, 3)  # Wh → kWh
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(2.5) # Donmaları engellemek için timeout süresi

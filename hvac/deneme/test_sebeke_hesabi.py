@@ -77,13 +77,37 @@ c("eski fallback'in ürettiği şişkin toplam ARTIK ÇIKMIYOR",
 # ── 3) Toplam = şebeke + kojen ───────────────────────────────────────────
 r = satir(TRDP1_kWh=19030, TRDP2_kWh=12606, TRDP3_kWh=7694, TRDP4_kWh=12532,
           Kojen_Uretim_kWh=41737)
-c("dört trafo + kojen toplamı", r["Toplam_Hastane_Tuketim_kWh"] == 51862 + 41737,
-  r["Toplam_Hastane_Tuketim_kWh"])
+# 27.10.2026: kojen OG baradan trafolara karışık beslenir — trafo toplamı
+# kojeni İÇERİR. Dört trafo ölçülen günde: Toplam = trafo, Şebeke = trafo − kojen.
+c("dört trafo + kojen: toplam = trafo toplamı (kojen iki kez sayılmaz)",
+  r["Toplam_Hastane_Tuketim_kWh"] == 51862, r["Toplam_Hastane_Tuketim_kWh"])
+c("dört trafo + kojen: şebeke = trafo − kojen",
+  r["Sebeke_Tuketim_kWh"] == 51862 - 41737, r["Sebeke_Tuketim_kWh"])
+c("şebeke + kojen = hastane genel",
+  r["Sebeke_Tuketim_kWh"] + r["Kojen_Uretim_kWh"] == r["Toplam_Hastane_Tuketim_kWh"])
 r0 = satir(TRDP1_kWh=19030, TRDP2_kWh=12606, TRDP3_kWh=7694, TRDP4_kWh=12532)
-c("kojen yokken toplam yalnız şebeke", r0["Toplam_Hastane_Tuketim_kWh"] == 51862,
-  r0["Toplam_Hastane_Tuketim_kWh"])
-c("kojen çalışan gün, duran günden kojen kadar fazla",
-  round(r["Toplam_Hastane_Tuketim_kWh"] - r0["Toplam_Hastane_Tuketim_kWh"]) == 41737)
+c("kojen yokken toplam = şebeke = trafo", r0["Toplam_Hastane_Tuketim_kWh"] == 51862
+  and r0["Sebeke_Tuketim_kWh"] == 51862, r0["Toplam_Hastane_Tuketim_kWh"])
+r = satir(TRDP1_kWh=10000, TRDP2_kWh=5000, TRDP3_kWh=5000, TRDP4_kWh=5000, Kojen_Uretim_kWh=30000)
+c("kojen trafo toplamını aşarsa şebeke eksi (şebekeye verildi)",
+  r["Sebeke_Tuketim_kWh"] == -5000, r["Sebeke_Tuketim_kWh"])
+
+# ── 3b) Kojen üretim = Kojen-1..4 sayaçlarının toplamı ───────────────────
+_KOLONLAR += ["Kojen1_kWh", "Kojen2_kWh", "Kojen3_kWh", "Kojen4_kWh"]
+r = satir(TRDP1_kWh=19030, TRDP2_kWh=12606, TRDP3_kWh=7694, TRDP4_kWh=12532,
+          Kojen3_kWh=11000, Kojen4_kWh=10500)
+c("kojen üretim = okunan kojenlerin toplamı", r["Kojen_Uretim_kWh"] == 21500, r["Kojen_Uretim_kWh"])
+c("şebeke = trafo − kojen sayaçları", r["Sebeke_Tuketim_kWh"] == 51862 - 21500, r["Sebeke_Tuketim_kWh"])
+r = satir(TRDP1_kWh=19030, TRDP2_kWh=12606, TRDP3_kWh=7694, TRDP4_kWh=12532,
+          Kojen1_kWh=10000, Kojen2_kWh=10000, Kojen3_kWh=11000, Kojen4_kWh=10500, Kojen_Uretim_kWh=99999)
+c("dört kojen girilince eski elle toplam EZİLİR", r["Kojen_Uretim_kWh"] == 41500, r["Kojen_Uretim_kWh"])
+r = satir(Sebeke_Tuketim_kWh=40000, Kojen_Uretim_kWh=36000)
+c("kojen sayacı olmayan eski gün: elle girilen kojen toplamı korunur", r["Kojen_Uretim_kWh"] == 36000)
+
+# ── 3c) Eksik trafolu günler (Ağustos–Eylül 2026) eski kuralla kalır ─────
+r = satir(TRDP1_kWh=19783, TRDP3_kWh=8139, Kojen_Uretim_kWh=44411)
+c("eksik trafoda şebeke eksiye düşürülmez (trafo − kojen uygulanmaz)",
+  r["Sebeke_Tuketim_kWh"] == 19783 + 8139, r["Sebeke_Tuketim_kWh"])
 
 # ── 4) Trafo hiç yoksa eski davranış korunur (2023-2025 satırları) ───────
 r = satir(Sebeke_Tuketim_kWh=40000, Kojen_Uretim_kWh=36000)

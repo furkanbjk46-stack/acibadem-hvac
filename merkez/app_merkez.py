@@ -1712,9 +1712,11 @@ with sol:
     _koj_top, _koj_n       = _canli_topla("kojen")
     _gaz_top, _gaz_n       = _canli_topla("dogalgaz")
     _su_top, _su_n         = _canli_topla("su")
-    # Toplam enerji = şebeke + kojen üretimi (kojen canlı ölçülüyorsa)
-    _top_enerji = (None if _sebeke_top is None and _koj_top is None
-                   else (_sebeke_top or 0) + (_koj_top or 0))
+    # Toplam enerji = TRAFO toplamı (canlı "sebeke" alanı = TRDP sayaçları).
+    # Kojen OG baradan trafolara karışık beslenir — trafo toplamı kojeni
+    # zaten içerir; üstüne kojen eklemek onu iki kez sayardı (27.10.2026,
+    # enerji_hesap.py ile aynı kural). Kojen kendi kartında ayrıca görünür.
+    _top_enerji = _sebeke_top
     _yaslar = [v["yas"] for v in CANLI.values() if v.get("yas") is not None]
 
     def _alt(n, ek=""):
@@ -1724,7 +1726,7 @@ with sol:
     # kalır: test_ozet_karsilastirma kart listesini buradan okur.
     _metrikler = [
         ("Toplam Enerji", _top_enerji,
-         _alt(_sebeke_n, " · şebeke + kojen" if _koj_n else " · şebeke (kojen canlı ölçülmüyor)"),
+         _alt(_sebeke_n, " · trafo toplamı (şebeke + kojen)"),
          "kW", "enerji"),
         ("Doğalgaz",      _gaz_top, _alt(_gaz_n, " · kazan + kojen"), "m³/h", "dogalgaz"),
         ("Soğutma",       _sog_top, _alt(_sog_n, " · chiller + kule"), "kW", "sogutma"),
@@ -1733,7 +1735,7 @@ with sol:
     ]
 
     # Özet kaleminin geçişi: hangi canlı alanların toplamı olduğu
-    _OZET_ALAN = {"enerji": ("sebeke", "kojen"), "dogalgaz": ("dogalgaz",),
+    _OZET_ALAN = {"enerji": ("sebeke",), "dogalgaz": ("dogalgaz",),
                   "sogutma": ("sogutma",), "su": ("su",), "kojen": ("kojen",)}
 
     for _lbl, _deger, _alt_metin, _birim, _ozet_key in _metrikler:
@@ -2103,7 +2105,7 @@ hospitals.forEach(function(h) {{
             '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
             '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
             '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
-            satir('⚡', 'Şebeke', v.sebeke) +
+            satir('⚡', 'Trafo toplam', v.sebeke) +
             satir('⚙️', 'Kojen üretim', v.kojen) +
             '<div style="font-size:9px;color:#6b7280;margin-top:6px;">Anlık değer · 📐 '+h.m2+' m²</div>' +
             '</div>';

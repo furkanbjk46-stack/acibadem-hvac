@@ -145,6 +145,7 @@ ENERGY_SCHEMA = [
     "Kar_Eritme_Aktif",
     "TRDP1_kWh", "TRDP2_kWh", "TRDP3_kWh", "TRDP4_kWh",
     "Sebeke_Tuketim_kWh", "Kojen_Uretim_kWh",
+    "Kojen1_kWh", "Kojen2_kWh", "Kojen3_kWh", "Kojen4_kWh",   # 27.10.2026 kojen sayaçları
     "Kazan_Dogalgaz_m3", "Kojen_Dogalgaz_m3", "Su_Tuketimi_m3",
     "Chiller_Tuketim_kWh", "MCC_Tuketim_kWh", "VRF_Split_Tuketim_kWh",
     "Dis_Hava_Sicakligi_C", "Chiller_Load_Percent",
@@ -313,7 +314,7 @@ def date_exists_in_csv(target_date_str):
 
 def write_to_energy_csv(row_dict):
     """
-    energy_data.csv'ye yeni satir ekle.
+    energy_data.csv'ye yeni satir ekle. Yazildiysa True, yazilamadiysa False.
     Mevcut dosyada eksik sutun varsa (schema degisikligi) pandas ile guncelle.
     """
     import pandas as pd
@@ -338,13 +339,19 @@ def write_to_energy_csv(row_dict):
             os.replace(_gecici, ENERGY_CSV)
         except Exception as e:
             logger.error("energy_data.csv guncelleme hatasi: %s", e)
+            return False
     else:
-        with open(ENERGY_CSV, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=ENERGY_SCHEMA, extrasaction="ignore")
-            writer.writeheader()
-            writer.writerow(row_dict)
+        try:
+            with open(ENERGY_CSV, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=ENERGY_SCHEMA, extrasaction="ignore")
+                writer.writeheader()
+                writer.writerow(row_dict)
+        except Exception as e:
+            logger.error("energy_data.csv olusturma hatasi: %s", e)
+            return False
 
     logger.info("energy_data.csv -> yazildi: %s", row_dict.get("Tarih"))
+    return True
 
 
 # ================================================================
@@ -422,10 +429,25 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     _t3 = _to_num(trdp3)
     _t4 = _to_num(trdp4)
 
-    if (_t1 > 0 or _t2 > 0 or _t3 > 0 or _t4 > 0):
-        sebeke_kwh = round(_t1 + _t2 + _t3 + _t4, 1)   # Olculen trafolarin toplami
+    # --- Kojen uretim sayaclari (KOJEN-n, "uretim" analizorleri) ---
+    # KOJEN-1/2 sahada henuz bagli degil: okunmayan kojen BOS kalir (0 yazilmaz),
+    # formdan elle girilebilir. Kural enerji_hesap.py'de (27.10.2026).
+    kojen_n = {i: (daily_kwh.get("KOJEN-%d" % i, "") if daily_kwh else "") for i in range(1, 5)}
+    _okunan_kojen = [_to_num(v) for v in kojen_n.values() if v != ""]
+    kojen_kwh = round(sum(_okunan_kojen), 1) if _okunan_kojen else ""
+
+    _trdp_toplam = round(_t1 + _t2 + _t3 + _t4, 1)
+    if (_t1 > 0 and _t2 > 0 and _t3 > 0 and _t4 > 0):
+        # Dort trafo: trafo toplami = hastane geneli (kojen de icinde);
+        # sebeke = trafo - kojen (eksi = sebekeye verildi)
+        toplam_hastane_kwh = _trdp_toplam
+        sebeke_kwh = round(_trdp_toplam - _to_num(kojen_kwh), 1)
+    elif (_t1 > 0 or _t2 > 0 or _t3 > 0 or _t4 > 0):
+        sebeke_kwh = _trdp_toplam   # Eksik trafo: olculenlerin toplami (eski kural)
+        toplam_hastane_kwh = round(sebeke_kwh + _to_num(kojen_kwh), 1)
     else:
         sebeke_kwh = ""  # TRDP verisi yok, bos birak
+        toplam_hastane_kwh = total_kwh
 
     # --- Son satir (sadece ENERGY_SCHEMA sutunlari) ---
     row = {
@@ -447,7 +469,11 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "TRDP3_kWh":                  trdp3,   # Otomatik (Modbus)
         "TRDP4_kWh":                  trdp4,   # Otomatik (Modbus, PAC4200)
         "Sebeke_Tuketim_kWh":         sebeke_kwh,  # Otomatik hesaplandi
-        "Kojen_Uretim_kWh":           "",
+        "Kojen_Uretim_kWh":           kojen_kwh,   # Okunan kojenlerin toplami
+        "Kojen1_kWh":                 kojen_n[1],
+        "Kojen2_kWh":                 kojen_n[2],
+        "Kojen3_kWh":                 kojen_n[3],  # Otomatik (Modbus, PAC3200)
+        "Kojen4_kWh":                 kojen_n[4],  # Otomatik (Modbus, PAC3200)
         "Kazan_Dogalgaz_m3":          "",
         "Kojen_Dogalgaz_m3":          "",
         "Su_Tuketimi_m3":             "",
@@ -459,7 +485,7 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "Dis_Hava_Nem_Yuzde":         data.get("Dis_Hava_Nem_Yuzde", ""),
         "Kojen_Adet":                 kojen_adet,
         "Chiller_Load_Percent":       ch_load,
-        "Toplam_Hastane_Tuketim_kWh": sebeke_kwh if sebeke_kwh != "" else total_kwh,  # Sebeke+Kojen (Kojen=0 simdilik)
+        "Toplam_Hastane_Tuketim_kWh": toplam_hastane_kwh,  # Dort trafo: trafo toplami (enerji_hesap)
         "Toplam_Sogutma_Tuketim_kWh": chiller_kwh,  # CH analizörleri = soğutma
         "Diger_Yuk_kWh":              diger_kwh,    # Toplam - MCC - Soğutma
         # --- Soğutma kırılımı (Chiller bazında) ---
@@ -651,12 +677,18 @@ def run_daily_snapshot():
     ref = load_ref()
     daily_kwh = calc_daily_kwh(modbus_now, ref)
 
-    # 3. Bugunun okumalarini yarin icin referans olarak kaydet
-    if modbus_now:
-        save_ref(today_str, modbus_now)
+    # 3. Bugunun okumalari yarin icin referans olarak kaydedilir — ama SADECE
+    #    dunun satiri yazildiktan (veya zaten var oldugu goruldukten) SONRA.
+    #    Eskiden once kaydediliyordu: yazma basarisiz olursa referans bugune
+    #    kaymis oluyor, telafi calismasi "tarih uyumsuz" deyip dunun kWh'ini
+    #    bos yaziyordu — o gunun tuketimi kalici kayboluyordu (H-02).
+    def _referansi_kaydet():
+        if modbus_now:
+            save_ref(today_str, modbus_now)
 
     # 4. Ilk calistirma — referans kaydedildi, dun icin veri yazilamaz
     if daily_kwh is None:
+        _referansi_kaydet()
         logger.info("Ilk calistirma: bugunun referansi kaydedildi.")
         logger.info("Yarin %02d:%02d'da dun'un (%s) verisi otomatik yazilacak.",
                     SNAPSHOT_HOUR, SNAPSHOT_MINUTE, today_str)
@@ -668,6 +700,7 @@ def run_daily_snapshot():
     # 5. Dunku tarih zaten energy_data.csv'de var mi?
     if date_exists_in_csv(yesterday_str):
         logger.warning("Tarih zaten mevcut: %s — atlanıyor.", yesterday_str)
+        _referansi_kaydet()
         return
 
     # 6. Satiri olustur (dun'un tarihi ile) ve yaz
@@ -676,7 +709,11 @@ def run_daily_snapshot():
     # kalır; hava_doldur bir sonraki açılışta tamamlar)
     if hava_durumu is not None:
         row.update(hava_durumu.gunluk_hava(yesterday_str, yesterday_str).get(yesterday_str, {}))
-    write_to_energy_csv(row)
+    if not write_to_energy_csv(row):
+        logger.error("%s satiri yazilamadi — referans KORUNDU, sonraki acilista telafi "
+                     "ayni farkla tekrar deneyecek.", yesterday_str)
+        return
+    _referansi_kaydet()
 
     logger.info("Otomatik: MCC=%.1f kWh | Chiller=%.1f kWh | Dis Hava=%.1f C",
                 row.get("MCC_Tuketim_kWh") or 0,
@@ -764,7 +801,11 @@ def bridge_loop():
         if (now.hour == SNAPSHOT_HOUR
                 and now.minute == SNAPSHOT_MINUTE
                 and last_run_date != today):
-            run_daily_snapshot()
+            # Hata dongu thread'ini oldurmesin (referans korunur, telafi acilista dener)
+            try:
+                run_daily_snapshot()
+            except Exception as e:
+                logger.error("Gunluk snapshot hatasi: %s", e)
             last_run_date = today
 
         time.sleep(30)  # 30 saniyede bir saat kontrolu
