@@ -171,7 +171,7 @@ finally:
 
 _koj = [d for d in _dc.ANALYZERS if d["name"].startswith("KOJEN-")]
 c("KOJEN-3/4 canlı okunacak listede",
-  {d["name"]: d["ip"] for d in _koj} == {"KOJEN-3": "192.168.1.19", "KOJEN-4": "192.168.1.18"}, _koj)
+  {d["name"]: d["ip"] for d in _koj} == {"KOJEN-3": "192.168.1.18", "KOJEN-4": "192.168.1.19"}, _koj)
 c("kojenler üretim sayacı olarak işaretli", all(d.get("uretim") for d in _koj))
 c("kojenler tüketim toplamına GİRMEZ (çift sayım yok)",
   not any(d["name"] in _db.ALL_ANALYZERS for d in _koj))

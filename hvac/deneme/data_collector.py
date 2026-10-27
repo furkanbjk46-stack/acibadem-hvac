@@ -70,8 +70,8 @@ ANALYZERS = [
     # EKLENMEZ (tüketim toplamına girmez); günlük farkı Kojen3/4_kWh'e yazılır.
     # "uretim": güç ve enerji akım trafosu yönünden bağımsız okunur
     # (URETIM_ENERJI_REG, canli_guc.guc_oku).
-    {"ip": "192.168.1.19",  "name": "KOJEN-3",      "brand": "siemens", "uretim": True},
-    {"ip": "192.168.1.18",  "name": "KOJEN-4",      "brand": "siemens", "uretim": True},
+    {"ip": "192.168.1.18",  "name": "KOJEN-3",      "brand": "siemens", "uretim": True},
+    {"ip": "192.168.1.19",  "name": "KOJEN-4",      "brand": "siemens", "uretim": True},
 ]
 
 MODBUS_PORT    = 502
