@@ -31,9 +31,9 @@ create table if not exists canli_guc (
     primary key (lokasyon_id, cihaz)
 );
 
--- Mevcut tablolarla (energy_data, bakim_kartlari vb.) aynı erişim modeli:
--- anon/publishable key ile okuma-yazma (RLS kapalı).
-alter table canli_guc disable row level security;
+-- RLS: 27.10.2026'dan beri AÇIK — politikalar rls_canli_guc.sql'de.
+-- (Eskiden burada RLS kapatılıyordu; Supabase Security Advisor hata verdi.
+--  Bu dosya yeniden çalıştırılırsa ardından rls_canli_guc.sql de çalıştırılmalı.)
 
 -- YETKİ — bunu atlamak 401'e çıkar.
 -- Lokasyon PC'si ve portal anon/publishable anahtarla bağlanır. Yeni tabloda
@@ -41,4 +41,5 @@ alter table canli_guc disable row level security;
 -- HTTP 401 Unauthorized olarak döndürür; lokasyonun CMD penceresinde
 -- "http/2 401 unauthorized" diye görünür. Tablo kurulurken varsayılan
 -- yetkiler her projede aynı işlemiyor, bu yüzden AÇIKÇA veriyoruz.
-grant select, insert, update, delete on table canli_guc to anon, authenticated, service_role;
+grant select, insert, update on table canli_guc to anon, authenticated;
+grant select, insert, update, delete on table canli_guc to service_role;
