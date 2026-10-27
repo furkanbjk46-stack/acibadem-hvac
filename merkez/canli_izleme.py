@@ -699,6 +699,86 @@ def akan(deger, ond: int = 1, faz: str = "", onceki=None, t=None, sure=None) -> 
             f"data-ond='{ond}' data-faz='{faz}'{ek}>{tr_sayi(deger, ond)}</span>")
 
 
+def siralama_betigi(aralik_sn: float = 4.0, sure_ms: int = 1100) -> str:
+    """YALNIZ SUNUM: lokasyon kartlarını ekrandaki akan kW'a göre yeniden sıralar,
+    kartlar havada süzülerek yer değiştirir (FLIP: eski yerden yeniye animasyon).
+
+    Gerçek sistemde KULLANILMAZ — orada sıra sunucuda, gerçek ölçüme göre
+    belirlenir. Betik ana belgede tek aralık tutar (her çizimde öncekini kapatır).
+    """
+    return """
+<script>
+(function () {
+  var W = window.parent, ARALIK = %d, SURE = %d;
+  if (W.__synSira) { W.clearInterval(W.__synSira); }
+  function sayi(el) {
+    if (!el) { return null; }
+    var t = (el.textContent || '').replace(/\\./g, '').replace(',', '.');
+    var v = parseFloat(t); return isNaN(v) ? null : v;
+  }
+  function rozet(kart, n) {
+    var r = W.document.createElement('span');
+    r.className = 'lok-sira';
+    r.textContent = '#' + n;
+    r.style.cssText = 'position:absolute;top:8px;left:10px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;'
+                    + 'font-size:8px;color:#46536b;font-weight:700;';
+    kart.insertBefore(r, kart.firstChild);
+  }
+  function sirala() {
+    var d; try { d = W.document; } catch (e) { return; }
+    var kap = d.querySelector('.lok-scroll');
+    if (!kap || kap.__synHareket) { return; }
+    var kartlar = Array.prototype.slice.call(kap.querySelectorAll('a.lok-kart'));
+    if (kartlar.length < 2) { return; }
+    var ebeveyn = kartlar[0].parentNode;    // markdown araya kap koyabilir
+    var deger = new Map();
+    kartlar.forEach(function (k) {
+      deger.set(k, sayi(k.querySelector('.canli-sayi[data-ond="0"]')));
+    });
+    var yeni = kartlar.slice().sort(function (a, b) {
+      var x = deger.get(a), y = deger.get(b);
+      if (x == null && y == null) { return 0; }
+      if (x == null) { return 1; }
+      if (y == null) { return -1; }
+      return y - x;
+    });
+    if (yeni.every(function (k, i) { return k === kartlar[i]; })) { return; }
+    // FLIP: önce eski konumlar, sonra yeni sıra, sonra eski yerden yeniye animasyon
+    var once = new Map();
+    kartlar.forEach(function (k) { once.set(k, k.getBoundingClientRect()); });
+    yeni.forEach(function (k) { ebeveyn.appendChild(k); });
+    kap.querySelectorAll('.lok-sira').forEach(function (r) { r.remove(); });
+    var n = 0;
+    yeni.forEach(function (k) { if (n < 4 && deger.get(k) != null) { rozet(k, ++n); } });
+    kap.__synHareket = true;
+    var bitecek = 0;
+    yeni.forEach(function (k) {
+      var a = once.get(k), b = k.getBoundingClientRect();
+      var dx = a.left - b.left, dy = a.top - b.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) { return; }
+      bitecek++;
+      var yukari = dy > 0;     // yükselen kart üstten geçer
+      k.style.zIndex = yukari ? '3' : '2';
+      k.style.position = 'relative';
+      var an = k.animate([
+        {transform: 'translate(' + dx + 'px,' + dy + 'px) scale(1)', boxShadow: '0 1px 2px rgba(20,22,26,.08)'},
+        {transform: 'translate(' + (dx * 0.5) + 'px,' + (dy * 0.5 - (yukari ? 16 : 6)) + 'px) scale(' + (yukari ? 1.05 : 0.98) + ')',
+         boxShadow: '0 22px 38px -14px rgba(19,50,115,.45)', offset: 0.5},
+        {transform: 'translate(0,0) scale(1)', boxShadow: '0 1px 2px rgba(20,22,26,.08)'}
+      ], {duration: SURE, easing: 'cubic-bezier(.45,.05,.25,1)'});
+      an.onfinish = an.oncancel = function () {
+        k.style.zIndex = '';
+        if (--bitecek <= 0) { kap.__synHareket = false; }
+      };
+    });
+    if (!bitecek) { kap.__synHareket = false; }
+  }
+  W.__synSira = W.setInterval(sirala, ARALIK);
+})();
+</script>
+""" % (int(aralik_sn * 1000), int(sure_ms))
+
+
 def tazele_betigi(veri: dict) -> str:
     """Ana sayfadaki canlı sayıların ALTINDAKİ değeri yeniler (sayfa yeniden çizilmez).
 

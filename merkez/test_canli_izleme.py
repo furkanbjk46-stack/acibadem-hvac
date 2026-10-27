@@ -600,6 +600,16 @@ c("Kocaeli hicbir lokasyon listesinde yok",
   all('"kocaeli":' not in m for m in (_MRK, SAYFA, _RAP))
   and "kocaeli" not in {l for l, _, _ in S.LOKASYONLAR} and "kocaeli" not in S.SIM_KONUM)
 
+# ── Lokasyon kartları süzülerek yer değiştirir — YALNIZ SUNUM (27.10.2026) ──
+_sb = CI.siralama_betigi()
+c("sıralama betiği kartları akan kW'a göre dizer ve FLIP ile hareket ettirir",
+  "a.lok-kart" in _sb and ".animate(" in _sb and "getBoundingClientRect" in _sb)
+c("sıralama betiği önceki aralığı kapatır (üst üste çalışmaz)", "clearInterval(W.__synSira)" in _sb)
+_demo_blok = _MRK.split("    if _demo_modu():\n        _akis_taban")[1].split("    else:")[0]
+c("sıralama animasyonu YALNIZ demo dalında (gerçek sistemde yok)",
+  "siralama_betigi" in _demo_blok and _MRK.count("siralama_betigi") == 1)
+c("sıra rozeti betikte güncellenebilir (lok-sira sınıfı)", 'class="lok-sira"' in _MRK)
+
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))
 _g = sum(1 for _, ok, _ in T if ok)
