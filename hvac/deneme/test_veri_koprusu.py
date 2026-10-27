@@ -64,9 +64,13 @@ c("her cihazın markası okuyucusu olan bir marka",
 # ── 2) TRDP'ler alt sayaç toplamına karışmaz (çift sayım koruması) ───────
 for _t in ("TRDP-1", "TRDP-2", "TRDP-3", "TRDP-4"):
     c(f"{_t} MCC/Chiller toplamına girmez", _t not in db.ALL_ANALYZERS)
-c("toplayıcıdaki her TRDP dışı cihaz bir gruba ait (sessizce kaybolmaz)",
-  all(n in db.ALL_ANALYZERS for n in _adlar if not n.startswith("TRDP")),
-  [n for n in _adlar if not n.startswith("TRDP") and n not in db.ALL_ANALYZERS])
+# Üretim sayaçları (kojen, "uretim": True) da tüketim toplamına girmez
+_tuketim = [a["name"] for a in dc.ANALYZERS if not a["name"].startswith("TRDP") and not a.get("uretim")]
+c("toplayıcıdaki her TRDP/üretim dışı cihaz bir gruba ait (sessizce kaybolmaz)",
+  all(n in db.ALL_ANALYZERS for n in _tuketim),
+  [n for n in _tuketim if n not in db.ALL_ANALYZERS])
+c("üretim sayaçları tüketim toplamına girmez",
+  not any(a["name"] in db.ALL_ANALYZERS for a in dc.ANALYZERS if a.get("uretim")))
 
 # ── 3) Günlük satır: TRDP-4 dolar, şebeke hesabı doğru kalır ────────────
 _gun = {n: 100.0 for n in db.ALL_ANALYZERS}      # her alt sayaç 100 kWh

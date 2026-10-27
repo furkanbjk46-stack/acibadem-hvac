@@ -65,6 +65,12 @@ ANALYZERS = [
     # data_bridge'de ALL_ANALYZERS'a EKLENMEZ: TRDP'ler şebeke tarafıdır, MCC/Chiller
     # alt sayaç toplamına girerse çift sayım olur.
     {"ip": "172.17.91.123", "name": "TRDP-4",       "brand": "siemens"},
+    # KOJEN-3 / KOJEN-4 — Siemens PAC3200, 27.10.2026'da canlı izlemeye alındı
+    # (Synapse "KOJEN ÜRETİMİ"). ÜRETİM sayacıdır: data_bridge'de ALL_ANALYZERS'a
+    # EKLENMEZ (tüketim toplamına girmez). "uretim": canli_guc gücün yönünden
+    # bağımsız okur (akım trafosu yönü sahada doğrulanmadı).
+    {"ip": "192.168.1.19",  "name": "KOJEN-3",      "brand": "siemens", "uretim": True},
+    {"ip": "192.168.1.18",  "name": "KOJEN-4",      "brand": "siemens", "uretim": True},
 ]
 
 MODBUS_PORT    = 502

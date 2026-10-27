@@ -145,6 +145,35 @@ try:
 finally:
     cg._float_oku = _orj_float
 
+# ── 4b) ÜRETİM sayacı (kojen, 27.10.2026) — akım trafosu yönünden bağımsız ──
+KOJ = {"ip": "1.2.3.4", "name": "KOJEN-3", "brand": "siemens", "uretim": True}
+cg._float_oku = lambda ip, adres, timeout=2.0: -1_250_000.0      # ters bağlı: negatif W
+try:
+    c("kojen gücü ters bağlıda da pozitif", cg.guc_oku(KOJ, a) == 1250.0)
+    c("tüketim sayacında işaret korunur (şebekeye verme görünür)",
+      cg.guc_oku({"ip": "1.2.3.4", "brand": "siemens"}, a) == -1250.0)
+finally:
+    cg._float_oku = _orj_float
+
+_enerji = {801: 1_000.0, 809: 5_000_000.0}                       # Wh (Giren, Verilen)
+_orj_double = cg._double_oku
+cg._double_oku = lambda ip, adres, timeout=2.0: _enerji.get(adres)
+try:
+    c("kojen enerjisi Giren + Verilen toplamı", cg._sayac_oku(KOJ) == 5001.0, cg._sayac_oku(KOJ))
+    _enerji[809] = None
+    c("biri okunamazsa kojen enerjisi None (yarım değer yok)", cg._sayac_oku(KOJ) is None)
+finally:
+    cg._double_oku = _orj_double
+
+import data_collector as _dc  # noqa: E402
+import data_bridge as _db  # noqa: E402
+_koj = [d for d in _dc.ANALYZERS if d["name"].startswith("KOJEN-")]
+c("KOJEN-3/4 canlı okunacak listede",
+  {d["name"]: d["ip"] for d in _koj} == {"KOJEN-3": "192.168.1.19", "KOJEN-4": "192.168.1.18"}, _koj)
+c("kojenler üretim sayacı olarak işaretli", all(d.get("uretim") for d in _koj))
+c("kojenler tüketim toplamına GİRMEZ (çift sayım yok)",
+  not any(d["name"] in _db.ALL_ANALYZERS for d in _koj))
+
 # ── 5) Sayaç farkından güç ───────────────────────────────────────────────
 o = cg.Olcer(a)
 c("ilk okumada sayaç gücü yok", o._sayac_gucu("TRDP-1", 1000.0, 1000.0) is None)

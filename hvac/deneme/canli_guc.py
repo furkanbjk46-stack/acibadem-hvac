@@ -137,6 +137,39 @@ def _float_oku(ip: str, adres: int, timeout: float = OKUMA_TIMEOUT):
             pass
 
 
+def _double_oku(ip: str, adres: int, timeout: float = OKUMA_TIMEOUT):
+    """Tek bir double (4 register) oku. Hata → None."""
+    s = None
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(timeout)
+        s.connect((ip, MODBUS_PORT))
+        s.send(_istek_paketi(adres, 4))
+        resp = s.recv(256)
+        if len(resp) >= 17 and resp[7] == 3:
+            return struct.unpack(">d", resp[9:17])[0]
+        return None
+    except Exception:
+        return None
+    finally:
+        try:
+            if s:
+                s.close()
+        except Exception:
+            pass
+
+
+# ÜRETİM sayaçları (kojen, "uretim": True) — 27.10.2026
+# Jeneratör çıkışındaki analizörde akım trafosunun yönü sahada doğrulanmadı:
+# ters bağlıysa güç NEGATİF okunur ve enerji "Giren" (801) yerine "Verilen"
+# (809) sayacında birikir. Yön varsayılmaz: güç mutlak değerle, enerji
+# Giren + Verilen toplamıyla alınır (ikisi de ölçülen değerdir; boşta
+# kojenin çektiği küçük iç tüketim bu toplamda ihmal edilebilir).
+# Adresler: SENTRON PAC3200 Modbus tablosu — 801 Aktif enerji Giren T1,
+# 809 Aktif enerji Verilen T1 (Double, Wh).
+URETIM_ENERJI_REG = {"siemens": (801, 809)}
+
+
 def guc_oku(dev: dict, ayar: dict = None, adres: int = None):
     """Cihazın toplam etkin gücünü kW olarak oku. Hata → None."""
     ayar = ayar or ayar_oku()
@@ -147,6 +180,8 @@ def guc_oku(dev: dict, ayar: dict = None, adres: int = None):
     w = _float_oku(dev["ip"], int(adres))
     if w is None:
         return None
+    if dev.get("uretim"):
+        w = abs(w)                       # üretim: yön bağlantıya göre işaretli gelebilir
     return round(w / 1000.0, 2)          # W → kW
 
 
@@ -170,7 +205,14 @@ def cihazlar(ayar: dict = None) -> list:
 
 
 def _sayac_oku(dev: dict):
-    """kWh sayacı — ÜRETİMDEKİ okuyucuyla (tek kaynak)."""
+    """kWh sayacı — ÜRETİMDEKİ okuyucuyla (tek kaynak).
+    Üretim sayacında Giren + Verilen toplamı (yönden bağımsız, yukarıya bkz.)."""
+    regler = URETIM_ENERJI_REG.get(dev.get("brand")) if dev.get("uretim") else None
+    if regler:
+        okunan = [_double_oku(dev["ip"], r) for r in regler]
+        if any(v is None for v in okunan):
+            return None
+        return round(sum(okunan) / 1000.0, 3)   # Wh → kWh
     try:
         import data_collector as dc
         return dc.modbus_get_kwh(dev)
