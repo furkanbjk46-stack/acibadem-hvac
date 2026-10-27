@@ -749,7 +749,7 @@ def siralama_betigi(aralik_sn: float = 4.0, sure_ms: int = 1100) -> str:
     yeni.forEach(function (k) { ebeveyn.appendChild(k); });
     kap.querySelectorAll('.lok-sira').forEach(function (r) { r.remove(); });
     var n = 0;
-    yeni.forEach(function (k) { if (n < 4 && deger.get(k) != null) { rozet(k, ++n); } });
+    yeni.forEach(function (k) { if (deger.get(k) != null) { rozet(k, ++n); } });
     kap.__synHareket = true;
     var bitecek = 0;
     yeni.forEach(function (k) {

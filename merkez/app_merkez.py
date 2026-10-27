@@ -1587,7 +1587,7 @@ with sol:
         _akis_wm2 = (f' class="canli-sayi" data-deger="{kw_anlik * 1000 / m2_lok:.2f}" data-ond="1" data-faz="{lok_id}"'
                      f' data-carpan="{1000.0 / m2_lok:.6f}"'
                      + gecis_ozellik(_g_seb, 1000.0 / m2_lok) if kw_anlik is not None and m2_lok else "")
-        sira_badge = f'<span class="lok-sira" style="position:absolute;top:8px;left:10px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#46536b;font-weight:700;">#{i+1}</span>' if (i < 4 and kw_anlik is not None) else ""
+        sira_badge = f'<span class="lok-sira" style="position:absolute;top:8px;left:10px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:8px;color:#46536b;font-weight:700;">#{i+1}</span>' if kw_anlik is not None else ""
 
         # Dün/önceki gün % kıyası anlık değerde anlamsız → gösterilmez
         degisim_html = ""
