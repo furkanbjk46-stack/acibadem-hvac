@@ -283,26 +283,48 @@ def bacnet_nokta_oku(gateway_ip, dnet, dadr_hex, obj_type, obj_inst, prop_id):
     finally:
         sock.close()
 
-def bacnet_thread():
-    if not os.path.exists(EXCEL_FILE):
-        logger.warning("BACnet Excel dosyasi bulunamadi: %s", EXCEL_FILE)
-        logger.warning("BACnet thread baslatilmadi. Dosyayi bu klasore kopyalayin.")
-        return
+def bacnet_sablon_yolu() -> str:
+    """Şablonun GÜNCEL yolu: önce configs/, yoksa kök (her çağrıda yeniden bakılır)."""
+    return _EXCEL_FILE_CONFIGS if os.path.exists(_EXCEL_FILE_CONFIGS) else _EXCEL_FILE_ROOT
 
+
+def bacnet_sablonu_oku():
+    """Okuma şablonunu diskten okur → DataFrame; okunamazsa None.
+
+    27.10.2026: Şablon eskiden yalnızca program AÇILIRKEN bir kez okunuyordu.
+    Maslak'ta şablona DIS HAVA NEM ve KOJEN-1..4 DURUM eklendi, program yeniden
+    başlatılmadığı için bu 5 nokta hiç okunmadı; hedefli_enerji_verileri.csv eski
+    48 noktayla yazılmaya devam etti, energy_data'da Kojen_Adet ve
+    Dis_Hava_Nem_Yuzde boş kaldı (ahu_collector şablonu her turda okuduğu için
+    bacnet_ham_veriler.xlsx'te değerler görünüyordu). Artık her günlük okumadan
+    hemen önce çağrılır: şablona eklenen nokta ertesi sabah kendiliğinden okunur.
+    """
+    yol = bacnet_sablon_yolu()
+    if not os.path.exists(yol):
+        logger.warning("BACnet Excel dosyasi bulunamadi: %s", yol)
+        return None
     try:
         import pandas as pd
-        df = pd.read_excel(EXCEL_FILE)
+        df = pd.read_excel(yol)
         df['Gateway IP']      = df['Gateway IP'].ffill()
         df['Network (DNET)']  = df['Network (DNET)'].ffill()
+        return df
     except ImportError:
         logger.error("pandas/openpyxl yuklu degil: pip install pandas openpyxl")
-        return
     except Exception as e:
-        logger.error("BACnet Excel okunamadi: %s", e)
-        return
+        logger.error("BACnet Excel okunamadi (%s): %s", yol, e)
+    return None
 
-    logger.info("BACnet thread baslatildi (%d nokta, gunluk saat %02d:%02d)",
-                len(df), BACNET_SAAT, BACNET_DAKIKA)
+
+def bacnet_thread():
+    df = bacnet_sablonu_oku()
+    if df is not None:
+        logger.info("BACnet thread baslatildi (%d nokta, gunluk saat %02d:%02d)",
+                    len(df), BACNET_SAAT, BACNET_DAKIKA)
+    else:
+        # Şablon şu an yoksa da thread bekler: dosya sonradan konursa
+        # bir sonraki günlük okumada bulunur (program yeniden başlatılmadan).
+        logger.warning("BACnet sablonu su an yok — gunluk okuma saatinde tekrar aranacak.")
 
     fieldnames = ["Timestamp", "Device_ID", "Point_Name", "Value", "Status"]
     _son_gun = None
@@ -314,6 +336,20 @@ def bacnet_thread():
 
         if not (saat_tamam and _son_gun != bugun):
             time.sleep(60)
+            continue
+
+        # Şablon her günlük okumadan ÖNCE yeniden okunur. Okunamazsa (Excel o
+        # anda açık/kilitli, bozuk) son başarılı şablonla devam edilir.
+        _yeni = bacnet_sablonu_oku()
+        if _yeni is not None:
+            if df is not None and len(_yeni) != len(df):
+                logger.info("BACnet sablonu degisti: %d -> %d nokta", len(df), len(_yeni))
+            df = _yeni
+        elif df is not None:
+            logger.warning("BACnet sablonu okunamadi — onceki sablonla (%d nokta) devam ediliyor", len(df))
+        if df is None:
+            logger.warning("BACnet sablonu yok — bugunku okuma atlandi.")
+            _son_gun = bugun
             continue
 
         _son_gun = bugun
