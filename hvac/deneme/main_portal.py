@@ -106,11 +106,9 @@ CONFIG = {
     # Bina bilgileri
     "BUILDING_AREA_M2": 0,  # Hastane toplam alan (m²) - 0 ise m² bazlı metrikler gösterilmez
     
-    # Birim fiyatlar (0 ise maliyet gösterilmez)
-    "UNIT_PRICE_ELECTRICITY": 0,  # TL/kWh
-    "UNIT_PRICE_GAS": 0,          # TL/m³
-    "UNIT_PRICE_WATER": 0,        # TL/m³
-    
+    # Birim fiyat / TL maliyet KALDIRILDI (28.10.2026): portal ve raporlar
+    # yalnız kWh / m³ üzerinden çalışır, hiçbir yerde TL gösterilmez.
+
     # Rapor zamanlayıcı ayarları
     "DAILY_REPORT_HOUR": 17,      # Günlük rapor saati (0-23)
     "DAILY_REPORT_MINUTE": 0,     # Günlük rapor dakikası (0-59)

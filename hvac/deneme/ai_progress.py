@@ -30,7 +30,7 @@ _DEFAULT_FEATURES = {
     "yoy_comparison":       {"name": "YoY Karşılaştırma",           "active": True,  "points": 4},
     "anomaly_detection":    {"name": "Anomali Tespiti",             "active": True,  "points": 4},
     "ahu_capacity":         {"name": "AHU Kapasite Analizi",        "active": True,  "points": 4},
-    "cost_analysis":        {"name": "Maliyet Hesaplama",           "active": True,  "points": 3},
+    # cost_analysis (Maliyet Hesaplama) 28.10.2026'da kaldırıldı — sistemde TL hesabı yok
     "hvac_sat_analysis":    {"name": "HVAC SAT/Mode Analizi",       "active": True,  "points": 4},
     "maintenance_cards":    {"name": "Bakım Kartı Entegrasyonu",    "active": True,  "points": 3},
     # İleri AI (henüz aktif değil)

@@ -144,22 +144,6 @@ def load_building_area() -> float:
     return 0.0
 
 
-def load_unit_prices() -> Dict:
-    """Birim fiyatları settings'ten yükle."""
-    try:
-        if os.path.exists(SETTINGS_FILE):
-            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return {
-                    "electricity": float(data.get("UNIT_PRICE_ELECTRICITY", 0)),
-                    "gas": float(data.get("UNIT_PRICE_GAS", 0)),
-                    "water": float(data.get("UNIT_PRICE_WATER", 0)),
-                }
-    except Exception:
-        pass
-    return {"electricity": 0, "gas": 0, "water": 0}
-
-
 # ─── Plotly Grafik Üretimi ───
 def create_monthly_pie_chart(total_kwh: float, chiller_kwh: float, gas_kwh: float) -> Optional[bytes]:
     if not HAS_PLOTLY:
@@ -399,12 +383,6 @@ class MonthlyReportGenerator:
         if building_area > 0:
             self._add_m2_metrics(pdf, current, building_area)
         
-        # 2.5. MALİYET ÖZETİ
-        prices = load_unit_prices()
-        has_price = prices["electricity"] > 0 or prices["gas"] > 0
-        if has_price:
-            self._add_cost_summary(pdf, current, previous, prices)
-        
         # 3. HVAC PERFORMANS
         self._add_hvac_summary(pdf, hvac_month)
         
@@ -554,45 +532,6 @@ class MonthlyReportGenerator:
                      f"{gas_kwh / area:.3f}", "", (239, 68, 68))
         pdf.info_box(10 + 2*(bw + gap), y, bw, 22, "Toplam kWh/m2",
                      f"{current['total'] / area:.3f}", "", (139, 92, 246))
-        
-        pdf.set_y(y + 26)
-    
-    def _add_cost_summary(self, pdf: MonthlyReportPDF, current: Dict, previous: Dict, prices: Dict):
-        """Aylık maliyet özet kutuları."""
-        pdf.section_title("AYLIK MALIYET OZETI (TL)", (245, 158, 11))
-        
-        cost_elec = current["grid"] * prices["electricity"] if prices["electricity"] > 0 else 0
-        cost_gas = current["gas"] * prices["gas"] if prices["gas"] > 0 else 0
-        cost_total = cost_elec + cost_gas
-        
-        # Önceki ay maliyeti
-        prev_cost_elec = previous["grid"] * prices["electricity"] if prices["electricity"] > 0 else 0
-        prev_cost_gas = previous["gas"] * prices["gas"] if prices["gas"] > 0 else 0
-        prev_cost_total = prev_cost_elec + prev_cost_gas
-        
-        avg_daily_cost = cost_total / current["days"] if current["days"] > 0 else 0
-        
-        y = pdf.get_y()
-        bw = 45
-        gap = 3
-        
-        if prices["electricity"] > 0:
-            pdf.info_box(10, y, bw, 22, "Elektrik Maliyeti",
-                         f"{cost_elec:,.0f} TL".replace(",", "."),
-                         f"{prices['electricity']:.2f} TL/kWh", (59, 130, 246))
-        
-        if prices["gas"] > 0:
-            pdf.info_box(10 + bw + gap, y, bw, 22, "Dogalgaz Maliyeti",
-                         f"{cost_gas:,.0f} TL".replace(",", "."),
-                         f"{prices['gas']:.2f} TL/m3", (239, 68, 68))
-        
-        pdf.info_box(10 + 2*(bw + gap), y, bw, 22, "Toplam Maliyet",
-                     f"{cost_total:,.0f} TL".replace(",", "."),
-                     self._pct_change(cost_total, prev_cost_total), (245, 158, 11))
-        
-        pdf.info_box(10 + 3*(bw + gap), y, bw, 22, "Gunluk Ort. Maliyet",
-                     f"{avg_daily_cost:,.0f} TL".replace(",", "."),
-                     "", (139, 92, 246))
         
         pdf.set_y(y + 26)
     
@@ -779,14 +718,6 @@ class MonthlyReportGenerator:
             kwh_m2 = current["total"] / area
             lines.append(f"[-] Aylik metrekare basina tuketim: {kwh_m2:.3f} kWh/m2.")
 
-        # Maliyet değerlendirmesi
-        prices = load_unit_prices()
-        if prices["electricity"] > 0 or prices["gas"] > 0:
-            cost_elec = current["grid"] * prices["electricity"]
-            cost_gas = current["gas"] * prices["gas"]
-            cost_total = cost_elec + cost_gas
-            lines.append(f"[-] Aylik tahmini toplam maliyet: {cost_total:,.0f} TL.".replace(",", "."))
-        
         # Sonuç
         lines.append("")
         if critical == 0 and (previous["total"] <= 0 or ((current["total"] - previous["total"]) / previous["total"] * 100) < 5):

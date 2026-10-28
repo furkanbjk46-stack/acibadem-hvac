@@ -122,7 +122,7 @@ c("özet göstergeler ters renkte", 'f" {unit}", delta,\n                       
 # Etiket niteliğindeki yazılar delta DEĞİL, alt not olmalı
 _ETIKET = ["Toplam Değişim", "Şebeke Değişim", "Chiller Değişim",
            "Toplam R² Skoru", "Beklenen Tüketim", "Sistem Sağlığı",
-           "Elektrik", "Doğalgaz", "Su", "Toplam Maliyet"]
+           ]   # Elektrik/Doğalgaz/Su/Toplam Maliyet kartları 28.10.2026'da kaldırıldı (TL yok)
 for _ad in _ETIKET:
     _bul = [n for n in notlular if _ad in n["etiket"]]
     c("etiket yazısı alt notta: %s" % _ad, _bul,
@@ -186,7 +186,7 @@ _kart_cagri = [d for d in ast.walk(AGAC)
                and d.func.id == "_bolum_karti"]
 _anahtarlar = [a.args[0].value for a in _kart_cagri
                if a.args and isinstance(a.args[0], ast.Constant)]
-c("tüm bölümler kart içinde", len(_anahtarlar) >= 19, len(_anahtarlar))
+c("tüm bölümler kart içinde", len(_anahtarlar) >= 17, len(_anahtarlar))
 c("kart anahtarları 'kart_' ile başlar (CSS ona bakıyor)",
   all(k.startswith("kart_") for k in _anahtarlar),
   [k for k in _anahtarlar if not k.startswith("kart_")])
@@ -194,12 +194,20 @@ c("kart anahtarları benzersiz", len(set(_anahtarlar)) == len(_anahtarlar),
   [k for k in set(_anahtarlar) if _anahtarlar.count(k) > 1])
 
 # Üç sekmenin de bölümleri karta alınmış olmalı
-for _k in ("kart_dun_ozeti", "kart_m2_tuketim", "kart_maliyet_gunluk",      # dashboard
-           "kart_birlesik_ozet", "kart_maliyet_aylik", "kart_oneriler",     # aylık rapor
+for _k in ("kart_dun_ozeti", "kart_m2_tuketim",                             # dashboard
+           "kart_birlesik_ozet", "kart_oneriler",                           # aylık rapor
            "kart_pdf_indir", "kart_ai_ilerleme", "kart_ml_egitim",
            "kart_tahmin_coklu_yil", "kart_tahmin_aylik", "kart_ml_model",   # tahmin & trend
            "kart_gelecek_ay", "kart_senaryo", "kart_tasarruf_ozeti"):
     c("kart var: %s" % _k, _k in _anahtarlar)
+
+# ── TL / maliyet hiçbir ekranda yok (28.10.2026) ─────────────────────────
+for _k in ("kart_maliyet_gunluk", "kart_maliyet_aylik"):
+    c("maliyet kartı YOK: %s" % _k, _k not in _anahtarlar)
+c("portalda birim fiyat / TL maliyet yok",
+  "UNIT_PRICE" not in KAYNAK
+  and KAYNAK.count("₺") == KAYNAK.count('"₺nan"')            # yalnız eski hata notunda
+  and KAYNAK.count("TL/kWh") == KAYNAK.count('"2,45 TL/kWh"'))  # yalnız yorumda
 
 # ── Kıyas yılı yoksa "0 (kWh)" sütunu basılmaz ───────────────────────────
 c("kıyas sütunları koşula bağlı (Tahmin & Trend)", "_kiyas_var = bool(" in KAYNAK)

@@ -142,22 +142,6 @@ def load_building_area() -> float:
     return 0.0
 
 
-def load_unit_prices() -> Dict:
-    """Birim fiyatları settings'ten yükle."""
-    try:
-        if os.path.exists(SETTINGS_FILE):
-            with open(SETTINGS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                return {
-                    "electricity": float(data.get("UNIT_PRICE_ELECTRICITY", 0)),
-                    "gas": float(data.get("UNIT_PRICE_GAS", 0)),
-                    "water": float(data.get("UNIT_PRICE_WATER", 0)),
-                }
-    except Exception:
-        pass
-    return {"electricity": 0, "gas": 0, "water": 0}
-
-
 def load_last_analysis() -> List[Dict]:
     """Son HVAC analiz sonuçlarını yükle."""
     try:
@@ -429,12 +413,6 @@ class DailyReportGenerator:
         if building_area > 0:
             self._add_m2_metrics(pdf, report_row, building_area)
         
-        # 2.5. MALİYET ÖZETİ
-        prices = load_unit_prices()
-        has_price = prices["electricity"] > 0 or prices["gas"] > 0
-        if has_price:
-            self._add_cost_summary(pdf, report_row, prices)
-        
         # 3. HVAC PERFORMANS ÖZETİ 
         self._add_hvac_summary(pdf, hvac_day)
         
@@ -578,38 +556,6 @@ class DailyReportGenerator:
         pdf.info_box(10 + 2*(box_w + gap), y, box_w, 22, "Toplam kWh/m2",
                      f"{total / area:.3f}",
                      "", (139, 92, 246))
-        
-        pdf.set_y(y + 26)
-    
-    def _add_cost_summary(self, pdf: DailyReportPDF, report: Dict, prices: Dict):
-        """Maliyet özet kutuları."""
-        pdf.section_title("", "MALIYET OZETI (TL)", (245, 158, 11))
-        
-        total_kwh = report.get("total", 0)
-        grid_kwh = report.get("grid", 0)
-        gas_m3 = report.get("gas_kazan", 0) + report.get("gas_kojen", 0)
-        
-        cost_elec = grid_kwh * prices["electricity"] if prices["electricity"] > 0 else 0
-        cost_gas = gas_m3 * prices["gas"] if prices["gas"] > 0 else 0
-        cost_total = cost_elec + cost_gas
-        
-        y = pdf.get_y()
-        bw = 60
-        gap = 5
-        
-        if prices["electricity"] > 0:
-            pdf.info_box(10, y, bw, 22, "Sebeke Elektrik Maliyeti",
-                         f"{cost_elec:,.0f} TL".replace(",", "."),
-                         f"{prices['electricity']:.2f} TL/kWh | {grid_kwh:,.0f} kWh".replace(",", "."), (59, 130, 246))
-        
-        if prices["gas"] > 0:
-            pdf.info_box(10 + bw + gap, y, bw, 22, "Dogalgaz Maliyeti",
-                         f"{cost_gas:,.0f} TL".replace(",", "."),
-                         f"{prices['gas']:.2f} TL/m3", (239, 68, 68))
-        
-        pdf.info_box(10 + 2*(bw + gap), y, bw, 22, "Toplam Maliyet",
-                     f"{cost_total:,.0f} TL".replace(",", "."),
-                     "", (245, 158, 11))
         
         pdf.set_y(y + 26)
     

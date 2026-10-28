@@ -195,9 +195,6 @@ class MonthlyReportPDFGenerator:
         # Özet Göstergeler
         self._add_summary_section(unified_data.get("summary", {}))
 
-        # Maliyet Özeti
-        self._add_cost_section(unified_data.get("summary", {}))
-
         # YoY Karşılaştırma
         self._add_yoy_section(yoy_analysis)
 
@@ -325,58 +322,6 @@ class MonthlyReportPDFGenerator:
             self.pdf.set_y(box_y3 + bh + 6)
         else:
             self.pdf.ln(4)
-
-    def _add_cost_section(self, summary: Dict):
-        """Maliyet özeti — KPI kutuları ile"""
-        try:
-            import json
-            settings_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs", "hvac_settings.json")
-            prices = {}
-            if os.path.exists(settings_path):
-                with open(settings_path, "r", encoding="utf-8") as f:
-                    prices = json.load(f)
-
-            p_elec = float(prices.get("UNIT_PRICE_ELECTRICITY", 0))
-            p_gas = float(prices.get("UNIT_PRICE_GAS", 0))
-            p_water = float(prices.get("UNIT_PRICE_WATER", 0))
-
-            if p_elec <= 0 and p_gas <= 0 and p_water <= 0:
-                return
-
-            total_grid = summary.get("total_grid_consumption", 0)
-            total_gas = summary.get("total_gas", 0)
-            total_water = summary.get("total_water_consumption", 0)
-
-            cost_elec = total_grid * p_elec if p_elec > 0 else 0
-            cost_gas = total_gas * p_gas if p_gas > 0 else 0
-            cost_water = total_water * p_water if p_water > 0 else 0
-            cost_total = cost_elec + cost_gas + cost_water
-
-            self._section_title("MALIYET OZETI (TL)", self.WARNING_C)
-
-            cost_y = self.pdf.get_y()
-            cw = 45
-            cg = 2.5
-
-            if p_elec > 0:
-                self._info_box(10, cost_y, cw, 25,
-                               "Elektrik", f"{cost_elec:,.0f} TL".replace(",", "."),
-                               f"{p_elec:.2f} TL/kWh", self.ACCENT)
-            if p_gas > 0:
-                self._info_box(10 + cw + cg, cost_y, cw, 25,
-                               "Dogalgaz", f"{cost_gas:,.0f} TL".replace(",", "."),
-                               f"{p_gas:.2f} TL/m3", self.DANGER)
-            if p_water > 0:
-                self._info_box(10 + 2*(cw + cg), cost_y, cw, 25,
-                               "Su", f"{cost_water:,.0f} TL".replace(",", "."),
-                               f"{p_water:.2f} TL/m3", (59, 130, 200))
-            self._info_box(10 + 3*(cw + cg), cost_y, cw, 25,
-                           "TOPLAM", f"{cost_total:,.0f} TL".replace(",", "."),
-                           "", self.SUCCESS)
-
-            self.pdf.set_y(cost_y + 30)
-        except Exception:
-            pass
 
     def _add_yoy_section(self, yoy_analysis: Dict):
         """Geçen yıl karşılaştırma — modern tablo ile"""
@@ -594,6 +539,10 @@ class MonthlyReportPDFGenerator:
                 self.pdf.set_font(self.font, 'B', 10)
                 self.pdf.set_text_color(40, 40, 40)
                 self.pdf.cell(0, 6, self._sanitize(f"{year} Aylik Tuketim Tahmini"), 0, 1)
+                if forecast_data.get("yontem_notu"):
+                    self.pdf.set_font(self.font, '', 8)
+                    self.pdf.set_text_color(90, 90, 90)
+                    self.pdf.multi_cell(0, 4, self._sanitize(forecast_data["yontem_notu"]))
                 self.pdf.ln(2)
 
                 prev_y = monthly_fc[0]["prev_year"] if monthly_fc else ""

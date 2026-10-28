@@ -1171,10 +1171,10 @@ st.markdown("""
     color: #5b6880 !important;
     margin-top: 2px;
 }
-/* Bölüm rengi: ölçüm mavi, oran/alan mor, para amber, tahmin yeşil */
+/* Bölüm rengi: ölçüm mavi, oran/alan mor, tasarruf amber, tahmin yeşil */
 [class*="st-key-kart_m2"], [class*="st-key-kart_ml"],
 [class*="st-key-kart_ai"]      { border-left-color: #8b5cf6 !important; }
-[class*="st-key-kart_maliyet"], [class*="st-key-kart_tasarruf"]
+[class*="st-key-kart_tasarruf"]
                                { border-left-color: #c98500 !important; }
 [class*="st-key-kart_tahmin"], [class*="st-key-kart_senaryo"],
 [class*="st-key-kart_gelecek"] { border-left-color: #0ca30c !important; }
@@ -1224,6 +1224,14 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+
+# ── Hareket: kartlar süzülerek gelir, sayılar gerçek değere sayarak açılır ──
+# (portal_hareket.py — veriye dokunmaz, uydurma/akan değer üretmez)
+try:
+    import portal_hareket as _portal_hareket
+    _portal_hareket.uygula(st, components)
+except Exception:
+    pass
 
 # ── BasEUI Dropdown Koyu Tema — components.html ile gerçek JS enjeksiyonu ──
 # st.markdown içindeki <script> tarayıcı tarafından çalıştırılmaz (innerHTML güvenliği).
@@ -2793,55 +2801,6 @@ def generate_pdf_report(start: date, end_exclusive: date, df_period: pd.DataFram
         pdf.ln(4)
 
         # ═══════════════════════════════════════════
-        #  BÖLÜM 3 — MALİYET ÖZETİ
-        # ═══════════════════════════════════════════
-        try:
-            import json as _cost_json
-            _cost_settings_path = os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json")
-            _cost_prices = {}
-            if os.path.exists(_cost_settings_path):
-                with open(_cost_settings_path, "r", encoding="utf-8") as _cpf:
-                    _cost_prices = _cost_json.load(_cpf)
-
-            _p_elec = float(_cost_prices.get("UNIT_PRICE_ELECTRICITY", 0))
-            _p_gas = float(_cost_prices.get("UNIT_PRICE_GAS", 0))
-            _p_water = float(_cost_prices.get("UNIT_PRICE_WATER", 0))
-
-            if _p_elec > 0 or _p_gas > 0 or _p_water > 0:
-                total_gas_m3 = total_gas_kazan + total_gas_kojen
-                cost_elec = total_grid * _p_elec if _p_elec > 0 else 0
-                cost_gas = total_gas_m3 * _p_gas if _p_gas > 0 else 0
-                cost_water = total_water * _p_water if _p_water > 0 else 0
-                cost_total = cost_elec + cost_gas + cost_water
-
-                section_title("MALIYET OZETI (TL)", WARNING_C)
-
-                # Maliyet KPI kutuları
-                cost_box_y = pdf.get_y()
-                cbox_w = 45
-                cgap = 2.5
-
-                if _p_elec > 0:
-                    info_box(10, cost_box_y, cbox_w, 25,
-                             "Elektrik", f"{cost_elec:,.0f} TL".replace(",", "."),
-                             f"{_p_elec:.2f} TL/kWh", ACCENT)
-                if _p_gas > 0:
-                    info_box(10 + cbox_w + cgap, cost_box_y, cbox_w, 25,
-                             "Dogalgaz", f"{cost_gas:,.0f} TL".replace(",", "."),
-                             f"{_p_gas:.2f} TL/m3", DANGER)
-                if _p_water > 0:
-                    info_box(10 + 2*(cbox_w + cgap), cost_box_y, cbox_w, 25,
-                             "Su", f"{cost_water:,.0f} TL".replace(",", "."),
-                             f"{_p_water:.2f} TL/m3", (59, 130, 200))
-                info_box(10 + 3*(cbox_w + cgap), cost_box_y, cbox_w, 25,
-                         "TOPLAM", f"{cost_total:,.0f} TL".replace(",", "."),
-                         "", SUCCESS)
-
-                pdf.set_y(cost_box_y + 30)
-        except Exception:
-            pass
-
-        # ═══════════════════════════════════════════
         #  BÖLÜM 4 — İÇGÖRÜLER
         # ═══════════════════════════════════════════
         section_title("ICGORULER VE ANALIZ", SUCCESS)
@@ -4261,7 +4220,7 @@ with tab2:
                     else:
                         metrik_notlu("⚪ Sistem Sağlığı", "--", "Veri yok")
         
-        # Settings'i bir kez oku (m² ve maliyet bölümleri için)
+        # Settings'i bir kez oku (m² bölümü için)
         try:
             import json as _json
             _settings_path = os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json")
@@ -4273,9 +4232,6 @@ with tab2:
             _all_settings = {}
         
         building_area = float(_all_settings.get("BUILDING_AREA_M2", 0))
-        price_elec = float(_all_settings.get("UNIT_PRICE_ELECTRICITY", 0))
-        price_gas = float(_all_settings.get("UNIT_PRICE_GAS", 0))
-        price_water = float(_all_settings.get("UNIT_PRICE_WATER", 0))
         
         # ═══ 2. m² BAŞINA TÜKETİM ═══
         if building_area and building_area > 0 and not report_data.empty:
@@ -4292,43 +4248,6 @@ with tab2:
                 with ma3:
                     total_per_m2 = rep_total / building_area
                     st.metric("⚡ Toplam Enerji", f"{total_per_m2:.2f} kWh/m²")
-        
-        # ═══ 3. DÜNKÜ MALİYET ═══
-        has_any_price = price_elec > 0 or price_gas > 0 or price_water > 0
-        if has_any_price and not report_data.empty:
-            cost_elec = rep_grid * price_elec if price_elec > 0 else 0
-            cost_gas = rep_gas * price_gas if price_gas > 0 else 0
-            rep_water = 0
-            if "Su_Tuketimi_m3" in report_data.columns:
-                rep_water = sayi(report_data.iloc[0].get("Su_Tuketimi_m3", 0))
-            cost_water = rep_water * price_water if price_water > 0 else 0
-            cost_total = cost_elec + cost_gas + cost_water
-            
-            with _bolum_karti("kart_maliyet_gunluk", "💰 Dünkü Maliyet Tahmini"):
-                cost_count = sum([price_elec > 0, price_gas > 0, price_water > 0, True])
-                cost_cols = st.columns(cost_count)
-                col_idx = 0
-                
-                if price_elec > 0:
-                    with cost_cols[col_idx]:
-                        metrik_notlu("⚡ Elektrik", f"₺{cost_elec:,.0f}".replace(",", "."),
-                                     f"{price_elec:.2f} TL/kWh")
-                    col_idx += 1
-                
-                if price_gas > 0:
-                    with cost_cols[col_idx]:
-                        metrik_notlu("🔥 Doğalgaz", f"₺{cost_gas:,.0f}".replace(",", "."),
-                                     f"{price_gas:.2f} TL/m³")
-                    col_idx += 1
-                
-                if price_water > 0:
-                    with cost_cols[col_idx]:
-                        metrik_notlu("💧 Su", f"₺{cost_water:,.0f}".replace(",", "."),
-                                     f"{price_water:.2f} TL/m³")
-                    col_idx += 1
-                
-                with cost_cols[col_idx]:
-                    st.metric("💰 Toplam Maliyet", f"₺{cost_total:,.0f}".replace(",", "."))
         
         st.divider()
         # ===== /GÜNLÜK ÖZET KARTLARI =====
@@ -4710,59 +4629,6 @@ with tab5:
                             st.metric("Ort. Chiller Set", "Veri yok")
                 
                 
-                # ========== MALİYET ÖZETİ ==========
-                try:
-                    import json as _tab5_json
-                    _tab5_settings_path = os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json")
-                    _tab5_prices = {}
-                    if os.path.exists(_tab5_settings_path):
-                        with open(_tab5_settings_path, "r", encoding="utf-8") as _tf:
-                            _tab5_prices = _tab5_json.load(_tf)
-                    
-                    _p_elec = float(_tab5_prices.get("UNIT_PRICE_ELECTRICITY", 0))
-                    _p_gas = float(_tab5_prices.get("UNIT_PRICE_GAS", 0))
-                    _p_water = float(_tab5_prices.get("UNIT_PRICE_WATER", 0))
-                    
-                    if _p_elec > 0 or _p_gas > 0 or _p_water > 0:
-                        with _bolum_karti("kart_maliyet_aylik", "💰 Aylık Maliyet Özeti"):
-                        
-                            _total_grid = summary.get("total_grid_consumption", 0)
-                            _total_gas = summary.get("total_gas", 0)
-                            _total_water = summary.get("total_water_consumption", 0)
-                            _days = unified_data.get("days_with_data", 1) or 1
-                        
-                            _cost_elec = _total_grid * _p_elec if _p_elec > 0 else 0
-                            _cost_gas = _total_gas * _p_gas if _p_gas > 0 else 0
-                            _cost_water = _total_water * _p_water if _p_water > 0 else 0
-                            _cost_total = _cost_elec + _cost_gas + _cost_water
-                        
-                            # Metrik kartları
-                            _cost_cols = st.columns(4)
-                            with _cost_cols[0]:
-                                if _p_elec > 0:
-                                    metrik_notlu("⚡ Elektrik Maliyeti", f"{_cost_elec:,.0f} ₺",
-                                                 f"{_p_elec:.2f} TL/kWh")
-                                else:
-                                    st.metric("⚡ Elektrik Maliyeti", "Fiyat yok")
-                            with _cost_cols[1]:
-                                if _p_gas > 0:
-                                    metrik_notlu("🔥 Doğalgaz Maliyeti", f"{_cost_gas:,.0f} ₺",
-                                                 f"{_p_gas:.2f} TL/m³")
-                                else:
-                                    st.metric("🔥 Doğalgaz Maliyeti", "Fiyat yok")
-                            with _cost_cols[2]:
-                                if _p_water > 0:
-                                    metrik_notlu("💧 Su Maliyeti", f"{_cost_water:,.0f} ₺",
-                                                 f"{_p_water:.2f} TL/m³")
-                                else:
-                                    st.metric("💧 Su Maliyeti", "Fiyat yok")
-                            with _cost_cols[3]:
-                                _daily_avg = _cost_total / _days if _days > 0 else 0
-                                metrik_notlu("📊 Toplam Maliyet", f"{_cost_total:,.0f} ₺",
-                                             f"Ort. {_daily_avg:,.0f} ₺/gün")
-                        
-                except Exception:
-                    pass
                 # ═══ TAHMİN VE TREND ANALİZİ ═══
                 try:
                     # Tahmin/sapma ileriye dönük günlük modelden (H-04)
@@ -4864,7 +4730,7 @@ with tab5:
                     
                     # 3. Tasarruf Özeti
                     if savings and savings.get("savings_total_kwh") is not None:
-                        with _bolum_karti("kart_tasarruf_rapor", "💰 Beklenen vs Gerceklesen Tasarruf"):
+                        with _bolum_karti("kart_tasarruf_rapor", "📉 Beklenen vs Gerceklesen Tasarruf"):
                             st.caption(f"Alan artisina ragmen tuketim degisimi ({savings.get('prev_year', '')}->{savings.get('year', '')})")
                         
                             sv_cols = st.columns(4)
@@ -5441,7 +5307,7 @@ with tab6:
 
         # ═══ 3. TASARRUF ÖZETİ ═══
         if _fc_savings and _fc_savings.get("savings_total_kwh") is not None:
-            with _bolum_karti("kart_tasarruf_ozeti", "💰 Beklenen vs Gerçekleşen Tasarruf"):
+            with _bolum_karti("kart_tasarruf_ozeti", "📉 Beklenen vs Gerçekleşen Tasarruf"):
                 st.caption(f"Alan artışına rağmen tüketim değişimi ({_fc_savings.get('prev_year', '')}→{_fc_savings.get('year', '')})")
             
                 _sv = st.columns(4)
