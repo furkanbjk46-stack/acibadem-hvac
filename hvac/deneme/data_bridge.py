@@ -106,7 +106,16 @@ MCC_ONLY_ANALYZERS = ALL_ANALYZERS - CHILLER_ANALYZERS
 BACNET_MAP = {
     "DIS HAVA":                "Dis_Hava_Sicakligi_C",
     "DIS HAVA NEM":            "Dis_Hava_Nem_Yuzde",     # 24.10.2026: AI 32 (cihaz 2098211)
-    "CH SET":                  "Chiller_Set_Temp_C",
+    # "CH SET" KALDIRILDI (28.10.2026): şablondaki adresi (0103 / AV 12) chiller
+    # seti değil, kollektör denetleyicisinin set noktasıydı (GUNDUZ/GECE
+    # KOLLEKTOR SET AV 10/11'in yanı) — 27.10 satırına 12 °C yazdı, yanlış
+    # "chiller set yüksek" alarmı verdi. Chiller seti artık chiller'ların
+    # GERÇEKTE kullandığı CH-x IC SET'lerden hesaplanır (aşağıda).
+    "CH-1 IC SET":             "_ch_ic_1",
+    "CH-2 IC SET":             "_ch_ic_2",
+    "CH-3 IC SET":             "_ch_ic_3",
+    "CH-4 IC SET":             "_ch_ic_4",
+    "CH-5 IC SET":             "_ch_ic_5",
     "MAS-1 ISITMA SICAKLIK":   "Mas1_Isitma_Temp",
     "MAS-2 ISITMA SICAKLIK":   "Mas2_Isitma_Temp",
     "MAS-1 SOGUTMA SICAKLIK":  "Mas1_Sogutma_Temp",
@@ -358,6 +367,34 @@ def write_to_energy_csv(row_dict):
 # ANA ROW BUILDER
 # ================================================================
 
+def chiller_set_hesapla(data):
+    """Chiller seti = CH-1..5 IC SET (chiller'ın o an KULLANDIĞI set).
+
+    OTO SET hepsine aynı değeri gönderir; normalde hepsi eşittir. Çalışan
+    chiller'ların değeri alınır (hiçbiri çalışmıyorsa okunanların hepsi).
+    Değerler ayrışırsa ÇOĞUNLUĞUN değeri yazılır, eşitlikte ortanca; ayrışan
+    chiller kayda uyarı olarak düşer (ör. 28.10.2026: CH-5 IC SET 3,3 —
+    OTO SET'in 7,5'ini uygulamıyor). Hiç IC SET okunamadıysa boş.
+    """
+    okunan = {i: data[f"_ch_ic_{i}"] for i in range(1, 6) if f"_ch_ic_{i}" in data}
+    if not okunan:
+        return ""
+    calisan = {i: v for i, v in okunan.items() if data.get(f"_ch_dur_{i}", 0) >= 1.0}
+    kume = calisan or okunan
+    from collections import Counter
+    from statistics import median
+    sayim = Counter(round(v, 1) for v in kume.values()).most_common()
+    if len(sayim) > 1 and sayim[0][1] == sayim[1][1]:
+        deger = round(median(kume.values()), 2)
+    else:
+        deger = sayim[0][0]
+    ayrisan = {i: v for i, v in kume.items() if abs(v - deger) > 0.25}
+    if ayrisan:
+        logger.warning("Chiller IC SET'ler ayrisiyor: ortak %.1f C, farkli: %s",
+                       deger, ", ".join("CH-%d=%.1f" % (i, v) for i, v in sorted(ayrisan.items())))
+    return round(deger, 2)
+
+
 def build_daily_row(today_str, bacnet, daily_kwh):
     """BACnet + Modbus verilerinden gunluk energy_data satirini olustur"""
 
@@ -382,6 +419,8 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         kojen_adet = sum(1 for v in kojen_okunan if v >= 1.0) if kojen_okunan else ""
     else:
         ch_adet = abs_adet = kaz_adet = kojen_adet = ""
+
+    ch_set = chiller_set_hesapla(data)
 
     # Chiller yukleme yuzdesi: sadece calisan chillerlerin ortalamasi
     ch_yuz_vals = [
@@ -452,7 +491,7 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     # --- Son satir (sadece ENERGY_SCHEMA sutunlari) ---
     row = {
         "Tarih":                      today_str,
-        "Chiller_Set_Temp_C":         data.get("Chiller_Set_Temp_C", ""),
+        "Chiller_Set_Temp_C":         ch_set,   # CH-x IC SET (çalışanların ortak değeri)
         "Chiller_Adet":               ch_adet,
         "Absorption_Chiller_Adet":    abs_adet,
         "Kazan_Adet":                 kaz_adet,
