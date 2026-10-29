@@ -10,9 +10,12 @@
 --   <harf>_BLOK_FCU_SET ............ 8.0 – 18.0 °C
 --   ZON<n>_KLIMA_SANTRALI_SET ...... 6.0 – 16.0 °C
 --   diğer noktalar ................. 5.0 – 40.0 °C  (genel sınır)
--- Yalnız INSERT ve hedef_deger/nokta_adi değişen UPDATE denetlenir; sahanın
--- durum/hata_mesaji/executed_at güncellemeleri etkilenmez. service_role da
--- denetlenir (yanlış değer hangi yoldan gelirse gelsin sahaya gitmemeli).
+-- YALNIZ YÜRÜTÜLECEK komutlar (durum = 'bekliyor') denetlenir: saha yalnız
+-- bunları BACnet'e yazar. OTO SET'in sonuçlanmış kayıtları (tamamlandi / hata —
+-- reddettiği aralık dışı değerin İZİ dahil) serbest yazılır; yoksa tek bir
+-- red kaydı aynı turdaki bütün kayıtları düşürürdü. Bekleyen bir komutun
+-- değerini/noktasını değiştiren ya da durumu 'bekliyor'a çeviren UPDATE de
+-- denetlenir. service_role da denetlenir.
 -- Tekrar çalıştırılabilir.
 -- ════════════════════════════════════════════════════════════════════════════
 
@@ -26,9 +29,13 @@ DECLARE
   _alt numeric := 5.0;
   _ust numeric := 40.0;
 BEGIN
-  IF TG_OP = 'UPDATE' AND NEW.hedef_deger IS NOT DISTINCT FROM OLD.hedef_deger
+  IF NEW.durum IS DISTINCT FROM 'bekliyor' THEN
+    RETURN NEW;                       -- yürütülmeyecek kayıt (sonuç / iz)
+  END IF;
+  IF TG_OP = 'UPDATE' AND OLD.durum = 'bekliyor'
+     AND NEW.hedef_deger IS NOT DISTINCT FROM OLD.hedef_deger
      AND NEW.nokta_adi IS NOT DISTINCT FROM OLD.nokta_adi THEN
-    RETURN NEW;                       -- yalnız durum güncellemesi
+    RETURN NEW;                       -- değer değişmedi
   END IF;
   IF NEW.hedef_deger IS NULL THEN
     RETURN NEW;                       -- okuma komutu (değer yok)
