@@ -2085,37 +2085,6 @@ def yoy_month_compare(df: pd.DataFrame, year: int, month: int,
     }
 
 
-def aggregate_for_view(df_in: pd.DataFrame, view_mode: str) -> pd.DataFrame:
-    if df_in.empty:
-        return df_in
-    d = df_in.copy()
-    dt = pd.to_datetime(d["Tarih"], format="%Y-%m-%d", errors="coerce")
-    d["_dt"] = dt
-
-    if view_mode == "Günlük":
-        d = d.sort_values("_dt")
-        d["Tarih"] = pd.to_datetime(d["Tarih"], format="%Y-%m-%d", errors="coerce")
-        return d.drop(columns=["_dt"], errors="ignore")
-
-    if view_mode == "Aylık":
-        d["_grp"] = dt.dt.to_period("M").dt.to_timestamp()
-    else:
-        d["_grp"] = dt.dt.to_period("Y").dt.to_timestamp()
-
-    sum_cols = [
-        "Sebeke_Tuketim_kWh", "Kojen_Uretim_kWh", "Toplam_Hastane_Tuketim_kWh",
-        "Chiller_Tuketim_kWh", "MCC_Tuketim_kWh", "VRF_Split_Tuketim_kWh",
-        "Toplam_Sogutma_Tuketim_kWh", "Kazan_Dogalgaz_m3", "Kojen_Dogalgaz_m3",
-        "Su_Tuketimi_m3", "Diger_Yuk_kWh",
-    ]
-    mean_cols = ["Dis_Hava_Sicakligi_C"]
-
-    grouped = d.groupby("_grp", as_index=False).agg({**{c: "sum" for c in sum_cols}, **{c: "mean" for c in mean_cols}})
-    grouped = grouped.rename(columns={"_grp": "Tarih"})
-    grouped["Tarih"] = pd.to_datetime(grouped["Tarih"], format="%Y-%m-%d", errors="coerce")
-    return grouped
-
-
 def render_styled_table(df: pd.DataFrame, max_height: int = 400, max_rows: int = 200, table_key: str = "table") -> None:
     """Styled HTML tablo render et - siyah yazı, beyaz arka plan, ondalık 1 basamak
     
@@ -4316,7 +4285,7 @@ with tab2:
         _son_dt = pd.to_datetime(max(df["Tarih"]))
         st.markdown(_pt.bolum("Dönem ve Karşılaştırma", "takvim", "seçilen ay ↔ karşılaştırılan ay"),
                     unsafe_allow_html=True)
-        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1.4])
+        c1, c2, c3, c4 = st.columns(4)
         with c1:
             sel_year = st.selectbox("Yıl", options=years, index=len(years) - 1, key="dash_year_select")
         with c2:
@@ -4331,9 +4300,6 @@ with tab2:
         with c4:
             cmp_month = st.selectbox("Karşılaştırılacak Ay", options=list(range(1, 13)), index=int(sel_month) - 1,
                                      format_func=lambda m: _AYLAR[m - 1], key="dash_cmp_month_select")
-        with c5:
-            view_mode = st.radio("Grafik detayı", ["Günlük", "Aylık", "Yıllık"], horizontal=True,
-                                 key="dash_viewmode_radio")
 
         start, end = month_range(int(sel_year), int(sel_month))
         df_period = filter_range(df, start, end)
@@ -4371,27 +4337,36 @@ with tab2:
                      "°C" if avg_temp == avg_temp else ""),
         ]), unsafe_allow_html=True)
 
-        st.markdown(_pt.bolum("Grafikler", "grafik"), unsafe_allow_html=True)
-
-        df_chart = aggregate_for_view(df_period, view_mode)
-        fig_line = chart_consumption_vs_temp(df_chart, view_mode)
-        fig_stack = chart_stacked_breakdown(df_chart, view_mode)
-        fig_bar = chart_month_vs_last_year(yoy, baslik=_kiyas_txt) if yoy else None
-
-        left, right = st.columns([2, 1])
-        with left:
-            if fig_line:
-                st.plotly_chart(fig_line, use_container_width=True)
+        # ═══ GRAFİK & TREND — Synapse lokasyon Dashboard'u (portal_grafik.py) ═══
+        # Açılır listeden tüm metrikler; dönem = yukarıdaki Yıl/Ay seçimi,
+        # rozet = karşılaştırılan aya göre değişim.
+        import portal_grafik as _pg
+        st.markdown(_pt.bolum("Grafik & Trend", "grafik"), unsafe_allow_html=True)
+        _g_adlar = list(_pg.SECENEKLER.keys())
+        if st.session_state.get("dash_grafik_sec") not in _pg.SECENEKLER:
+            st.session_state.pop("dash_grafik_sec", None)
+        _g_tip = _pg.SECENEKLER.get(st.session_state.get("dash_grafik_sec"), "tuketim")
+        st.markdown(_pg.secici_css(_g_tip), unsafe_allow_html=True)
+        _gc1, _gc2 = st.columns([2, 3])
+        with _gc1:
+            with st.container(key=_pg.KAP):
+                _g_ad = st.selectbox("Grafik", _g_adlar, index=_g_adlar.index("Tüketim"),
+                                     key="dash_grafik_sec", label_visibility="collapsed")
+        _g_tip = _pg.SECENEKLER[_g_ad]
+        _df_kiyas = yoy["prev_df"] if yoy else None
+        _ay_adi = f"{_AYLAR[int(sel_month) - 1]} {sel_year}"
+        _kiyas_adi = f"{_AYLAR[int(cmp_month) - 1]} {cmp_year}"
+        with _gc2:
+            st.markdown("<div style='font-size:11px;color:#46536b;padding-top:10px;'>"
+                        f"{_ay_adi} {_pg.rozet(_g_tip, df_period, _df_kiyas, _kiyas_adi)}</div>",
+                        unsafe_allow_html=True)
+        st.markdown(_pg.desen_html(_g_tip), unsafe_allow_html=True)
+        _g_fig, _g_bilgi = _pg.ciz(_g_tip, df_period, _df_kiyas, _ay_adi, _kiyas_adi, building_area)
+        with st.container(key=_pg.ALAN):
+            if _g_fig is not None:
+                st.plotly_chart(_g_fig, use_container_width=True, config={"displayModeBar": False})
             else:
-                st.info("Seçilen aralıkta veri yok.")
-        with right:
-            if fig_bar:
-                st.plotly_chart(fig_bar, use_container_width=True)
-            else:
-                st.info("YoY bar grafiği için 'Ay/Yıl Seç (YoY)' kullan.")
-
-        if fig_stack:
-            st.plotly_chart(fig_stack, use_container_width=True)
+                st.info(_g_bilgi or "Grafik için veri yok.")
 
         st.markdown(_pt.bolum("Seçilen Dönem Verisi", "kayit"), unsafe_allow_html=True)
         render_styled_table(df_period.sort_values("Tarih"), table_key="dashboard")
