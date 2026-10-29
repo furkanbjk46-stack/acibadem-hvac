@@ -1685,6 +1685,11 @@ def recalc(df: pd.DataFrame) -> pd.DataFrame:
 def load_data() -> pd.DataFrame:
     if not os.path.exists(DATA_FILE):
         return empty_df()
+    # 30.10.2026 şebeke geçişi (tek sefer; işaret dosyası varsa hiçbir şey yapmaz)
+    try:
+        _enerji_hesap.sebeke_gecisi_uygula(DATA_FILE, os.path.join(os.path.dirname(__file__), "configs"))
+    except Exception:
+        pass
     df = pd.read_csv(DATA_FILE)
     df = ensure_schema(df)
     df = coerce_types(df)

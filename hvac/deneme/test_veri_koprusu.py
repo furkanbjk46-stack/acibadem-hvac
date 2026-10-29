@@ -72,23 +72,24 @@ c("toplayıcıdaki her TRDP/üretim dışı cihaz bir gruba ait (sessizce kaybol
 c("üretim sayaçları tüketim toplamına girmez",
   not any(a["name"] in db.ALL_ANALYZERS for a in dc.ANALYZERS if a.get("uretim")))
 
+# (tarihler Haziran öncesi: bu bölüm ESKİ şebeke kuralını sınar — yeni kural 01.06.2026'dan)
 # ── 3) Günlük satır: TRDP-4 dolar, şebeke hesabı doğru kalır ────────────
 _gun = {n: 100.0 for n in db.ALL_ANALYZERS}      # her alt sayaç 100 kWh
 _gun.update({"TRDP-1": 5000.0, "TRDP-3": 4000.0, "TRDP-4": 3000.0})
 _mcc = sum(100.0 for n in db.ALL_ANALYZERS if n not in db.CHILLER_ANALYZERS)
 _ch = sum(100.0 for n in db.CHILLER_ANALYZERS)
 
-r = db.build_daily_row("2026-09-21", {}, _gun)
+r = db.build_daily_row("2026-05-21", {}, _gun)
 c("TRDP4_kWh sütunu dolar", r["TRDP4_kWh"] == 3000.0, r["TRDP4_kWh"])
 c("TRDP-2 okunamadıysa boş kalır (0 yazılmaz)", r["TRDP2_kWh"] == "", r["TRDP2_kWh"])
-_dort_trafo = db.build_daily_row("2026-09-29", {}, {
+_dort_trafo = db.build_daily_row("2026-05-29", {}, {
     "TRDP-1": 5000.0, "TRDP-2": 6000.0, "TRDP-3": 4000.0, "TRDP-4": 3000.0})
 c("dört trafo da okunuyor", [_dort_trafo["TRDP%d_kWh" % i] for i in (1, 2, 3, 4)]
   == [5000.0, 6000.0, 4000.0, 3000.0])
 c("şebeke DÖRT trafonun toplamı (eksik ölçüm bitti)",
   _dort_trafo["Sebeke_Tuketim_kWh"] == 18000.0, _dort_trafo["Sebeke_Tuketim_kWh"])
 c("MCC-5 günlük satıra yazılır",
-  db.build_daily_row("2026-09-29", {}, {"MCC-5": 777.0})["MCC5_kWh"] == 777.0)
+  db.build_daily_row("2026-05-29", {}, {"MCC-5": 777.0})["MCC5_kWh"] == 777.0)
 c("şebeke = ÖLÇÜLEN trafoların toplamı (alt sayaç yedeği YOK)",
   r["Sebeke_Tuketim_kWh"] == round(5000 + 4000 + 3000, 1),
   (r["Sebeke_Tuketim_kWh"], 5000 + 4000 + 3000))
@@ -102,21 +103,22 @@ c("eksik trafo şebekeyi ŞİŞİRMEZ, eksik bırakır (TRDP-2 yok)",
   r["Sebeke_Tuketim_kWh"] < round(5000 + 4000 + 3000 + _mcc + _ch, 1))
 
 # Tek trafo bile gelse o trafo şebekeye yazılır (kullanıcı kuralı).
-_tek = db.build_daily_row("2026-09-21", {}, {"TRDP-3": 4200.0})
+_tek = db.build_daily_row("2026-05-21", {}, {"TRDP-3": 4200.0})
 c("tek trafo doluysa şebeke o trafodur", _tek["Sebeke_Tuketim_kWh"] == 4200.0,
   _tek["Sebeke_Tuketim_kWh"])
-_dort = db.build_daily_row("2026-09-21", {},
+_dort = db.build_daily_row("2026-05-21", {},
                            {"TRDP-1": 1000.0, "TRDP-3": 2000.0, "TRDP-4": 3000.0})
 c("dört trafodan üçü doluysa toplamı yazılır",
   _dort["Sebeke_Tuketim_kWh"] == 6000.0, _dort["Sebeke_Tuketim_kWh"])
-_yok = db.build_daily_row("2026-09-21", {}, {n: 100.0 for n in db.ALL_ANALYZERS})
+_yok = db.build_daily_row("2026-05-21", {}, {n: 100.0 for n in db.ALL_ANALYZERS})
 c("hiç trafo yoksa şebeke BOŞ bırakılır (uydurma toplam yok)",
   _yok["Sebeke_Tuketim_kWh"] == "", _yok["Sebeke_Tuketim_kWh"])
 c("MCC toplamı TRDP-4 eklenmeden önceki ile aynı", r["MCC_Tuketim_kWh"] == round(_mcc, 1),
   (r["MCC_Tuketim_kWh"], _mcc))
 
 # ── 3b) Kojen sayaçları (27.10.2026): trafo toplamı kojeni içerir ────────
-_kj = db.build_daily_row("2026-10-28", {}, {
+# Haziran 2026 öncesi gün: eski kural (trafo toplamı) — 30.10.2026'dan beri yeni kural 01.06'dan başlar
+_kj = db.build_daily_row("2026-05-28", {}, {
     "TRDP-1": 22000.0, "TRDP-2": 16000.0, "TRDP-3": 8000.0, "TRDP-4": 12000.0,
     "KOJEN-3": 11000.0, "KOJEN-4": 10500.0, **{n: 100.0 for n in db.ALL_ANALYZERS}})
 c("Kojen3/4 günlük satıra yazılır", (_kj["Kojen3_kWh"], _kj["Kojen4_kWh"]) == (11000.0, 10500.0))

@@ -807,6 +807,16 @@ def bridge_loop():
     logger.info("Data Bridge baslatildi — her gun %02d:%02d'de calisacak",
                 SNAPSHOT_HOUR, SNAPSHOT_MINUTE)
 
+    # 30.10.2026 sebeke gecisi: 01.06-28.10 arasi trafodan TURETILMIS sebeke
+    # degerleri bosaltilir (tek sefer, yedekli; elle girilmis degere dokunmaz)
+    try:
+        import enerji_hesap as _eh
+        _n = _eh.sebeke_gecisi_uygula(ENERGY_CSV, os.path.join(BASE_DIR, "configs"))
+        if _n:
+            logger.info("Sebeke gecisi: %d gunun turetilmis sebeke degeri bosaltildi", _n)
+    except Exception as e:
+        logger.error("Sebeke gecisi yapilamadi: %s", e)
+
     # Baslarken ref dosyasi yoksa hemen olustur (8:30'u bekleme)
     if not os.path.exists(REF_FILE):
         logger.info("Ref dosyasi yok — baslangic referansi olusturuluyor...")

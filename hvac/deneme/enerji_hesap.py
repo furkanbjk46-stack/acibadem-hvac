@@ -37,19 +37,29 @@ KURAL (27.10.2026) — kojen orta gerilimden (step-up) beslenir:
   korunur, "trafo − kojen" eksi ve anlamsız çıkardı. Trafo verisi hiç olmayan
   2023–2025 günlerinde şebeke elle girilmiş EDAŞ değeridir: Toplam = Şebeke + Kojen.
 
-KURAL (29.10.2026, kullanıcı kararı) — YENI_KURAL_BASLANGIC ve sonrası:
+KURAL (29.10.2026, kullanıcı kararı; 30.10.2026'da 01.06.2026'ya geri çekildi)
+— YENI_KURAL_BASLANGIC ve sonrası:
   Şebeke       = elle girilen şebeke tüketimi (EDAŞ; trafodan HESAPLANMAZ)
-  Toplam       = Şebeke + Kojen Üretim
+  Toplam       = Şebeke + Kojen Üretim   (trafo toplamı yalnız bilgi)
   Şebeke yoksa Toplam = yalnız Kojen Üretim (ekranda "şebeke verisi eksik").
-  Bu tarihten ÖNCEKİ günler yukarıdaki kurallarla aynen kalır (geçmiş değişmez).
+  Haziran 2026'dan önceki günler yukarıdaki kurallarla aynen kalır.
   Tarih sütunu olmayan veri (eski çağrılar, testler) eski kuralla hesaplanır.
+
+GEÇİŞ (30.10.2026, tek sefer): 01.06–28.10.2026 arasında şebeke sütununda
+TRAFODAN TÜRETİLMİŞ değer duruyordu (trafo − kojen ya da trafo toplamı); elle
+girilmiş EDAŞ değeri değildi. sebeke_gecisi_uygula() bunları — yalnız türetilmiş
+olduğu birebir eşitlikle kanıtlananları — boşaltır, eski değerleri yedeğe yazar.
+Farklı (elle girilmiş) bir değere dokunmaz. Lokasyonda bir kez çalışır (işaret dosyası).
 """
 
 TRDP_KOLONLARI = ["TRDP1_kWh", "TRDP2_kWh", "TRDP3_kWh", "TRDP4_kWh"]
 # Kojen-1..4 üretim sayaçları (data_bridge KOJEN-n günlük farkı ya da form)
 KOJEN_KOLONLARI = ["Kojen1_kWh", "Kojen2_kWh", "Kojen3_kWh", "Kojen4_kWh"]
 # Şebeke elle girilir, Toplam = Şebeke + Kojen — bu tarihten itibaren (dahil)
-YENI_KURAL_BASLANGIC = "2026-10-29"
+YENI_KURAL_BASLANGIC = "2026-06-01"
+# Türetilmiş şebeke değerlerinin temizleneceği aralık (dahil)
+GECIS_ARALIK = ("2026-06-01", "2026-10-28")
+GECIS_ISARET = "sebeke_gecisi_20261030.json"   # configs/ altında; varsa geçiş yapılmış
 
 
 def yeni_kural_mi(tarih) -> bool:
@@ -134,3 +144,57 @@ def eksik_trafolar(satir):
         if not (v > 0):
             eksik.append("TRDP-" + k[4])
     return eksik
+
+
+def turetilmis_sebeke(df):
+    """GECIS_ARALIK içinde şebeke değeri trafodan TÜRETİLMİŞ satırların maskesi.
+
+    Türetilmiş = trafo − kojen'e ya da trafo toplamına 1 kWh'ten az farkla eşit
+    (eski kural bu ikisinden birini yazıyordu). Elle girilmiş farklı değer hariç."""
+    import pandas as pd
+    if "Tarih" not in df.columns or "Sebeke_Tuketim_kWh" not in df.columns:
+        return pd.Series(False, index=df.index)
+    t = pd.to_datetime(df["Tarih"], errors="coerce")
+    aralik = (t >= pd.Timestamp(GECIS_ARALIK[0])) & (t <= pd.Timestamp(GECIS_ARALIK[1]))
+    sb = pd.to_numeric(df["Sebeke_Tuketim_kWh"], errors="coerce")
+    trafo = sum(_sut(df, k) for k in TRDP_KOLONLARI)
+    kojen = _sut(df, "Kojen_Uretim_kWh")
+    esit = ((sb - (trafo - kojen)).abs() < 1) | ((sb - trafo).abs() < 1)
+    return (aralik & sb.notna() & (trafo > 0) & esit).fillna(False)
+
+
+def sebeke_gecisi_uygula(csv_yolu: str, configs_dizini: str) -> int:
+    """Tek seferlik geçiş: türetilmiş şebeke değerlerini boşaltır. Boşaltılan satır sayısı.
+
+    İşaret dosyası (configs/GECIS_ISARET) varsa hiçbir şey yapmaz. Eski değerler
+    işaret dosyasına yedeklenir (geri almak gerekirse elle). CSV atomik yazılır."""
+    import json
+    import os
+    import pandas as pd
+    isaret = os.path.join(configs_dizini, GECIS_ISARET)
+    if os.path.exists(isaret) or not os.path.exists(csv_yolu):
+        return 0
+    try:
+        import kilit
+        _kl = kilit.kisa_kilit("sebeke_gecisi")
+    except Exception:
+        _kl = None
+    from contextlib import nullcontext
+    with (_kl or nullcontext(True)) as alindi:
+        if not alindi or os.path.exists(isaret):
+            return 0                       # başka süreç yapıyor / yaptı
+        df = pd.read_csv(csv_yolu)
+        m = turetilmis_sebeke(df)
+        yedek = [{"Tarih": str(df.at[i, "Tarih"]), "Sebeke_Tuketim_kWh": float(df.at[i, "Sebeke_Tuketim_kWh"])}
+                 for i in df.index[m]]
+        if m.any():
+            df.loc[m, "Sebeke_Tuketim_kWh"] = float("nan")
+            gecici = csv_yolu + ".gecis_tmp"
+            df.to_csv(gecici, index=False)
+            os.replace(gecici, csv_yolu)
+        os.makedirs(configs_dizini, exist_ok=True)
+        with open(isaret, "w", encoding="utf-8") as f:
+            json.dump({"aciklama": "Trafodan türetilmiş şebeke değerleri boşaltıldı (30.10.2026 kuralı). "
+                                   "Elle girilmiş farklı değerlere dokunulmadı.",
+                       "aralik": GECIS_ARALIK, "bosaltilan": yedek}, f, ensure_ascii=False, indent=1)
+        return len(yedek)

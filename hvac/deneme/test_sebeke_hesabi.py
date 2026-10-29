@@ -109,11 +109,11 @@ r = satir(TRDP1_kWh=19783, TRDP3_kWh=8139, Kojen_Uretim_kWh=44411)
 c("eksik trafoda şebeke eksiye düşürülmez (trafo − kojen uygulanmaz)",
   r["Sebeke_Tuketim_kWh"] == 19783 + 8139, r["Sebeke_Tuketim_kWh"])
 
-# ── 3d) 29.10.2026 kuralı: şebeke ELLE, toplam = şebeke + kojen (yalnız yeni günler) ──
+# ── 3d) Kural (30.10.2026: 01.06.2026'dan itibaren): şebeke ELLE, toplam = şebeke + kojen ──
 _T4 = dict(TRDP1_kWh=20000, TRDP2_kWh=15000, TRDP3_kWh=8000, TRDP4_kWh=12000, Kojen3_kWh=11000)
-_esk = recalc(pd.DataFrame([{**{k: 0.0 for k in _KOLONLAR}, **_T4, "Tarih": "2026-10-28",
+_esk = recalc(pd.DataFrame([{**{k: 0.0 for k in _KOLONLAR}, **_T4, "Tarih": "2026-05-28",
                              "Sebeke_Tuketim_kWh": 99999}])).iloc[0]
-c("geçmiş gün (28.10) eski kuralla kalır: toplam = trafo",
+c("Haziran öncesi gün (28.05) eski kuralla kalır: toplam = trafo",
   _esk["Toplam_Hastane_Tuketim_kWh"] == 55000 and _esk["Sebeke_Tuketim_kWh"] == 44000,
   (_esk["Toplam_Hastane_Tuketim_kWh"], _esk["Sebeke_Tuketim_kWh"]))
 _yn = recalc(pd.DataFrame([{**{k: 0.0 for k in _KOLONLAR}, **_T4, "Tarih": "2026-10-29",
@@ -128,7 +128,43 @@ c("yeni gün, şebeke yok: toplam = yalnız kojen", _ys["Toplam_Hastane_Tuketim_
   _ys["Toplam_Hastane_Tuketim_kWh"])
 c("yeni gün, şebeke yok: şebeke boş kalır (uydurulmaz)", pd.isna(_ys["Sebeke_Tuketim_kWh"]),
   _ys["Sebeke_Tuketim_kWh"])
-c("kural başlangıcı", enerji_hesap.yeni_kural_mi("2026-10-29") and not enerji_hesap.yeni_kural_mi("2026-10-28"))
+c("kural başlangıcı 01.06.2026", enerji_hesap.yeni_kural_mi("2026-06-01")
+  and enerji_hesap.yeni_kural_mi("2026-10-28") and not enerji_hesap.yeni_kural_mi("2026-05-31"))
+_yz = recalc(pd.DataFrame([{**{k: 0.0 for k in _KOLONLAR}, **_T4, "Tarih": "2026-07-15",
+                            "Sebeke_Tuketim_kWh": 30000}])).iloc[0]
+c("Temmuz günü de yeni kuralla: toplam = şebeke + kojen", _yz["Toplam_Hastane_Tuketim_kWh"] == 41000,
+  _yz["Toplam_Hastane_Tuketim_kWh"])
+
+# ── 3e) Tek seferlik geçiş: trafodan TÜRETİLMİŞ şebeke boşaltılır ──
+import json as _json  # noqa: E402
+import tempfile as _tf  # noqa: E402
+_d = _tf.mkdtemp()
+_csv = os.path.join(_d, "energy_data.csv")
+pd.DataFrame([
+    {"Tarih": "2026-05-20", **_T4, "Kojen_Uretim_kWh": 0, "Sebeke_Tuketim_kWh": 58000},       # aralık dışı
+    {"Tarih": "2026-07-10", **_T4, "Kojen_Uretim_kWh": 11000, "Sebeke_Tuketim_kWh": 44000},   # trafo − kojen
+    {"Tarih": "2026-08-15", "TRDP1_kWh": 20000, "TRDP3_kWh": 7000, "Kojen_Uretim_kWh": 40000,
+     "Sebeke_Tuketim_kWh": 27000},                                                             # eksik trafo toplamı
+    {"Tarih": "2026-09-01", **_T4, "Kojen_Uretim_kWh": 11000, "Sebeke_Tuketim_kWh": 31234},   # ELLE girilmiş
+    {"Tarih": "2026-10-29", **_T4, "Kojen_Uretim_kWh": 11000, "Sebeke_Tuketim_kWh": 44000},   # aralık sonrası
+]).to_csv(_csv, index=False)
+_n = enerji_hesap.sebeke_gecisi_uygula(_csv, os.path.join(_d, "configs"))
+_g = pd.read_csv(_csv).set_index("Tarih")["Sebeke_Tuketim_kWh"]
+c("geçiş: türetilmiş 2 değer boşaltıldı", _n == 2, _n)
+c("geçiş: trafo − kojen değeri boş", pd.isna(_g["2026-07-10"]))
+c("geçiş: eksik trafo toplamı boş", pd.isna(_g["2026-08-15"]))
+c("geçiş: ELLE girilmiş değere dokunulmaz", _g["2026-09-01"] == 31234)
+c("geçiş: aralık dışına (Mayıs, 29.10) dokunulmaz", _g["2026-05-20"] == 58000 and _g["2026-10-29"] == 44000)
+_yedek = _json.load(open(os.path.join(_d, "configs", enerji_hesap.GECIS_ISARET), encoding="utf-8"))
+c("geçiş: eski değerler yedekte", sorted(x["Tarih"] for x in _yedek["bosaltilan"]) == ["2026-07-10", "2026-08-15"])
+pd.DataFrame([{"Tarih": "2026-07-10", **_T4, "Kojen_Uretim_kWh": 11000, "Sebeke_Tuketim_kWh": 44000}]).to_csv(_csv, index=False)
+c("geçiş: tek sefer (işaret varsa tekrar çalışmaz)",
+  enerji_hesap.sebeke_gecisi_uygula(_csv, os.path.join(_d, "configs")) == 0
+  and pd.read_csv(_csv)["Sebeke_Tuketim_kWh"].iloc[0] == 44000)
+_p = recalc(pd.DataFrame([{**{k: 0.0 for k in _KOLONLAR}, **_T4, "Tarih": "2026-07-10",
+                           "Sebeke_Tuketim_kWh": float("nan"), "Kojen_Uretim_kWh": 11000}])).iloc[0]
+c("geçiş sonrası şebeke girilene kadar toplam = yalnız kojen", _p["Toplam_Hastane_Tuketim_kWh"] == 11000,
+  _p["Toplam_Hastane_Tuketim_kWh"])
 
 # ── 4) Trafo hiç yoksa eski davranış korunur (2023-2025 satırları) ───────
 r = satir(Sebeke_Tuketim_kWh=40000, Kojen_Uretim_kWh=36000)
