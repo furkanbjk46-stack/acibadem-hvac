@@ -488,6 +488,17 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         sebeke_kwh = ""  # TRDP verisi yok, bos birak
         toplam_hastane_kwh = total_kwh
 
+    # 29.10.2026 kurali (enerji_hesap.YENI_KURAL_BASLANGIC ve sonrasi): sebeke
+    # ELLE girilir (trafodan hesaplanmaz); toplam = sebeke + kojen. Kopru sebekeyi
+    # BOS birakir, toplam simdilik yalniz kojen — sebeke girilince recalc tamamlar.
+    try:
+        import enerji_hesap as _eh
+        if _eh.yeni_kural_mi(today_str):
+            sebeke_kwh = ""
+            toplam_hastane_kwh = kojen_kwh
+    except Exception as e:
+        logger.warning("Yeni sebeke kurali uygulanamadi: %s", e)
+
     # --- Son satir (sadece ENERGY_SCHEMA sutunlari) ---
     row = {
         "Tarih":                      today_str,

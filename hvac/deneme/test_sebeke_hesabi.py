@@ -109,6 +109,27 @@ r = satir(TRDP1_kWh=19783, TRDP3_kWh=8139, Kojen_Uretim_kWh=44411)
 c("eksik trafoda şebeke eksiye düşürülmez (trafo − kojen uygulanmaz)",
   r["Sebeke_Tuketim_kWh"] == 19783 + 8139, r["Sebeke_Tuketim_kWh"])
 
+# ── 3d) 29.10.2026 kuralı: şebeke ELLE, toplam = şebeke + kojen (yalnız yeni günler) ──
+_T4 = dict(TRDP1_kWh=20000, TRDP2_kWh=15000, TRDP3_kWh=8000, TRDP4_kWh=12000, Kojen3_kWh=11000)
+_esk = recalc(pd.DataFrame([{**{k: 0.0 for k in _KOLONLAR}, **_T4, "Tarih": "2026-10-28",
+                             "Sebeke_Tuketim_kWh": 99999}])).iloc[0]
+c("geçmiş gün (28.10) eski kuralla kalır: toplam = trafo",
+  _esk["Toplam_Hastane_Tuketim_kWh"] == 55000 and _esk["Sebeke_Tuketim_kWh"] == 44000,
+  (_esk["Toplam_Hastane_Tuketim_kWh"], _esk["Sebeke_Tuketim_kWh"]))
+_yn = recalc(pd.DataFrame([{**{k: 0.0 for k in _KOLONLAR}, **_T4, "Tarih": "2026-10-29",
+                            "Sebeke_Tuketim_kWh": 30000}])).iloc[0]
+c("yeni gün: şebeke elle girilen değer (trafodan hesaplanmaz)", _yn["Sebeke_Tuketim_kWh"] == 30000,
+  _yn["Sebeke_Tuketim_kWh"])
+c("yeni gün: hastane genel = şebeke + kojen", _yn["Toplam_Hastane_Tuketim_kWh"] == 41000,
+  _yn["Toplam_Hastane_Tuketim_kWh"])
+_ys = recalc(pd.DataFrame([{**{k: 0.0 for k in _KOLONLAR}, **_T4, "Tarih": "2026-11-02",
+                            "Sebeke_Tuketim_kWh": float("nan")}])).iloc[0]
+c("yeni gün, şebeke yok: toplam = yalnız kojen", _ys["Toplam_Hastane_Tuketim_kWh"] == 11000,
+  _ys["Toplam_Hastane_Tuketim_kWh"])
+c("yeni gün, şebeke yok: şebeke boş kalır (uydurulmaz)", pd.isna(_ys["Sebeke_Tuketim_kWh"]),
+  _ys["Sebeke_Tuketim_kWh"])
+c("kural başlangıcı", enerji_hesap.yeni_kural_mi("2026-10-29") and not enerji_hesap.yeni_kural_mi("2026-10-28"))
+
 # ── 4) Trafo hiç yoksa eski davranış korunur (2023-2025 satırları) ───────
 r = satir(Sebeke_Tuketim_kWh=40000, Kojen_Uretim_kWh=36000)
 c("trafo yoksa elle girilen şebeke korunur", r["Sebeke_Tuketim_kWh"] == 40000,

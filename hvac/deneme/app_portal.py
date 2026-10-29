@@ -3378,7 +3378,17 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
     # baradan trafolara karışık beslenir: dört trafo ölçülmüşse trafo toplamı
     # hastane geneli, şebeke = trafo − kojen. Eksik trafoda eski kural.
     kojen = _ed_val(row, "Kojen_Uretim_kWh") or 0
-    if all((_ed_val(row, k) or 0) > 0 for k in _enerji_hesap.TRDP_KOLONLARI):
+    _sebeke_not = ""
+    if _enerji_hesap.yeni_kural_mi(_sec):
+        # 29.10.2026 kuralı: şebeke elle girilir, Hastane Genel = Şebeke + Kojen.
+        # Şebeke yoksa toplam yalnız kojendir ve not düşülür.
+        _sb = _ed_val(row, "Sebeke_Tuketim_kWh")
+        sebeke = _sb if (_sb or 0) > 0 else 0
+        hastane_genel = sebeke + kojen
+        _sebeke_lbl = "Şebeke (manuel)"
+        if not sebeke:
+            _sebeke_not = "şebeke verisi eksik — toplam yalnız kojen"
+    elif all((_ed_val(row, k) or 0) > 0 for k in _enerji_hesap.TRDP_KOLONLARI):
         hastane_genel = trafo_toplam
         sebeke = trafo_toplam - kojen
         _sebeke_lbl = "Şebeke (trafo − kojen)"
@@ -3526,8 +3536,12 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         f"<div class='mainv' style='margin:8px 0 14px;'>{_ed_num(hastane_genel)} <span class='u'>kWh</span></div>"
         "<div style='display:flex;justify-content:space-between;border-top:1px solid rgba(24,26,30,0.10);padding-top:16px;'>"
         f"<div style='text-align:left;'><div class='bdlbl'>{_ik('sebeke', 15)}{_sebeke_lbl}</div>"
-        f"<div class='vblue' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(sebeke)} "
-        f"<span style='font-size:11px;'>{_pct(sebeke)}</span></div></div>"
+        + (f"<div class='vblue' style='font-size:17px;font-weight:600;margin-top:3px;'>—</div>"
+           f"<div style='font-size:10px;font-weight:700;color:#c98500;margin-top:2px;'>⚠ {_sebeke_not}</div></div>"
+           if _sebeke_not else
+           f"<div class='vblue' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(sebeke)} "
+           f"<span style='font-size:11px;'>{_pct(sebeke)}</span></div></div>")
+        +
         f"<div style='text-align:right;'><div class='bdlbl' style='justify-content:flex-end;'>{_ik('kojen', 15)}Kojen Üretim</div>"
         f"<div class='vemr' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(kojen)} "
         f"<span style='font-size:11px;'>{_pct(kojen)}</span></div>"
@@ -3778,7 +3792,10 @@ with tab1:
             koj4 = st.number_input("Kojen-4 Üretim (kWh)", step=50.0, min_value=0.0, key="entry_kojen4",
                                    help="Sayaçtan (PAC3200) her sabah otomatik yazılır.")
         with a3:
-            st.markdown("**Doğalgaz / Su**")
+            st.markdown("**Kaynak Tüketim**")
+            # 29.10.2026: şebeke ELLE girilir (EDAŞ); Toplam = Şebeke + Kojen
+            sebeke_giris = st.number_input("Şebeke Tüketimi (kWh)", step=50.0, min_value=0.0, key="entry_sebeke",
+                                           help="Şimdilik elle girilir. Hastane genel toplam = şebeke + kojen üretim.")
             kazan_gaz = st.number_input("Kazan Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kazan_gaz")
             koj_gaz = st.number_input("Kojen Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kojen_gaz")
             su = st.number_input("Su Tüketimi (m³)", step=1.0, min_value=0.0, key="entry_su")
@@ -3803,11 +3820,13 @@ with tab1:
             "Kojen_Uretim_kWh": (_fv("Kojen_Uretim_kWh", 0.0)
                                  if not any(_fv("Kojen%d_kWh" % _i, 0.0) > 0 for _i in range(1, 5))
                                  else 0.0),
-            "Sebeke_Tuketim_kWh": _fv("Sebeke_Tuketim_kWh", 0.0),
+            "Sebeke_Tuketim_kWh": sebeke_giris if sebeke_giris > 0 else float("nan"),
+            "Tarih": str(tarih),
             "MCC_Tuketim_kWh": mcc_kwh, "Chiller_Tuketim_kWh": ch_kwh, "VRF_Split_Tuketim_kWh": vrf_kwh,
         }])).iloc[0]
+        _yeni_kural = _enerji_hesap.yeni_kural_mi(tarih)
         koj = float(_on["Kojen_Uretim_kWh"])
-        sebeke = float(_on["Sebeke_Tuketim_kWh"])
+        sebeke = sayi(_on["Sebeke_Tuketim_kWh"])
         preview_total_h = float(_on["Toplam_Hastane_Tuketim_kWh"])
         trafo_toplam = trdp1 + trdp2 + trdp3 + trdp4
         _eksik = [a for a, v in (("TRDP-1", trdp1), ("TRDP-2", trdp2),
@@ -3816,12 +3835,20 @@ with tab1:
             if _eksik else ""
         _ihrac_not = " (eksi: şebekeye verildi)" if sebeke < 0 else ""
         preview_other = max(0.0, preview_mekanik - (ch_kwh + mcc_kwh))
+        if _yeni_kural:
+            # Şebeke elle; girilmediyse toplam yalnız kojendir (uyarılır)
+            _sebeke_txt = (f"Şebeke (manuel) = **{sebeke:,.0f} kWh**" if sebeke > 0
+                           else "Şebeke = **—** ⚠️ şebeke verisi eksik, toplam yalnız kojen")
+            _kaynak_txt = (f"{_sebeke_txt} | Kojen Üretim (1-4) = **{koj:,.0f} kWh** | "
+                           f"Hastane Genel Toplam (şebeke + kojen) = **{preview_total_h:,.0f} kWh** | "
+                           f"Trafo Toplamı = **{trafo_toplam:,.0f} kWh** | ")
+        else:
+            _kaynak_txt = (f"Trafo Toplamı = **{trafo_toplam:,.0f} kWh**{mekanik_not} | "
+                           f"Kojen Üretim (1-4) = **{koj:,.0f} kWh** | "
+                           f"Şebeke (trafo − kojen) = **{sebeke:,.0f} kWh**{_ihrac_not} | "
+                           f"Toplam Hastane (şebeke + kojen) = **{preview_total_h:,.0f} kWh** | ")
         st.info(
-            f"**Otomatik Hesap Önizleme:** "
-            f"Trafo Toplamı = **{trafo_toplam:,.0f} kWh**{mekanik_not} | "
-            f"Kojen Üretim (1-4) = **{koj:,.0f} kWh** | "
-            f"Şebeke (trafo − kojen) = **{sebeke:,.0f} kWh**{_ihrac_not} | "
-            f"Toplam Hastane (şebeke + kojen) = **{preview_total_h:,.0f} kWh** | "
+            f"**Otomatik Hesap Önizleme:** " + _kaynak_txt +
             f"Bina Yükü (1+3) = **{preview_bina_yuk:,.0f} kWh** | "
             f"Mekanik (2+4) = **{preview_mekanik:,.0f} kWh** | "
             f"Toplam Soğutma = **{preview_total_cool:,.0f} kWh**"
@@ -3876,7 +3903,9 @@ with tab1:
                 "TRDP2_kWh": trdp2,
                 "TRDP3_kWh": trdp3,
                 "TRDP4_kWh": trdp4,
-                "Sebeke_Tuketim_kWh": sebeke,
+                # Yeni kuralda elle girilen değer; eski tarihte hesap (recalc yine düzeltir)
+                "Sebeke_Tuketim_kWh": ((sebeke_giris if sebeke_giris > 0 else None)
+                                       if _yeni_kural else sebeke),
                 "Kojen_Uretim_kWh": koj,
                 "Kojen1_kWh": koj1,
                 "Kojen2_kWh": koj2,
@@ -4235,7 +4264,10 @@ with tab2:
                                     birim if _v is not None else "")
                 st.markdown(_pt.bolum("Kojen & Kaynak", "kojen"), unsafe_allow_html=True)
                 st.markdown(_pt.izgara([
-                    _kk("sebeke", "Şebeke Tüketim", "Sebeke_Tuketim_kWh"),
+                    # Yeni kuralda şebeke elle girilir; girilmediyse kart bunu söyler
+                    (_pt.kart("sebeke", "Şebeke Tüketim", "—", "", "şebeke verisi eksik", "syn-kotu")
+                     if _enerji_hesap.yeni_kural_mi(report_date) and not ((_gun_deger("Sebeke_Tuketim_kWh") or 0) > 0)
+                     else _kk("sebeke", "Şebeke Tüketim", "Sebeke_Tuketim_kWh")),
                     _kk("kojen", "Kojen Üretim", "Kojen_Uretim_kWh"),
                     _kk("trdp", "TRDP-1 (Bina)", "TRDP1_kWh"),
                     _kk("trdp", "TRDP-2 (Mek.)", "TRDP2_kWh"),

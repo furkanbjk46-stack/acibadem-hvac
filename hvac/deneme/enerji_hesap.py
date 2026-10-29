@@ -36,11 +36,35 @@ KURAL (27.10.2026) — kojen orta gerilimden (step-up) beslenir:
   hastane tüketimi değildir — o günlerde (Ağustos–Eylül 2026) eski kural
   korunur, "trafo − kojen" eksi ve anlamsız çıkardı. Trafo verisi hiç olmayan
   2023–2025 günlerinde şebeke elle girilmiş EDAŞ değeridir: Toplam = Şebeke + Kojen.
+
+KURAL (29.10.2026, kullanıcı kararı) — YENI_KURAL_BASLANGIC ve sonrası:
+  Şebeke       = elle girilen şebeke tüketimi (EDAŞ; trafodan HESAPLANMAZ)
+  Toplam       = Şebeke + Kojen Üretim
+  Şebeke yoksa Toplam = yalnız Kojen Üretim (ekranda "şebeke verisi eksik").
+  Bu tarihten ÖNCEKİ günler yukarıdaki kurallarla aynen kalır (geçmiş değişmez).
+  Tarih sütunu olmayan veri (eski çağrılar, testler) eski kuralla hesaplanır.
 """
 
 TRDP_KOLONLARI = ["TRDP1_kWh", "TRDP2_kWh", "TRDP3_kWh", "TRDP4_kWh"]
 # Kojen-1..4 üretim sayaçları (data_bridge KOJEN-n günlük farkı ya da form)
 KOJEN_KOLONLARI = ["Kojen1_kWh", "Kojen2_kWh", "Kojen3_kWh", "Kojen4_kWh"]
+# Şebeke elle girilir, Toplam = Şebeke + Kojen — bu tarihten itibaren (dahil)
+YENI_KURAL_BASLANGIC = "2026-10-29"
+
+
+def yeni_kural_mi(tarih) -> bool:
+    """Bu günün satırı yeni kuralla mı hesaplanır? (tarih: str / date / Timestamp)"""
+    import pandas as pd
+    t = pd.to_datetime(tarih, errors="coerce")
+    return bool(pd.notna(t) and t >= pd.Timestamp(YENI_KURAL_BASLANGIC))
+
+
+def _yeni_maske(df):
+    import pandas as pd
+    if "Tarih" not in df.columns:
+        return pd.Series(False, index=df.index)
+    t = pd.to_datetime(df["Tarih"], errors="coerce")
+    return (t >= pd.Timestamp(YENI_KURAL_BASLANGIC)).fillna(False)
 
 
 def _sut(df, ad):
@@ -67,6 +91,10 @@ def yeniden_hesapla(df):
     df["Kojen_Uretim_kWh"] = kojen_toplam.where(kojen_girildi, _sut(df, "Kojen_Uretim_kWh"))
     kojen = _sut(df, "Kojen_Uretim_kWh")
 
+    import pandas as pd
+    yeni = _yeni_maske(df)
+    sebeke_girilen = pd.to_numeric(df["Sebeke_Tuketim_kWh"], errors="coerce")         if "Sebeke_Tuketim_kWh" in df.columns else pd.Series(float("nan"), index=df.index)
+
     trdp = [_sut(df, k) for k in TRDP_KOLONLARI]
     trdp_toplam = trdp[0] + trdp[1] + trdp[2] + trdp[3]
     girildi = (trdp[0] > 0) | (trdp[1] > 0) | (trdp[2] > 0) | (trdp[3] > 0)
@@ -82,6 +110,11 @@ def yeniden_hesapla(df):
     mcc_sogutma = _sut(df, "MCC_Tuketim_kWh") + _sut(df, "Toplam_Sogutma_Tuketim_kWh")
     eski_toplam = sebeke.where(sebeke > 0, mcc_sogutma) + kojen
     df["Toplam_Hastane_Tuketim_kWh"] = trdp_toplam.where(tam, eski_toplam)
+
+    # Yeni kural (YENI_KURAL_BASLANGIC ve sonrası): şebeke elle, toplam = şebeke + kojen
+    if yeni.any():
+        df.loc[yeni, "Sebeke_Tuketim_kWh"] = sebeke_girilen[yeni]
+        df.loc[yeni, "Toplam_Hastane_Tuketim_kWh"] = sebeke_girilen[yeni].fillna(0).clip(lower=0) + kojen[yeni]
 
     # Diğer yük = toplam - MCC - soğutma (negatif olmaz)
     df["Diger_Yuk_kWh"] = (_sut(df, "Toplam_Hastane_Tuketim_kWh")

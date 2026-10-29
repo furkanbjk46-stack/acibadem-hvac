@@ -135,6 +135,15 @@ c("köprü ile enerji_hesap AYNI sonucu verir",
   (_eh_r["Sebeke_Tuketim_kWh"], _eh_r["Toplam_Hastane_Tuketim_kWh"], _eh_r["Kojen_Uretim_kWh"])
   == (_kj["Sebeke_Tuketim_kWh"], _kj["Toplam_Hastane_Tuketim_kWh"], _kj["Kojen_Uretim_kWh"]))
 
+# ── 3c) 29.10.2026 kuralı: köprü yeni günde şebekeyi BOŞ bırakır (elle girilecek) ──
+_yk = db.build_daily_row("2026-10-29", {}, {
+    "TRDP-1": 22000.0, "TRDP-2": 16000.0, "TRDP-3": 8000.0, "TRDP-4": 12000.0,
+    "KOJEN-3": 11000.0, "KOJEN-4": 10500.0})
+c("yeni günde şebeke trafodan hesaplanmaz, boş kalır", _yk["Sebeke_Tuketim_kWh"] == "", _yk["Sebeke_Tuketim_kWh"])
+c("yeni günde toplam şimdilik yalnız kojen", _yk["Toplam_Hastane_Tuketim_kWh"] == 21500.0,
+  _yk["Toplam_Hastane_Tuketim_kWh"])
+c("trafolar yine yazılır (bilgi olarak)", _yk["TRDP1_kWh"] == 22000.0)
+
 # ── 4) İlk gün: referansta TRDP-4 yok → boş kalır, çökmez ──────────────
 _dun = (date.today() - timedelta(days=1)).isoformat()
 _ref_eski = {"date": _dun, "readings": {"TRDP-1": 1000, "TRDP-3": 2000}}   # TRDP-4 yok
