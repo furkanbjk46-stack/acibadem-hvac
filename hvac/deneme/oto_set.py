@@ -799,7 +799,7 @@ def _setleri_uygula(sb_url, sb_key, lokasyon_id, hedefler, etiket=""):
         if not n:
             continue                                   # bu lokasyonda yok
         # Değer doğrulama kapısı — elle gönderilen komutlarla aynı koruma
-        gecerli, sebep = komut_degeri_gecerli(deger)
+        gecerli, sebep = komut_degeri_gecerli(deger, ad)
         if not gecerli:
             logger.error("oto_set: %s reddedildi — %s", ad, sebep)
             hatali += 1

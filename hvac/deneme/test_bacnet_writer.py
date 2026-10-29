@@ -288,14 +288,15 @@ db_komutlar = [
      "created_at": datetime.now(timezone.utc).isoformat()},
     {"id": "k4", "nokta_adi": "CH3_REM_SET", "hedef_deger": 3.0,
      "created_at": datetime.now(timezone.utc).isoformat()},
-    {"id": "k5", "nokta_adi": "ZON1_KLIMA_SANTRALI_SET", "hedef_deger": 22.0,
+    # 29.10.2026: klima santrali seti 6–16 °C (nokta aralığı) — örnek değer aralık içinde
+    {"id": "k5", "nokta_adi": "ZON1_KLIMA_SANTRALI_SET", "hedef_deger": 12.0,
      "created_at": datetime.now(timezone.utc).isoformat()},
 ]
 db_noktalar = [dict(nokta(9), nokta_adi="CH1_REM_SET"),
                dict(nokta(11), nokta_adi="CH2_REM_SET"),
                dict(nokta(13), nokta_adi="CH3_REM_SET"),
                dict(nokta(15), nokta_adi="ZON1_KLIMA_SANTRALI_SET")]
-cihaz.override[(2, 15)] = 21.0                 # zon-1: BMS başka değerde tutuyor
+cihaz.override[(2, 15)] = 11.0                 # zon-1: BMS başka değerde tutuyor
 cihaz.degerler[(1, 27)] = 6.5
 guncellenen = {}
 
@@ -334,7 +335,22 @@ c("[uctan uca] aralik disi (3 C) 'hata' ve sahaya gitmedi",
 c("[uctan uca] BMS'in ezdigi nokta 'hata' (eskiden 'tamamlandi' idi)",
   guncellenen.get("k5", {}).get("durum") == "hata", guncellenen.get("k5"))
 c("[uctan uca] ezilme mesaji cihazdaki degeri yazar",
-  "21.0" in guncellenen.get("k5", {}).get("hata_mesaji", ""), guncellenen.get("k5"))
+  "11.0" in guncellenen.get("k5", {}).get("hata_mesaji", ""), guncellenen.get("k5"))
+
+# ── 5b) Nokta bazlı dar aralık (29.10.2026) ─────────────────────────────
+for _n, _v, _ok in [("CH1_REM_SET", 7.5, True), ("CH1_REM_SET", 5.5, False), ("CH4_REM_SET", 12.5, False),
+                    ("GUNDUZ_KOLLEKTOR_SET", 12, True), ("GECE_KOLLEKTOR_SET", 19, False),
+                    ("B_BLOK_FCU_SET", 14, True), ("A_BLOK_FCU_SET", 7, False),
+                    ("ZON1_KLIMA_SANTRALI_SET", 10, True), ("ZON2_KLIMA_SANTRALI_SET", 17, False),
+                    ("TANIMSIZ_NOKTA", 35, True), ("TANIMSIZ_NOKTA", 41, False)]:
+    c("[aralik] %s = %s %s" % (_n, _v, "kabul" if _ok else "red"), bw.komut_degeri_gecerli(_v, _n)[0] == _ok)
+_sql = open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                         "merkez", "rls_komut_aralik.sql"), encoding="utf-8").read()     if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                                   "merkez", "rls_komut_aralik.sql")) else None
+if _sql is not None:     # yalnız geliştirme deposunda: veritabanı tetikleyicisi AYNI aralıkları kullanır
+    for _d, _a, _u in bw.NOKTA_ARALIKLARI:
+        c("[aralik] SQL tetikleyicisi aynı: %s" % _d,
+          ("'%s'" % _d.replace("\\", "\\")) in _sql and ("%s AND %s" % (_a, _u)) in _sql, _d)
 _ea = guncellenen.get("k1", {}).get("executed_at", "")
 c("[uctan uca] executed_at saat dilimi iceriyor (UTC)", _ea.endswith("+00:00"), _ea)
 

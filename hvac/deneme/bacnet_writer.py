@@ -33,6 +33,28 @@ PROP_PRESENT_VALUE = 85    # BACnet property ID
 KOMUT_DEGER_MIN = 5.0
 KOMUT_DEGER_MAX = 40.0
 
+# ── Nokta tipine göre DAR aralık (29.10.2026, kullanıcı onaylı) ──────────────
+# Genel 5–40 °C yalnız tanımsız noktalar için. Bilinen noktada değer kendi
+# tipinin gerçekçi aralığında olmalı: ortak anahtarı bulan biri bile chiller
+# setini 5 °C'ye ya da 35 °C'ye çekemez. Aynı tablo Supabase'de de tetikleyiciyle
+# uygulanır (merkez/rls_komut_aralik.sql) — iki katman birebir aynı olmalı.
+#   (nokta adı deseni, alt, üst)
+NOKTA_ARALIKLARI = [
+    (r"^CH\d+_REM_SET$", 6.0, 12.0),             # chiller çıkış (uzaktan) seti
+    (r"^(GUNDUZ|GECE)_KOLLEKTOR_SET$", 8.0, 18.0),
+    (r"^[A-Z]_BLOK_FCU_SET$", 8.0, 18.0),
+    (r"^ZON\d+_KLIMA_SANTRALI_SET$", 6.0, 16.0),
+]
+
+
+def nokta_araligi(nokta_adi):
+    """Noktanın izinli aralığı (alt, üst); tanımsız tipte genel aralık."""
+    import re
+    for desen, alt, ust in NOKTA_ARALIKLARI:
+        if nokta_adi and re.match(desen, str(nokta_adi)):
+            return alt, ust
+    return KOMUT_DEGER_MIN, KOMUT_DEGER_MAX
+
 # ── Bekleyen komutun ömrü (dakika) ─────────────────────────────────────────
 # Lokasyon uzun süre çevrimdışı kalıp geri geldiğinde, günler önce kuyruğa
 # girmiş bir komut o an sahaya yazılıyordu (Altunizade 65 gün çevrimdışıydı).
@@ -41,17 +63,19 @@ KOMUT_DEGER_MAX = 40.0
 KOMUT_OMUR_DK = 30
 
 
-def komut_degeri_gecerli(deger):
-    """Komut değerini doğrular. (gecerli: bool, sebep: str) döner."""
+def komut_degeri_gecerli(deger, nokta_adi=None):
+    """Komut değerini doğrular (nokta verilirse onun dar aralığıyla).
+    (gecerli: bool, sebep: str) döner."""
     try:
         d = float(deger)
     except (TypeError, ValueError):
         return False, f"Gecersiz deger tipi: {deger!r}"
     if d != d or d in (float("inf"), float("-inf")):  # NaN / sonsuz
         return False, f"Gecersiz sayisal deger: {deger!r}"
-    if not (KOMUT_DEGER_MIN <= d <= KOMUT_DEGER_MAX):
+    alt, ust = nokta_araligi(nokta_adi)
+    if not (alt <= d <= ust):
         return False, (f"Deger izinli aralik disinda: {d} "
-                       f"(izinli {KOMUT_DEGER_MIN}-{KOMUT_DEGER_MAX} C)")
+                       f"(izinli {alt}-{ust} C{' — ' + str(nokta_adi) if nokta_adi else ''})")
     return True, ""
 
 
@@ -538,7 +562,7 @@ def komutlari_isle(sb_url: str, sb_key: str, lokasyon_id: str):
                 continue
 
             # GÜVENLİK KAPISI: aralık dışı/bozuk değer sahaya gönderilmez
-            _gecerli, _sebep = komut_degeri_gecerli(hedef)
+            _gecerli, _sebep = komut_degeri_gecerli(hedef, nokta_adi)
             if not _gecerli:
                 _komut_guncelle(sb_url, sb_key, kid, "hata", _sebep)
                 logger.warning(f"  🛑 Komut reddedildi ({nokta_adi}): {_sebep}")
