@@ -63,7 +63,11 @@ def lisans_kontrol() -> dict:
         lok_id = cfg.get("lokasyon_id", "")
 
         from supabase import create_client
-        sb = create_client(url, key)
+        try:  # lokasyon anahtarı varsa istekler onunla imzalanır (sb_kimlik.py)
+            import sb_kimlik
+            sb = sb_kimlik.istemci(url, key)
+        except ImportError:
+            sb = create_client(url, key)
 
         sonuc = (
             sb.table("lisanslar")

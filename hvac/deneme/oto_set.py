@@ -36,6 +36,11 @@ import logging
 import os
 import urllib.request
 from datetime import datetime, timedelta, timezone
+try:  # lokasyon anahtarı (sb_kimlik.py); yoksa ortak anahtar — bugünkü davranış
+    from sb_kimlik import yetki as _sb_yetki
+except Exception:
+    def _sb_yetki(_k):
+        return "Bearer " + _k
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +111,7 @@ _TAHMIN_OMRU_DK = 30
 # Supabase okuma (stdlib; ek bağımlılık yok) — YALNIZCA OKUMA
 # ══════════════════════════════════════════════════════════════════════════
 def _istek(url, key, yol, veri=None, method="GET", timeout=10):
-    h = {"apikey": key, "Authorization": "Bearer " + key,
+    h = {"apikey": key, "Authorization": _sb_yetki(key),
          "Content-Type": "application/json"}
     if method == "POST":
         h["Prefer"] = "return=minimal"

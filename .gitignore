@@ -14,3 +14,9 @@ hvac/deneme/yedekler/
 
 # Mekanik Zeka analiz çıktıları (her çalıştırmada üretilir, makineye özel)
 hvac/deneme/static/outputs/
+
+# Surecler arasi kilit dosyalari (kilit.py calisirken uretir)
+hvac/deneme/.kilit_*.lock
+
+# Lokasyon anahtari (imzali JWT) - ASLA repoya girmez (sb_kimlik.py)
+**/lokasyon_anahtari.json

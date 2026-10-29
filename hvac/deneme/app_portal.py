@@ -23,6 +23,11 @@ import enerji_hesap as _enerji_hesap
 import plotly.express as px
 
 from fpdf import FPDF
+try:  # lokasyon anahtarı (sb_kimlik.py); yoksa ortak anahtar — bugünkü davranış
+    from sb_kimlik import yetki as _sb_yetki
+except Exception:
+    def _sb_yetki(_k):
+        return "Bearer " + _k
 
 st.set_page_config(page_title="Enerji Yönetimi & Raporlama", layout="wide")
 
@@ -3135,7 +3140,7 @@ def _bildirim_panel():
                 _req = urllib.request.Request(
                     _url + (f"/rest/v1/bildirimler?or=(lokasyon.eq.{_lok},lokasyon.eq.all)"
                             f"&okundu=eq.false&order=created_at.asc"),
-                    headers={"apikey": _key, "Authorization": "Bearer " + _key,
+                    headers={"apikey": _key, "Authorization": _sb_yetki(_key),
                              "Content-Type": "application/json"})
                 with urllib.request.urlopen(_req, timeout=5) as _resp:
                     _cached = _bj.loads(_resp.read().decode())
@@ -3190,7 +3195,7 @@ def _bildirim_panel():
             _pr = urllib.request.Request(
                 _url + _hedef,
                 data=_bj.dumps({"okundu": True}).encode(),
-                headers={"apikey": _key, "Authorization": "Bearer " + _key,
+                headers={"apikey": _key, "Authorization": _sb_yetki(_key),
                          "Content-Type": "application/json",
                          "Prefer": "return=minimal"},
                 method="PATCH")

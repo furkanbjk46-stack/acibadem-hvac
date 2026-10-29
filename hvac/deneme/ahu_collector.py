@@ -13,6 +13,11 @@ import json
 import urllib.request
 import urllib.error
 from datetime import datetime
+try:  # lokasyon anahtarı (sb_kimlik.py); yoksa ortak anahtar — bugünkü davranış
+    from sb_kimlik import yetki as _sb_yetki
+except Exception:
+    def _sb_yetki(_k):
+        return "Bearer " + _k
 
 logger = logging.getLogger(__name__)
 
@@ -1060,7 +1065,7 @@ def _bildirim_gonder(kritik: int, uyari: int, optimal: int, toplam: int):
             data=payload,
             headers={
                 "apikey":        sb_key,
-                "Authorization": "Bearer " + sb_key,
+                "Authorization": _sb_yetki(sb_key),
                 "Content-Type":  "application/json",
                 "Prefer":        "return=minimal",
             },

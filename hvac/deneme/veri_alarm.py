@@ -34,6 +34,11 @@ UYARI: kırılım eksilir ama toplam hesabı ayakta kalır.
 import json
 import os
 from datetime import datetime
+try:  # lokasyon anahtarı (sb_kimlik.py); yoksa ortak anahtar — bugünkü davranış
+    from sb_kimlik import yetki as _sb_yetki
+except Exception:
+    def _sb_yetki(_k):
+        return "Bearer " + _k
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODBUS_CSV = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
@@ -316,7 +321,7 @@ def bildirim_gonder(sb_url, sb_key, lokasyon_id, alarmlar, _imza_dosya=None) -> 
     try:
         istek = urllib.request.Request(
             sb_url.rstrip("/") + "/rest/v1/bildirimler", data=veri,
-            headers={"apikey": sb_key, "Authorization": "Bearer " + sb_key,
+            headers={"apikey": sb_key, "Authorization": _sb_yetki(sb_key),
                      "Content-Type": "application/json", "Prefer": "return=minimal"},
             method="POST")
         urllib.request.urlopen(istek, timeout=8)
