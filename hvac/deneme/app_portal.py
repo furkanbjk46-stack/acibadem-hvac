@@ -2947,24 +2947,12 @@ def _baslik_ciz():
     st.markdown(_pt.baslik_html(
         "Enerji ve Verimlilik", "Enerji Yönetimi & Raporlama", "Sistem Hazır",
         f"{_lok_adi} · Son kayıt: {_son_txt}",
-        [("Ana Sayfa", "geri", _ana),
-         # Ayarlar Mekanik Zeka'da tek yerde; #ayarlar ayar penceresini açar
-         ("Ayarlar", "ayar", _ana + "static/index.html#ayarlar")]), unsafe_allow_html=True)
+        [("Ana Sayfa", "geri", _ana)]), unsafe_allow_html=True)   # Ayarlar düğmesi yok (29.10.2026)
 
 
 _baslik_ciz()
 
-# ── Aylık bakım uyarısı (ayın 25'inden itibaren işaret yoksa) ──
-try:
-    from bakim_durum import uyari_gerekli as _bakim_uyari
-    if _bakim_uyari():
-        st.error(
-            "🔧 **Bu ay santral bakımları yapılmamıştır** — aylık bakım işareti girilmedi. "
-            "HVAC portalı → Bakım Kartları → \"Bu Ayın Bakımı Yapıldı\" ile işaretleyin. "
-            "İşaretlenmezse tüm raporlara bakım notu düşer ve Synapse'de alarm görünür."
-        )
-except Exception:
-    pass
+# Aylık bakım uyarısı artık Bildirimler panelinde (_bildirim_panel, 29.10.2026)
 
 # Sağ üst: Günlük + Aylık Rapor butonları
 # Otomatik rapor bildirimlerini kontrol et
@@ -3092,8 +3080,27 @@ def _bildirim_panel():
             return "uyari"
         return "bilgi"
 
-    # ── 1) Veri toplama alarmları (yerel dosya — Supabase'e gerek yok) ──
     _kayitlar = []
+
+    # ── 0) Aylık bakım uyarısı (ayın 25'inden itibaren işaret yoksa) ──
+    # Eskiden sayfa başında ayrı kırmızı kutuydu; artık bildirimlerin içinde.
+    try:
+        from bakim_durum import uyari_gerekli as _bakim_uyari
+        if _bakim_uyari():
+            _kayitlar.append({
+                "kaynak": "bakim",
+                "sinif": "uyari",
+                "mesaj": ("🔧 Bu ay santral bakımları yapılmamıştır — aylık bakım işareti girilmedi.\n"
+                          "HVAC portalı → Bakım Kartları → \"Bu Ayın Bakımı Yapıldı\" ile işaretleyin. "
+                          "İşaretlenmezse tüm raporlara bakım notu düşer ve Synapse'de alarm görünür."),
+                "gonderen": "Bakım Takibi",
+                "zaman": "",
+                "id": None,
+            })
+    except Exception:
+        pass
+
+    # ── 1) Veri toplama alarmları (yerel dosya — Supabase'e gerek yok) ──
     try:
         import veri_alarm
         for _a in (veri_alarm.oku().get("alarmlar") or []):
@@ -4392,7 +4399,6 @@ with tab2:
             st.markdown("<div style='font-size:11px;color:#46536b;padding-top:10px;'>"
                         f"{_ay_adi} {_pg.rozet(_g_tip, df_period, _df_kiyas, _kiyas_adi)}</div>",
                         unsafe_allow_html=True)
-        st.markdown(_pg.desen_html(_g_tip), unsafe_allow_html=True)
         _g_fig, _g_bilgi = _pg.ciz(_g_tip, df_period, _df_kiyas, _ay_adi, _kiyas_adi, building_area)
         with st.container(key=_pg.ALAN):
             if _g_fig is not None:

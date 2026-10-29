@@ -19,15 +19,17 @@ def c(ad, kosul, detay=""):
     T.append((ad, bool(kosul), detay))
 
 
-# ── Başlık: Mekanik Zeka düzeni, Bakım Kartları YOK ──
+# ── Başlık: Mekanik Zeka düzeni; yalnız Ana Sayfa (Ayarlar ve Bakım Kartları yok, 29.10.2026) ──
 b = PT.baslik_html("Enerji ve Verimlilik", "Enerji Yönetimi & Raporlama", "Sistem Hazır", "Maslak",
-                   [("Ana Sayfa", "geri", "http://x/"), ("Ayarlar", "ayar", "http://x/static/index.html#ayarlar")])
-c("başlıkta Ana Sayfa ve Ayarlar var", "Ana Sayfa" in b and "Ayarlar" in b)
-c("başlıkta Bakım Kartları yok", "Bakım" not in b)
-c("düğmeler üst pencerede açılır (gömülü çerçeveden çıkar)", b.count('target="_top"') == 2)
-c("Ayarlar düğmesi Mekanik Zeka ayar penceresine gider", "#ayarlar" in b)
-_html = open(os.path.join(BURASI, "static", "index.html"), encoding="utf-8").read()
-c("Mekanik Zeka #ayarlar ile ayar penceresini açar", "location.hash === '#ayarlar'" in _html)
+                   [("Ana Sayfa", "geri", "http://x/")])
+c("başlıkta Ana Sayfa var", "Ana Sayfa" in b)
+c("düğme üst pencerede açılır (gömülü çerçeveden çıkar)", b.count('target="_top"') == 1)
+_cagri = PORTAL.split("_pt.baslik_html(")[1].split("unsafe_allow_html")[0]
+c("portal başlığında Ayarlar ve Bakım Kartları YOK", "Ayarlar" not in _cagri and "Bakım" not in _cagri, _cagri)
+# Bakım uyarısı sayfa üstünde değil, Bildirimler panelinde
+c("bakım uyarısı bildirimlerin içinde", '"kaynak": "bakim"' in PORTAL)
+c("bakım uyarısı sayfa üstünde ayrı kutu değil",
+  '"🔧 **Bu ay santral bakımları yapılmamıştır**' not in PORTAL)
 c("başlık akan degrade + ışık çizgisi (Mekanik Zeka)", "synAkis" in PT.CSS and "synCizgi" in PT.CSS)
 c("portal başlığı çiziyor, eski st.title yok",
   "_pt.baslik_html(" in PORTAL and 'st.title("⚡ Enerji ve Verimlilik")\n\n' not in PORTAL)

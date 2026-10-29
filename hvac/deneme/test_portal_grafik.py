@@ -63,9 +63,12 @@ c("rozet artışı kırmızı ▲ gösterir", "▲ +%20,0" in r and "#d03b3b" in
 c("rozet: bu ay verisi olmayan kalemde YOK (sahte -%100 yok)", PG.rozet("su", bu, once, "Ekim 2025") == "")
 c("rozet: karşılaştırma ayında veri yoksa YOK", PG.rozet("tuketim", bu, once.iloc[0:0], "x") == "")
 
-# ── Desen: metriğe özel akan dolgu, yalnız grafik alanında ──
-c("tüketim deseni akım", "pg_tuketim_0" in PG.desen_html("tuketim") and "animateTransform" in PG.desen_html("tuketim"))
-c("desen yalnız grafik alanına uygulanır", (".st-key-%s" % PG.ALAN) in PG.desen_html("su"))
+# ── Grafikler DÜZ (29.10.2026): akan desen / animasyon yok ──
+_KAYNAK = open(os.path.join(BURASI, "portal_grafik.py"), encoding="utf-8").read()
+c("grafiklerde akan desen yok", "animateTransform" not in _KAYNAK and "desen_html" not in PORTAL)
+_HAREKET = open(os.path.join(BURASI, "portal_hareket.py"), encoding="utf-8").read()
+c("grafiklerin giriş animasyonu kapalı",
+  '[data-testid="stPlotlyChart"], [data-testid="stPlotlyChart"] * { animation: none !important; }' in _HAREKET)
 
 # ── Portala bağlı ──
 c("Dashboard grafiği portal_grafik ile", "_pg.ciz(_g_tip, df_period, _df_kiyas" in PORTAL)

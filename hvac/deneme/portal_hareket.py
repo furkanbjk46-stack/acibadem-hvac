@@ -20,18 +20,16 @@ CSS = """
 /* Gelişler: bölüm kartları, metrikler, grafikler, enerji diyagramı kartları */
 [class*="st-key-kart_"],
 [data-testid="stMetric"],
-[data-testid="stPlotlyChart"],
 [data-testid="stExpander"],
 #ed-root .gcard {
     animation: synGelis .6s cubic-bezier(.2,.7,.2,1) both;
 }
 /* Yan yana sütunlar sırayla gelsin */
-[data-testid="stColumn"]:nth-child(2) > div [data-testid="stMetric"],
-[data-testid="stColumn"]:nth-child(2) > div [data-testid="stPlotlyChart"] { animation-delay: .07s; }
-[data-testid="stColumn"]:nth-child(3) > div [data-testid="stMetric"],
-[data-testid="stColumn"]:nth-child(3) > div [data-testid="stPlotlyChart"] { animation-delay: .14s; }
-[data-testid="stColumn"]:nth-child(4) > div [data-testid="stMetric"],
-[data-testid="stColumn"]:nth-child(4) > div [data-testid="stPlotlyChart"] { animation-delay: .21s; }
+[data-testid="stColumn"]:nth-child(2) > div [data-testid="stMetric"] { animation-delay: .07s; }
+[data-testid="stColumn"]:nth-child(3) > div [data-testid="stMetric"] { animation-delay: .14s; }
+[data-testid="stColumn"]:nth-child(4) > div [data-testid="stMetric"] { animation-delay: .21s; }
+/* Grafikler DÜZ (29.10.2026): ne giriş animasyonu ne akan dolgu */
+[data-testid="stPlotlyChart"], [data-testid="stPlotlyChart"] * { animation: none !important; }
 [data-testid="stColumn"]:nth-child(5) > div [data-testid="stMetric"] { animation-delay: .28s; }
 
 /* Üzerine gelince hafif yükselme */
@@ -50,7 +48,7 @@ CSS = """
 #ed-root .badge { animation: synNabiz 2.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-    [class*="st-key-kart_"], [data-testid="stMetric"], [data-testid="stPlotlyChart"],
+    [class*="st-key-kart_"], [data-testid="stMetric"],
     [data-testid="stExpander"], #ed-root .gcard, #ed-root .badge { animation: none !important; transition: none !important; }
 }
 </style>

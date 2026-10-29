@@ -5,9 +5,8 @@ ENERJİ PORTALI — GRAFİK & TREND (29.10.2026)
 
 Synapse lokasyon Dashboard'undaki GRAFİK bölümünün (merkez/pages/lokasyon_detay.py)
 Enerji portalındaki karşılığı: kategorili AÇILIR LİSTEDEN tüm metrikler,
-her metriğin kendi simgesi/birimi, sütunların içinde metriğe özel akan desen
-(tüketim → akım, şebeke → şimşek, su → dalga, soğutma → buz, kazan → alev,
-kojen → yukarı oklar, MCC → pano ışıkları) ve karşılaştırılan aya göre rozet.
+her metriğin kendi simgesi/birimi ve karşılaştırılan aya göre rozet.
+Grafikler DÜZ (29.10.2026, kullanıcı kararı): akan desen / animasyon yok, düz renk.
 
 Dönem, Dashboard'un üstündeki Yıl/Ay ↔ Karşılaştırılacak Yıl/Ay seçimidir.
 Değerler veriden olduğu gibi çizilir; hiçbir değer üretilmez.
@@ -21,7 +20,7 @@ except Exception:
     IK = None
 
 KAP = "grafik_secim"          # açılır listenin st.container anahtarı
-ALAN = "grafik_alani"         # grafiğin st.container anahtarı (desen kuralı buna bağlı)
+ALAN = "grafik_alani"         # grafiğin st.container anahtarı
 
 # (kategori, [(ad, tip, birim, simge)])
 GRUPLAR = [
@@ -53,7 +52,7 @@ SECENEKLER = {ad: tip for _, ogeler in GRUPLAR for ad, tip, _, _ in ogeler}
 BIRIM = {tip: b for _, ogeler in GRUPLAR for _, tip, b, _ in ogeler}
 SIMGE = {tip: s for _, ogeler in GRUPLAR for _, tip, _, s in ogeler}
 
-# Tek sütunlu metrikler: (kolon, akan desen, renk)
+# Tek sütunlu metrikler: (kolon, —, renk)
 TEK = {
     "tuketim":   ("Toplam_Hastane_Tuketim_kWh", "akim", "#2a78d6"),
     "sebeke":    ("Sebeke_Tuketim_kWh", "elektrik", "#4a3aa7"),
@@ -118,69 +117,6 @@ def secici_css(secili_tip: str) -> str:
             '.st-key-%s [data-baseweb="select"] *{font-size:13px !important;font-weight:600 !important;'
             'color:#133273 !important;}' % (KAP, KAP))
     return "<style>" + css + "</style>"
-
-
-# ── Sütunların içinde akan desenler (Synapse ile aynı) ─────────────────────
-def _desen(did, efekt, c):
-    b = "#ffffff"
-    if efekt == "akim":
-        return (f"<pattern id='{did}' width='16' height='16' patternUnits='userSpaceOnUse'>"
-                f"<rect width='16' height='16' fill='{c}'/>"
-                f"<path d='M-4 20 L20 -4 M-4 4 L4 -4 M12 20 L20 12' stroke='{b}' stroke-opacity='.26' stroke-width='5'/>"
-                "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='0 -16' dur='0.9s' repeatCount='indefinite'/></pattern>")
-    if efekt == "dalga":
-        return (f"<pattern id='{did}' width='40' height='18' patternUnits='userSpaceOnUse'>"
-                f"<rect width='40' height='18' fill='{c}'/>"
-                f"<path d='M0 7 Q10 2 20 7 T40 7' fill='none' stroke='{b}' stroke-opacity='.38' stroke-width='2.2'/>"
-                f"<path d='M0 14 Q10 10 20 14 T40 14' fill='none' stroke='{b}' stroke-opacity='.18' stroke-width='1.6'/>"
-                "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='-40 -18' dur='3s' repeatCount='indefinite'/></pattern>")
-    if efekt == "buz":
-        return (f"<linearGradient id='{did}' x1='0' y1='0' x2='0' y2='1' spreadMethod='repeat'>"
-                f"<stop offset='0' stop-color='{c}'/><stop offset='.42' stop-color='{c}'/>"
-                f"<stop offset='.5' stop-color='#d6e9ff'/><stop offset='.58' stop-color='{c}'/><stop offset='1' stop-color='{c}'/>"
-                "<animateTransform attributeName='gradientTransform' type='translate' from='0 -1' to='0 1' dur='2.6s' repeatCount='indefinite'/></linearGradient>")
-    if efekt == "elektrik":
-        return (f"<pattern id='{did}' width='14' height='18' patternUnits='userSpaceOnUse'>"
-                f"<rect width='14' height='18' fill='{c}'/>"
-                f"<path d='M8 0 L3.5 8 L9.5 9.5 L5 18' fill='none' stroke='{b}' stroke-opacity='.5' stroke-width='1.6'>"
-                "<animate attributeName='stroke-opacity' values='.15;.65;.2;.55;.15' dur='0.8s' repeatCount='indefinite'/></path>"
-                "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='0 -18' dur='0.7s' repeatCount='indefinite'/></pattern>")
-    if efekt == "led":
-        return (f"<pattern id='{did}' width='12' height='10' patternUnits='userSpaceOnUse'>"
-                f"<rect width='12' height='10' fill='{c}'/>"
-                f"<rect y='6' width='12' height='2.4' fill='{b}' fill-opacity='.3'>"
-                "<animate attributeName='fill-opacity' values='.08;.4;.08' dur='1.2s' repeatCount='indefinite'/></rect>"
-                "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='0 -10' dur='1.4s' repeatCount='indefinite'/></pattern>")
-    if efekt == "alev":
-        return (f"<linearGradient id='{did}' x1='0' y1='0' x2='0' y2='1' spreadMethod='reflect'>"
-                "<stop offset='0' stop-color='#f59e0b'/><stop offset='.35' stop-color='#eb6834'/>"
-                f"<stop offset='.7' stop-color='{c}'/><stop offset='1' stop-color='#9f1d1d'/>"
-                "<animateTransform attributeName='gradientTransform' type='translate' values='0 0;0 -0.18;0 0.05;0 0' dur='1.3s' repeatCount='indefinite'/></linearGradient>")
-    if efekt == "uretim":
-        return (f"<pattern id='{did}' width='20' height='14' patternUnits='userSpaceOnUse'>"
-                f"<rect width='20' height='14' fill='{c}'/>"
-                f"<path d='M3 11 L10 5 L17 11' fill='none' stroke='{b}' stroke-opacity='.36' stroke-width='2.4' stroke-linecap='round'/>"
-                "<animateTransform attributeName='patternTransform' type='translate' from='0 0' to='0 -14' dur='1.1s' repeatCount='indefinite'/></pattern>")
-    return ""
-
-
-def desen_html(tip: str) -> str:
-    """Seçilen grafiğin sütun desenleri (SVG defs + CSS bağlantısı)."""
-    if tip in TEK:
-        efektler = [TEK[tip][1:]]
-    elif tip in COK:
-        efektler = [("akim", r) for _, _, r in COK[tip]]
-    elif tip == "karsilastir":
-        efektler = [("akim", "#9cc3f2"), ("akim", "#2a78d6")]
-    else:
-        return ""
-    defs = "".join(_desen("pg_%s_%d" % (tip, i), e, c) for i, (e, c) in enumerate(efektler))
-    kural = "".join('.st-key-%s .js-plotly-plot .barlayer .trace:nth-child(%d) .point path'
-                    '{fill:url(#pg_%s_%d) !important;}' % (ALAN, i + 1, tip, i) for i in range(len(efektler)))
-    return ("<svg width='0' height='0' style='position:absolute;width:0;height:0;overflow:hidden' aria-hidden='true'>"
-            "<defs>" + defs + "</defs></svg><style>" + kural
-            + ".st-key-%s .js-plotly-plot .barlayer .point path{transform-box:fill-box;transform-origin:50%% 100%%;}"
-            % ALAN + "</style>")
 
 
 # ── Rozet: seçilen ay ↔ karşılaştırılan ay ────────────────────────────────

@@ -2939,10 +2939,6 @@
 
         // Sayfa yüklenince otomatik kontrol et
         window.addEventListener('load', () => { checkAutoAnalysis(); });
-        // Enerji portalının başlığındaki 'Ayarlar' düğmesi buraya #ayarlar ile gelir
-        window.addEventListener('load', () => {
-            if (location.hash === '#ayarlar' && typeof openSettingsModal === 'function') { openSettingsModal(); }
-        });
 
         // Upload CSV
         async function uploadCSV() {
