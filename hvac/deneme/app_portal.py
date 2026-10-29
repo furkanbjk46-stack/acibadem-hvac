@@ -1233,6 +1233,13 @@ try:
 except Exception:
     pass
 
+# ── Tasarım dili: Mekanik Zeka başlığı + Synapse sekme/kart/simge (portal_tasarim.py) ──
+try:
+    import portal_tasarim as _pt
+    st.markdown(_pt.CSS + (_pt.IK.CSS if _pt.IK else "") + _pt.sekme_css(), unsafe_allow_html=True)
+except Exception:
+    _pt = None
+
 # ── BasEUI Dropdown Koyu Tema — components.html ile gerçek JS enjeksiyonu ──
 # st.markdown içindeki <script> tarayıcı tarafından çalıştırılmaz (innerHTML güvenliği).
 # components.html bir iframe oluşturur → window.parent.document ile parent DOM'a erişir.
@@ -1333,15 +1340,7 @@ _loc_mgr = get_location_manager()
 _loc_mgr.ensure_locations_ready()
 _loc_config = _loc_mgr.get_location_config()
 
-st.markdown(
-    f"""
-    <div style='display:flex; justify-content:space-between; align-items:center; gap:12px; margin: 0 0 10px 0;'>
-      <div style='font-weight:800; font-size:14px; letter-spacing:0.4px; color:#0f1f3d; text-transform:uppercase;'>{_loc_config.get('name', 'ACIBADEM MASLAK HASTANESİ')}</div>
-      <a href='{PORTAL_URL}' target='_top' style='text-decoration:none; font-weight:800; color:#0f1f3d;'>⬅ Ana Sayfa</a>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+# Lokasyon adı ve Ana Sayfa artık başlık kartında (aşağıda, "UI" bölümü)
 
 # --- FAZ 7: MANUEL SYNC (form içine taşındı) ---
 DATA_FILE = _loc_mgr.get_data_path("energy_data.csv")
@@ -2960,7 +2959,28 @@ def generate_pdf_report(start: date, end_exclusive: date, df_period: pd.DataFram
 # =============================
 # UI
 # =============================
-st.title("⚡ Enerji ve Verimlilik")
+# ── Başlık: Mekanik Zeka ile aynı düzen (Ana Sayfa + Ayarlar; Bakım Kartları yok) ──
+def _baslik_ciz():
+    try:
+        _son_t = pd.to_datetime(load_data()["Tarih"], errors="coerce").max()
+        _son_txt = _son_t.strftime("%d.%m.%Y") if pd.notna(_son_t) else "—"
+    except Exception:
+        _son_txt = "—"
+    _lok_adi = _loc_config.get("name", "ACIBADEM MASLAK HASTANESİ")
+    _ana = PORTAL_URL if PORTAL_URL.endswith("/") else PORTAL_URL + "/"
+    if _pt is None:
+        st.title("⚡ Enerji ve Verimlilik")
+        st.markdown(f"[⬅ Ana Sayfa]({_ana})")
+        return
+    st.markdown(_pt.baslik_html(
+        "Enerji ve Verimlilik", "Enerji Yönetimi & Raporlama", "Sistem Hazır",
+        f"{_lok_adi} · Son kayıt: {_son_txt}",
+        [("Ana Sayfa", "geri", _ana),
+         # Ayarlar Mekanik Zeka'da tek yerde; #ayarlar ayar penceresini açar
+         ("Ayarlar", "ayar", _ana + "static/index.html#ayarlar")]), unsafe_allow_html=True)
+
+
+_baslik_ciz()
 
 # ── Aylık bakım uyarısı (ayın 25'inden itibaren işaret yoksa) ──
 try:
@@ -3267,17 +3287,20 @@ if page_param in ["dashboard", "karsilastirma", "grafik", "grafikler"]:
     default_tab = 1  # Dashboard & Karşılaştırma tab'ı
 
 # TAB isimleri
+# TAB isimleri — Synapse sekme dili: düz ad, önünde hareketli simge
+# (simgeler portal_tasarim.sekme_css; sıra portal_tasarim.SEKMELER ile aynı)
 TAB_NAMES = [
-    "🔌 Enerji Diyagramı",
-    "1) Veri Girişi & Excel İçe Aktarım",
-    "2) Dashboard & Karşılaştırma",
-    "3) PDF Rapor",
-    "4) Veri Görüntüleme",
-    "5) 📈 Aylık Birleşik Rapor",
-    "6) 🔮 Tahmin & Trend",
+    "Enerji Diyagramı",
+    "Veri Girişi & Excel",
+    "Dashboard & Karşılaştırma",
+    "PDF Rapor",
+    "Veri Görüntüleme",
+    "Aylık Birleşik Rapor",
+    "Tahmin & Trend",
 ]
 
-tab_diyagram, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(TAB_NAMES)
+with st.container(key="enerji_sekmeler"):
+    tab_diyagram, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(TAB_NAMES)
 
 # ══════════════════════════════════════════════════════════════════
 # ENERJİ DİYAGRAMI — lokasyona özgü enerji topolojisi (şimdilik Maslak)
@@ -3291,21 +3314,21 @@ ENERJI_TOPOLOJI = {
         "genel":   [("TRDP-1", "TRDP1_kWh"), ("TRDP-3", "TRDP3_kWh")],
         "mekanik": [("TRDP-2", "TRDP2_kWh"), ("TRDP-4", "TRDP4_kWh")],
         "kumeler": [
-            ("MCC PANOLARI (SIEMENS)", "▣", [
+            ("MCC PANOLARI (SIEMENS)", "mcc", [
                 ("2BK-D01", "MCC_2BK_D01_kWh"), ("2BK-D02", "MCC_2BK_D02_kWh"),
                 ("4BK-E01", "MCC_4BK_E01_kWh"), ("4BK-E02", "MCC_4BK_E02_kWh"),
                 ("4BK-F01", "MCC_4BK_F01_kWh"),
                 ("CK-D01", "MCC_CK_D01_kWh"), ("CK-E01", "MCC_CK_E01_kWh"), ("CK-F01", "MCC_CK_F01_kWh"),
             ]),
-            ("MCC PANOLARI (JANITZA)", "▣", [
+            ("MCC PANOLARI (JANITZA)", "mcc", [
                 ("MCC-1", "MCC1_kWh"), ("MCC-2", "MCC2_kWh"), ("MCC-3", "MCC3_kWh"),
                 ("MCC-4", "MCC4_kWh"), ("MCC-5", "MCC5_kWh"), ("MCC-6", "MCC6_kWh"),
                 ("MCC-7", "MCC7_kWh"),
             ]),
-            ("SOĞUTMA KULELERİ", "❄", [
+            ("SOĞUTMA KULELERİ", "sogutma", [
                 ("KULE-01", "Kule1_kWh"), ("KULE-02", "Kule2_kWh"), ("KULE-03", "Kule3_kWh"),
             ]),
-            ("CHILLER", "🧊", [
+            ("CHILLER", "sogutma", [
                 ("CH-1", "Chiller1_kWh"), ("CH-2", "Chiller2_kWh"), ("CH-3", "Chiller3_kWh"),
                 ("CH-4", "Chiller4_kWh"), ("CH-5", "Chiller5_kWh"),
             ]),
@@ -3406,48 +3429,54 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         f"🌡 {_dis_hava:.1f}°C</span>" if _dis_hava is not None else ""
     )
 
-    # ── Glassmorphism stil bloğu: global 'p,span,div{color:!important}' kuralını ID-scoped sınıflar yener ──
+    # ── Stil: Synapse kart dili (portal_tasarim / lokasyon Dashboard'u) ──
+    # ID-kapsamlı sınıflar global 'p,span,div{color:!important}' kuralını yener.
+    _ik = (lambda ad, b=18: _pt.ikon(ad, b)) if _pt else (lambda ad, b=18: "")
     _style = (
         "<style>"
-        "#ed-root{position:relative;overflow:hidden;border-radius:16px;background:#f1f0ed;"
-        "padding:22px;border:1px solid rgba(24,26,30,0.10);}"
-        "#ed-root .blob{display:none;}"
-        "#ed-root .b1{width:420px;height:420px;background:#256abf;top:-14%;left:4%;}"
-        "#ed-root .b2{width:360px;height:360px;background:#0ca30c;bottom:-12%;right:6%;}"
-        "#ed-root .b3{width:300px;height:300px;background:#6366f1;top:38%;left:44%;}"
+        "#ed-root{position:relative;padding:2px 0 0;}"
         "#ed-root .layer{position:relative;z-index:1;}"
-        "#ed-root .gcard{background:#ffffff;"
-        "-webkit-border:1px solid rgba(24,26,30,0.10);"
-        "border-top:1px solid rgba(24,26,30,0.10);border-radius:18px;"
-        "box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22),inset 0 1px 0 #24324d;padding:20px;}"
-        "#ed-root .hbrand{color:#0f1f3d!important;font-weight:700;letter-spacing:4px;font-size:14px;}"
-        "#ed-root .hsub{color:#46536b!important;font-weight:400;letter-spacing:2px;}"
-        "#ed-root .badge{color:#0ca30c!important;background:rgba(12,163,12,0.15);"
-        "border:1px solid rgba(12,163,12,0.3);padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;}"
-        "#ed-root .hmut{color:#24324d!important;font-size:12px;}"
-        "#ed-root .chead{color:#46536b!important;font-size:11px;font-weight:600;letter-spacing:2px;}"
-        "#ed-root .mainv{color:#0f1f3d!important;font-weight:300;font-size:46px;line-height:1;letter-spacing:-1px;}"
-        "#ed-root .mainv .u{color:#46536b!important;font-size:15px;font-weight:400;}"
-        "#ed-root .bdlbl{color:#46536b!important;font-size:11px;}"
-        "#ed-root .vblue{color:#2a78d6!important;}"
+        "#ed-root .gcard{background:#ffffff;border:1px solid rgba(24,26,30,.10);border-radius:16px;"
+        "box-shadow:0 1px 1px rgba(20,22,26,.05),0 10px 22px -12px rgba(20,22,26,.22);padding:16px 18px;}"
+        "#ed-root .hbrand{display:flex;align-items:center;gap:8px;color:#133273!important;font-weight:700;"
+        "letter-spacing:1.4px;font-size:12px;text-transform:uppercase;padding:4px 0 8px;"
+        "border-bottom:1px solid rgba(24,26,30,.10);}"
+        "#ed-root .hsub{color:#46536b!important;font-weight:500;letter-spacing:.3px;text-transform:none;font-size:10px;}"
+        "#ed-root .hbrand .hsub{margin-left:auto;}"
+        "#ed-root .chead{display:flex;align-items:center;justify-content:center;gap:7px;color:#46536b!important;"
+        "font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;}"
+        "#ed-root .mainv{color:#133273!important;font-weight:800;font-size:40px;line-height:1.1;letter-spacing:-0.02em;}"
+        "#ed-root .mainv .u{color:#46536b!important;font-size:13px;font-weight:500;letter-spacing:0;}"
+        "#ed-root .bdlbl{display:flex;align-items:center;gap:6px;color:#46536b!important;font-size:10px;"
+        "font-weight:600;letter-spacing:1px;text-transform:uppercase;}"
+        "#ed-root .vblue{color:#4a3aa7!important;}"
         "#ed-root .vemr{color:#0ca30c!important;}"
-        "#ed-root .sectitle{color:#0f1f3d!important;font-size:18px;font-weight:400;}"
-        "#ed-root .secval{color:#0f1f3d!important;font-size:22px;font-weight:300;}"
-        "#ed-root .secval .u{color:#46536b!important;font-size:13px;}"
-        "#ed-root .pcblue{color:#2a78d6!important;font-weight:600;}"
-        "#ed-root .pcamber{color:#c98500!important;font-weight:600;}"
-        "#ed-root .trdplbl{color:#46536b!important;font-size:12px;font-weight:600;}"
-        "#ed-root .trdpval{color:#0f1f3d!important;font-size:19px;font-weight:600;}"
-        "#ed-root .ptitle{color:#24324d!important;font-size:12px;font-weight:600;letter-spacing:1px;}"
-        "#ed-root .bar{display:inline-block;width:4px;height:12px;border-radius:2px;"
-        "vertical-align:middle;margin-right:8px;}"
+        "#ed-root .sectitle{display:flex;align-items:center;gap:8px;color:#133273!important;font-size:12px;"
+        "font-weight:700;letter-spacing:1.4px;text-transform:uppercase;}"
+        "#ed-root .secval{color:#133273!important;font-size:24px;font-weight:700;letter-spacing:-0.02em;}"
+        "#ed-root .secval .u{color:#46536b!important;font-size:10px;font-weight:500;}"
+        "#ed-root .pcblue{color:#2a78d6!important;font-weight:700;}"
+        "#ed-root .pcamber{color:#c98500!important;font-weight:700;}"
+        "#ed-root .trdplbl{display:flex;align-items:center;gap:6px;color:#46536b!important;font-size:10px;"
+        "font-weight:600;letter-spacing:1.2px;text-transform:uppercase;}"
+        "#ed-root .trdpval{color:#133273!important;font-size:22px;font-weight:700;letter-spacing:-0.02em;}"
+        "#ed-root .ptitle{display:flex;align-items:center;gap:7px;color:#133273!important;font-size:11px;"
+        "font-weight:700;letter-spacing:1.3px;text-transform:uppercase;}"
+        "#ed-root .bar{display:inline-block;width:4px;height:12px;border-radius:2px;vertical-align:middle;}"
         "#ed-root .bblue{background:#2a78d6;}#ed-root .bamber{background:#c98500;}"
-        "#ed-root .cid{color:#46536b!important;font-size:11px;font-weight:600;}"
-        "#ed-root .cval{color:#0f1f3d!important;font-size:15px;font-weight:500;}"
-        "#ed-root .cval .u{color:#46536b!important;font-size:9px;}"
-        "#ed-root .cpct{color:#c98500!important;font-weight:600;}"
+        "#ed-root .cel{background:#fafaf8;border:1px solid rgba(24,26,30,.10);border-radius:12px;padding:9px 11px;"
+        "transition:transform .2s,box-shadow .2s;}"
+        "#ed-root .cel:hover{transform:translateY(-2px);box-shadow:0 10px 20px -14px rgba(19,50,115,.35);}"
+        "#ed-root .cid{color:#46536b!important;font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;}"
+        "#ed-root .cval{color:#133273!important;font-size:16px;font-weight:700;margin-top:1px;}"
+        "#ed-root .cval .u{color:#46536b!important;font-size:9px;font-weight:500;}"
+        "#ed-root .cpct{color:#c98500!important;font-weight:700;}"
         "#ed-root .cempty{opacity:0.55;}"
         "#ed-root .cempty .cval{color:#46536b!important;font-style:italic;font-size:11px;font-weight:400;}"
+        "#ed-root .trdp{flex:1;background:#fafaf8;border:1px solid rgba(24,26,30,.10);border-left:3px solid var(--k);"
+        "border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;"
+        "transition:transform .2s,box-shadow .2s;}"
+        "#ed-root .trdp:hover{transform:translateY(-2px);box-shadow:0 10px 20px -14px rgba(19,50,115,.35);}"
         "</style>"
     )
 
@@ -3455,12 +3484,10 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
     def _cell(ad, col):
         d = _ed_val(row, col)
         if d is None:
-            return ("<div class='cempty' style='background:#ffffff;border:1px solid rgba(24,26,30,0.10);"
-                    f"border-radius:10px;padding:11px;'><div class='cid'>{ad}</div>"
+            return (f"<div class='cel cempty'><div class='cid'>{ad}</div>"
                     "<div class='cval'>veri yok</div></div>")
         pct_txt = "%0" if d <= 0 else f"%{(d/hastane_genel*100):.1f}".replace(".", ",") if hastane_genel > 0 else "—"
-        return ("<div style='background:#ffffff;border:1px solid rgba(24,26,30,0.10);"
-                f"border-radius:10px;padding:11px;'><div class='cid'>{ad}</div>"
+        return (f"<div class='cel'><div class='cid'>{ad}</div>"
                 f"<div class='cval'>{_ed_num(d)} <span class='u'>kWh</span></div>"
                 f"<div class='cpct' style='font-size:11px;margin-top:2px;'>{pct_txt}</div></div>")
 
@@ -3474,30 +3501,30 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         else:
             val_txt = _ed_num(d)
             pct_txt = f"%{(d/hastane_genel*100):.1f}".replace(".", ",") if hastane_genel > 0 else "—"
-        return ("<div style='flex:1;background:#f1f0ed;border:1px solid rgba(24,26,30,0.10);"
-                "border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;'>"
-                f"<div><div class='trdplbl'>{ad}</div>"
+        _k = "#2a78d6" if accent == "blue" else "#c98500"
+        return (f"<div class='trdp' style='--k:{_k};'>"
+                f"<div><div class='trdplbl'>{_ik('trdp', 15)}{ad}</div>"
                 f"<div class='{pccls}' style='font-size:11px;margin-top:4px;'>{pct_txt}</div></div>"
                 f"<div class='trdpval'>{val_txt}</div></div>")
 
     def _panel(kume, barcls):
         if not kume:
             return ""
-        ad, _ikon, chips = kume
+        ad, _simge, chips = kume
         grup = sum((_ed_val(row, c) or 0) for _, c in chips)
         cells = "".join(_cell(a, c) for a, c in chips)
         return ("<div class='gcard' style='margin-top:18px;'>"
-                f"<div class='ptitle'><span class='bar {barcls}'></span>{ad} — "
+                f"<div class='ptitle'><span class='bar {barcls}'></span>{_ik(_simge, 16)}{ad} — "
                 f"<span class='cpct'>{_pct(grup)}</span></div>"
                 "<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));"
                 f"gap:10px;margin-top:14px;'>{cells}</div></div>")
 
-    def _section(title, total, accent, trdp_list, note=""):
+    def _section(title, total, accent, trdp_list, note="", simge=""):
         pccls = "pcblue" if accent == "blue" else "pcamber"
         cards = "".join(_trdp(a, c, accent) for a, c in trdp_list)
         return ("<div class='gcard'>"
                 "<div style='display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px;'>"
-                f"<div class='sectitle'>{title}{note}</div>"
+                f"<div class='sectitle'>{_ik(simge, 18) if simge else ''}{title}{note}</div>"
                 "<div style='text-align:right;'>"
                 f"<div class='secval'>{_ed_num(total)} <span class='u'>kWh</span></div>"
                 f"<div class='{pccls}' style='font-size:12px;'>{_pct(total)}</div></div></div>"
@@ -3514,22 +3541,22 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
 
     html = _style + (
         "<div id='ed-root'>"
-        "<div class='blob b1'></div><div class='blob b2'></div><div class='blob b3'></div>"
         "<div class='layer'>"
         # ── Üst bar ──
-        "<div style='margin-bottom:22px;'>"
-        "<div class='hbrand'>SYNERGY <span class='hsub'>| ENERJİ DİYAGRAMI</span></div>"
+        "<div style='margin-bottom:18px;'>"
+        f"<div class='hbrand'>{_ik('trdp', 16)}Enerji Diyagramı"
+        f"<span class='hsub'>{_date_txt}{_hava_txt} · kWh/gün</span></div>"
         "</div>"
         # ── 1. Seviye: Hastane Genel Toplam çekirdeği ──
         "<div style='display:flex;justify-content:center;margin-bottom:22px;'>"
         "<div class='gcard' style='width:460px;text-align:center;'>"
-        "<div class='chead'>HASTANE GENEL TOPLAM · GÜNLÜK</div>"
-        f"<div class='mainv' style='margin:12px 0 18px;'>{_ed_num(hastane_genel)} <span class='u'>kWh</span></div>"
+        f"<div class='chead'>{_ik('enerji', 18)}Hastane Genel Toplam · Günlük</div>"
+        f"<div class='mainv' style='margin:8px 0 14px;'>{_ed_num(hastane_genel)} <span class='u'>kWh</span></div>"
         "<div style='display:flex;justify-content:space-between;border-top:1px solid rgba(24,26,30,0.10);padding-top:16px;'>"
-        f"<div style='text-align:left;'><div class='bdlbl'>{_sebeke_lbl}</div>"
+        f"<div style='text-align:left;'><div class='bdlbl'>{_ik('sebeke', 15)}{_sebeke_lbl}</div>"
         f"<div class='vblue' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(sebeke)} "
         f"<span style='font-size:11px;'>{_pct(sebeke)}</span></div></div>"
-        "<div style='text-align:right;'><div class='bdlbl'>Kojen Üretim</div>"
+        f"<div style='text-align:right;'><div class='bdlbl' style='justify-content:flex-end;'>{_ik('kojen', 15)}Kojen Üretim</div>"
         f"<div class='vemr' style='font-size:17px;font-weight:600;margin-top:3px;'>{_ed_num(kojen)} "
         f"<span style='font-size:11px;'>{_pct(kojen)}</span></div>"
         + (f"<div class='bdlbl' style='margin-top:3px;'>{_kojen_kirilim}</div>" if _kojen_kirilim else "")
@@ -3539,15 +3566,15 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         "<div style='display:flex;gap:22px;align-items:flex-start;'>"
         # Sol sütun
         "<div style='flex:1;'>"
-        + _section("🏢 Bina Genel Tüketim", bina_genel, "blue", topo["genel"])
+        + _section("Bina Genel Tüketim", bina_genel, "blue", topo["genel"], simge="trdp")
         + _panel(_siemens, "bblue")
         + _panel(_kule, "bblue")
         + "</div>"
         # Sağ sütun
         "<div style='flex:1;'>"
         + _section(
-            "⚙️ Bina Mekanik Tüketim", bina_mekanik, "amber", topo["mekanik"],
-            note=f" <span class='hsub' style='font-size:11px;letter-spacing:0;'>({_mek_kaynak})</span>",
+            "Bina Mekanik Tüketim", bina_mekanik, "amber", topo["mekanik"],
+            note=f" <span class='hsub'>({_mek_kaynak})</span>", simge="mcc",
         )
         + _panel(_janitza, "bamber")
         + _panel(_chiller, "bamber")
@@ -3555,7 +3582,7 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         "</div>"
         # ── Açıklama ──
         "<div class='hsub' style='font-size:9px;margin-top:18px;letter-spacing:0;'>"
-        "Mavi = Şebeke · Yeşil = Kojen · Sarı = Hastane Genel Toplam'a oran · "
+        "Mor = Şebeke · Yeşil = Kojen · Sarı = Hastane Genel Toplam'a oran · "
         "Birim: kWh/gün · TRDP-1/3/4 otomatik (Modbus) · TRDP-2 manuel girilir; "
         "ikisi birden ölçülene kadar mekanik kısım alt sayaç toplamından hesaplanır."
         "</div>"
@@ -4077,7 +4104,6 @@ with tab1:
 
 # ---------------- TAB 2 ----------------
 with tab2:
-    st.subheader("Dashboard & Karşılaştırma")
     df = load_data()
     if df.empty:
         st.warning("Dashboard için veri gerekli.")
@@ -4184,42 +4210,71 @@ with tab2:
             health_status = "Veri Yok"
             health_color = "⚪"
         
-        # Kartları göster (biçim: global "kart_" kuralı, _bolum_karti)
+        # Kartları göster — Synapse lokasyon Dashboard'u dili (portal_tasarim)
+        def _tr_sayi(v, ond=0):
+            return f"{v:,.{ond}f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-        # ═══ 1. DÜNÜN ÖZETİ ═══
-        with _bolum_karti("kart_dun_ozeti",
-                          f"📊 Dünün Özeti — {report_date.strftime('%d.%m.%Y')}"):
+        def _gun_deger(col):
+            if report_data.empty or col not in report_data.columns:
+                return None
+            _v = report_data.iloc[0].get(col)
+            try:
+                return None if _v is None or pd.isna(_v) else float(_v)
+            except (TypeError, ValueError):
+                return None
+
+        _gun_txt = report_date.strftime('%d.%m.%Y')
+        _pct_dun = None
+        if not compare_data.empty and rep_total > 0:
+            _ct = sayi(compare_data.iloc[0].get("Toplam_Hastane_Tuketim_kWh"))
+            _pct_dun = ((rep_total - _ct) / _ct * 100) if _ct > 0 else None
+
+        # ═══ 1. ÖZET (DÜN) ═══
+        with st.container(key="kart_dun_ozeti"):
+            st.markdown(_pt.bolum(f"Özet — {_gun_txt}", "enerji",
+                                  "önceki güne göre" if _pct_dun is not None else ""),
+                        unsafe_allow_html=True)
             if report_data.empty:
-                st.info(f"📅 {report_date.strftime('%d.%m.%Y')} için henüz veri girilmedi.")
+                st.info(f"📅 {_gun_txt} için henüz veri girilmedi.")
             else:
-                sc1, sc2, sc3, sc4, sc5 = st.columns(5)
-                with sc1:
-                    # TÜKETİM ARTIŞI İYİ HABER DEĞİLDİR: ok yukarı -> kırmızı,
-                    # aşağı -> yeşil. Streamlit'in varsayılanı tersidir.
-                    st.metric("⚡ Dünkü Tüketim", f"{rep_total:,.0f} kWh".replace(",", "."),
-                              delta=delta_str, delta_color="inverse")
-                with sc2:
-                    st.metric("❄️ Chiller Tüketimi", f"{rep_chiller:,.0f} kWh".replace(",", "."))
-                with sc3:
-                    st.metric("🔥 Doğalgaz", f"{rep_gas:,.0f} m³".replace(",", "."))
-                with sc4:
-                    if critical_count is not None:
-                        alert_color = "🔴" if critical_count > 0 else ("🟡" if warning_count > 0 else "🟢")
-                        st.metric(f"{alert_color} Aktif Uyarılar", f"{critical_count} Kritik / {warning_count} Uyarı")
-                    else:
-                        st.metric("⚪ Aktif Uyarılar", "Veri yok", help=f"{report_date.strftime('%d.%m.%Y')} için HVAC analizi bulunamadı")
-                with sc5:
-                    if health_score is not None:
-                        metrik_notlu(
-                            f"{health_color} Sistem Sağlığı", f"%{health_score}",
-                            f"{health_status} · {unit_count} ünitenin "
-                            f"{critical_count + warning_count}'inde bulgu",
-                            help="Sorunlu ünitelerin toplam üniteye oranı. "
-                                 "Kritik bulgu tam, uyarı 0,35 ağırlıkla sayılır.",
-                        )
-                    else:
-                        metrik_notlu("⚪ Sistem Sağlığı", "--", "Veri yok")
-        
+                _d_txt, _d_cls = _pt.degisim(_pct_dun, ters=True)   # tüketim artışı kötü haber
+                if critical_count is not None:
+                    _uy_txt, _uy_alt = f"{critical_count} / {warning_count}", "kritik / uyarı"
+                else:
+                    _uy_txt, _uy_alt = "—", "HVAC analizi yok"
+                if health_score is not None:
+                    _sg_txt = f"%{health_score}"
+                    _sg_alt = (f"{health_status} · {unit_count} ünitenin "
+                               f"{critical_count + warning_count}'inde bulgu")
+                else:
+                    _sg_txt, _sg_alt = "—", "Veri yok"
+                st.markdown(_pt.izgara([
+                    _pt.kart("enerji", "Dünkü Tüketim", _tr_sayi(rep_total), "kWh", _d_txt, _d_cls),
+                    _pt.kart("sogutma", "Chiller Tüketimi", _tr_sayi(rep_chiller), "kWh"),
+                    _pt.kart("dogalgaz", "Doğalgaz", _tr_sayi(rep_gas), "m³"),
+                    _pt.kart("alarm", "Aktif Uyarılar", _uy_txt, "", _uy_alt),
+                    _pt.kart("saglik", "Sistem Sağlığı", _sg_txt, "", _sg_alt),
+                ]), unsafe_allow_html=True)
+
+                # ═══ KOJEN & KAYNAK (aynı gün; ölçülmeyen kalem "—") ═══
+                def _kk(simge, etiket, col, birim="kWh"):
+                    _v = _gun_deger(col)
+                    return _pt.kart(simge, etiket, _tr_sayi(_v) if _v is not None else "—",
+                                    birim if _v is not None else "")
+                st.markdown(_pt.bolum("Kojen & Kaynak", "kojen"), unsafe_allow_html=True)
+                st.markdown(_pt.izgara([
+                    _kk("sebeke", "Şebeke Tüketim", "Sebeke_Tuketim_kWh"),
+                    _kk("kojen", "Kojen Üretim", "Kojen_Uretim_kWh"),
+                    _kk("trdp", "TRDP-1 (Bina)", "TRDP1_kWh"),
+                    _kk("trdp", "TRDP-2 (Mek.)", "TRDP2_kWh"),
+                    _kk("trdp", "TRDP-3 (Bina)", "TRDP3_kWh"),
+                    _kk("trdp", "TRDP-4 (Mek.)", "TRDP4_kWh"),
+                    _kk("mcc", "MCC Tüketim", "MCC_Tuketim_kWh"),
+                    _kk("kazan", "Kazan Doğalgaz", "Kazan_Dogalgaz_m3", "m³"),
+                    _kk("dogalgaz", "Kojen Doğalgaz", "Kojen_Dogalgaz_m3", "m³"),
+                    _kk("su", "Su Tüketimi", "Su_Tuketimi_m3", "m³"),
+                ], 200), unsafe_allow_html=True)
+
         # Settings'i bir kez oku (m² bölümü için)
         try:
             import json as _json
@@ -4235,28 +4290,25 @@ with tab2:
         
         # ═══ 2. m² BAŞINA TÜKETİM ═══
         if building_area and building_area > 0 and not report_data.empty:
-            with _bolum_karti("kart_m2_tuketim",
-                              f"📐 m² Başına Tüketim — {building_area:,.0f} m²".replace(",", ".")):
-                ma1, ma2, ma3 = st.columns(3)
-                with ma1:
-                    cooling_per_m2 = rep_chiller / building_area
-                    st.metric("❄️ Soğutma", f"{cooling_per_m2:.2f} kWh/m²")
-                with ma2:
-                    heating_kwh = rep_gas * 10.64
-                    heating_per_m2 = heating_kwh / building_area
-                    st.metric("🔥 Isıtma", f"{heating_per_m2:.2f} kWh/m²")
-                with ma3:
-                    total_per_m2 = rep_total / building_area
-                    st.metric("⚡ Toplam Enerji", f"{total_per_m2:.2f} kWh/m²")
-        
-        st.divider()
+            with st.container(key="kart_m2_tuketim"):
+                st.markdown(_pt.bolum("m² Başına Tüketim", "verim",
+                                      f"{_tr_sayi(building_area)} m²"), unsafe_allow_html=True)
+                cooling_per_m2 = rep_chiller / building_area
+                heating_per_m2 = rep_gas * 10.64 / building_area
+                total_per_m2 = rep_total / building_area
+                st.markdown(_pt.izgara([
+                    _pt.kart("sogutma", "Soğutma", _tr_sayi(cooling_per_m2, 2), "kWh/m²"),
+                    _pt.kart("kazan", "Isıtma", _tr_sayi(heating_per_m2, 2), "kWh/m²"),
+                    _pt.kart("enerji", "Toplam Enerji", _tr_sayi(total_per_m2, 2), "kWh/m²"),
+                ]), unsafe_allow_html=True)
+
         # ===== /GÜNLÜK ÖZET KARTLARI =====
         
         years = sorted({d.year for d in df["Tarih"].tolist()})
         month_periods = sorted({pd.to_datetime(d).to_period("M") for d in df["Tarih"].tolist()})
         month_labels = [str(p) for p in month_periods]
 
-        st.markdown("### Grafik Aralığı Daraltma (Kaydırıcı)")
+        st.markdown(_pt.bolum("Grafik Aralığı", "takvim", "yıl ya da ay aralığı seçin"), unsafe_allow_html=True)
         scope = st.radio("Daraltma tipi", ["Yıl Bazlı", "Ay Bazlı"], horizontal=True, key="dash_scope_radio")
 
         if scope == "Yıl Bazlı":
@@ -4272,7 +4324,7 @@ with tab2:
 
         df_scope = filter_range(df, start_scope, end_scope)
 
-        st.divider()
+        st.markdown(_pt.bolum("Karşılaştırma", "grafik"), unsafe_allow_html=True)
         mode = st.radio("Karşılaştırma modu", ["Ay/Yıl Seç (YoY)", "Özel Tarih Aralığı"], horizontal=True, key="dash_mode_radio")
 
         if mode == "Ay/Yıl Seç (YoY)":
@@ -4309,33 +4361,26 @@ with tab2:
         total_gas = sumcol(df_period, "Kazan_Dogalgaz_m3") + sumcol(df_period, "Kojen_Dogalgaz_m3")
         avg_temp = float(df_period["Dis_Hava_Sicakligi_C"].astype(float).mean()) if not df_period.empty else 0.0
 
-        st.markdown("### Özet Göstergeler")
-        k1, k2, k3, k4, k5 = st.columns(5)
+        st.markdown(_pt.bolum("Dönem Özeti", "takvim",
+                              "geçen yılın aynı ayına göre" if yoy else ""), unsafe_allow_html=True)
 
-        def metric_yoy(col_key, label, val, unit):
+        def metric_yoy(col_key, simge, label, val, unit):
+            # Hepsi tüketim kalemi: artış kırmızı ▲, azalış yeşil ▼ (ters=True)
+            _txt, _cls = "", ""
             if yoy and col_key in yoy["metrics"]:
                 cur_v, prev_v = yoy["metrics"][col_key]
-                pct = safe_pct_change(cur_v, prev_v)
-                delta = f"{pct:+.1f}%" if pct is not None else "N/A"
-                # Hepsi tüketim kalemi: artış kırmızı, azalış yeşil.
-                st.metric(label, f"{val:,.0f}".replace(",", ".") + f" {unit}", delta,
-                          delta_color="inverse")
-            else:
-                st.metric(label, f"{val:,.0f}".replace(",", ".") + f" {unit}")
+                _txt, _cls = _pt.degisim(safe_pct_change(cur_v, prev_v), ters=True)
+            return _pt.kart(simge, label, _tr_sayi(val), unit, _txt, _cls)
 
-        with k1:
-            metric_yoy("Toplam_Hastane_Tuketim_kWh", "Toplam Hastane", total_h, "kWh")
-        with k2:
-            metric_yoy("Sebeke_Tuketim_kWh", "Şebeke", total_grid, "kWh")
-        with k3:
-            metric_yoy("Toplam_Sogutma_Tuketim_kWh", "Toplam Soğutma", total_cool, "kWh")
-        with k4:
-            st.metric("Toplam Doğalgaz", f"{total_gas:,.0f}".replace(",", ".") + " m³")
-        with k5:
-            st.metric("Ortalama Dış Hava", f"{avg_temp:,.1f}".replace(",", ".") + " °C")
+        st.markdown(_pt.izgara([
+            metric_yoy("Toplam_Hastane_Tuketim_kWh", "enerji", "Toplam Hastane", total_h, "kWh"),
+            metric_yoy("Sebeke_Tuketim_kWh", "sebeke", "Şebeke", total_grid, "kWh"),
+            metric_yoy("Toplam_Sogutma_Tuketim_kWh", "sogutma", "Toplam Soğutma", total_cool, "kWh"),
+            _pt.kart("dogalgaz", "Toplam Doğalgaz", _tr_sayi(total_gas), "m³"),
+            _pt.kart("termometre", "Ortalama Dış Hava", _tr_sayi(avg_temp, 1), "°C"),
+        ]), unsafe_allow_html=True)
 
-        st.divider()
-        st.markdown("### Grafikler")
+        st.markdown(_pt.bolum("Grafikler", "grafik"), unsafe_allow_html=True)
 
         df_chart = aggregate_for_view(df_period, view_mode)
         fig_line = chart_consumption_vs_temp(df_chart, view_mode)
@@ -4357,8 +4402,7 @@ with tab2:
         if fig_stack:
             st.plotly_chart(fig_stack, use_container_width=True)
 
-        st.divider()
-        st.markdown("### Seçilen Dönem Verisi")
+        st.markdown(_pt.bolum("Seçilen Dönem Verisi", "kayit"), unsafe_allow_html=True)
         render_styled_table(df_period.sort_values("Tarih"), table_key="dashboard")
 
 # ---------------- TAB 3 ----------------

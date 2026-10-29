@@ -74,7 +74,8 @@ for d in ast.walk(AGAC):
         "renk": _r,
     })
 
-c("st.metric çağrıları bulundu", len(metrikler) >= 40, len(metrikler))
+# 29.10.2026: Dashboard Synapse kartlarına geçti (portal_tasarim.kart) — st.metric azaldı
+c("st.metric çağrıları bulundu", len(metrikler) >= 30, len(metrikler))
 
 # ── metrik_notlu çağrıları (delta değil, altına nötr not) ────────────────
 notlular = []
@@ -106,7 +107,7 @@ c("tasarruf göstergeleri varsayılanda (artış = yeşil)",
   [(m["satir"], m["renk"]) for m in _tasarruf])
 
 # Tüketim kalemleri ters renkte olmalı
-_TUKETIM = ["Dünkü Tüketim", "Şebeke Tüketimi", "Soğutma Tüketimi",
+_TUKETIM = ["Şebeke Tüketimi", "Soğutma Tüketimi",
             "Toplam Doğalgaz", "Beklenen Toplam", "Beklenen Şebeke",
             "Beklenen Sebeke"]
 for _ad in _TUKETIM:
@@ -116,12 +117,17 @@ for _ad in _TUKETIM:
       _bul and all(m["renk"] == "inverse" for m in _bul),
       [(m["satir"], m["renk"]) for m in _bul])
 
-# metric_yoy ortak yardımcısı (Toplam Hastane / Şebeke / Toplam Soğutma)
-c("özet göstergeler ters renkte", 'f" {unit}", delta,\n                          delta_color="inverse")' in KAYNAK)
+# Dashboard kartları (portal_tasarim): tüketim artışı kırmızı ▲, azalış yeşil ▼
+c("dünkü tüketim kartı ters renkte", "_pt.degisim(_pct_dun, ters=True)" in KAYNAK)
+c("dönem özeti kartları ters renkte (metric_yoy)",
+  "_pt.degisim(safe_pct_change(cur_v, prev_v), ters=True)" in KAYNAK)
+import portal_tasarim as _PT
+c("ters renk: artış kırmızı", _PT.degisim(5.0, ters=True) == ("▲ %5,0", "syn-kotu"))
+c("ters renk: azalış yeşil", _PT.degisim(-5.0, ters=True) == ("▼ %5,0", "syn-iyi"))
 
 # Etiket niteliğindeki yazılar delta DEĞİL, alt not olmalı
 _ETIKET = ["Toplam Değişim", "Şebeke Değişim", "Chiller Değişim",
-           "Toplam R² Skoru", "Beklenen Tüketim", "Sistem Sağlığı",
+           "Toplam R² Skoru", "Beklenen Tüketim",   # Sistem Sağlığı artık Dashboard kartında
            ]   # Elektrik/Doğalgaz/Su/Toplam Maliyet kartları 28.10.2026'da kaldırıldı (TL yok)
 for _ad in _ETIKET:
     _bul = [n for n in notlular if _ad in n["etiket"]]
@@ -186,7 +192,7 @@ _kart_cagri = [d for d in ast.walk(AGAC)
                and d.func.id == "_bolum_karti"]
 _anahtarlar = [a.args[0].value for a in _kart_cagri
                if a.args and isinstance(a.args[0], ast.Constant)]
-c("tüm bölümler kart içinde", len(_anahtarlar) >= 17, len(_anahtarlar))
+c("tüm bölümler kart içinde", len(_anahtarlar) >= 15, len(_anahtarlar))
 c("kart anahtarları 'kart_' ile başlar (CSS ona bakıyor)",
   all(k.startswith("kart_") for k in _anahtarlar),
   [k for k in _anahtarlar if not k.startswith("kart_")])
@@ -199,7 +205,8 @@ for _k in ("kart_dun_ozeti", "kart_m2_tuketim",                             # da
            "kart_pdf_indir", "kart_ai_ilerleme", "kart_ml_egitim",
            "kart_tahmin_coklu_yil", "kart_tahmin_aylik", "kart_ml_model",   # tahmin & trend
            "kart_gelecek_ay", "kart_senaryo", "kart_tasarruf_ozeti"):
-    c("kart var: %s" % _k, _k in _anahtarlar)
+    # Dashboard bölümleri Synapse kartlarında: st.container(key=...) ile anahtarlı
+    c("kart var: %s" % _k, _k in _anahtarlar or ('key="%s"' % _k) in KAYNAK)
 
 # ── TL / maliyet hiçbir ekranda yok (28.10.2026) ─────────────────────────
 for _k in ("kart_maliyet_gunluk", "kart_maliyet_aylik"):

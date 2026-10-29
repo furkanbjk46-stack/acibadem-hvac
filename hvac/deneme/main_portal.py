@@ -3249,10 +3249,11 @@ async def hvac_entry():
 @app.get("/enerji", include_in_schema=False)
 async def enerji_entry():
     """Enerji (Streamlit) uygulamasını portal çerçevesinde aç."""
+    # ÇERÇEVE KALDIRILDI (29.10.2026, /hvac ile aynı): üstteki "ACIBADEM SAĞLIK
+    # GRUBU — Enerji Yönetimi & Raporlama" çubuğu kalktı; Ana Sayfa / Ayarlar
+    # düğmeleri artık Enerji portalının kendi başlık kartında (Mekanik Zeka düzeni).
     streamlit_url = os.environ.get("STREAMLIT_URL", "http://localhost:8501").rstrip("/")
-    iframe_src = f"{streamlit_url}/?embed=true"
-    title = "Enerji Yönetimi & Raporlama"
-    return HTMLResponse(_iframe_wrapper_html(title=title, iframe_src=iframe_src))
+    return RedirectResponse(url=f"{streamlit_url}/?embed=true", status_code=302)
 
 # --- Portal yardımcıları (Acıbadem temalı ana sayfa) ---
 ACIBADEM_PRIMARY = os.environ.get("ACIBADEM_PRIMARY", "#012D75")  # koyu mavi
