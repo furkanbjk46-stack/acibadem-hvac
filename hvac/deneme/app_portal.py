@@ -2055,9 +2055,12 @@ def safe_pct_change(cur: float, prev: float) -> float | None:
     return (cur - prev) / prev * 100.0
 
 
-def yoy_month_compare(df: pd.DataFrame, year: int, month: int) -> dict:
+def yoy_month_compare(df: pd.DataFrame, year: int, month: int,
+                      prev_year: int = None, prev_month: int = None) -> dict:
+    """Seçilen ay ile karşılaştırılan ay. Karşılaştırma verilmezse geçen yılın aynı ayı."""
     cur_start, cur_end = month_range(year, month)
-    prev_start, prev_end = month_range(year - 1, month)
+    prev_start, prev_end = month_range(prev_year if prev_year is not None else year - 1,
+                                       prev_month if prev_month is not None else month)
     cur = filter_range(df, cur_start, cur_end)
     prev = filter_range(df, prev_start, prev_end)
 
@@ -2383,7 +2386,7 @@ def chart_stacked_breakdown(df_period: pd.DataFrame, view_mode: str = "Günlük"
     return fig
 
 
-def chart_month_vs_last_year(yoy_info: dict):
+def chart_month_vs_last_year(yoy_info: dict, baslik: str = None):
     cur_df = yoy_info["cur_df"]
     prev_df = yoy_info["prev_df"]
     cur_start, _ = yoy_info["cur_period"]
@@ -2410,7 +2413,7 @@ def chart_month_vs_last_year(yoy_info: dict):
     
     fig = px.bar(
         dfp, x="Metrik", y="Değer", color="Dönem", barmode="group",
-        title="<b>📅 Bu Ay vs Geçen Yıl Aynı Ay</b>",
+        title="<b>📅 %s</b>" % (baslik or "Bu Ay vs Geçen Yıl Aynı Ay"),
         labels={"Değer": "Toplam (kWh)", "Metrik": ""},
         color_discrete_map=colors
     )
@@ -4305,52 +4308,38 @@ with tab2:
         # ===== /GÜNLÜK ÖZET KARTLARI =====
         
         years = sorted({d.year for d in df["Tarih"].tolist()})
-        month_periods = sorted({pd.to_datetime(d).to_period("M") for d in df["Tarih"].tolist()})
-        month_labels = [str(p) for p in month_periods]
 
-        st.markdown(_pt.bolum("Grafik Aralığı", "takvim", "yıl ya da ay aralığı seçin"), unsafe_allow_html=True)
-        scope = st.radio("Daraltma tipi", ["Yıl Bazlı", "Ay Bazlı"], horizontal=True, key="dash_scope_radio")
+        # Dönem seçimi: ay + karşılaştırılacak ikinci ay (29.10.2026 — eski
+        # "Grafik Aralığı" kaydırıcısı ve "Karşılaştırma modu" kaldırıldı)
+        _AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+                  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
+        _son_dt = pd.to_datetime(max(df["Tarih"]))
+        st.markdown(_pt.bolum("Dönem ve Karşılaştırma", "takvim", "seçilen ay ↔ karşılaştırılan ay"),
+                    unsafe_allow_html=True)
+        c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 1, 1.4])
+        with c1:
+            sel_year = st.selectbox("Yıl", options=years, index=len(years) - 1, key="dash_year_select")
+        with c2:
+            sel_month = st.selectbox("Ay", options=list(range(1, 13)), index=_son_dt.month - 1,
+                                     format_func=lambda m: _AYLAR[m - 1], key="dash_month_select")
+        # Varsayılan karşılaştırma: geçen yılın aynı ayı
+        _kyil = [y for y in years if y != int(sel_year)] or years
+        _kvars = int(sel_year) - 1 if (int(sel_year) - 1) in years else _kyil[-1]
+        with c3:
+            cmp_year = st.selectbox("Karşılaştırılacak Yıl", options=years, index=years.index(_kvars),
+                                    key="dash_cmp_year_select")
+        with c4:
+            cmp_month = st.selectbox("Karşılaştırılacak Ay", options=list(range(1, 13)), index=int(sel_month) - 1,
+                                     format_func=lambda m: _AYLAR[m - 1], key="dash_cmp_month_select")
+        with c5:
+            view_mode = st.radio("Grafik detayı", ["Günlük", "Aylık", "Yıllık"], horizontal=True,
+                                 key="dash_viewmode_radio")
 
-        if scope == "Yıl Bazlı":
-            y1, y2 = st.select_slider("Yıl aralığı", options=years, value=(years[0], years[-1]), key="dash_year_slider")
-            start_scope = date(int(y1), 1, 1)
-            end_scope = date(int(y2) + 1, 1, 1)
-        else:
-            m1, m2 = st.select_slider("Ay aralığı (YYYY-MM)", options=month_labels, value=(month_labels[0], month_labels[-1]), key="dash_month_slider")
-            p1 = pd.Period(m1, freq="M")
-            p2 = pd.Period(m2, freq="M")
-            start_scope = p1.start_time.date()
-            end_scope = (p2.end_time + pd.Timedelta(days=1)).date()
-
-        df_scope = filter_range(df, start_scope, end_scope)
-
-        st.markdown(_pt.bolum("Karşılaştırma", "grafik"), unsafe_allow_html=True)
-        mode = st.radio("Karşılaştırma modu", ["Ay/Yıl Seç (YoY)", "Özel Tarih Aralığı"], horizontal=True, key="dash_mode_radio")
-
-        if mode == "Ay/Yıl Seç (YoY)":
-            c1, c2, c3 = st.columns([1, 1, 2])
-            ys = sorted({d.year for d in df_scope["Tarih"].tolist()}) or years
-            with c1:
-                sel_year = st.selectbox("Yıl", options=ys, index=len(ys) - 1, key="dash_year_select")
-            with c2:
-                sel_month = st.selectbox("Ay", options=list(range(1, 13)), index=0, key="dash_month_select")
-            with c3:
-                view_mode = st.radio("Grafik detayı", ["Günlük", "Aylık", "Yıllık"], horizontal=True, key="dash_viewmode_radio")
-
-            start, end = month_range(int(sel_year), int(sel_month))
-            df_period = filter_range(df_scope, start, end)
-            yoy = yoy_month_compare(df, int(sel_year), int(sel_month))
-        else:
-            c1, c2, c3 = st.columns([1, 1, 2])
-            with c1:
-                start = st.date_input("Başlangıç", value=min(df_scope["Tarih"]), key="dash_start_date")
-            with c2:
-                end_incl = st.date_input("Bitiş", value=max(df_scope["Tarih"]), key="dash_end_date")
-            with c3:
-                view_mode = st.radio("Grafik detayı", ["Günlük", "Aylık", "Yıllık"], horizontal=True, key="dash_viewmode_radio2")
-            end = (pd.to_datetime(end_incl) + pd.Timedelta(days=1)).date()
-            df_period = filter_range(df_scope, start, end)
-            yoy = None
+        start, end = month_range(int(sel_year), int(sel_month))
+        df_period = filter_range(df, start, end)
+        yoy = yoy_month_compare(df, int(sel_year), int(sel_month), int(cmp_year), int(cmp_month))
+        _kiyas_txt = (f"{_AYLAR[int(sel_month) - 1]} {sel_year} ↔ "
+                      f"{_AYLAR[int(cmp_month) - 1]} {cmp_year}")
 
         def sumcol(dfx, col):
             return float(dfx[col].fillna(0).sum()) if not dfx.empty else 0.0
@@ -4361,8 +4350,7 @@ with tab2:
         total_gas = sumcol(df_period, "Kazan_Dogalgaz_m3") + sumcol(df_period, "Kojen_Dogalgaz_m3")
         avg_temp = float(df_period["Dis_Hava_Sicakligi_C"].astype(float).mean()) if not df_period.empty else 0.0
 
-        st.markdown(_pt.bolum("Dönem Özeti", "takvim",
-                              "geçen yılın aynı ayına göre" if yoy else ""), unsafe_allow_html=True)
+        st.markdown(_pt.bolum("Dönem Özeti", "takvim", _kiyas_txt), unsafe_allow_html=True)
 
         def metric_yoy(col_key, simge, label, val, unit):
             # Hepsi tüketim kalemi: artış kırmızı ▲, azalış yeşil ▼ (ters=True)
@@ -4377,7 +4365,10 @@ with tab2:
             metric_yoy("Sebeke_Tuketim_kWh", "sebeke", "Şebeke", total_grid, "kWh"),
             metric_yoy("Toplam_Sogutma_Tuketim_kWh", "sogutma", "Toplam Soğutma", total_cool, "kWh"),
             _pt.kart("dogalgaz", "Toplam Doğalgaz", _tr_sayi(total_gas), "m³"),
-            _pt.kart("termometre", "Ortalama Dış Hava", _tr_sayi(avg_temp, 1), "°C"),
+            # Dış hava o ay hiç girilmediyse ortalama NaN olur: "nan" yerine "—"
+            _pt.kart("termometre", "Ortalama Dış Hava",
+                     _tr_sayi(avg_temp, 1) if avg_temp == avg_temp else "—",
+                     "°C" if avg_temp == avg_temp else ""),
         ]), unsafe_allow_html=True)
 
         st.markdown(_pt.bolum("Grafikler", "grafik"), unsafe_allow_html=True)
@@ -4385,7 +4376,7 @@ with tab2:
         df_chart = aggregate_for_view(df_period, view_mode)
         fig_line = chart_consumption_vs_temp(df_chart, view_mode)
         fig_stack = chart_stacked_breakdown(df_chart, view_mode)
-        fig_bar = chart_month_vs_last_year(yoy) if yoy else None
+        fig_bar = chart_month_vs_last_year(yoy, baslik=_kiyas_txt) if yoy else None
 
         left, right = st.columns([2, 1])
         with left:

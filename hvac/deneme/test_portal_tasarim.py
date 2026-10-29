@@ -58,6 +58,15 @@ c("Dashboard'da ÖZET / KOJEN & KAYNAK bölümleri",
 c("sayma / JavaScript yok (değerler sabit)", "<script" not in open(os.path.join(BURASI, "portal_tasarim.py"),
                                                                   encoding="utf-8").read().lower())
 
+# ── Dashboard dönem seçimi (29.10.2026): kaydırıcı ve mod kalktı, iki ay karşılaştırılır ──
+c("Grafik Aralığı kaydırıcısı kaldırıldı", 'key="dash_year_slider"' not in PORTAL and 'key="dash_scope_radio"' not in PORTAL)
+c("Karşılaştırma modu kaldırıldı", 'key="dash_mode_radio"' not in PORTAL)
+c("yıl + ay + karşılaştırılacak yıl + ay seçimi var",
+  all(('key="%s"' % k) in PORTAL for k in ("dash_year_select", "dash_month_select",
+                                           "dash_cmp_year_select", "dash_cmp_month_select")))
+c("karşılaştırma seçilen iki aya göre",
+  "yoy_month_compare(df, int(sel_year), int(sel_month), int(cmp_year), int(cmp_month))" in PORTAL)
+
 # ── Enerji diyagramı: Synapse kart dili ──
 c("diyagramda emoji başlık kalmadı", "🏢 Bina Genel" not in PORTAL and "⚙️ Bina Mekanik" not in PORTAL)
 c("diyagram Synapse simgeleri", '("CHILLER", "sogutma", [' in PORTAL and "_ik('trdp', 16)" in PORTAL)
