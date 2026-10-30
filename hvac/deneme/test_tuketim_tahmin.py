@@ -208,6 +208,20 @@ c("yıllık özet: şebekesiz günler toplama katılmaz ve sayılır",
   _ys["sebeke_eksik_gun"] == int(_yeni.sum())
   and abs(_ys["total_kwh"] - sk.loc[pd.to_datetime(sk["Tarih"]).between("2026-01-01", "2026-05-31"),
                                     "Toplam_Hastane_Tuketim_kWh"].sum()) < 1)
+_yk = PO.yil_ozeti(sk, 2026, "toplam", haric=[])
+c("şebekesiz ay: not 'Şebeke girilmemiş: 31 gün', kısmi toplam gösterilmez",
+  _yk["aylar"][6]["not"] == "Şebeke girilmemiş: 31 gün" and _yk["aylar"][6]["gercek"] is None, _yk["aylar"][6])
+# Şebeke girilen ay ölçüme girer; birkaç bozuk gün (≤%20) ayı düşürmez
+sk2 = df.copy()
+sk2.loc[pd.to_datetime(sk2["Tarih"]).between("2026-03-01", "2026-03-05"), "Toplam_Hastane_Tuketim_kWh"] = 0
+_ym = PO.yil_ozeti(sk2, 2026, "toplam", haric=[])["aylar"][2]
+c("5 bozuk günlü ay ölçüme girer (26/31 geçerli)", _ym["tam"] and _ym["sapma"] is not None
+  and _ym["not"] == "26/31 gün", _ym)
+sk2.loc[pd.to_datetime(sk2["Tarih"]).between("2026-03-01", "2026-03-10"), "Toplam_Hastane_Tuketim_kWh"] = 0
+_ym = PO.yil_ozeti(sk2, 2026, "toplam", haric=[])["aylar"][2]
+c("10 bozuk günlü ay ölçülmez, gerekçe yazılır", not _ym["tam"] and _ym["gercek"] is None
+  and _ym["not"] == "yalnız 21/31 gün geçerli", _ym)
+c("Maslak: Eylül 2026 artık hariç değil", PO.haric_donemler() == [])
 _g15 = pd.to_datetime(sk["Tarih"]) == "2026-07-15"
 sk.loc[_g15, "Sebeke_Tuketim_kWh"] = 30000.0       # kullanıcı Şebeke'yi girdi → portal Toplam'ı yeniden hesaplar
 sk.loc[_g15, "Toplam_Hastane_Tuketim_kWh"] = 30000.0 + sk.loc[_g15, "Kojen_Uretim_kWh"]

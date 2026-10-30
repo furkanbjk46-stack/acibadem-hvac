@@ -32,6 +32,7 @@ HEDEF_BIRIM = {"toplam": "kWh", "sogutma": "kWh", "isitma_gaz": "m³"}
 AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",
          "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
 EN_AZ_EGITIM_GUN = 365     # bir yıldan az geçmişle mevsim öğrenilemez
+OLCUM_ORANI = 0.8          # bitmiş ay, günlerinin en az %80'i geçerliyse sapma ölçümüne girer
 
 
 def haric_donemler() -> List[Dict]:
@@ -58,6 +59,7 @@ def birlestir(df: pd.DataFrame, haric: Optional[List[Dict]] = None):
     """
     g, rapor = _birlestir(df, haric=haric)
     eksik = (g["tarih"] >= pd.Timestamp(YENI_KURAL_BASLANGIC)) & g["sebeke"].isna() & g["toplam"].notna()
+    g["sebeke_eksik"] = eksik.values
     if eksik.any():
         g.loc[eksik, "toplam"] = np.nan
         rapor.ekle("ŞEBEKE YOK", g.loc[eksik, "tarih"].min().date(), g.loc[eksik, "tarih"].max().date(),
@@ -109,17 +111,32 @@ def yil_ozeti(df: pd.DataFrame, yil: int, hedef: str = "toplam",
         # çalışma günü (işletme bunu ay başında bilir). Toplamda tüketimi değiştirmez.
         kj = _kojen_gun(gunler) if len(gunler) == ay_gun else None
         t = m.ay_tahmini(yil, ay, kojen_calisma_gun=kj)
-        tam = len(gunler) == ay_gun and len(gecerli) >= ay_gun - 1
-        gercek = float(gecerli[hedef].sum() / len(gecerli) * ay_gun) if tam else (
-            float(gunler[hedef].sum()) if gunler[hedef].notna().any() else None)
+        # 30.10.2026: ayın en az %80'i geçerliyse ölçülür (eskiden gün−1). Tek tük bozuk gün
+        # (kalite kontrolü ayıklar) ayı ölçümden düşürmesin; gerçekleşen = geçerli günlerin
+        # ortalaması × ay günü.
+        ay_bitti = len(gunler) == ay_gun
+        tam = ay_bitti and len(gecerli) >= OLCUM_ORANI * ay_gun
+        sb_eksik = int(gunler["sebeke_eksik"].sum()) if hedef == "toplam" and "sebeke_eksik" in gunler else 0
+        if tam:
+            gercek = float(gecerli[hedef].sum() / len(gecerli) * ay_gun)
+        elif not ay_bitti and gunler[hedef].notna().any() and not sb_eksik:
+            gercek = float(gunler[hedef].sum())              # içinde bulunulan ay: şimdiye kadarki
+        else:
+            gercek = None                                    # bitmiş ama ölçülemeyen ay: kısmi toplam yanıltır
         notu = ""
         if any(pd.Timestamp(h["bas"]) <= bas + pd.Timedelta(days=ay_gun - 1) and pd.Timestamp(h["son"]) >= bas
                for h in haric):
             notu = "hariç tutuldu"
+        elif sb_eksik and not tam:
+            notu = "Şebeke girilmemiş: %d gün" % sb_eksik
         elif len(gunler) and gunler[hedef].notna().sum() == 0:
             notu = "veri yok"
-        elif len(gunler) and not tam:
-            notu = ("%d gün" % gunler[hedef].notna().sum()) if len(gunler) < ay_gun else "veri sorunlu, ölçüme girmedi"
+        elif len(gunler) and not ay_bitti:
+            notu = "%d gün" % gunler[hedef].notna().sum()
+        elif ay_bitti and not tam:
+            notu = "yalnız %d/%d gün geçerli" % (len(gecerli), ay_gun)
+        elif tam and len(gecerli) < ay_gun:
+            notu = "%d/%d gün" % (len(gecerli), ay_gun)
         aylar.append({
             "ay": ay, "ad": AYLAR[ay - 1], "tahmin": float(t["tuketim"]), "gercek": gercek,
             "gercek_gun": int(gunler[hedef].notna().sum()), "tam": tam,

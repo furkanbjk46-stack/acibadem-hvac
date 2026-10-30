@@ -1,10 +1,5 @@
 {
   "_aciklama": "Gunluk tahmin modelinin LOKASYONA OZEL ayari. 'haric': modelin egitimde ve sapma olcumunde KULLANMAYACAGI donemler (veri yontemi degisen, bozuk aylar). Gunler silinmez, yalniz modele girmez.",
-  "haric": [
-    {
-      "bas": "2026-09-01",
-      "son": "2026-09-30",
-      "neden": "kojen/sebeke hesap yontemi degisti, ay fazla cikti (kullanici karari 24.10.2026)"
-    }
-  ]
+  "_not_20261030": "Eylul 2026 haric tutmasi kaldirildi (kullanici karari 30.10.2026): Haziran-Ekim 2026 Sebeke elle yeniden girilecek; Sebeke girilmemis gunler zaten kendiliginden modele girmez (portal_ozet.birlestir).",
+  "haric": []
 }
