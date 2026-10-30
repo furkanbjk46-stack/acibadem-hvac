@@ -97,10 +97,17 @@ def cihaz_kilidi(dev):
             kilit = threading.Lock()
             _MODBUS_KILITLER[ad] = kilit
         return kilit
-READ_SAAT      = 7    # Günlük Modbus okuma saati
-READ_DAKIKA    = 0    # Günlük Modbus okuma dakikası
+# 30.10.2026: SAYAÇ (Modbus) okuması 07:00'dan 23:59'a alındı — günlük
+# tüketim takvim gününe (≈00:00–24:00) denk gelsin; data_bridge 00:05'te
+# dünün (okumanın yapıldığı günün) satırını yazar.
+# BACnet (dış hava, nem, chiller/kojen durumu, set) SABAH 07:05'te kalır
+# (kullanıcı kararı): anlık değerler geçmişle aynı saatte kıyaslanabilsin.
+# Köprü 00:05'te o günün 07:05 okumasını kullanır (data_bridge.BACNET_TAZELIK_SAAT).
+READ_SAAT      = 23   # Günlük Modbus okuma saati
+READ_DAKIKA    = 59   # Günlük Modbus okuma dakikası
 BACNET_SAAT    = 7    # Günlük BACnet okuma saati
-BACNET_DAKIKA  = 5    # Günlük BACnet okuma dakikası (Modbus'tan 5 dk sonra)
+BACNET_DAKIKA  = 5    # Günlük BACnet okuma dakikası
+KONTROL_SN     = 20   # Okuma saati kontrol aralığı: 23:59 tek dakikalık pencere, 60 sn kaçırabilirdi
 
 # ================================================================
 # BACNET YAPILANDIRMASI
@@ -195,7 +202,7 @@ def modbus_thread():
     while True:
         now = datetime.now()
         bugun = now.date()
-        saat_tamam = (now.hour == READ_SAAT and READ_DAKIKA <= now.minute < READ_DAKIKA + 5)
+        saat_tamam = (now.hour == READ_SAAT and READ_DAKIKA <= now.minute < READ_DAKIKA + 5)   # 23:59 → yalnız 59. dk
 
         # Orijinal günlük okuma kilidi aktif edildi
         if saat_tamam and _son_gun != bugun:
@@ -230,7 +237,7 @@ def modbus_thread():
             logger.info("Modbus gunluk okuma tamamlandi: %d/%d OK -> %s",
                         ok_count, len(ANALYZERS), MODBUS_CSV)
 
-        time.sleep(60)  # Her dakika kontrol et
+        time.sleep(KONTROL_SN)  # 23:59 penceresi tek dakika — sık kontrol
 
 # ================================================================
 # BACNET FONKSİYONLARI
@@ -378,7 +385,7 @@ def bacnet_thread():
         saat_tamam = (now.hour == BACNET_SAAT and BACNET_DAKIKA <= now.minute < BACNET_DAKIKA + 5)
 
         if not (saat_tamam and _son_gun != bugun):
-            time.sleep(60)
+            time.sleep(KONTROL_SN)
             continue
 
         # Şablon her günlük okumadan ÖNCE yeniden okunur. Okunamazsa (Excel o

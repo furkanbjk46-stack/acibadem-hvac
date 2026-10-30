@@ -2,17 +2,19 @@
 # Modbus (analizor_guncel_veriler.csv) + BACnet (hedefli_enerji_verileri.csv)
 # verilerini otomatik olarak energy_data.csv formatina donusturur.
 #
-# CALISMA MANTIĞI:
-#   Her sabah 07:10'da (SNAPSHOT_HOUR/MINUTE) sayac okumasi yapilir.
-#   Gunluk tuketim = bugun 07:10 okumasi - dun 07:10 okumasi
-#   Hesaplanan tuketim DUN'un tarihi ile energy_data.csv'ye yazilir.
+# CALISMA MANTIĞI (30.10.2026'dan beri):
+#   Sayaclar her gece 23:59'da okunur (data_collector), kopru 00:05'te calisir.
+#   BACnet (dis hava, durumlar, set) sabah 07:05'te okunur; kopru o gunun degerini kullanir.
+#   Gunluk tuketim = dun 23:59 okumasi - onceki gun 23:59 okumasi
+#   Hesaplanan tuketim DUN'un (okumanin yapildigi gunun) tarihi ile yazilir.
 #
-#   Ornek: 4 Mayis 07:10'da calisinca ->
-#     - 4 Mayis 07:10 okumasi kaydedilir (yarinki hesap icin)
-#     - 3 Mayis 07:10 - 4 Mayis 07:10 farki = 3 Mayis'in tuketimi
-#     - energy_data.csv'ye "2026-05-03" satirini yazar
+#   Ornek: 5 Mayis 00:05'te calisinca ->
+#     - 4 Mayis 23:59 okumasi referans kaydedilir (yarinki hesap icin)
+#     - 3 Mayis 23:59 - 4 Mayis 23:59 farki = 4 Mayis'in tuketimi
+#     - energy_data.csv'ye "2026-05-04" satirini yazar
+#   (Eskiden 07:00 okunup 07:10'da yaziliyordu; gun 07:00-07:00 idi.)
 #
-#   Telafi: PC 07:10'da kapaliysa, acilista dun'un satiri eksikse snapshot
+#   Telafi: PC 00:05'te kapaliysa, acilista dun'un satiri eksikse snapshot
 #   hemen calistirilir (gun kaybi olmaz).
 
 import csv
@@ -48,9 +50,9 @@ ENERGY_CSV = os.path.join(BASE_DIR, "energy_data.csv")
 # Gunluk Modbus referans degerleri (dun gece okuma)
 REF_FILE = os.path.join(BASE_DIR, "modbus_daily_ref.json")
 
-# Gunluk snapshot saati — her sabah 07:00'de dun'un verisini yazar
-SNAPSHOT_HOUR   = 7
-SNAPSHOT_MINUTE = 10
+# Gunluk snapshot saati — her gece 00:05'te dunun (23:59 okumasi) satirini yazar
+SNAPSHOT_HOUR   = 0
+SNAPSHOT_MINUTE = 5
 
 # ================================================================
 # BACNET TAZELIK / DONMA KORUMASI (24.10.2026)
@@ -62,7 +64,9 @@ SNAPSHOT_MINUTE = 10
 #     kalir (yanlis veri yerine eksik veri; veri_alarm bunu KRITIK bildirir)
 #   * acilista energy_data.csv'de gecmiste kalmis donmus bloklar bosaltilir
 # ================================================================
-BACNET_TAZELIK_SAAT = 20       # 07:05 okumasi ile 07:10 yazimi arasi dakikalar; 20 saat bol pay
+# 30.10.2026: BACnet 07:05'te, kopru 00:05'te → normal yas ~17 saat. PC 00:05'te
+# kapali kalip sabah 09:05'e kadar acilirsa telafi de dunun BACnet'ini kullanabilsin: 26 saat.
+BACNET_TAZELIK_SAAT = 26
 DONMA_GUN = 4                  # olcum bu kadar gun birebir ayniysa donmus sayilir
 # energy_data'da BACnet'ten gelen (ya da ondan turetilen) tum sutunlar
 BACNET_SUTUNLARI = [
@@ -840,7 +844,7 @@ def bridge_loop():
     except Exception as e:
         logger.error("Hava verisi doldurulamadi: %s", e)
 
-    # E-3 fix: Kacirilan gun telafisi — acilista saat 07:10'u gecmisse ve dun'un
+    # E-3 fix: Kacirilan gun telafisi — acilista saat 00:05'i gecmisse ve dun'un
     # satiri energy_data.csv'de yoksa snapshot'i hemen calistir (PC o saatte
     # kapali kaldiginda gun tamamen atlaniyordu).
     _now = datetime.now()

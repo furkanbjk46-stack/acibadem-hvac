@@ -46,8 +46,10 @@ DC._EXCEL_FILE_ROOT = os.path.join(gecici, "yok.xlsx")
 DC.BACNET_CSV = csv_yol
 DC.bacnet_nokta_oku = lambda *a, **k: 1.0
 
-# Sahte saat: gün 1 07:06 → (okuma) → gün 2 07:06 → (okuma) → dur
-ANLAR = [datetime(2026, 10, 27, 7, 6), datetime(2026, 10, 28, 7, 6)]
+# Sahte saat: gün 1 okuma penceresi → (okuma) → gün 2 aynı pencere → (okuma) → dur
+# (pencere DC.BACNET_SAAT/DAKIKA'dan — 30.10.2026'da 07:05'ten 23:54'e alındı)
+_DK = DC.BACNET_DAKIKA + 1 if DC.BACNET_DAKIKA < 59 else DC.BACNET_DAKIKA
+ANLAR = [datetime(2026, 10, 27, DC.BACNET_SAAT, _DK), datetime(2026, 10, 28, DC.BACNET_SAAT, _DK)]
 okunan = []
 
 

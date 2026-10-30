@@ -43,8 +43,15 @@ DB.BACNET_CSV = bc
 c("33 gün eski BACnet dosyası KULLANILMIYOR", DB.read_bacnet_csv(simdi=datetime(2026, 10, 24, 7, 10)) == {})
 taze = DB.read_bacnet_csv(simdi=datetime(2026, 9, 21, 7, 10))
 c("aynı sabahki dosya kullanılıyor", taze.get("DIS HAVA") == 19.88, taze)
-c("eşik: 19 saat taze, 21 saat bayat",
-  DB.read_bacnet_csv(simdi=datetime(2026, 9, 22, 2, 5)) != {} and DB.read_bacnet_csv(simdi=datetime(2026, 9, 22, 4, 6)) == {})
+from datetime import timedelta as _td  # noqa: E402
+_okuma = datetime(2026, 9, 21, 7, 5, 7)
+_esik = DB.BACNET_TAZELIK_SAAT
+c("eşik: sınırdan 1 saat önce taze, 1 saat sonra bayat",
+  DB.read_bacnet_csv(simdi=_okuma + _td(hours=_esik - 1)) != {}
+  and DB.read_bacnet_csv(simdi=_okuma + _td(hours=_esik + 1)) == {}, _esik)
+# 30.10.2026: sayaçlar 23:59, köprü 00:05 — o günün 07:05 BACnet okumasını kullanır (~17 sa)
+c("köprü gece 00:05'te o günün 07:05 BACnet okumasını kullanır",
+  DB.read_bacnet_csv(simdi=datetime(2026, 9, 22, 0, 5)).get("DIS HAVA") == 19.88)
 DB.BACNET_CSV = eski
 
 satir = DB.build_daily_row("2026-10-23", {}, None)

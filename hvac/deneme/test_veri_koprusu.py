@@ -166,6 +166,20 @@ c("ertesi gün TRDP-4 günlük tüketimi hesaplanır", d2.get("TRDP-4") == 3200,
 d3 = db.calc_daily_kwh({"TRDP-4": 100}, {"date": _dun, "readings": {"TRDP-4": 900000}})
 c("sayaç sıfırlanırsa negatif tüketim yazılmaz", d3.get("TRDP-4") == 0, d3)
 
+# ── 6) Günlük okuma takvimi (30.10.2026: 07:00 → 23:59) ─────────────────
+_mb = (dc.READ_SAAT, dc.READ_DAKIKA)
+_bn = (dc.BACNET_SAAT, dc.BACNET_DAKIKA)
+_kp = (db.SNAPSHOT_HOUR, db.SNAPSHOT_MINUTE)
+c("Modbus okuması 23:59", _mb == (23, 59), _mb)
+c("BACnet sabah 07:05'te kalır (kullanıcı kararı, B seçeneği)", _bn == (7, 5), _bn)
+c("köprü gece yarısından SONRA, okumadan önce değil (00:05)", _kp == (0, 5), _kp)
+c("köprü 00:05'te: dünün 23:59 sayaç ve 07:05 BACnet okuması aynı takvim gününe ait",
+  _kp < _bn < _mb)
+_yas = (24 - _bn[0]) + _kp[0] + (_kp[1] - _bn[1]) / 60.0   # 07:05 → ertesi 00:05
+c("BACnet tazelik sınırı köprünün normal okumasını kapsar (~17 sa) ve telafiye pay bırakır",
+  _yas < db.BACNET_TAZELIK_SAAT and db.BACNET_TAZELIK_SAAT >= 26, (_yas, db.BACNET_TAZELIK_SAAT))
+c("tek dakikalık 23:59 penceresi kaçmasın: kontrol aralığı < 60 sn", dc.KONTROL_SN < 60, dc.KONTROL_SN)
+
 gecen = sum(1 for _, k, _ in T if k)
 for ad, k, d in T:
     print(("PASS " if k else "FAIL ") + ad + ("" if k else "   [%s]" % (d,)))
