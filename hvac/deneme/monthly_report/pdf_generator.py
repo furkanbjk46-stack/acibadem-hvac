@@ -545,11 +545,9 @@ class MonthlyReportPDFGenerator:
                     self.pdf.multi_cell(0, 4, self._sanitize(forecast_data["yontem_notu"]))
                 self.pdf.ln(2)
 
-                prev_y = monthly_fc[0]["prev_year"] if monthly_fc else ""
-                last_y = monthly_fc[0]["last_year"] if monthly_fc else ""
-
-                fc_headers = ["Ay", str(prev_y), str(last_y), "Trend", "Tahmin", "Gercek", "Sapma"]
-                fc_widths = [22, 28, 28, 18, 28, 28, 18]
+                # 30.10.2026: yalnız günlük model — eski motorun trend sütunları yok
+                fc_headers = ["Ay", "Tahmin (kWh)", "Gercek (kWh)", "Sapma"]
+                fc_widths = [40, 50, 55, 25]
 
                 fc_rows = []
                 for fc in monthly_fc:
@@ -564,9 +562,6 @@ class MonthlyReportPDFGenerator:
 
                     fc_rows.append([
                         fc["month_name"],
-                        f"{fc['prev_total']:,.0f}".replace(",", "."),
-                        f"{fc['last_total']:,.0f}".replace(",", "."),
-                        f"{fc['trend_total_pct']:+.1f}%",
                         f"{fc['forecast_total']:,.0f}".replace(",", "."),
                         actual_str,
                         sapma_str,
@@ -595,7 +590,7 @@ class MonthlyReportPDFGenerator:
                 self._info_box(10, sy, bw, 25,
                                "Beklenen Tuketim",
                                f"{savings.get('expected_total', 0):,.0f}".replace(",", "."),
-                               "kWh (alan bazli)", (139, 92, 246))
+                               "kWh (onceki yil)", (139, 92, 246))
                 self._info_box(10 + bw + gap, sy, bw, 25,
                                "Gerceklesen",
                                f"{savings.get('curr_total', 0):,.0f}".replace(",", "."),

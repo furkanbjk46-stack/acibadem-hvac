@@ -135,3 +135,24 @@ def gunluk_hava(bas: str, son: str, bugun: date = None) -> Dict[str, dict]:
     except Exception as e:
         logger.warning("Hava durumu alınamadı (%s → %s): %s — alanlar boş kalacak", bas, son, e)
     return sonuc
+
+
+TAHMIN_EN_COK_GUN = 16         # Open-Meteo günlük tahmin ufku
+
+
+def ileri_tahmin(gun: int = TAHMIN_EN_COK_GUN, bugun: date = None) -> Dict[str, dict]:
+    """YARINDAN itibaren `gun` günün hava TAHMİNİ (energy_data'ya yazılmaz; tüketim
+    tahmini içindir). Aynı biçim: { 'YYYY-AA-GG': {Hava_...: değer} }.
+    Hata olursa boş sözlük — tahmin modeli o zaman geçmiş ortalamaya düşer."""
+    kd = koordinat()
+    if not kd:
+        return {}
+    bugun = bugun or date.today()
+    gun = max(1, min(int(gun), TAHMIN_EN_COK_GUN))
+    try:
+        url = ("%s?latitude=%s&longitude=%s&forecast_days=%d&daily=%s&timezone=Europe%%2FIstanbul"
+               % (TAHMIN, kd[0], kd[1], min(gun + 1, TAHMIN_EN_COK_GUN), GUNLUK))
+        return {t: v for t, v in _cevir(_getir(url)).items() if t > bugun.isoformat()}
+    except Exception as e:
+        logger.warning("Hava tahmini alınamadı: %s — geçmiş ortalama kullanılacak", e)
+        return {}

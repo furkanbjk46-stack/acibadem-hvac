@@ -75,7 +75,8 @@ for d in ast.walk(AGAC):
     })
 
 # 29.10.2026: Dashboard Synapse kartlarına geçti (portal_tasarim.kart) — st.metric azaldı
-c("st.metric çağrıları bulundu", len(metrikler) >= 30, len(metrikler))
+# 30.10.2026: Tahmin & Trend yeni modele geçti — kalan st.metric'ler ~19
+c("st.metric çağrıları bulundu", len(metrikler) >= 15, len(metrikler))
 
 # ── metrik_notlu çağrıları (delta değil, altına nötr not) ────────────────
 notlular = []
@@ -108,8 +109,7 @@ c("tasarruf göstergeleri varsayılanda (artış = yeşil)",
 
 # Tüketim kalemleri ters renkte olmalı
 _TUKETIM = ["Şebeke Tüketimi", "Soğutma Tüketimi",
-            "Toplam Doğalgaz", "Beklenen Toplam", "Beklenen Şebeke",
-            "Beklenen Sebeke"]
+            "Toplam Doğalgaz"]   # "Beklenen ..." eski tahmin motoruyla kalktı (30.10.2026)
 for _ad in _TUKETIM:
     # Etiketlerin başında emoji olabiliyor ("⚡ Dünkü Tüketim")
     _bul = [m for m in metrikler if _ad in m["etiket"] and m["delta"]]
@@ -127,7 +127,7 @@ c("ters renk: azalış yeşil", _PT.degisim(-5.0, ters=True) == ("▼ %5,0", "sy
 
 # Etiket niteliğindeki yazılar delta DEĞİL, alt not olmalı
 _ETIKET = ["Toplam Değişim", "Şebeke Değişim", "Chiller Değişim",
-           "Toplam R² Skoru", "Beklenen Tüketim",   # Sistem Sağlığı artık Dashboard kartında
+           "Önceki yıl", "Yarın", "Önümüzdeki 7 gün",   # Sistem Sağlığı artık Dashboard kartında
            ]   # Elektrik/Doğalgaz/Su/Toplam Maliyet kartları 28.10.2026'da kaldırıldı (TL yok)
 for _ad in _ETIKET:
     _bul = [n for n in notlular if _ad in n["etiket"]]
@@ -143,12 +143,9 @@ c("gerçek değişimde delta kalır (Ort. Chiller Set)",
   _cs and all(m["renk"] == "off" for m in _cs),
   [(m["satir"], m["renk"]) for m in _cs])
 
-# ── ML parametre etki çubukları ─────────────────────────────────────────
-# Eskiden "█" karakteriyle çiziliyordu: en büyük satır tabloyu kaplayan dev
-# bir lacivert blok, %2 altındakilerde hiç çubuk yoktu.
+# ── Eski ML motorunun ekranları (etki çubukları, R², senaryo) 30.10.2026'da kalktı ──
 c("etki çubukları blok karakteriyle çizilmiyor", '"█" *' not in KAYNAK)
-c("etki çubukları HTML iz/dolgu ile", ".fi-dolgu{" in KAYNAK and ".fi-iz{" in KAYNAK)
-c("en küçük etki bile görünür (min-width)", "min-width:3px" in KAYNAK)
+c("eski ML durum / senaryo kartı yok", "kart_ml_model" not in KAYNAK and "sc_predict" not in KAYNAK)
 
 # ── Sistem Sağlığı: ünite sayısına oranlı ───────────────────────────────
 # Eski mutlak ceza (kritik -15, uyarı -5) 55 AHU'luk tesiste 20 uyarıda
@@ -192,7 +189,7 @@ _kart_cagri = [d for d in ast.walk(AGAC)
                and d.func.id == "_bolum_karti"]
 _anahtarlar = [a.args[0].value for a in _kart_cagri
                if a.args and isinstance(a.args[0], ast.Constant)]
-c("tüm bölümler kart içinde", len(_anahtarlar) >= 15, len(_anahtarlar))
+c("tüm bölümler kart içinde", len(_anahtarlar) >= 13, len(_anahtarlar))
 c("kart anahtarları 'kart_' ile başlar (CSS ona bakıyor)",
   all(k.startswith("kart_") for k in _anahtarlar),
   [k for k in _anahtarlar if not k.startswith("kart_")])
@@ -203,8 +200,8 @@ c("kart anahtarları benzersiz", len(set(_anahtarlar)) == len(_anahtarlar),
 for _k in ("kart_dun_ozeti", "kart_m2_tuketim",                             # dashboard
            "kart_birlesik_ozet", "kart_oneriler",                           # aylık rapor
            "kart_pdf_indir", "kart_ai_ilerleme", "kart_ml_egitim",
-           "kart_tahmin_coklu_yil", "kart_tahmin_aylik", "kart_ml_model",   # tahmin & trend
-           "kart_gelecek_ay", "kart_senaryo", "kart_tasarruf_ozeti"):
+           "kart_tahmin_coklu_yil", "kart_tahmin_kisa_vade", "kart_tahmin_gunluk_model",   # tahmin & trend
+           "kart_gelecek_ay", "kart_tasarruf_ozeti"):
     # Dashboard bölümleri Synapse kartlarında: st.container(key=...) ile anahtarlı
     c("kart var: %s" % _k, _k in _anahtarlar or ('key="%s"' % _k) in KAYNAK)
 
@@ -216,14 +213,9 @@ c("portalda birim fiyat / TL maliyet yok",
   and KAYNAK.count("₺") == KAYNAK.count('"₺nan"')            # yalnız eski hata notunda
   and KAYNAK.count("TL/kWh") == KAYNAK.count('"2,45 TL/kWh"'))  # yalnız yorumda
 
-# ── Kıyas yılı yoksa "0 (kWh)" sütunu basılmaz ───────────────────────────
-c("kıyas sütunları koşula bağlı (Tahmin & Trend)", "_kiyas_var = bool(" in KAYNAK)
-c("kıyas sütunları koşula bağlı (Aylık Birleşik Rapor)", "_kiyas5 = bool(" in KAYNAK)
-c("kıyas yokken sebebi yazılıyor",
-  KAYNAK.count("en az iki TAM yıl") + KAYNAK.count("en az iki TAM yil") >= 2)
-c("trend %0 iken ok nötr",
-  KAYNAK.count('delta_color="inverse" if abs(') >= 4,
-  KAYNAK.count('delta_color="inverse" if abs('))
+# ── Tahmin tabloları yalnız yeni model: eski "trend" / "0 (kWh)" sütunları yok ──
+c("eski motorun trend sütunları portalda yok",
+  "['prev_total']" not in KAYNAK and "trend_total_pct" not in KAYNAK)
 
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))

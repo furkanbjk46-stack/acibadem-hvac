@@ -72,13 +72,13 @@ if os.environ.get("HVAC_WATCHDOG") != "1":
         pass  # supabase_config.json yoksa veya ayarlanmamışsa sessizce atla
 
 
-@st.cache_resource(ttl=300)
-def _get_forecast_engine():
-    """ConsumptionForecastEngine'i (ML modeli dahil) tek seferde yükler ve
-    rerun'lar arasında bellekte tutar — her widget etkileşiminde diskten
-    pickle yeniden okunmasını engeller."""
-    from monthly_report.forecast_engine import ConsumptionForecastEngine
-    return ConsumptionForecastEngine()
+def _bina_alani() -> float:
+    import json
+    try:
+        with open(os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json"), encoding="utf-8") as f:
+            return float(json.load(f).get("BUILDING_AREA_M2", 0) or 0)
+    except Exception:
+        return 0.0
 
 
 def _veri_imzasi() -> float:
@@ -97,33 +97,26 @@ def _gunluk_model_ozeti(yil: int, hedef: str, veri_imzasi: float) -> dict:
     return portal_ozet.yil_ozeti(load_data(), yil, hedef)
 
 
-def _durust_tahmin_verisi(yil: int) -> dict:
-    """Aylık rapor ve PDF için tahmin verisi: eski motorun yapısı korunur, ama
-    aylık "Tahmin" ve "Sapma" günlük modelin İLERİYE DÖNÜK sonucuyla değiştirilir.
+@st.cache_data(show_spinner=False, ttl=3600)
+def _tahmin_rapor_verisi(yil: int, veri_imzasi: float) -> dict:
+    """Aylık Birleşik Rapor ve PDF için tahmin paketi. 30.10.2026'dan beri YALNIZ
+    günlük model (eski ML motoru monthly_report/forecast_engine kaldırıldı):
+    geçmiş her ay yalnız o aydan önceki veriyle tahmin edilir (H-04)."""
+    from tuketim_tahmin import portal_ozet
+    return portal_ozet.rapor_verisi(load_data(), int(yil), _bina_alani())
 
-    NEDEN (H-04, 26.10.2026 denetimi): eski motorun sapması, modelin eğitimde
-    GÖRDÜĞÜ aylarla hesaplanıyordu — gerçek başarı değildi, PDF'te de öyle
-    basılıyordu. Günlük model her geçmiş ayı yalnız o aydan önceki veriyle
-    tahmin eder. Yeni model çalışmazsa eski veri olduğu gibi döner.
-    """
-    veri = _get_forecast_engine().full_analysis(yil)
-    try:
-        from tuketim_tahmin import portal_ozet
-        oz = portal_ozet.yil_ozeti(load_data(), int(yil), "toplam")
-        if oz.get("hata"):
-            return veri
-        aylar = {a["ay"]: a for a in oz["aylar"]}
-        for fc in veri.get("monthly_forecast") or []:
-            a = aylar.get(fc.get("month"))
-            if not a or a.get("tahmin") is None:
-                continue
-            fc["forecast_total"] = a["tahmin"]
-            fc["deviation_total_pct"] = a["sapma"]
-        veri["yontem_notu"] = ("Tahmin ve sapma: günlük model, her ay yalnız o aydan önceki "
-                               "veriyle (ileriye dönük). Sapma = (gerçek − tahmin) / tahmin.")
-    except Exception:
-        pass
-    return veri
+
+@st.cache_data(show_spinner=False, ttl=3 * 3600)
+def _hava_tahmini() -> dict:
+    """Open-Meteo 16 günlük tahmin (3 saatte bir tazelenir). İnternet yoksa {}."""
+    import hava_durumu
+    return hava_durumu.ileri_tahmin()
+
+
+@st.cache_data(show_spinner=False, ttl=3 * 3600)
+def _ufuk_tahmini(hedef: str, gun_imzasi: str, veri_imzasi: float) -> dict:
+    from tuketim_tahmin import portal_ozet
+    return portal_ozet.ufuk_tahmini(load_data(), hedef, 30, hava_tahmin=_hava_tahmini())
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
@@ -1181,7 +1174,7 @@ st.markdown("""
 [class*="st-key-kart_ai"]      { border-left-color: #8b5cf6 !important; }
 [class*="st-key-kart_tasarruf"]
                                { border-left-color: #c98500 !important; }
-[class*="st-key-kart_tahmin"], [class*="st-key-kart_senaryo"],
+[class*="st-key-kart_tahmin"],
 [class*="st-key-kart_gelecek"] { border-left-color: #0ca30c !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -4556,7 +4549,6 @@ with tab5:
             YearOverYearAnalyzer, 
             SavingsRecommendationEngine,
             MonthlyReportPDFGenerator,
-            ConsumptionForecastEngine
         )
         
         col1, col2, col3 = st.columns([1, 1, 2])
@@ -4689,13 +4681,12 @@ with tab5:
                 
                 # ═══ TAHMİN VE TREND ANALİZİ ═══
                 try:
-                    # Tahmin/sapma ileriye dönük günlük modelden (H-04)
-                    forecast_data = _durust_tahmin_verisi(report_year)
-                    
+                    # Tahmin/sapma yalnız günlük modelden, ileriye dönük (H-04)
+                    forecast_data = _tahmin_rapor_verisi(int(report_year), _veri_imzasi())
+
                     yearly = forecast_data.get("yearly_summary", [])
                     monthly_fc = forecast_data.get("monthly_forecast", [])
                     savings = forecast_data.get("savings", {})
-                    next_m = forecast_data.get("next_month", {})
                     b_area = forecast_data.get("building_area", 0)
                     
                     # 1. Çok Yıllık Trend
@@ -4734,20 +4725,9 @@ with tab5:
                     # 2. Aylık Tahmin Tablosu
                     if monthly_fc:
                         with _bolum_karti("kart_rapor_aylik_tahmin", f"🔮 {report_year} Aylik Tuketim Tahmini"):
-                            # Kıyas yılı yoksa (motor 0 döndürür) "0 (kWh)" başlıklı
-                            # boş sütunlar basılmaz — Tahmin & Trend ile aynı kural.
-                            _kiyas5 = bool(monthly_fc[0].get("prev_year")) and bool(monthly_fc[0].get("last_year"))
-                            if _kiyas5:
-                                st.caption("Onceki yillar arasi trende gore konservatif projeksiyon")
-                                _py5 = str(monthly_fc[0]['prev_year'])
-                                _ly5 = str(monthly_fc[0]['last_year'])
-                                _md5 = f"| Ay | {_py5} (kWh) | {_ly5} (kWh) | Trend | Tahmin (kWh) | Gerceklesen | Sapma |\n"
-                                _md5 += "|:---|---:|---:|:---:|---:|---:|:---:|\n"
-                            else:
-                                st.caption("Kiyas sutunlari yok: trend icin en az iki TAM yil "
-                                           "(yilda 300+ gunluk veri) gerekiyor.")
-                                _md5 = "| Ay | Tahmin (kWh) | Gerceklesen | Sapma |\n"
-                                _md5 += "|:---|---:|---:|:---:|\n"
+                            st.caption(forecast_data.get("yontem_notu", ""))
+                            _md5 = "| Ay | Tahmin (kWh) | Gerceklesen | Sapma |\n"
+                            _md5 += "|:---|---:|---:|:---:|\n"
 
                             for fc in monthly_fc:
                                 _gc5 = "-"
@@ -4757,11 +4737,7 @@ with tab5:
                                     if fc.get("is_partial"):
                                         _gc5 += f" ({fc['actual_days']}g)"
                                     _sp5 = f"{fc['deviation_total_pct']:+.1f}%" if fc.get("deviation_total_pct") is not None else "-"
-
-                                if _kiyas5:
-                                    _md5 += f"| {fc['month_name']} | {fc['prev_total']:,.0f} | {fc['last_total']:,.0f} | {fc['trend_total_pct']:+.1f}% | {fc['forecast_total']:,.0f} | {_gc5} | {_sp5} |\n".replace(",", ".")
-                                else:
-                                    _md5 += f"| {fc['month_name']} | {fc['forecast_total']:,.0f} | {_gc5} | {_sp5} |\n".replace(",", ".")
+                                _md5 += f"| {fc['month_name']} | {fc['forecast_total']:,.0f} | {_gc5} | {_sp5} |\n".replace(",", ".")
                         
                             st.markdown(_md5)
                         
@@ -4795,7 +4771,7 @@ with tab5:
                             with sv_cols[0]:
                                 metrik_notlu("Beklenen Tuketim",
                                              f"{savings['expected_total']:,.0f} kWh".replace(",", "."),
-                                             "(alan bazli)")
+                                             f"({savings.get('prev_year', '')} gerceklesen)")
                             with sv_cols[1]:
                                 st.metric("Gerceklesen",
                                           f"{savings['curr_total']:,.0f} kWh".replace(",", "."))
@@ -4811,28 +4787,6 @@ with tab5:
                                           f"%{savings['savings_grid_pct']:.1f}")
                         
                     
-                    # 4. Gelecek Ay Tahmini
-                    if next_m:
-                        with _bolum_karti("kart_gelecek_ay_rapor", f"🎯 Gelecek Ay Tahmini: {next_m.get('month_name', '')} {next_m.get('year', '')}"):
-                            nm_cols = st.columns(3)
-                            with nm_cols[0]:
-                                _mtt = next_m.get('trend_total_pct', 0) or 0
-                                st.metric("Beklenen Toplam",
-                                          f"{next_m.get('forecast_total', 0):,.0f} kWh".replace(",", "."),
-                                          f"Trend: {_mtt:+.1f}%",
-                                          delta_color="inverse" if abs(_mtt) >= 0.05 else "off")
-                            with nm_cols[1]:
-                                _mtg = next_m.get('trend_grid_pct', 0) or 0
-                                st.metric("Beklenen Sebeke",
-                                          f"{next_m.get('forecast_grid', 0):,.0f} kWh".replace(",", "."),
-                                          f"Trend: {_mtg:+.1f}%",
-                                          delta_color="inverse" if abs(_mtg) >= 0.05 else "off")
-                            with nm_cols[2]:
-                                if b_area > 0:
-                                    st.metric("Beklenen kWh/m2",
-                                              f"{next_m.get('per_m2', 0):.1f} kWh/m2")
-                        
-                
                 except Exception as _fc_err:
                     st.warning(f"Tahmin modülü hatası: {_fc_err}")
                 
@@ -4957,7 +4911,7 @@ with tab5:
                         # PDF Oluştur (tahmin verisiyle)
                         pdf_gen = MonthlyReportPDFGenerator()
                         try:
-                            _fc_data = _durust_tahmin_verisi(report_year)
+                            _fc_data = _tahmin_rapor_verisi(int(report_year), _veri_imzasi())
                         except Exception:
                             _fc_data = None
                         pdf_bytes = pdf_gen.generate(report_year, report_month, unified_data, yoy_analysis, recommendations, charts=pdf_charts, forecast_data=_fc_data)
@@ -5164,125 +5118,64 @@ with tab5:
             st.info("ML eğitim modülü henüz aktif değil.")
 
 # ---------------- TAB 6: TAHMİN & TREND ----------------
+# 30.10.2026: yalnız günlük model (tuketim_tahmin). Eski ML motoru
+# (monthly_report/forecast_engine: aylık tablo, ML durumu, senaryo) kaldırıldı.
+# Isıtma gazı tahmini portalda gösterilmez — yalnız toplam tüketim ve soğutma.
 with tab6:
     st.subheader("🔮 Tüketim Tahmini ve Trend Analizi")
-    st.caption("Geçmiş verilerden geleceğe yönelik projeksiyon ve tasarruf analizi")
-    
+    st.caption("Günlük model: hava (derece-gün) + hafta sonu/tatil + mevsim + kojen planı")
+
+    _TH_HEDEF = {"toplam": "Toplam tüketim", "sogutma": "Soğutma (chiller)"}
+    _sayi = lambda v: "-" if v is None else f"{v:,.0f}".replace(",", ".")
+
     try:
-        from monthly_report.forecast_engine import AYLAR
-
-        _fc_col1, _fc_col2 = st.columns([1, 3])
-        with _fc_col1:
-            _fc_year = st.selectbox("Tahmin Yılı", options=list(range(2024, 2028)), index=2, key="forecast_year_select")
-
-        _fc_eng = _get_forecast_engine()
-        _fc_result = _fc_eng.full_analysis(_fc_year)
-        
-        _fc_yearly = _fc_result.get("yearly_summary", [])
-        _fc_monthly = _fc_result.get("monthly_forecast", [])
-        _fc_savings = _fc_result.get("savings", {})
-        _fc_next = _fc_result.get("next_month", {})
-        _fc_area = _fc_result.get("building_area", 0)
-        
-        # ═══ 1. ÇOK YILLIK TREND ═══
-        if _fc_yearly and len(_fc_yearly) >= 2:
-            with _bolum_karti("kart_tahmin_coklu_yil", "📈 Çok Yıllık Trend Analizi"):
-            
-                _yc = st.columns(len(_fc_yearly))
-                for _yi, _ys in enumerate(_fc_yearly):
-                    with _yc[_yi]:
-                        metrik_notlu(
-                            f"{_ys['year']} ({_ys['days']} gün)",
-                            f"{_ys['total_kwh']:,.0f} kWh".replace(",", "."),
-                            f"{_ys['kwh_per_m2']:.1f} kWh/m²" if _fc_area > 0 else None,
-                        )
-            
-                _tc = st.columns(3)
-                _ly = _fc_yearly[-1]
-                _py = _fc_yearly[-2]
-                with _tc[0]:
-                    _ct = (_ly['total_kwh'] - _py['total_kwh']) / _py['total_kwh'] * 100 if _py['total_kwh'] > 0 else 0
-                    metrik_notlu("Toplam Değişim", f"{_ct:+.1f}%", f"{_py['year']}→{_ly['year']}")
-                with _tc[1]:
-                    _cg = (_ly['grid_kwh'] - _py['grid_kwh']) / _py['grid_kwh'] * 100 if _py['grid_kwh'] > 0 else 0
-                    metrik_notlu("Şebeke Değişim", f"{_cg:+.1f}%", f"{_py['year']}→{_ly['year']}")
-                with _tc[2]:
-                    _cc = (_ly['chiller_kwh'] - _py['chiller_kwh']) / _py['chiller_kwh'] * 100 if _py['chiller_kwh'] > 0 else 0
-                    metrik_notlu("Chiller Değişim", f"{_cc:+.1f}%", f"{_py['year']}→{_ly['year']}")
-            
-        
-        # ═══ 2. AYLIK TAHMİN TABLOSU ═══
-        if _fc_monthly:
-            with _bolum_karti("kart_tahmin_aylik", f"🔮 {_fc_year} Aylık Tüketim Tahmini"):
-                # Kıyas yılları YOKSA (en az iki TAM yıl veri gerekir) motor
-                # prev_year/last_year'ı 0 döndürüyor; tablo "0 (kWh)" başlıklı
-                # sıfır dolu sütunlar gösteriyordu — ne olduğu anlaşılmıyordu.
-                # Böyle durumda o sütunlar hiç basılmaz, sebebi yazılır.
-                _kiyas_var = bool(_fc_monthly[0].get("prev_year")) and bool(_fc_monthly[0].get("last_year"))
-                if _kiyas_var:
-                    st.caption("Önceki yıllar arası trende göre konservatif projeksiyon")
-                    _prev_y = str(_fc_monthly[0]['prev_year'])
-                    _last_y = str(_fc_monthly[0]['last_year'])
-                    _md = f"| Ay | {_prev_y} (kWh) | {_last_y} (kWh) | Trend | Tahmin (kWh) | Gerçekleşen | Sapma (eğitim içi) |\n"
-                    _md += "|:---|---:|---:|:---:|---:|---:|:---:|\n"
-                else:
-                    st.caption("Kıyas sütunları yok: trend için en az iki TAM yıl "
-                               "(yılda 300+ günlük veri) gerekiyor. Tahmin ML modelinden geliyor.")
-                    _md = "| Ay | Tahmin (kWh) | Gerçekleşen | Sapma (eğitim içi) |\n"
-                    _md += "|:---|---:|---:|:---:|\n"
-
-                for _fm in _fc_monthly:
-                    _ay = _fm["month_name"]
-                    _p = f"{_fm['prev_total']:,.0f}".replace(",", ".")
-                    _l = f"{_fm['last_total']:,.0f}".replace(",", ".")
-                    _tr = f"{_fm['trend_total_pct']:+.1f}%"
-                    _th = f"{_fm['forecast_total']:,.0f}".replace(",", ".")
-
-                    if _fm["actual_total"] is not None:
-                        _gc = f"{_fm['actual_total']:,.0f}".replace(",", ".")
-                        if _fm.get("is_partial"):
-                            _gc += f" ({_fm['actual_days']}g)"
-                        _sp = f"{_fm['deviation_total_pct']:+.1f}%" if _fm.get("deviation_total_pct") is not None else "-"
-                    else:
-                        _gc = "-"
-                        _sp = "-"
-
-                    if _kiyas_var:
-                        _md += f"| {_ay} | {_p} | {_l} | {_tr} | {_th} | {_gc} | {_sp} |\n"
-                    else:
-                        _md += f"| {_ay} | {_th} | {_gc} | {_sp} |\n"
-
-                st.markdown(_md)
-                st.caption("Bu tablodaki sapma, modelin eğitimde gördüğü aylarla hesaplanır; "
-                           "gerçek tahmin başarısını göstermez. Ölçülmüş başarı için aşağıdaki "
-                           "Günlük Model kartına bakın.")
-            
-                _tf = sum(f["forecast_total"] for f in _fc_monthly)
-                _ta = sum(f["actual_total"] or 0 for f in _fc_monthly)
-                _mwd = sum(1 for f in _fc_monthly if f["actual_total"] is not None)
-            
-                _fs = st.columns(3)
-                with _fs[0]:
-                    st.metric(f"{_fc_year} Yıllık Tahmin", f"{_tf:,.0f} kWh".replace(",", "."))
-                with _fs[1]:
-                    if _mwd > 0:
-                        st.metric(f"Gerçekleşen ({_mwd} ay)", f"{_ta:,.0f} kWh".replace(",", "."))
-                    else:
-                        st.metric("Gerçekleşen", "Henüz veri yok")
-                with _fs[2]:
-                    if _fc_area > 0:
-                        st.metric("Tahmini kWh/m²", f"{_tf/_fc_area:.1f} kWh/m²")
-
-        # ═══ 2b. GÜNLÜK MODEL (YENİ) ═══
-        # Eski modelin yanında, kıyaslanabilsin diye. Yukarıdaki "Sapma" modelin
-        # eğitimde gördüğü aylarla kıyaslanıyor; burada her geçmiş ay yalnız o
-        # aydan ÖNCEKİ veriyle tahmin edilir — sapma gerçek başarıyı gösterir.
-        with _bolum_karti("kart_tahmin_gunluk_model", "🧪 Günlük Model Tahmini (yeni)",
-                          "Hava + takvim + kojen planı; geçmiş aylar ileriye dönük sınanır"):
-            _gm_hedefler = {"toplam": "Toplam tüketim", "sogutma": "Soğutma (chiller kWh)",
-                            "isitma_gaz": "Isıtma gazı (kazan m³)"}
-            _gm_hedef = st.radio("Tahmin edilen", list(_gm_hedefler), format_func=_gm_hedefler.get,
+        _th_c1, _th_c2 = st.columns([1, 3])
+        with _th_c1:
+            _fc_year = st.selectbox("Tahmin Yılı", options=list(range(2024, date.today().year + 2)),
+                                    index=list(range(2024, date.today().year + 2)).index(date.today().year),
+                                    key="forecast_year_select")
+        with _th_c2:
+            _gm_hedef = st.radio("Tahmin edilen", list(_TH_HEDEF), format_func=_TH_HEDEF.get,
                                  horizontal=True, key="gm_hedef")
+
+        # ═══ 1. KISA VADE: YARIN / 7 GÜN / 30 GÜN ═══
+        with _bolum_karti("kart_tahmin_kisa_vade", "📅 Yarın · 7 Gün · 30 Gün",
+                          "İlk ~15 gün Open-Meteo hava tahminiyle, sonrası o günlerin geçmiş ortalama havasıyla"):
+            with st.spinner("Tahmin hesaplanıyor..."):
+                _uf = _ufuk_tahmini(_gm_hedef, date.today().isoformat(), _veri_imzasi())
+            if _uf.get("hata"):
+                st.info(_uf["hata"])
+            else:
+                _ub = _uf["birim"]
+                _ut = _uf["toplamlar"]
+                _ug = _uf["gunler"]
+                _uk = st.columns(3)
+                with _uk[0]:
+                    _y = _ug[0]
+                    metrik_notlu("Yarın", f"{_sayi(_ut['yarin'])} {_ub}",
+                                 f"{pd.Timestamp(_y['tarih']).strftime('%d.%m')} · "
+                                 + f"{_y['sicaklik']:.1f} °C".replace(".", ",")
+                                 + (" (tahmin)" if _y["hava"] == "tahmin" else " (geçmiş ort.)"))
+                with _uk[1]:
+                    metrik_notlu("Önümüzdeki 7 gün", f"{_sayi(_ut['hafta'])} {_ub}",
+                                 f"günlük ort. {_sayi(_ut['hafta'] / 7)} {_ub}")
+                with _uk[2]:
+                    metrik_notlu("Önümüzdeki 30 gün", f"{_sayi(_ut['ay'])} {_ub}",
+                                 f"günlük ort. {_sayi(_ut['ay'] / 30)} {_ub}")
+                import portal_grafik as _pg
+                _ufig = _pg.tahmin_grafigi(_ug, _ub)
+                if _ufig is not None:
+                    st.plotly_chart(_ufig, use_container_width=True, config={"displayModeBar": False})
+                if _uf["hava_tahmin_gun"]:
+                    st.caption(f"Hava tahmini {_uf['hava_tahmin_gun']} gün için kullanıldı; kalan günler geçmiş "
+                               f"yılların aynı takvim günü ortalaması. Son tüketim verisi: {_uf['son_veri']}.")
+                else:
+                    st.caption("Hava tahmini alınamadı (internet / koordinat) — tüm günler geçmiş ortalama "
+                               f"havayla hesaplandı. Son tüketim verisi: {_uf['son_veri']}.")
+
+        # ═══ 2. AYLIK TAHMİN (seçilen yıl) ═══
+        with _bolum_karti("kart_tahmin_gunluk_model", f"🔮 {_fc_year} Aylık Tahmin",
+                          "Geçmiş her ay yalnız o aydan önceki veriyle tahmin edilir (ileriye dönük)"):
             try:
                 with st.spinner("Günlük model hesaplanıyor..."):
                     _gm = _gunluk_model_ozeti(int(_fc_year), _gm_hedef, _veri_imzasi())
@@ -5292,15 +5185,7 @@ with tab6:
                 st.info(_gm["hata"])
             else:
                 _gb = _gm["birim"]
-                # Ay NUMARASIYLA eşlenir: eski motor adları ASCII yazıyor ("Subat", "Mayis")
-                _eski = {f["month"]: f["forecast_total"] for f in (_fc_monthly or [])} \
-                    if _gm_hedef == "toplam" else {}
-                _sayi = lambda v: "-" if v is None else f"{v:,.0f}".replace(",", ".")
-                if _eski:
-                    _gmd = f"| Ay | Mevcut model ({_gb}) | Yeni model ({_gb}) | Gerçekleşen | Yeni model sapması |\n"
-                    _gmd += "|:---|---:|---:|---:|:---:|\n"
-                else:
-                    _gmd = f"| Ay | Yeni model ({_gb}) | Gerçekleşen | Sapma |\n|:---|---:|---:|:---:|\n"
+                _gmd = f"| Ay | Tahmin ({_gb}) | Gerçekleşen | Sapma |\n|:---|---:|---:|:---:|\n"
                 for _a in _gm["aylar"]:
                     _gc = _sayi(_a["gercek"])
                     if _a["gercek"] is not None and _a["not"]:
@@ -5308,14 +5193,20 @@ with tab6:
                     elif _a["gercek"] is None and _a["not"]:
                         _gc = _a["not"]
                     _sp = f"{_a['sapma']:+.1f}%" if _a["sapma"] is not None else "-"
-                    if _eski:
-                        _gmd += f"| {_a['ad']} | {_sayi(_eski.get(_a['ay']))} | {_sayi(_a['tahmin'])} | {_gc} | {_sp} |\n"
-                    else:
-                        _gmd += f"| {_a['ad']} | {_sayi(_a['tahmin'])} | {_gc} | {_sp} |\n"
+                    _gmd += f"| {_a['ad']} | {_sayi(_a['tahmin'])} | {_gc} | {_sp} |\n"
                 st.markdown(_gmd)
                 st.caption("Sapma = (gerçekleşen − tahmin) / tahmin. Yalnız verisi tam ve temiz aylar "
                            "ölçülür; hariç tutulan dönemler configs/tuketim_tahmin.json'da. "
                            f"Son veri: {_gm['son_veri']}.")
+
+                _gtop = sum(a["tahmin"] or 0 for a in _gm["aylar"])
+                _gger = [a for a in _gm["aylar"] if a["gercek"] is not None]
+                _gs = st.columns(2)
+                with _gs[0]:
+                    metrik_notlu(f"{_fc_year} yıllık tahmin", f"{_sayi(_gtop)} {_gb}", "12 ayın toplamı")
+                with _gs[1]:
+                    metrik_notlu("Gerçekleşen", f"{_sayi(sum(a['gercek'] for a in _gger))} {_gb}" if _gger
+                                 else "Henüz veri yok", f"{len(_gger)} ay" if _gger else None)
 
                 _go = _gm.get("olcut")
                 if _go:
@@ -5334,208 +5225,76 @@ with tab6:
                         metrik_notlu("ASHRAE G14", "Geçer" if _go["ashrae_g14"] else "Kalır",
                                      "NMBE ±%5, CV(RMSE) ≤%15")
 
-                # Gelecek ay + kojen planı (yalnız toplamda: şebeke = tüketim − GES − kojen)
-                if _gm_hedef == "toplam":
-                    _bugun = pd.Timestamp.today()
-                    _gy, _ga = (_bugun.year + 1, 1) if _bugun.month == 12 else (_bugun.year, _bugun.month + 1)
-                    from tuketim_tahmin.portal_ozet import AYLAR as _GM_AYLAR
-                    st.markdown(f"**Gelecek ay: {_GM_AYLAR[_ga - 1]} {_gy}**")
-                    _kg = st.number_input("Kojen planı: bu ay kaç gün çalışacak? (boş = son 90 günün düzeni)",
-                                          min_value=0, max_value=31, value=None, step=1, key="gm_kojen_gun")
-                    try:
-                        _gt = _gunluk_model_gelecek_ay(_gy, _ga, None if _kg is None else int(_kg), _veri_imzasi())
-                        _gn = st.columns(3)
-                        with _gn[0]:
-                            metrik_notlu("Beklenen toplam", f"{_sayi(float(_gt['tuketim']))} kWh",
-                                         "ort. hava " + f"{_gt['ort_sicaklik']:.1f} °C".replace(".", ","))
-                        with _gn[1]:
-                            metrik_notlu("Kojen", f"{_sayi(float(_gt['kojen']))} kWh",
-                                         "plan" if _gt["kojen_kaynak"] != "varsayim" else "son 90 günün düzeni")
-                        with _gn[2]:
-                            metrik_notlu("Beklenen şebeke", f"{_sayi(float(_gt['sebeke']))} kWh",
-                                         "toplam − GES − kojen")
-                    except Exception as _gt_e:
-                        st.info(f"Gelecek ay hesaplanamadı: {type(_gt_e).__name__}")
-
                 if _gm.get("kalite"):
                     with st.expander(f"Veri kalitesi: {len(_gm['kalite'])} bulgu (modele girmeyen günler)"):
                         for _b in _gm["kalite"][:60]:
                             st.markdown(f"- **{_b['tur']}** {_b['bas']} → {_b['son']} ({_b['gun']} gün): {_b['aciklama']}")
 
+        # ═══ 3. GELECEK AY + KOJEN PLANI (yalnız toplam: şebeke = tüketim − GES − kojen) ═══
+        if _gm_hedef == "toplam":
+            _bugun = pd.Timestamp.today()
+            _gy, _ga = (_bugun.year + 1, 1) if _bugun.month == 12 else (_bugun.year, _bugun.month + 1)
+            from tuketim_tahmin.portal_ozet import AYLAR as _GM_AYLAR
+            with _bolum_karti("kart_gelecek_ay", f"🎯 Gelecek Ay: {_GM_AYLAR[_ga - 1]} {_gy}"):
+                _kg = st.number_input("Kojen planı: bu ay kaç gün çalışacak? (boş = son 90 günün düzeni)",
+                                      min_value=0, max_value=31, value=None, step=1, key="gm_kojen_gun")
+                try:
+                    _gt = _gunluk_model_gelecek_ay(_gy, _ga, None if _kg is None else int(_kg), _veri_imzasi())
+                    _gn = st.columns(3)
+                    with _gn[0]:
+                        metrik_notlu("Beklenen toplam", f"{_sayi(float(_gt['tuketim']))} kWh",
+                                     "ort. hava " + f"{_gt['ort_sicaklik']:.1f} °C".replace(".", ","))
+                    with _gn[1]:
+                        metrik_notlu("Kojen", f"{_sayi(float(_gt['kojen']))} kWh",
+                                     "plan" if _gt["kojen_kaynak"] != "varsayim" else "son 90 günün düzeni")
+                    with _gn[2]:
+                        metrik_notlu("Beklenen şebeke", f"{_sayi(float(_gt['sebeke']))} kWh",
+                                     "toplam − GES − kojen")
+                except Exception as _gt_e:
+                    st.info(f"Gelecek ay hesaplanamadı: {type(_gt_e).__name__}")
 
-        # ═══ 3. TASARRUF ÖZETİ ═══
-        if _fc_savings and _fc_savings.get("savings_total_kwh") is not None:
-            with _bolum_karti("kart_tasarruf_ozeti", "📉 Beklenen vs Gerçekleşen Tasarruf"):
-                st.caption(f"Alan artışına rağmen tüketim değişimi ({_fc_savings.get('prev_year', '')}→{_fc_savings.get('year', '')})")
-            
+        # ═══ 4. ÇOK YILLIK TREND + TASARRUF (gerçekleşen veri) ═══
+        _rv = _tahmin_rapor_verisi(int(_fc_year), _veri_imzasi())
+        _fc_yearly = _rv.get("yearly_summary", [])
+        _fc_area = _rv.get("building_area", 0)
+        if len(_fc_yearly) >= 2:
+            with _bolum_karti("kart_tahmin_coklu_yil", "📈 Çok Yıllık Trend (gerçekleşen)"):
+                _yc = st.columns(len(_fc_yearly))
+                for _yi, _ys in enumerate(_fc_yearly):
+                    with _yc[_yi]:
+                        metrik_notlu(f"{_ys['year']} ({_ys['days']} gün)", f"{_sayi(_ys['total_kwh'])} kWh",
+                                     f"{_ys['kwh_per_m2']:.1f} kWh/m²" if _fc_area > 0 else None)
+                _ly, _py = _fc_yearly[-1], _fc_yearly[-2]
+                _deg = lambda k: (_ly[k] - _py[k]) / _py[k] * 100 if _py[k] > 0 else 0
+                _tc = st.columns(3)
+                with _tc[0]:
+                    metrik_notlu("Toplam Değişim", f"{_deg('total_kwh'):+.1f}%", f"{_py['year']}→{_ly['year']}")
+                with _tc[1]:
+                    metrik_notlu("Şebeke Değişim", f"{_deg('grid_kwh'):+.1f}%", f"{_py['year']}→{_ly['year']}")
+                with _tc[2]:
+                    metrik_notlu("Chiller Değişim", f"{_deg('chiller_kwh'):+.1f}%", f"{_py['year']}→{_ly['year']}")
+                st.caption("Son yıl kısmi olabilir (gün sayısı başlıkta); değişim yüzdesi tam yıllar arasında anlamlıdır.")
+                _sx = [f"{y['year']}: {y['sebeke_eksik_gun']} gün" for y in _fc_yearly if y.get("sebeke_eksik_gun")]
+                if _sx:
+                    st.caption("⚠️ Şebeke girilmemiş günler toplama katılmadı (toplam tüketim bilinmiyor) — "
+                               + ", ".join(_sx) + ". Şebeke girildikçe tamamlanır.")
+
+        _fc_savings = _rv.get("savings", {})
+        if _fc_savings.get("savings_total_kwh") is not None:
+            with _bolum_karti("kart_tasarruf_ozeti", "📉 Önceki Yıla Göre Tasarruf"):
                 _sv = st.columns(4)
                 with _sv[0]:
-                    metrik_notlu("Beklenen Tüketim", f"{_fc_savings['expected_total']:,.0f} kWh".replace(",", "."),
-                                 "(alan bazlı)")
+                    metrik_notlu("Önceki yıl", f"{_sayi(_fc_savings['expected_total'])} kWh",
+                                 str(_fc_savings.get("prev_year", "")))
                 with _sv[1]:
-                    st.metric("Gerçekleşen", f"{_fc_savings['curr_total']:,.0f} kWh".replace(",", "."))
+                    metrik_notlu("Gerçekleşen", f"{_sayi(_fc_savings['curr_total'])} kWh",
+                                 str(_fc_savings.get("year", "")))
                 with _sv[2]:
-                    # TASARRUF tüketimin tersidir: artı tasarruf iyi haber, yukarı ok
-                    # YEŞİL kalır (Streamlit varsayılanı) — tüketim kartlarının tersi.
-                    st.metric("Toplam Tasarruf", f"{_fc_savings['savings_total_kwh']:,.0f} kWh".replace(",", "."),
+                    st.metric("Toplam Tasarruf", f"{_sayi(_fc_savings['savings_total_kwh'])} kWh",
                               f"%{_fc_savings['savings_total_pct']:.1f}")
                 with _sv[3]:
-                    st.metric("Şebeke Tasarruf", f"{_fc_savings['savings_grid_kwh']:,.0f} kWh".replace(",", "."),
+                    st.metric("Şebeke Tasarruf", f"{_sayi(_fc_savings['savings_grid_kwh'])} kWh",
                               f"%{_fc_savings['savings_grid_pct']:.1f}")
-            
-        
-        # ═══ 4. GELECEK AY TAHMİNİ ═══
-        if _fc_next:
-            with _bolum_karti("kart_gelecek_ay", f"🎯 Gelecek Ay Tahmini: {_fc_next.get('month_name', '')} {_fc_next.get('year', '')}"):
-                _method = _fc_next.get("method", "trend")
-                _method_label = "🤖 ML Model" if _method == "ml" else "📊 Trend"
-                st.caption(f"Tahmin yöntemi: {_method_label}")
-                _nm = st.columns(3)
-                with _nm[0]:
-                    _ntt = _fc_next.get('trend_total_pct', 0) or 0
-                    # Trend sıfırsa (kıyas yılı yoksa öyle olur) ok anlam taşımasın
-                    st.metric("Beklenen Toplam", f"{_fc_next.get('forecast_total', 0):,.0f} kWh".replace(",", "."),
-                              f"Trend: {_ntt:+.1f}%",
-                              delta_color="inverse" if abs(_ntt) >= 0.05 else "off")
-                with _nm[1]:
-                    _ntg = _fc_next.get('trend_grid_pct', 0) or 0
-                    st.metric("Beklenen Şebeke", f"{_fc_next.get('forecast_grid', 0):,.0f} kWh".replace(",", "."),
-                              f"Trend: {_ntg:+.1f}%",
-                              delta_color="inverse" if abs(_ntg) >= 0.05 else "off")
-                with _nm[2]:
-                    if _fc_area > 0:
-                        st.metric("Beklenen kWh/m²", f"{_fc_next.get('per_m2', 0):.1f} kWh/m²")
-            
-                # Ortalama koşullar (ML tahmini ise)
-                if "avg_conditions" in _fc_next:
-                    _ac = _fc_next["avg_conditions"]
-                    st.caption(f"Baz koşullar: Dış hava {_ac.get('dis_hava', '-')}°C | Chiller set {_ac.get('chiller_set', '-')}°C | Chiller {_ac.get('chiller_adet', '-')} adet | Kazan {_ac.get('kazan_adet', '-')} adet")
-        
-        
-        # ═══ 5. ML MODEL BİLGİLERİ ═══
-        _model_info = _fc_result.get("model_info", {})
-        with _bolum_karti("kart_ml_model", "🤖 ML Model Durumu"):
-        
-            if _model_info.get("is_trained"):
-                _mi = st.columns(4)
-                with _mi[0]:
-                    _r2t = _model_info.get("r2_total", 0)
-                    _quality = "Mükemmel" if _r2t > 0.9 else "İyi" if _r2t > 0.7 else "Orta" if _r2t > 0.5 else "Gelişiyor"
-                    metrik_notlu("Toplam R² Skoru", f"{_r2t:.3f}", _quality)
-                with _mi[1]:
-                    _r2g = _model_info.get("r2_grid", 0)
-                    st.metric("Şebeke R² Skoru", f"{_r2g:.3f}")
-                with _mi[2]:
-                    st.metric("Eğitim Verisi", f"{_model_info.get('train_samples', 0)} gün")
-                with _mi[3]:
-                    st.metric("Tahmin Yöntemi", "🤖 ML Aktif")
-            
-                # Feature importance
-                _fi = _model_info.get("feature_importance", {})
-                if _fi:
-                    st.markdown("**📊 Parametre Etki Sıralaması:**")
-                    _fi_labels = {
-                        "dis_hava": "Dis Hava Sicakligi", "chiller_adet": "Chiller Adet",
-                        "chiller_set": "Chiller Set Temp", "kazan_adet": "Kazan Adet",
-                        "ay": "Ay", "ay_sin": "Mevsim (sin)", "ay_cos": "Mevsim (cos)",
-                        "gun_sayisi": "Gun Sayisi", "absorption_adet": "Absorption Chiller",
-                        "kojen_uretim": "Kojen Uretim", "kazan_dogalgaz": "Kazan Dogalgaz",
-                    }
-                    # ÇUBUK NEDEN HTML: eskiden satırlar dolu blok karakteri
-                    # int(oran*50) kere yazılarak çiziliyordu. İki yanlışı vardı:
-                    #   1) %72,9 olan satır 36 blok yazıp tabloyu kaplayan dev
-                    #      bir lacivert slab oluyordu (23.10.2026 ekran görüntüsü),
-                    #   2) %2'nin altındaki satırlarda int(oran*50)=0 çıkıp
-                    #      HİÇ çubuk basılmıyordu — "etki yok" gibi görünüyordu.
-                    # Artık her satır kendi izinde orantılı çiziliyor; en küçük
-                    # değer bile min-width ile 3 px görünür kalıyor.
-                    _fi_sorted = sorted(_fi.items(), key=lambda x: x[1], reverse=True)
-                    _fi_enb = max((v for _, v in _fi_sorted), default=0) or 1
-                    _fi_satir = ""
-                    for _fname, _fval in _fi_sorted:
-                        _label = _fi_labels.get(_fname, _fname)
-                        _gen = _fval / _fi_enb * 100.0
-                        _fi_satir += (
-                            "<div class='fi-satir'>"
-                            f"<span class='fi-ad'>{_label}</span>"
-                            "<span class='fi-iz'>"
-                            f"<span class='fi-dolgu' style='width:{_gen:.1f}%'></span>"
-                            "</span>"
-                            f"<span class='fi-oran'>{_fval*100:.1f}%</span>"
-                            "</div>"
-                        )
-                    st.markdown(
-                        "<style>"
-                        ".fi-liste{display:flex;flex-direction:column;gap:6px;margin:6px 0 2px;max-width:760px;}"
-                        ".fi-satir{display:grid;grid-template-columns:minmax(120px,max-content)"
-                        " minmax(0,1fr) 48px;align-items:center;gap:10px;}"
-                        ".fi-ad{font-size:0.86rem;color:#24324d;white-space:nowrap;}"
-                        ".fi-iz{height:10px;border-radius:6px;background:rgba(19,50,115,0.08);"
-                        "overflow:hidden;}"
-                        # min-width: %0,2'lik parametre bile 3 px görünür kalsın,
-                        # ama oranlar yüzdeyle verildiği için birbirinden ayrılsın.
-                        ".fi-dolgu{display:block;height:100%;border-radius:6px;min-width:3px;"
-                        "background:linear-gradient(90deg,#2a78d6,#133273);}"
-                        ".fi-oran{font-size:0.82rem;color:#4a5a78;text-align:right;"
-                        "font-variant-numeric:tabular-nums;}"
-                        "</style>"
-                        f"<div class='fi-liste'>{_fi_satir}</div>",
-                        unsafe_allow_html=True,
-                    )
-            
-                # Yeniden eğit butonu
-                if st.button("🔄 Modeli Yeniden Eğit", key="retrain_ml"):
-                    _rt = _fc_eng.train_model()
-                    if _rt.get("success"):
-                        st.success(f"Model yeniden eğitildi! R²: {_rt.get('r2_total', 0):.3f} | {_rt.get('samples', 0)} veri")
-                        st.rerun()
-                    else:
-                        st.error(f"Eğitim hatası: {_rt.get('reason', 'Bilinmeyen')}")
-            else:
-                st.info("ML model henüz eğitilmedi. İlk eğitim için butona tıklayın.")
-                if st.button("🚀 Modeli Eğit", key="first_train_ml"):
-                    _rt = _fc_eng.train_model()
-                    if _rt.get("success"):
-                        st.success(f"Model eğitildi! R²: {_rt.get('r2_total', 0):.3f} | {_rt.get('samples', 0)} veri")
-                        st.rerun()
-                    else:
-                        st.error(f"Eğitim hatası: {_rt.get('reason', 'Bilinmeyen')}")
-        
-        
-        # ═══ 6. SENARYO TAHMİNİ ═══
-        with _bolum_karti("kart_senaryo", "🎛️ Senaryo Tahmini"):
-            st.caption("Parametreleri değiştirerek farklı koşullarda tüketimi tahmin edin")
-        
-            _sc1, _sc2, _sc3 = st.columns(3)
-            with _sc1:
-                _s_hava = st.slider("🌡️ Dış Hava (°C)", -10.0, 45.0, 20.0, 0.5, key="sc_hava")
-                _s_ay = st.selectbox("📅 Ay", list(range(1, 13)),
-                                     format_func=lambda x: AYLAR.get(x, str(x)),
-                                     index=2, key="sc_ay")
-            with _sc2:
-                _s_chiller = st.number_input("❄️ Chiller Adet", 0, 6, 2, key="sc_chiller")
-                _s_set = st.slider("🎯 Chiller Set (°C)", 5.0, 12.0, 7.0, 0.5, key="sc_set")
-            with _sc3:
-                _s_kazan = st.number_input("🔥 Kazan Adet", 0, 4, 1, key="sc_kazan")
-                _s_kar = st.checkbox("🌨️ Kar Eritme", key="sc_kar")
-        
-            if st.button("🔮 Tahmin Et", key="sc_predict"):
-                _sc_result = _fc_eng.scenario_predict(
-                    dis_hava=_s_hava, chiller_set=_s_set,
-                    chiller_adet=_s_chiller, kazan_adet=_s_kazan,
-                    ay=_s_ay, kar_eritme=_s_kar,
-                )
-                if "error" in _sc_result:
-                    st.warning(_sc_result["error"])
-                else:
-                    _sr = st.columns(3)
-                    with _sr[0]:
-                        st.metric("Günlük Toplam", f"{_sc_result['gunluk_toplam']:,.0f} kWh".replace(",", "."))
-                    with _sr[1]:
-                        st.metric("Günlük Şebeke", f"{_sc_result['gunluk_sebeke']:,.0f} kWh".replace(",", "."))
-                    with _sr[2]:
-                        st.metric(f"Aylık Toplam ({_sc_result['gun_sayisi']} gün)",
-                                  f"{_sc_result['aylik_toplam']:,.0f} kWh".replace(",", "."))
-    
+
     except Exception as _fc_err:
         st.warning(f"Tahmin modülü hatası: {_fc_err}")

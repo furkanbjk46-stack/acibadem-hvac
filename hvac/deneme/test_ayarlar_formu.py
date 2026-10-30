@@ -84,8 +84,7 @@ def _oku(yol):
 # Ayarı OKUYABİLECEK bütün taraflar: mekanik motor, ön koşul kapısı ve
 # enerji tarafı (m² ve birim fiyatlar oradan okunur).
 _TUKETICILER = (PY, ON_KOSUL, _oku("app_portal.py"), _oku("daily_report.py"),
-                _oku("monthly_summary_report.py"),
-                _oku(os.path.join("monthly_report", "forecast_engine.py")))
+                _oku("monthly_summary_report.py"))
 
 
 def _motor_okuyor_mu(anahtar):

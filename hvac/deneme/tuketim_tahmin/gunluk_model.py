@@ -307,16 +307,19 @@ class GunlukTahminModeli:
         # Hava düzeltmeli geçen yıl: geçen yılın aynı ayı + (bu yılın hava etkisi − o yılın hava etkisi),
         # × son 90 günün bir yıl öncesine göre değişimi
         h = self.gecmis
-        gy = h[(h["tarih"].dt.year == yil - 1) & (h["tarih"].dt.month == ay) & h["hedef_gecerli"]]
+        gy = h[(h["tarih"].dt.year == yil - 1) & (h["tarih"].dt.month == ay) & h["hedef_gecerli"]
+               & h[self.hedef].notna()]
         gecen_yil = None
         if len(gy) >= ay_gun - 3:
             gy_dolu = self._doldur(gy)
             model_gy = self.model.predict(self._X(gy_dolu, self.secilen)).sum() / len(gy) * ay_gun
             model_bu = gunluk / self.seviye
             gercek_gy = gy[self.hedef].sum() / len(gy) * ay_gun
-            son90 = h[(h["tarih"] >= bas - pd.Timedelta(days=SEVIYE_GUN)) & h["hedef_gecerli"]]
+            # hedef boş günler (ör. bilinmeyen toplam) ortalamayı NaN yapmasın
+            gecerli_h = h["hedef_gecerli"] & h[self.hedef].notna()
+            son90 = h[(h["tarih"] >= bas - pd.Timedelta(days=SEVIYE_GUN)) & gecerli_h]
             once90 = h[(h["tarih"] >= bas - pd.Timedelta(days=SEVIYE_GUN + 365)) &
-                       (h["tarih"] < bas - pd.Timedelta(days=365)) & h["hedef_gecerli"]]
+                       (h["tarih"] < bas - pd.Timedelta(days=365)) & gecerli_h]
             degisim = (son90[self.hedef].mean() / once90[self.hedef].mean()
                        if len(son90) > 30 and len(once90) > 30 and once90[self.hedef].mean() > 0 else 1.0)
             gecen_yil = (gercek_gy + (model_bu - model_gy)) * float(np.clip(degisim, 0.85, 1.15))

@@ -49,8 +49,8 @@ c("puan 0-100 aralığında", 0 <= r["total_score"] <= 100, r["total_score"])
 # modül/fonksiyon kodda gerçekten bulunmalı.
 KANIT = {
     "prediction_model": [
-        (os.path.join(BURASI, "monthly_report", "forecast_engine.py"), "class MLPredictor"),
-        (os.path.join(BURASI, "monthly_report", "forecast_engine.py"), "def auto_train_if_needed"),
+        (os.path.join(BURASI, "tuketim_tahmin", "gunluk_model.py"), "class GunlukTahminModeli"),
+        (os.path.join(BURASI, "tuketim_tahmin", "portal_ozet.py"), "def ufuk_tahmini"),
     ],
     "feedback_filtering": [
         # Geri bildirim SADECE kaydediliyorsa filtre yok demektir; gerçek filtre

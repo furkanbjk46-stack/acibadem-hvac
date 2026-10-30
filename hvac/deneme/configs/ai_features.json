@@ -3,7 +3,7 @@
 
   "prediction_model": {
     "active": true,
-    "_kanit": "monthly_report/forecast_engine.py — MLPredictor (GradientBoosting). Veri biriktikce auto_train_if_needed() ile kendini yeniden egitir; predict_month_from_history() aylik tahmin, predict_scenario() senaryo tahmini uretir. Egitilmis model: configs/ml_forecast_model.pkl. app_portal.py rapor ekraninda kullanilir.",
+    "_kanit": "tuketim_tahmin/gunluk_model.py — GunlukTahminModeli (Ridge, gunluk): hava derece-gunu + hafta sonu/tatil + mevsim + kojen plani. Her acilista guncel veriyle egitilir. portal_ozet.ufuk_tahmini() yarin/7/30 gun (16 gunluk Open-Meteo hava tahminiyle), yil_ozeti() ileriye donuk aylik tahmin. 30.10.2026'da eski forecast_engine (MLPredictor) kaldirildi.",
     "_acik_20260920": true
   },
 

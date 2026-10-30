@@ -7,14 +7,13 @@ from .savings_engine import SavingsRecommendationEngine
 from .pdf_generator import MonthlyReportPDFGenerator
 from .hvac_history import HVACHistoryManager
 from .training_data import TrainingDataCollector
-from .forecast_engine import ConsumptionForecastEngine
+# forecast_engine (eski ML tahmin motoru) 30.10.2026'da kaldırıldı — tahmin artık tuketim_tahmin/
 
 __all__ = [
     "UnifiedDataMerger",
-    "YearOverYearAnalyzer", 
+    "YearOverYearAnalyzer",
     "SavingsRecommendationEngine",
     "MonthlyReportPDFGenerator",
     "HVACHistoryManager",
     "TrainingDataCollector",
-    "ConsumptionForecastEngine"
 ]

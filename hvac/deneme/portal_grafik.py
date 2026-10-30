@@ -173,6 +173,25 @@ def _tarih_ekseni(fig):
     return fig
 
 
+def tahmin_grafigi(gunler, birim: str):
+    """Günlük tahmin çubukları (hava tahminli günler koyu, geçmiş ortalamalı açık)
+    + sağ eksende sıcaklık. Animasyon yok."""
+    d = pd.DataFrame(gunler)
+    if d.empty:
+        return None
+    d["tarih"] = pd.to_datetime(d["tarih"])
+    fig = go.Figure()
+    for tur, ad, renk in (("tahmin", "Hava tahminiyle", "#2a78d6"), ("ortalama", "Geçmiş ortalama havayla", "#9db8e0")):
+        s = d[d["hava"] == tur]
+        if len(s):
+            fig.add_bar(x=s["tarih"], y=s["tahmin"], name=ad, marker_color=renk,
+                        hovertemplate="%{x|%d.%m.%Y}<br>%{y:,.0f} " + birim + "<extra></extra>")
+    fig.add_scatter(x=d["tarih"], y=d["sicaklik"], name="Ort. sıcaklık (°C)", yaxis="y2", mode="lines+markers",
+                    line=dict(color="#e0773a", width=2), marker=dict(size=4),
+                    hovertemplate="%{y:.1f} °C<extra></extra>")
+    return _tarih_ekseni(_duzen(fig, birim, yukseklik=340, sag_eksen="°C", lejant=True))
+
+
 def ciz(tip: str, df_donem, df_kiyas, ay_adi: str, kiyas_adi: str, m2: float = 0):
     """(fig | None, bilgi metni). bilgi: veri yoksa kullanıcıya gösterilecek açıklama."""
     if df_donem is None or df_donem.empty:
