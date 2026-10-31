@@ -54,6 +54,12 @@ c("kategorili panel: her satırın simgesi + birimi, seçili satır vurgulu",
   and "background:#eef3fb !important" in _css)
 c("satırlarda düğme rengi ezilir (açık mavi yok), başlık satırla çakışmaz",
   "background:transparent !important" in _css and "margin:0 !important;padding:0 !important" in _css)
+import re as _re  # noqa: E402
+_kurallar = [k for k in _re.findall(r"([^{}]+)\{", _css) if ":has(" in k and "gsec" in k]
+c("panel :has() kuralları yalnız panelin içinde (kapalı panel sayfada gizli durur; dışarı taşan "
+  "kural tüm Dashboard'u sıkıştırıp açılışta kaydırıyordu)",
+  _kurallar and all(all(p.strip().startswith('[data-testid="stPopoverBody"]') for p in k.split(","))
+                    for k in _kurallar), _kurallar)
 c("sürüme bağlı liste seçicisi kalmadı", "stSelectboxVirtualDropdown" not in _css and "nth-child" not in _css)
 
 # ── Çizim: veriden olduğu gibi ──

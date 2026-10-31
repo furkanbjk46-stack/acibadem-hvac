@@ -118,20 +118,25 @@ def secici_css(secili_tip: str) -> str:
         'border:1px solid rgba(24,26,30,.12) !important;border-radius:12px;min-height:40px;'
         'box-shadow:0 6px 16px -12px rgba(20,22,26,.3) !important;}'
         '.st-key-%s button p{font-size:13px !important;font-weight:600 !important;color:#133273 !important;}'
-        '[data-testid="stPopoverBody"]:has(.gsec-baslik),[data-baseweb="popover"]:has(.gsec-baslik) > div'
-        '{background:#fff !important;}'
+        '[data-testid="stPopoverBody"]:has(.gsec-baslik){background:#fff !important;}'
         # Yükseklik sınırı + kaydırma: panel tüm listeyi (≈1100 px) sığdıramayınca Streamlit
         # onu düğmenin üstüne/ortaya taşıyordu. Ay seçimindeki gibi AŞAĞI açılsın (31.10.2026).
         '[data-testid="stPopoverBody"]:has(.gsec-baslik){max-height:min(440px,55vh) !important;'
         'overflow-y:auto !important;}'
-        '[data-testid="stElementContainer"]:has(.gsec-baslik),.element-container:has(.gsec-baslik),'
-        '[data-testid="stMarkdown"]:has(.gsec-baslik),[data-testid="stMarkdownContainer"]:has(.gsec-baslik)'
+        # DİKKAT: panel kapalıyken içeriği SAYFADA gizli durur. :has() kuralları panelin
+        # dışına taşarsa tüm Dashboard bloğuna uygulanır (31.10.2026: bölüm araları
+        # sıfırlanıp sayfa sıkıştı, panel açılınca kural düşüp sayfa kaydı). Hepsi
+        # stPopoverBody İÇİNE sınırlı.
+        '[data-testid="stPopoverBody"] [data-testid="stElementContainer"]:has(.gsec-baslik),'
+        '[data-testid="stPopoverBody"] [data-testid="stMarkdown"]:has(.gsec-baslik),'
+        '[data-testid="stPopoverBody"] [data-testid="stMarkdownContainer"]:has(.gsec-baslik)'
         '{margin:0 !important;padding:0 !important;}'
         'p.gsec-baslik{display:block;margin:0 !important;padding:14px 10px 6px !important;line-height:1.2;'
         'font-size:10.5px !important;font-weight:800 !important;letter-spacing:1.1px;color:#8b97ab !important;}'
         'p.gsec-baslik.ilk{padding-top:4px !important;}'
-        '[data-testid="stVerticalBlock"]:has(> div [class*="st-key-gsec_"]),'
-        '[data-testid="stVerticalBlock"]:has(> [class*="st-key-gsec_"]){gap:0 !important;}'
+        '[data-testid="stPopoverBody"] [data-testid="stVerticalBlock"]:has(> div [class*="st-key-gsec_"]),'
+        '[data-testid="stPopoverBody"] [data-testid="stVerticalBlock"]:has(> [class*="st-key-gsec_"])'
+        '{gap:0 !important;}'
         '[class*="st-key-gsec_"] button,[class*="st-key-gsec_"] button:focus,'
         '[class*="st-key-gsec_"] button:active{justify-content:flex-start;border:none !important;'
         'background:transparent !important;min-height:40px;padding:0 12px;border-radius:8px;'

@@ -98,6 +98,10 @@ span[data-testid="stIconMaterial"], [data-testid="stExpanderToggleIcon"] span,
 /* ── KPI KARTI (Synapse .dz-kart): simge solda, değer yanında ── */
 @keyframes synKartGir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .syn-izgara { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--min, 210px), 1fr)); gap: 10px; margin-bottom: 6px; }
+/* Streamlit yazı bloğuna kabın iç boşluğunu saymadan px genişlik verir; kenarlıklı
+   kutudaki kart ızgarası sağdan taşıyordu (31.10.2026) */
+[data-testid="stMarkdown"]:has(.syn-izgara), [data-testid="stMarkdownContainer"]:has(> .syn-izgara) { width: 100% !important; max-width: 100% !important; }
+[data-testid="stMarkdown"] { max-width: 100% !important; }   /* bölüm başlığı çizgisi de taşmasın */
 .syn-kart { background: #fff; border: 1px solid rgba(24,26,30,.10); border-radius: 16px; padding: 11px 15px;
     display: flex; align-items: center; gap: 12px; min-width: 0;
     box-shadow: 0 1px 1px rgba(20,22,26,.05), 0 10px 22px -12px rgba(20,22,26,.22);
