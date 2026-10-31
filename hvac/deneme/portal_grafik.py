@@ -79,44 +79,65 @@ ROZET_KOLON = dict({t: [k] for t, (k, _, _) in TEK.items()},
 _YAZI = "Inter,system-ui,-apple-system,Segoe UI,sans-serif"
 
 
-# ── Açılır liste görünümü (kategori başlığı · simge · ad · birim) ──────────
+# ── Kategorili seçici (Synapse görünümü: KATEGORİ başlığı / simge · ad · birim) ──
+# 31.10.2026: st.selectbox'ın açılır listesi sürüme göre farklı çiziliyor (1.42 sabit
+# yükseklikli sanal liste, 1.5x data-key'li) ve yalnız görünen satırlar DOM'da —
+# kategori başlığı / simge CSS'i sahada tutmuyordu (liste düz görünüyordu). Yerine
+# açılır panel (st.popover) içinde gerçek başlıklar ve satır düğmeleri: her sürümde aynı.
+SECIM = "dash_grafik_tip"      # seçili metriğin tipi (session_state)
+_AD = {tip: ad for ad, tip in SECENEKLER.items()}
+
+
+def _sec(st_, tip):
+    st_.session_state[SECIM] = tip
+
+
+def secili(st_, varsayilan: str = "tuketim") -> str:
+    tip = st_.session_state.get(SECIM, varsayilan)
+    return tip if tip in _AD else varsayilan
+
+
 def secici_css(secili_tip: str) -> str:
-    """Streamlit 1.42 (baseweb menü) ve 1.5x+ (sanal liste) seçicileri birlikte."""
-    if not IK:
-        return ""
-    ilk, sira = {}, 0
-    for baslik, ogeler in GRUPLAR:
-        ilk[sira] = baslik
-        sira += len(ogeler)
-    n = len(SECENEKLER)
-    listeler = ['[data-baseweb="popover"] ul[role="listbox"]:has(> li:nth-child(%d)):not(:has(> li:nth-child(%d)))'
-                % (n, n + 1),
-                '[data-testid="stSelectboxVirtualDropdown"]:has([data-key="%d"])' % (n - 1)]
-    css = ""
-    for L in listeler:
-        css += (L + '{max-height:480px !important;padding:4px 8px 8px !important;}'
-                + L + ' [role="option"]{display:flex !important;flex-wrap:wrap;align-items:center;'
-                'min-height:36px;font-size:12.5px !important;font-weight:600 !important;color:#24324d !important;'
-                'border-radius:8px;}'
-                + L + ' [role="option"][aria-selected="true"]{background:#eef3fb !important;color:#133273 !important;'
-                'box-shadow:inset 3px 0 0 #2a78d6;}')
-    for i, (ad, tip) in enumerate(SECENEKLER.items()):
-        for j, L in enumerate(listeler):
-            sec = (L + ' > li[role="option"]:nth-child(%d)' % (i + 1)) if j == 0 else \
-                  (L + ' [role="option"][data-key="%d"]' % i)
-            css += IK.etiket_css(sec, SIMGE.get(tip, "grafik"), 16)
-            css += sec + '::after{content:"%s";margin-left:auto;padding-left:12px;font-size:10.5px;' \
-                         'font-weight:600;color:#8b97ab;}' % BIRIM.get(tip, "")
-            if i in ilk and i > 0:          # kategori sınırı: araya boşluk + ince çizgi
-                css += sec + '{margin-top:10px;border-top:1px solid rgba(24,26,30,.08);}'
-    # Seçili değerin önüne simge
-    css += IK.etiket_css('.st-key-%s [data-baseweb="select"] > div' % KAP, SIMGE.get(secili_tip, "grafik"), 17)
-    css += ('.st-key-%s [data-baseweb="select"] > div{display:flex;align-items:center;padding-left:12px;'
-            'background:#fff !important;border:1px solid rgba(24,26,30,.12) !important;border-radius:12px !important;'
-            'box-shadow:0 6px 16px -12px rgba(20,22,26,.3);}'
-            '.st-key-%s [data-baseweb="select"] *{font-size:13px !important;font-weight:600 !important;'
-            'color:#133273 !important;}' % (KAP, KAP))
+    css = (
+        '.st-key-%s button{justify-content:flex-start;background:#fff;border:1px solid rgba(24,26,30,.12);'
+        'border-radius:12px;min-height:40px;box-shadow:0 6px 16px -12px rgba(20,22,26,.3);}'
+        '.st-key-%s button p{font-size:13px !important;font-weight:600 !important;color:#133273 !important;}'
+        '.gsec-baslik{font-size:10.5px;font-weight:800;letter-spacing:1.1px;color:#8b97ab;'
+        'padding:10px 10px 4px;margin:0;}'
+        '.gsec-baslik.ilk{padding-top:2px;}'
+        '[data-testid="stVerticalBlock"]:has(> div [class*="st-key-gsec_"]),'
+        '[data-testid="stVerticalBlock"]:has(> [class*="st-key-gsec_"]){gap:2px !important;}'
+        '[class*="st-key-gsec_"] button{justify-content:flex-start;border:none !important;background:transparent;'
+        'min-height:36px;padding:0 10px;border-radius:8px;box-shadow:none;}'
+        '[class*="st-key-gsec_"] button:hover{background:#f3f6fb;}'
+        '[class*="st-key-gsec_"] button p{font-size:12.5px !important;font-weight:600 !important;color:#24324d !important;}'
+        '[class*="st-key-gsec_"] button::after{margin-left:auto;padding-left:16px;font-size:10.5px;'
+        'font-weight:600;color:#8b97ab;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}'
+        '.st-key-gsec_%s button{background:#eef3fb !important;box-shadow:inset 3px 0 0 #2a78d6;}'
+        '.st-key-gsec_%s button p{color:#133273 !important;}'
+    ) % (KAP, KAP, secili_tip, secili_tip)
+    for _, tip in SECENEKLER.items():
+        css += '.st-key-gsec_%s button::after{content:"%s";}' % (tip, BIRIM.get(tip, ""))
+        if IK:
+            css += IK.etiket_css('.st-key-gsec_%s button p' % tip, SIMGE.get(tip, "grafik"), 16)
+    if IK:
+        css += IK.etiket_css('.st-key-%s button p' % KAP, SIMGE.get(secili_tip, "grafik"), 17)
     return "<style>" + css + "</style>"
+
+
+def secici(st_, varsayilan: str = "tuketim") -> str:
+    """Kategorili grafik seçici; seçilen metriğin tipini döner.
+    Panel başlığı seçili metrik olduğu için seçim değişince panel yeniden çizilir ve kapanır."""
+    tip = secili(st_, varsayilan)
+    st_.markdown(secici_css(tip), unsafe_allow_html=True)
+    with st_.container(key=KAP):
+        with st_.popover("%s  ·  %s" % (_AD[tip], BIRIM[tip]), use_container_width=True):
+            for i, (baslik, ogeler) in enumerate(GRUPLAR):
+                st_.markdown("<p class='gsec-baslik%s'>%s</p>" % (" ilk" if i == 0 else "", baslik),
+                             unsafe_allow_html=True)
+                for ad, t, _, _ in ogeler:
+                    st_.button(ad, key="gsec_" + t, use_container_width=True, on_click=_sec, args=(st_, t))
+    return tip
 
 
 # ── Rozet: seçilen ay ↔ karşılaştırılan ay ────────────────────────────────
@@ -174,17 +195,18 @@ def _tarih_ekseni(fig):
 
 
 def tahmin_grafigi(gunler, birim: str):
-    """Günlük tahmin çubukları (hava tahminli günler koyu, geçmiş ortalamalı açık)
-    + sağ eksende sıcaklık. Animasyon yok."""
+    """Günlük çubuklar: gerçekleşen (yeşil), hava tahminiyle (koyu mavi), geçmiş
+    ortalama havayla (açık mavi) + sağ eksende sıcaklık. Animasyon yok."""
     d = pd.DataFrame(gunler)
     if d.empty:
         return None
     d["tarih"] = pd.to_datetime(d["tarih"])
     fig = go.Figure()
-    for tur, ad, renk in (("tahmin", "Hava tahminiyle", "#2a78d6"), ("ortalama", "Geçmiş ortalama havayla", "#9db8e0")):
-        s = d[d["hava"] == tur]
+    for tur, ad, renk in (("gercek", "Gerçekleşen", "#0ca30c"), ("tahmin", "Tahmin (hava tahminiyle)", "#2a78d6"),
+                          ("ortalama", "Tahmin (geçmiş ortalama havayla)", "#9db8e0")):
+        s = d[d["kaynak"] == tur]
         if len(s):
-            fig.add_bar(x=s["tarih"], y=s["tahmin"], name=ad, marker_color=renk,
+            fig.add_bar(x=s["tarih"], y=s["deger"], name=ad, marker_color=renk,
                         hovertemplate="%{x|%d.%m.%Y}<br>%{y:,.0f} " + birim + "<extra></extra>")
     fig.add_scatter(x=d["tarih"], y=d["sicaklik"], name="Ort. sıcaklık (°C)", yaxis="y2", mode="lines+markers",
                     line=dict(color="#e0773a", width=2), marker=dict(size=4),

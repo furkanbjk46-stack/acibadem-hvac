@@ -113,7 +113,7 @@ kb.loc[402, "Dis_Hava_Sicakligi_C"] = 0.0 if sic[402] > 14 else 30.0   # tek gü
 _, rk = veri_kalite.kontrol(kb, KOLONLAR)
 tk = {b["tur"] for b in rk.bulgular}
 c("kalite: ŞEBEKE 0 yakalanıyor", "ŞEBEKE 0" in tk, rk.ozet())
-c("kalite: DÜŞÜK TOPLAM yakalanıyor", "DÜŞÜK TOPLAM" in tk, rk.ozet())
+c("kalite: düşük toplam artık ELENMİYOR (31.10.2026 kararı)", "DÜŞÜK TOPLAM" not in tk, rk.ozet())
 c("kalite: SENSÖR SIÇRAMA yakalanıyor", "SENSÖR SIÇRAMA" in tk, rk.ozet())
 
 # ── Hedef seçimi ──

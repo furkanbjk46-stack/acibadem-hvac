@@ -117,15 +117,8 @@ def kontrol(gunluk: pd.DataFrame, kolonlar: Dict[str, str], haric: Optional[List
             d.loc[i, "_hedef_gecerli"] = False
             r.ekle("ŞEBEKE 0", t[i], t[i], 1, "şebeke 0 yazılmış, toplam (%.0f kWh) yalnız kojen" % y[i])
 
-    # 3c) Ani düşük toplam: komşu günlerin medyanının %60'ının altı (sayaç / kayıt kopması;
-    #     Maslak 31.08.2026: kojen 0, toplam yalnız şebeke 29 bin kWh). Eşik oransaldır —
-    #     binaya özel sabit kWh sınırı YOK, başka tesiste de aynı çalışır.
-    komsu = y.where(y > 0).rolling(15, center=True, min_periods=7).median()
-    m_dus = (y > 0) & (y < 0.6 * komsu) & d["_hedef_gecerli"]
-    for i in d.index[m_dus]:
-        d.loc[i, "_hedef_gecerli"] = False
-        r.ekle("DÜŞÜK TOPLAM", t[i], t[i], 1,
-               "%.0f kWh, komşu günlerin %%%.0f'i — kayıt/sayaç kopması" % (y[i], 100 * y[i] / komsu[i]))
+    # 3c) "Ani düşük toplam" kontrolü 31.10.2026'da kaldırıldı (kullanıcı kararı): veriler
+    #     elle düzeltiliyor; düşük ama gerçek günler eğitimden atılmasın.
 
     # 4) Kojen kaybı: kojen normalde var, sonra boş/0 kalmış → toplam eksik sayılır
     if k["kojen_uretim"] in d.columns:

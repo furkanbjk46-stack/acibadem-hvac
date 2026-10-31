@@ -3,7 +3,7 @@
 
   "prediction_model": {
     "active": true,
-    "_kanit": "tuketim_tahmin/gunluk_model.py — GunlukTahminModeli (Ridge, gunluk): hava derece-gunu + hafta sonu/tatil + mevsim + kojen plani. Her acilista guncel veriyle egitilir. portal_ozet.ufuk_tahmini() yarin/7/30 gun (16 gunluk Open-Meteo hava tahminiyle), yil_ozeti() ileriye donuk aylik tahmin. 30.10.2026'da eski forecast_engine (MLPredictor) kaldirildi.",
+    "_kanit": "tuketim_tahmin/gunluk_model.py — GunlukTahminModeli (Ridge, gunluk): hava derece-gunu + hafta sonu/tatil + mevsim + kojen plani. Her acilista guncel veriyle egitilir. portal_ozet.donem_tahmini() yarin + donem (ay) toplami + ayin haftalari (gerceklesen gunler + 16 gunluk Open-Meteo hava tahminiyle kalan gunler), yil_ozeti() ileriye donuk aylik tahmin. 30.10.2026'da eski forecast_engine (MLPredictor) kaldirildi.",
     "_acik_20260920": true
   },
 

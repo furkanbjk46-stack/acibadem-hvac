@@ -114,9 +114,11 @@ def _hava_tahmini() -> dict:
 
 
 @st.cache_data(show_spinner=False, ttl=3 * 3600)
-def _ufuk_tahmini(hedef: str, gun_imzasi: str, veri_imzasi: float) -> dict:
+def _donem_tahmini(hedef: str, gun_imzasi: str, veri_imzasi: float) -> dict:
+    """Yarın + dönem (yarının ayı) toplamı + ayın haftaları. gun_imzasi: bugünün
+    tarihi — gün dönünce önbellek tazelenir."""
     from tuketim_tahmin import portal_ozet
-    return portal_ozet.ufuk_tahmini(load_data(), hedef, 30, hava_tahmin=_hava_tahmini())
+    return portal_ozet.donem_tahmini(load_data(), hedef, hava_tahmin=_hava_tahmini())
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
@@ -2144,34 +2146,22 @@ def render_styled_table(df: pd.DataFrame, max_height: int = 400, max_rows: int =
     for col in df_page.select_dtypes(include=['float64', 'float32']).columns:
         df_page[col] = df_page[col].apply(lambda x: f"{x:.1f}" if pd.notna(x) else "")
     
-    # Styled HTML tablo
-    styled_df = df_page.style.set_properties(**{
-        'background-color': '#fafaf8',
-        'color': '#0f1f3d',
-        'border': '1px solid #e0e0e0',
-        'padding': '4px 6px',
-        'font-size': '11px',
-        'white-space': 'nowrap'
-    }).set_table_styles([
-        {'selector': 'th', 'props': [
-            ('background-color', '#012D75'),
-            ('color', '#0f1f3d'),
-            ('font-weight', 'bold'),
-            ('padding', '6px 8px'),
-            ('font-size', '11px'),
-            ('border', '1px solid #003087'),
-            ('white-space', 'nowrap')
-        ]},
-        {'selector': 'table', 'props': [
-            ('width', '100%'),
-            ('border-collapse', 'collapse')
-        ]}
-    ])
-    
-    # Scrollable container
+    # Biçim SINIF kuralıyla (31.10.2026). Eskiden pandas Styler her HÜCREYE ayrı CSS
+    # seçicisi üretiyordu (200 satır × ~60 sütun ≈ 12 bin seçici); Streamlit bu uzun
+    # stil bloğunu kesince sayfanın yarısından sonraki satırlar biçimsiz (büyük yazı,
+    # geniş satır) görünüyordu. Tek sınıf kuralı her satıra aynı uygulanır.
+    _tid = "vt-" + re.sub(r"[^a-z0-9]", "", table_key.lower())
+    _html = df_page.to_html(classes=_tid, border=0, na_rep="")
     st.markdown(f'''
+    <style>
+    table.{_tid} {{ width:100%; border-collapse:collapse; }}
+    table.{_tid} th, table.{_tid} td {{ padding:4px 6px; font-size:11px; line-height:1.3;
+        white-space:nowrap; border:1px solid #e0e0e0; color:#0f1f3d; background:#fafaf8; }}
+    table.{_tid} thead th {{ position:sticky; top:0; z-index:1; background:#eef1f6; font-weight:700;
+        border-color:#cfd6e2; }}
+    </style>
     <div style="max-height: {max_height}px; overflow-y: auto; overflow-x: auto; border: 1px solid #334155; border-radius: 8px;">
-        {styled_df.to_html(escape=False)}
+        {_html}
     </div>
     ''', unsafe_allow_html=True)
 
@@ -4294,32 +4284,9 @@ with tab2:
                     _kk("su", "Su Tüketimi", "Su_Tuketimi_m3", "m³"),
                 ], 200), unsafe_allow_html=True)
 
-        # Settings'i bir kez oku (m² bölümü için)
-        try:
-            import json as _json
-            _settings_path = os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json")
-            _all_settings = {}
-            if os.path.exists(_settings_path):
-                with open(_settings_path, "r", encoding="utf-8") as _f:
-                    _all_settings = _json.load(_f)
-        except Exception:
-            _all_settings = {}
-        
-        building_area = float(_all_settings.get("BUILDING_AREA_M2", 0))
-        
-        # ═══ 2. m² BAŞINA TÜKETİM ═══
-        if building_area and building_area > 0 and not report_data.empty:
-            with st.container(key="kart_m2_tuketim"):
-                st.markdown(_pt.bolum("m² Başına Tüketim", "verim",
-                                      f"{_tr_sayi(building_area)} m²"), unsafe_allow_html=True)
-                cooling_per_m2 = rep_chiller / building_area
-                heating_per_m2 = rep_gas * 10.64 / building_area
-                total_per_m2 = rep_total / building_area
-                st.markdown(_pt.izgara([
-                    _pt.kart("sogutma", "Soğutma", _tr_sayi(cooling_per_m2, 2), "kWh/m²"),
-                    _pt.kart("kazan", "Isıtma", _tr_sayi(heating_per_m2, 2), "kWh/m²"),
-                    _pt.kart("enerji", "Toplam Enerji", _tr_sayi(total_per_m2, 2), "kWh/m²"),
-                ]), unsafe_allow_html=True)
+        # m² yalnız Grafik & Trend'deki kWh/m² metrikleri için (31.10.2026: m² başına
+        # tüketim kartları kaldırıldı — kullanıcı kararı)
+        building_area = _bina_alani()
 
         # ===== /GÜNLÜK ÖZET KARTLARI =====
         
@@ -4389,17 +4356,10 @@ with tab2:
         # rozet = karşılaştırılan aya göre değişim.
         import portal_grafik as _pg
         st.markdown(_pt.bolum("Grafik & Trend", "grafik"), unsafe_allow_html=True)
-        _g_adlar = list(_pg.SECENEKLER.keys())
-        if st.session_state.get("dash_grafik_sec") not in _pg.SECENEKLER:
-            st.session_state.pop("dash_grafik_sec", None)
-        _g_tip = _pg.SECENEKLER.get(st.session_state.get("dash_grafik_sec"), "tuketim")
-        st.markdown(_pg.secici_css(_g_tip), unsafe_allow_html=True)
         _gc1, _gc2 = st.columns([2, 3])
         with _gc1:
-            with st.container(key=_pg.KAP):
-                _g_ad = st.selectbox("Grafik", _g_adlar, index=_g_adlar.index("Tüketim"),
-                                     key="dash_grafik_sec", label_visibility="collapsed")
-        _g_tip = _pg.SECENEKLER[_g_ad]
+            # Kategorili açılır panel (31.10.2026): ENERJİ & KAYNAK / GAZ & SU / ...
+            _g_tip = _pg.secici(st)
         _df_kiyas = yoy["prev_df"] if yoy else None
         _ay_adi = f"{_AYLAR[int(sel_month) - 1]} {sel_year}"
         _kiyas_adi = f"{_AYLAR[int(cmp_month) - 1]} {cmp_year}"
@@ -5143,40 +5103,52 @@ with tab6:
             _gm_hedef = st.radio("Tahmin edilen", list(_TH_HEDEF), format_func=_TH_HEDEF.get,
                                  horizontal=True, key="gm_hedef")
 
-        # ═══ 1. KISA VADE: YARIN / 7 GÜN / 30 GÜN ═══
-        with _bolum_karti("kart_tahmin_kisa_vade", "📅 Yarın · 7 Gün · 30 Gün",
-                          "İlk ~15 gün Open-Meteo hava tahminiyle, sonrası o günlerin geçmiş ortalama havasıyla"):
-            with st.spinner("Tahmin hesaplanıyor..."):
-                _uf = _ufuk_tahmini(_gm_hedef, date.today().isoformat(), _veri_imzasi())
-            if _uf.get("hata"):
-                st.info(_uf["hata"])
+        # ═══ 1. KISA VADE: YARIN + DÖNEM (AY) TOPLAMI + AYIN HAFTALARI ═══
+        # 31.10.2026: "7 gün / 30 gün" yerine yarının ayı: gerçekleşen günler + kalan günlerin
+        # tahmini = dönem toplamı; her hafta (Pzt–Paz, ay sınırında kesilir) ayrı toplam.
+        with st.spinner("Tahmin hesaplanıyor..."):
+            _dt = _donem_tahmini(_gm_hedef, date.today().isoformat(), _veri_imzasi())
+        _dt_baslik = (f"📅 Yarın · {_dt['ay_adi']} {_dt['yil']} Dönem Tahmini" if not _dt.get("hata")
+                      else "📅 Yarın · Dönem Tahmini")
+        with _bolum_karti("kart_tahmin_kisa_vade", _dt_baslik,
+                          "Gerçekleşen günler ölçülen değerle, kalan günler tahminle; ilk ~15 gün Open-Meteo "
+                          "hava tahmini, sonrası geçmiş ortalama hava"):
+            if _dt.get("hata"):
+                st.info(_dt["hata"])
             else:
-                _ub = _uf["birim"]
-                _ut = _uf["toplamlar"]
-                _ug = _uf["gunler"]
-                _uk = st.columns(3)
+                _ub = _dt["birim"]
+                _y = _dt["yarin"]
+                _uk = st.columns(2)
                 with _uk[0]:
-                    _y = _ug[0]
-                    metrik_notlu("Yarın", f"{_sayi(_ut['yarin'])} {_ub}",
+                    metrik_notlu("Yarın", f"{_sayi(_y['deger'])} {_ub}",
                                  f"{pd.Timestamp(_y['tarih']).strftime('%d.%m')} · "
                                  + f"{_y['sicaklik']:.1f} °C".replace(".", ",")
-                                 + (" (tahmin)" if _y["hava"] == "tahmin" else " (geçmiş ort.)"))
+                                 + (" (hava tahmini)" if _y["kaynak"] == "tahmin" else " (geçmiş ort.)"))
                 with _uk[1]:
-                    metrik_notlu("Önümüzdeki 7 gün", f"{_sayi(_ut['hafta'])} {_ub}",
-                                 f"günlük ort. {_sayi(_ut['hafta'] / 7)} {_ub}")
-                with _uk[2]:
-                    metrik_notlu("Önümüzdeki 30 gün", f"{_sayi(_ut['ay'])} {_ub}",
-                                 f"günlük ort. {_sayi(_ut['ay'] / 30)} {_ub}")
+                    _gk = _dt["gercek_gun"]
+                    metrik_notlu(f"{_dt['ay_adi']} {_dt['yil']} toplamı", f"{_sayi(_dt['ay_toplam'])} {_ub}",
+                                 (f"{_gk} gün gerçekleşen ({_sayi(_dt['gerceklesen'])} {_ub}) + "
+                                  f"{len(_dt['gunler']) - _gk} gün tahmin") if _gk else
+                                 f"{len(_dt['gunler'])} günün tamamı tahmin")
+                _hf = st.columns(len(_dt["haftalar"]))
+                for _hi, _h in enumerate(_dt["haftalar"]):
+                    with _hf[_hi]:
+                        _hb, _hs = pd.Timestamp(_h["bas"]), pd.Timestamp(_h["son"])
+                        _hdurum = ("gerçekleşen" if _h["gercek_gun"] == _h["gun"] else
+                                   "tahmin" if _h["gercek_gun"] == 0 else
+                                   f"{_h['gercek_gun']} gün gerçek + {_h['gun'] - _h['gercek_gun']} tahmin")
+                        metrik_notlu(f"{_h['no']}. hafta", f"{_sayi(_h['toplam'])} {_ub}",
+                                     f"{_hb.strftime('%d')}–{_hs.strftime('%d.%m')} · {_hdurum}")
                 import portal_grafik as _pg
-                _ufig = _pg.tahmin_grafigi(_ug, _ub)
+                _ufig = _pg.tahmin_grafigi(_dt["gunler"], _ub)
                 if _ufig is not None:
                     st.plotly_chart(_ufig, use_container_width=True, config={"displayModeBar": False})
-                if _uf["hava_tahmin_gun"]:
-                    st.caption(f"Hava tahmini {_uf['hava_tahmin_gun']} gün için kullanıldı; kalan günler geçmiş "
-                               f"yılların aynı takvim günü ortalaması. Son tüketim verisi: {_uf['son_veri']}.")
+                if _dt["hava_tahmin_gun"]:
+                    st.caption(f"Hava tahmini {_dt['hava_tahmin_gun']} gün için kullanıldı; kalan tahmin günleri "
+                               f"geçmiş yılların aynı takvim günü ortalaması. Son tüketim verisi: {_dt['son_veri']}.")
                 else:
-                    st.caption("Hava tahmini alınamadı (internet / koordinat) — tüm günler geçmiş ortalama "
-                               f"havayla hesaplandı. Son tüketim verisi: {_uf['son_veri']}.")
+                    st.caption("Hava tahmini alınamadı (internet / koordinat) — tahmin günleri geçmiş ortalama "
+                               f"havayla hesaplandı. Son tüketim verisi: {_dt['son_veri']}.")
 
         # ═══ 2. AYLIK TAHMİN (seçilen yıl) ═══
         with _bolum_karti("kart_tahmin_gunluk_model", f"🔮 {_fc_year} Aylık Tahmin",

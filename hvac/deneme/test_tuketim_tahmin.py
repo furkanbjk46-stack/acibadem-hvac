@@ -139,41 +139,51 @@ import monthly_report  # noqa: E402
 c("monthly_report paketi eski motor olmadan yükleniyor", not hasattr(monthly_report, "ConsumptionForecastEngine"))
 _t6 = kaynak[kaynak.index("# ---------------- TAB 6"):]
 c("Tahmin & Trend: ısıtma gazı seçeneği yok", "isitma_gaz" not in _t6)
-c("Tahmin & Trend: yarın / 7 gün / 30 gün kartı var", "kart_tahmin_kisa_vade" in _t6 and "_ufuk_tahmini(" in _t6)
+c("Tahmin & Trend: yarın + dönem + haftalar kartı var", "kart_tahmin_kisa_vade" in _t6 and "_donem_tahmini(" in _t6)
 
-# ── 10) Yarın / 7 gün / 30 gün ─────────────────────────────────────────────
-BUGUN = "2026-10-23"
-u = PO.ufuk_tahmini(df, "toplam", 30, bugun=BUGUN, haric=[])
-c("ufuk: hata yok, 30 gün, yarından başlar",
-  u.get("hata") is None and len(u["gunler"]) == 30 and u["gunler"][0]["tarih"] == "2026-10-24", u.get("hata"))
-c("ufuk toplamları: yarın = 1. gün, 7 gün = ilk 7, 30 gün = hepsi",
-  abs(u["toplamlar"]["yarin"] - u["gunler"][0]["tahmin"]) < 1e-6
-  and abs(u["toplamlar"]["hafta"] - sum(g["tahmin"] for g in u["gunler"][:7])) < 1e-6
-  and abs(u["toplamlar"]["ay"] - sum(g["tahmin"] for g in u["gunler"])) < 1e-6)
-c("hava tahmini yokken tüm günler 'ortalama'", all(g["hava"] == "ortalama" for g in u["gunler"])
-  and u["hava_tahmin_gun"] == 0)
-_paz = [g for g in u["gunler"] if pd.Timestamp(g["tarih"]).dayofweek == 6]
-_hi = [g for g in u["gunler"] if pd.Timestamp(g["tarih"]).dayofweek < 5]
+# ── 10) Yarın + dönem (ay) toplamı + ayın haftaları ────────────────────────
+BUGUN = "2026-10-23"                     # sentetik veri 23.10'a kadar → Ekim: 23 gün gerçek + 8 tahmin
+u = PO.donem_tahmini(df, "toplam", bugun=BUGUN, haric=[])
+c("dönem: hata yok, yarının ayı (Ekim 2026), 31 gün",
+  u.get("hata") is None and (u["yil"], u["ay"]) == (2026, 10) and len(u["gunler"]) == 31, u.get("hata"))
+c("yarın = 24.10 ve tahmin", u["yarin"]["tarih"] == "2026-10-24" and u["yarin"]["kaynak"] == "ortalama")
+c("geçmiş günler GERÇEK değerle", u["gercek_gun"] == 23 and u["gunler"][0]["kaynak"] == "gercek"
+  and abs(u["gunler"][0]["deger"] - df.loc[df["Tarih"] == "2026-10-01", "Toplam_Hastane_Tuketim_kWh"].iloc[0]) < 1e-6)
+c("dönem toplamı = gerçekleşen + kalan günlerin tahmini",
+  abs(u["ay_toplam"] - u["gerceklesen"] - sum(g["tahmin"] for g in u["gunler"][23:])) < 1e-6)
+c("haftalar ayı tam böler (toplamlar ve gün sayısı)",
+  abs(sum(h["toplam"] for h in u["haftalar"]) - u["ay_toplam"]) < 1e-6 and sum(h["gun"] for h in u["haftalar"]) == 31)
+c("haftalar Pazartesi başlar, ay sınırında kesilir (Ekim 2026: 1–4, 5–11, …, 26–31)",
+  [(h["bas"][-2:], h["son"][-2:]) for h in u["haftalar"]] ==
+  [("01", "04"), ("05", "11"), ("12", "18"), ("19", "25"), ("26", "31")], [(h["bas"], h["son"]) for h in u["haftalar"]])
+c("karışık hafta: gerçek + tahmin gün sayısı", u["haftalar"][3]["gercek_gun"] == 5 and u["haftalar"][3]["gun"] == 7)
+uk = PO.donem_tahmini(df, "toplam", bugun="2026-10-31", haric=[])
+c("ay sonunda dönem bir sonraki ay (31.10 → Kasım, tamamı tahmin)",
+  (uk["ay"], uk["gercek_gun"], len(uk["gunler"])) == (11, 0, 30) and uk["yarin"]["tarih"] == "2026-11-01")
+c("Kasım 2026 haftaları: 1 | 2–8 | 9–15 | 16–22 | 23–29 | 30",
+  [(h["bas"][-2:], h["son"][-2:]) for h in uk["haftalar"]] ==
+  [("01", "01"), ("02", "08"), ("09", "15"), ("16", "22"), ("23", "29"), ("30", "30")])
+_paz = [g for g in uk["gunler"] if pd.Timestamp(g["tarih"]).dayofweek == 6]
+_hi = [g for g in uk["gunler"] if pd.Timestamp(g["tarih"]).dayofweek < 5]
 c("Pazar tahmini hafta içinden düşük (takvim etkisi)",
   np.mean([g["tahmin"] for g in _paz]) < np.mean([g["tahmin"] for g in _hi]))
-# Sıcak hava dalgası tahmini: ilk 5 gün 32 °C → o günler belirgin yüksek
+# Sıcak hava dalgası tahmini: 24–28.10 32 °C → o günler belirgin yüksek
 _sicak = {(pd.Timestamp("2026-10-24") + pd.Timedelta(days=i)).strftime("%Y-%m-%d"):
           {"Hava_Sicaklik_Ort_C": 32.0, "Hava_Sicaklik_Max_C": 36.0, "Hava_Sicaklik_Min_C": 27.0,
            "Hava_Durumu": "güneşli"} for i in range(5)}
-uh = PO.ufuk_tahmini(df, "toplam", 30, hava_tahmin=_sicak, bugun=BUGUN, haric=[])
+uh = PO.donem_tahmini(df, "toplam", hava_tahmin=_sicak, bugun=BUGUN, haric=[])
 c("hava tahmini verilen günler 'tahmin' olarak işaretli", uh["hava_tahmin_gun"] == 5
-  and [g["hava"] for g in uh["gunler"][:6]] == ["tahmin"] * 5 + ["ortalama"])
-c("tahmin edilen sıcaklık modele girdi (32 °C)", abs(uh["gunler"][0]["sicaklik"] - 32.0) < 1e-9)
-c("sıcak hava dalgası tüketimi artırır (CDD)", uh["toplamlar"]["yarin"] > u["toplamlar"]["yarin"] * 1.2,
-  (uh["toplamlar"]["yarin"], u["toplamlar"]["yarin"]))
-c("hava tahmini olmayan günler değişmez",
-  abs(uh["gunler"][10]["tahmin"] - u["gunler"][10]["tahmin"]) < 1e-6)
-us = PO.ufuk_tahmini(df, "sogutma", 30, hava_tahmin=_sicak, bugun=BUGUN, haric=[])
-c("soğutma ufku: kWh, sıcakta artar", us.get("hata") is None and us["birim"] == "kWh"
-  and us["gunler"][0]["tahmin"] > us["gunler"][10]["tahmin"])
-c("ufuk: boş veri → hata metni", PO.ufuk_tahmini(pd.DataFrame(), "toplam")["hata"])
-c("ufuk: bir yıldan az geçmiş → hata metni",
-  PO.ufuk_tahmini(sentetik(bas="2026-03-01"), "toplam", bugun=BUGUN, haric=[])["hata"])
+  and [g["kaynak"] for g in uh["gunler"][22:29]] == ["gercek"] + ["tahmin"] * 5 + ["ortalama"])
+c("tahmin edilen sıcaklık modele girdi (32 °C)", abs(uh["yarin"]["sicaklik"] - 32.0) < 1e-9)
+c("sıcak hava dalgası tüketimi artırır (CDD)", uh["yarin"]["deger"] > u["yarin"]["deger"] * 1.2,
+  (uh["yarin"]["deger"], u["yarin"]["deger"]))
+c("gerçek günler hava tahmininden etkilenmez", uh["gunler"][5]["deger"] == u["gunler"][5]["deger"])
+us = PO.donem_tahmini(df, "sogutma", hava_tahmin=_sicak, bugun=BUGUN, haric=[])
+c("soğutma dönemi: kWh, sıcakta artar", us.get("hata") is None and us["birim"] == "kWh"
+  and us["gunler"][23]["deger"] > us["gunler"][30]["deger"])
+c("dönem: boş veri → hata metni", PO.donem_tahmini(pd.DataFrame(), "toplam")["hata"])
+c("dönem: bir yıldan az geçmiş → hata metni",
+  PO.donem_tahmini(sentetik(bas="2026-03-01"), "toplam", bugun=BUGUN, haric=[])["hata"])
 c("hava_tablosu: Hava_* → modelin adları",
   list(PO.hava_tablosu(_sicak).columns[:2]) == ["Tarih", "sicaklik_ort"] and PO.hava_tablosu({}) is None)
 
@@ -199,10 +209,9 @@ c("şebekesiz yeni kural günlerinde toplam boş", gk.loc[gk["tarih"] >= "2026-0
 c("01.06 öncesi toplam aynen", gk.loc[gk["tarih"] < "2026-06-01", "toplam"].notna().all())
 c("soğutma etkilenmez", gk.loc[gk["tarih"] >= "2026-06-01", "sogutma"].notna().all())
 c("kalite raporunda 'ŞEBEKE YOK'", any(b["tur"] == "ŞEBEKE YOK" for b in rk.bulgular))
-_us = PO.ufuk_tahmini(sk, "toplam", 7, bugun=BUGUN, haric=[])
+_us = PO.donem_tahmini(sk, "toplam", bugun="2026-10-31", haric=[])
 c("yalnız-kojen günleri tahmini aşağı çekmez (±%5)",
-  abs(_us["toplamlar"]["hafta"] / u["toplamlar"]["hafta"] - 1) < 0.05,
-  (_us["toplamlar"]["hafta"], u["toplamlar"]["hafta"]))
+  abs(_us["ay_toplam"] / uk["ay_toplam"] - 1) < 0.05, (_us["ay_toplam"], uk["ay_toplam"]))
 _ys = PO.yillik_ozet(sk)[-1]
 c("yıllık özet: şebekesiz günler toplama katılmaz ve sayılır",
   _ys["sebeke_eksik_gun"] == int(_yeni.sum())

@@ -127,7 +127,7 @@ c("ters renk: azalış yeşil", _PT.degisim(-5.0, ters=True) == ("▼ %5,0", "sy
 
 # Etiket niteliğindeki yazılar delta DEĞİL, alt not olmalı
 _ETIKET = ["Toplam Değişim", "Şebeke Değişim", "Chiller Değişim",
-           "Önceki yıl", "Yarın", "Önümüzdeki 7 gün",   # Sistem Sağlığı artık Dashboard kartında
+           "Önceki yıl", "Yarın",   # Sistem Sağlığı artık Dashboard kartında
            ]   # Elektrik/Doğalgaz/Su/Toplam Maliyet kartları 28.10.2026'da kaldırıldı (TL yok)
 for _ad in _ETIKET:
     _bul = [n for n in notlular if _ad in n["etiket"]]
@@ -197,7 +197,8 @@ c("kart anahtarları benzersiz", len(set(_anahtarlar)) == len(_anahtarlar),
   [k for k in set(_anahtarlar) if _anahtarlar.count(k) > 1])
 
 # Üç sekmenin de bölümleri karta alınmış olmalı
-for _k in ("kart_dun_ozeti", "kart_m2_tuketim",                             # dashboard
+c("m² başına tüketim kartı kaldırıldı (31.10.2026)", "kart_m2_tuketim" not in KAYNAK)
+for _k in ("kart_dun_ozeti",                                                # dashboard
            "kart_birlesik_ozet", "kart_oneriler",                           # aylık rapor
            "kart_pdf_indir", "kart_ai_ilerleme", "kart_ml_egitim",
            "kart_tahmin_coklu_yil", "kart_tahmin_kisa_vade", "kart_tahmin_gunluk_model",   # tahmin & trend

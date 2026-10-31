@@ -32,11 +32,26 @@ once = gunler("2025-10", Toplam_Hastane_Tuketim_kWh=50000, Sebeke_Tuketim_kWh=20
 # ── Liste: tüm metrikler, kategorili ──
 c("açılır listede tüm metrikler (15)", len(PG.SECENEKLER) == 15, len(PG.SECENEKLER))
 c("her metriğin simgesi ve birimi var", all(PG.SIMGE.get(t) and PG.BIRIM.get(t) for t in PG.SECENEKLER.values()))
-c("varsayılan Tüketim", "Tüketim" in PG.SECENEKLER and 'index=_g_adlar.index("Tüketim")' in PORTAL)
+class _SS(dict):
+    pass
+
+
+class _St:
+    session_state = _SS()
+
+
+c("varsayılan Tüketim", PG.secili(_St) == "tuketim" and "_pg.secici(st)" in PORTAL)
+_St.session_state[PG.SECIM] = "yok"
+c("bilinmeyen seçim varsayılana döner", PG.secili(_St) == "tuketim")
+PG._sec(_St, "chillerler")
+c("satır düğmesi seçimi yazar", PG.secili(_St) == "chillerler")
 c("kategoriler: enerji, gaz & su, soğutma, özet", [g for g, _ in PG.GRUPLAR] ==
   ["ENERJİ & KAYNAK", "GAZ & SU", "SOĞUTMA & MEKANİK", "ÖZET & KARŞILAŞTIRMA"])
-c("liste görünümü Streamlit 1.42 ve 1.5x için", 'ul[role="listbox"]' in PG.secici_css("tuketim")
-  and "stSelectboxVirtualDropdown" in PG.secici_css("tuketim"))
+_css = PG.secici_css("chillerler")
+c("kategorili panel: her satırın simgesi + birimi, seçili satır vurgulu",
+  all(('.st-key-gsec_%s button::after{content:"%s";}' % (t, PG.BIRIM[t])) in _css for t in PG.SECENEKLER.values())
+  and ".st-key-gsec_chillerler button{background:#eef3fb" in _css)
+c("sürüme bağlı liste seçicisi kalmadı", "stSelectboxVirtualDropdown" not in _css and "nth-child" not in _css)
 
 # ── Çizim: veriden olduğu gibi ──
 f, _ = PG.ciz("tuketim", bu, once, "Ekim 2026", "Ekim 2025")

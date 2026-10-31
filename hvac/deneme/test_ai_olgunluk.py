@@ -50,7 +50,7 @@ c("puan 0-100 aralığında", 0 <= r["total_score"] <= 100, r["total_score"])
 KANIT = {
     "prediction_model": [
         (os.path.join(BURASI, "tuketim_tahmin", "gunluk_model.py"), "class GunlukTahminModeli"),
-        (os.path.join(BURASI, "tuketim_tahmin", "portal_ozet.py"), "def ufuk_tahmini"),
+        (os.path.join(BURASI, "tuketim_tahmin", "portal_ozet.py"), "def donem_tahmini"),
     ],
     "feedback_filtering": [
         # Geri bildirim SADECE kaydediliyorsa filtre yok demektir; gerçek filtre

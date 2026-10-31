@@ -1108,25 +1108,6 @@
                     </button>
                 </div>
 
-                <div class="control-section">
-                    <h3><i class="fas fa-database"></i> Örnek Veri Setleri</h3>
-                    <button class="btn btn-secondary" onclick="downloadTemplate()">
-                        <i class="fas fa-file-download"></i>
-                        Excel Şablonu İndir
-                    </button>
-                    <button class="btn btn-secondary" onclick="loadSample('simple')">
-                        <i class="fas fa-vial"></i>
-                        Basit Örnek
-                    </button>
-                    <button class="btn btn-secondary" onclick="loadSample('complex')">
-                        <i class="fas fa-flask"></i>
-                        Karmaşık Örnek
-                    </button>
-                    <button class="btn btn-warning" onclick="loadSample('problematic')">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Sorunlu Örnek
-                    </button>
-                </div>
             </div>
 
             <!-- Results Section -->
@@ -1291,7 +1272,7 @@
                             <tr>
                                 <td colspan="19" class="empty-state">
                                     <i class="fas fa-inbox"></i>
-                                    <div>Henüz analiz yapılmadı. Veri yükleyin veya örnek veri seçin.</div>
+                                    <div>Henüz analiz yapılmadı. Veri yükleyin.</div>
                                 </td>
                             </tr>
                         </tbody>
@@ -1332,54 +1313,6 @@
             </div>
         </div>
 
-        <!-- Manual Entry Section -->
-        <div class="manual-section">
-            <h3><i class="fas fa-edit"></i> Manuel Veri Girişi</h3>
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i>
-                <div>Manuel girişte sütun isimleri backend ile uyumlu olmalıdır. Aşağıdaki formatı kullanın.</div>
-            </div>
-
-            <div class="manual-table-container">
-                <table class="manual-table">
-                    <thead>
-                        <tr>
-                            <th>Mahal</th>
-                            <th>Tip</th>
-                            <th>İsim</th>
-                            <th>Mod</th>
-                            <th>Öncelik</th>
-                            <th>Gidiş (°C)</th>
-                            <th>Dönüş (°C)</th>
-                            <th>Giriş (°C)</th>
-                            <th>Çıkış (°C)</th>
-                            <th>Oda (°C)</th>
-                            <th>Setpoint (°C)</th>
-                            <th>SAT (°C)</th>
-                            <th>Soğutma Vana (%)</th>
-                            <th>Isıtma Vana (%)</th>
-                            <th>Nem (%)</th>
-                            <th>Santral Gidiş (°C)</th>
-                            <th>Santral Dönüş (°C)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="manualBody">
-                        <!-- Rows will be added dynamically -->
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="manual-actions">
-                <button class="btn btn-secondary btn-sm" onclick="addManualRow()">
-                    <i class="fas fa-plus"></i>
-                    Satır Ekle
-                </button>
-                <button class="btn btn-primary btn-sm" onclick="analyzeManual()">
-                    <i class="fas fa-calculator"></i>
-                    Manuel Veriyi Analiz Et
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- Settings Modal -->
@@ -1941,7 +1874,7 @@
                     show = true;
                 } else if (filter === 'warning' && badge === 'warning') {
                     show = true;
-                } else if (filter === 'optimal' && badge === 'optimal') {
+                } else if (filter === 'optimal' && badge === 'optimal' && row.dataset.analizdisi !== '1') {
                     show = true;
                 } else if (filter === 'tutarsiz' && row.dataset.tutarsiz === '1') {
                     show = true;
@@ -2520,7 +2453,6 @@
             loadLocations();
             checkConnection();
             initChart();
-            initManualTable();
             initUretimTuketimChart();
             loadUretimTuketimGecmis();
             setInterval(loadUretimTuketimGecmis, 60000); // canlı: her 1 dk
@@ -2757,100 +2689,6 @@
             });
         }
 
-        // Initialize manual table
-        function initManualTable() {
-            addManualRow({
-                'Type': 'AHU',
-                'Name': 'AHU-1',
-                'Mode': 'COOLING',
-                'Priority': 'Normal',
-                'Supply (°C)': '7.5',
-                'Return (°C)': '12.5',
-                'Room (°C)': '24.0',
-                'Set (°C)': '22.0',
-                'SAT (°C)': '14.5',
-                'Cool Valve (%)': '80',
-                'Heat Valve (%)': '0',
-                'Humidity (%)': '50'
-            });
-        }
-
-        // Add manual row
-        function addManualRow(data = {}) {
-            const tbody = document.getElementById('manualBody');
-            const row = document.createElement('tr');
-
-            const fields = [
-                'Location', 'Type', 'Name', 'Mode', 'Priority',
-                'Supply (°C)', 'Return (°C)', 'Inlet (°C)', 'Outlet (°C)',
-                'Room (°C)', 'Set (°C)', 'SAT (°C)',
-                'Cool Valve (%)', 'Heat Valve (%)', 'Humidity (%)',
-                'Plant Supply (°C)', 'Plant Return (°C)'
-            ];
-
-            fields.forEach(field => {
-                const td = document.createElement('td');
-                const input = document.createElement('input');
-                input.type = field.includes('(°C)') || field.includes('(%)') ? 'number' : 'text';
-                input.step = field.includes('(%)') ? '1' : '0.1';
-                input.value = data[field] || '';
-                input.placeholder = field;
-                td.appendChild(input);
-                row.appendChild(td);
-            });
-
-            tbody.appendChild(row);
-        }
-
-        // Collect manual data
-        function collectManualData() {
-            const rows = document.querySelectorAll('#manualBody tr');
-            const data = [];
-
-            rows.forEach(row => {
-                const inputs = row.querySelectorAll('input');
-                const rowData = {};
-                const fields = [
-                    'Location', 'Type', 'Name', 'Mode', 'Priority',
-                    'Supply (°C)', 'Return (°C)', 'Inlet (°C)', 'Outlet (°C)',
-                    'Room (°C)', 'Set (°C)', 'SAT (°C)',
-                    'Cool Valve (%)', 'Heat Valve (%)', 'Humidity (%)',
-                    'Plant Supply (°C)', 'Plant Return (°C)'
-                ];
-
-                fields.forEach((field, idx) => {
-                    let value = inputs[idx].value.trim();
-                    if ((field.includes('(°C)') || field.includes('(%)')) && value === '') {
-                        value = null;
-                    }
-                    rowData[field] = value;
-                });
-
-                data.push(rowData);
-            });
-
-            return data;
-        }
-
-        // Analyze manual data
-        async function analyzeManual() {
-            const manualData = collectManualData();
-
-            if (manualData.length === 0) {
-                showAlert('Lütfen en az bir satır veri girin.', 'warning');
-                return;
-            }
-
-            const payload = {
-                rows: manualData,
-                engine: document.getElementById('engineSelect').value,
-                oat: document.getElementById('oatInput').value,
-                tol_ahu_normal: document.getElementById('tolNormal').value
-            };
-
-            await analyzeData(payload);
-        }
-
         // ── Otomatik analiz: sayfa açılınca kontrol et ──
         let isAutoAnalysis = false;
 
@@ -3036,7 +2874,7 @@
 
                 if (severity === 'CRITICAL') critical++;
                 else if (severity === 'WARNING') warning++;
-                else if (severity === 'OPTIMAL') optimal++;
+                // OPTIMAL aşağıda sayılır: analiz dışı satır optimal değildir
 
                 const score = parseFloat(row.Score || row.score || 0);
                 if (!isNaN(score)) scores.push(score);
@@ -3050,11 +2888,16 @@
                 // SAĞLAMLAŞTIRMA: Analiz Dışı işareti (ön koşul kapısında atlananlar)
                 const _rule = String(row.Rule || '');
                 const _status = String(row.Status || '');
+                // 31.10.2026: bakım kartında ARIZALI/BAKIMDA sensörlü santraller
+                // (SENSOR_FAULT — "Sensör Arızalı/Bakımda - ΔT Bant Kontrolü Atlandı")
+                // de analiz dışıdır; OPTIMAL sayılmaz.
                 const _analizDisi = _rule.startsWith('SKIP') || _rule === 'FAN_BASMIYOR' ||
-                    ['ANALIZ_DISI', 'STANDBY', 'MAINTENANCE'].includes(_status) ||
+                    _rule === 'SENSOR_FAULT' ||
+                    ['ANALIZ_DISI', 'STANDBY', 'MAINTENANCE', 'SENSOR_FAULT'].includes(_status) ||
                     (row['Atlama Nedeni'] || '') !== '';
                 tr.dataset.analizdisi = _analizDisi ? '1' : '0';
                 if (_analizDisi) tr.style.opacity = '0.75';
+                if (severity === 'OPTIMAL' && !_analizDisi) optimal++;
 
                 // Çıkış denetimi: motorun kendi içinde çeliştiği satırlar
                 const _denetim = String(row['Denetim'] || '');
@@ -3335,214 +3178,6 @@
             scoreChart.update();
         }
 
-        // Download Excel template as XLSX
-        function downloadTemplate() {
-            // Create workbook and worksheet
-            const wb = XLSX.utils.book_new();
-
-            // Define headers - Location ilk sütun
-            const headers = [
-                'Location', 'Type', 'Name', 'Mode', 'Priority',
-                'Supply (°C)', 'Return (°C)', 'Inlet (°C)', 'Outlet (°C)',
-                'Room (°C)', 'Set (°C)', 'SAT (°C)',
-                'Cool Valve (%)', 'Heat Valve (%)', 'Humidity (%)',
-                'Plant Supply (°C)', 'Plant Return (°C)'
-            ];
-
-            // Create example data
-            const data = [
-                headers,
-                ['', 'AHU', 'AHU-1', 'COOLING', 'Normal', 7.0, 12.5, '', '', 24.0, 22.0, 14.5, 80, 0, 50, '', ''],
-                ['Bodrum Kat', 'CHILLER', 'CH-1', 'COOLING', 'Critical', '', '', 12.0, 7.0, '', '', '', '', '', '', '', ''],
-                ['1. Kat', 'FCU', 'FCU-101', 'COOLING', 'Normal', 8.5, 13.0, '', '', 25.0, 22.0, '', 85, 0, '', '', ''],
-                ['Çatı', 'COLLECTOR', 'ANA KOLLEKTOR', 'COOLING', 'Critical', 6.0, 12.0, '', '', '', '', '', '', '', '', '', '']
-            ];
-
-            // Create worksheet from data
-            const ws = XLSX.utils.aoa_to_sheet(data);
-
-            // Set column widths for better readability
-            ws['!cols'] = [
-                { wch: 15 },  // Location
-                { wch: 12 },  // Type
-                { wch: 20 },  // Name
-                { wch: 10 },  // Mode
-                { wch: 10 },  // Priority
-                { wch: 12 },  // Supply
-                { wch: 12 },  // Return
-                { wch: 12 },  // Inlet
-                { wch: 12 },  // Outlet
-                { wch: 10 },  // Room
-                { wch: 10 },  // Set
-                { wch: 10 },  // SAT
-                { wch: 12 },  // Cool Valve
-                { wch: 12 },  // Heat Valve
-                { wch: 12 },  // Humidity
-                { wch: 15 },  // Plant Supply
-                { wch: 15 }   // Plant Return
-            ];
-
-            // Add worksheet to workbook
-            XLSX.utils.book_append_sheet(wb, ws, 'HVAC Data');
-
-            // Generate XLSX file and trigger download
-            XLSX.writeFile(wb, 'hvac_analiz_sablonu.xlsx');
-
-            showAlert('Excel şablonu (XLSX) indirildi. Bu dosyayı doldurup yükleyebilirsiniz.', 'success');
-        }
-
-        // Load sample data
-        function loadSample(type) {
-            const samples = {
-                // BASİT ÖRNEK: Normal çalışan birkaç AHU
-                simple: [
-                    {
-                        'Location': 'MAS-1', 'Type': 'kollektor', 'Name': 'sogutma kollektor',
-                        'Mode': 'Cooling', 'Priority': 'Kritik',
-                        'Inlet (°C)': '12', 'Outlet (°C)': '7'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'AHU', 'Name': 'AHU-1',
-                        'Mode': 'cooling', 'Priority': 'Normal',
-                        'Return (°C)': '24', 'Room (°C)': '23', 'Set (°C)': '22',
-                        'SAT (°C)': '16', 'Cool Valve (%)': '60', 'Heat Valve (%)': '0'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'AHU', 'Name': 'AHU-2',
-                        'Mode': 'cooling', 'Priority': 'Normal',
-                        'Return (°C)': '25', 'Room (°C)': '24', 'Set (°C)': '22',
-                        'SAT (°C)': '17', 'Cool Valve (%)': '70', 'Heat Valve (%)': '0'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'CHILLER', 'Name': 'CHILLER-1',
-                        'Mode': 'Cooling', 'Priority': 'Kritik',
-                        'Inlet (°C)': '12', 'Outlet (°C)': '7'
-                    }
-                ],
-
-                // KARMAŞIK ÖRNEK: Çoklu lokasyon, çeşitli ekipmanlar
-                complex: [
-                    {
-                        'Location': 'MAS-1', 'Type': 'kollektor', 'Name': 'sogutma kollektor',
-                        'Mode': 'Cooling', 'Priority': 'Kritik',
-                        'Inlet (°C)': '14', 'Outlet (°C)': '7'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'kollektor', 'Name': 'ısıtma kollektor',
-                        'Mode': 'Heat', 'Priority': 'Kritik',
-                        'Inlet (°C)': '60', 'Outlet (°C)': '50'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'AHU', 'Name': 'AHU-1',
-                        'Mode': 'cooling', 'Priority': 'Normal',
-                        'Return (°C)': '24', 'Room (°C)': '23', 'Set (°C)': '22',
-                        'SAT (°C)': '16', 'Cool Valve (%)': '65', 'Heat Valve (%)': '0'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'AHU', 'Name': 'AHU-2',
-                        'Mode': 'heat', 'Priority': 'kritik',
-                        'Return (°C)': '22', 'Room (°C)': '20', 'Set (°C)': '22',
-                        'SAT (°C)': '32', 'Cool Valve (%)': '0', 'Heat Valve (%)': '70'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'AHU', 'Name': 'AHU-3',
-                        'Mode': 'AUTO', 'Priority': 'Normal',
-                        'Return (°C)': '23', 'Room (°C)': '22', 'Set (°C)': '22',
-                        'SAT (°C)': '22', 'Cool Valve (%)': '0', 'Heat Valve (%)': '0'
-                    },
-                    {
-                        'Location': 'MAS-2', 'Type': 'AHU', 'Name': 'AHU-10',
-                        'Mode': 'cooling', 'Priority': 'Normal',
-                        'Return (°C)': '25', 'Room (°C)': '24', 'Set (°C)': '22',
-                        'SAT (°C)': '15', 'Cool Valve (%)': '80', 'Heat Valve (%)': '0'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'CHILLER', 'Name': 'CHILLER-1',
-                        'Mode': 'Cooling', 'Priority': 'Kritik',
-                        'Inlet (°C)': '14', 'Outlet (°C)': '7'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'KAZAN', 'Name': 'KAZAN-1',
-                        'Mode': 'Heat', 'Priority': 'Kritik',
-                        'Inlet (°C)': '70', 'Outlet (°C)': '65'
-                    }
-                ],
-
-                // SORUNLU ÖRNEK: Çeşitli arıza durumları
-                problematic: [
-                    {
-                        'Location': 'MAS-1', 'Type': 'kollektor', 'Name': 'sogutma kollektor',
-                        'Mode': 'Cooling', 'Priority': 'Kritik',
-                        'Inlet (°C)': '19', 'Outlet (°C)': '7'
-                    },
-                    {
-                        'Location': 'MAS-1', 'Type': 'kollektor', 'Name': 'ısıtma kollektor',
-                        'Mode': 'Heat', 'Priority': 'Kritik',
-                        'Inlet (°C)': '60', 'Outlet (°C)': '50'
-                    },
-                    // NOT_HEATING: Vana açık ama SAT düşük
-                    {
-                        'Location': 'MAS-1', 'Type': 'AHU', 'Name': 'AHU-NOT-HEATING',
-                        'Mode': 'heat', 'Priority': 'kritik',
-                        'Return (°C)': '22', 'Room (°C)': '20', 'Set (°C)': '22',
-                        'SAT (°C)': '15', 'Cool Valve (%)': '0', 'Heat Valve (%)': '65'
-                    },
-                    // NOT_COOLING: Vana açık ama SAT yüksek
-                    {
-                        'Location': 'MAS-1', 'Type': 'AHU', 'Name': 'AHU-NOT-COOLING',
-                        'Mode': 'cooling', 'Priority': 'kritik',
-                        'Return (°C)': '26', 'Room (°C)': '26', 'Set (°C)': '22',
-                        'SAT (°C)': '22', 'Cool Valve (%)': '45', 'Heat Valve (%)': '0'
-                    },
-                    // HEAT_EFF_LOW: Vana %100 ama SAT düşük
-                    {
-                        'Location': 'MAS-1', 'Type': 'AHU', 'Name': 'AHU-HEAT-EFF-LOW',
-                        'Mode': 'heat', 'Priority': 'Normal',
-                        'Return (°C)': '23', 'Room (°C)': '20', 'Set (°C)': '22',
-                        'SAT (°C)': '23', 'Cool Valve (%)': '0', 'Heat Valve (%)': '100'
-                    },
-                    // SIMUL_HEAT_COOL: Her iki vana da açık
-                    {
-                        'Location': 'MAS-2', 'Type': 'AHU', 'Name': 'AHU-SIMUL-HEAT-COOL',
-                        'Mode': 'AUTO', 'Priority': 'kritik',
-                        'Return (°C)': '24', 'Room (°C)': '23', 'Set (°C)': '22',
-                        'SAT (°C)': '20', 'Cool Valve (%)': '30', 'Heat Valve (%)': '25'
-                    },
-                    // STANDBY: AUTO modda vanalar 0
-                    {
-                        'Location': 'MAS-2', 'Type': 'AHU', 'Name': 'AHU-STANDBY',
-                        'Mode': 'AUTO', 'Priority': 'Normal',
-                        'Return (°C)': '22', 'Room (°C)': '22', 'Set (°C)': '22',
-                        'SAT (°C)': '22', 'Cool Valve (%)': '0', 'Heat Valve (%)': '0'
-                    },
-                    // VALVE_LOW: Vana düşük (SAT sorunu değil)
-                    {
-                        'Location': 'MAS-2', 'Type': 'AHU', 'Name': 'AHU-VALVE-LOW',
-                        'Mode': 'heat', 'Priority': 'Normal',
-                        'Return (°C)': '23', 'Room (°C)': '21', 'Set (°C)': '22',
-                        'SAT (°C)': '15', 'Cool Valve (%)': '0', 'Heat Valve (%)': '10'
-                    },
-                    // CHILLER BYPASS
-                    {
-                        'Location': 'MAS-1', 'Type': 'CHILLER', 'Name': 'CHILLER-BYPASS',
-                        'Mode': 'Cooling', 'Priority': 'Kritik',
-                        'Inlet (°C)': '12', 'Outlet (°C)': '11.5'
-                    },
-                    // KAZAN Normal
-                    {
-                        'Location': 'MAS-1', 'Type': 'KAZAN', 'Name': 'KAZAN-1',
-                        'Mode': 'Heat', 'Priority': 'Kritik',
-                        'Inlet (°C)': '70', 'Outlet (°C)': '65'
-                    }
-                ]
-            };
-
-            const tbody = document.getElementById('manualBody');
-            tbody.innerHTML = '';
-            samples[type].forEach(row => addManualRow(row));
-            showAlert(`${type} örnek veri yüklendi. "Manuel Veriyi Analiz Et" butonuna tıklayın.`, 'info');
-        }
-
         // Export XLSX (Analiz Sonuçları)
         function exportCSV() {
             if (currentResults.length === 0) {
@@ -3615,9 +3250,7 @@
 
         // Refresh results
         function refreshResults() {
-            if (currentResults.length > 0) {
-                analyzeManual();
-            }
+            loadAutoAnalysis();   // 31.10.2026: manuel giriş kaldırıldı
         }
 
         // Show loading
