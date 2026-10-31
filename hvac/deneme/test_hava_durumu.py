@@ -137,7 +137,8 @@ c("formda her hava sütununun alanı var",
 c("formda Kojen Adet alanı var ve kaydediliyor",
   'key="entry_kojen_count"' in kaynak and '"Kojen_Adet": int(kojen_count)' in kaynak)
 c("boş hava alanı kaydedilmiyor (internet değeri korunur)", "if _deger is not None:" in kaynak)
-c("hava alanları 0 değil BOŞ başlıyor", "st.session_state[_hk] = None if" in kaynak)
+c("hava alanları 0 değil BOŞ başlıyor", "_hf = None if _hv is None or pd.isna(_hv) else float(_hv)" in kaynak
+  and "st.session_state[_hk] = _hf" in kaynak)
 c("hava durumu seçenekleri hava_durumu.py ile aynı",
   all(HD.durum_metni(k, 5) in ["", "güneşli", "bulutlu", "yağmurlu", "karlı", "sisli"] for k in (0, 2, 45, 61, 73)))
 

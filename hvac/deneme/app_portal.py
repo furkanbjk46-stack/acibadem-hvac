@@ -3635,7 +3635,12 @@ with tab1:
         for _hk, _hc in _HAVA_FORM_ALANLARI:
             _hv = _ex_pre.get(_hc) if _ex_pre is not None else None
             try:
-                st.session_state[_hk] = None if _hv is None or pd.isna(_hv) else float(_hv)
+                _hf = None if _hv is None or pd.isna(_hv) else float(_hv)
+                # Yüzde alanları formda en fazla 100: sensör 100,64 gönderdiğinde
+                # (29-30.10.2026) form StreamlitValueAboveMaxError ile açılmıyordu.
+                if _hf is not None and _hc.endswith("_Yuzde"):
+                    _hf = min(100.0, max(0.0, _hf))
+                st.session_state[_hk] = _hf
             except (TypeError, ValueError):
                 st.session_state[_hk] = None
         _hd = _ex_pre.get("Hava_Durumu") if _ex_pre is not None else None

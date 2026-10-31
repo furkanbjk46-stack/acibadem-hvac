@@ -371,6 +371,21 @@ def write_to_energy_csv(row_dict):
 # ANA ROW BUILDER
 # ================================================================
 
+def yuzde_kirp(v):
+    """Bağıl nem %0-100 aralığına kırpılır; boş → boş.
+
+    31.10.2026: sensör yağmur/sis doygunluğunda 100,64 gönderdi; portal formu
+    (en fazla 100) bu değerle açılırken StreamlitValueAboveMaxError verdi.
+    Fiziksel olarak %100 üstü nem yoktur — kalibrasyon payıdır.
+    """
+    if v in ("", None):
+        return v
+    try:
+        return round(min(100.0, max(0.0, float(v))), 2)
+    except (TypeError, ValueError):
+        return ""
+
+
 def chiller_set_hesapla(data):
     """Chiller seti = CH-1..5 IC SET (chiller'ın o an KULLANDIĞI set).
 
@@ -536,7 +551,7 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "MCC_Tuketim_kWh":            mcc_kwh,      # CH HARİÇ tüm analizörler
         "VRF_Split_Tuketim_kWh":      0,            # Sahada henuz yok
         "Dis_Hava_Sicakligi_C":       data.get("Dis_Hava_Sicakligi_C", ""),
-        "Dis_Hava_Nem_Yuzde":         data.get("Dis_Hava_Nem_Yuzde", ""),
+        "Dis_Hava_Nem_Yuzde":         yuzde_kirp(data.get("Dis_Hava_Nem_Yuzde", "")),
         "Kojen_Adet":                 kojen_adet,
         "Chiller_Load_Percent":       ch_load,
         "Toplam_Hastane_Tuketim_kWh": toplam_hastane_kwh,  # Dort trafo: trafo toplami (enerji_hesap)

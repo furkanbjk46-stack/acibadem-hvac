@@ -230,8 +230,13 @@ class Olcer:
     def _sayac_gucu(self, ad: str, kwh, simdi: float):
         """Sayaç farkından ortalama kW. İlk okumada / geriye saymada None."""
         onceki = self._sayac.get(ad)
+        if kwh is None:
+            # Okunamayan tur geçmişi SİLMEZ ve boş değer saklanmaz. 31.10.2026:
+            # (None, zaman) saklanıyordu; sonraki turda "kwh < None" TypeError
+            # verip TÜM turu düşürüyordu (hiçbir cihazın canlı değeri yazılmadı).
+            return None
         self._sayac[ad] = (kwh, simdi)
-        if onceki is None or kwh is None:
+        if onceki is None or onceki[0] is None:
             return None
         eski_kwh, eski_zaman = onceki
         dt = simdi - eski_zaman
