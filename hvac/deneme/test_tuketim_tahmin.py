@@ -139,9 +139,11 @@ import monthly_report  # noqa: E402
 c("monthly_report paketi eski motor olmadan yükleniyor", not hasattr(monthly_report, "ConsumptionForecastEngine"))
 _t6 = kaynak[kaynak.index("# ---------------- TAB 6"):]
 c("Tahmin & Trend: ısıtma gazı seçeneği yok", "isitma_gaz" not in _t6)
-c("Tahmin & Trend: yarın + dönem + haftalar kartı var", "kart_tahmin_kisa_vade" in _t6 and "_donem_tahmini(" in _t6)
+c("Tahmin & Trend: yarın + 1–15 + 16–ay sonu + dönem kartı var (4 kart yan yana)",
+  "kart_tahmin_kisa_vade" in _t6 and "_donem_tahmini(" in _t6 and "_uk = st.columns(4)" in _t6
+  and "haftalar" not in _t6)
 
-# ── 10) Yarın + dönem (ay) toplamı + ayın haftaları ────────────────────────
+# ── 10) Yarın + ayın iki yarısı + dönem (ay) tahmini ───────────────────────
 BUGUN = "2026-10-23"                     # sentetik veri 23.10'a kadar → Ekim: 23 gün gerçek + 8 tahmin
 u = PO.donem_tahmini(df, "toplam", bugun=BUGUN, haric=[])
 c("dönem: hata yok, yarının ayı (Ekim 2026), 31 gün",
@@ -151,18 +153,16 @@ c("geçmiş günler GERÇEK değerle", u["gercek_gun"] == 23 and u["gunler"][0][
   and abs(u["gunler"][0]["deger"] - df.loc[df["Tarih"] == "2026-10-01", "Toplam_Hastane_Tuketim_kWh"].iloc[0]) < 1e-6)
 c("dönem toplamı = gerçekleşen + kalan günlerin tahmini",
   abs(u["ay_toplam"] - u["gerceklesen"] - sum(g["tahmin"] for g in u["gunler"][23:])) < 1e-6)
-c("haftalar ayı tam böler (toplamlar ve gün sayısı)",
-  abs(sum(h["toplam"] for h in u["haftalar"]) - u["ay_toplam"]) < 1e-6 and sum(h["gun"] for h in u["haftalar"]) == 31)
-c("haftalar Pazartesi başlar, ay sınırında kesilir (Ekim 2026: 1–4, 5–11, …, 26–31)",
-  [(h["bas"][-2:], h["son"][-2:]) for h in u["haftalar"]] ==
-  [("01", "04"), ("05", "11"), ("12", "18"), ("19", "25"), ("26", "31")], [(h["bas"], h["son"]) for h in u["haftalar"]])
-c("karışık hafta: gerçek + tahmin gün sayısı", u["haftalar"][3]["gercek_gun"] == 5 and u["haftalar"][3]["gun"] == 7)
+c("ayın iki yarısı: 1–15 ve 16–31, toplamları dönemi tam böler",
+  [(y["bas"][-2:], y["son"][-2:], y["gun"]) for y in u["yarilar"]] == [("01", "15", 15), ("16", "31", 16)]
+  and abs(sum(y["toplam"] for y in u["yarilar"]) - u["ay_toplam"]) < 1e-6)
+c("ilk yarı tamamen gerçek, ikinci yarı karışık (8 gerçek + 8 tahmin)",
+  (u["yarilar"][0]["gercek_gun"], u["yarilar"][1]["gercek_gun"]) == (15, 8))
 uk = PO.donem_tahmini(df, "toplam", bugun="2026-10-31", haric=[])
 c("ay sonunda dönem bir sonraki ay (31.10 → Kasım, tamamı tahmin)",
   (uk["ay"], uk["gercek_gun"], len(uk["gunler"])) == (11, 0, 30) and uk["yarin"]["tarih"] == "2026-11-01")
-c("Kasım 2026 haftaları: 1 | 2–8 | 9–15 | 16–22 | 23–29 | 30",
-  [(h["bas"][-2:], h["son"][-2:]) for h in uk["haftalar"]] ==
-  [("01", "01"), ("02", "08"), ("09", "15"), ("16", "22"), ("23", "29"), ("30", "30")])
+c("Kasım (30 gün): 1–15 ve 16–30",
+  [(y["bas"][-2:], y["son"][-2:]) for y in uk["yarilar"]] == [("01", "15"), ("16", "30")])
 _paz = [g for g in uk["gunler"] if pd.Timestamp(g["tarih"]).dayofweek == 6]
 _hi = [g for g in uk["gunler"] if pd.Timestamp(g["tarih"]).dayofweek < 5]
 c("Pazar tahmini hafta içinden düşük (takvim etkisi)",

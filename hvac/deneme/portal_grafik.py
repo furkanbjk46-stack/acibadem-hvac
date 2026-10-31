@@ -90,6 +90,16 @@ _AD = {tip: ad for ad, tip in SECENEKLER.items()}
 
 def _sec(st_, tip):
     st_.session_state[SECIM] = tip
+    # Streamlit paneli seçimden sonra açık bırakıyor (31.10.2026 tarayıcı denemesi):
+    # bir sonraki çizimde kapatma betiği çalışsın.
+    st_.session_state[SECIM + "_kapat"] = True
+
+
+# Paneli kapatır: Escape + panel dışına tıklama (baseweb Popover ikisini de dinler).
+_KAPAT_JS = ("<script>const d=window.parent.document;"
+             "d.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',code:'Escape',keyCode:27,bubbles:true}));"
+             "['mousedown','mouseup','click'].forEach(t=>d.body.dispatchEvent(new MouseEvent(t,{bubbles:true})));"
+             "</script>")
 
 
 def secili(st_, varsayilan: str = "tuketim") -> str:
@@ -98,24 +108,38 @@ def secili(st_, varsayilan: str = "tuketim") -> str:
 
 
 def secici_css(secili_tip: str) -> str:
+    # Görünüm Synapse lokasyon Dashboard'undaki listeyle aynı: beyaz panel, gri büyük
+    # harf kategori başlığı, satırlarda arka plan YOK (portalın genel düğme rengi —
+    # açık mavi — ezilir), üzerine gelince çok açık gri, seçili satır açık mavi + sol çizgi.
+    # Streamlit markdown bloklarına eksi alt boşluk verir; başlık satırla çakışmasın
+    # diye başlığın kabındaki boşluklar sıfırlanır.
     css = (
-        '.st-key-%s button{justify-content:flex-start;background:#fff;border:1px solid rgba(24,26,30,.12);'
-        'border-radius:12px;min-height:40px;box-shadow:0 6px 16px -12px rgba(20,22,26,.3);}'
+        '.st-key-%s button{justify-content:flex-start;background:#fff !important;'
+        'border:1px solid rgba(24,26,30,.12) !important;border-radius:12px;min-height:40px;'
+        'box-shadow:0 6px 16px -12px rgba(20,22,26,.3) !important;}'
         '.st-key-%s button p{font-size:13px !important;font-weight:600 !important;color:#133273 !important;}'
-        '.gsec-baslik{font-size:10.5px;font-weight:800;letter-spacing:1.1px;color:#8b97ab;'
-        'padding:10px 10px 4px;margin:0;}'
-        '.gsec-baslik.ilk{padding-top:2px;}'
+        '[data-testid="stPopoverBody"]:has(.gsec-baslik),[data-baseweb="popover"]:has(.gsec-baslik) > div'
+        '{background:#fff !important;}'
+        '[data-testid="stElementContainer"]:has(.gsec-baslik),.element-container:has(.gsec-baslik),'
+        '[data-testid="stMarkdown"]:has(.gsec-baslik),[data-testid="stMarkdownContainer"]:has(.gsec-baslik)'
+        '{margin:0 !important;padding:0 !important;}'
+        'p.gsec-baslik{display:block;margin:0 !important;padding:14px 10px 6px !important;line-height:1.2;'
+        'font-size:10.5px !important;font-weight:800 !important;letter-spacing:1.1px;color:#8b97ab !important;}'
+        'p.gsec-baslik.ilk{padding-top:4px !important;}'
         '[data-testid="stVerticalBlock"]:has(> div [class*="st-key-gsec_"]),'
-        '[data-testid="stVerticalBlock"]:has(> [class*="st-key-gsec_"]){gap:2px !important;}'
-        '[class*="st-key-gsec_"] button{justify-content:flex-start;border:none !important;background:transparent;'
-        'min-height:36px;padding:0 10px;border-radius:8px;box-shadow:none;}'
-        '[class*="st-key-gsec_"] button:hover{background:#f3f6fb;}'
-        '[class*="st-key-gsec_"] button p{font-size:12.5px !important;font-weight:600 !important;color:#24324d !important;}'
+        '[data-testid="stVerticalBlock"]:has(> [class*="st-key-gsec_"]){gap:0 !important;}'
+        '[class*="st-key-gsec_"] button,[class*="st-key-gsec_"] button:focus,'
+        '[class*="st-key-gsec_"] button:active{justify-content:flex-start;border:none !important;'
+        'background:transparent !important;min-height:40px;padding:0 12px;border-radius:8px;'
+        'box-shadow:none !important;}'
+        '[class*="st-key-gsec_"] button:hover{background:#f3f6fb !important;}'
+        '[class*="st-key-gsec_"] button p{font-size:14px !important;font-weight:600 !important;color:#24324d !important;}'
         '[class*="st-key-gsec_"] button::after{margin-left:auto;padding-left:16px;font-size:10.5px;'
         'font-weight:600;color:#8b97ab;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}'
-        '.st-key-gsec_%s button{background:#eef3fb !important;box-shadow:inset 3px 0 0 #2a78d6;}'
+        '.st-key-gsec_%s button,.st-key-gsec_%s button:focus,.st-key-gsec_%s button:hover'
+        '{background:#eef3fb !important;box-shadow:inset 3px 0 0 #2a78d6 !important;}'
         '.st-key-gsec_%s button p{color:#133273 !important;}'
-    ) % (KAP, KAP, secili_tip, secili_tip)
+    ) % (KAP, KAP, secili_tip, secili_tip, secili_tip, secili_tip)
     for _, tip in SECENEKLER.items():
         css += '.st-key-gsec_%s button::after{content:"%s";}' % (tip, BIRIM.get(tip, ""))
         if IK:
@@ -137,6 +161,11 @@ def secici(st_, varsayilan: str = "tuketim") -> str:
                              unsafe_allow_html=True)
                 for ad, t, _, _ in ogeler:
                     st_.button(ad, key="gsec_" + t, use_container_width=True, on_click=_sec, args=(st_, t))
+    if st_.session_state.pop(SECIM + "_kapat", False):
+        import time
+        import streamlit.components.v1 as components
+        # Zaman damgası: içerik her seferinde farklı olsun, betik yeniden çalışsın
+        components.html("<!-- %s -->" % time.time() + _KAPAT_JS, height=0)
     return tip
 
 

@@ -50,7 +50,10 @@ c("kategoriler: enerji, gaz & su, soğutma, özet", [g for g, _ in PG.GRUPLAR] =
 _css = PG.secici_css("chillerler")
 c("kategorili panel: her satırın simgesi + birimi, seçili satır vurgulu",
   all(('.st-key-gsec_%s button::after{content:"%s";}' % (t, PG.BIRIM[t])) in _css for t in PG.SECENEKLER.values())
-  and ".st-key-gsec_chillerler button{background:#eef3fb" in _css)
+  and ".st-key-gsec_chillerler button,.st-key-gsec_chillerler button:focus" in _css
+  and "background:#eef3fb !important" in _css)
+c("satırlarda düğme rengi ezilir (açık mavi yok), başlık satırla çakışmaz",
+  "background:transparent !important" in _css and "margin:0 !important;padding:0 !important" in _css)
 c("sürüme bağlı liste seçicisi kalmadı", "stSelectboxVirtualDropdown" not in _css and "nth-child" not in _css)
 
 # ── Çizim: veriden olduğu gibi ──

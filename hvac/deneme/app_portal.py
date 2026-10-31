@@ -115,7 +115,7 @@ def _hava_tahmini() -> dict:
 
 @st.cache_data(show_spinner=False, ttl=3 * 3600)
 def _donem_tahmini(hedef: str, gun_imzasi: str, veri_imzasi: float) -> dict:
-    """Yarın + dönem (yarının ayı) toplamı + ayın haftaları. gun_imzasi: bugünün
+    """Yarın + ayın iki yarısı + dönem (yarının ayı) tahmini. gun_imzasi: bugünün
     tarihi — gün dönünce önbellek tazelenir."""
     from tuketim_tahmin import portal_ozet
     return portal_ozet.donem_tahmini(load_data(), hedef, hava_tahmin=_hava_tahmini())
@@ -2150,20 +2150,17 @@ def render_styled_table(df: pd.DataFrame, max_height: int = 400, max_rows: int =
     # seçicisi üretiyordu (200 satır × ~60 sütun ≈ 12 bin seçici); Streamlit bu uzun
     # stil bloğunu kesince sayfanın yarısından sonraki satırlar biçimsiz (büyük yazı,
     # geniş satır) görünüyordu. Tek sınıf kuralı her satıra aynı uygulanır.
+    # HTML TEK SATIR yazılır: girintili satır markdown'da kod bloğu sayılıyor ve tablo
+    # ham metin olarak basılıyordu (31.10.2026 ekran görüntüsü).
     _tid = "vt-" + re.sub(r"[^a-z0-9]", "", table_key.lower())
-    _html = df_page.to_html(classes=_tid, border=0, na_rep="")
-    st.markdown(f'''
-    <style>
-    table.{_tid} {{ width:100%; border-collapse:collapse; }}
-    table.{_tid} th, table.{_tid} td {{ padding:4px 6px; font-size:11px; line-height:1.3;
-        white-space:nowrap; border:1px solid #e0e0e0; color:#0f1f3d; background:#fafaf8; }}
-    table.{_tid} thead th {{ position:sticky; top:0; z-index:1; background:#eef1f6; font-weight:700;
-        border-color:#cfd6e2; }}
-    </style>
-    <div style="max-height: {max_height}px; overflow-y: auto; overflow-x: auto; border: 1px solid #334155; border-radius: 8px;">
-        {_html}
-    </div>
-    ''', unsafe_allow_html=True)
+    _html = "".join(s.strip() for s in df_page.to_html(classes=_tid, border=0, na_rep="").splitlines())
+    _css = (f"table.{_tid}{{width:100%;border-collapse:collapse;}}"
+            f"table.{_tid} th,table.{_tid} td{{padding:4px 6px;font-size:11px;line-height:1.3;white-space:nowrap;"
+            f"border:1px solid #e0e0e0;color:#0f1f3d;background:#fafaf8;}}"
+            f"table.{_tid} thead th{{position:sticky;top:0;z-index:1;background:#eef1f6;font-weight:700;"
+            f"border-color:#cfd6e2;}}")
+    st.markdown(f"<style>{_css}</style><div style='max-height:{max_height}px;overflow:auto;"
+                f"border:1px solid #334155;border-radius:8px;'>{_html}</div>", unsafe_allow_html=True)
 
 
 def chart_consumption_vs_temp(df_period: pd.DataFrame, view_mode: str = "Günlük"):
@@ -5103,9 +5100,9 @@ with tab6:
             _gm_hedef = st.radio("Tahmin edilen", list(_TH_HEDEF), format_func=_TH_HEDEF.get,
                                  horizontal=True, key="gm_hedef")
 
-        # ═══ 1. KISA VADE: YARIN + DÖNEM (AY) TOPLAMI + AYIN HAFTALARI ═══
+        # ═══ 1. KISA VADE: YARIN + AYIN İKİ YARISI + DÖNEM (AY) TAHMİNİ ═══
         # 31.10.2026: "7 gün / 30 gün" yerine yarının ayı: gerçekleşen günler + kalan günlerin
-        # tahmini = dönem toplamı; her hafta (Pzt–Paz, ay sınırında kesilir) ayrı toplam.
+        # tahmini = dönem tahmini; ayrıca 1–15 ve 16–ay sonu toplamları.
         with st.spinner("Tahmin hesaplanıyor..."):
             _dt = _donem_tahmini(_gm_hedef, date.today().isoformat(), _veri_imzasi())
         _dt_baslik = (f"📅 Yarın · {_dt['ay_adi']} {_dt['yil']} Dönem Tahmini" if not _dt.get("hata")
@@ -5118,27 +5115,25 @@ with tab6:
             else:
                 _ub = _dt["birim"]
                 _y = _dt["yarin"]
-                _uk = st.columns(2)
+                # Dört kart yan yana: Yarın | 1–15 | 16–ay sonu | Dönem (ay) tahmini
+                def _durum(gk, gun):
+                    return ("gerçekleşen" if gk == gun else "tahmin" if gk == 0 else
+                            f"{gk} gün gerçek + {gun - gk} gün tahmin")
+                _uk = st.columns(4)
                 with _uk[0]:
                     metrik_notlu("Yarın", f"{_sayi(_y['deger'])} {_ub}",
                                  f"{pd.Timestamp(_y['tarih']).strftime('%d.%m')} · "
                                  + f"{_y['sicaklik']:.1f} °C".replace(".", ",")
                                  + (" (hava tahmini)" if _y["kaynak"] == "tahmin" else " (geçmiş ort.)"))
-                with _uk[1]:
-                    _gk = _dt["gercek_gun"]
-                    metrik_notlu(f"{_dt['ay_adi']} {_dt['yil']} toplamı", f"{_sayi(_dt['ay_toplam'])} {_ub}",
-                                 (f"{_gk} gün gerçekleşen ({_sayi(_dt['gerceklesen'])} {_ub}) + "
-                                  f"{len(_dt['gunler']) - _gk} gün tahmin") if _gk else
-                                 f"{len(_dt['gunler'])} günün tamamı tahmin")
-                _hf = st.columns(len(_dt["haftalar"]))
-                for _hi, _h in enumerate(_dt["haftalar"]):
-                    with _hf[_hi]:
-                        _hb, _hs = pd.Timestamp(_h["bas"]), pd.Timestamp(_h["son"])
-                        _hdurum = ("gerçekleşen" if _h["gercek_gun"] == _h["gun"] else
-                                   "tahmin" if _h["gercek_gun"] == 0 else
-                                   f"{_h['gercek_gun']} gün gerçek + {_h['gun'] - _h['gercek_gun']} tahmin")
-                        metrik_notlu(f"{_h['no']}. hafta", f"{_sayi(_h['toplam'])} {_ub}",
-                                     f"{_hb.strftime('%d')}–{_hs.strftime('%d.%m')} · {_hdurum}")
+                for _yi, _yr in enumerate(_dt["yarilar"]):
+                    with _uk[1 + _yi]:
+                        _yb, _ys = pd.Timestamp(_yr["bas"]), pd.Timestamp(_yr["son"])
+                        metrik_notlu(f"{_yb.day}–{_ys.day} {_dt['ay_adi']} tahmini", f"{_sayi(_yr['toplam'])} {_ub}",
+                                     f"{_yr['gun']} gün · {_durum(_yr['gercek_gun'], _yr['gun'])}")
+                with _uk[3]:
+                    metrik_notlu("Dönem (ay) tahmini", f"{_sayi(_dt['ay_toplam'])} {_ub}",
+                                 f"{_dt['ay_adi']} {_dt['yil']} · "
+                                 + _durum(_dt["gercek_gun"], len(_dt["gunler"])))
                 import portal_grafik as _pg
                 _ufig = _pg.tahmin_grafigi(_dt["gunler"], _ub)
                 if _ufig is not None:

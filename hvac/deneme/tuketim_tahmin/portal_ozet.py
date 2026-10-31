@@ -163,7 +163,7 @@ def gelecek_ay(df: pd.DataFrame, yil: int, ay: int, kojen_calisma_gun: Optional[
     return m.ay_tahmini(yil, ay, kojen_calisma_gun=kojen_calisma_gun)
 
 
-# ── Kısa vade: yarın + dönem (ay) toplamı + ayın haftaları ─────────────────
+# ── Kısa vade: yarın + ayın iki yarısı + dönem (ay) tahmini ────────────────
 # hava_durumu.ileri_tahmin() sütun adları → modelin hava adları
 _HAVA_ADLARI = {dis: ic for ic, dis in ENERJI_HAVA_SUTUNLARI.items()}
 
@@ -185,14 +185,13 @@ def hava_tablosu(hava_tahmin: Optional[Dict[str, dict]]) -> Optional[pd.DataFram
 def donem_tahmini(df: pd.DataFrame, hedef: str = "toplam",
                   hava_tahmin: Optional[Dict[str, dict]] = None, bugun=None,
                   haric: Optional[List[Dict]] = None) -> Dict:
-    """Yarın + YARININ AYI (dönem) toplamı + o ayın her haftasının toplamı.
+    """Yarın + YARININ AYI (dönem) tahmini + ayın iki yarısı (1–15, 16–ay sonu).
 
     Ayın gerçekleşmiş (geçerli verisi olan) günleri GERÇEK değerle, kalan günler
     tahminle doldurulur; böylece dönem toplamı = gerçekleşen + kalan günlerin tahmini.
     Tahmin edilen günlerde hava_tahmin (Open-Meteo, 16 güne kadar) varsa o kullanılır,
     yoksa o takvim gününün geçmiş ortalama sıcaklığı. Her gün "kaynak" alanı:
     'gercek' | 'tahmin' (hava tahminiyle) | 'ortalama' (geçmiş ortalama havayla).
-    Haftalar Pazartesi başlar, ay sınırında kesilir (ör. 1. hafta 01–02.11).
     """
     if hedef not in HEDEF_ADI:
         raise ValueError(hedef)
@@ -220,21 +219,17 @@ def donem_tahmini(df: pd.DataFrame, hedef: str = "toplam",
         gunler.append({"tarih": ts, "tahmin": float(v), "gercek": gercek,
                        "deger": gercek if gercek is not None else float(v),
                        "sicaklik": float(s), "kaynak": kaynak})
-    haftalar = []
-    for g_ in gunler:
-        t = pd.Timestamp(g_["tarih"])
-        if not haftalar or t.dayofweek == 0:
-            haftalar.append({"no": len(haftalar) + 1, "bas": g_["tarih"], "son": g_["tarih"],
-                             "toplam": 0.0, "gercek_gun": 0, "gun": 0})
-        h = haftalar[-1]
-        h["son"] = g_["tarih"]
-        h["toplam"] += g_["deger"]
-        h["gun"] += 1
-        h["gercek_gun"] += g_["kaynak"] == "gercek"
+    # Ayın iki yarısı: 1–15 ve 16–ay sonu (31.10.2026 kullanıcı kararı; haftalık kaldırıldı)
+    yarilar = []
+    for bas_g, son_g in ((1, 15), (16, len(gunler))):
+        p = gunler[bas_g - 1:son_g]
+        yarilar.append({"bas": p[0]["tarih"], "son": p[-1]["tarih"], "gun": len(p),
+                        "toplam": float(sum(x["deger"] for x in p)),
+                        "gercek_gun": sum(1 for x in p if x["kaynak"] == "gercek")})
     y = next(x for x in gunler if x["tarih"] == yarin.strftime("%Y-%m-%d"))
     return {"hata": None, "hedef": hedef, "birim": HEDEF_BIRIM[hedef],
             "yil": int(bas.year), "ay": int(bas.month), "ay_adi": AYLAR[bas.month - 1],
-            "gunler": gunler, "haftalar": haftalar, "yarin": y,
+            "gunler": gunler, "yarilar": yarilar, "yarin": y,
             "ay_toplam": float(sum(x["deger"] for x in gunler)),
             "gerceklesen": float(sum(x["gercek"] for x in gunler if x["gercek"] is not None)),
             "gercek_gun": sum(1 for x in gunler if x["kaynak"] == "gercek"),
