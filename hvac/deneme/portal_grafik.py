@@ -120,6 +120,10 @@ def secici_css(secili_tip: str) -> str:
         '.st-key-%s button p{font-size:13px !important;font-weight:600 !important;color:#133273 !important;}'
         '[data-testid="stPopoverBody"]:has(.gsec-baslik),[data-baseweb="popover"]:has(.gsec-baslik) > div'
         '{background:#fff !important;}'
+        # Yükseklik sınırı + kaydırma: panel tüm listeyi (≈1100 px) sığdıramayınca Streamlit
+        # onu düğmenin üstüne/ortaya taşıyordu. Ay seçimindeki gibi AŞAĞI açılsın (31.10.2026).
+        '[data-testid="stPopoverBody"]:has(.gsec-baslik){max-height:min(440px,55vh) !important;'
+        'overflow-y:auto !important;}'
         '[data-testid="stElementContainer"]:has(.gsec-baslik),.element-container:has(.gsec-baslik),'
         '[data-testid="stMarkdown"]:has(.gsec-baslik),[data-testid="stMarkdownContainer"]:has(.gsec-baslik)'
         '{margin:0 !important;padding:0 !important;}'

@@ -3163,7 +3163,9 @@ def _bildirim_panel():
     _ilk = _kayitlar[0]["mesaj"].splitlines()[0] if _kayitlar[0]["mesaj"] else ""
     st.markdown(
         f"<div style='background:{_zemin};border:1px solid {_kenar};border-left:4px solid {_yazi};"
-        f"border-radius:12px;padding:10px 14px;margin:6px 0 2px;'>"
+        # Alt boşluk 22px: Streamlit markdown bloğuna eksi alt boşluk verir; azı olunca
+        # "Bildirimler" kutusu şeridin üstüne biniyordu (31.10.2026)
+        f"border-radius:12px;padding:10px 14px;margin:6px 0 22px;'>"
         f"<div style='display:flex;align-items:center;gap:8px;flex-wrap:wrap;'>{_rozet}"
         f"<span style='color:{_yazi};font-size:13px;font-weight:600;'>{_ilk}</span></div></div>",
         unsafe_allow_html=True)
