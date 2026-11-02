@@ -775,11 +775,16 @@ def fetch_canli_tum(url, key):
 
 
 def canli_ozet_hesapla(satirlar):
-    """{lokasyon_id: {"sebeke", "sogutma", "kojen", "yas"}} — kW, ölçülmeyen kalem None.
+    """{lokasyon_id: {"enerji", "sebeke", "trafo", "kojen", "sogutma", ..., "yas"}}
+    — kW, ölçülmeyen kalem None.
 
-    Şebeke = TRDP sayaçlarının toplamı, soğutma = chiller + kule (canlı izleme
-    panelindeki gruplarla aynı). Kojen sayacı canlı okunmuyor; ileride
-    "KOJEN..." adlı bir sayaç tabloya yazılırsa kendiliğinden dolar.
+    trafo  = TRDP sayaçlarının toplamı
+    sebeke = EDAŞ giriş sayacı (SEBEKE, 02.11.2026 Maslak) — net, eksi = veriliyor
+    kojen  = KOJEN-n üretim sayaçlarının toplamı
+    enerji = hastanenin anlık toplam enerjisi (kartlar + Global Özet):
+             şebeke sayacı varsa ŞEBEKE + KOJEN; yoksa trafo toplamı (kojen OG
+             baradan trafolara karıştığı için trafo toplamı kojeni zaten içerir).
+    Soğutma = chiller + kule (canlı izleme panelindeki gruplarla aynı).
     Son ölçümü CANLI_BAYAT_SN'den eski lokasyon "canlı değil" sayılır.
     """
     from datetime import timezone as _tz
@@ -804,8 +809,8 @@ def canli_ozet_hesapla(satirlar):
             kw = float(kw)
         except (TypeError, ValueError):
             continue
-        o = ozet.setdefault(lok, {"sebeke": None, "sogutma": None, "kojen": None,
-                                  "dogalgaz": None, "su": None, "yas": None, "t": None})
+        o = ozet.setdefault(lok, {"enerji": None, "sebeke": None, "trafo": None, "sogutma": None,
+                                  "kojen": None, "dogalgaz": None, "su": None, "yas": None, "t": None})
         try:
             t = datetime.fromisoformat(str(s.get("olcum_zamani")).replace("Z", "+00:00"))
             simdi = datetime.now(_tz.utc) if t.tzinfo else datetime.now()
@@ -826,9 +831,14 @@ def canli_ozet_hesapla(satirlar):
         elif ad.startswith("SU-"):
             alan = "su"
         else:
-            alan = {"enerji": "sebeke", "sogutma": "sogutma"}.get(_grup(ad))
+            alan = {"enerji": "trafo", "sebeke": "sebeke", "sogutma": "sogutma"}.get(_grup(ad))
         if alan:
             o[alan] = (o[alan] or 0.0) + kw
+    for o in ozet.values():
+        if o["sebeke"] is not None:
+            o["enerji"] = round(o["sebeke"] + (o["kojen"] or 0.0), 2)
+        else:
+            o["enerji"] = o["trafo"]
     # Bayat lokasyonlar canlı sayılmaz
     return {k: v for k, v in ozet.items()
             if v["yas"] is None or v["yas"] <= CANLI_BAYAT_SN}
@@ -842,7 +852,7 @@ def _canli_akis_betigi(taban: dict, mod: str = "dalga") -> str:
     return _ci.akis_betigi(taban, mod)
 
 
-CANLI_ALANLAR = ("sebeke", "sogutma", "kojen", "dogalgaz", "su")
+CANLI_ALANLAR = ("enerji", "sebeke", "sogutma", "kojen", "dogalgaz", "su")
 
 
 def canli_gecis_hesapla(canli: dict, durum: dict) -> dict:
@@ -1545,9 +1555,11 @@ with sol:
     GECIS = canli_gecis_hesapla(CANLI, st.session_state.setdefault("_canli_gecis", {}))
 
     def anlik_sebeke(lok_id):
-        return (CANLI.get(lok_id) or {}).get("sebeke")
+        # Kartın değeri: hastanenin anlık TOPLAM enerjisi (şebeke + kojen;
+        # şebeke sayacı olmayan lokasyonda trafo toplamı) — canli_ozet_hesapla
+        return (CANLI.get(lok_id) or {}).get("enerji")
 
-    # En çok ANLIK şebeke çekenden aza; canlı ölçümü olmayanlar sona
+    # En çok ANLIK enerji çekenden aza; canlı ölçümü olmayanlar sona
     lok_sira = sorted(
         HASTANELER.items(),
         key=lambda x: (anlik_sebeke(x[0]) is not None, anlik_sebeke(x[0]) or 0),
@@ -1573,7 +1585,7 @@ with sol:
             durum_renk = "#d03b3b"
             durum_lbl  = "ÇEVRİMDIŞI"
 
-        # Kartta ANLIK şebeke gücü (kW). Yoğunluk: W/m² (anlık kW × 1000 / alan)
+        # Kartta ANLIK toplam enerji (şebeke + kojen, kW). Yoğunluk: W/m² (kW × 1000 / alan)
         kw_anlik  = anlik_sebeke(lok_id)
         kwh_str   = kw_metin(kw_anlik)
         m2_lok    = lok_info.get("m2", 10000)
@@ -1581,7 +1593,7 @@ with sol:
                      if kw_anlik is not None and m2_lok else "—")
         # Bu iki sayı tarayıcıda saniyede bir akar (_canli_akis_betigi): gerçekte
         # önceki → son ölçüm geçişi, sunumda dalga. İkisi aynı fazda.
-        _g_seb = GECIS.get((lok_id, "sebeke"))
+        _g_seb = GECIS.get((lok_id, "enerji"))
         _akis_kw = (f' class="canli-sayi" data-deger="{kw_anlik:.1f}" data-ond="0" data-faz="{lok_id}"'
                     + gecis_ozellik(_g_seb) if kw_anlik is not None else "")
         _akis_wm2 = (f' class="canli-sayi" data-deger="{kw_anlik * 1000 / m2_lok:.2f}" data-ond="1" data-faz="{lok_id}"'
@@ -1707,16 +1719,16 @@ with sol:
         degerler = [v[alan] for v in CANLI.values() if v.get(alan) is not None]
         return (sum(degerler), len(degerler)) if degerler else (None, 0)
 
-    _sebeke_top, _sebeke_n = _canli_topla("sebeke")
+    _enerji_top, _enerji_n = _canli_topla("enerji")
     _sog_top, _sog_n       = _canli_topla("sogutma")
     _koj_top, _koj_n       = _canli_topla("kojen")
     _gaz_top, _gaz_n       = _canli_topla("dogalgaz")
     _su_top, _su_n         = _canli_topla("su")
-    # Toplam enerji = TRAFO toplamı (canlı "sebeke" alanı = TRDP sayaçları).
-    # Kojen OG baradan trafolara karışık beslenir — trafo toplamı kojeni
-    # zaten içerir; üstüne kojen eklemek onu iki kez sayardı (27.10.2026,
-    # enerji_hesap.py ile aynı kural). Kojen kendi kartında ayrıca görünür.
-    _top_enerji = _sebeke_top
+    # Toplam enerji = lokasyonların "enerji" alanı: şebeke sayacı olan lokasyonda
+    # ŞEBEKE + KOJEN (02.11.2026), olmayanda TRAFO toplamı. Trafo + kojen
+    # TOPLANMAZ — kojen OG baradan trafolara karışır, iki kez sayılırdı
+    # (27.10.2026, enerji_hesap.py ile aynı kural).
+    _top_enerji = _enerji_top
     _yaslar = [v["yas"] for v in CANLI.values() if v.get("yas") is not None]
 
     def _alt(n, ek=""):
@@ -1726,7 +1738,7 @@ with sol:
     # kalır: test_ozet_karsilastirma kart listesini buradan okur.
     _metrikler = [
         ("Toplam Enerji", _top_enerji,
-         _alt(_sebeke_n, " · trafo toplamı (şebeke + kojen)"),
+         _alt(_enerji_n, " · şebeke + kojen"),
          "kW", "enerji"),
         ("Doğalgaz",      _gaz_top, _alt(_gaz_n, " · kazan + kojen"), "m³/h", "dogalgaz"),
         ("Soğutma",       _sog_top, _alt(_sog_n, " · chiller + kule"), "kW", "sogutma"),
@@ -1735,7 +1747,7 @@ with sol:
     ]
 
     # Özet kaleminin geçişi: hangi canlı alanların toplamı olduğu
-    _OZET_ALAN = {"enerji": ("sebeke",), "dogalgaz": ("dogalgaz",),
+    _OZET_ALAN = {"enerji": ("enerji",), "dogalgaz": ("dogalgaz",),
                   "sogutma": ("sogutma",), "su": ("su",), "kojen": ("kojen",)}
 
     for _lbl, _deger, _alt_metin, _birim, _ozet_key in _metrikler:
@@ -2105,7 +2117,7 @@ hospitals.forEach(function(h) {{
             '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">' +
             '<div style="width:7px;height:7px;border-radius:50%;background:'+c+';box-shadow:0 0 6px '+c+';"></div>' +
             '<span style="font-size:9px;color:'+c+';font-weight:600;">'+h.durum+'</span></div>' +
-            satir('⚡', 'Trafo toplam', v.sebeke) +
+            satir('⚡', 'Şebeke', v.sebeke) +
             satir('⚙️', 'Kojen üretim', v.kojen) +
             '<div style="font-size:9px;color:#6b7280;margin-top:6px;">Anlık değer · 📐 '+h.m2+' m²</div>' +
             '</div>';
@@ -2195,7 +2207,7 @@ window.addEventListener('message', function(ev) {{
                 return None
             return g if (g and g.get("o") is not None and g.get("s")) else {"d": d, "o": None, "t": None, "s": None}
 
-        _kart = {_l: _gv(_g.get((_l, "sebeke")), _v.get("sebeke")) for _l, _v in _c.items()}
+        _kart = {_l: _gv(_g.get((_l, "enerji")), _v.get("enerji")) for _l, _v in _c.items()}
         _ozet = {}
         for _k, _alanlar in _OZET_ALAN.items():
             _dlist = [_v.get(_a) for _v in _c.values() for _a in _alanlar if _v.get(_a) is not None]
