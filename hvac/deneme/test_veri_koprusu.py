@@ -65,7 +65,9 @@ c("her cihazın markası okuyucusu olan bir marka",
 for _t in ("TRDP-1", "TRDP-2", "TRDP-3", "TRDP-4"):
     c(f"{_t} MCC/Chiller toplamına girmez", _t not in db.ALL_ANALYZERS)
 # Üretim sayaçları (kojen, "uretim": True) da tüketim toplamına girmez
-_tuketim = [a["name"] for a in dc.ANALYZERS if not a["name"].startswith("TRDP") and not a.get("uretim")]
+# Şebeke sayacı (SEBEKE, "sebeke": True) da öyle: hastanenin GİRİŞİ, alt sayaç değil
+_tuketim = [a["name"] for a in dc.ANALYZERS
+            if not a["name"].startswith("TRDP") and not a.get("uretim") and not a.get("sebeke")]
 c("toplayıcıdaki her TRDP/üretim dışı cihaz bir gruba ait (sessizce kaybolmaz)",
   all(n in db.ALL_ANALYZERS for n in _tuketim),
   [n for n in _tuketim if n not in db.ALL_ANALYZERS])
@@ -146,6 +148,35 @@ c("yeni günde toplam şimdilik yalnız kojen", _yk["Toplam_Hastane_Tuketim_kWh"
   _yk["Toplam_Hastane_Tuketim_kWh"])
 c("trafolar yine yazılır (bilgi olarak)", _yk["TRDP1_kWh"] == 22000.0)
 
+# ── 3d) 02.11.2026: şebeke EDAŞ giriş sayacından (SEBEKE, PAC3200) otomatik ──
+c("SEBEKE toplayıcıda tanımlı, doğru adreste (192.168.1.15)",
+  _ad.get("SEBEKE", {}).get("ip") == "192.168.1.15", _ad.get("SEBEKE"))
+c("SEBEKE Siemens okuyucusuyla, NET sayaç olarak okunur",
+  _ad.get("SEBEKE", {}).get("brand") == "siemens" and _ad.get("SEBEKE", {}).get("sebeke") is True)
+c("SEBEKE alt sayaç toplamına girmez (çift sayım)", "SEBEKE" not in db.ALL_ANALYZERS)
+_sk = db.build_daily_row("2026-11-02", {}, {
+    "TRDP-1": 22000.0, "TRDP-2": 16000.0, "TRDP-3": 8000.0, "TRDP-4": 12000.0,
+    "KOJEN-3": 11000.0, "KOJEN-4": 10500.0, "SEBEKE": 31000.0})
+c("yeni günde şebeke sayaçtan yazılır", _sk["Sebeke_Tuketim_kWh"] == 31000.0, _sk["Sebeke_Tuketim_kWh"])
+c("toplam = şebeke sayacı + kojen", _sk["Toplam_Hastane_Tuketim_kWh"] == 52500.0,
+  _sk["Toplam_Hastane_Tuketim_kWh"])
+import enerji_hesap as _ehs
+import pandas as _pds
+_sk_eh = _ehs.yeniden_hesapla(_pds.DataFrame([dict(_sk)])).iloc[0]
+c("köprü ile enerji_hesap şebeke sayaçlı günde AYNI toplamı verir",
+  (_sk_eh["Sebeke_Tuketim_kWh"], _sk_eh["Toplam_Hastane_Tuketim_kWh"]) == (31000.0, 52500.0),
+  (_sk_eh["Sebeke_Tuketim_kWh"], _sk_eh["Toplam_Hastane_Tuketim_kWh"]))
+_ex = db.build_daily_row("2026-11-02", {}, {"KOJEN-3": 11000.0, "KOJEN-4": 10500.0, "SEBEKE": -1500.0})
+c("şebekeye verilen günde (eksi net) toplam = kojen − verilen",
+  _ex["Sebeke_Tuketim_kWh"] == -1500.0 and _ex["Toplam_Hastane_Tuketim_kWh"] == 20000.0,
+  (_ex["Sebeke_Tuketim_kWh"], _ex["Toplam_Hastane_Tuketim_kWh"]))
+_ex_eh = _ehs.yeniden_hesapla(_pds.DataFrame([dict(_ex)])).iloc[0]
+c("enerji_hesap eksi şebekeyi sıfıra kırpmaz", _ex_eh["Toplam_Hastane_Tuketim_kWh"] == 20000.0,
+  _ex_eh["Toplam_Hastane_Tuketim_kWh"])
+_os = db.build_daily_row("2026-11-02", {}, {"KOJEN-3": 11000.0, "KOJEN-4": 10500.0})
+c("şebeke sayacı okunamadıysa boş kalır (elle girilebilir), toplam yalnız kojen",
+  _os["Sebeke_Tuketim_kWh"] == "" and _os["Toplam_Hastane_Tuketim_kWh"] == 21500.0)
+
 # ── 4) İlk gün: referansta TRDP-4 yok → boş kalır, çökmez ──────────────
 _dun = (date.today() - timedelta(days=1)).isoformat()
 _ref_eski = {"date": _dun, "readings": {"TRDP-1": 1000, "TRDP-3": 2000}}   # TRDP-4 yok
@@ -165,6 +196,28 @@ c("ertesi gün TRDP-4 günlük tüketimi hesaplanır", d2.get("TRDP-4") == 3200,
 # Sayaç sıfırlanırsa (değişim/bakım) negatif tüketim yazılmaz
 d3 = db.calc_daily_kwh({"TRDP-4": 100}, {"date": _dun, "readings": {"TRDP-4": 900000}})
 c("sayaç sıfırlanırsa negatif tüketim yazılmaz", d3.get("TRDP-4") == 0, d3)
+
+# Şebeke NET sayaçtır: şebekeye verilen gün fark eksi olabilir — sıfırlanma sayılmaz
+d4 = db.calc_daily_kwh({"SEBEKE": 47711000}, {"date": _dun, "readings": {"SEBEKE": 47712500}})
+c("şebeke net farkı eksi kalabilir", d4.get("SEBEKE") == -1500, d4)
+d5 = db.calc_daily_kwh({"SEBEKE": 47787000}, {"date": _dun, "readings": {"SEBEKE": 47712000}})
+c("şebeke 50.000 kWh üstü günlük tüketimi kesmez (hastanenin tamamı)", d5.get("SEBEKE") == 75000, d5)
+d6 = db.calc_daily_kwh({"SEBEKE": 100}, {"date": _dun, "readings": {"SEBEKE": 47712000}})
+c("şebeke sayacı değişir/sıfırlanırsa saçma fark yazılmaz (boş)", "SEBEKE" not in d6, d6)
+
+# Net enerji okuyucusu: GİREN(T1+T2) − VERİLEN(T1+T2)
+_reg = {801: 47712102600.0, 805: 0.0, 809: 29688900.0, 813: 0.0}
+_eski_oku = dc._siemens_double
+dc._siemens_double = lambda ip, a: _reg.get(a)
+try:
+    c("şebeke sayacı net kWh okunur (giren − verilen)",
+      dc.modbus_get_kwh(_ad["SEBEKE"]) == round((47712102600.0 - 29688900.0) / 1000, 3),
+      dc.modbus_get_kwh(_ad["SEBEKE"]))
+    _reg[813] = None
+    c("şebeke sayacında bir register okunamazsa yarım değer yazılmaz",
+      dc.modbus_get_kwh(_ad["SEBEKE"]) is None)
+finally:
+    dc._siemens_double = _eski_oku
 
 # ── 6) Günlük okuma takvimi (30.10.2026: 07:00 → 23:59) ─────────────────
 _mb = (dc.READ_SAAT, dc.READ_DAKIKA)

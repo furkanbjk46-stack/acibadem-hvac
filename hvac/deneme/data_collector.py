@@ -72,6 +72,13 @@ ANALYZERS = [
     # (URETIM_ENERJI_REG, canli_guc.guc_oku).
     {"ip": "192.168.1.18",  "name": "KOJEN-3",      "brand": "siemens", "uretim": True},
     {"ip": "192.168.1.19",  "name": "KOJEN-4",      "brand": "siemens", "uretim": True},
+    # ŞEBEKE — EDAŞ giriş sayacı, Siemens PAC3200 (OG, 3 telli bağlı), 02.11.2026'da
+    # sahada denendi (sebeke_deneme.py: register 65 ile sayaç farkı uyumlu).
+    # "sebeke": NET sayaç — kojen OG baraya bağlı olduğundan enerji iki yönlü
+    # akar; enerji = GİREN − VERİLEN (SEBEKE_ENERJI_REG), güç işaretiyle okunur
+    # (eksi = şebekeye veriliyor). data_bridge'de ALL_ANALYZERS'a EKLENMEZ;
+    # günlük farkı Sebeke_Tuketim_kWh'e yazılır.
+    {"ip": "192.168.1.15",  "name": "SEBEKE",       "brand": "siemens", "sebeke": True},
 ]
 
 MODBUS_PORT    = 502
@@ -138,6 +145,13 @@ PROP_PRESENT_VALUE = 85
 # Adresler: SENTRON PAC3200 Modbus tablosu — Aktif enerji Giren/Verilen T1, Double, Wh.
 URETIM_ENERJI_REG = {"siemens": (801, 809)}
 
+# ŞEBEKE sayacı ("sebeke": True), 02.11.2026: NET enerji = GİREN − VERİLEN.
+# Kojen OG baraya bağlı: üretim tüketimi aşınca enerji şebekeye verilir ve
+# "Verilen" sayacında birikir (sahada 29.689 kWh). Tarife-2 sayaçları da
+# katılır (sahada 0; ileride tarife geçişi açılırsa enerji kaybolmasın).
+# Adresler: SENTRON PAC3200 Modbus tablosu, Double, Wh.
+SEBEKE_ENERJI_REG = {"siemens": ((801, 805), (809, 813))}
+
 
 def _siemens_double(ip, adres):
     """Siemens PAC: tek double (4 register) oku. Hata → None."""
@@ -162,6 +176,13 @@ def _siemens_double(ip, adres):
 
 
 def modbus_get_kwh(device):
+    net = SEBEKE_ENERJI_REG.get(device.get("brand")) if device.get("sebeke") else None
+    if net:
+        giren = [_siemens_double(device["ip"], r) for r in net[0]]
+        verilen = [_siemens_double(device["ip"], r) for r in net[1]]
+        if any(v is None for v in giren + verilen):
+            return None                      # yarım değer yazılmaz
+        return round((sum(giren) - sum(verilen)) / 1000, 3)  # Wh → kWh (net)
     regler = URETIM_ENERJI_REG.get(device.get("brand")) if device.get("uretim") else None
     if regler:
         okunan = [_siemens_double(device["ip"], r) for r in regler]

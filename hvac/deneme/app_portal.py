@@ -3379,12 +3379,13 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
     kojen = _ed_val(row, "Kojen_Uretim_kWh") or 0
     _sebeke_not = ""
     if _enerji_hesap.yeni_kural_mi(_sec):
-        # 29.10.2026 kuralı: şebeke elle girilir, Hastane Genel = Şebeke + Kojen.
+        # 29.10.2026 kuralı: Hastane Genel = Şebeke + Kojen. 02.11.2026'dan beri
+        # şebeke EDAŞ sayacından otomatik (net; eksi = şebekeye verildi).
         # Şebeke yoksa toplam yalnız kojendir ve not düşülür.
         _sb = _ed_val(row, "Sebeke_Tuketim_kWh")
-        sebeke = _sb if (_sb or 0) > 0 else 0
+        sebeke = _sb or 0
         hastane_genel = sebeke + kojen
-        _sebeke_lbl = "Şebeke (manuel)"
+        _sebeke_lbl = "Şebeke (sayaç)"
         if not sebeke:
             _sebeke_not = "şebeke verisi eksik — toplam yalnız kojen"
     elif all((_ed_val(row, k) or 0) > 0 for k in _enerji_hesap.TRDP_KOLONLARI):
@@ -3797,9 +3798,14 @@ with tab1:
                                    help="Sayaçtan (PAC3200) her sabah otomatik yazılır.")
         with a3:
             st.markdown("**Kaynak Tüketim**")
-            # 29.10.2026: şebeke ELLE girilir (EDAŞ); Toplam = Şebeke + Kojen
-            sebeke_giris = st.number_input("Şebeke Tüketimi (kWh)", step=50.0, min_value=0.0, key="entry_sebeke",
-                                           help="Şimdilik elle girilir. Hastane genel toplam = şebeke + kojen üretim.")
+            # 29.10.2026: Toplam = Şebeke + Kojen. 02.11.2026: şebeke EDAŞ giriş
+            # sayacından (PAC3200) her gece otomatik yazılır — NET değer, kojen
+            # şebekeye enerji verdiği gün EKSİ olabilir. Bu yüzden min_value YOK:
+            # eksi kayıt düzenlemeye açılınca StreamlitValueBelowMinError verirdi.
+            sebeke_giris = st.number_input("Şebeke Tüketimi (kWh)", step=50.0, key="entry_sebeke",
+                                           help="EDAŞ giriş sayacından (PAC3200) her gece otomatik yazılır; "
+                                                "sayaç okunamadıysa elle girilebilir. Net değerdir: eksi = "
+                                                "şebekeye verildi. Hastane genel toplam = şebeke + kojen üretim.")
             kazan_gaz = st.number_input("Kazan Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kazan_gaz")
             koj_gaz = st.number_input("Kojen Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kojen_gaz")
             su = st.number_input("Su Tüketimi (m³)", step=1.0, min_value=0.0, key="entry_su")
@@ -3824,7 +3830,7 @@ with tab1:
             "Kojen_Uretim_kWh": (_fv("Kojen_Uretim_kWh", 0.0)
                                  if not any(_fv("Kojen%d_kWh" % _i, 0.0) > 0 for _i in range(1, 5))
                                  else 0.0),
-            "Sebeke_Tuketim_kWh": sebeke_giris if sebeke_giris > 0 else float("nan"),
+            "Sebeke_Tuketim_kWh": sebeke_giris if sebeke_giris != 0 else float("nan"),
             "Tarih": str(tarih),
             "MCC_Tuketim_kWh": mcc_kwh, "Chiller_Tuketim_kWh": ch_kwh, "VRF_Split_Tuketim_kWh": vrf_kwh,
         }])).iloc[0]
@@ -3840,8 +3846,8 @@ with tab1:
         _ihrac_not = " (eksi: şebekeye verildi)" if sebeke < 0 else ""
         preview_other = max(0.0, preview_mekanik - (ch_kwh + mcc_kwh))
         if _yeni_kural:
-            # Şebeke elle; girilmediyse toplam yalnız kojendir (uyarılır)
-            _sebeke_txt = (f"Şebeke (manuel) = **{sebeke:,.0f} kWh**" if sebeke > 0
+            # Şebeke sayaçtan / elle; yoksa toplam yalnız kojendir (uyarılır)
+            _sebeke_txt = (f"Şebeke = **{sebeke:,.0f} kWh**{_ihrac_not}" if sebeke != 0
                            else "Şebeke = **—** ⚠️ şebeke verisi eksik, toplam yalnız kojen")
             _kaynak_txt = (f"{_sebeke_txt} | Kojen Üretim (1-4) = **{koj:,.0f} kWh** | "
                            f"Hastane Genel Toplam (şebeke + kojen) = **{preview_total_h:,.0f} kWh** | "
@@ -3908,7 +3914,7 @@ with tab1:
                 "TRDP3_kWh": trdp3,
                 "TRDP4_kWh": trdp4,
                 # Yeni kuralda elle girilen değer; eski tarihte hesap (recalc yine düzeltir)
-                "Sebeke_Tuketim_kWh": ((sebeke_giris if sebeke_giris > 0 else None)
+                "Sebeke_Tuketim_kWh": ((sebeke_giris if sebeke_giris != 0 else None)
                                        if _yeni_kural else sebeke),
                 "Kojen_Uretim_kWh": koj,
                 "Kojen1_kWh": koj1,
@@ -4268,9 +4274,9 @@ with tab2:
                                     birim if _v is not None else "")
                 st.markdown(_pt.bolum("Kojen & Kaynak", "kojen"), unsafe_allow_html=True)
                 st.markdown(_pt.izgara([
-                    # Yeni kuralda şebeke elle girilir; girilmediyse kart bunu söyler
+                    # Yeni kuralda şebeke sayaçtan/elle; yoksa kart bunu söyler
                     (_pt.kart("sebeke", "Şebeke Tüketim", "—", "", "şebeke verisi eksik", "syn-kotu")
-                     if _enerji_hesap.yeni_kural_mi(report_date) and not ((_gun_deger("Sebeke_Tuketim_kWh") or 0) > 0)
+                     if _enerji_hesap.yeni_kural_mi(report_date) and not (_gun_deger("Sebeke_Tuketim_kWh") or 0)
                      else _kk("sebeke", "Şebeke Tüketim", "Sebeke_Tuketim_kWh")),
                     _kk("kojen", "Kojen Üretim", "Kojen_Uretim_kWh"),
                     _kk("trdp", "TRDP-1 (Bina)", "TRDP1_kWh"),

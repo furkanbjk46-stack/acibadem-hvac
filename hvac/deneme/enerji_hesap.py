@@ -43,6 +43,11 @@ KURAL (29.10.2026, kullanıcı kararı; 30.10.2026'da 01.06.2026'ya geri çekild
   Toplam       = Şebeke + Kojen Üretim   (trafo toplamı yalnız bilgi)
   Şebeke yoksa Toplam = yalnız Kojen Üretim (ekranda "şebeke verisi eksik").
   Haziran 2026'dan önceki günler yukarıdaki kurallarla aynen kalır.
+
+  02.11.2026: Şebeke EDAŞ giriş sayacından (SEBEKE, PAC3200) OTOMATİK gelir —
+  data_bridge günlük NET farkı (giren − verilen) yazar. Kojen şebekeye enerji
+  verdiği gün değer EKSİ olabilir; Toplam = Şebeke + Kojen yine doğrudur
+  (sıfıra kırpılmaz). Sayaç okunamayan gün elle girilebilir.
   Tarih sütunu olmayan veri (eski çağrılar, testler) eski kuralla hesaplanır.
 
 GEÇİŞ (30.10.2026, tek sefer): 01.06–28.10.2026 arasında şebeke sütununda
@@ -124,7 +129,8 @@ def yeniden_hesapla(df):
     # Yeni kural (YENI_KURAL_BASLANGIC ve sonrası): şebeke elle, toplam = şebeke + kojen
     if yeni.any():
         df.loc[yeni, "Sebeke_Tuketim_kWh"] = sebeke_girilen[yeni]
-        df.loc[yeni, "Toplam_Hastane_Tuketim_kWh"] = sebeke_girilen[yeni].fillna(0).clip(lower=0) + kojen[yeni]
+        # Eksi şebeke = o gün şebekeye verilen net enerji: toplamdan düşer
+        df.loc[yeni, "Toplam_Hastane_Tuketim_kWh"] = sebeke_girilen[yeni].fillna(0) + kojen[yeni]
 
     # Diğer yük = toplam - MCC - soğutma (negatif olmaz)
     df["Diger_Yuk_kWh"] = (_sut(df, "Toplam_Hastane_Tuketim_kWh")

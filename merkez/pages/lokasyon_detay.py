@@ -2014,6 +2014,16 @@ with tab_canli:
         _olculmeyen = [(a, n) for a, n in _olculmeyen if a != "KOJEN"]
         _kp = _CI.grup_toplami(seri, _kojen_canli) if _kojen_canli else None
 
+        # ── Şebeke (EDAŞ giriş sayacı, 02.11.2026) ENERJİ KAYNAĞI kartında,
+        # kojen üretiminin altında "ŞEBEKE" iç kartı. Sayaç tanımlı lokasyonda
+        # üst şerit ŞEBEKE | KOJEN ÜRETİM | TOPLAM ENERJİ (şebeke + kojen) olur.
+        # Değer NET: eksi = şebekeye veriliyor.
+        _sebeke_canli = []
+        if "enerji" in _canli_gruplar:
+            _sebeke_canli = next((c for a, _, c in _gruplar if a == "sebeke"), [])
+            _gruplar = [g for g in _gruplar if g[0] != "sebeke"]
+        _sp = _CI.grup_toplami(seri, _sebeke_canli) if _sebeke_canli else None
+
         # ── Üst şerit ────────────────────────────────────────────────
         _kartlar, _grup_govde = [], []
         for _an, _bas, _cihazlar in _gruplar:
@@ -2029,7 +2039,17 @@ with tab_canli:
                 _trafo_dg = ("—" if _tp is None else _CI.akan(
                     _tp, 1, "grup-" + _bas, *(_CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure) or ()))
                     + "<span class='cg-br'>kW</span>")
-                _parcalar = [("TRAFO TOPLAM", _trafo_dg, _alt, True)]
+                _parcalar = [] if _sebeke_canli else [("TRAFO TOPLAM", _trafo_dg, _alt, True)]
+                if _sebeke_canli:
+                    _sebeke_alt = ("sayaç okunamadı" if _sp is None
+                                   else "şebekeye veriliyor" if _sp < 0 else "EDAŞ girişi")
+                    if yas is not None:
+                        _sebeke_alt += " · son ölçüm %.0f sn önce" % yas
+                    _parcalar.append(("ŞEBEKE", (
+                        "—" if _sp is None else _CI.akan(
+                            _sp, 1, "grup-sebeke",
+                            *(_CI.grup_gecis(_onc, degerler, _sebeke_canli, _t_son, _sure) or ())))
+                        + "<span class='cg-br'>kW</span>", _sebeke_alt, _sp is not None))
                 if _kojen_var:
                     if _kp is not None:
                         _kc = sum(1 for _c in _kojen_canli if (degerler.get(_c) or 0) >= 1)
@@ -2040,7 +2060,23 @@ with tab_canli:
                     else:
                         _uretim_dg = "—<span class='cg-br'>kW</span>"
                         _uretim_alt = "%d kojen · canlı sayaç bekleniyor" % len(_kojen_bekleyen)
-                    _parcalar.append(("ÜRETİM TOPLAM", _uretim_dg, _uretim_alt, _kp is not None))
+                    _parcalar.append(("KOJEN ÜRETİM" if _sebeke_canli else "ÜRETİM TOPLAM",
+                                      _uretim_dg, _uretim_alt, _kp is not None))
+                if _sebeke_canli:
+                    # Toplam enerji = şebeke + kojen üretimi (trafo toplamı DEĞİL:
+                    # kojen OG baradan trafolara karışır, trafo + kojen çift sayar)
+                    if _sp is None:
+                        _top_dg, _top_alt = "—", "şebeke sayacı okunamadı"
+                    else:
+                        _top = round(_sp + (_kp or 0), 1)
+                        _top_dg = _CI.akan(_top, 1, "grup-toplam-enerji",
+                                           *(_CI.grup_gecis(_onc, degerler, _sebeke_canli + _kojen_canli,
+                                                            _t_son, _sure) or ()))
+                        _top_alt = "şebeke + kojen üretim"
+                        if _kojen_bekleyen:
+                            _top_alt += " · %d kojen sayacı bekleniyor" % len(_kojen_bekleyen)
+                    _parcalar.append(("TOPLAM ENERJİ", _top_dg + "<span class='cg-br'>kW</span>",
+                                      _top_alt, _sp is not None))
                 _kartlar.append(_CI.ozet_ikili_kart_html(_parcalar))
             elif _an == "sogutma":
                 _ch = sum(1 for _c in _cihazlar
@@ -2086,9 +2122,9 @@ with tab_canli:
                 # ENERJİ KAYNAĞI içinde iki ayrı kart (26.10.2026):
                 #   TRAFO        → TRDP-1..4, başlıkta trafoların toplamı
                 #   KOJEN ÜRETİM → KOJEN-1..4, başlıkta üretim toplamı
-                _trafo_tp = ("—" if _tp is None else _CI.akan(
-                    _tp, 1, "grup-" + _bas, *(_kart_gecis or ())) + "<span class='cg-br'>kW</span>")
-                _satirlar += _CI.alt_kart_html("TRAFO", _trafo_tp, _cihaz_satirlari)
+                # 02.11.2026: iç kart başlıklarında TOPLAM YAZILMAZ (kullanıcı
+                # kararı) — yalnız satırlardaki sayaç değerleri.
+                _satirlar += _CI.alt_kart_html("TRAFO", "", _cihaz_satirlari)
                 if _kojen_var:
                     _kolcek = _CI.olcek_degeri(seri, _kojen_canli)
                     _kojen_satirlari = ""
@@ -2103,19 +2139,26 @@ with tab_canli:
                         else:
                             _kojen_satirlari += _CI.olculmeyen_satir_html(
                                 _c, _CI.KOJEN_BEKLEME_NOTU, sag="bekleniyor")
-                    if _kp is not None:
-                        _kojen_tp = (_CI.akan(_kp, 1, "grup-uretim",
-                                              *(_CI.grup_gecis(_onc, degerler, _kojen_canli, _t_son, _sure) or ()))
-                                     + "<span class='cg-br'>kW</span>")
-                    else:
-                        _kojen_tp = "sayaç bekleniyor"
+                    _kojen_tp = "" if _kp is not None else "sayaç bekleniyor"
                     _satirlar += _CI.alt_kart_html("KOJEN ÜRETİM", _kojen_tp, _kojen_satirlari,
                                                    bekliyor=_kp is None)
                     _ok += sum(1 for _c in _kojen_canli if degerler.get(_c) is not None)
                     if _kp is not None:
                         _kart_toplam = round((_tp or 0) + _kp, 1)
                         _kart_gecis = _CI.grup_gecis(_onc, degerler, _cihazlar + _kojen_canli, _t_son, _sure)
-                # Canlı sayacı olmayan doğalgaz / su: iki kartın altında
+                # ŞEBEKE iç kartı: kojen üretiminin altında
+                if _sebeke_canli:
+                    _solcek = _CI.olcek_degeri(seri, _sebeke_canli)
+                    _sebeke_satirlari = "".join(
+                        _CI.satir_html(
+                            _c, degerler.get(_c),
+                            _CI.bar_html(degerler.get(_c), _solcek, esikli=False),
+                            _yontemler.get(_c),
+                            gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None)
+                        for _c in _sebeke_canli)
+                    _satirlar += _CI.alt_kart_html("ŞEBEKE", "", _sebeke_satirlari)
+                    _ok += sum(1 for _c in _sebeke_canli if degerler.get(_c) is not None)
+                # Canlı sayacı olmayan doğalgaz / su: kartların altında
                 if _olculmeyen:
                     _satirlar += ("<div class='cg-liste cg-liste-ic'>" +
                                   "".join(_CI.olculmeyen_satir_html(_ad, _neden) for _ad, _neden in _olculmeyen) +
@@ -2124,14 +2167,17 @@ with tab_canli:
 
             _ack = _CI.GRUP_ACIKLAMA.get(_an, "")
             if _an == "enerji":
-                _ack = "Trafolar" + (" ve kojen üretimi" if _kojen_var else "") + " · canlı sayaçtan"
+                _ack = ("Trafolar"
+                        + (", kojen üretimi" if _kojen_var and _sebeke_canli else
+                           " ve kojen üretimi" if _kojen_var else "")
+                        + (" ve şebeke" if _sebeke_canli else "") + " · canlı sayaçtan")
                 if _kojen_bekleyen:
                     _ack += "; kojen sayaçları yakında eklenecek"
                 if _olculmeyen:
                     _ack += "; " + ", ".join(a.lower() for a, _ in _olculmeyen) + " kalemlerinde canlı sayaç yok"
             _grup_govde.append(_CI.grup_html(
                 _bas, _ack, _satirlar, _kart_toplam, _ok, _olcusuz, birim=_br,
-                gecis=_kart_gecis, ic_kartli=(_an == "enerji"),
+                gecis=_kart_gecis, ic_kartli=(_an == "enerji"), toplamsiz=(_an == "enerji"),
                 yukseklik=600 if _an == "enerji" else 430))
 
         _kartlar.append(_CI.ozet_kart_html(
