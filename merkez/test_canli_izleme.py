@@ -610,6 +610,33 @@ c("sıralama animasyonu YALNIZ demo dalında (gerçek sistemde yok)",
   "siralama_betigi" in _demo_blok and _MRK.count("siralama_betigi") == 1)
 c("sıra rozeti betikte güncellenebilir (lok-sira sınıfı)", 'class="lok-sira"' in _MRK)
 
+# ── Şebeke sayacı (02.11.2026, EDAŞ girişi PAC3200) ──────────────────────
+c("SEBEKE kendi grubunda (DİĞER'e düşmez)", CI.grup_bul("SEBEKE") == "sebeke")
+c("SEBEKE ekranda ŞEBEKE yazar", CI.kisa_ad("SEBEKE") == "ŞEBEKE" and CI.kisa_ad("CHILLER-1") == "CH-1")
+c("şebeke çubuğu trafo eşiğiyle boyanmaz (MW mertebesi)", "sebeke" in CI.ESIKSIZ_GRUPLAR)
+c("eksi şebeke (verilen) çubuğu çizilir",
+  "width:50.0%" in CI.bar_html(-500.0, 1000.0, esikli=False))
+_g_top = CI.grup_html("ENERJİ KAYNAĞI", "", "", 3840.7, 6, toplamsiz=True)
+c("ENERJİ KAYNAĞI başlığında toplam yazmaz", "cg-toplam" not in _g_top and "3.840" not in _g_top)
+c("diğer gruplar toplamı yine yazar", "cg-toplam" in CI.grup_html("MCC YÜKÜ", "", "", 100.0, 3))
+c("iç kart başlığı toplamsız olabilir",
+  "<span class='cg-altkart-tp'></span>" in CI.alt_kart_html("TRAFO", "", ""))
+_uc = CI.ozet_ikili_kart_html([("ŞEBEKE", "1", "EDAŞ", True), ("KOJEN ÜRETİM", "2", "", True),
+                               ("TOPLAM ENERJİ", "3", "şebeke + kojen üretim", True)])
+c("üst şerit ŞEBEKE | KOJEN ÜRETİM | TOPLAM ENERJİ üç sütun",
+  _uc.count("class='cg-ic'") == 3 and "cg-ozet-uclu" in _uc and ".cg-ozet-uclu{grid-column:span 3" in CI.STIL)
+c("iki parçalı kart üç sütun kaplamaz", "cg-ozet-uclu" not in _ik)
+_ld = SAYFA.split("def _canli_izleme_ciz")[1].split("_canli_izleme_blok()")[0]
+c("sayfa: şebeke kojenin altında ŞEBEKE iç kartı",
+  _ld.index('alt_kart_html("KOJEN ÜRETİM"') < _ld.index('alt_kart_html("ŞEBEKE"'))
+c("sayfa: TOPLAM ENERJİ = şebeke + kojen (trafo toplamı değil)",
+  "_top = round(_sp + (_kp or 0), 1)" in _ld and '"TOPLAM ENERJİ"' in _ld)
+c("sayfa: TRAFO iç kartında toplam yok", 'alt_kart_html("TRAFO", "",' in _ld)
+c("sayfa: ENERJİ KAYNAĞI grubu toplamsız", 'toplamsiz=(_an == "enerji")' in _ld)
+c("sunum: Maslak canlı verisinde ŞEBEKE var", "SEBEKE" in S._maslak_olcekle(
+    {"Sebeke_Tuketim_kWh": 24000.0, "Kojen_Uretim_kWh": 0}) and
+  S._maslak_olcekle({"Sebeke_Tuketim_kWh": 24000.0})["SEBEKE"] == 1000.0)
+
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))
 _g = sum(1 for _, ok, _ in T if ok)

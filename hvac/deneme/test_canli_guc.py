@@ -191,6 +191,27 @@ o3 = cg.Olcer(a)
 o3._sayac_gucu("TRDP-3", 500.0, 1000.0)
 c("çok kısa aralıkta değer üretilmez", o3._sayac_gucu("TRDP-3", 500.1, 1002.0) is None)
 
+# ── 5b) Şebeke sayacı (SEBEKE, net — 02.11.2026): iki yönlü ─────────────
+_sb = next((d for d in _dc.ANALYZERS if d["name"] == "SEBEKE"), {})
+c("SEBEKE canlı okunacak listede (192.168.1.15, net sayaç)",
+  _sb.get("ip") == "192.168.1.15" and _sb.get("sebeke") is True, _sb)
+_orj_float = cg._float_oku
+cg._float_oku = lambda ip, adres, timeout=None: -420000.0
+try:
+    c("şebeke gücü işaretiyle okunur (eksi = şebekeye veriliyor)", cg.guc_oku(_sb, a) == -420.0,
+      cg.guc_oku(_sb, a))
+finally:
+    cg._float_oku = _orj_float
+o4 = cg.Olcer(a)
+o4._sayac_gucu("SEBEKE", 1000.0, 1000.0, True)
+c("şebeke sayacı geriye sayınca eksi güç üretir (sıfırlanma sayılmaz)",
+  o4._sayac_gucu("SEBEKE", 998.5, 1015.0, True) == -360.0)
+k = o4._karar("SEBEKE", -350.0, -360.0, 998.5, True)
+c("şebekeye verilirken eksi değer makul sayılır ve gösterilir",
+  k["kw"] == -350.0 and k["yontem"] == "register", k)
+k = o4._karar("TRDP-1", -350.0, None, None)
+c("trafoda büyük eksi değer yine makul DEĞİL", k["kw"] is None, k)
+
 # ── 6) ÇAPRAZ DENETİM — asıl koruma ──────────────────────────────────────
 o = cg.Olcer(a)
 k = o._karar("TRDP-1", 400.0, 408.0, 123.0)

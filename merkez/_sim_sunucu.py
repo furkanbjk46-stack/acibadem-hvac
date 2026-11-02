@@ -551,6 +551,8 @@ def _maslak_olcekle(r):
         top = sum(MASLAK_CANLI_TABAN[a] for a in adlar) or 1.0
         for a in adlar:
             t[a] = MASLAK_CANLI_TABAN[a] / top * gunluk / 24.0
+    # EDAS giris sayaci (02.11.2026): gunluk kayittaki sebeke tuketimi / 24
+    t["SEBEKE"] = float(r.get("Sebeke_Tuketim_kWh") or 0) / 24.0
     return t
 
 

@@ -99,6 +99,10 @@ GRUPLAR = [
     # yazılırsa (bugün yalnız sunum verisi yazıyor) kendi grubunda görünür;
     # yazılmıyorsa grup hiç çıkmaz, OLCULMEYEN satırı gösterilir.
     ("kojen",    "KOJEN ÜRETİMİ",   ("KOJEN-",)),
+    # EDAŞ giriş sayacı (02.11.2026, Maslak PAC3200). Trafoların yanında
+    # ENERJİ KAYNAĞI kartında "ŞEBEKE" iç kartı olarak durur. Net değerdir:
+    # eksi = şebekeye veriliyor.
+    ("sebeke",   "ŞEBEKE",          ("SEBEKE",)),
     ("dogalgaz", "DOĞALGAZ",        ("DOGALGAZ-",)),
     ("su",       "SU",              ("SU-",)),
 ]
@@ -107,6 +111,7 @@ GRUP_ACIKLAMA = {
     "sogutma": "Chiller'lar ve soğutma kuleleri · canlı sayaçtan",
     "mcc":     "Ana panolar ve blok panoları · canlı sayaçtan",
     "kojen":   "Kojen jeneratörleri · canlı sayaçtan",
+    "sebeke":  "EDAŞ giriş sayacı · canlı sayaçtan",
     "dogalgaz": "Kazan + kojen gaz girişi · canlı sayaçtan",
     "su":      "Şebeke suyu girişi · canlı sayaçtan",
     "diger":   "Gruplanmamış sayaçlar",
@@ -129,7 +134,8 @@ def grup_bul(cihaz: str) -> str:
 
 def kisa_ad(cihaz: str) -> str:
     """CHILLER-1 → CH-1 (ekranda dar sütuna sığsın; veri adı DEĞİŞMEZ)."""
-    return str(cihaz or "").replace("CHILLER-", "CH-")
+    ad = str(cihaz or "")
+    return "ŞEBEKE" if ad.upper() == "SEBEKE" else ad.replace("CHILLER-", "CH-")
 
 
 def _sira_anahtari(cihaz: str, onekler: tuple):
@@ -362,7 +368,8 @@ def olcek_degeri(seri: dict, cihazlar: list) -> float:
 
 # Yük eşiği (yeşil→kırmızı) yalnız TÜKETEN sayaçlar için anlamlı. Kojen
 # üretimi yüksekken kırmızı "alarm" gibi görünürdü; gaz/su debisi kW değil.
-ESIKSIZ_GRUPLAR = ("kojen", "dogalgaz", "su")
+# Şebeke girişi hastanenin tamamını taşır (MW mertebesi): trafo eşiği anlamsız.
+ESIKSIZ_GRUPLAR = ("kojen", "sebeke", "dogalgaz", "su")
 ESIKSIZ_RENK = "rgb(42, 120, 214)"
 
 
@@ -442,13 +449,18 @@ def alt_kart_html(baslik: str, toplam_html: str, satirlar: str, bekliyor: bool =
 
 def grup_html(baslik: str, aciklama: str, satirlar: str, toplam_kw,
               okunan: int, olcusuz: int = 0, yukseklik: int = 430, birim: str = "kW",
-              gecis: tuple = None, ic_kartli: bool = False) -> str:
+              gecis: tuple = None, ic_kartli: bool = False, toplamsiz: bool = False) -> str:
     """Bir grup kartı. Liste uzarsa KART değil liste kayar.
 
     ic_kartli: satırlar alt_kart_html bloklarıysa liste ızgara değil düz
-    sütundur (iç kartlar kendi ızgarasını taşır)."""
-    _t = '—' if toplam_kw is None else akan(toplam_kw, 1, 'grup-' + baslik, *(gecis or ())) + ' ' + birim
-    ust = f"<div class='cg-toplam'>{_t}</div>"
+    sütundur (iç kartlar kendi ızgarasını taşır).
+    toplamsiz: başlıkta toplam YAZILMAZ (ENERJİ KAYNAĞI, 02.11.2026: trafo ile
+    kojen aynı enerjiyi iki kez taşır, toplamları anlamsız)."""
+    if toplamsiz:
+        ust = ""
+    else:
+        _t = '—' if toplam_kw is None else akan(toplam_kw, 1, 'grup-' + baslik, *(gecis or ())) + ' ' + birim
+        ust = f"<div class='cg-toplam'>{_t}</div>"
     dip = "%d kalem canlı okunuyor" % okunan
     if olcusuz:
         dip += " · %d kalemde sayaç yok" % olcusuz
@@ -466,16 +478,18 @@ def ozet_kart_html(etiket: str, deger: str, alt: str, canli: bool = False) -> st
 
 
 def ozet_ikili_kart_html(parcalar: list) -> str:
-    """Tek kart içinde yan yana iç kartlar (ör. TRAFO TOPLAM | ÜRETİM TOPLAM).
+    """Tek kart içinde yan yana iç kartlar (ör. ŞEBEKE | KOJEN ÜRETİM | TOPLAM ENERJİ).
 
-    parcalar: [(etiket, deger_html, alt, canli), ...]
+    parcalar: [(etiket, deger_html, alt, canli), ...] — iki ya da üç parça;
+    kart şeritte parça sayısı kadar sütun kaplar.
     """
     nabiz = "<span class='cg-nabiz'></span>"
     ic = "".join(
         "<div class='cg-ic'><div class='cg-ozet-et'>" + (nabiz if canli else "") + etiket + "</div>"
         "<div class='cg-ozet-dg'>" + deger + "</div><div class='cg-ozet-alt'>" + alt + "</div></div>"
         for etiket, deger, alt, canli in parcalar)
-    return f"<div class='cg-ozet cg-ozet-ikili'>{ic}</div>"
+    uclu = " cg-ozet-uclu" if len(parcalar) >= 3 else ""
+    return f"<div class='cg-ozet cg-ozet-ikili{uclu}'>{ic}</div>"
 
 
 def ozet_serit_html(kartlar: list) -> str:
@@ -504,6 +518,9 @@ STIL = """
 /* İki iç kartlı özet (TRAFO TOPLAM | ÜRETİM TOPLAM): şeritte iki sütun kaplar */
 .cg-ozet-ikili{grid-column:span 2; display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:7px;}
 .cg-ic{background:#f6f8fc; border:1px solid rgba(24,26,30,.08); border-radius:12px; padding:7px 11px; min-width:0;}
+/* Üç iç kartlı özet (ŞEBEKE | KOJEN ÜRETİM | TOPLAM ENERJİ): üç sütun */
+.cg-ozet-uclu{grid-column:span 3; grid-template-columns:1fr 1fr 1fr;}
+@media (max-width:760px){ .cg-ozet-uclu{grid-column:1 / -1;} }
 @media (max-width:560px){ .cg-ozet-ikili{grid-column:span 1; grid-template-columns:1fr;} }
 
 /* ── alt bant ── */

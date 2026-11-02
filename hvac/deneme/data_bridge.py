@@ -255,6 +255,12 @@ def save_ref(today_str, readings):
 
 MAX_DAILY_KWH_PER_DEVICE = 50_000  # Bir cihazin gunluk max makul tuketimi
 
+# NET sayaclar (GIREN - VERILEN): sebekeye enerji verilen gun farki EKSI
+# olabilir — sayac sifirlanmasi sayilmaz. Sebeke girisi hastanenin tamamini
+# tasir (kojen dururken ~3 MW x 24 sa = ~75.000 kWh): genel sinir ona dar.
+NET_SAYACLAR = {"SEBEKE"}
+MAX_DAILY_KWH_NET = 200_000
+
 
 def calc_daily_kwh(today_readings, ref):
     """
@@ -286,6 +292,12 @@ def calc_daily_kwh(today_readings, ref):
             logger.warning("%s icin dunku referans yok — atlaniyor", name)
             continue
         diff = today_val - yest_val
+        if name in NET_SAYACLAR:
+            if abs(diff) > MAX_DAILY_KWH_NET:
+                logger.error("%s gunluk net fark makul degil (%.1f kWh) — bos birakildi", name, diff)
+                continue
+            daily[name] = round(diff, 1)
+            continue
         if diff < 0:
             logger.warning("%s sayac sifirlandi veya hata (diff=%.1f) — 0 kabul edildi", name, diff)
             diff = 0.0
@@ -508,13 +520,20 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         toplam_hastane_kwh = total_kwh
 
     # 29.10.2026 kurali (enerji_hesap.YENI_KURAL_BASLANGIC ve sonrasi): sebeke
-    # ELLE girilir (trafodan hesaplanmaz); toplam = sebeke + kojen. Kopru sebekeyi
-    # BOS birakir, toplam simdilik yalniz kojen — sebeke girilince recalc tamamlar.
+    # trafodan HESAPLANMAZ; toplam = sebeke + kojen.
+    # 02.11.2026: sebeke EDAS giris sayacindan (SEBEKE, PAC3200) otomatik —
+    # gunluk NET fark (giren - verilen; eksi = sebekeye verildi). Sayac o gun
+    # okunamadiysa BOS kalir, toplam simdilik yalniz kojen; portaldan elle
+    # girilirse recalc tamamlar.
     try:
         import enerji_hesap as _eh
         if _eh.yeni_kural_mi(today_str):
-            sebeke_kwh = ""
-            toplam_hastane_kwh = kojen_kwh
+            _sb = daily_kwh.get("SEBEKE", "") if daily_kwh else ""
+            sebeke_kwh = _sb
+            if _sb != "":
+                toplam_hastane_kwh = round(_to_num(_sb) + _to_num(kojen_kwh), 1)
+            else:
+                toplam_hastane_kwh = kojen_kwh
     except Exception as e:
         logger.warning("Yeni sebeke kurali uygulanamadi: %s", e)
 
@@ -537,7 +556,7 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "TRDP2_kWh":                  trdp2,   # Manuel / henuz bagli degil
         "TRDP3_kWh":                  trdp3,   # Otomatik (Modbus)
         "TRDP4_kWh":                  trdp4,   # Otomatik (Modbus, PAC4200)
-        "Sebeke_Tuketim_kWh":         sebeke_kwh,  # Otomatik hesaplandi
+        "Sebeke_Tuketim_kWh":         sebeke_kwh,  # Otomatik (SEBEKE sayaci, net)
         "Kojen_Uretim_kWh":           kojen_kwh,   # Okunan kojenlerin toplami
         "Kojen1_kWh":                 kojen_n[1],
         "Kojen2_kWh":                 kojen_n[2],
@@ -788,7 +807,8 @@ def run_daily_snapshot():
                 row.get("MCC_Tuketim_kWh") or 0,
                 row.get("Chiller_Tuketim_kWh") or 0,
                 row.get("Dis_Hava_Sicakligi_C") or 0)
-    logger.info("Manuel tamamlanacak (portal): Sebeke, Kojen, Dogalgaz, Su")
+    logger.info("Sebeke=%s kWh (sayac) | Manuel tamamlanacak (portal): Dogalgaz, Su",
+                row.get("Sebeke_Tuketim_kWh") if row.get("Sebeke_Tuketim_kWh") != "" else "okunamadi")
 
     # 7. Veri toplama alarmlari: baglanti hatasi / bos gunluk veri
     #    Tespit veri_alarm.py'de (tek kaynak); buradan yalnizca tetiklenir.

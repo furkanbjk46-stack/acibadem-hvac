@@ -156,6 +156,7 @@ def guc_oku(dev: dict, ayar: dict = None, adres: int = None):
         return None
     if dev.get("uretim"):
         w = abs(w)                       # üretim: yön bağlantıya göre işaretli gelebilir
+    # Şebeke ("sebeke"): işaret KORUNUR — eksi = şebekeye veriliyor.
     return round(w / 1000.0, 2)          # W → kW
 
 
@@ -223,12 +224,17 @@ class Olcer:
                 kilit.release()
         return kw_reg, kwh
 
-    def _makul(self, kw) -> bool:
+    def _makul(self, kw, net: bool = False) -> bool:
+        # Şebeke iki yönlü: eksi taraf da üst sınır kadar geniş
+        alt = -self.ayar["makul_ust_kw"] if net else self.ayar["makul_alt_kw"]
         return (kw is not None
-                and self.ayar["makul_alt_kw"] <= kw <= self.ayar["makul_ust_kw"])
+                and alt <= kw <= self.ayar["makul_ust_kw"])
 
-    def _sayac_gucu(self, ad: str, kwh, simdi: float):
-        """Sayaç farkından ortalama kW. İlk okumada / geriye saymada None."""
+    def _sayac_gucu(self, ad: str, kwh, simdi: float, net: bool = False):
+        """Sayaç farkından ortalama kW. İlk okumada / geriye saymada None.
+
+        net: şebeke sayacı (GİREN − VERİLEN) — şebekeye verilirken geriye
+        sayması NORMALDİR, eksi güç döner."""
         onceki = self._sayac.get(ad)
         if kwh is None:
             # Okunamayan tur geçmişi SİLMEZ ve boş değer saklanmaz. 31.10.2026:
@@ -240,7 +246,7 @@ class Olcer:
             return None
         eski_kwh, eski_zaman = onceki
         dt = simdi - eski_zaman
-        if dt < 5 or kwh < eski_kwh:       # çok kısa aralık / sayaç sıfırlanmış
+        if dt < 5 or (kwh < eski_kwh and not net):   # çok kısa aralık / sayaç sıfırlanmış
             return None
         return round((kwh - eski_kwh) / dt * 3600.0, 2)
 
@@ -307,13 +313,14 @@ class Olcer:
                 sonuc.append(kayit)
                 continue
             kw_reg, kwh = ham[ad]
+            net = bool(dev.get("sebeke"))
             self._hata_isle(ad, kw_reg is not None or kwh is not None)
-            kw_sayac = self._sayac_gucu(ad, kwh, simdi) if sayac_turu else None
-            sonuc.append(self._karar(ad, kw_reg, kw_sayac, kwh))
+            kw_sayac = self._sayac_gucu(ad, kwh, simdi, net) if sayac_turu else None
+            sonuc.append(self._karar(ad, kw_reg, kw_sayac, kwh, net))
 
         return sonuc
 
-    def _karar(self, ad, kw_reg, kw_sayac, kwh) -> dict:
+    def _karar(self, ad, kw_reg, kw_sayac, kwh, net: bool = False) -> dict:
         """Hangi değeri göstereceğimize karar ver ve NEDENİNİ yaz.
 
         yontem: "register"   → güç register'ı sayaçla doğrulandı
@@ -321,8 +328,8 @@ class Olcer:
                 "sayac"      → register yok ya da sayaçla çelişti, ortalama
                 None         → okunamadı
         """
-        reg_makul = self._makul(kw_reg)
-        sayac_makul = self._makul(kw_sayac)
+        reg_makul = self._makul(kw_reg, net)
+        sayac_makul = self._makul(kw_sayac, net)
         onceki = self._son_karar.get(ad, {})
 
         kayit = {"cihaz": ad, "kw": None, "yontem": None, "not": None,
