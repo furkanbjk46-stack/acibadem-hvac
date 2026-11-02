@@ -525,6 +525,8 @@ def _canli_tabanlari():
         t["DOGALGAZ-ANA"] = (float(r.get("Kazan_Dogalgaz_m3") or 0)
                              + float(r.get("Kojen_Dogalgaz_m3") or 0)) / 24.0
         t["SU-ANA"] = float(r.get("Su_Tuketimi_m3") or 0) / 24.0
+        # EDAS giris sayaci (02.11.2026): gunluk sebeke tuketimi / 24
+        t["SEBEKE"] = float(r.get("Sebeke_Tuketim_kWh") or 0) / 24.0
         tabanlar[lok_id] = t
     return tabanlar
 

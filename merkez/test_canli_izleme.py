@@ -637,6 +637,35 @@ c("sunum: Maslak canlı verisinde ŞEBEKE var", "SEBEKE" in S._maslak_olcekle(
     {"Sebeke_Tuketim_kWh": 24000.0, "Kojen_Uretim_kWh": 0}) and
   S._maslak_olcekle({"Sebeke_Tuketim_kWh": 24000.0})["SEBEKE"] == 1000.0)
 
+# ── Ana ekran: lokasyon kartı = şebeke + kojen, pop-up şebeke | kojen (02.11.2026) ──
+import ast as _ast  # noqa: E402
+_fn = next(n for n in _ast.parse(_MRK).body
+           if isinstance(n, _ast.FunctionDef) and n.name == "canli_ozet_hesapla")
+_ns_oz = {"datetime": datetime, "CANLI_BAYAT_SN": 10 ** 9}
+exec(_ast.get_source_segment(_MRK, _fn), _ns_oz)
+_zt = datetime.now().isoformat()
+_oz = _ns_oz["canli_ozet_hesapla"]([
+    {"lokasyon_id": "maslak", "cihaz": c_, "kw": k_, "olcum_zamani": _zt}
+    for c_, k_ in (("TRDP-1", 1200.0), ("TRDP-2", 900.0), ("KOJEN-3", 10.0), ("KOJEN-4", 650.0),
+                   ("SEBEKE", 1300.0), ("CHILLER-1", 200.0))] + [
+    {"lokasyon_id": "altunizade", "cihaz": "TRDP-1", "kw": 800.0, "olcum_zamani": _zt}])
+c("canlı özet: şebeke sayacı ayrı alan (trafoya karışmaz)",
+  _oz["maslak"]["sebeke"] == 1300.0 and _oz["maslak"]["trafo"] == 2100.0, _oz["maslak"])
+c("canlı özet: kart değeri = şebeke + kojen", _oz["maslak"]["enerji"] == 1960.0, _oz["maslak"])
+c("canlı özet: şebeke sayacı olmayan lokasyonda kart = trafo toplamı (kojen eklenmez)",
+  _oz["altunizade"]["enerji"] == 800.0 and _oz["altunizade"]["sebeke"] is None, _oz["altunizade"])
+_oz2 = _ns_oz["canli_ozet_hesapla"]([{"lokasyon_id": "m", "cihaz": "SEBEKE", "kw": -300.0, "olcum_zamani": _zt},
+                                     {"lokasyon_id": "m", "cihaz": "KOJEN-4", "kw": 900.0, "olcum_zamani": _zt}])
+c("canlı özet: şebekeye verilirken toplam = kojen − verilen", _oz2["m"]["enerji"] == 600.0, _oz2["m"])
+c("lokasyon kartı ve sırası 'enerji' alanından",
+  'return (CANLI.get(lok_id) or {}).get("enerji")' in _MRK
+  and '_g_seb = GECIS.get((lok_id, "enerji"))' in _MRK
+  and '_kart = {_l: _gv(_g.get((_l, "enerji")), _v.get("enerji"))' in _MRK)
+c("Global Özet Toplam Enerji = şebeke + kojen", '"enerji": ("enerji",)' in _MRK and '" · şebeke + kojen"' in _MRK)
+c("harita pop-up: Şebeke ve Kojen üretim satırları",
+  "satir('⚡', 'Şebeke', v.sebeke)" in _MRK and "satir('⚙️', 'Kojen üretim', v.kojen)" in _MRK
+  and "Trafo toplam" not in _MRK)
+
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))
 _g = sum(1 for _, ok, _ in T if ok)
