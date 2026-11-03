@@ -683,7 +683,10 @@ def _dis_hava_log_yaz(sb_url: str, sb_key: str, derece: float, kaynak: str = "ap
     except Exception:
         pass  # Log yazma hatası ana akışı etkilemesin
 
-@st.cache_data(ttl=120, show_spinner=False)
+# energy_data günlük satırlardan oluşur; 75 sütun ve tüm geçmiş ~1,4 sn sürüyor.
+# select("*") BİLEREK kalıyor: karsilastirma_hesap Chiller/Kule/MCC/TRDP
+# sütunlarını adlarından bulur, sütun listesi yazmak yenilerini sessizce düşürürdü.
+@st.cache_data(ttl=300, show_spinner=False)
 def fetch_energy(url, key):
     try:
         from supabase import create_client
@@ -1009,6 +1012,29 @@ def fetch_guncellemeler(url, key):
         return r.data or []
     except:
         return []
+
+# Sağ sütundaki küçük okumalar her çizimde veritabanına gidiyordu (03.11.2026
+# ölçümü: oto set sorguları tek başına ~0,9 sn). Hata önbelleğe alınmaz: istisna
+# çağırana gider, sonraki çizim yeniden dener. Portaldan bu veriyi değiştiren
+# yerler _rest_oku.clear() çağırır; lokasyondan gelen değerler en çok 60 sn gecikir.
+@st.cache_data(ttl=60, show_spinner=False)
+def _rest_oku(url, key, yol):
+    import urllib.request as _ur
+    with _ur.urlopen(_ur.Request(
+        url + yol,
+        headers={"apikey": key, "Authorization": "Bearer " + key}), timeout=4) as r:
+        return json.loads(r.read())
+
+# Bulunamazsa LookupError: "analiz yok" önbelleğe alınmaz, yoksa o sürede AI
+# gereksiz yere yeniden çalışırdı. Analiz kaydedilince _analiz_oku.clear().
+@st.cache_data(ttl=300, show_spinner=False)
+def _analiz_oku(url, key, tarih):
+    from supabase import create_client
+    r = create_client(url, key).table("ai_analizler").select("metin,created_at") \
+        .eq("tarih", tarih).limit(1).execute()
+    if not r.data:
+        raise LookupError(tarih)
+    return r.data[0]["metin"], r.data[0]["created_at"]
 
 config = load_config()
 url  = config.get("supabase_url","")
@@ -2434,11 +2460,8 @@ with sag:
     _os = {}
     _ml_data = []
     try:
-        with _oaur.urlopen(_oaur.Request(
-            url + "/rest/v1/ayarlar?key=eq.oto_set_aktif&select=value",
-            headers={"apikey":key,"Authorization":"Bearer "+key}), timeout=4) as r:
-            d = _oajson.loads(r.read())
-            _oto_aktif_su = (d[0]["value"] == "true") if d else True
+        d = _rest_oku(url, key, "/rest/v1/ayarlar?key=eq.oto_set_aktif&select=value")
+        _oto_aktif_su = (d[0]["value"] == "true") if d else True
     except Exception: pass
     # Sunumda örnek veri sunucusuna yazılmaz; anahtarın yine de çalıştığı
     # görülsün diye durum oturumda tutulur.
@@ -2449,10 +2472,7 @@ with sag:
     # anahtara yazıyor: oto_set_son_kontrol_<lokasyon>. En güncel olanı
     # gösteririz. Eski tek anahtar (oto_set_son_kontrol) yedek olarak kalır.
     try:
-        with _oaur.urlopen(_oaur.Request(
-            url + "/rest/v1/ayarlar?key=like.oto_set_son_kontrol*&select=key,value",
-            headers={"apikey":key,"Authorization":"Bearer "+key}), timeout=4) as r:
-            _kayitlar = _oajson.loads(r.read())
+        _kayitlar = _rest_oku(url, key, "/rest/v1/ayarlar?key=like.oto_set_son_kontrol*&select=key,value")
         _adaylar = []
         for _kv in _kayitlar:
             try:
@@ -2465,11 +2485,8 @@ with sag:
             _os = sorted(_adaylar, key=lambda x: str(x.get("zaman", "")))[-1]
     except Exception: pass
     try:
-        with _oaur.urlopen(_oaur.Request(
-            url + "/rest/v1/oto_mod_log?order=created_at.desc&limit=60"
-                 "&select=tip,eski_mod,yeni_mod,tahmin_ort,komut_sayisi,created_at,lokasyonlar",
-            headers={"apikey":key,"Authorization":"Bearer "+key}), timeout=4) as r:
-            _ml_data = _oajson.loads(r.read())
+        _ml_data = _rest_oku(url, key, "/rest/v1/oto_mod_log?order=created_at.desc&limit=60"
+                             "&select=tip,eski_mod,yeni_mod,tahmin_ort,komut_sayisi,created_at,lokasyonlar")
     except Exception: pass
 
     _olc("Sağ sütun: oto set sorguları (3 adet)")
@@ -2550,58 +2567,52 @@ with sag:
     _oz_test_saglik = []
     _geri_bildirim_saglik = []
     try:
-        with _oaur.urlopen(_oaur.Request(
-            url + "/rest/v1/lokasyonlar?select=lokasyon_id,bakim_ozet,ping_zamani",
-            headers={"apikey": key, "Authorization": "Bearer " + key}), timeout=4) as r:
-            for _lr in _oajson.loads(r.read()):
-                _bo = _lr.get("bakim_ozet")
-                if isinstance(_bo, str):
-                    try:
-                        _bo = _oajson.loads(_bo)
-                    except Exception:
-                        _bo = {}
-                _o = (_bo or {}).get("oto")
-                if isinstance(_o, dict):
-                    _oto_saglik.append((_lr["lokasyon_id"], _o))
-                    # Yürürlükteki set değerleri SAHADAN gelir; merkez kendi
-                    # tablosunu tutmaz (kural yalnızca oto_set.py'de).
-                    # LOKASYON BAŞINA saklanır: setler hastaneye göre değişir
-                    # (farklı blok/zon yapısı, farklı işletme tablosu). Tek bir
-                    # lokasyonunkini hepsiymiş gibi göstermek yanıltırdı.
-                    if isinstance(_o.get("setler"), dict) and _o["setler"]:
-                        _setler_lok[_lr["lokasyon_id"]] = _o["setler"]
-                    # Hava tahmini koordinatı: lokasyon profilini girmemiş
-                    # bir hastane İstanbul varsayılanıyla karar verir. Farklı
-                    # şehirde bu SESSİZ bir hatadır (eşik aylarca yanlış
-                    # tarafta kalır), bu yüzden ana ekranda sayılır.
-                    if (_o.get("konum") or {}).get("kaynak") == "varsayilan":
-                        _varsayilan_konum.append(_lr["lokasyon_id"])
-                    # Geçiş saatleri lokasyona özel olabilir (ayarlar tablosunda
-                    # `oto_gunduz_saat_<lokasyon>` gibi). Hangi hastanenin genel
-                    # kuraldan ayrıldığını sahanın bildirdiği kuraldan öğreniriz.
-                    if (_o.get("kural") or {}).get("ozel"):
-                        _ozel_saatli.append(_lr["lokasyon_id"])
-                # Mekanik Zeka öz testi: lokasyon KENDİ ayarlarıyla testleri
-                # koşar (oz_test.py). Aynı kod farklı ayarla farklı karar verir;
-                # "bende yeşildi" yetmez, sahada da yeşil olmalı.
-                _ot = (_bo or {}).get("oz_test")
-                if isinstance(_ot, dict) and _ot.get("toplam"):
-                    _oz_test_saglik.append((_lr["lokasyon_id"], _ot))
-                # Tasarruf önerisi geri bildirimi: öğrenme döngüsünü kurmadan
-                # önce sahada ne kadar veri biriktiğini görmek için.
-                _gb = (_bo or {}).get("geri_bildirim")
-                if isinstance(_gb, dict) and _gb.get("kayit") is not None:
-                    _geri_bildirim_saglik.append((_lr["lokasyon_id"], _gb))
+        for _lr in _rest_oku(url, key, "/rest/v1/lokasyonlar?select=lokasyon_id,bakim_ozet,ping_zamani"):
+            _bo = _lr.get("bakim_ozet")
+            if isinstance(_bo, str):
+                try:
+                    _bo = _oajson.loads(_bo)
+                except Exception:
+                    _bo = {}
+            _o = (_bo or {}).get("oto")
+            if isinstance(_o, dict):
+                _oto_saglik.append((_lr["lokasyon_id"], _o))
+                # Yürürlükteki set değerleri SAHADAN gelir; merkez kendi
+                # tablosunu tutmaz (kural yalnızca oto_set.py'de).
+                # LOKASYON BAŞINA saklanır: setler hastaneye göre değişir
+                # (farklı blok/zon yapısı, farklı işletme tablosu). Tek bir
+                # lokasyonunkini hepsiymiş gibi göstermek yanıltırdı.
+                if isinstance(_o.get("setler"), dict) and _o["setler"]:
+                    _setler_lok[_lr["lokasyon_id"]] = _o["setler"]
+                # Hava tahmini koordinatı: lokasyon profilini girmemiş
+                # bir hastane İstanbul varsayılanıyla karar verir. Farklı
+                # şehirde bu SESSİZ bir hatadır (eşik aylarca yanlış
+                # tarafta kalır), bu yüzden ana ekranda sayılır.
+                if (_o.get("konum") or {}).get("kaynak") == "varsayilan":
+                    _varsayilan_konum.append(_lr["lokasyon_id"])
+                # Geçiş saatleri lokasyona özel olabilir (ayarlar tablosunda
+                # `oto_gunduz_saat_<lokasyon>` gibi). Hangi hastanenin genel
+                # kuraldan ayrıldığını sahanın bildirdiği kuraldan öğreniriz.
+                if (_o.get("kural") or {}).get("ozel"):
+                    _ozel_saatli.append(_lr["lokasyon_id"])
+            # Mekanik Zeka öz testi: lokasyon KENDİ ayarlarıyla testleri
+            # koşar (oz_test.py). Aynı kod farklı ayarla farklı karar verir;
+            # "bende yeşildi" yetmez, sahada da yeşil olmalı.
+            _ot = (_bo or {}).get("oz_test")
+            if isinstance(_ot, dict) and _ot.get("toplam"):
+                _oz_test_saglik.append((_lr["lokasyon_id"], _ot))
+            # Tasarruf önerisi geri bildirimi: öğrenme döngüsünü kurmadan
+            # önce sahada ne kadar veri biriktiğini görmek için.
+            _gb = (_bo or {}).get("geri_bildirim")
+            if isinstance(_gb, dict) and _gb.get("kayit") is not None:
+                _geri_bildirim_saglik.append((_lr["lokasyon_id"], _gb))
     except Exception:
         pass
 
     # ── Dönem saatleri (kullanıcı tarafından değiştirilebilir) ──
     def _oto_saat_oku(anahtar, varsayilan):
         try:
-            with _oaur.urlopen(_oaur.Request(
-                url + f"/rest/v1/ayarlar?key=eq.{anahtar}&select=value",
-                headers={"apikey": key, "Authorization": "Bearer " + key}), timeout=4) as r:
-                d = _oajson.loads(r.read())
+            d = _rest_oku(url, key, f"/rest/v1/ayarlar?key=eq.{anahtar}&select=value")
             return int(float(d[0]["value"])) if d else varsayilan
         except Exception:
             return varsayilan
@@ -3110,6 +3121,7 @@ with sag:
                                      "Prefer": "resolution=merge-duplicates"}), timeout=4)
                     except Exception as _e:
                         st.session_state["_oto_switch_hata"] = str(_e)
+                    _rest_oku.clear()   # anahtar yeni durumu hemen göstersin
                 st.rerun()
 
         with _k_rozet:
@@ -3208,6 +3220,7 @@ with sag:
                         headers={"apikey": key, "Authorization": "Bearer " + key,
                                  "Content-Type": "application/json",
                                  "Prefer": "resolution=merge-duplicates"}), timeout=4)
+                _rest_oku.clear()   # yeni saatler hemen görünsün
                 st.session_state["_oto_popup"] = None
                 st.rerun()
         with _p2:
@@ -3455,15 +3468,9 @@ with sag:
             def _sb_analiz_oku(tarih):
                 """Supabase ai_analizler tablosundan ilgili günün analizini çek."""
                 try:
-                    from supabase import create_client as _cc
-                    _c = _cc(url, key)
-                    _r = _c.table("ai_analizler").select("metin,created_at") \
-                           .eq("tarih", str(tarih)).limit(1).execute()
-                    if _r.data:
-                        return _r.data[0]["metin"], _r.data[0]["created_at"]
+                    return _analiz_oku(url, key, str(tarih))
                 except Exception:
-                    pass
-                return None, None
+                    return None, None
 
             def _sb_analiz_yaz(tarih, metin, lok_n):
                 """Analiz metnini Supabase ai_analizler tablosuna kaydet (upsert)."""
@@ -3475,6 +3482,7 @@ with sag:
                         "metin":      metin,
                         "lok_sayisi": lok_n,
                     }, on_conflict="tarih").execute()
+                    _analiz_oku.clear()
                 except Exception:
                     pass
 
