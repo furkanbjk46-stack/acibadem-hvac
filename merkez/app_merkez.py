@@ -1713,7 +1713,7 @@ with sol:
     # Tüm lokasyonların canlı sayaçlarından ANLIK toplamlar (kW). Geçmiş /
     # aylık değerler kaldırıldı (22.10.2026). Canlı sayacı olmayan kalemlerde
     # sayı uydurulmaz: "canlı sayaç yok" yazılır; sayaç bağlanınca kendiliğinden dolar.
-    st.markdown('<div class="sec">' + _ik.ikon("enerji", 17) + 'GLOBAL ÖZET — ANLIK · FURKAN</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sec">' + _ik.ikon("enerji", 17) + 'GLOBAL ÖZET — ANLIK</div>', unsafe_allow_html=True)
 
     def _canli_topla(alan):
         degerler = [v[alan] for v in CANLI.values() if v.get(alan) is not None]
