@@ -19,6 +19,16 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+# Süre ölçümü (geçici): ?olcum=1 ile açılan oturumda giriş sonrası ana ekranın
+# altında sunucu tarafı süreleri gösterilir. Diğer kullanıcılar bir şey görmez.
+import time as _olcum_time
+_OLCUM_T0 = _olcum_time.perf_counter()
+_olcum_noktalar = []
+def _olc(ad):
+    _olcum_noktalar.append((ad, _olcum_time.perf_counter()))
+if "olcum" in st.query_params:
+    st.session_state["_olcum_goster"] = True
+
 # İzleyici (salt okunur) oturumlarında veritabanına yazmayı en alt katmanda
 # engeller — bkz. salt_okuma.py. Diğer modüller içe aktarılmadan ÖNCE kurulur.
 import salt_okuma as _salt_okuma
@@ -1185,6 +1195,7 @@ if "bakim" in st.query_params:
 # service_role RLS'i bypass eder → portala erişebilen veritabanına tam yetkilidir.
 import giris
 giris.giris_kapisi()   # giriş yoksa giriş ekranını basar ve durdurur
+_olc("Başlangıç + giriş kontrolü")
 
 # İzleyici linkiyle gelindiyse: her şey görünür, hiçbir şey değiştirilemez
 _IZLEYICI = giris.izleyici_mi()
@@ -1493,8 +1504,11 @@ if not bagli:
     st.error("⚠️ Supabase bağlantısı yok. merkez_config.json dosyasını kontrol edin.")
     st.stop()
 
+_olc("Stil + yönlendirmeler")
 df_all, _fetch_err = fetch_energy(url, key)
+_olc("fetch_energy")
 lokasyonlar  = fetch_lokasyonlar(url, key)
+_olc("fetch_lokasyonlar")
 lok_dict     = {l["lokasyon_id"]: l for l in lokasyonlar}
 
 # Sadece bilinen lokasyonları al (deneme/test verileri filtrelenir)
@@ -1538,6 +1552,7 @@ def dun_kwh(lok_id):
 # ============================================================
 # ANA LAYOUT: sol | harita | sağ
 # ============================================================
+_olc("Veri hazırlığı")
 sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 
 # ════════════════════════════════
@@ -1841,6 +1856,7 @@ with sol:
 # ════════════════════════════════
 # MERKEZ KOLON — TÜRKİYE HARİTASI
 # ════════════════════════════════
+_olc("Sol sütun (lokasyonlar + global özet)")
 with merkez:
     # ── Leaflet harita verisi ─────────────────────────────
     harita_js = []
@@ -2268,6 +2284,7 @@ window.addEventListener('message', function(ev) {{
 # ════════════════════════════════
 # SAĞ KOLON
 # ════════════════════════════════
+_olc("Orta sütun (harita)")
 with sag:
     # ── Canlı Uyarılar ──
     st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
@@ -2409,6 +2426,7 @@ with sag:
     div[data-testid="stCheckbox"]{position:absolute;opacity:0;pointer-events:none;height:0;}
     </style>""", unsafe_allow_html=True)
 
+    _olc("Sağ sütun: uyarılar")
     import json as _oajson, urllib.request as _oaur
 
     # Verileri çek
@@ -2454,6 +2472,7 @@ with sag:
             _ml_data = _oajson.loads(r.read())
     except Exception: pass
 
+    _olc("Sağ sütun: oto set sorguları (3 adet)")
     # ── DURUM LOG'DAN TÜRETİLİR ──────────────────────────────────────────
     # Karar lokasyon PC'sinde veriliyor ve lokasyon `ayarlar` tablosuna
     # YAZAMAZ (anon anahtara yazma yetkisi bilinçli olarak verilmedi —
@@ -3886,6 +3905,7 @@ with sag:
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
 
+_olc("Sağ sütun: kalan bölümler")
 # ============ FOOTER ============
 st.markdown(f"""
 <div style="text-align:center; padding:10px 0 4px; border-top:1px solid rgba(24,26,30,0.10); margin-top:10px;">
@@ -3969,6 +3989,20 @@ _components.html("""
 </script>
 <!-- cizim: %s -->
 """ % now_display.strftime("%H%M%S"), height=0)
+
+# ============ SÜRE ÖLÇÜMÜ (geçici) ============
+if st.session_state.get("_olcum_goster"):
+    _olc("Altbilgi + hizalama")
+    _olcum_satir, _olcum_onceki = [], _OLCUM_T0
+    for _olcum_ad, _olcum_t in _olcum_noktalar:
+        _olcum_satir.append(f"{_olcum_t - _olcum_onceki:7.3f} sn  {_olcum_ad}")
+        _olcum_onceki = _olcum_t
+    _olcum_toplam = _olcum_onceki - _OLCUM_T0
+    _olcum_gecmis = (st.session_state.get("_olcum_gecmis", []) + [round(_olcum_toplam, 2)])[-10:]
+    st.session_state["_olcum_gecmis"] = _olcum_gecmis
+    st.code("\n".join(_olcum_satir)
+            + f"\n{_olcum_toplam:7.3f} sn  TOPLAM (sunucu)"
+            + f"\nSon çizimler (sn): {_olcum_gecmis}")
 
 # ============ AYARLAR ============
 if _IZLEYICI:
