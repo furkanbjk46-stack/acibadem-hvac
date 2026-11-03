@@ -1536,7 +1536,7 @@ if _fetch_err:
 # ── Online durumu hesapla ──
 # Modül sürece bir kez yüklenir; yeni sürüm yayınlanınca eski kalmasın (bkz. SURUM)
 import canli_izleme as _ci_g
-if getattr(_ci_g, "SURUM", 0) < 11:
+if getattr(_ci_g, "SURUM", 0) < 12:
     import importlib as _il_ci
     _ci_g = _il_ci.reload(_ci_g)
 
@@ -1580,8 +1580,9 @@ with sol:
                     + 'LOKASYON DURUMU</div>', unsafe_allow_html=True)
     with _lb_ara:
         with st.container(key="lok_arama"):
-            _lok_ara = st.text_input("Lokasyon ara", key="lok_ara", placeholder="Lokasyon ara",
-                                     label_visibility="collapsed")
+            # Süzmeyi tarayıcı yapar (canli_izleme.arama_betigi): yazarken çalışır
+            st.text_input("Lokasyon ara", key="lok_ara", placeholder="Lokasyon ara",
+                          label_visibility="collapsed")
 
     # ANLIK değerler: kartlar, harita penceresi ve Global Özet bunu kullanır
     CANLI = canli_ozet_hesapla(fetch_canli_tum(url, key))
@@ -1603,12 +1604,7 @@ with sol:
     # Tüm kartları tek HTML bloğu olarak oluştur → scrollable div içine sar
     tum_kartlar = '<div class="lok-scroll">'
 
-    _eslesen = 0
     for i, (lok_id, lok_info) in enumerate(lok_sira):
-        # Arama yalnız gösterimi süzer; sıra numarası (#) gerçek sırasını korur
-        if not _ci_g.lokasyon_eslesir(_lok_ara, lok_id, lok_info["isim"], lok_info["kisa"]):
-            continue
-        _eslesen += 1
         online, fark_dk = online_bilgi(lok_id)
         renk     = lok_info["renk"]
         if fark_dk is None:
@@ -1652,6 +1648,7 @@ with sol:
             # butonuna yönlendirilir → sayfa YENİDEN YÜKLENMEZ (aşağıya bak).
             # href yine de duruyor: JS çalışmazsa eski tam sayfa yolu yedek kalır.
             f'<a class="{card_cls} lok-kart" data-lok="{lok_id}" '
+            f'data-ara="{_ci_g.arama_metni(lok_id + " " + lok_info["isim"] + " " + lok_info["kisa"])}" '
             f'href="?detay={lok_id}" target="_self" title="{lok_info["kisa"]} detayına git" '
             f'style="padding:14px;position:relative;--lokrenk:{renk};">'
             + sira_badge +
@@ -1686,11 +1683,11 @@ with sol:
             f'</div></div></a>'
         )
 
-    if not _eslesen:
-        tum_kartlar += ('<div style="padding:18px 8px;text-align:center;font-size:12px;color:#46536b;">'
-                        'Aramayla eşleşen lokasyon yok.</div>')
+    tum_kartlar += ('<div class="lok-ara-bos" style="display:none;padding:18px 8px;text-align:center;'
+                    'font-size:12px;color:#46536b;">Aramayla eşleşen lokasyon yok.</div>')
     tum_kartlar += '</div>'
     st.markdown(tum_kartlar, unsafe_allow_html=True)
+    _components.html(_ci_g.arama_betigi(), height=0)
 
     # ── Lokasyon kartı geçişi: SAYFA YENİDEN YÜKLENMEDEN ──
     #

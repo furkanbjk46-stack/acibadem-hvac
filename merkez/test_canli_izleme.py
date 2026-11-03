@@ -379,13 +379,17 @@ c("ana: tazeleme durum gönderir", '"durum": _durum' in _ANA)
 c("ana: online_bilgi ortak hesabı kullanır", "_ci_g.baglanti_durumu" in _ANA)
 
 # ── Lokasyon arama ──
-c("arama: boş sorgu hepsini getirir", CI.lokasyon_eslesir("", "x") and CI.lokasyon_eslesir("  ", "x"))
-c("arama: Türkçe harf farkı yok", CI.lokasyon_eslesir("atasehir", "ATAŞEHİR")
-  and CI.lokasyon_eslesir("ATAŞEHİR", "atasehir") and CI.lokasyon_eslesir("kadıköy", "KADİKÖY"))
-c("arama: büyük I küçük ı", CI.lokasyon_eslesir("ISPARTA", "ısparta"))
-c("arama: kısmi eşleşme, alanlardan biri yeter", CI.lokasyon_eslesir("mas", "x", "Acıbadem Maslak"))
-c("arama: eşleşmeyen gelmez", not CI.lokasyon_eslesir("zzz", "maslak", "Acıbadem Maslak"))
-c("ana: kartlar aramayla süzülür", "_ci_g.lokasyon_eslesir(_lok_ara" in _ANA and 'key="lok_ara"' in _ANA)
+c("arama: Türkçe harf farkı yok", CI.arama_metni("ATAŞEHİR") == "atasehir"
+  and CI.arama_metni("KADİKÖY") == CI.arama_metni("kadıköy") == "kadikoy")
+c("arama: boşluk sadeleşir", CI.arama_metni("  Acıbadem   Maslak ") == "acibadem maslak")
+_ab = CI.arama_betigi()
+c("arama: betik yazarken çalışır", "addEventListener('input'" in _ab and ".st-key-lok_arama" in _ab)
+c("arama: silinince kartlar geri gelir", "a.style.display = uyar ? '' : 'none'" in _ab and "!q ||" in _ab)
+c("arama: sayfa yenilenince de uygulanır", "setInterval(uygula" in _ab)
+c("arama: betiğin harf eşlemesi python ile aynı",
+  all(("'%s':'%s'" % (chr(k), v)) in _ab for k, v in CI._ARAMA_HARF.items()))
+c("ana: kartlar sunucuda süzülmez, hepsi sayfada", "lokasyon_eslesir" not in _ANA and 'data-ara="' in _ANA
+  and 'key="lok_ara"' in _ANA and "_ci_g.arama_betigi()" in _ANA)
 c("ana: tablet işareti iç sütunda değil", "_lb_baslik" in _ANA and
   '<div class="sec"><span class="ana-duzen-isaret">' not in _ANA)
 c("panel: rapor butonu yok", "Rapor oluştur" not in PANEL and "_rapor" not in PANEL)
@@ -598,7 +602,7 @@ c("ic kart: baslik + toplam + kendi listesi", "cg-altkart-bas" in _ak and "cg-li
 c("ic kartli grup duz sutun", "cg-liste-blok" in CI.grup_html("E", "", _ak, 1.0, 1, ic_kartli=True)
   and "cg-liste-blok" not in CI.grup_html("E", "", "", 1.0, 1))
 c("sayfa: kojen ayri kart degil, enerji kartinda", '_gruplar = [g for g in _gruplar if g[0] != "kojen"]' in _sy)
-c("sayfa modul surumu 11 istiyor", "_CI_GEREKEN_SURUM = 11" in _sy and CI.SURUM >= 11)
+c("sayfa modul surumu 12 istiyor", "_CI_GEREKEN_SURUM = 12" in _sy and CI.SURUM >= 12)
 
 # ── 26.10.2026: ana sayfada tam yenileme yok, canlı değerler küçük parçayla ──
 c("ana sayfada 10 sn'lik tam sayfa yenilemesi kapali", "_TAM_YENILEME = False" in _MRK

@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 11
+SURUM = 12
 
 # Satır grafiklerinin geçmişi — saniye (kullanıcı kararı: 5 dakika, seçim yok).
 PENCERE_SN = 300
@@ -101,10 +101,47 @@ def arama_metni(s) -> str:
     return " ".join(str(s or "").translate(_ARAMA_HARF).lower().split())
 
 
-def lokasyon_eslesir(sorgu, *alanlar) -> bool:
-    """Boş sorgu her lokasyonu getirir; aksi halde alanlardan birinde geçmeli."""
-    q = arama_metni(sorgu)
-    return not q or any(q in arama_metni(a) for a in alanlar)
+def arama_betigi() -> str:
+    """Lokasyon araması: yazarken kartları TARAYICIDA süzer, Enter gerekmez.
+
+    st.text_input değeri ancak Enter/odak kaybında sunucuya gider; süzme sunucuda
+    olsaydı silinen harfle kartlar geri gelmezdi. Tüm kartlar sayfada durur, her
+    kartın data-ara özniteliği arama_metni() ile hazırdır. Sayfa yeniden çizilince
+    kartlar yenilendiği için süzme aralıkla da uygulanır. Harf eşlemesi _ARAMA_HARF ile aynı.
+    """
+    return """
+<script>
+(function () {
+  var W = window.parent, d;
+  try { d = W.document; } catch (e) { return; }
+  var H = {'İ':'i','I':'i','ı':'i','Ş':'s','ş':'s','Ğ':'g','ğ':'g','Ü':'u','ü':'u','Ö':'o','ö':'o','Ç':'c','ç':'c'};
+  function norm(s) {
+    return s.replace(/[İIıŞşĞğÜüÖöÇç]/g, function (c) { return H[c]; })
+            .toLowerCase().trim().replace(/\\s+/g, ' ');
+  }
+  function uygula() {
+    var kutu = d.querySelector('.st-key-lok_arama input');
+    if (!kutu) { return; }
+    var q = norm(kutu.value || ''), say = 0;
+    d.querySelectorAll('.lok-kart[data-ara]').forEach(function (a) {
+      var uyar = !q || a.getAttribute('data-ara').indexOf(q) !== -1;
+      a.style.display = uyar ? '' : 'none';
+      if (uyar) { say++; }
+    });
+    var bos = d.querySelector('.lok-ara-bos');
+    if (bos) { bos.style.display = say ? 'none' : 'block'; }
+  }
+  if (W.__synAraAralik) { W.clearInterval(W.__synAraAralik); }
+  if (W.__synAraDinle) { d.removeEventListener('input', W.__synAraDinle, true); }
+  W.__synAraDinle = function (e) {
+    if (e.target && e.target.closest && e.target.closest('.st-key-lok_arama')) { uygula(); }
+  };
+  d.addEventListener('input', W.__synAraDinle, true);
+  uygula();
+  W.__synAraAralik = W.setInterval(uygula, 400);
+})();
+</script>
+"""
 
 # Satır grafiği renkleri — BİLEREK tek aile (lacivert/mavi).
 # Yeşil/turuncu/kırmızı bu portalda DURUM demek (iyi/uyarı/kritik); çizgiyi
