@@ -3525,10 +3525,9 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         "<div id='ed-root'>"
         "<div class='layer'>"
         # ── Üst bar ──
-        "<div style='margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;'>"
+        "<div style='margin-bottom:18px;'>"
         f"<div class='hbrand'>{_ik('trdp', 16)}Enerji Diyagramı"
         f"<span class='hsub'>{_date_txt}{_hava_txt} · kWh/gün</span></div>"
-        "<div style='font-size:12px;font-weight:700;color:#133273;'>FURKAN</div>"
         "</div>"
         # ── 1. Seviye: Hastane Genel Toplam çekirdeği ──
         "<div style='display:flex;justify-content:center;margin-bottom:22px;'>"
