@@ -34,11 +34,77 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 10
+SURUM = 11
 
-# Pencere seçenekleri — saniye. Varsayılan 5 dakika (kullanıcı kararı).
-PENCERELER = {"1 dakika": 60, "5 dakika": 300, "15 dakika": 900, "30 dakika": 1800}
-VARSAYILAN_PENCERE = "5 dakika"
+# Satır grafiklerinin geçmişi — saniye (kullanıcı kararı: 5 dakika, seçim yok).
+PENCERE_SN = 300
+
+# Saha 15 sn'de bir ölçüm yazar. Son ölçüm bundan eskiyse haberleşme kopmuş
+# sayılır, son değer ekranda BIRAKILMAZ (kullanıcı kararı 03.11.2026).
+BAGLANTI_KOPUK_SN = 120
+# Heartbeat 2 dk'da bir gelir; bu kadar dakika gelmezse lokasyon ÇEVRİMDIŞI.
+CEVRIMICI_DK = 10
+_TR_SAAT = timezone(timedelta(hours=3))
+
+
+def baglanti_durumu(ping, simdi=None):
+    """lokasyonlar.ping_zamani → (çevrimiçi mi, kaç dakika önce). Kayıt yoksa (False, None).
+
+    ping İstanbul saatiyle yazılır (lokasyon PC'si), saat dilimi taşımaz. Kıyas
+    da İstanbul saatiyle yapılmalı: sunucu UTC iken datetime.now() ile fark
+    3 saat EKSİ çıkıyor, kopan lokasyon saatlerce çevrimiçi görünüyordu.
+    """
+    metin = str(ping or "").strip()
+    if not metin or metin == "None":
+        return False, None
+    try:
+        t = datetime.fromisoformat(metin.replace("Z", "+00:00"))
+    except ValueError:
+        return False, None
+    if t.tzinfo is not None:
+        t = t.astimezone(_TR_SAAT).replace(tzinfo=None)
+    simdi = simdi or datetime.now(_TR_SAAT).replace(tzinfo=None)
+    fark = (simdi - t).total_seconds() / 60
+    return fark < CEVRIMICI_DK, fark
+
+
+def baglanti_kopuk_mu(yas_sn) -> bool:
+    return yas_sn is not None and yas_sn > BAGLANTI_KOPUK_SN
+
+
+def sure_metni(sn) -> str:
+    if sn < 3600:
+        return "%d dk" % max(1, round(sn / 60))
+    if sn < 172800:
+        return "%.0f saat" % (sn / 3600)
+    return "%.0f gün" % (sn / 86400)
+
+
+def kopuk_html(yas_sn) -> str:
+    """Haberleşme koptuğunda canlı bölümün yerine çıkan uyarı (son değerler gösterilmez)."""
+    return (
+        "<div style='border:1px solid rgba(208,59,59,.45);background:rgba(208,59,59,.07);"
+        "border-radius:12px;padding:22px 24px;text-align:center;'>"
+        "<div style='font-size:14px;font-weight:800;letter-spacing:1px;color:#d03b3b;'>"
+        "● LOKASYONLA HABERLEŞME KOPUK</div>"
+        "<div style='font-size:12px;color:#24324d;margin-top:8px;'>"
+        "Son ölçüm <b>%s önce</b> alındı. Canlı veri akmıyor, eski değerler gösterilmiyor. "
+        "Haberleşme gelince bu bölüm kendiliğinden yeniden başlar.</div></div>" % sure_metni(yas_sn))
+
+
+_ARAMA_HARF = str.maketrans({"İ": "i", "I": "i", "ı": "i", "Ş": "s", "ş": "s", "Ğ": "g", "ğ": "g",
+                             "Ü": "u", "ü": "u", "Ö": "o", "ö": "o", "Ç": "c", "ç": "c"})
+
+
+def arama_metni(s) -> str:
+    """Türkçe harf ve büyük/küçük farkı aramayı etkilemesin (ATAŞEHİR = atasehir)."""
+    return " ".join(str(s or "").translate(_ARAMA_HARF).lower().split())
+
+
+def lokasyon_eslesir(sorgu, *alanlar) -> bool:
+    """Boş sorgu her lokasyonu getirir; aksi halde alanlardan birinde geçmeli."""
+    q = arama_metni(sorgu)
+    return not q or any(q in arama_metni(a) for a in alanlar)
 
 # Satır grafiği renkleri — BİLEREK tek aile (lacivert/mavi).
 # Yeşil/turuncu/kırmızı bu portalda DURUM demek (iyi/uyarı/kritik); çizgiyi
@@ -799,11 +865,16 @@ def siralama_betigi(aralik_sn: float = 4.0, sure_ms: int = 1100) -> str:
 def tazele_betigi(veri: dict) -> str:
     """Ana sayfadaki canlı sayıların ALTINDAKİ değeri yeniler (sayfa yeniden çizilmez).
 
-    veri = {"kart": {lok: g}, "ozet": {anahtar: g}, "harita": {lok: {...}}}
+    veri = {"kart": {lok: g}, "ozet": {anahtar: g}, "harita": {lok: {...}},
+            "durum": {lok: çevrimiçi mi}}
     g = {"d": son, "o": önceki|None, "t": zaman, "s": süre|None}. Kart/özet
     span'larının data-deger / data-onceki / data-t / data-sure öznitelikleri
     güncellenir; saniyelik akış (akis_betigi) yeni değerlerle devam eder.
     data-carpan (W/m² = kW × 1000/m²) korunur.
+
+    Bu turda değeri gelmeyen kart/özet sayısı "—" olur: ana sayfa kendiliğinden
+    yeniden çizilmediği için son değer yoksa ekranda sonsuza dek kalırdı.
+    Kartın ÇEVRİMİÇİ/ÇEVRİMDIŞI yazısı da aynı nedenle burada güncellenir.
     """
     import json
     return """
@@ -812,9 +883,15 @@ def tazele_betigi(veri: dict) -> str:
   var veri = %s, W = window.parent, d;
   try { d = W.document; } catch (e) { return; }
   d.querySelectorAll('.canli-sayi[data-faz]').forEach(function (el) {
-    var fz = el.getAttribute('data-faz');
-    var g = fz.indexOf('ozet-') === 0 ? (veri.ozet || {})[fz.slice(5)] : (veri.kart || {})[fz];
-    if (!g || g.d == null) { return; }
+    var fz = el.getAttribute('data-faz'), ozet = fz.indexOf('ozet-') === 0;
+    var g = ozet ? (veri.ozet || {})[fz.slice(5)] : (veri.kart || {})[fz];
+    if (!g || g.d == null) {
+      if (ozet || el.closest('.lok-kart')) {
+        ['data-deger', 'data-onceki', 'data-t', 'data-sure'].forEach(function (a) { el.removeAttribute(a); });
+        el.textContent = '\\u2014';
+      }
+      return;
+    }
     var c = parseFloat(el.getAttribute('data-carpan') || '1');
     el.setAttribute('data-deger', (g.d * c).toFixed(3));
     if (g.o != null && g.s) {
@@ -826,6 +903,16 @@ def tazele_betigi(veri: dict) -> str:
     }
   });
   if (veri.harita) { W.__synHaritaTaban = veri.harita; }
+  Object.keys(veri.durum || {}).forEach(function (lok) {
+    var kart = d.querySelector('.lok-kart[data-lok="' + lok + '"]');
+    if (!kart) { return; }
+    var on = veri.durum[lok], r = on ? '#0ca30c' : '#d03b3b';
+    kart.classList.remove('nk-green', 'nk-red');
+    kart.classList.add(on ? 'nk-green' : 'nk-red');
+    var y = kart.querySelector('.lok-durum'), n = kart.querySelector('.lok-nokta');
+    if (y) { y.textContent = on ? '\\u00c7EVR\\u0130M\\u0130\\u00c7\\u0130' : '\\u00c7EVR\\u0130MDI\\u015eI'; y.style.color = r; }
+    if (n) { n.style.background = r; }
+  });
 })();
 </script>
 """ % json.dumps(veri, ensure_ascii=False)

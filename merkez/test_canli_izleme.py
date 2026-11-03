@@ -341,15 +341,54 @@ c("seri oturumda tutuluyor", "st.session_state[_seri_anahtar] = seri" in SAYFA)
 c("seri lokasyona göre ayrı", '"canli_seri_" + str(lok_id)' in SAYFA)
 c("kendi kendine yenileniyor (gerçekte 3 sn, sunumda ~1 sn)",
   '@st.fragment(run_every="0.5s" if _demo_modu() else "3s")' in SAYFA)
-# Widget fragment GOVDESINDE olmamali: kendi kendine yenilenen bolumde her
-# turda yeniden kurulur ve secim elden kayar. (Konum ust/alt onemli degil,
-# ONEMLI OLAN govdenin icinde olmamasi.)
+# Pencere seçimi kaldırıldı (kullanıcı kararı 03.11.2026): geçmiş sabit 5 dakika.
 _fragman_govde = (SAYFA.split("def _canli_izleme_ciz():")[1]
                   .split("\n    _canli_izleme_blok()")[0])
-c("pencere seçimi fragment gövdesinde DEĞİL",
-  "st.selectbox" not in _fragman_govde and 'key="canli_pencere"' in SAYFA)
-c("fragment session_state'ten okuyor", 'st.session_state.get("canli_pencere"' in SAYFA)
+c("dakika penceresi seçimi yok", 'key="canli_pencere"' not in SAYFA and "st.selectbox" not in _fragman_govde)
+c("geçmiş sabit 5 dakika", CI.PENCERE_SN == 300 and "_CI.PENCERE_SN" in _fragman_govde)
 c("sayaç yoksa açıklanıyor", "canlı sayaç okuması yok" in SAYFA)
+
+# ── Haberleşme koptuğunda son değer ekranda kalmaz (03.11.2026) ──
+_t0 = datetime(2026, 11, 3, 11, 0, 0)
+c("kopuk: 30 sn önce ölçüm canlı", not CI.baglanti_kopuk_mu(30))
+c("kopuk: eşiğin üstü kopuk", CI.baglanti_kopuk_mu(CI.BAGLANTI_KOPUK_SN + 1))
+c("kopuk: ölçüm zamanı bilinmiyorsa kopuk sayılmaz", not CI.baglanti_kopuk_mu(None))
+_koy = _fragman_govde.index("baglanti_kopuk_mu(yas)")
+c("kopuk: kontrol seri güncellenmeden önce", _koy < _fragman_govde.index("_CI.seri_guncelle("))
+c("kopuk: seri sıfırlanır", "st.session_state.pop(_seri_anahtar" in _fragman_govde)
+_kh = CI.kopuk_html(600)
+c("kopuk: uyarı ne kadar önce olduğunu söyler", "10 dk önce" in _kh and "KOPUK" in _kh)
+c("kopuk: uzun süre saatle yazılır", "3 saat" in CI.sure_metni(3 * 3600))
+c("durum: yeni ping çevrimiçi", CI.baglanti_durumu("2026-11-03T10:58:00.123", _t0)[0] is True)
+c("durum: eski ping çevrimdışı", CI.baglanti_durumu("2026-11-03T10:40:00", _t0)[0] is False)
+c("durum: ping yoksa kurulmadı", CI.baglanti_durumu(None, _t0) == (False, None)
+  and CI.baglanti_durumu("None", _t0) == (False, None) and CI.baglanti_durumu("bozuk", _t0) == (False, None))
+_on_u, _dk_u = CI.baglanti_durumu("2026-11-03T07:58:00+00:00", _t0)
+c("durum: UTC yazılmış ping İstanbul saatine çevrilir", _on_u is True and abs(_dk_u - 2) < 0.01, _dk_u)
+# Sunucu saatinden bağımsız: varsayılan "şimdi" İstanbul saati olmalı (UTC'de 3 saat kayıyordu)
+from datetime import timezone as _tz_t, timedelta as _td_t
+_ist = datetime.now(_tz_t(_td_t(hours=3))).replace(tzinfo=None)
+_on_e, _dk_e = CI.baglanti_durumu((_ist - _td_t(minutes=30)).isoformat())
+c("durum: sunucu saat dilimi sonucu değiştirmez", _on_e is False and abs(_dk_e - 30) < 1, _dk_e)
+_tb = CI.tazele_betigi({"kart": {}, "ozet": {}, "durum": {"maslak": False}})
+c("tazele: değeri gelmeyen kart boşalır", "removeAttribute" in _tb and "\\u2014" in _tb and "lok-kart" in _tb)
+c("tazele: durum yazısı güncellenir", "lok-durum" in _tb and '"maslak": false' in _tb)
+_ANA = open(os.path.join(BURASI, "app_merkez.py"), encoding="utf-8").read()
+c("ana: kartta durum ve nokta işaretli", 'class="lok-durum"' in _ANA and 'class="lok-nokta"' in _ANA)
+c("ana: tazeleme durum gönderir", '"durum": _durum' in _ANA)
+c("ana: online_bilgi ortak hesabı kullanır", "_ci_g.baglanti_durumu" in _ANA)
+
+# ── Lokasyon arama ──
+c("arama: boş sorgu hepsini getirir", CI.lokasyon_eslesir("", "x") and CI.lokasyon_eslesir("  ", "x"))
+c("arama: Türkçe harf farkı yok", CI.lokasyon_eslesir("atasehir", "ATAŞEHİR")
+  and CI.lokasyon_eslesir("ATAŞEHİR", "atasehir") and CI.lokasyon_eslesir("kadıköy", "KADİKÖY"))
+c("arama: büyük I küçük ı", CI.lokasyon_eslesir("ISPARTA", "ısparta"))
+c("arama: kısmi eşleşme, alanlardan biri yeter", CI.lokasyon_eslesir("mas", "x", "Acıbadem Maslak"))
+c("arama: eşleşmeyen gelmez", not CI.lokasyon_eslesir("zzz", "maslak", "Acıbadem Maslak"))
+c("ana: kartlar aramayla süzülür", "_ci_g.lokasyon_eslesir(_lok_ara" in _ANA and 'key="lok_ara"' in _ANA)
+c("ana: tablet işareti iç sütunda değil", "_lb_baslik" in _ANA and
+  '<div class="sec"><span class="ana-duzen-isaret">' not in _ANA)
+c("panel: rapor butonu yok", "Rapor oluştur" not in PANEL and "_rapor" not in PANEL)
 c("satırlar modülden üretiliyor (sayfada kopya HTML yok)",
   "_CI.satir_html(" in SAYFA and "_CI.grup_html(" in SAYFA
   and "_CI.bar_html(" in SAYFA)
@@ -559,7 +598,7 @@ c("ic kart: baslik + toplam + kendi listesi", "cg-altkart-bas" in _ak and "cg-li
 c("ic kartli grup duz sutun", "cg-liste-blok" in CI.grup_html("E", "", _ak, 1.0, 1, ic_kartli=True)
   and "cg-liste-blok" not in CI.grup_html("E", "", "", 1.0, 1))
 c("sayfa: kojen ayri kart degil, enerji kartinda", '_gruplar = [g for g in _gruplar if g[0] != "kojen"]' in _sy)
-c("sayfa modul surumu 10 istiyor", "_CI_GEREKEN_SURUM = 10" in _sy and CI.SURUM >= 10)
+c("sayfa modul surumu 11 istiyor", "_CI_GEREKEN_SURUM = 11" in _sy and CI.SURUM >= 11)
 
 # ── 26.10.2026: ana sayfada tam yenileme yok, canlı değerler küçük parçayla ──
 c("ana sayfada 10 sn'lik tam sayfa yenilemesi kapali", "_TAM_YENILEME = False" in _MRK
@@ -592,8 +631,13 @@ c("tarih eksenli grafiklerde ay adi yazilmaz (Oct 6 yerine 06.10)",
   and SAYFA.count("st.plotly_chart(_tr_eksen(") >= 10)
 c("ay karsilastirmasi gecen yilin ayni ayiyla",
   '("Bu Ay vs Geçen Yılın Aynı Ayı", "ay_karsilastir", "kWh")' in SAYFA
-  and "gec_ay_bas = bu_ay_bas.replace(year=bu_ay_bas.year - 1)" in SAYFA
+  and "_kiyas_gec = _kiyas_ay.replace(year=_kiyas_ay.year - 1)" in SAYFA
+  and "_GV.ay_kiyas(" in SAYFA
   and "Bu Ay vs Geçen Ay\"" not in SAYFA)
+c("ay karsilastirmasi secilen tarihin ayini gosterir",
+  "_kiyas_ay = pd.Timestamp(tarih_bit).replace(day=1)" in SAYFA and "bu_ay_bas  = now" not in SAYFA)
+c("excel butonu grafigin ustunde",
+  'key="grafik_excel"' in SAYFA and SAYFA.index('key="grafik_excel"') < SAYFA.index('if grafik_tip == "tuketim":'))
 _RAP = open(os.path.join(BURASI, "pages", "rapor_olustur.py"), encoding="utf-8").read()
 # (haritadaki "İstanbul sınırı ... Kocaeli" coğrafi notu lokasyon değil)
 c("Kocaeli hicbir lokasyon listesinde yok",

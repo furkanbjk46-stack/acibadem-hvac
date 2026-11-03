@@ -887,6 +887,36 @@ with tab1:
             f"{_tr_tarih(pd.Timestamp(tarih_bit), '%d %b %Y')}"
         )
 
+        # Ay karşılaştırması bitiş tarihinin ayını gösterir
+        import grafik_veri as _GV
+        _kiyas_ay = pd.Timestamp(tarih_bit).replace(day=1)
+        _kiyas_gec = _kiyas_ay.replace(year=_kiyas_ay.year - 1)
+        _kiyas_ad = _tr_tarih(_kiyas_ay, "%B %Y")
+        _kiyas_gec_ad = _tr_tarih(_kiyas_gec, "%B %Y")
+
+        # ── Seçili grafiğin Excel'i (grafik + günlük veri + özet) ──
+        # Üretim hatası grafiği engellemez: buton yerine uyarı çıkar.
+        _xl_bos, _xl_btn = st.columns([5, 1])
+        with _xl_btn:
+            try:
+                _xl_ay = grafik_tip == "ay_karsilastir"
+                _xl_paket = _GV.grafik_tablosu(
+                    grafik_tip, secili_df.to_dict("records"), m2,
+                    df.to_dict("records") if _xl_ay else None,
+                    _kiyas_ay.year, _kiyas_ay.month, _kiyas_ad, _kiyas_gec_ad)
+                if _xl_paket:
+                    _xl_bas, _xl_bit = ((_kiyas_ay.date(), None) if _xl_ay else (tarih_bas, tarih_bit))
+                    st.download_button(
+                        "⬇ Excel",
+                        _GV.xlsx_uret(secim, lok_info["isim"],
+                                      (f"{_kiyas_ad} / {_kiyas_gec_ad}" if _xl_ay else tarih_aralik_str),
+                                      _xl_paket, pd.Timestamp.now(tz="Etc/GMT-3").strftime("%d.%m.%Y %H:%M")),
+                        file_name=f"{lok_id}_{grafik_tip}_{_xl_bas}{'_' + str(_xl_bit) if _xl_bit else ''}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True, key="grafik_excel")
+            except Exception as _xl_hata:
+                st.caption("Excel hazırlanamadı: %s" % type(_xl_hata).__name__)
+
         def _bar_chart(veri_df, baslik=""):
             """Günlük tüketim bar grafiği — verilen df ile çizer."""
             if "Toplam_Hastane_Tuketim_kWh" not in veri_df.columns or veri_df.empty:
@@ -1169,26 +1199,23 @@ with tab1:
         # ── Bu Ay vs Geçen Yılın Aynı Ayı ──
         # Geçen ayla kıyas mevsim farkını tüketim değişimi gibi gösteriyordu
         # (Eylül soğutma ↔ Ekim); doğru kıyas geçen yılın AYNI ayı (26.10.2026).
+        # 03.11.2026: seçilen tarihten bağımsız hep bu ayı gösteriyordu; ayın 1'i
+        # dönem dışı kalıyordu (başlangıç şu anki saati taşıyordu); ayda henüz
+        # veri yokken int(NaN) hatasıyla açılmıyordu. Hesap: grafik_veri.ay_kiyas
         elif grafik_tip == "ay_karsilastir":
             if "Toplam_Hastane_Tuketim_kWh" in df.columns and not df.empty:
-                import calendar as _cal
-                bu_ay_bas  = now.replace(day=1)
-                gec_ay_bas = bu_ay_bas.replace(year=bu_ay_bas.year - 1)
-                gec_ay_bit = gec_ay_bas.replace(day=_cal.monthrange(gec_ay_bas.year, gec_ay_bas.month)[1])
-                bu_ay_df  = df[df["Tarih"] >= pd.Timestamp(bu_ay_bas)]
-                gec_ay_df = df[(df["Tarih"] >= pd.Timestamp(gec_ay_bas)) & (df["Tarih"] <= pd.Timestamp(gec_ay_bit))]
-                bu_gun  = bu_ay_df.groupby(bu_ay_df["Tarih"].dt.day)["Toplam_Hastane_Tuketim_kWh"].sum()
-                gec_gun = gec_ay_df.groupby(gec_ay_df["Tarih"].dt.day)["Toplam_Hastane_Tuketim_kWh"].sum()
+                _ak = _GV.ay_kiyas(df.to_dict("records"), _kiyas_ay.year, _kiyas_ay.month)
+                st.caption(f"Karşılaştırılan ay: {_kiyas_ad} · {_kiyas_gec_ad} (bitiş tarihinin ayı)")
                 fig_ay = go.Figure()
                 fig_ay.add_trace(go.Bar(
-                    x=gec_gun.index, y=gec_gun.values,
-                    name=_tr_tarih(gec_ay_bas, "%B %Y"),
+                    x=list(_ak["gec"]), y=list(_ak["gec"].values()),
+                    name=_kiyas_gec_ad,
                     marker=dict(color=f"rgba({rr},{rg},{rb},0.4)"),
                     hovertemplate="Gün %{x}: %{y:,.0f} kWh<extra></extra>",
                 ))
                 fig_ay.add_trace(go.Bar(
-                    x=bu_gun.index, y=bu_gun.values,
-                    name=_tr_tarih(bu_ay_bas, "%B %Y"),
+                    x=list(_ak["bu"]), y=list(_ak["bu"].values()),
+                    name=_kiyas_ad,
                     marker=dict(color=f"rgba({rr},{rg},{rb},0.9)"),
                     hovertemplate="Gün %{x}: %{y:,.0f} kWh<extra></extra>",
                 ))
@@ -1201,21 +1228,20 @@ with tab1:
                     barmode="group",
                     legend=dict(orientation="h", y=1.1, font=dict(size=10)),
                 )
-                # Toplam fark özeti — SYN-5 fix: geçen yılın ayı AYNI GÜN ARALIĞINA kırpılır
+                # Toplam fark özeti — SYN-5 fix: yalnız iki yılda da verisi olan günler
                 # (kısmi ay tam ayla kıyaslanınca ayın başında sahte "az tüketim" görünüyordu)
-                bu_top = bu_gun.sum()
-                gec_kiyas = gec_gun[gec_gun.index <= bu_gun.index.max()] if not bu_gun.empty else gec_gun
-                gec_top = gec_kiyas.sum()
-                if gec_top > 0:
-                    fark_pct = (bu_top - gec_top) / gec_top * 100
+                fark_pct = _ak["fark_pct"]
+                if fark_pct is not None:
                     fark_renk = "#d03b3b" if fark_pct > 0 else "#0ca30c"
                     fark_yon  = "▲" if fark_pct > 0 else "▼"
                     st.markdown(
                         f"<div style='text-align:center;font-size:11px;color:{fark_renk};margin-bottom:4px;'>"
-                        f"{fark_yon} Bu ay şimdiye kadar, geçen yılın aynı ayının aynı dönemine (ilk {int(bu_gun.index.max())} gün) göre "
+                        f"{fark_yon} {_kiyas_ad}, {_kiyas_gec_ad} ile veri olan ortak {_ak['ortak_gun']} günde "
                         f"<b>{abs(fark_pct):.1f}%</b> {'fazla' if fark_pct>0 else 'az'} tüketim</div>",
                         unsafe_allow_html=True
                     )
+                elif not _ak["bu"]:
+                    st.info(f"{_kiyas_ad} için henüz tüketim verisi yok.")
                 st.plotly_chart(_tr_eksen(fig_ay), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Ay karşılaştırma verisi bulunamadı.")
@@ -1937,7 +1963,7 @@ with tab_canli:
     # ise sürece BİR KEZ yüklenir. Yayın sonrası süreç yeniden başlamazsa
     # sayfa yeni, modül eski kalır ve burada olmayan bir işlev çağrılır
     # (21.10.2026: ekranda AttributeError çıktı). Sürüm tutmuyorsa tazele.
-    _CI_GEREKEN_SURUM = 10
+    _CI_GEREKEN_SURUM = 11
     if getattr(_CI, "SURUM", 0) < _CI_GEREKEN_SURUM:
         import importlib
         _CI = importlib.reload(_CI)
@@ -1972,10 +1998,16 @@ with tab_canli:
                 st.code("%s: %s" % (type(_hata).__name__, _hata))
 
     def _canli_izleme_ciz():
-        pencere_sn = _CI.PENCERELER.get(
-            st.session_state.get("canli_pencere", _CI.VARSAYILAN_PENCERE), 300)
+        pencere_sn = _CI.PENCERE_SN
 
         olcumler, yas = fetch_canli_guc(url, key, lok_id)
+        # Haberleşme koptuysa son değer "canlı" gibi kalmasın; seri de sıfırlanır,
+        # bağlantı gelince araya düz çizgi çekilmez (03.11.2026).
+        if _CI.baglanti_kopuk_mu(yas):
+            st.session_state.pop(_seri_anahtar, None)
+            st.markdown(_CI.kopuk_html(yas), unsafe_allow_html=True)
+            return
+
         seri = _CI.seri_guncelle(
             st.session_state.get(_seri_anahtar), olcumler, pencere_sn)
         st.session_state[_seri_anahtar] = seri
@@ -2206,16 +2238,3 @@ with tab_canli:
     #   SUNUM: örnek değerin etrafında dalga.
     import streamlit.components.v1 as _cmp_akis
     _cmp_akis.html(_CI.akis_betigi(mod="dalga" if _demo_modu() else "gecis"), height=0)
-
-    # Pencere seçimi FRAGMENT DIŞINDA ve altta: kendi kendine yenilenen bir
-    # bölümün içindeki widget her turda yeniden kurulur ve seçim elden kayar.
-    # Seçim burada yapılır, fragment session_state'ten okur.
-    _bos, _sag = st.columns([4, 1])
-    with _sag:
-        st.selectbox(
-            "Pencere", list(_CI.PENCERELER),
-            index=list(_CI.PENCERELER).index(_CI.VARSAYILAN_PENCERE),
-            key="canli_pencere",
-            help="Satır grafiklerinde kaç dakikalık geçmiş görünsün. Seri "
-                 "merkezin oturumunda tutulur, veri tabanında yer kaplamaz; "
-                 "sekme açıldığında boş başlar ve pencere süresince dolar.")

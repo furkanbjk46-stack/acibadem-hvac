@@ -18,7 +18,7 @@ kısımları):
       - şebeke / kojen kaynağı
       - veriye dayalı teşhis maddeleri
       - bağlantı, oto-set, arıza/bakım durumu
-      - "Lokasyon detayına git" ve "Rapor oluştur"
+      - "Lokasyon detayına git"
 Gemini önerisindeki ölçülmeyen kalemler (aydınlatma, medikal/UPS, COP,
 OSOS/BEDAŞ) bilerek EKLENMEDİ — sayaç olmadan göstermek uydurma olurdu.
 

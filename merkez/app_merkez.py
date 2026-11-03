@@ -764,7 +764,7 @@ def fetch_canli_guc(url, key, lokasyon_id):
 # Lokasyon kartları, harita penceresi ve Global Özet artık günlük kWh değil
 # canli_guc tablosundaki ANLIK kW'ı gösterir. Tek sorguda tüm lokasyonlar
 # alınır (lokasyon başına ayrı istek atılmaz).
-CANLI_BAYAT_SN = 300   # son ölçüm bundan eskiyse "canlı değil" sayılır
+CANLI_BAYAT_SN = 120   # son ölçüm bundan eskiyse "canlı değil" sayılır (canli_izleme.BAGLANTI_KOPUK_SN)
 
 @st.cache_data(ttl=_CANLI_TTL, show_spinner=False)
 def fetch_canli_tum(url, key):
@@ -1534,17 +1534,14 @@ if _fetch_err:
     st.warning(f"⚠️ Enerji verisi alınamadı — Supabase erişilemiyor. Proje duraklatılmış olabilir. Hata: `{_fetch_err[:80]}`")
 
 # ── Online durumu hesapla ──
+# Modül sürece bir kez yüklenir; yeni sürüm yayınlanınca eski kalmasın (bkz. SURUM)
+import canli_izleme as _ci_g
+if getattr(_ci_g, "SURUM", 0) < 11:
+    import importlib as _il_ci
+    _ci_g = _il_ci.reload(_ci_g)
+
 def online_bilgi(lok_id):
-    ld = lok_dict.get(lok_id, {})
-    ping = str(ld.get("ping_zamani") or "").strip()
-    if ping and ping not in ("None",""):
-        try:
-            dt = pd.to_datetime(ping).tz_localize(None)
-            fark = (now - dt).total_seconds() / 60
-            return fark < 10, fark
-        except:
-            pass
-    return False, None
+    return _ci_g.baglanti_durumu(lok_dict.get(lok_id, {}).get("ping_zamani"))
 
 def dun_kwh(lok_id):
     if df_all.empty or lok_id not in aktif_loklar:
@@ -1571,9 +1568,20 @@ sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 # ════════════════════════════════
 with sol:
     # ── Lokasyon Durumu ──
-    # .ana-duzen-isaret: tablet CSS'inin ana 3'lü düzeni bulması için işaret
-    st.markdown('<div class="sec"><span class="ana-duzen-isaret"></span>' + _ik.ikon("konum", 17)
-                + 'LOKASYON DURUMU</div>', unsafe_allow_html=True)
+    # .ana-duzen-isaret: tablet CSS'inin ana 3'lü düzeni bulması için işaret.
+    # Başlıktan AYRI durur: başlık + arama kendi sütunlarında, CSS o iç sütunları
+    # ana düzen sanmasın.
+    st.markdown('<style>[data-testid="stElementContainer"]:has(.ana-duzen-isaret){position:absolute;height:0;}'
+                '.st-key-lok_arama input{height:32px;font-size:12px;padding:4px 10px;}</style>'
+                '<span class="ana-duzen-isaret"></span>', unsafe_allow_html=True)
+    _lb_baslik, _lb_ara = st.columns([1.5, 1], vertical_alignment="center")
+    with _lb_baslik:
+        st.markdown('<div class="sec">' + _ik.ikon("konum", 17)
+                    + 'LOKASYON DURUMU</div>', unsafe_allow_html=True)
+    with _lb_ara:
+        with st.container(key="lok_arama"):
+            _lok_ara = st.text_input("Lokasyon ara", key="lok_ara", placeholder="Lokasyon ara",
+                                     label_visibility="collapsed")
 
     # ANLIK değerler: kartlar, harita penceresi ve Global Özet bunu kullanır
     CANLI = canli_ozet_hesapla(fetch_canli_tum(url, key))
@@ -1595,7 +1603,12 @@ with sol:
     # Tüm kartları tek HTML bloğu olarak oluştur → scrollable div içine sar
     tum_kartlar = '<div class="lok-scroll">'
 
+    _eslesen = 0
     for i, (lok_id, lok_info) in enumerate(lok_sira):
+        # Arama yalnız gösterimi süzer; sıra numarası (#) gerçek sırasını korur
+        if not _ci_g.lokasyon_eslesir(_lok_ara, lok_id, lok_info["isim"], lok_info["kisa"]):
+            continue
+        _eslesen += 1
         online, fark_dk = online_bilgi(lok_id)
         renk     = lok_info["renk"]
         if fark_dk is None:
@@ -1649,7 +1662,7 @@ with sol:
             f'animation:breathe-ring 3s ease-in-out infinite;"></div>'
             f'<div style="font-size:36px;line-height:1;position:relative;z-index:1;'
             f'">🏥</div>'
-            f'<div style="position:absolute;top:2px;right:2px;z-index:2;width:11px;height:11px;'
+            f'<div class="lok-nokta" style="position:absolute;top:2px;right:2px;z-index:2;width:11px;height:11px;'
             f'border-radius:50%;background:rgba({dr},{dg},{db},1);border:2px solid #ffffff;'
             f'"></div>'
             f'</div>'
@@ -1657,7 +1670,7 @@ with sol:
             f'<div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:10px;font-weight:700;'
             f'color:{renk};letter-spacing:1.5px;'
             f'margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{lok_info["kisa"]}</div>'
-            f'<div style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:5px;">{durum_lbl}</div>'
+            f'<div class="lok-durum" style="font-size:8px;color:{durum_renk};font-weight:600;margin-bottom:5px;">{durum_lbl}</div>'
             f'<div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">'
             f'<span style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;font-size:16px;font-weight:900;'
             f'color:{renk};line-height:1;"><span{_akis_kw}>{kwh_str}</span></span>'
@@ -1673,6 +1686,9 @@ with sol:
             f'</div></div></a>'
         )
 
+    if not _eslesen:
+        tum_kartlar += ('<div style="padding:18px 8px;text-align:center;font-size:12px;color:#46536b;">'
+                        'Aramayla eşleşen lokasyon yok.</div>')
     tum_kartlar += '</div>'
     st.markdown(tum_kartlar, unsafe_allow_html=True)
 
@@ -2245,7 +2261,14 @@ window.addEventListener('message', function(ev) {{
         else:
             _hb = {_l: {_a: (_g.get((_l, _a)) if gecis_ozellik(_g.get((_l, _a))) else _v.get(_a))
                         for _a in ("sebeke", "kojen")} for _l, _v in _c.items()}
-        _components.html(_ci_t.tazele_betigi({"kart": _kart, "ozet": _ozet, "harita": _hb}), height=0)
+        # Sayfa yeniden çizilmediği için kartın durum yazısı da buradan yenilenir
+        _durum = {}
+        for _lk in fetch_lokasyonlar(url, key) or []:
+            _on, _dk = _ci_g.baglanti_durumu(_lk.get("ping_zamani"))
+            if _dk is not None:
+                _durum[_lk.get("lokasyon_id")] = _on
+        _components.html(_ci_t.tazele_betigi({"kart": _kart, "ozet": _ozet, "harita": _hb,
+                                              "durum": _durum}), height=0)
 
     _canli_tazele()
 

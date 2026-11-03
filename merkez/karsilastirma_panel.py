@@ -203,16 +203,12 @@ def panel_govde(st, r, dag, ld, ctx):
                    f"<span style='color:#24324d;text-align:right;'>{dg}</span></div>")
         st.markdown(h2, unsafe_allow_html=True)
 
-    b1, b2, b3 = st.columns(3)
+    b1, b2 = st.columns(2)
     with b1:
         if st.button("📍 Lokasyon detayına git", use_container_width=True, key=on + "_detay"):
             st.session_state.pop("detay_ozet", None)
             st.session_state["detay_lokasyon"] = r["id"]
             st.rerun()
     with b2:
-        if st.button("📄 Rapor oluştur", use_container_width=True, key=on + "_rapor"):
-            st.session_state["rapor_lokasyon"] = r["id"]
-            st.switch_page("pages/rapor_olustur.py")
-    with b3:
         if st.button("Kapat", use_container_width=True, key=on + "_kapat"):
             st.rerun()
