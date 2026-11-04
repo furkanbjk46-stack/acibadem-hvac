@@ -1,0 +1,6 @@
+# Windows toplu is dosyalari (.bat/.cmd) CRLF satir sonuyla saklanir ve AYNEN indirilir.
+# LF ile cmd satirlari yanlis boler: "echo" -> "cho", "errorlevel" -> "rlevel",
+# "cd deneme" calismaz (04.11.2026: PORTAL_BASLAT.bat portal_watchdog.py bulamadi).
+*.bat -text
+*.BAT -text
+*.cmd -text
