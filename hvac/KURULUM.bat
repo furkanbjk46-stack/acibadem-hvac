@@ -31,11 +31,18 @@ cd deneme
 echo Gerekli kutuphaneler yukleniyor...
 echo.
 
-REM pip guncelle
-python -m pip install --upgrade pip --quiet
-
-REM Kutuphaneleri yukle (Eklenen: scikit-learn, numpy, kaleido, xlsxwriter, supabase)
-pip install streamlit pandas plotly openpyxl xlrd fastapi uvicorn fpdf2 python-multipart kaleido scikit-learn numpy xlsxwriter supabase --quiet
+REM --- Kutuphaneler ----------------------------------------------
+REM Bu dosyanin yaninda "paketler" klasoru varsa kurulum INTERNETSIZ yapilir
+REM (sirket aginda pypi.org'a erisim proxy yuzunden kapaliysa). Yoksa internetten.
+REM Liste tek yerde: %~dp0requirements.txt
+if exist "%~dp0paketler\" (
+    echo [BILGI] "paketler" klasoru bulundu - internetsiz kurulum.
+    python -m pip install --no-index --find-links "%~dp0paketler" --upgrade pip --quiet
+    python -m pip install --no-index --find-links "%~dp0paketler" -r "%~dp0requirements.txt"
+) else (
+    python -m pip install --upgrade pip --quiet
+    python -m pip install -r "%~dp0requirements.txt" --quiet
+)
 
 if errorlevel 1 (
     echo [HATA] Kutuphane yukleme basarisiz!
