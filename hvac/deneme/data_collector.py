@@ -65,6 +65,23 @@ ANALYZERS = [
     # data_bridge'de ALL_ANALYZERS'a EKLENMEZ: TRDP'ler şebeke tarafıdır, MCC/Chiller
     # alt sayaç toplamına girerse çift sayım olur.
     {"ip": "172.17.91.123", "name": "TRDP-4",       "brand": "siemens"},
+    # KOJEN-1 / KOJEN-2 — Janitza UMG 512 PRO, 05.11.2026'da canlı izlemeye alındı.
+    # ÜRETİM sayacıdır: KOJEN-3/4 ile aynı kural — ALL_ANALYZERS'a EKLENMEZ,
+    # günlük farkı Kojen1/2_kWh'e yazılır (data_bridge kojen_n'i 1..4 jenerik
+    # okuduğu için orada değişiklik gerekmedi).
+    #
+    # ENERJİ REGISTER'I HENÜZ DOĞRULANMADI: URETIM_ENERJI_REG'de janitza
+    # karşılığı YOK, bu yüzden enerji aşağıdaki genel janitza adresinden
+    # (0x4A74 = 19060, "Real energy L1..L3") okunur. Siemens üretim sayaçları
+    # Giren+Verilen toplamını okuyor (801+809) — boştaki kojenin çektiği iç
+    # tüketim yönü bozmasın diye. Janitza'da bunun karşılığı olan adres çifti
+    # ÜRETİCİ ADRES LİSTESİNDEN doğrulanmadan buraya yazılmaz (bu dosyadaki
+    # register'ların tamamı kılavuzdan alınmıştır, tahmin değildir).
+    # Doğrulama: cihazın kendi web arayüzü Modbus adres listesini veriyor
+    # (10.70.131.2) ve "GUC:KOJEN-1" komutu register'ı sayaç farkıyla
+    # karşılaştırıyor. Doğru çift bulununca URETIM_ENERJI_REG'e janitza eklenir.
+    {"ip": "10.70.131.2",   "name": "KOJEN-1",      "brand": "janitza", "uretim": True},
+    {"ip": "10.70.131.3",   "name": "KOJEN-2",      "brand": "janitza", "uretim": True},
     # KOJEN-3 / KOJEN-4 — Siemens PAC3200, 27.10.2026'da canlı izlemeye alındı
     # (Synapse "KOJEN ÜRETİMİ"). ÜRETİM sayacıdır: data_bridge'de ALL_ANALYZERS'a
     # EKLENMEZ (tüketim toplamına girmez); günlük farkı Kojen3/4_kWh'e yazılır.

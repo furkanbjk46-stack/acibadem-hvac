@@ -170,8 +170,17 @@ finally:
     _dc._siemens_double = _orj_double
 
 _koj = [d for d in _dc.ANALYZERS if d["name"].startswith("KOJEN-")]
-c("KOJEN-3/4 canlı okunacak listede",
-  {d["name"]: d["ip"] for d in _koj} == {"KOJEN-3": "192.168.1.18", "KOJEN-4": "192.168.1.19"}, _koj)
+c("KOJEN-1..4 canlı okunacak listede",
+  {d["name"]: d["ip"] for d in _koj} == {"KOJEN-1": "10.70.131.2", "KOJEN-2": "10.70.131.3",
+                                         "KOJEN-3": "192.168.1.18", "KOJEN-4": "192.168.1.19"}, _koj)
+# KOJEN-1/2 (Janitza UMG 512 PRO, 05.11.2026) ilk JANITZA üretim sayaçlarıdır.
+# URETIM_ENERJI_REG'de janitza karşılığı YOK: enerji genel janitza adresinden
+# (19060) okunur. Bu kontrol o boşluğu GÖRÜNÜR tutar — biri üretici adres
+# listesinden doğrulamadan tahmini bir adres eklerse test düşer.
+c("kojen-1/2 janitza üretim sayacı",
+  all(d["brand"] == "janitza" for d in _koj if d["name"] in ("KOJEN-1", "KOJEN-2")))
+c("janitza üretim register'ı henüz doğrulanmadı (genel adrese düşer)",
+  "janitza" not in _dc.URETIM_ENERJI_REG, _dc.URETIM_ENERJI_REG)
 c("kojenler üretim sayacı olarak işaretli", all(d.get("uretim") for d in _koj))
 c("kojenler tüketim toplamına GİRMEZ (çift sayım yok)",
   not any(d["name"] in _db.ALL_ANALYZERS for d in _koj))
