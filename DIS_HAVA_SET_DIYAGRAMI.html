@@ -1,0 +1,532 @@
+<meta charset="utf-8">
+<title>Dış Hava Set Diyagramı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f5f7fa;
+  --card:#ffffff;
+  --card2:#f9fafc;
+  --line:#dde3ec;
+  --line2:#eef1f6;
+  --ink:#0f1726;
+  --ink2:#5a6478;
+  --ink3:#8b94a6;
+  --brand:#012D75;
+  --grid:#e6eaf2;
+
+  --s1:#2a78d6;   /* chiller · gündüz kollektör */
+  --s2:#eb6834;   /* gece kollektör */
+  --s3:#1baf7a;   /* FCU */
+  --s4:#4a3aa7;   /* AHU */
+
+  --cold:#2a78d6;
+  --warm:#eb6834;
+  --hyst:rgba(42,120,214,.10);
+  --shadow:0 1px 2px rgba(15,23,38,.05), 0 4px 16px rgba(15,23,38,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0e1525;
+    --card:#161f33;
+    --card2:#1b2539;
+    --line:#2b3850;
+    --line2:#232e44;
+    --ink:#e7edf7;
+    --ink2:#a3aec3;
+    --ink3:#78839a;
+    --brand:#9dbcf5;
+    --grid:#24304a;
+
+    --s1:#3987e5;
+    --s2:#d95926;
+    --s3:#199e70;
+    --s4:#9085e9;
+
+    --cold:#3987e5;
+    --warm:#d95926;
+    --hyst:rgba(57,135,229,.14);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0e1525;
+  --card:#161f33;
+  --card2:#1b2539;
+  --line:#2b3850;
+  --line2:#232e44;
+  --ink:#e7edf7;
+  --ink2:#a3aec3;
+  --ink3:#78839a;
+  --brand:#9dbcf5;
+  --grid:#24304a;
+
+  --s1:#3987e5;
+  --s2:#d95926;
+  --s3:#199e70;
+  --s4:#9085e9;
+
+  --cold:#3987e5;
+  --warm:#d95926;
+  --hyst:rgba(57,135,229,.14);
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans","Segoe UI",system-ui,-apple-system,sans-serif;
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding-block:26px 56px;padding-left:16px;padding-right:16px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+
+h1{font-size:27px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px;text-wrap:balance}
+.lede{color:var(--ink2);font-size:15px;max-width:66ch;margin:0 0 6px}
+.src{color:var(--ink3);font-size:12.5px;margin-bottom:24px}
+.src code{font-family:"IBM Plex Mono",monospace;font-size:12px;background:var(--card2);
+  border:1px solid var(--line2);border-radius:4px;padding:1px 5px}
+
+h2{font-size:18px;font-weight:600;letter-spacing:-.01em;margin:0 0 3px}
+.sub{color:var(--ink2);font-size:13.5px;margin:0 0 14px;max-width:72ch}
+section{margin-bottom:34px}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  box-shadow:var(--shadow);padding:16px 16px 12px}
+.ctitle{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink2);margin-bottom:6px}
+.chart{display:block;width:100%;height:auto;overflow:visible}
+
+.flow{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:26px}
+@media(min-width:760px){.flow{grid-template-columns:repeat(4,1fr)}}
+.step{background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:12px 14px;position:relative;box-shadow:var(--shadow)}
+.step .n{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;
+  color:var(--ink3);letter-spacing:.08em}
+.step .t{font-weight:600;font-size:14px;margin:3px 0 2px}
+.step .d{color:var(--ink2);font-size:12.5px;line-height:1.5}
+
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;
+  background:var(--card);box-shadow:var(--shadow)}
+thead th{background:var(--card2);color:var(--ink2);font-size:11.5px;font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;text-align:right;padding:10px 12px;
+  border-bottom:1px solid var(--line);white-space:nowrap}
+thead th:first-child,thead th.l{text-align:left}
+tbody td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--line2);white-space:nowrap}
+tbody td:first-child,tbody td.l{text-align:left}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:var(--card2)}
+.zone{display:inline-flex;align-items:center;gap:7px;font-weight:600}
+.sw{width:10px;height:10px;border-radius:3px;flex:none}
+
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;padding-top:10px;
+  border-top:1px solid var(--line2)}
+.lg{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink2)}
+.lg .sw{width:12px;height:3px;border-radius:2px}
+.lg .hb{width:12px;height:12px;border-radius:3px;background:var(--hyst);
+  border:1px dashed var(--ink3)}
+
+.note{font-size:13px;color:var(--ink2);background:var(--card2);border:1px solid var(--line);
+  border-left:3px solid var(--warm);border-radius:9px;padding:12px 14px;margin-top:14px}
+.note b{color:var(--ink)}
+
+.split{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:820px){.split{grid-template-columns:1fr 1fr}}
+.kv{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:13px 15px;
+  box-shadow:var(--shadow)}
+.kv .k{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink3);margin-bottom:5px}
+.kv .v{font-family:"IBM Plex Mono",monospace;font-size:14px;line-height:1.7}
+.kv .v em{font-style:normal;color:var(--ink2)}
+
+footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);
+  color:var(--ink3);font-size:12.5px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+  <h1>Dış Hava Set Diyagramı</h1>
+  <p class="lede">
+    Acıbadem Maslak — oto-set motoru, dış hava sıcaklığına göre chiller, kollektör,
+    FCU ve klima santrali setpoint'lerini belirleyip BACnet ile sahaya yazar.
+  </p>
+  <p class="src">
+    Kaynak: <code>hvac/deneme/oto_set.py</code> (eşikler, set tabloları, histerezis) ·
+    <code>hvac/deneme/main_portal.py</code> (analiz tarafı dış hava yanlılığı) ·
+    <code>configs/hvac_settings.json</code> (canlı eşik değerleri)
+  </p>
+
+  <!-- AKIŞ -->
+  <div class="flow">
+    <div class="step">
+      <div class="n">01</div>
+      <div class="t">Tahmin alınır</div>
+      <div class="d">Open-Meteo'dan 3 günlük tahmin. Koordinat lokasyon profilinden;
+        yoksa İstanbul'a düşülür ve heartbeat'te <em>varsayılan</em> olarak bildirilir.</div>
+    </div>
+    <div class="step">
+      <div class="n">02</div>
+      <div class="t">Referans seçilir</div>
+      <div class="d">Gündüz geçişinde <b>bugünün maksimumu</b>, gece geçişinde
+        <b>yarının minimumu</b>. Tahmin yoksa geçiş ertelenir, set gönderilmez.</div>
+    </div>
+    <div class="step">
+      <div class="n">03</div>
+      <div class="t">Bölge belirlenir</div>
+      <div class="d">Chiller 4 bölge (±2 °C histerezis), kollektör/FCU/AHU 3 bölge
+        (±3 °C histerezis). Geçiş kademesiz: bir gecede iki bölge atlanabilir.</div>
+    </div>
+    <div class="step">
+      <div class="n">04</div>
+      <div class="t">Set yazılır</div>
+      <div class="d">Setpoint doğrudan BACnet'e yazılır. İlk doğrulama belirli bir
+        süre sonra cihazdan geri okunarak yapılır; anlık okuma karar vermez.</div>
+    </div>
+  </div>
+
+  <!-- CHILLER -->
+  <section>
+    <h2>Chiller gidiş seti</h2>
+    <p class="sub">
+      Beş chiller'ın uzaktan set noktası (<span class="mono">CH1…CH5_REM_SET</span>)
+      dört bölgeye göre belirlenir. Dış hava yükseldikçe set <b>düşer</b> — sıcak havada
+      daha soğuk su üretilir.
+    </p>
+    <div class="card">
+      <svg id="chChiller" class="chart" viewBox="0 0 900 300" role="img"
+           aria-label="Chiller gidiş seti ile dış hava sıcaklığı ilişkisi: 7 derecenin altında 8,0; 7-23 arası 7,5; 23-26 arası 7,0; 26 üstünde 6,5 santigrat"></svg>
+      <div class="legend">
+        <span class="lg"><span class="sw" style="background:var(--s1)"></span>Chiller seti</span>
+        <span class="lg"><span class="hb"></span>Histerezis bandı (±2 °C) — bölgeden çıkmak için gereken aşım</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- KOLLEKTOR / FCU / AHU -->
+  <section>
+    <h2>Kollektör, FCU ve klima santrali setleri</h2>
+    <p class="sub">
+      Üç bölge, iki eşik (15 °C ve 23 °C). 15 °C eşiği kışın kollektörü yükselterek
+      chiller'ı durdurur; 23 °C eşiği yaz yoğun soğutmasına geçirir. İki eşik iki ayrı
+      işi yapar, biri diğerinin yerine geçmez.
+    </p>
+    <div class="split">
+      <div class="card">
+        <div class="ctitle">Kollektör</div>
+        <svg id="chKol" class="chart" viewBox="0 0 560 300" role="img"
+             aria-label="Gündüz ve gece kollektör setpoint'lerinin dış hava sıcaklığına göre üç bölgeli değişimi"></svg>
+        <div class="legend">
+          <span class="lg"><span class="sw" style="background:var(--s1)"></span>Gündüz</span>
+          <span class="lg"><span class="sw" style="background:var(--s2)"></span>Gece</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ctitle">FCU ve klima santrali</div>
+        <svg id="chFcu" class="chart" viewBox="0 0 560 300" role="img"
+             aria-label="FCU ve klima santrali setpoint'lerinin dış hava sıcaklığına göre üç bölgeli değişimi"></svg>
+        <div class="legend">
+          <span class="lg"><span class="sw" style="background:var(--s3)"></span>FCU A/B blok</span>
+          <span class="lg"><span class="sw" style="background:var(--s4)"></span>Zon 1/2 AHU</span>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      <b>Gündüz kollektör ile klima santrali seti iki bölgede aynı değerdedir</b>
+      (15–23 °C'de 10, 23 °C üstünde 8), gece kollektör ile FCU ise ısıtma bölgesinde
+      aynıdır (14). Çakışan çizgiler birbirini gizlemesin diye iki ayrı panel çizildi;
+      histerezis bandı (±3 °C) her ikisinde de aynıdır.
+    </div>
+  </section>
+
+  <!-- TABLO -->
+  <section>
+    <h2>Set tablosu</h2>
+    <p class="sub">Diyagramdaki bütün değerler. Birim °C.</p>
+    <div class="tblwrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="l">Dış hava</th>
+            <th class="l">Mod</th>
+            <th>Chiller</th>
+            <th>Gündüz koll.</th>
+            <th>Gece koll.</th>
+            <th>FCU A/B</th>
+            <th>Zon 1/2 AHU</th>
+            <th class="l">Bölgeden çıkış</th>
+          </tr>
+        </thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+    </div>
+    <div class="note">
+      <b>Chiller ve kollektör bölgeleri aynı eşikleri kullanmaz.</b> Chiller 7 / 23 / 26 °C'de,
+      kollektör grubu 15 / 23 °C'de bölge değiştirir. Tabloda satırlar chiller bölgelerine göre
+      bölünmüştür; kollektör değerleri o aralıkta geçerli olan moddan gelir.
+    </div>
+  </section>
+
+  <!-- ANALIZ TARAFI -->
+  <section>
+    <h2>Analiz tarafı: dış havanın hedef ΔT'ye etkisi</h2>
+    <p class="sub">
+      Bu ayrı bir mekanizmadır — sahaya set yazmaz, Mekanik Zeka'nın santral hedefini
+      kaydırır. Klima santrali soğutma hedef ΔT'si emişten türetilir, dış hava bunu
+      en fazla ±0,5 °C öteler.
+    </p>
+    <div class="card">
+      <svg id="chBias" class="chart" viewBox="0 0 900 250" role="img"
+           aria-label="Dış hava sıcaklığının hedef delta T üzerindeki yanlılığı: 15 derecenin altında eksi 0,5; 25 üstünde artı 0,5; arada doğrusal"></svg>
+      <div class="legend">
+        <span class="lg"><span class="sw" style="background:var(--s2)"></span>Hedef ΔT yanlılığı</span>
+      </div>
+    </div>
+
+    <div class="split" style="margin-top:14px">
+      <div class="kv">
+        <div class="k">Hedef ΔT formülü</div>
+        <div class="v">
+          hedef = <em>sınırla(</em> emiş − 16,5 + yanlılık <em>, 4 … 8 )</em><br>
+          <em>16,5 = soğutma SAT bandının ortası (15–18)</em>
+        </div>
+      </div>
+      <div class="kv">
+        <div class="k">Mod çıkarımı — son çare</div>
+        <div class="v">
+          dış hava ≤ 12 → <em>ısıtma</em><br>
+          dış hava ≥ 20 → <em>soğutma</em><br>
+          <em>arada: mod belirlenemez, SAT analizi atlanır</em>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>Yanlılık üst sınırı ayar dosyasından gelir.</b>
+      <span class="mono">configs/hvac_settings.json</span> içinde
+      <span class="mono">OAT_BIAS_MAX = 0,5</span> — koddaki varsayılan 2,0 değil.
+      23.10.2026 analizinde dış hava 18,2 °C iken yanlılık −0,18 °C çıkmıştı;
+      bu eğri onu birebir veriyor.
+    </div>
+  </section>
+
+  <footer>
+    Değerler kaynak dosyalardan okunarak üretilmiştir; diyagram ile tablo aynı veriden çizilir.
+    Eşikler veya set tabloları <span class="mono">oto_set.py</span> içinde değişirse bu sayfa
+    yeniden üretilmelidir.
+  </footer>
+</div>
+
+<script>
+/* ── Kaynak değerler: oto_set.py ───────────────────────────────── */
+const CH = {
+  sinir: [7, 23, 26], h: 2,
+  mod: [
+    {ad:"koç soğuk", set:8.0, alt:null, ust:7},
+    {ad:"serin",     set:7.5, alt:7,    ust:23},
+    {ad:"ılımlı",    set:7.0, alt:23,   ust:26},
+    {ad:"sıcak",     set:6.5, alt:26,   ust:null},
+  ],
+};
+const DIG = {
+  sinir: [15, 23], h: 3,
+  mod: [
+    {ad:"ısıtma",         alt:null, ust:15, gunduz:12, gece:14, fcu:14, ahu:10},
+    {ad:"soğutma",        alt:15,   ust:23, gunduz:10, gece:12, fcu:14, ahu:10},
+    {ad:"yoğun soğutma",  alt:23,   ust:null, gunduz:8, gece:10, fcu:12, ahu:8},
+  ],
+};
+const BIAS_MAX = 0.5, BIAS_ALT = 15, BIAS_UST = 25, BIAS_MERKEZ = 20;
+
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a={},p=null)=>{const n=document.createElementNS(NS,t);
+  for(const k in a) n.setAttribute(k,a[k]); if(p) p.appendChild(n); return n;};
+const cv=(n)=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const vir=(n,d=1)=>Number(n).toLocaleString("tr-TR",{minimumFractionDigits:d,maximumFractionDigits:d});
+
+/* Bölgeden çıkış metni — histerezis mantığı oto_set._bolgeli_mod ile aynı */
+function cikis(m,h){
+  const p=[];
+  if(m.ust!==null) p.push("> "+vir(m.ust+h,0));
+  if(m.alt!==null) p.push("< "+vir(m.alt-h,0));
+  return p.join("  ·  ") || "—";
+}
+
+/* ── Ortak eksen çizimi ───────────────────────────────────────── */
+function eksen(svg,W,H,M,xmin,xmax,ymin,ymax,ybirim,yadim){
+  const iw=W-M.l-M.r, ih=H-M.t-M.b;
+  const X=(v)=>M.l+(v-xmin)/(xmax-xmin)*iw;
+  const Y=(v)=>M.t+ih-(v-ymin)/(ymax-ymin)*ih;
+  const grid=cv("--grid"), ink3=cv("--ink3"), ink2=cv("--ink2");
+
+  for(let v=ymin; v<=ymax+1e-9; v+=yadim){
+    el("line",{x1:M.l,y1:Y(v),x2:W-M.r,y2:Y(v),stroke:grid,"stroke-width":1},svg);
+    const t=el("text",{x:M.l-10,y:Y(v)+4,"text-anchor":"end",fill:ink3,
+      "font-size":11,"font-family":"IBM Plex Mono, monospace"},svg);
+    t.textContent=vir(v, v%1?1:0);
+  }
+  for(let v=xmin; v<=xmax+1e-9; v+=5){
+    const t=el("text",{x:X(v),y:H-M.b+20,"text-anchor":"middle",fill:ink3,
+      "font-size":11,"font-family":"IBM Plex Mono, monospace"},svg);
+    t.textContent=v;
+  }
+  const xl=el("text",{x:M.l+iw/2,y:H-2,"text-anchor":"middle",fill:ink2,"font-size":12},svg);
+  xl.textContent="Dış hava sıcaklığı (°C)";
+  const yl=el("text",{x:14,y:M.t+ih/2,fill:ink2,"font-size":12,"text-anchor":"middle",
+    transform:`rotate(-90 14 ${M.t+ih/2})`},svg);
+  yl.textContent=ybirim;
+  return {X,Y,iw,ih};
+}
+
+/* Eşik çizgisi + histerezis bandı */
+function esik(svg,X,M,ih,deger,h,etiket){
+  const ink2=cv("--ink2"), ink3=cv("--ink3");
+  el("rect",{x:X(deger-h),y:M.t,width:X(deger+h)-X(deger-h),height:ih,
+    fill:cv("--hyst")},svg);
+  el("line",{x1:X(deger),y1:M.t,x2:X(deger),y2:M.t+ih,stroke:ink3,
+    "stroke-width":1.5,"stroke-dasharray":"5 4"},svg);
+  const t=el("text",{x:X(deger),y:M.t-7,"text-anchor":"middle",fill:ink2,
+    "font-size":11.5,"font-weight":600,"font-family":"IBM Plex Mono, monospace"},svg);
+  t.textContent=etiket;
+}
+
+/* Kademeli (step) çizgi */
+function kademe(svg,X,Y,xmin,xmax,mod,alan,renk,etiket){
+  let d="";
+  mod.forEach((m,i)=>{
+    const a = m.alt===null ? xmin : m.alt;
+    const b = m.ust===null ? xmax : m.ust;
+    const v = m[alan];
+    d += (i===0 ? "M" : "L") + X(a) + " " + Y(v) + " L" + X(b) + " " + Y(v) + " ";
+  });
+  el("path",{d:d.trim(),fill:"none",stroke:renk,"stroke-width":2.5,
+    "stroke-linejoin":"round","stroke-linecap":"round"},svg);
+
+  mod.forEach((m)=>{
+    const a = m.alt===null ? xmin : m.alt;
+    const b = m.ust===null ? xmax : m.ust;
+    const cx=(X(a)+X(b))/2;
+    const g=el("g",{},svg);
+    el("circle",{cx:X(b)===X(xmax)?cx:cx,cy:Y(m[alan]),r:0,fill:renk},g);
+    const t=el("text",{x:cx,y:Y(m[alan])-9,"text-anchor":"middle",fill:renk,
+      "font-size":12,"font-weight":600,"font-family":"IBM Plex Mono, monospace"},g);
+    t.textContent=vir(m[alan],1);
+  });
+
+  /* Doğrudan etiket — kimlik yalnız renge bağlı kalmasın */
+  const son=mod[mod.length-1];
+  const t=el("text",{x:X(xmax)+8,y:Y(son[alan])+4,fill:renk,"font-size":12,
+    "font-weight":600},svg);
+  t.textContent=etiket;
+}
+
+/* ── 1. CHILLER ──────────────────────────────────────────────── */
+(function(){
+  const svg=document.getElementById("chChiller"), W=900,H=300,M={t:34,r:96,b:40,l:56};
+  const xmin=0,xmax=35;
+  const {X,Y,ih}=eksen(svg,W,H,M,xmin,xmax,6,8.5,"Chiller gidiş seti (°C)",0.5);
+  CH.sinir.forEach(s=>esik(svg,X,M,ih,s,CH.h,s+"°C"));
+  kademe(svg,X,Y,xmin,xmax,CH.mod,"set",cv("--s1"),"Chiller");
+
+  CH.mod.forEach(m=>{
+    const a=m.alt===null?xmin:m.alt, b=m.ust===null?xmax:m.ust;
+    const t=el("text",{x:(X(a)+X(b))/2,y:M.t+ih-8,"text-anchor":"middle",
+      fill:cv("--ink3"),"font-size":11},svg);
+    t.textContent=m.ad;
+  });
+})();
+
+/* ── 2. KOLLEKTÖR + FCU/AHU — çakışan seriler ayrı panellerde ── */
+function digPanel(id, seriler){
+  const svg=document.getElementById(id), W=560,H=300,M={t:34,r:92,b:40,l:52};
+  const xmin=0,xmax=35;
+  const {X,Y,ih}=eksen(svg,W,H,M,xmin,xmax,6,16,"Setpoint (°C)",2);
+  DIG.sinir.forEach(s=>esik(svg,X,M,ih,s,DIG.h,s+"°C"));
+  seriler.forEach(([alan,renk,etiket])=>
+    kademe(svg,X,Y,xmin,xmax,DIG.mod,alan,cv(renk),etiket));
+  DIG.mod.forEach(m=>{
+    const a=m.alt===null?xmin:m.alt, b=m.ust===null?xmax:m.ust;
+    const t=el("text",{x:(X(a)+X(b))/2,y:M.t+ih-8,"text-anchor":"middle",
+      fill:cv("--ink3"),"font-size":10.5},svg);
+    t.textContent=m.ad;
+  });
+}
+digPanel("chKol", [["gece","--s2","Gece"], ["gunduz","--s1","Gündüz"]]);
+digPanel("chFcu", [["fcu","--s3","FCU"], ["ahu","--s4","AHU"]]);
+
+/* ── 3. HEDEF ΔT YANLILIĞI ───────────────────────────────────── */
+(function(){
+  const svg=document.getElementById("chBias"), W=900,H=250,M={t:28,r:96,b:40,l:56};
+  const xmin=0,xmax=35;
+  const {X,Y,ih}=eksen(svg,W,H,M,xmin,xmax,-0.6,0.6,"Hedef ΔT yanlılığı (°C)",0.3);
+
+  el("line",{x1:M.l,y1:Y(0),x2:W-M.r,y2:Y(0),stroke:cv("--ink3"),
+    "stroke-width":1,"stroke-dasharray":"2 3"},svg);
+
+  const bias=(o)=> o<=BIAS_ALT ? -BIAS_MAX
+                 : o>=BIAS_UST ?  BIAS_MAX
+                 : (o-BIAS_MERKEZ)/5*BIAS_MAX;
+  let d="";
+  for(let o=xmin;o<=xmax;o+=0.5){ d+=(d?"L":"M")+X(o)+" "+Y(bias(o))+" "; }
+  el("path",{d:d.trim(),fill:"none",stroke:cv("--s2"),"stroke-width":2.5,
+    "stroke-linejoin":"round"},svg);
+
+  [BIAS_ALT,BIAS_MERKEZ,BIAS_UST].forEach(o=>{
+    el("line",{x1:X(o),y1:M.t,x2:X(o),y2:M.t+ih,stroke:cv("--grid"),
+      "stroke-width":1,"stroke-dasharray":"4 4"},svg);
+    el("circle",{cx:X(o),cy:Y(bias(o)),r:4.5,fill:cv("--s2"),
+      stroke:cv("--card"),"stroke-width":2},svg);
+    const t=el("text",{x:X(o),y:M.t-8,"text-anchor":"middle",fill:cv("--ink2"),
+      "font-size":11.5,"font-weight":600,"font-family":"IBM Plex Mono, monospace"},svg);
+    t.textContent=o+"°C";
+  });
+
+  [[xmin+2,-BIAS_MAX,"−0,5"],[xmax-2,BIAS_MAX,"+0,5"]].forEach(([o,v,s])=>{
+    const t=el("text",{x:X(o),y:Y(v)+(v<0?18:-10),"text-anchor":"middle",
+      fill:cv("--s2"),"font-size":12,"font-weight":600,
+      "font-family":"IBM Plex Mono, monospace"},svg);
+    t.textContent=s;
+  });
+
+  const lbl=el("text",{x:X(xmax)+8,y:Y(BIAS_MAX)+4,fill:cv("--s2"),
+    "font-size":12,"font-weight":600},svg);
+  lbl.textContent="Yanlılık";
+})();
+
+/* ── 4. TABLO — chiller bölgelerine göre, kollektör değeri o aralığın modundan ── */
+(function(){
+  function digMod(o){
+    for(let i=0;i<DIG.sinir.length;i++) if(o<DIG.sinir[i]) return DIG.mod[i];
+    return DIG.mod[DIG.mod.length-1];
+  }
+  const satirlar=[];
+  CH.mod.forEach(m=>{
+    const a=m.alt, b=m.ust;
+    const aralik = a===null ? `< ${b}` : (b===null ? `> ${a}` : `${a} – ${b}`);
+    /* aralığın içinden temsil sıcaklığı: kollektör modunu belirlemek için */
+    const temsil = a===null ? b-1 : (b===null ? a+1 : (a+b)/2);
+    const d=digMod(temsil);
+    satirlar.push({aralik, chMod:m.ad, ch:m.set, d, cikis:cikis(m,CH.h)});
+  });
+
+  const renk=["var(--cold)","var(--s1)","var(--s2)","var(--warm)"];
+  document.getElementById("tblBody").innerHTML = satirlar.map((s,i)=>`
+    <tr>
+      <td class="l mono">${s.aralik} °C</td>
+      <td class="l"><span class="zone"><span class="sw" style="background:${renk[i]}"></span>${s.chMod}</span>
+        <div style="color:var(--ink3);font-size:12px;margin-top:1px">kollektör: ${s.d.ad}</div></td>
+      <td class="mono">${vir(s.ch)}</td>
+      <td class="mono">${vir(s.d.gunduz)}</td>
+      <td class="mono">${vir(s.d.gece)}</td>
+      <td class="mono">${vir(s.d.fcu)}</td>
+      <td class="mono">${vir(s.d.ahu)}</td>
+      <td class="l mono" style="color:var(--ink2)">${s.cikis}</td>
+    </tr>`).join("");
+})();
+</script>
