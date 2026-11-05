@@ -70,16 +70,8 @@ ANALYZERS = [
     # günlük farkı Kojen1/2_kWh'e yazılır (data_bridge kojen_n'i 1..4 jenerik
     # okuduğu için orada değişiklik gerekmedi).
     #
-    # ENERJİ REGISTER'I HENÜZ DOĞRULANMADI: URETIM_ENERJI_REG'de janitza
-    # karşılığı YOK, bu yüzden enerji aşağıdaki genel janitza adresinden
-    # (0x4A74 = 19060, "Real energy L1..L3") okunur. Siemens üretim sayaçları
-    # Giren+Verilen toplamını okuyor (801+809) — boştaki kojenin çektiği iç
-    # tüketim yönü bozmasın diye. Janitza'da bunun karşılığı olan adres çifti
-    # ÜRETİCİ ADRES LİSTESİNDEN doğrulanmadan buraya yazılmaz (bu dosyadaki
-    # register'ların tamamı kılavuzdan alınmıştır, tahmin değildir).
-    # Doğrulama: cihazın kendi web arayüzü Modbus adres listesini veriyor
-    # (10.70.131.2) ve "GUC:KOJEN-1" komutu register'ı sayaç farkıyla
-    # karşılaştırıyor. Doğru çift bulununca URETIM_ENERJI_REG'e janitza eklenir.
+    # Enerji register'ı 05.11.2026'da ÜRETİCİ KILAVUZUNDAN alındı
+    # (UMG 512-PRO, "Modbus address list" s.12) — bkz. URETIM_ENERJI_REG.
     {"ip": "10.70.131.2",   "name": "KOJEN-1",      "brand": "janitza", "uretim": True},
     {"ip": "10.70.131.3",   "name": "KOJEN-2",      "brand": "janitza", "uretim": True},
     # KOJEN-3 / KOJEN-4 — Siemens PAC3200, 27.10.2026'da canlı izlemeye alındı
@@ -160,7 +152,26 @@ PROP_PRESENT_VALUE = 85
 # Yön varsayılmaz: Giren + Verilen toplamı alınır (ikisi de ölçülen değer;
 # boştaki kojenin çektiği küçük iç tüketim bu toplamda ihmal edilebilir).
 # Adresler: SENTRON PAC3200 Modbus tablosu — Aktif enerji Giren/Verilen T1, Double, Wh.
-URETIM_ENERJI_REG = {"siemens": (801, 809)}
+#
+# JANITZA (UMG 512-PRO), 05.11.2026 — aynı kural, kılavuzdaki adreslerle
+# ("Modbus address list", s.12; güç için kullandığımız 19026 da bu tablodan,
+# sahada çalışıyor). Float, birim Wh:
+#     19062/19064/19066  _G_WH_V[0..2]  Real energy L1/L2/L3, consumed
+#     19070/19072/19074  _G_WH_Z[0..2]  Real energy L1/L2/L3, delivered
+# NEDEN TOPLAM SAYAÇ (19060) DEĞİL: 19060 (_G_WH_SUML13) NET enerjidir —
+# consumed − delivered. KOJEN-1'in kendi ekranı bunu -10.325.301 kWh
+# gösteriyor, yani akım trafosu yönü ters ve sayaç EKSİYE doğru büyüyor.
+# Günlük fark o sayaçtan alınsaydı eksi çıkar, calc_daily_kwh bunu "sayaç
+# sıfırlandı" sayıp her gün 0 yazardı. consumed ve delivered ayrı ayrı
+# birikir ve İKİSİ DE ARTAR: toplamları yönden bağımsızdır (Siemens'teki
+# Giren+Verilen ile birebir aynı mantık).
+# TARİFE: 19068 "consumed, rate 1" olduğu için KULLANILMAZ; faz bazlı
+# 19062/64/66'da tarife ayrımı yoktur, ileride tarife geçişi açılırsa enerji
+# kaybolmaz.
+URETIM_ENERJI_REG = {
+    "siemens": (801, 809),
+    "janitza": (19062, 19064, 19066, 19070, 19072, 19074),
+}
 
 # ŞEBEKE sayacı ("sebeke": True), 02.11.2026: NET enerji = GİREN − VERİLEN.
 # Kojen OG baraya bağlı: üretim tüketimi aşınca enerji şebekeye verilir ve
@@ -192,6 +203,36 @@ def _siemens_double(ip, adres):
     return None
 
 
+def _janitza_float(ip, adres):
+    """Janitza UMG: tek float (2 register) oku. Hata → None."""
+    s = None
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(2.5)
+        s.connect((ip, MODBUS_PORT))
+        s.send(struct.pack(">HHHBBHH", 1, 0, 6, 1, 3, int(adres), 2))
+        resp = s.recv(1024)
+        if len(resp) >= 13 and resp[7] == 3:
+            return struct.unpack(">f", resp[9:13])[0]
+    except Exception:
+        pass
+    finally:
+        try:
+            if s:
+                s.close()
+        except Exception:
+            pass
+    return None
+
+
+def _enerji_oku(device, adres):
+    """Üretim sayacından tek enerji register'ı (Wh). Markaya göre biçim:
+    Siemens PAC double (4 register), Janitza UMG float (2 register)."""
+    if device.get("brand") == "janitza":
+        return _janitza_float(device["ip"], adres)
+    return _siemens_double(device["ip"], adres)
+
+
 def modbus_get_kwh(device):
     net = SEBEKE_ENERJI_REG.get(device.get("brand")) if device.get("sebeke") else None
     if net:
@@ -202,7 +243,7 @@ def modbus_get_kwh(device):
         return round((sum(giren) - sum(verilen)) / 1000, 3)  # Wh → kWh (net)
     regler = URETIM_ENERJI_REG.get(device.get("brand")) if device.get("uretim") else None
     if regler:
-        okunan = [_siemens_double(device["ip"], r) for r in regler]
+        okunan = [_enerji_oku(device, r) for r in regler]
         if any(v is None for v in okunan):
             return None                      # yarım değer yazılmaz
         return round(sum(okunan) / 1000, 3)  # Wh → kWh

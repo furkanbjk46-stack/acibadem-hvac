@@ -174,13 +174,43 @@ c("KOJEN-1..4 canlı okunacak listede",
   {d["name"]: d["ip"] for d in _koj} == {"KOJEN-1": "10.70.131.2", "KOJEN-2": "10.70.131.3",
                                          "KOJEN-3": "192.168.1.18", "KOJEN-4": "192.168.1.19"}, _koj)
 # KOJEN-1/2 (Janitza UMG 512 PRO, 05.11.2026) ilk JANITZA üretim sayaçlarıdır.
-# URETIM_ENERJI_REG'de janitza karşılığı YOK: enerji genel janitza adresinden
-# (19060) okunur. Bu kontrol o boşluğu GÖRÜNÜR tutar — biri üretici adres
-# listesinden doğrulamadan tahmini bir adres eklerse test düşer.
+# Enerji adresleri üretici kılavuzundan alındı (UMG 512-PRO "Modbus address
+# list" s.12): faz bazlı consumed + delivered. Bu kontroller iki şeyi korur:
+#   · NET sayaç (19060) günlük farka GİRMEZ — o sayaç bu sahada eksiye doğru
+#     büyüyor, günlük fark eksi çıkar ve 0 yazılırdı;
+#   · tarifeli adres (19068 "rate 1") kullanılmaz — tarife geçişi açılırsa
+#     enerjinin yarısı kaybolurdu.
 c("kojen-1/2 janitza üretim sayacı",
   all(d["brand"] == "janitza" for d in _koj if d["name"] in ("KOJEN-1", "KOJEN-2")))
-c("janitza üretim register'ı henüz doğrulanmadı (genel adrese düşer)",
-  "janitza" not in _dc.URETIM_ENERJI_REG, _dc.URETIM_ENERJI_REG)
+c("janitza üretim enerjisi = faz bazlı consumed + delivered (kılavuz s.12)",
+  _dc.URETIM_ENERJI_REG.get("janitza") == (19062, 19064, 19066, 19070, 19072, 19074),
+  _dc.URETIM_ENERJI_REG)
+c("NET sayaç (19060) üretim enerjisine girmez (eksiye büyüyor)",
+  19060 not in (_dc.URETIM_ENERJI_REG.get("janitza") or ()))
+c("tarifeli adres (19068) kullanılmaz",
+  19068 not in (_dc.URETIM_ENERJI_REG.get("janitza") or ()))
+
+# Janitza enerji register'ı FLOAT (2 register); Siemens'in double okuyucusuyla
+# okunursa değer çöp çıkar. Bu kontrol dağıtımın markaya göre yapıldığını tutar.
+_cagri = []
+_orj_jf, _orj_sd = _dc._janitza_float, _dc._siemens_double
+try:
+    _dc._janitza_float = lambda ip, ad: (_cagri.append(("janitza", ad)), 1000.0)[1]
+    _dc._siemens_double = lambda ip, ad: (_cagri.append(("siemens", ad)), 1000.0)[1]
+    _kwh = _dc.modbus_get_kwh({"ip": "10.70.131.2", "brand": "janitza", "uretim": True})
+    c("janitza üretim enerjisi float okuyucuyla okunur",
+      [m for m, _ in _cagri] == ["janitza"] * 6, _cagri)
+    c("altı register'ın toplamı kWh'e çevrilir", _kwh == 6.0, _kwh)
+    _cagri[:] = []
+    _dc.modbus_get_kwh({"ip": "192.168.1.18", "brand": "siemens", "uretim": True})
+    c("siemens üretim enerjisi double okuyucuyla okunur",
+      _cagri == [("siemens", 801), ("siemens", 809)], _cagri)
+    _cagri[:] = []
+    _dc._janitza_float = lambda ip, ad: None
+    c("bir register okunamazsa janitza kojen enerjisi None (yarım değer yok)",
+      _dc.modbus_get_kwh({"ip": "10.70.131.2", "brand": "janitza", "uretim": True}) is None)
+finally:
+    _dc._janitza_float, _dc._siemens_double = _orj_jf, _orj_sd
 c("kojenler üretim sayacı olarak işaretli", all(d.get("uretim") for d in _koj))
 c("kojenler tüketim toplamına GİRMEZ (çift sayım yok)",
   not any(d["name"] in _db.ALL_ANALYZERS for d in _koj))
