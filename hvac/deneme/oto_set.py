@@ -73,14 +73,27 @@ CH_H        = 2.0
 #
 # 15 eşiğinin eklenme sebebi (işletmenin notu): tek eşik 23 iken sıcaklık
 # 23'ün altına indiğinde kollektör gündüz 10 °C'de kalıyor, bu da chiller'ı
-# sürekli çalıştırıyordu. 15'in altında set 12/14'e çıkarak chiller'ı
-# durduruyor. İki eşik iki ayrı işi yapar; biri diğerinin yerine geçmez.
+# sürekli çalıştırıyordu. 15'in altında set 12/14'e çıkınca chiller duruyordu.
+#
+# 05.11.2026 — KIŞ SETİ İPTAL EDİLDİ (işletme kararı):
+# 15 °C altında gönderilen 12/14 kollektör seti kaldırıldı; bu bölge artık
+# 15-23 bandıyla AYNI seti alıyor (gündüz 10 / gece 12). FCU ve AHU zaten
+# iki bölgede de aynıydı, onlara dokunulmadı.
+#
+# Eşik ve mod adı BİLEREK DURUYOR: "isitma" modu durum dosyasında ve
+# oto_mod_log geçmişinde dolu, kaldırılsa eski kayıtlar okunamaz hale gelir.
+# Mod hâlâ 15 °C'de değişiyor, ama artık sahaya giden değeri değiştirmiyor.
+# Kış setini geri istersen tek yapılacak iş aşağıdaki "isitma" satırını
+# 12/14'e döndürmek.
+#
+# DİKKAT: bu iptal, 01.10'da giderilen "chiller sürekli çalışıyor" durumunu
+# geri getirebilir — 15 °C altında kollektör yine 10 °C'de kalacak.
 #
 #   > 23 °C   yogun_sogutma : gündüz 8  / gece 10 · FCU 12 · AHU 8
 #   15-23 °C  sogutma       : gündüz 10 / gece 12 · FCU 14 · AHU 10
-#   < 15 °C   isitma        : gündüz 12 / gece 14 · FCU 14 · AHU 10
+#   < 15 °C   isitma        : gündüz 10 / gece 12 · FCU 14 · AHU 10   (= sogutma)
 #
-# Kaynak: işletme tablosu (ekran görüntüsü, 16.10.2026).
+# Kaynak: işletme tablosu (ekran görüntüsü, 16.10.2026) + 05.11.2026 iptal kararı.
 DIG_SINIRLAR = [15.0, 23.0]
 DIG_MODLAR   = ["isitma", "sogutma", "yogun_sogutma"]
 DIG_H        = 3.0
@@ -91,7 +104,8 @@ DIG_SET  = {
     "sogutma": {"GUNDUZ_KOLLEKTOR_SET": 10.0, "GECE_KOLLEKTOR_SET": 12.0,
                 "A_BLOK_FCU_SET": 14.0, "B_BLOK_FCU_SET": 14.0,
                 "ZON1_KLIMA_SANTRALI_SET": 10.0, "ZON2_KLIMA_SANTRALI_SET": 10.0},
-    "isitma":  {"GUNDUZ_KOLLEKTOR_SET": 12.0, "GECE_KOLLEKTOR_SET": 14.0,
+    # 05.11.2026: kış seti iptal — sogutma ile birebir aynı (eskiden 12/14).
+    "isitma":  {"GUNDUZ_KOLLEKTOR_SET": 10.0, "GECE_KOLLEKTOR_SET": 12.0,
                 "A_BLOK_FCU_SET": 14.0, "B_BLOK_FCU_SET": 14.0,
                 "ZON1_KLIMA_SANTRALI_SET": 10.0, "ZON2_KLIMA_SANTRALI_SET": 10.0},
 }

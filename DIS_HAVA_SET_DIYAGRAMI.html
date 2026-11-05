@@ -213,9 +213,10 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);
   <section>
     <h2>Kollektör, FCU ve klima santrali setleri</h2>
     <p class="sub">
-      Üç bölge, iki eşik (15 °C ve 23 °C). 15 °C eşiği kışın kollektörü yükselterek
-      chiller'ı durdurur; 23 °C eşiği yaz yoğun soğutmasına geçirir. İki eşik iki ayrı
-      işi yapar, biri diğerinin yerine geçmez.
+      Üç bölge, iki eşik (15 °C ve 23 °C). 23 °C eşiği yaz yoğun soğutmasına geçirir.
+      <b>15 °C eşiği 05.11.2026'dan beri seti değiştirmiyor</b> — eskiden kollektörü
+      12/14'e yükseltip chiller'ı durduruyordu, bu kış seti işletme kararıyla iptal
+      edildi. Eşik ve mod adı geçmiş kayıtlar okunabilir kalsın diye duruyor.
     </p>
     <div class="split">
       <div class="card">
@@ -238,10 +239,10 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);
       </div>
     </div>
     <div class="note">
-      <b>Gündüz kollektör ile klima santrali seti iki bölgede aynı değerdedir</b>
-      (15–23 °C'de 10, 23 °C üstünde 8), gece kollektör ile FCU ise ısıtma bölgesinde
-      aynıdır (14). Çakışan çizgiler birbirini gizlemesin diye iki ayrı panel çizildi;
-      histerezis bandı (±3 °C) her ikisinde de aynıdır.
+      <b>Gündüz kollektör ile klima santrali seti her üç bölgede de aynı değerdedir</b>
+      (10 · 10 · 8). Kış seti iptal edildikten sonra bu iki eğri tamamen çakıştığı için
+      ayrı panellerde çizildi; tek panelde biri diğerini gizlerdi. Histerezis bandı
+      (±3 °C) her ikisinde de aynıdır.
     </div>
   </section>
 
@@ -337,7 +338,9 @@ const CH = {
 const DIG = {
   sinir: [15, 23], h: 3,
   mod: [
-    {ad:"ısıtma",         alt:null, ust:15, gunduz:12, gece:14, fcu:14, ahu:10},
+    /* 05.11.2026: kış seti iptal — ısıtma bölgesi soğutma ile aynı set gönderir.
+       Eşik ve mod adı duruyor, sahaya giden değer değişmiyor. */
+    {ad:"ısıtma",         alt:null, ust:15, gunduz:10, gece:12, fcu:14, ahu:10},
     {ad:"soğutma",        alt:15,   ust:23, gunduz:10, gece:12, fcu:14, ahu:10},
     {ad:"yoğun soğutma",  alt:23,   ust:null, gunduz:8, gece:10, fcu:12, ahu:8},
   ],

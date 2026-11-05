@@ -904,10 +904,12 @@ if _metin:
 # ── 15) ISLETME TABLOSU — kollektor/FCU/AHU UC BOLGE, IKI ESIK ──────────
 # 01.10.2026'da 15 C esigi eklenirken 23 C esigi yanlislikla kaldirilmis,
 # mod ikiliye dusmustu. Sonuc: 23 ustunde kollektor gunduz 10'da kaliyor,
-# chiller surekli calisiyordu. Iki esik iki AYRI isi yapar:
+# chiller surekli calisiyordu. Esikler:
 #   23 -> yaz bolgesi (kollektor 8/10, FCU 12, AHU 8)
-#   15 -> kis bolgesi (kollektor 12/14) — chiller'i durdurur
-# Biri digerinin yerine gecemez; bu blok ikisinin de durdugunu kilitler.
+#   15 -> mod sinirini belirler; 05.11.2026'dan beri SET DEGISTIRMEZ
+#         (kis seti 12/14 isletme karariyla iptal edildi)
+# Esigin kendisi duruyor: mod adi gecmis kayitlarda kullaniliyor. Bu blok
+# iki esigin de tanimli kaldigini kilitler; setlerin esitligi asagida.
 c("[tablo] iki esik tanimli (15 ve 23)",
   oto_set.DIG_SINIRLAR == [15.0, 23.0], oto_set.DIG_SINIRLAR)
 c("[tablo] uc mod tanimli", oto_set.DIG_MODLAR == ["isitma", "sogutma", "yogun_sogutma"],
@@ -921,12 +923,20 @@ c("[tablo] her modun set takimi tam",
 for _mod, _gun, _gece, _fcu, _ahu in (
         ("yogun_sogutma", 8.0, 10.0, 12.0, 8.0),       # 23 ustu
         ("sogutma",      10.0, 12.0, 14.0, 10.0),      # 15-23
-        ("isitma",       12.0, 14.0, 14.0, 10.0)):     # 15 alti
+        ("isitma",       10.0, 12.0, 14.0, 10.0)):     # 15 alti — 05.11.2026 iptal
     _s = oto_set.DIG_SET[_mod]
     c("[tablo] %s setleri (%g/%g · FCU %g · AHU %g)" % (_mod, _gun, _gece, _fcu, _ahu),
       _s["GUNDUZ_KOLLEKTOR_SET"] == _gun and _s["GECE_KOLLEKTOR_SET"] == _gece
       and _s["A_BLOK_FCU_SET"] == _s["B_BLOK_FCU_SET"] == _fcu
       and _s["ZON1_KLIMA_SANTRALI_SET"] == _s["ZON2_KLIMA_SANTRALI_SET"] == _ahu, _s)
+
+# 05.11.2026 — KIS SETI IPTAL EDILDI. 15 C altinda gonderilen 12/14 kollektor
+# seti kaldirildi; isitma bolgesi artik sogutma ile BIREBIR AYNI set gonderir.
+# Esik ve mod adi duruyor (gecmis kayitlar okunabilir kalsin diye), ama sahaya
+# giden deger degismiyor. Bu kontrol, kis setinin kazara geri gelmesini yakalar.
+c("[tablo] isitma bolgesi sogutma ile ayni set (kis seti iptal)",
+  oto_set.DIG_SET["isitma"] == oto_set.DIG_SET["sogutma"],
+  oto_set.DIG_SET["isitma"])
 
 # Bolge secimi ve histerezis (sahaya giden kararin kendisi)
 for _ref, _bek in ((14.9, "isitma"), (15.0, "sogutma"),
