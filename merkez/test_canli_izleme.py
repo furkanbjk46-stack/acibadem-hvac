@@ -714,6 +714,46 @@ c("harita pop-up: Şebeke ve Kojen üretim satırları",
   "satir('⚡', 'Şebeke', v.sebeke)" in _MRK and "satir('⚙️', 'Kojen üretim', v.kojen)" in _MRK
   and "Trafo toplam" not in _MRK)
 
+# ── Ölçüm yaşı: her sayacın altındaki "kaç sn önce" yazısı ───────────────
+# Panel, önbellek (12 sn) + saha turu (15 sn) yüzünden hiçbir zaman "şu anı"
+# göstermiyor; yaş yazısı bunu söylüyor. Yaş SATIRIN KENDİ zamanından gelmeli:
+# ortak bir paket yaşı yazılsaydı geri kalan tek sayaç gizlenirdi.
+_YT = T0 + timedelta(seconds=90)
+_yas = CI.olcum_yaslari(
+    [{"cihaz": "TRDP-1", "olcum_zamani": (_YT - timedelta(seconds=8)).isoformat()},
+     {"cihaz": "KOJEN-1", "olcum_zamani": (_YT - timedelta(seconds=75)).isoformat()},
+     {"cihaz": "MCC-9", "olcum_zamani": "bozuk-zaman"}], simdi=_YT)
+c("yaş her sayaç için AYRI hesaplanır", round(_yas["TRDP-1"]) == 8 and round(_yas["KOJEN-1"]) == 75, _yas)
+c("zamanı çözülemeyen sayacın yaşı None (uydurulmaz)", _yas["MCC-9"] is None, _yas)
+c("lokasyon saati ileriyse yaş eksiye düşmez",
+  CI.olcum_yaslari([{"cihaz": "A", "olcum_zamani": (_YT + timedelta(seconds=4)).isoformat()}],
+                   simdi=_YT)["A"] == 0.0)
+c("yaş metni: saniye / dakika", CI.yas_metni(0) == "0 sn önce" and CI.yas_metni(12) == "12 sn önce"
+  and CI.yas_metni(95) == "2 dk önce", (CI.yas_metni(0), CI.yas_metni(95)))
+c("yaş bilinmiyorsa satırda HİÇ yazı olmaz", CI.yas_html(None) == "")
+_sy = CI.satir_html("TRDP-1", 812.0, "<svg/>", "register", yas=8)
+c("satırda yaş yazısı değerin altında (cg-dg hücresi içinde)",
+  "cg-yas" in _sy and _sy.index("cg-dg") < _sy.index("cg-yas") and _sy.count("</div>") == 5, _sy)
+c("satırda yaş yazısı 'kaç sn önce' der", "8 sn önce" in _sy, _sy)
+c("tarayıcı yaşı ilerletsin diye çizim anındaki yaş data-yas ile yazılır",
+  "data-yas='8'" in _sy, _sy)
+c("taze ölçüm sararmaz, bayat ölçüm sararır",
+  "cg-yas-bayat" not in CI.satir_html("A", 1.0, "", yas=CI.YAS_BAYAT_SN - 1)
+  and "cg-yas-bayat" in CI.satir_html("A", 1.0, "", yas=CI.YAS_BAYAT_SN))
+c("yaş verilmeyen satır eskisi gibi çizilir (geri uyumlu)",
+  "cg-yas" not in CI.satir_html("A", 1.0, "<svg/>", "register"))
+c("yaş yazısı satır ızgarasına 4. sütun eklemez (sütunlar kaymaz)",
+  _sy.count("<div class='cg-satir'>") == 1 and "cg-yas" in _sy.split("cg-dg")[1])
+_jy = CI.akis_betigi(mod="gecis")
+c("yaş yazısı tarayıcıda saniyede bir ilerler (çizimler arasında donmaz)",
+  ".cg-yas[data-yas]" in _jy and "el.__yasT0" in _jy and "sn \\u00f6nce" in _jy)
+c("yaş eşiği betiğe de geçer (bayat rengi tarayıcıda da döner)",
+  "BAYAT = %d" % CI.YAS_BAYAT_SN in _jy)
+c("sayfa her sayacın yaşını satıra geçirir",
+  "_yaslar = _CI.olcum_yaslari(olcumler)" in SAYFA and SAYFA.count("yas=_yaslar.get(_c)") == 3, )
+c("yaş yazısının stili tanımlı", ".cg-yas{" in CI.STIL and ".cg-yas.cg-yas-bayat{" in CI.STIL)
+
+
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))
 _g = sum(1 for _, ok, _ in T if ok)

@@ -2021,6 +2021,10 @@ with tab_canli:
             return
 
         _yontemler = {o.get("cihaz"): o.get("yontem") for o in (olcumler or [])}
+        # Her sayacın altına "kaç sn önce" yazısı: yaş, o satırın KENDİ
+        # olcum_zamani'nden gelir (ortak bir paket yaşı yazılsaydı geri kalan
+        # tek sayacı gizlerdi). Bkz. canli_izleme.olcum_yaslari.
+        _yaslar = _CI.olcum_yaslari(olcumler)
         _gruplar = _CI.gruplara_ayir(list(degerler))
         _aralik = _CI.olcum_araligi_sn(seri)
         _okunan_top = sum(1 for v in degerler.values() if v is not None)
@@ -2145,7 +2149,8 @@ with tab_canli:
                     _CI.bar_html(degerler.get(_c), _olcek, birim=_br,
                                  esikli=_an not in _CI.ESIKSIZ_GRUPLAR),
                     _yontemler.get(_c), birim=_br,
-                    gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None)
+                    gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None,
+                    yas=_yaslar.get(_c))
             _olcusuz = 0
             _kart_toplam, _kart_gecis = _tp, _CI.grup_gecis(_onc, degerler, _cihazlar, _t_son, _sure)
             if _an != "enerji":
@@ -2167,7 +2172,8 @@ with tab_canli:
                                 _c, degerler.get(_c),
                                 _CI.bar_html(degerler.get(_c), _kolcek, esikli=False),
                                 _yontemler.get(_c),
-                                gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None)
+                                gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None,
+                                yas=_yaslar.get(_c))
                         else:
                             _kojen_satirlari += _CI.olculmeyen_satir_html(
                                 _c, _CI.KOJEN_BEKLEME_NOTU, sag="bekleniyor")
@@ -2186,7 +2192,8 @@ with tab_canli:
                             _c, degerler.get(_c),
                             _CI.bar_html(degerler.get(_c), _solcek, esikli=False),
                             _yontemler.get(_c),
-                            gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None)
+                            gecis=(_onc[_c], _t_son, _sure) if _c in _onc else None,
+                            yas=_yaslar.get(_c))
                         for _c in _sebeke_canli)
                     _satirlar += _CI.alt_kart_html("ŞEBEKE", "", _sebeke_satirlari)
                     _ok += sum(1 for _c in _sebeke_canli if degerler.get(_c) is not None)

@@ -494,8 +494,64 @@ def tr_sayi(x, ond=1):
     return tam.replace(",", ".") + "," + kus
 
 
+# ── Ölçüm yaşı (her sayacın altındaki küçük yazı) ────────────────────────
+# Sayacın GÖSTERDİĞİ değer kaç saniye öncesine ait: panelin kendi tazeleme
+# aralığı 12 sn (önbellek), saha 15 sn'de bir yazıyor, buna bir de bulut
+# gecikmesi ekleniyor. Ekrandaki sayı bu yüzden hiçbir zaman "şu an" değil;
+# satırın altındaki yazı bunu saklamak yerine söyler (05.11.2026 isteği).
+#
+# ÖNEMLİ — yaş, satırın KENDİ olcum_zamani'nden hesaplanır. Bugün sahada
+# bütün sayaçlar aynı turda okunup tek pakette yazıldığı için bu zaman
+# hepsinde aynıdır, dolayısıyla satırların yaşı da aynı görünür; bu bir hata
+# değil, okumanın gerçekten tek tur olmasıdır. Yarın tek bir sayaç gerçekten
+# geri kalırsa (ör. kendi zamanıyla yazılırsa) yazı kendiliğinden doğruyu
+# gösterir — ortak bir "paket yaşı" yazılsaydı o sayacı gizlerdi.
+YAS_BAYAT_SN = 45          # 3 ölçüm turu (15 sn) geçmişse yazı sararır
+
+
+def yas_metni(sn) -> str:
+    """Ölçüm yaşının insan dilinde karşılığı. Bilinmiyorsa boş metin."""
+    if sn is None:
+        return ""
+    sn = max(0, int(round(float(sn))))
+    if sn < 60:
+        return "%d sn önce" % sn
+    return sure_metni(sn) + " önce"
+
+
+def olcum_yaslari(olcumler: list, simdi: datetime = None) -> dict:
+    """{cihaz: ölçümün kaç saniye önce alındığı}. Zaman çözülemezse değer None.
+
+    Negatif çıkan fark (lokasyon saati birkaç saniye ileri) 0'a çekilir:
+    "-2 sn önce" yazmak sayacın geleceği okuduğunu söylerdi.
+    """
+    simdi = simdi or datetime.now()
+    sonuc = {}
+    for o in (olcumler or []):
+        ad = o.get("cihaz")
+        if not ad:
+            continue
+        t = _zaman_coz(o.get("olcum_zamani"))
+        sonuc[ad] = None if t is None else max(0.0, (simdi - t).total_seconds())
+    return sonuc
+
+
+def yas_html(sn) -> str:
+    """Satırın altındaki yaş yazısı. Yaş bilinmiyorsa HİÇ yazılmaz.
+
+    data-yas: çizim anındaki yaş (sn). Tarayıcı (akis_betigi) o andan bu yana
+    geçen süreyi ekleyip saniyede bir yeniler; yoksa yazı iki çizim arasında
+    donar ve olduğundan taze görünürdü.
+    """
+    if sn is None:
+        return ""
+    bayat = " cg-yas-bayat" if float(sn) >= YAS_BAYAT_SN else ""
+    return (f"<div class='cg-yas{bayat}' data-yas='{int(round(float(sn)))}'>"
+            f"{yas_metni(sn)}</div>")
+
+
 def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None, birim: str = "kW",
-               gecis: tuple = None) -> str:
+               gecis: tuple = None, yas=None) -> str:
     """Tek cihaz satırı: ad · mini grafik · anlık kW.
 
     Okunamayan cihaz "0,0 kW" DEĞİL "okunamadı" yazar: sıfır, sayacın
@@ -519,10 +575,13 @@ def satir_html(cihaz: str, deger, cubuk: str, yontem: str = None, birim: str = "
                  else "<span class='cg-dot cg-dot-bekle'></span>")
     # İpucu ÇİPTE: satır display:contents olduğu için kendi kutusu yok,
     # üzerine konan title görünmezdi.
+    # Yaş yazısı DEĞER HÜCRESİNİN İÇİNDE: satır display:contents olduğu için
+    # kendi kutusu yok, hücrelerin arasına dördüncü bir öğe konsa ızgaranın
+    # sütun düzeni bozulur ve bütün satırlar kayardı.
     return (f"<div class='cg-satir'>"
             f"<div class='{cip_sinif}'{baslik}>{nokta}{kisa_ad(cihaz)}</div>"
             f"<div class='cg-cizgi'>{cubuk}</div>"
-            f"<div class='{dg_sinif}'>{dg}</div></div>")
+            f"<div class='{dg_sinif}'>{dg}{yas_html(yas)}</div></div>")
 
 
 def olculmeyen_satir_html(ad: str, aciklama: str, sag: str = "veri çekilemiyor") -> str:
@@ -698,6 +757,11 @@ STIL = """
 .cg-dg{font-size:15px; font-weight:700; color:#133273; text-align:right; white-space:nowrap;}
 .cg-dg.cg-dg-yok{font-size:10.5px; font-weight:600; color:#9aa2b1;}
 .cg-br{font-size:9.5px; font-weight:500; color:#46536b; margin-left:2px;}
+/* Ölçüm yaşı: değerin hemen altında, okunacak kadar var ama sayıyla
+   yarışmayacak kadar silik. Bayatlarsa (45 sn+) sararır. */
+.cg-yas{font-size:9px; font-weight:500; color:#9aa2b1; text-align:right;
+  margin-top:1px; letter-spacing:.2px; white-space:nowrap;}
+.cg-yas.cg-yas-bayat{color:#b2730c;}
 
 /* ── doğrulama noktası: cihaz adının SOLUNDA, yanıp söner ── */
 .cg-dot{display:inline-block; width:6px; height:6px; border-radius:50%;
@@ -968,7 +1032,7 @@ def akis_betigi(harita_taban: dict = None, mod: str = "dalga") -> str:
     return """
 <script>
 (function () {
-  var taban = %s, MOD = %s;
+  var taban = %s, MOD = %s, BAYAT = %s;
   var W = window.parent;
   if (W.__synAkis) { W.clearInterval(W.__synAkis); }
   W.__synGecisBas = W.__synGecisBas || {};
@@ -1003,6 +1067,21 @@ def akis_betigi(harita_taban: dict = None, mod: str = "dalga") -> str:
       el.textContent = yaz(gecis(fz, o == null ? null : parseFloat(o), v,
                                  el.getAttribute('data-t'), parseFloat(el.getAttribute('data-sure')), simdi), ond);
     });
+    // Ölçüm yaşı: sunucunun yazdığı yaş ÇİZİM ANINA aittir; tarayıcı o andan
+    // bu yana geçeni ekler. Yeni çizim yeni bir data-yas getirince sayaç
+    // sıfırdan başlar (__yasV karşılaştırması).
+    d.querySelectorAll('.cg-yas[data-yas]').forEach(function (el) {
+      var v = parseFloat(el.getAttribute('data-yas'));
+      if (isNaN(v)) { return; }
+      if (el.__yasV !== v) { el.__yasV = v; el.__yasT0 = simdi; }
+      var y = Math.max(0, Math.round(v + (simdi - el.__yasT0)));
+      el.textContent = y < 60 ? y + ' sn \\u00f6nce'
+        : (y < 3600 ? Math.max(1, Math.round(y / 60)) + ' dk \\u00f6nce'
+                    : (y < 172800 ? Math.round(y / 3600) + ' saat \\u00f6nce'
+                                  : Math.round(y / 86400) + ' g\\u00fcn \\u00f6nce'));
+      if (y >= BAYAT) { el.classList.add('cg-yas-bayat'); }
+      else { el.classList.remove('cg-yas-bayat'); }
+    });
     var hb = W.__synHaritaTaban || taban;
     var lokler = Object.keys(hb);
     if (!lokler.length) { return; }
@@ -1019,4 +1098,4 @@ def akis_betigi(harita_taban: dict = None, mod: str = "dalga") -> str:
   W.__synAkis = W.setInterval(adim, 1000);
 })();
 </script>
-""" % (json.dumps(taban, ensure_ascii=False), json.dumps(mod))
+""" % (json.dumps(taban, ensure_ascii=False), json.dumps(mod), YAS_BAYAT_SN)
