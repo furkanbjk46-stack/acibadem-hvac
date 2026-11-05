@@ -788,7 +788,13 @@ def canli_ozet_hesapla(satirlar):
              şebeke sayacı varsa ŞEBEKE + KOJEN; yoksa trafo toplamı (kojen OG
              baradan trafolara karıştığı için trafo toplamı kojeni zaten içerir).
     Soğutma = chiller + kule (canlı izleme panelindeki gruplarla aynı).
-    Son ölçümü CANLI_BAYAT_SN'den eski lokasyon "canlı değil" sayılır.
+
+    TAZELİK SATIR BAZINDADIR (05.11.2026): her satır KENDİ ölçüm zamanına göre
+    değerlendirilir; CANLI_BAYAT_SN'den eski (ya da zamanı okunamayan) satır
+    toplamlara girmez, "eski_sayac" sayısına yazılır. Eskiden lokasyonun en yeni
+    ölçümü taze olunca bütün satırlar toplanıyordu: tabloda kalmış 24 saatlik
+    bir sayaç değeri (ör. 9.000 kW) canlı toplamı şişiriyordu. Taze satırı
+    olmayan lokasyon "canlı değil" sayılır.
     """
     from datetime import timezone as _tz
     try:
@@ -803,6 +809,7 @@ def canli_ozet_hesapla(satirlar):
                 return "sogutma"
             return "diger"
     ozet = {}
+    eski_sayac = {}
     for s in satirlar or []:
         lok = s.get("lokasyon_id")
         kw = s.get("kw")
@@ -812,18 +819,22 @@ def canli_ozet_hesapla(satirlar):
             kw = float(kw)
         except (TypeError, ValueError):
             continue
-        o = ozet.setdefault(lok, {"enerji": None, "sebeke": None, "trafo": None, "sogutma": None,
-                                  "kojen": None, "dogalgaz": None, "su": None, "yas": None, "t": None})
         try:
             t = datetime.fromisoformat(str(s.get("olcum_zamani")).replace("Z", "+00:00"))
             simdi = datetime.now(_tz.utc) if t.tzinfo else datetime.now()
             y = (simdi - t).total_seconds()
-            o["yas"] = y if o["yas"] is None else min(o["yas"], y)
-            # Son ölçümün zamanı (epoch): ekrandaki geçiş bununla eşlenir
-            _te = t.timestamp()
-            o["t"] = _te if o["t"] is None else max(o["t"], _te)
         except Exception:
-            pass
+            t, y = None, None
+        if y is None or y > CANLI_BAYAT_SN:
+            eski_sayac[lok] = eski_sayac.get(lok, 0) + 1   # toplama girmez
+            continue
+        o = ozet.setdefault(lok, {"enerji": None, "sebeke": None, "trafo": None, "sogutma": None,
+                                  "kojen": None, "dogalgaz": None, "su": None, "yas": None, "t": None,
+                                  "eski_sayac": 0})
+        o["yas"] = y if o["yas"] is None else min(o["yas"], y)
+        # Son ölçümün zamanı (epoch): ekrandaki geçiş bununla eşlenir
+        _te = t.timestamp()
+        o["t"] = _te if o["t"] is None else max(o["t"], _te)
         ad = str(s.get("cihaz") or "").upper()
         # Kojen / gaz (m³/h) / su (m³/h) sahada bugün canlı okunmuyor; bu
         # adlarla satır gelirse (bugün yalnız sunum verisi) kendiliğinden dolar.
@@ -837,14 +848,15 @@ def canli_ozet_hesapla(satirlar):
             alan = {"enerji": "trafo", "sebeke": "sebeke", "sogutma": "sogutma"}.get(_grup(ad))
         if alan:
             o[alan] = (o[alan] or 0.0) + kw
-    for o in ozet.values():
+    for lok, o in ozet.items():
+        o["eski_sayac"] = eski_sayac.get(lok, 0)
         if o["sebeke"] is not None:
             o["enerji"] = round(o["sebeke"] + (o["kojen"] or 0.0), 2)
         else:
             o["enerji"] = o["trafo"]
-    # Bayat lokasyonlar canlı sayılmaz
-    return {k: v for k, v in ozet.items()
-            if v["yas"] is None or v["yas"] <= CANLI_BAYAT_SN}
+    # Yalnız taze satırı olan lokasyonlar burada; satırları hep eski olan
+    # lokasyon hiç eklenmediği için "canlı değil" sayılır.
+    return ozet
 
 
 def _canli_akis_betigi(taban: dict, mod: str = "dalga") -> str:

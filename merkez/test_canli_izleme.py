@@ -602,7 +602,7 @@ c("ic kart: baslik + toplam + kendi listesi", "cg-altkart-bas" in _ak and "cg-li
 c("ic kartli grup duz sutun", "cg-liste-blok" in CI.grup_html("E", "", _ak, 1.0, 1, ic_kartli=True)
   and "cg-liste-blok" not in CI.grup_html("E", "", "", 1.0, 1))
 c("sayfa: kojen ayri kart degil, enerji kartinda", '_gruplar = [g for g in _gruplar if g[0] != "kojen"]' in _sy)
-c("sayfa modul surumu 12 istiyor", "_CI_GEREKEN_SURUM = 12" in _sy and CI.SURUM >= 12)
+c("sayfa modul surumu 13 istiyor (taze_ayir)", "_CI_GEREKEN_SURUM = 13" in _sy and CI.SURUM >= 13)
 
 # ── 26.10.2026: ana sayfada tam yenileme yok, canlı değerler küçük parçayla ──
 c("ana sayfada 10 sn'lik tam sayfa yenilemesi kapali", "_TAM_YENILEME = False" in _MRK

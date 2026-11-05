@@ -531,6 +531,37 @@ def izleyici_mi() -> bool:
     return bool(st.session_state.get("izleyici"))
 
 
+def _jeton_kalan_sn(jeton) -> float:
+    """Jetonun son kullanma zamanına kalan saniye (çözülemezse 0)."""
+    try:
+        return int(str(jeton).split(".")[0]) - time.time()
+    except Exception:
+        return 0.0
+
+
+def oturum_yetkili_mi(parola_hash: str) -> bool:
+    """Açık oturum HÂLÂ geçerli kimlik bilgisine mi dayanıyor? (05.11.2026)
+
+    Önceden açık oturumda yalnızca "giriş yapılmış mı" ve hareketsizlik süresine
+    bakılıyordu: parola ya da izleme anahtarı değişse de açık sekme 12 saatlik
+    hareketsizliğe kadar içeride kalıyordu. Artık her çalıştırmada:
+      * tam yetkili: oturumun jetonu GÜNCEL parola karmasıyla imzalı ve süresi
+        dolmamış olmalı (parola değişince imza tutmaz);
+      * izleyici: girişte kullanılan link jetonu GÜNCEL izleme anahtarıyla
+        hâlâ tutmalı (anahtar değişince ya da kaldırılınca düşer).
+    """
+    import streamlit as st
+    if izleyici_mi():
+        return izleme_jetonu_gecerli(str(st.session_state.get("izleyici_jeton") or ""))
+    return _jeton_gecerli(str(st.session_state.get("giris_jeton") or ""), parola_hash)
+
+
+def _oturumu_dusur():
+    import streamlit as st
+    for k in ("giris_ok", "giris_son_hareket", "giris_jeton", "izleyici", "izleyici_jeton"):
+        st.session_state.pop(k, None)
+
+
 def oturum_gecerli() -> bool:
     """Oturum açık ve süresi dolmamış mı?"""
     import streamlit as st
@@ -592,11 +623,17 @@ def giris_kapisi():
             # (Zaten tam yetkili giriş yapmış biri linke tıklarsa yetkisi düşürülmez)
             st.session_state["giris_ok"] = True
             st.session_state["izleyici"] = True
+            st.session_state["izleyici_jeton"] = _izle   # her turda yeniden doğrulanır
             st.session_state["giris_son_hareket"] = time.time()
         try:
             del st.query_params["izle"]   # jeton adres çubuğunda kalmasın
         except Exception:
             pass
+
+    # Açık oturum her çalıştırmada GÜNCEL parola / izleme anahtarıyla doğrulanır
+    # (05.11.2026): erişimi kaldırılan kişi açık sekmesiyle devam edemesin.
+    if st.session_state.get("giris_ok") and not oturum_yetkili_mi(parola_hash):
+        _oturumu_dusur()
 
     if izleyici_mi():
         # İzleyiciye ASLA tam yetkili oturum çerezi yazılmaz; oturum yalnızca
@@ -612,11 +649,20 @@ def giris_kapisi():
         # rerun olması gibi) oturum kalıcı olmaz ve kullanıcı her sayfa
         # yenilemesinde düşerdi. Bu yüzden çerez, sunucu onu göremediği her
         # çalıştırmada yeniden yazılır. İşlem fiyatı birkaç yüz bayt HTML'dir.
-        if not _cerez_oku(CEREZ_AD):
-            jeton = st.session_state.get("giris_jeton")
-            if not jeton or not _jeton_gecerli(jeton, parola_hash):
-                jeton = _jeton_uret(parola_hash, OTURUM_SAAT * 3600)
-                st.session_state["giris_jeton"] = jeton
+        #
+        # Jeton burada GEÇERLİDİR (yukarıda güncel parolayla doğrulandı). Eskiden
+        # geçersiz jeton yerine sessizce YENİ parolayla jeton üretilip çereze
+        # yazılıyordu; parola değişikliğinden sonra eski oturum böylece kalıcı
+        # hâle geliyordu (05.11.2026). Artık yalnız geçerli jeton yazılır.
+        # Kullanım sürdükçe oturum düşmesin diye süresinin yarısı geçince
+        # aynı (güncel) parolayla yenilenir.
+        jeton = st.session_state.get("giris_jeton")
+        yenilendi = False
+        if _jeton_kalan_sn(jeton) < OTURUM_SAAT * 1800:
+            jeton = _jeton_uret(parola_hash, OTURUM_SAAT * 3600)
+            st.session_state["giris_jeton"] = jeton
+            yenilendi = True
+        if yenilendi or not _cerez_oku(CEREZ_AD):
             _cerez_yaz(jeton, OTURUM_SAAT * 3600)
         return
 
@@ -871,8 +917,7 @@ def cikis_yap():
     # _cerez_beklendi BİLEREK sıfırlanmaz: sıfırlanırsa çıkıştan sonra
     # "Oturum denetleniyor…" ekranı bir kez daha görünür. O bekleme yalnızca
     # yeni bir sayfa açılışında (session_state zaten boşken) gereklidir.
-    for k in ("giris_ok", "giris_son_hareket", "giris_jeton", "izleyici"):
-        st.session_state.pop(k, None)
+    _oturumu_dusur()
     st.session_state["giris_cikis"] = True
 
 

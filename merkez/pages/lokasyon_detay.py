@@ -1963,7 +1963,7 @@ with tab_canli:
     # ise sürece BİR KEZ yüklenir. Yayın sonrası süreç yeniden başlamazsa
     # sayfa yeni, modül eski kalır ve burada olmayan bir işlev çağrılır
     # (21.10.2026: ekranda AttributeError çıktı). Sürüm tutmuyorsa tazele.
-    _CI_GEREKEN_SURUM = 12
+    _CI_GEREKEN_SURUM = 13
     if getattr(_CI, "SURUM", 0) < _CI_GEREKEN_SURUM:
         import importlib
         _CI = importlib.reload(_CI)
@@ -2007,6 +2007,12 @@ with tab_canli:
             st.session_state.pop(_seri_anahtar, None)
             st.markdown(_CI.kopuk_html(yas), unsafe_allow_html=True)
             return
+
+        # Toplamlara yalnız KENDİ ölçümü taze sayaçlar girer (05.11.2026);
+        # tabloda kalmış eski satır toplamı şişirmesin, ayrıca not olarak yazılır.
+        olcumler, _eski_sayaclar = _CI.taze_ayir(olcumler)
+        if _eski_sayaclar:
+            st.markdown(_CI.eski_sayac_html(_eski_sayaclar), unsafe_allow_html=True)
 
         seri = _CI.seri_guncelle(
             st.session_state.get(_seri_anahtar), olcumler, pencere_sn)

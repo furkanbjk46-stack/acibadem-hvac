@@ -151,7 +151,9 @@ c("Ayarlar izleyicide gizli",
   "if not _IZLEYICI:\n        # Ayarlar paneli TARAYICIDA" in _mrk
   and _mrk.index("if _IZLEYICI:\n    st.stop()") < _mrk.index('with st.container(key="ayarlar_panel")'))
 _gr = open(os.path.join(_d, "giris.py"), encoding="utf-8").read()
-c("cikis izleyici bayragini siler", '"giris_jeton", "izleyici")' in _gr)
+c("cikis izleyici bayragini siler",
+  '"giris_jeton", "izleyici", "izleyici_jeton")' in _gr and "def cikis_yap" in _gr
+  and "_oturumu_dusur()" in _gr[_gr.index("def cikis_yap"):])
 
 print("\n%d/%d PASS" % (sum(SONUC), len(SONUC)))
 sys.exit(0 if all(SONUC) else 1)

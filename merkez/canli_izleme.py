@@ -34,7 +34,7 @@ from datetime import datetime, timedelta, timezone
 # işlevi çağırır (21.10.2026: ekranda AttributeError). Sayfa bu damgayı
 # kontrol eder, tutmazsa modülü tazeler.
 # Modüle YENİ bir işlev eklendiğinde bu sayı artırılır.
-SURUM = 12
+SURUM = 13
 
 # Satır grafiklerinin geçmişi — saniye (kullanıcı kararı: 5 dakika, seçim yok).
 PENCERE_SN = 300
@@ -534,6 +534,41 @@ def olcum_yaslari(olcumler: list, simdi: datetime = None) -> dict:
         t = _zaman_coz(o.get("olcum_zamani"))
         sonuc[ad] = None if t is None else max(0.0, (simdi - t).total_seconds())
     return sonuc
+
+
+def taze_ayir(olcumler: list, simdi: datetime = None, esik_sn: int = BAGLANTI_KOPUK_SN):
+    """Ölçümleri sayacın KENDİ zamanına göre ayırır → (taze, eski).
+
+    05.11.2026: canlı toplam, lokasyondaki EN YENİ ölçüm tazeyse bütün satırları
+    topluyordu. Listeden çıkarılmış ya da adı değişmiş bir sayacın tabloda kalan
+    satırı (ör. 24 saatlik 9.000 kW) böylece toplama giriyordu. Artık yalnız
+    kendi ölçümü esik_sn içinde olan satır taze sayılır; zamanı okunamayan satır
+    tazeliği kanıtlanamadığı için eskidir.
+    Eski listesi: [(cihaz, yaş_sn veya None), ...] — ekranda ayrıca gösterilir.
+    """
+    yaslar = olcum_yaslari(olcumler, simdi)
+    taze, eski = [], []
+    for o in (olcumler or []):
+        ad = o.get("cihaz")
+        if not ad:
+            continue
+        y = yaslar.get(ad)
+        if y is not None and y <= esik_sn:
+            taze.append(o)
+        else:
+            eski.append((ad, y))
+    return taze, eski
+
+
+def eski_sayac_html(eski: list) -> str:
+    """Toplama katılmayan eski sayaç ölçümlerinin notu. Liste boşsa boş metin."""
+    if not eski:
+        return ""
+    parcalar = ", ".join("%s (%s)" % (kisa_ad(ad), yas_metni(y) if y is not None else "zamanı okunamadı")
+                         for ad, y in sorted(eski, key=lambda x: x[0]))
+    return ("<div style='margin:4px 0 10px;padding:8px 12px;border-radius:10px;font-size:11.5px;"
+            "background:rgba(250,178,25,.10);border:1px solid rgba(250,178,25,.45);color:#7a5200;'>"
+            "<b>%d sayacın ölçümü eski, toplamlara katılmadı:</b> %s</div>" % (len(eski), parcalar))
 
 
 def yas_html(sn) -> str:
