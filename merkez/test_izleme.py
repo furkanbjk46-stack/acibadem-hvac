@@ -150,6 +150,20 @@ c("secrets dosyası yoksa st.secrets'e dokunulmaz", "secrets.toml" in _yon)
 c("canlı okuma için önbellek kısa (60 sn)", "ttl=60" in _yon)
 c("yenile düğmesi önbelleği temizler", "st.cache_data.clear()" in _yon)
 
+# ── Sekmeler: sunucu/veritabanı + agent katmanları ────────────────────────
+c("iki sekme: Sunucu ve veritabanı, Agent katmanları",
+  '_sekme_sunucu, _sekme_agent = st.tabs(["🖥️ Sunucu ve veritabanı", "🤖 Agent katmanları"])' in _yon)
+_agv = os.path.join(BURASI, "sunum", "agent_katmanlari.html")
+c("agent katmanları sayfası depoda", os.path.exists(_agv))
+_agh = open(_agv, encoding="utf-8").read() if os.path.exists(_agv) else ""
+c("gömülü sayfa açık temaya sabitlenebilir",
+  '<html lang="tr">' in _agh and ':root:not([data-tema="acik"])' in _agh and 'data-tema="acik"' in _yon)
+c("agent sayfası dış kaynak yüklemez", "<script src" not in _agh and "<link" not in _agh)
+c("agent sayfası yoksa ekran çökmez", "except OSError" in _yon)
+c("agent sayfası exec (app_merkez) ve doğrudan açılışta bulunur",
+  "for _aday in (_burasi, _os.path.dirname(_burasi))" in _yon)
+c("örnek raporlar gerçek arıza değildir diye işaretli", "ÖRNEK · gerçek arıza değildir" in _agh)
+
 # ── Kurulum SQL'i ─────────────────────────────────────────────────────────
 _sql = open(os.path.join(BURASI, "izleme_kurulum.sql"), encoding="utf-8").read()
 c("fonksiyon salt okur (STABLE)", "STABLE" in _sql)

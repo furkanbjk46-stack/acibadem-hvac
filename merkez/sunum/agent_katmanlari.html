@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synapse Agent Katmanları</title>
+<style>
+/* Düzen: kontrol çubuğu → katman şeması (canlı) → anlatım + anlık rapor → sorumluluk alanları → örnek raporlar. */
+:root {
+  --bg:#eef2f6; --yuzey:#ffffff; --fg:#152238; --soluk:#5a6880; --cizgi:#c9d2de;
+  --mavi:#1f63c4; --mavi-z:#e3edfb; --mor:#6b46c1; --mor-z:#efe9fb; --yesil:#18864a; --yesil-z:#e3f4ea;
+  --kirmizi:#c23a2b; --kirmizi-z:#fbe9e6; --sari:#a06a00; --sari-z:#fdf3dc; --turuncu:#c4581d; --turuncu-z:#fcece2; --bant:#f7f9fb;
+  --yazi:"Segoe UI",system-ui,-apple-system,sans-serif; --kod:Consolas,"Cascadia Mono",monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-tema="acik"]) {
+  --bg:#0f1622; --yuzey:#18222f; --fg:#e7edf5; --soluk:#9fb0c6; --cizgi:#334256;
+  --mavi:#78aef5; --mavi-z:#1b3150; --mor:#b49af0; --mor-z:#2c2346; --yesil:#5fcf8f; --yesil-z:#163628;
+  --kirmizi:#f28b7c; --kirmizi-z:#3c211d; --sari:#e8b54f; --sari-z:#3a2e14; --turuncu:#f0a070; --turuncu-z:#3a2618; --bant:#141d29; color-scheme:dark; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 var(--yazi); }
+main { max-width:1280px; margin:0 auto; padding:24px 18px 48px; display:flex; flex-direction:column; gap:16px; }
+h1 { margin:0; font-size:26px; line-height:1.2; }
+h2.bolum { margin:18px 0 0; font-size:19px; }
+.alt { color:var(--soluk); margin:4px 0 0; max-width:92ch; }
+.cubuk { display:flex; flex-wrap:wrap; gap:8px; align-items:center; background:var(--yuzey); border:1px solid var(--cizgi);
+  border-radius:10px; padding:10px 12px; }
+.cubuk .ayrac { width:1px; align-self:stretch; background:var(--cizgi); margin:0 4px; }
+button { font:600 13px var(--yazi); color:var(--fg); background:var(--bant); border:1px solid var(--cizgi);
+  border-radius:8px; padding:7px 12px; cursor:pointer; }
+button:hover { border-color:var(--mavi); }
+button:focus-visible { outline:2px solid var(--mavi); outline-offset:2px; }
+button.secili { background:var(--mavi-z); border-color:var(--mavi); color:var(--mavi); }
+button.ana { background:var(--mavi); color:#fff; border-color:var(--mavi); }
+.etiket { font-size:12px; color:var(--soluk); font-weight:600; }
+.sema { background:var(--yuzey); border:1px solid var(--cizgi); border-radius:10px; overflow-x:auto; padding:8px; }
+svg { display:block; width:100%; min-width:980px; height:auto; color:var(--fg); }
+.izgara2 { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:16px; }
+.izgara3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.izgara-rapor { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+@media (max-width:900px) { .izgara2, .izgara3, .izgara-rapor { grid-template-columns:1fr; } }
+.kutu { background:var(--yuzey); border:1px solid var(--cizgi); border-radius:10px; padding:14px 16px; min-width:0; }
+.kutu h2, .kutu h3 { margin:0 0 8px; font-size:13px; letter-spacing:.06em; text-transform:uppercase; color:var(--soluk); }
+#anlat-baslik { font-size:18px; font-weight:700; margin:0 0 4px; }
+#anlat-metin { margin:0; }
+.adimlar { display:flex; gap:5px; margin-top:12px; flex-wrap:wrap; }
+.adimlar span { width:22px; height:6px; border-radius:3px; background:var(--cizgi); }
+.adimlar span.bitti { background:var(--mavi); } .adimlar span.simdi { background:var(--turuncu); }
+#gecmis { list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:6px; }
+#gecmis li { font-size:13px; border-left:3px solid var(--yesil); padding:2px 0 2px 8px; }
+#gecmis li span { color:var(--soluk); }
+.lejant { display:flex; flex-wrap:wrap; gap:14px; font-size:12px; color:var(--soluk); }
+.lejant i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:-1px; }
+ul.kontrol { margin:0; padding-left:18px; font-size:14px; display:flex; flex-direction:column; gap:5px; }
+.kutu.ag { border-top:4px solid var(--sari); }
+ul.kontrol li.ek::marker { color:var(--mor); }
+ul.kontrol li.ek::after { content:"eklendi"; font:700 10px var(--yazi); color:var(--mor); background:var(--mor-z); padding:0 6px; border-radius:999px; margin-left:6px; vertical-align:1px; }
+.kutu .ara { margin:12px 0 6px; font-size:12px; font-weight:700; color:var(--mor); letter-spacing:.04em; }
+.kutu.capraz { border-top:4px solid var(--turuncu); }
+.kural { font-size:13px; color:var(--soluk); margin-top:10px; padding-top:8px; border-top:1px dashed var(--cizgi); }
+
+/* Rapor kartı */
+.rapor { background:var(--yuzey); border:1px solid var(--cizgi); border-left:5px solid var(--turuncu); border-radius:10px;
+  padding:12px 14px; font-size:13.5px; min-width:0; }
+.rapor.kapandi { border-left-color:var(--yesil); }
+.rapor.ornek::before { content:"ÖRNEK · gerçek arıza değildir"; display:block; font:700 10.5px var(--yazi); letter-spacing:.06em; color:var(--soluk); margin-bottom:6px; }
+.rapor .ust { display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; margin-bottom:6px; }
+.rapor .no { font:600 12px var(--kod); color:var(--soluk); }
+.rapor .baslik { font-weight:700; font-size:15px; margin:0 0 8px; }
+.cip2 { font:700 11px var(--yazi); padding:1px 8px; border-radius:999px; white-space:nowrap; }
+.cip2.yuksek { color:var(--kirmizi); background:var(--kirmizi-z); } .cip2.orta { color:var(--sari); background:var(--sari-z); }
+.cip2.dusuk { color:var(--mavi); background:var(--mavi-z); } .cip2.acik { color:var(--turuncu); background:var(--turuncu-z); }
+.cip2.kapali { color:var(--yesil); background:var(--yesil-z); }
+.rapor dl { display:grid; grid-template-columns:max-content minmax(0,1fr); gap:3px 12px; margin:0; }
+.rapor dt { color:var(--soluk); font-weight:600; }
+.rapor dd { margin:0; min-width:0; overflow-wrap:anywhere; }
+.rapor code { font-family:var(--kod); font-size:12.5px; }
+#anlik-rapor .bos { color:var(--soluk); font-size:14px; }
+
+/* SVG */
+.bant { fill:var(--bant); stroke:var(--cizgi); stroke-width:1; }
+.bant-baslik { font:700 11px var(--yazi); letter-spacing:.08em; fill:var(--soluk); }
+.bant-alt { font:400 11px var(--yazi); fill:var(--soluk); }
+.calisma { font:700 11px var(--yazi); fill:var(--yesil); }
+.calisma.olay { fill:var(--turuncu); } .calisma.gelecek { fill:var(--mor); }
+.dugum rect.govde { fill:var(--yuzey); stroke:var(--cizgi); stroke-width:1.4; transition:fill .35s, stroke .35s; }
+.dugum .t { font:600 13.5px var(--yazi); fill:currentColor; }
+.dugum .s { font:400 11.5px var(--yazi); fill:var(--soluk); }
+.dugum.wf rect.govde { stroke:var(--mavi); }
+.dugum.ag rect.govde { stroke:var(--sari); }
+.dugum.ust rect.govde { fill:var(--turuncu-z); stroke:var(--turuncu); stroke-width:1.8; }
+.dugum.duz rect.govde { stroke:var(--mavi); stroke-width:1.8; }
+.dugum.duz.v2 rect.govde { fill:var(--mor-z); stroke:var(--mor); }
+.dugum.insan rect.govde { stroke:var(--yesil); }
+.dugum.aktif rect.govde { fill:var(--mavi-z); stroke:var(--mavi); stroke-width:2.4; }
+.dugum.hata rect.govde { fill:var(--kirmizi-z); stroke:var(--kirmizi); stroke-width:2.4; }
+.dugum.ok rect.govde { fill:var(--yesil-z); stroke:var(--yesil); stroke-width:2.4; }
+.dugum.bekle rect.govde { fill:var(--sari-z); stroke:var(--sari); stroke-width:2.4; }
+.dugum.hata .nabiz, .dugum.bekle .nabiz { animation:nabiz 1s ease-in-out infinite; }
+.nabiz { fill:none; stroke:currentColor; stroke-width:0; opacity:0; }
+.dugum.hata .nabiz { stroke:var(--kirmizi); } .dugum.bekle .nabiz { stroke:var(--sari); }
+@keyframes nabiz { 0% { stroke-width:0; opacity:.7; } 100% { stroke-width:14; opacity:0; } }
+.rozet { font:700 10.5px var(--yazi); }
+.cip rect { fill:var(--yuzey); stroke:var(--turuncu); stroke-width:1.2; transition:fill .3s; }
+.cip text { font:600 12px var(--yazi); fill:var(--turuncu); }
+.cip.yanik rect { fill:var(--turuncu); } .cip.yanik text { fill:#fff; }
+.yol { fill:none; stroke:var(--cizgi); stroke-width:1.6; }
+.yol.kesik { stroke-dasharray:5 5; }
+.yol.parlak { stroke:var(--mavi); stroke-width:2.2; }
+.yol-etiket { font:600 10.5px var(--yazi); fill:var(--soluk); }
+.akis { fill:none; stroke:var(--mavi); stroke-width:2; stroke-dasharray:3 9; stroke-linecap:round; animation:ak 1.2s linear infinite; opacity:.75; }
+.wf.hata .akis { stroke:var(--kirmizi); animation-duration:3.5s; }
+@keyframes ak { to { stroke-dashoffset:-24; } }
+.paket circle { stroke:var(--yuzey); stroke-width:2; }
+.paket text { font:700 11px var(--yazi); fill:currentColor; paint-order:stroke; stroke:var(--yuzey); stroke-width:4px; }
+@media (prefers-reduced-motion: reduce) { .akis, .nabiz { animation:none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Synapse Agent Katmanları</h1>
+    <p class="alt">Üç portal agent'ı kendi bölgesini 7/24 kontrol eder ve sorunu önce kendi workflow'larıyla çözmeye çalışır. Çözemediği sorunu üst agent'a bildirir; üst agent her hatanın detaylı raporunu anında hazırlar. <b>Sürüm 1'de</b> raporu sen inceler, kodu sen düzeltirsin. Süreç iyi giderse <b>sürüm 2'de</b> senin yerine Claude geçer. Bu bir tasarım taslağıdır; sistemde henüz böyle bir kod yok.</p>
+  </header>
+
+  <div class="cubuk" role="toolbar" aria-label="Canlandırma kontrolleri">
+    <span class="etiket">Sürüm</span>
+    <button class="secili" data-surum="1">1 · Sen düzeltirsin</button>
+    <button data-surum="2">2 · Claude düzeltir</button>
+    <span class="ayrac"></span>
+    <span class="etiket">Senaryo</span>
+    <button class="secili" data-senaryo="enerji">Enerji · toplam tutmuyor</button>
+    <button data-senaryo="synapse">Synapse · agent kendi çözer</button>
+    <button data-senaryo="mekanik">Mekanik Zeka · düzeltme tutmadı</button>
+    <span class="ayrac"></span>
+    <button id="oynat" class="ana">▶ Oynat</button>
+    <button id="dur">⏸ Duraklat</button>
+    <button id="sifirla">↺ Baştan</button>
+    <span class="etiket">Hız</span>
+    <button class="secili" data-hiz="1">1×</button>
+    <button data-hiz="2">2×</button>
+  </div>
+
+  <div class="sema">
+  <svg viewBox="0 0 1200 720" role="img" aria-label="Katmanlar: workflow'lar, üç portal agent'ı, üst agent, düzelten (sürüm 1'de sen, sürüm 2'de Claude), tam test kapısı, yayın ve kayıt.">
+    <defs>
+      <marker id="ok" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor" opacity=".45"/></marker>
+    </defs>
+
+    <rect class="bant" x="10" y="36" width="950" height="140" rx="10"/>
+    <text class="bant-baslik" x="24" y="62">1 · WORKFLOW</text>
+    <text class="bant-alt" x="24" y="80">mevcut akışlar;</text>
+    <text class="bant-alt" x="24" y="96">agent'ların aracı</text>
+    <text class="calisma" x="24" y="122">● 7/24</text>
+    <rect class="bant" x="10" y="208" width="950" height="130" rx="10"/>
+    <text class="bant-baslik" x="24" y="234">2 · PORTAL</text>
+    <text class="bant-baslik" x="24" y="250">AGENT'LARI</text>
+    <text class="bant-alt" x="24" y="268">kendi bölgesi;</text>
+    <text class="bant-alt" x="24" y="284">önce kendi çözer</text>
+    <text class="calisma" x="24" y="310">● 7/24</text>
+    <rect class="bant" x="10" y="390" width="950" height="160" rx="10"/>
+    <text class="bant-baslik" x="24" y="416">3 · ÜST AGENT</text>
+    <text class="bant-alt" x="24" y="434">üç agent'ın bağlı</text>
+    <text class="bant-alt" x="24" y="450">olduğu raporlayıcı;</text>
+    <text class="bant-alt" x="24" y="466">kural tabanlı</text>
+    <text class="calisma" x="24" y="492">● 7/24 · anlık rapor</text>
+    <rect class="bant" x="10" y="590" width="950" height="118" rx="10"/>
+    <text class="bant-baslik" x="24" y="616">4 · KAYIT</text>
+    <text class="bant-alt" x="24" y="634">arıza ve çözüm</text>
+    <text class="calisma" x="24" y="660">● her adımda</text>
+    <rect class="bant" x="970" y="36" width="220" height="514" rx="10"/>
+    <text class="bant-baslik" x="984" y="58">DÜZELTME · YAYIN</text>
+    <text id="surum-yazi" class="calisma olay" x="984" y="76">● sürüm 1: sen</text>
+
+    <g>
+      <path id="iz-e" class="yol" d="M300 162V226" marker-end="url(#ok)"/>
+      <path id="iz-m" class="yol" d="M560 162V226" marker-end="url(#ok)"/>
+      <path id="iz-s" class="yol" d="M820 162V226" marker-end="url(#ok)"/>
+      <text class="yol-etiket" x="308" y="200">kontrol eder</text>
+      <text class="yol-etiket" x="568" y="200">kontrol eder</text>
+      <text class="yol-etiket" x="828" y="200">kontrol eder</text>
+      <path id="rp-e" class="yol" d="M300 318V406" marker-end="url(#ok)"/>
+      <path id="rp-m" class="yol" d="M560 318V406" marker-end="url(#ok)"/>
+      <path id="rp-s" class="yol" d="M820 318V406" marker-end="url(#ok)"/>
+      <text class="yol-etiket" x="308" y="368">çözülemeyen sorun ↓</text>
+      <text class="yol-etiket" x="568" y="368">çözülemeyen sorun ↓</text>
+      <text class="yol-etiket" x="828" y="368">bilgi / sorun ↓</text>
+      <path id="lp-e" class="yol kesik" d="M185 274C150 274 150 112 183 112" marker-end="url(#ok)"/>
+      <path id="lp-m" class="yol kesik" d="M445 274C410 274 410 112 443 112" marker-end="url(#ok)"/>
+      <path id="lp-s" class="yol kesik" d="M705 274C670 274 670 112 703 112" marker-end="url(#ok)"/>
+      <path id="ud" class="yol" d="M935 470H982" marker-end="url(#ok)"/>
+      <text class="yol-etiket" x="939" y="462">rapor</text>
+      <path id="dt" class="yol" d="M1080 408V330" marker-end="url(#ok)"/>
+      <text class="yol-etiket" x="1088" y="374">düzeltme</text>
+      <path id="ty" class="yol" d="M1080 250V178" marker-end="url(#ok)"/>
+      <text class="yol-etiket" x="1088" y="218">geçti</text>
+      <path id="yw-e" class="yol kesik" d="M1040 86V24H300V58" marker-end="url(#ok)"/>
+      <path id="yw-m" class="yol kesik" d="M1040 86V24H560V58" marker-end="url(#ok)"/>
+      <path id="yw-s" class="yol kesik" d="M1040 86V24H820V58" marker-end="url(#ok)"/>
+      <text class="yol-etiket" x="1048" y="20">yayın</text>
+      <path id="ck" class="yol" d="M560 532V610" marker-end="url(#ok)"/>
+      <text class="yol-etiket" x="568" y="576">kayıt</text>
+    </g>
+
+    <g id="wf-e" class="dugum wf"><rect class="nabiz" x="185" y="60" width="230" height="102" rx="10"/><rect class="govde" x="185" y="60" width="230" height="102" rx="10"/>
+      <text class="t" x="199" y="86">Enerji ve Verimlilik</text><text class="s" x="199" y="106">sayaç → köprü → hesap → rapor</text>
+      <path class="akis" d="M199 134H401"/></g>
+    <g id="wf-m" class="dugum wf"><rect class="nabiz" x="445" y="60" width="230" height="102" rx="10"/><rect class="govde" x="445" y="60" width="230" height="102" rx="10"/>
+      <text class="t" x="459" y="86">Mekanik Zeka</text><text class="s" x="459" y="106">okuma → kapı → kural → analiz</text>
+      <path class="akis" d="M459 134H661"/></g>
+    <g id="wf-s" class="dugum wf"><rect class="nabiz" x="705" y="60" width="230" height="102" rx="10"/><rect class="govde" x="705" y="60" width="230" height="102" rx="10"/>
+      <text class="t" x="719" y="86">Synapse · yerel sunucu</text><text class="s" x="719" y="106">veri → ekran → canlı izleme</text>
+      <path class="akis" d="M719 134H921"/></g>
+
+    <g id="ag-e" class="dugum ag"><rect class="nabiz" x="185" y="228" width="230" height="90" rx="10"/><rect class="govde" x="185" y="228" width="230" height="90" rx="10"/>
+      <text class="t" x="199" y="254">Enerji Portal Agent'ı</text><text class="s" x="199" y="274">diyagram, veri girişi, grafik, rapor</text>
+      <text class="s rozet" id="rz-e" x="199" y="300">● kontrol ediyor</text></g>
+    <g id="ag-m" class="dugum ag"><rect class="nabiz" x="445" y="228" width="230" height="90" rx="10"/><rect class="govde" x="445" y="228" width="230" height="90" rx="10"/>
+      <text class="t" x="459" y="254">Mekanik Zeka Agent'ı</text><text class="s" x="459" y="274">kurallar, bakım kartı, ayarlar</text>
+      <text class="s rozet" id="rz-m" x="459" y="300">● kontrol ediyor</text></g>
+    <g id="ag-s" class="dugum ag"><rect class="nabiz" x="705" y="228" width="230" height="90" rx="10"/><rect class="govde" x="705" y="228" width="230" height="90" rx="10"/>
+      <text class="t" x="719" y="254">Synapse Agent'ı</text><text class="s" x="719" y="274">ana sayfa, harita, detay, canlı</text>
+      <text class="s rozet" id="rz-s" x="719" y="300">● kontrol ediyor</text></g>
+
+    <g id="ust" class="dugum ust"><rect class="nabiz" x="185" y="408" width="750" height="124" rx="12"/><rect class="govde" x="185" y="408" width="750" height="124" rx="12"/>
+      <text class="t" x="203" y="436">Üst Agent · Raporlayıcı</text>
+      <text class="s" x="203" y="456">Üç agent'tan gelenleri toplar, her hata için anında detaylı rapor hazırlar, bildirir ve çözülene kadar takip eder.</text>
+      <g id="cip-1" class="cip"><rect x="203" y="474" width="150" height="38" rx="19"/><text x="278" y="498" text-anchor="middle">1 · Topla</text></g>
+      <g id="cip-2" class="cip"><rect x="371" y="474" width="170" height="38" rx="19"/><text x="456" y="498" text-anchor="middle">2 · Rapor hazırla</text></g>
+      <g id="cip-3" class="cip"><rect x="559" y="474" width="150" height="38" rx="19"/><text x="634" y="498" text-anchor="middle">3 · Bildir</text></g>
+      <g id="cip-4" class="cip"><rect x="727" y="474" width="190" height="38" rx="19"/><text x="822" y="498" text-anchor="middle">4 · Takip et, kapat</text></g>
+    </g>
+
+    <g id="yayin" class="dugum insan"><rect class="nabiz" x="984" y="86" width="192" height="92" rx="10"/><rect class="govde" x="984" y="86" width="192" height="92" rx="10"/>
+      <text class="t" x="998" y="112">Yayın</text><text class="s" x="998" y="132">Synapse · Lokasyon yaması</text>
+      <text class="s" id="yayin-kim" x="998" y="150">sen gönderirsin</text></g>
+    <g id="test" class="dugum insan"><rect class="nabiz" x="984" y="250" width="192" height="80" rx="10"/><rect class="govde" x="984" y="250" width="192" height="80" rx="10"/>
+      <text class="t" x="998" y="276">Tam test kapısı</text><text class="s" x="998" y="296">geçmezse yama gitmez</text>
+      <text class="s rozet" id="rz-test" x="998" y="316"></text></g>
+    <g id="duz" class="dugum duz"><rect class="nabiz" x="984" y="410" width="192" height="122" rx="10"/><rect class="govde" x="984" y="410" width="192" height="122" rx="10"/>
+      <text class="t" id="duz-ad" x="998" y="436">Sen</text>
+      <text class="s" id="duz-1" x="998" y="456">raporu incelersin,</text>
+      <text class="s" id="duz-2" x="998" y="474">kodu düzeltirsin</text>
+      <text class="s" id="duz-3" x="998" y="500">sürüm 2'de: Claude</text>
+      <text class="s rozet" id="rz-duz" x="998" y="520"></text></g>
+
+    <g id="kayit" class="dugum insan"><rect class="nabiz" x="410" y="612" width="300" height="80" rx="10"/><rect class="govde" x="410" y="612" width="300" height="80" rx="10"/>
+      <text class="t" x="424" y="638">Arıza ve çözüm kayıtları</text><text class="s" x="424" y="658">rapor · kök neden · değişiklik · sonuç</text>
+      <text class="s rozet" id="rz-kayit" x="424" y="678">0 kayıt</text></g>
+
+    <g id="paketler"></g>
+  </svg>
+  </div>
+
+  <div class="lejant">
+    <span><i style="background:var(--mavi)"></i>workflow · sürüm 1 düzelten (sen)</span>
+    <span><i style="background:var(--sari)"></i>portal agent'ı</span>
+    <span><i style="background:var(--turuncu)"></i>üst agent ve rapor</span>
+    <span><i style="background:var(--mor)"></i>sürüm 2 düzelten (Claude)</span>
+    <span><i style="background:var(--yesil)"></i>test, yayın, kayıt</span>
+    <span><i style="background:var(--kirmizi)"></i>arıza</span>
+    <span>Kesik çizgi: agent'ın kendi workflow'uyla çözme denemesi</span>
+  </div>
+
+  <div class="izgara2">
+    <section class="kutu" aria-live="polite">
+      <h2>Şu an</h2>
+      <p id="anlat-baslik">Senaryo seç ve Oynat'a bas</p>
+      <p id="anlat-metin">Agent'lar kendi bölgelerini 7/24 kontrol ediyor. Bir sorun çıkınca önce kendi workflow'larıyla çözmeyi deniyorlar; çözemezlerse üst agent raporu hazırlıyor.</p>
+      <div class="adimlar" id="adimlar"></div>
+      <ul id="gecmis"></ul>
+    </section>
+    <section class="kutu">
+      <h2>Üst agent · anlık rapor</h2>
+      <div id="anlik-rapor"><p class="bos">Rapor, sorun üst agent'a ulaştığında burada oluşur.</p></div>
+    </section>
+  </div>
+
+  <h2 class="bolum">Agent'ların sorumluluk alanları</h2>
+  <div class="izgara3">
+    <section class="kutu ag">
+      <h3>Enerji Portal Agent'ı</h3>
+      <ul class="kontrol">
+        <li><b>Enerji diyagramı:</b> toplamlar doğru mu, veriyle eşleşiyor mu</li>
+        <li><b>Veri girişi ve Excel:</b> dün seçilince değerler geliyor mu, gelen değerler doğru mu</li>
+        <li><b>Dashboard ve karşılaştırma:</b> grafikler veriyle tutuyor mu, grafik seçim listesi, seçili dönem verisi</li>
+        <li><b>PDF rapor, veri görüntüleme, aylık birleşik rapor:</b> içerik ve oluşan raporlar</li>
+        <li><b>Tahmin ve trend:</b> kartlar ve aylık tablo</li>
+        <li><b>Bildirim çubuğu</b></li>
+        <li><b>Genel:</b> bütün butonlar dahil detaylı kontrol</li>
+      </ul>
+      <p class="ara">EK KONTROLLER</p>
+      <ul class="kontrol">
+        <li class="ek"><b>Günlük döngü:</b> Modbus 23:59, köprü 00:05 ve bulut eşitleme 08:00 zamanında çalıştı mı</li>
+        <li class="ek"><b>Sayaç erişimi:</b> Şebeke PAC3200 (192.168.1.15) ve Kojen sayaçları okunuyor mu</li>
+        <li class="ek"><b>Donmuş veri:</b> bir sayaç günlerce aynı değeri mi veriyor (ör. Kojen üretimi 0)</li>
+        <li class="ek"><b>Veri kalitesi:</b> eksik gün, mükerrer tarih, aykırı ya da eksi değer; Şebeke negatifse kurala uygun mu</li>
+        <li class="ek"><b>Düzenleme ve silme:</b> bir günü değiştirip silince toplamlar ve raporlar güncelleniyor mu</li>
+        <li class="ek"><b>Hava durumu servisi:</b> yanıt veriyor mu; tahmin kartlarında boş ya da "nan" var mı</li>
+        <li class="ek"><b>Yerel ↔ bulut:</b> yereldeki günlük değer Synapse'e gidenle aynı mı</li>
+        <li class="ek"><b>Portal sağlığı:</b> 8501 açık mı, hata kaydında yeni hata var mı</li>
+      </ul>
+      <p class="kural">Kendi workflow'ları: günü yeniden hesaplatma, veriyi yeniden yükleme, raporu yeniden üretme, portalı yeniden başlatma.</p>
+    </section>
+    <section class="kutu ag">
+      <h3>Mekanik Zeka Agent'ı</h3>
+      <ul class="kontrol">
+        <li><b>Tüm kurallar:</b> analiz kurallarının doğruluğu</li>
+        <li><b>Bakım kartları:</b> detaylar, kaydetme ve eşitleme</li>
+        <li><b>Ayarlar:</b> veriler, butonlar ve bağımlılıklar</li>
+        <li><b>Sayfadaki tüm butonlar ve grafikler</b></li>
+      </ul>
+      <p class="ara">EK KONTROLLER</p>
+      <ul class="kontrol">
+        <li class="ek"><b>BACnet okuma:</b> 07:05 okuması geldi mi; değerler donmuş mu (aynı değer tekrarı)</li>
+        <li class="ek"><b>Sensör arızası:</b> arızalı satırlar Analiz Dışı'na düşüyor mu, optimal sayılmıyor mu</li>
+        <li class="ek"><b>Eşikler ve talimatlar:</b> CONFIG eşikleri ile talimat rehberi birbiriyle tutarlı mı</li>
+        <li class="ek"><b>API uçları:</b> 8005 açık mı, her <code>/api</code> ucu doğru yanıt veriyor mu</li>
+        <li class="ek"><b>Talimat penceresi ve PDF:</b> açılıyor, PDF Türkçe karakterle üretiliyor mu</li>
+        <li class="ek"><b>Giriş ekranı ve QR bağlantı</b> çalışıyor mu</li>
+        <li class="ek"><b>Sabah analizi</b> zamanında üretildi mi</li>
+        <li class="ek"><b>Watchdog:</b> iki portalı da ayakta tutuyor mu</li>
+        <li class="ek"><b>Koruma alanı:</b> otomatik set yazımı (<code>oto_set</code>, <code>bacnet_writer</code>) yalnızca izlenir; agent ve otomatik yama buraya dokunmaz, sorun her zaman sana gelir</li>
+      </ul>
+      <p class="kural">Kendi workflow'ları: analizi yeniden çalıştırma, öz testi koşma, bakım kartını yeniden eşitleme, portalı yeniden başlatma.</p>
+    </section>
+    <section class="kutu ag">
+      <h3>Synapse Agent'ı</h3>
+      <ul class="kontrol">
+        <li><b>Ana sayfa:</b> tüm butonlar, lokasyon verilerinin doğruluğu</li>
+        <li><b>Harita:</b> lokasyonların çevrimiçi durumu</li>
+        <li><b>Canlı uyarılar</b> ve tüm metrik kartlarının tek tek veri kontrolü</li>
+        <li><b>Lokasyon detayları:</b> veriler SQL ile doğrulanır, grafikler ve butonlar</li>
+        <li><b>Canlı izleme:</b> sistem ve veri yolları</li>
+      </ul>
+      <p class="ara">EK KONTROLLER</p>
+      <ul class="kontrol">
+        <li class="ek"><b>Giriş ve oturum:</b> parola, izleyici bağlantısı; parola değişince açık oturum düşüyor mu</li>
+        <li class="ek"><b>Lokasyon eşitlemesi:</b> her lokasyonun günlük verisi 08:00'den sonra geldi mi</li>
+        <li class="ek"><b>Canlı bayat sayaç:</b> 120 sn'den eski sayaç toplamdan çıkıyor ve not olarak görünüyor mu</li>
+        <li class="ek"><b>Yama kuyruğu:</b> "bekliyor" durumunda takılı kalan yama var mı</li>
+        <li class="ek"><b>Güvenlik:</b> tablo erişim kuralları (RLS), anahtarla dışarıdan okunabilen veri</li>
+        <li class="ek"><b>Yerel sunucu:</b> disk, bellek, servis ayakta mı, yedek alındı mı</li>
+      </ul>
+      <p class="kural">Kendi workflow'ları: önbelleği tazeleme, veriyi yeniden çekme, yerel sunucudaki Synapse'i yeniden başlatma.</p>
+    </section>
+  </div>
+
+  <section class="kutu capraz">
+    <h3>Üst agent'ın çapraz kontrolleri · tek agent'ın göremediği yerler</h3>
+    <ul class="kontrol">
+      <li class="ek"><b>Portallar arası tutarlılık:</b> Enerji portalındaki günlük toplam = Synapse'teki toplam = lokasyon detayındaki SQL toplamı</li>
+      <li class="ek"><b>Agent'ların kendisi:</b> üç agent da zamanında kontrol turunu bitirdi mi; susan agent da arıza sayılır</li>
+      <li class="ek"><b>Yama sonrası:</b> her lokasyonda sürüm aynı mı, yama sonrası iki portal da açıldı mı</li>
+      <li class="ek"><b>Tekrarlayan sorun:</b> agent'ın kendi çözdüğü bir sorun sık tekrarlıyorsa kod incelemesine yükseltilir</li>
+      <li class="ek"><b>Kapsam:</b> yeni eklenen bir sayfa, buton ya da sayaç hiçbir agent'ın listesinde değilse rapor edilir</li>
+    </ul>
+  </section>
+
+  <h2 class="bolum">Örnek raporlar</h2>
+  <p class="alt">Üst agent'ın hazırlayacağı rapor biçimi. Değerler örnektir.</p>
+  <div class="izgara-rapor" id="ornekler"></div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var R = { mavi: "var(--mavi)", kirmizi: "var(--kirmizi)", yesil: "var(--yesil)", mor: "var(--mor)", sari: "var(--sari)", turuncu: "var(--turuncu)" };
+  var hiz = 1, duraklat = false, calisiyor = false, jeton = 0, kayitSayisi = 0, surum = 1, senaryo = "enerji";
+  var azHareket = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function $(id) { return document.getElementById(id); }
+  function Iptal() {}
+
+  // ── Raporlar ──
+  var RAPORLAR = {
+    enerji: { no: "RPR-2026-1107-014", onem: "yuksek", baslik: "Enerji diyagramında Hastane Genel toplamı tutmuyor", alanlar: [
+      ["Agent", "Enerji Portal Agent'ı"], ["Sekme", "Enerji Diyagramı"], ["Kontrol", "Hastane Genel = Şebeke + Kojen"],
+      ["Veri", "06.11.2026 günlük satırı"], ["Beklenen", "61.240 kWh (Şebeke 33.180 + Kojen 28.060)"],
+      ["Bulunan", "58.904 kWh · fark −2.336 kWh"], ["Agent'ın denediği", "günü yeniden hesaplattı → fark sürüyor"],
+      ["Tekrar üretme", "Diyagramı aç, tarih 06.11.2026"], ["Olası yer", "<code>enerji_hesap.py</code>, <code>app_portal.py</code> diyagram bölümü (tahmin)"],
+      ["Sonraki adım", "kod incelemesi"]] },
+    synapse: { no: "RPR-2026-1107-015", onem: "dusuk", baslik: "Haritada Maslak çevrimiçi görünüyor, son sinyal 14 dk önce", alanlar: [
+      ["Agent", "Synapse Agent'ı"], ["Sekme", "Ana sayfa · harita"], ["Kontrol", "çevrimiçi rozeti ↔ son heartbeat (sınır 10 dk)"],
+      ["Bulunan", "rozet çevrimiçi, son heartbeat 14 dk önce"], ["Agent'ın denediği", "önbelleği tazeledi, veriyi yeniden çekti → rozet doğru"],
+      ["Sonuç", "agent çözdü; kod değişikliği gerekmedi"]] },
+    mekanik: { no: "RPR-2026-1107-016", onem: "yuksek", baslik: "Bakım kartında Kaydet yanıt veriyor ama kart değişmiyor", alanlar: [
+      ["Agent", "Mekanik Zeka Agent'ı"], ["Sekme", "Bakım kartı · AHU-6"], ["Kontrol", "Kaydet → kart dosyası ve bulut eşitlemesi"],
+      ["Bulunan", "istek başarılı (200) ama kartta değişiklik yok"], ["Agent'ın denediği", "kartı yeniden eşitledi → değişiklik yine yok"],
+      ["Tekrar üretme", "AHU-6 kartında emiş sensörünü Bakımda yap, Kaydet"], ["Olası yer", "<code>main_portal.py</code> bakım kartı ucu, bakım eşitlemesi (tahmin)"],
+      ["Sonraki adım", "kod incelemesi"]] }
+  };
+  var ORNEKLER = [
+    { no: "RPR-2026-1106-009", onem: "orta", durum: "acik", baslik: "Veri girişinde dün seçilince form boş geliyor", alanlar: [
+      ["Agent", "Enerji Portal Agent'ı"], ["Sekme", "Veri Girişi & Excel"], ["Kontrol", "tarih = dün seçilince kayıtlı değerler forma gelir"],
+      ["Beklenen", "05.11.2026 kaydındaki 42 alan dolu"], ["Bulunan", "0 alan dolu"], ["Agent'ın denediği", "veriyi yeniden yükledi → yine boş"],
+      ["Olası yer", "<code>app_portal.py</code> veri giriş formu (tahmin)"]] },
+    { no: "RPR-2026-1106-011", onem: "orta", durum: "acik", baslik: "Lokasyon detayında Ekim toplamı SQL ile tutmuyor", alanlar: [
+      ["Agent", "Synapse Agent'ı"], ["Sekme", "Lokasyon detayı · Maslak · Ekim 2026"], ["Kontrol", "ekrandaki toplam ↔ veritabanındaki SQL toplamı"],
+      ["Ekranda", "1.797.067 kWh"], ["SQL", "1.796.590 kWh · fark 477 kWh"], ["Agent'ın denediği", "önbelleği tazeledi → fark sürüyor"],
+      ["Olası yer", "<code>pages/lokasyon_detay.py</code>, <code>grafik_veri.py</code> (tahmin)"]] },
+    { no: "RPR-2026-1106-012", onem: "dusuk", durum: "kapali", baslik: "Dashboard grafik seçim listesi açılmıyor", alanlar: [
+      ["Agent", "Enerji Portal Agent'ı"], ["Sekme", "Dashboard & Karşılaştırma"], ["Kontrol", "grafik listesi açılır, 15 metrik görünür"],
+      ["Bulunan", "liste 30 sn yanıt vermedi"], ["Agent'ın denediği", "portalı yeniden başlattı → liste açıldı, 15 metrik"],
+      ["Sonuç", "agent çözdü; sık tekrarlarsa kod incelemesi önerilir"]] },
+    { no: "RPR-2026-1106-013", onem: "yuksek", durum: "acik", baslik: "Analiz kuralı çelişkili sonuç üretiyor", alanlar: [
+      ["Agent", "Mekanik Zeka Agent'ı"], ["Sekme", "Analiz sonuçları · MAS-1 AHU-9"], ["Kontrol", "değişmez kural: ısıtma modunda soğutma alarmı olmaz"],
+      ["Bulunan", "mod ısıtma, sonuç \"soğutmuyor — kritik\""], ["Agent'ın denediği", "analizi yeniden çalıştırdı, öz testi koştu → çelişki sürüyor"],
+      ["Olası yer", "<code>main_portal.py</code> kural motoru (tahmin)"]] }
+  ];
+  var ONEM = { yuksek: "Yüksek", orta: "Orta", dusuk: "Düşük" };
+
+  function raporHtml(r, durum, ornek) {
+    var kapali = durum === "kapali";
+    var s = "<article class='rapor" + (kapali ? " kapandi" : "") + (ornek ? " ornek" : "") + "'>"
+      + "<div class='ust'><span class='no'>" + r.no + "</span><span class='cip2 " + r.onem + "'>Önem: " + ONEM[r.onem] + "</span>"
+      + (kapali ? "<span class='cip2 kapali'>Kapandı</span>" : "<span class='cip2 acik'>Açık</span>") + "</div>"
+      + "<p class='baslik'>" + r.baslik + "</p><dl>";
+    r.alanlar.forEach(function (a) { s += "<dt>" + a[0] + "</dt><dd>" + a[1] + "</dd>"; });
+    return s + "</dl></article>";
+  }
+  function anlikRapor(anahtar, durum, ek) {
+    var r = JSON.parse(JSON.stringify(RAPORLAR[anahtar]));
+    (ek || []).forEach(function (a) { r.alanlar.push(a); });
+    $("anlik-rapor").innerHTML = raporHtml(r, durum, false);
+  }
+  $("ornekler").innerHTML = ORNEKLER.map(function (r) { return raporHtml(r, r.durum, true); }).join("");
+
+  // ── Motor ──
+  function bekle(ms, j) {
+    return new Promise(function (coz, red) {
+      var kalan = ms, son = performance.now();
+      function tik(t) {
+        if (j !== jeton) { red(new Iptal()); return; }
+        if (!duraklat) { kalan -= (t - son) * hiz; }
+        son = t;
+        if (kalan <= 0) { coz(); } else { requestAnimationFrame(tik); }
+      }
+      requestAnimationFrame(tik);
+    });
+  }
+  function paket(yolId, renk, etiket, sure, j, ters) {
+    return new Promise(function (coz, red) {
+      var yol = $(yolId), L = yol.getTotalLength();
+      var g = document.createElementNS(NS, "g"); g.setAttribute("class", "paket"); g.style.color = renk;
+      var c = document.createElementNS(NS, "circle"); c.setAttribute("r", "8"); c.setAttribute("fill", renk);
+      var t = document.createElementNS(NS, "text"); t.textContent = etiket || "";
+      g.appendChild(c); g.appendChild(t); $("paketler").appendChild(g); yol.classList.add("parlak");
+      var ilerle = 0, son = performance.now(), toplam = azHareket ? 1 : sure;
+      function kur(o) { var p = yol.getPointAtLength((ters ? 1 - o : o) * L);
+        c.setAttribute("cx", p.x); c.setAttribute("cy", p.y); t.setAttribute("x", p.x + 12); t.setAttribute("y", p.y - 10); }
+      kur(0);
+      function tik(z) {
+        if (j !== jeton) { g.remove(); yol.classList.remove("parlak"); red(new Iptal()); return; }
+        if (!duraklat) { ilerle += (z - son) * hiz; }
+        son = z;
+        var o = Math.min(1, ilerle / toplam); kur(o);
+        if (o >= 1) { setTimeout(function () { g.remove(); yol.classList.remove("parlak"); }, 250); coz(); }
+        else { requestAnimationFrame(tik); }
+      }
+      requestAnimationFrame(tik);
+    });
+  }
+  function durum(id, s) { var d = $(id); ["aktif", "hata", "ok", "bekle"].forEach(function (x) { d.classList.remove(x); }); if (s) { d.classList.add(s); } }
+  function rozet(id, metin, renk) { var r = $(id); r.textContent = metin; r.style.fill = renk || ""; }
+  function cip(n, a) { $("cip-" + n).classList.toggle("yanik", !!a); }
+  function anlat(b, m) { $("anlat-baslik").textContent = b; $("anlat-metin").textContent = m; }
+  function adimCiz(top, i) { var k = $("adimlar"); k.innerHTML = "";
+    for (var n = 0; n < top; n++) { var s = document.createElement("span"); if (n < i) { s.className = "bitti"; } else if (n === i) { s.className = "simdi"; } k.appendChild(s); } }
+  function kayitEkle(metin) {
+    kayitSayisi++; rozet("rz-kayit", kayitSayisi + " kayıt", "var(--yesil)");
+    var li = document.createElement("li"); var z = new Date();
+    li.innerHTML = "<b></b> <span></span>";
+    li.querySelector("b").textContent = "#" + kayitSayisi;
+    li.querySelector("span").textContent = ("0" + z.getHours()).slice(-2) + ":" + ("0" + z.getMinutes()).slice(-2) + " · " + metin;
+    $("gecmis").insertBefore(li, $("gecmis").firstChild);
+  }
+  function temizle() {
+    ["wf-e", "wf-m", "wf-s", "ag-e", "ag-m", "ag-s", "ust", "duz", "test", "yayin", "kayit"].forEach(function (d) { durum(d, null); });
+    ["e", "m", "s"].forEach(function (x) { rozet("rz-" + x, "● kontrol ediyor", ""); });
+    rozet("rz-test", "", ""); rozet("rz-duz", "", "");
+    [1, 2, 3, 4].forEach(function (n) { cip(n, false); });
+    $("paketler").innerHTML = "";
+    document.querySelectorAll(".yol.parlak").forEach(function (y) { y.classList.remove("parlak"); });
+    $("anlik-rapor").innerHTML = "<p class='bos'>Rapor, sorun üst agent'a ulaştığında burada oluşur.</p>";
+  }
+  function surumUygula() {
+    var v2 = surum === 2;
+    $("duz").classList.toggle("v2", v2);
+    $("duz-ad").textContent = v2 ? "Claude · agentic AI" : "Sen";
+    $("duz-1").textContent = v2 ? "rapor gelince başlar," : "raporu incelersin,";
+    $("duz-2").textContent = v2 ? "kodu düzeltir" : "kodu düzeltirsin";
+    $("duz-3").textContent = v2 ? "sen raporları okursun" : "sürüm 2'de: Claude";
+    $("yayin-kim").textContent = v2 ? "Claude gönderir" : "sen gönderirsin";
+    $("surum-yazi").textContent = v2 ? "● sürüm 2: Claude" : "● sürüm 1: sen";
+    $("surum-yazi").setAttribute("class", v2 ? "calisma gelecek" : "calisma olay");
+  }
+  // Sürüme göre metin: {D} düzelten, {d} küçük harfle, {gonderir}, {bildirim}
+  function m(s) {
+    var v2 = surum === 2;
+    return s.replace(/\{D\}/g, v2 ? "Claude" : "Sen").replace(/\{d\}/g, v2 ? "Claude" : "sen")
+      .replace(/\{gonderir\}/g, v2 ? "Claude gönderir" : "sen gönderirsin")
+      .replace(/\{bildirim\}/g, v2 ? "Rapor Claude'a gider; Claude kimse başlatmadan çalışır. Sen yalnızca raporları okursun." : "Rapor sana anında bildirim olarak gelir.");
+  }
+  function duzRenk() { return surum === 2 ? R.mor : R.mavi; }
+
+  // ── Ortak zincir: üst agent → düzelten → test → yayın ──
+  function rapora(x, anahtar, j) {
+    cip(1, true);
+    return paket("rp-" + x, R.turuncu, "çözülemeyen sorun", 1300, j)
+      .then(function () { durum("ust", "aktif"); return bekle(500, j); })
+      .then(function () { cip(2, true); anlikRapor(anahtar, "acik"); return bekle(1100, j); });
+  }
+  function duzelt(x, etiket, j) {
+    cip(3, true);
+    return paket("ud", R.turuncu, "rapor + bildirim", 1100, j)
+      .then(function () { durum("duz", "bekle"); rozet("rz-duz", surum === 2 ? "● düzeltiyor" : "● inceliyorsun", "var(--sari)"); return bekle(1600, j); })
+      .then(function () { durum("duz", "aktif"); rozet("rz-duz", "✓ " + etiket, "var(--yesil)"); return paket("dt", duzRenk(), etiket, 1000, j); })
+      .then(function () { durum("test", "bekle"); rozet("rz-test", "● tüm testler çalışıyor", "var(--sari)"); return bekle(1400, j); })
+      .then(function () { durum("test", "ok"); rozet("rz-test", "✓ hepsi geçti", "var(--yesil)"); return paket("ty", R.yesil, "yayınla", 800, j); })
+      .then(function () { durum("yayin", "ok"); return paket("yw-" + x, R.yesil, "yama", 1600, j); })
+      .then(function () { durum("wf-" + x, "aktif"); });
+  }
+
+  var SENARYOLAR = {
+    enerji: function () { return [
+      { b: "1. Workflow'lar ve agent'lar 7/24 çalışıyor", m: "Enerji Portal Agent'ı diyagramı, veri girişini, grafikleri, raporları ve butonları sırayla kontrol ediyor.",
+        f: function (j) { return bekle(1500, j); } },
+      { b: "2. Enerji agent'ı sorunu yakalar", m: "Enerji Diyagramı: 06.11.2026 için Hastane Genel toplamı, Şebeke + Kojen ile tutmuyor (fark −2.336 kWh).",
+        f: function (j) { durum("wf-e", "hata"); return paket("iz-e", R.kirmizi, "toplam tutmuyor", 1300, j)
+          .then(function () { durum("ag-e", "hata"); rozet("rz-e", "● sorun bulundu", "var(--kirmizi)"); return bekle(600, j); }); } },
+      { b: "3. Agent önce kendi workflow'uyla dener", m: "Günü yeniden hesaplatır ve tekrar kontrol eder. Fark sürüyor: sorun veride değil, kodda.",
+        f: function (j) { durum("ag-e", "bekle"); rozet("rz-e", "● kendi çözmeye çalışıyor", "var(--sari)");
+          return paket("lp-e", R.sari, "yeniden hesapla", 1300, j).then(function () { return paket("iz-e", R.kirmizi, "fark sürüyor", 1000, j); })
+          .then(function () { durum("ag-e", "hata"); rozet("rz-e", "● çözülemedi", "var(--kirmizi)"); }); } },
+      { b: "4. Üst agent anında detaylı rapor hazırlar", m: "Rapor sağdaki panelde: kontrol, beklenen ve bulunan değer, agent'ın denediği, tekrar üretme adımı, olası kod yeri.",
+        f: function (j) { return rapora("e", "enerji", j); } },
+      { b: m("5. Bildirim: {D}"), m: m("{bildirim} Rapordaki olası yerden başlanır, kod düzeltilir, tüm testler çalışır."),
+        f: function (j) { return duzelt("e", "düzeltme", j); } },
+      { b: m("6. Testler geçti, yamayı {gonderir}"), m: "Bugün yaptığımız gibi bütün test paketleri geçmeden yama gönderilmez. Yama Enerji portalına gitti.",
+        f: function (j) { return bekle(400, j); } },
+      { b: "7. Agent aynı kontrolü tekrar çalıştırır", m: "06.11.2026 için toplam artık Şebeke + Kojen ile tutuyor; sorun tekrarlanmıyor.",
+        f: function (j) { durum("ag-e", "aktif"); rozet("rz-e", "● tekrar kontrol", "var(--mavi)");
+          return paket("iz-e", R.yesil, "kontrol geçti", 1200, j).then(function () { durum("wf-e", "ok"); durum("ag-e", "ok"); rozet("rz-e", "✓ düzeldi", "var(--yesil)"); }); } },
+      { b: "8. Zincirli geri bildirim, rapor kapanır", m: "Agent sonucu üst agent'a bildirir; üst agent raporu kapatır ve çözüm detayını ekler.",
+        f: function (j) { cip(4, true); return paket("rp-e", R.yesil, "düzeldi", 1200, j, true)
+          .then(function () { durum("ust", "ok"); anlikRapor("enerji", "kapali", [["Çözüm", m("hesap kodu düzeltildi ({d}), tüm testler geçti, yama gönderildi")], ["Doğrulama", "agent tekrar kontrolü geçti"]]); return bekle(500, j); }); } },
+      { b: "9. Kayıt", m: "Arıza, rapor, kök neden, değişiklik ve tekrar kontrol sonucu kaydedilir.",
+        f: function (j) { return paket("ck", R.yesil, "rapor", 1000, j).then(function () { durum("kayit", "ok"); kayitEkle(m("Enerji · toplam tutmuyor · {d} düzeltti, kapandı")); return bekle(700, j); }); } }
+    ]; },
+    synapse: function () { return [
+      { b: "1. Workflow'lar ve agent'lar 7/24 çalışıyor", m: "Synapse yerel sunucuda. Synapse Agent'ı ana sayfayı, haritayı, canlı uyarıları ve lokasyon detaylarını kontrol ediyor.",
+        f: function (j) { return bekle(1400, j); } },
+      { b: "2. Synapse agent'ı sorunu yakalar", m: "Harita: Maslak çevrimiçi görünüyor ama son heartbeat 14 dk önce (sınır 10 dk).",
+        f: function (j) { durum("wf-s", "hata"); return paket("iz-s", R.kirmizi, "rozet yanlış", 1300, j)
+          .then(function () { durum("ag-s", "hata"); rozet("rz-s", "● sorun bulundu", "var(--kirmizi)"); return bekle(500, j); }); } },
+      { b: "3. Agent kendi workflow'uyla çözer", m: "Önbelleği tazeler ve veriyi yeniden çeker. Kod değişikliği gerekmez.",
+        f: function (j) { durum("ag-s", "bekle"); rozet("rz-s", "● kendi çözüyor", "var(--sari)");
+          return paket("lp-s", R.sari, "önbelleği tazele", 1400, j).then(function () { durum("wf-s", "aktif"); return paket("iz-s", R.yesil, "rozet doğru", 1100, j); })
+          .then(function () { durum("wf-s", "ok"); durum("ag-s", "ok"); rozet("rz-s", "✓ çözüldü", "var(--yesil)"); }); } },
+      { b: "4. Bilgi raporu üst agent'a gider", m: "Düzeltme işi açılmaz; rapor bilgi amaçlı ve kapalı olarak oluşur. Aynı sorun sık tekrarlarsa üst agent bunu ayrıca işaretler.",
+        f: function (j) { cip(1, true); return paket("rp-s", R.turuncu, "bilgi: çözüldü", 1300, j)
+          .then(function () { durum("ust", "ok"); cip(2, true); cip(4, true); anlikRapor("synapse", "kapali"); return bekle(800, j); }); } },
+      { b: "5. Kayıt", m: "Sorun, agent'ın uyguladığı workflow ve sonuç kaydedilir.",
+        f: function (j) { return paket("ck", R.yesil, "rapor", 1000, j).then(function () { durum("kayit", "ok"); kayitEkle("Synapse · harita rozeti · agent kendi çözdü"); return bekle(700, j); }); } }
+    ]; },
+    mekanik: function () { return [
+      { b: "1. Workflow'lar ve agent'lar 7/24 çalışıyor", m: "Mekanik Zeka Agent'ı kuralları, bakım kartlarını, ayarları, butonları ve grafikleri kontrol ediyor.",
+        f: function (j) { return bekle(1400, j); } },
+      { b: "2. Mekanik Zeka agent'ı sorunu yakalar", m: "Bakım kartı AHU-6: Kaydet yanıt veriyor ama kart değişmiyor. Agent kartı yeniden eşitler; değişmiyor.",
+        f: function (j) { durum("wf-m", "hata"); return paket("iz-m", R.kirmizi, "kart değişmiyor", 1300, j)
+          .then(function () { durum("ag-m", "hata"); rozet("rz-m", "● sorun bulundu", "var(--kirmizi)"); return paket("lp-m", R.sari, "yeniden eşitle", 1300, j); })
+          .then(function () { return paket("iz-m", R.kirmizi, "hâlâ değişmiyor", 900, j); })
+          .then(function () { rozet("rz-m", "● çözülemedi", "var(--kirmizi)"); }); } },
+      { b: "3. Üst agent raporu hazırlar ve bildirir", m: "Rapor sağdaki panelde: tekrar üretme adımı ve olası kod yeri dahil.",
+        f: function (j) { return rapora("m", "mekanik", j); } },
+      { b: m("4. İlk düzeltme: {D}"), m: "Kod düzeltilir, tüm testler geçer, yama gönderilir.",
+        f: function (j) { return duzelt("m", "düzeltme 1", j); } },
+      { b: "5. Tekrar kontrol: sorun sürüyor", m: "Testler geçmişti ama sahada kart yine değişmiyor. Değişiklik geri alınır, rapor yeniden açılır ve yeni kanıt eklenir.",
+        f: function (j) { return paket("iz-m", R.kirmizi, "sorun sürüyor", 1200, j)
+          .then(function () { durum("wf-m", "hata"); rozet("rz-m", "● düzelmedi, geri alındı", "var(--kirmizi)");
+            [2, 3].forEach(function (n) { cip(n, false); }); durum("test", null); durum("yayin", null); durum("duz", null); rozet("rz-test", "", ""); rozet("rz-duz", "", "");
+            return paket("rp-m", R.turuncu, "düzelmedi + yeni kanıt", 1300, j); })
+          .then(function () { durum("ust", "bekle"); cip(2, true);
+            anlikRapor("mekanik", "acik", [["Deneme 1", "testler geçti, sahada sorun sürdü → geri alındı"], ["Yeni kanıt", "kart yalnızca yerel dosyada değişiyor, bulut eşitlemesi eski değeri geri yazıyor"]]);
+            return bekle(1200, j); }); } },
+      { b: m("6. İkinci düzeltme: {D}"), m: "Yeni kanıtla kök neden bulunur: bulut eşitlemesi. Düzeltme, tüm testler ve yama tekrarlanır.",
+        f: function (j) { durum("ust", "aktif"); return duzelt("m", "düzeltme 2", j); } },
+      { b: "7. Tekrar kontrol geçer, rapor kapanır", m: "Kart kaydediliyor ve bulutta da değişiyor. Agent geri bildirir, üst agent raporu kapatır.",
+        f: function (j) { return paket("iz-m", R.yesil, "kontrol geçti", 1100, j)
+          .then(function () { durum("wf-m", "ok"); durum("ag-m", "ok"); rozet("rz-m", "✓ düzeldi", "var(--yesil)"); cip(4, true); return paket("rp-m", R.yesil, "düzeldi", 1100, j, true); })
+          .then(function () { durum("ust", "ok");
+            anlikRapor("mekanik", "kapali", [["Deneme 1", "geri alındı"], ["Çözüm", m("2. denemede bulut eşitlemesi düzeltildi ({d})")], ["Doğrulama", "agent tekrar kontrolü geçti"]]); }); } },
+      { b: "8. Kayıt", m: "İki deneme de kayda geçer: ilk düzeltmenin neden tutmadığı, geri alma ve ikinci çözüm.",
+        f: function (j) { return paket("ck", R.yesil, "rapor", 1000, j).then(function () { durum("kayit", "ok"); kayitEkle(m("Mekanik Zeka · bakım kartı · 2. denemede çözüldü ({d})")); return bekle(700, j); }); } }
+    ]; }
+  };
+
+  function oynat() {
+    if (calisiyor) { duraklat = false; return; }
+    var j = ++jeton; calisiyor = true; duraklat = false; temizle();
+    var adimlar = SENARYOLAR[senaryo](), i = 0;
+    function sonraki() {
+      if (i >= adimlar.length) { calisiyor = false; adimCiz(adimlar.length, adimlar.length);
+        anlat("Tamamlandı", "Zincir kapandı ve kayıt oluştu. Sürümü ya da senaryoyu değiştirip yeniden oynatabilirsin."); return; }
+      var a = adimlar[i]; adimCiz(adimlar.length, i); anlat(a.b, a.m);
+      a.f(j).then(function () { i++; return bekle(450, j); }).then(sonraki).catch(function (e) { if (!(e instanceof Iptal)) { throw e; } });
+    }
+    sonraki();
+  }
+  function sifirla() {
+    jeton++; calisiyor = false; duraklat = false; temizle(); surumUygula();
+    adimCiz(SENARYOLAR[senaryo]().length, -1);
+    anlat("Hazır", "Oynat'a bas. Duraklatıp okuyabilir, hızı 2× yapabilirsin.");
+  }
+  function grupSec(nitelik, fn) {
+    document.querySelectorAll("[" + nitelik + "]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        document.querySelectorAll("[" + nitelik + "]").forEach(function (x) { x.classList.remove("secili"); });
+        b.classList.add("secili"); fn(b.getAttribute(nitelik));
+      });
+    });
+  }
+  grupSec("data-surum", function (v) { surum = parseInt(v, 10); sifirla(); });
+  grupSec("data-senaryo", function (v) { senaryo = v; sifirla(); });
+  grupSec("data-hiz", function (v) { hiz = parseFloat(v); });
+  $("oynat").addEventListener("click", oynat);
+  $("dur").addEventListener("click", function () { duraklat = true; });
+  $("sifirla").addEventListener("click", sifirla);
+  sifirla();
+  if (!azHareket) { setTimeout(oynat, 700); }
+})();
+</script>
+</body>
+</html>
