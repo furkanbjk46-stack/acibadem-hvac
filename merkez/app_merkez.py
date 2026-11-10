@@ -594,21 +594,25 @@ def load_config():
     # Portal canlı Supabase yerine ÖRNEK VERİ sunucusuna bağlanır.
     # Streamlit Cloud'daki gerçek uygulamada ne bu ortam değişkeni ne de
     # [demo] secrets bölümü bulunur; dolayısıyla ÜRETİM ETKİLENMEZ.
+    # "_kaynak": bağlantı bilgisinin nereden geldiği (Ayarlar > Bağlantı gösterir).
     if _demo_modu():
-        return {"supabase_url": _demo_sunucusu_baslat(), "supabase_key": "simulasyon"}
+        return {"supabase_url": _demo_sunucusu_baslat(), "supabase_key": "simulasyon",
+                "_kaynak": "demo"}
 
     # Harici simülasyon sunucusu (SUNUM_BASLAT.bat ile yerel kullanım)
     _sim = os.environ.get("SYNAPSE_SIM_URL", "").strip()
     if _sim:
         return {"supabase_url": _sim,
-                "supabase_key": os.environ.get("SYNAPSE_SIM_KEY", "simulasyon")}
+                "supabase_key": os.environ.get("SYNAPSE_SIM_KEY", "simulasyon"),
+                "_kaynak": "simulasyon"}
 
-    # Streamlit Cloud: önce st.secrets'a bak
+    # Sunucu (thapps): secrets.toml
     try:
         if "supabase" in st.secrets:
             cfg = {
                 "supabase_url": st.secrets["supabase"]["url"],
                 "supabase_key": st.secrets["supabase"]["key"],
+                "_kaynak": "secrets",
             }
             if "m2_degerler" in st.secrets:
                 cfg["m2_degerler"] = dict(st.secrets["m2_degerler"])
@@ -618,8 +622,8 @@ def load_config():
     # Yerel PC: dosyadan oku
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
+            return dict(json.load(f), _kaynak="dosya")
+    return {"_kaynak": "dosya"}
 
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_dis_hava() -> float | None:
@@ -4044,20 +4048,79 @@ with st.container(key="ayarlar_panel"):
 
     # ── Bağlantı ──
     with ayar_tab1:
-        st.markdown("**Supabase Bağlantısı**")
-        mevcut_url = config.get("supabase_url", "")
-        mevcut_key = config.get("supabase_key", "")
-        yeni_url = st.text_input("Supabase URL", value=mevcut_url, key="ayar_url")
-        yeni_key = st.text_input("Supabase Anon Key", value=mevcut_key, key="ayar_key", type="password")
-        if st.button("💾 Bağlantıyı Kaydet", key="btn_baglanti"):
-            import json as _json
-            os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
-            cfg_yeni = config.copy()
-            cfg_yeni["supabase_url"] = yeni_url.strip()
-            cfg_yeni["supabase_key"] = yeni_key.strip()
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-                _json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
-            st.success("✅ Bağlantı bilgileri kaydedildi. Sayfayı yenileyin.")
+        # 10.11.2026: Eskiden burada anahtar düzenleme kutusu vardı. Sunucuda bağlantı
+        # secrets.toml'dan okunduğu için "Kaydet" hiçbir şeyi değiştirmiyordu (dosya
+        # yok sayılıyordu) ve kutu service_role anahtarını tarayıcıya gönderiyordu
+        # (göz simgesiyle görünür). Artık yalnızca durum gösterilir; anahtar
+        # tarayıcıya hiç gitmez. Düzenleme yalnızca yerel PC'de (dosya modunda) açık.
+        import base64 as _b64
+        import time as _btime
+        import urllib.request as _bur
+        st.markdown("**Veritabanı Bağlantısı**")
+        _kaynak = config.get("_kaynak", "dosya")
+        _kaynak_metin = {
+            "secrets": "Sunucu ayar dosyası (merkez/.streamlit/secrets.toml) — yalnızca yönetici değiştirir",
+            "dosya": "Yerel ayar dosyası (merkez/configs/merkez_config.json)",
+            "simulasyon": "Simülasyon sunucusu (SYNAPSE_SIM_URL)",
+            "demo": "Sunum/demo modu (örnek veri)",
+        }.get(_kaynak, _kaynak)
+
+        def _anahtar_rolu(_k):
+            try:
+                _p = _k.split(".")[1]
+                _d = json.loads(_b64.urlsafe_b64decode(_p + "=" * (-len(_p) % 4)))
+                return _d.get("role") or "?", _d.get("lokasyon_id")
+            except Exception:
+                return ("yok" if not _k else "tanınmadı"), None
+
+        _rol, _rol_lok = _anahtar_rolu(key)
+        _rol_metin = {"service_role": "service_role (merkez — tam yetki)",
+                      "anon": "anon (ortak saha anahtarı — sınırlı)",
+                      "authenticated": "lokasyon anahtarı (%s)" % (_rol_lok or "?")}.get(_rol, _rol)
+
+        _test_durum, _test_ms = "—", None
+        if url and key:
+            _tb = _btime.monotonic()
+            try:
+                with _bur.urlopen(_bur.Request(
+                        url.rstrip("/") + "/rest/v1/lokasyonlar?select=lokasyon_id&limit=1",
+                        headers={"apikey": key, "Authorization": "Bearer " + key}), timeout=8) as _r:
+                    _r.read()
+                _test_ms = (_btime.monotonic() - _tb) * 1000
+                _test_durum = "🟢 Bağlı"
+            except Exception as _be:
+                _test_durum = "🔴 Bağlanamadı (%s)" % (getattr(_be, "code", None)
+                                                     or getattr(_be, "reason", None) or _be)
+
+        for _bas, _deg in (("Adres", url or "—"),
+                           ("Anahtar türü", _rol_metin),
+                           ("Ayarın kaynağı", _kaynak_metin),
+                           ("Durum", _test_durum + (" · %d ms" % _test_ms if _test_ms else ""))):
+            st.markdown(f"<div style='display:flex;gap:10px;padding:7px 10px;margin:3px 0;"
+                        f"background:#fafaf8;border-radius:8px;border:1px solid rgba(19,50,115,.08);'>"
+                        f"<span style='min-width:120px;font-size:12px;color:#46536b;'>{_bas}</span>"
+                        f"<span style='font-size:12.5px;color:#133273;font-weight:600;"
+                        f"word-break:break-all;'>{_deg}</span></div>", unsafe_allow_html=True)
+
+        if _kaynak == "dosya":
+            with st.expander("Yerel bağlantıyı değiştir"):
+                st.caption("Yalnızca bu bilgisayardaki merkez_config.json değişir. "
+                           "Mevcut anahtar gösterilmez; değiştirmek için yenisini yapıştırın.")
+                yeni_url = st.text_input("Adres", value=url, key="ayar_url")
+                yeni_key = st.text_input("Anahtar", value="", key="ayar_key", type="password",
+                                         placeholder="boş bırakılırsa mevcut anahtar korunur")
+                if st.button("💾 Kaydet", key="btn_baglanti"):
+                    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+                    cfg_yeni = {k: v for k, v in config.items() if not k.startswith("_")}
+                    cfg_yeni["supabase_url"] = yeni_url.strip()
+                    if yeni_key.strip():
+                        cfg_yeni["supabase_key"] = yeni_key.strip()
+                    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                        json.dump(cfg_yeni, f, indent=2, ensure_ascii=False)
+                    st.success("✅ Kaydedildi. Sayfayı yenileyin.")
+        elif _kaynak == "secrets":
+            st.caption("Bağlantı bilgisi sunucuda tutulur ve buradan değiştirilemez. "
+                       "Anahtar tarayıcıya gönderilmez.")
 
     # ── Güncellemeler ──
     with ayar_tab2:
@@ -4067,14 +4130,16 @@ with st.container(key="ayarlar_panel"):
         durum_icon_map = {"tamamlandi": "✅", "bekliyor": "⏳", "iptal": "❌", "hata": "🚨"}
         if not gunc:
             st.info("Henüz güncelleme kaydı yok.")
+        import sql_durumu as _SQa      # zaman(): UTC → İstanbul
         for r in gunc:
             dr = durum_renk_map.get(r["durum"], "#aaa")
             di = durum_icon_map.get(r["durum"], "?")
-            tarih = r["created_at"][:16].replace("T", " ")
+            _tz_ = _SQa.zaman(r.get("created_at"))
+            tarih = _tz_.strftime("%d.%m.%Y %H:%M") if _tz_ else str(r.get("created_at", ""))[:16]
             st.markdown(f"""
             <div style="padding:7px 10px; margin:3px 0; background:#fafaf8;
                         border-radius:8px; border-left:3px solid {dr};">
-              <div style="font-size:12px; color:#e0f2fe; font-weight:600;">{di} {r['versiyon']}
+              <div style="font-size:12px; color:#133273; font-weight:600;">{di} {r['versiyon']}
                 <span style="color:#46536b; font-size:11px;">→ {r['hedef']}</span>
               </div>
               <div style="font-size:10px; color:{dr};">{r['durum'].upper()} &nbsp;·&nbsp;
@@ -4089,15 +4154,20 @@ with st.container(key="ayarlar_panel"):
         if not lokasyonlar:
             st.info("Lokasyon verisi bulunamadı.")
         else:
+            import sql_durumu as _SQh
             for lok in lokasyonlar:
-                ping = str(lok.get("ping_zamani") or "—")[:16].replace("T", " ")
+                _pz = _SQh.zaman(lok.get("ping_zamani"))
+                ping = (_pz.strftime("%d.%m.%Y %H:%M") + " · " + _SQh.once(_pz)) if _pz else "—"
+                _cevrim = _pz is not None and (datetime.now(_SQh.IST) - _pz).total_seconds() < 600
                 isim = lok.get("isim") or lok.get("lokasyon_id", "?")
+                _surum = lok.get("versiyon") or "—"
                 st.markdown(f"""
                 <div style="padding:8px 12px; margin:4px 0; background:#fafaf8;
                             border-radius:8px; border:1px solid rgba(19,50,115,0.1);
-                            display:flex; justify-content:space-between; align-items:center;">
-                  <span style="font-size:12px; color:#e0f2fe; font-weight:600;">🏥 {isim}</span>
-                  <span style="font-size:10px; color:#46536b;">Son ping: {ping}</span>
+                            display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                  <span style="font-size:12px; color:#133273; font-weight:600;">{'🟢' if _cevrim else '🔴'} {isim}
+                    <span style="font-weight:400; color:#46536b; font-size:10.5px;">· sürüm {_surum}</span></span>
+                  <span style="font-size:10.5px; color:#46536b;">Son ping: {ping}</span>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -4164,11 +4234,38 @@ with st.container(key="ayarlar_panel"):
                 except Exception as _me:
                     st.error(f"❌ Gönderilemedi: {_me}")
 
+        # Gönderilen mesajlar ve okundu durumu (eskiden gönderdikten sonra görünmüyordu)
+        st.caption("Merkezden gönderilen son mesajlar:")
+        try:
+            import sql_durumu as _SQm
+            from supabase import create_client as _ccm
+            _son_msg = (_ccm(url, key).table("bildirimler")
+                        .select("lokasyon,mesaj,oncelik,okundu,created_at")
+                        .eq("gonderen", "GM Merkez").order("created_at", desc=True)
+                        .limit(10).execute().data) or []
+        except Exception:
+            _son_msg = []
+        if not _son_msg:
+            st.caption("Henüz mesaj yok.")
+        _lok_ad = {v: k for k, v in _lok_secenekler.items()}
+        for _m in _son_msg:
+            _mz = _SQm.zaman(_m.get("created_at"))
+            _mo = {"acil": "🔴", "uyari": "🟡"}.get(_m.get("oncelik"), "🔵")
+            st.markdown(
+                f"<div style='padding:6px 10px;margin:3px 0;background:#fafaf8;border-radius:8px;"
+                f"border:1px solid rgba(19,50,115,.08);font-size:12px;color:#133273;'>"
+                f"{_mo} <b>{_lok_ad.get(_m.get('lokasyon'), _m.get('lokasyon'))}</b> · "
+                f"{'✅ okundu' if _m.get('okundu') else '⏳ okunmadı'}"
+                f"<span style='color:#46536b;font-size:10.5px;'> · "
+                f"{_mz.strftime('%d.%m %H:%M') if _mz else ''}</span><br>"
+                f"<span style='color:#46536b;'>{str(_m.get('mesaj') or '')[:160]}</span></div>",
+                unsafe_allow_html=True)
+
     # ── Veri: tüm tabloları tek tıkla indir (yalnız OKUR) ──
     with ayar_tab7:
         import veri_disa_aktar as _vda
         st.markdown("**💾 Veritabanı Yedeği İndir**")
-        st.caption("Supabase'deki tablolar okunur ve tek dosya olarak indirilir. Hiçbir veri "
+        st.caption("Synapse veritabanındaki tablolar okunur ve tek dosya olarak indirilir. Hiçbir veri "
                    "değiştirilmez. Dosya bağlantı ayarları, komut geçmişi ve lisans bilgisi de "
                    "içerebilir — güvenli bir yerde saklayın, paylaşmayın.")
         if not (url and key):
@@ -4243,11 +4340,32 @@ with st.container(key="ayarlar_panel"):
         # KOMUT_DEGER_MIN/MAX). Önceden 0–99 kabul ediliyordu: 3 °C yazan
         # kullanıcı "gönderildi" görüyor, komut lokasyonda sessizce hata oluyordu.
         # test_bacnet_writer.py iki tarafın eşitliğini doğrular.
+        # 10.11.2026: Veritabanı da nokta türüne göre aralık uygular
+        # (synapse_db hvac_komut_aralik tetiği: CHx_REM_SET 6–12, kollektör/FCU 8–18,
+        # klima santrali 6–16, diğerleri 5–40). Giriş kutusu aynı aralığa kısılır;
+        # yoksa 3 °C yazan kullanıcı ancak gönderince "reddedildi" görüyordu.
+        import re as _re_uc
+
+        def _uc_aralik(_n):
+            if _n and _re_uc.match(r"^CH\d+_REM_SET$", _n):
+                return 6.0, 12.0
+            if _n and (_re_uc.match(r"^(GUNDUZ|GECE)_KOLLEKTOR_SET$", _n)
+                       or _re_uc.match(r"^[A-Z]_BLOK_FCU_SET$", _n)):
+                return 8.0, 18.0
+            if _n and _re_uc.match(r"^ZON\d+_KLIMA_SANTRALI_SET$", _n):
+                return 6.0, 16.0
+            return 5.0, 40.0
+
+        _uc_alt, _uc_ust = _uc_aralik(_uc_nokta_adi)
         _uc_deger = st.number_input(
             "Hedef Değer (°C)",
-            min_value=5.0, max_value=40.0, value=7.0, step=0.5,
-            key="uc_deger"
+            min_value=_uc_alt, max_value=_uc_ust,
+            value=min(max(7.0, _uc_alt), _uc_ust), step=0.5,
+            key="uc_deger_%s" % (_uc_nokta_adi or "yok"),
+            help="Bu nokta için izinli aralık: %.1f – %.1f °C" % (_uc_alt, _uc_ust)
         )
+        st.caption("İzinli aralık: %.1f – %.1f °C (lokasyon ve veritabanı da aynı sınırı uygular)."
+                   % (_uc_alt, _uc_ust))
 
         # Son komutlar tablosu
         try:

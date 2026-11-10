@@ -770,8 +770,42 @@ class Islek(BaseHTTPRequestHandler):
         except Exception:
             return None
 
+    def _sql_durumu(self):
+        """synapse_sql_durumu() RPC taklidi (Yönetim > SQL (canlı) sekmesi)."""
+        adaylar = ("created_at", "olcum_zamani", "timestamp", "updated_at", "son_sync", "Tarih")
+        tablolar = []
+        for ad, satirlar in sorted(VERI.items()):
+            if not isinstance(satirlar, list) or "/" in ad:
+                continue
+            ornek = satirlar[0] if satirlar and isinstance(satirlar[0], dict) else {}
+            zs = next((a for a in adaylar if a in ornek), None)
+            son = max((str(r.get(zs)) for r in satirlar if r.get(zs)), default=None) if zs else None
+            tablolar.append({"tablo": ad, "satir": len(satirlar), "olu_satir": 0,
+                             "eklenen": len(satirlar), "guncellenen": 0, "silinen": 0,
+                             "son_vacuum": None, "son_analyze": None, "rls": True,
+                             "politika": 4, "sutun": len(ornek), "zaman_sutunu": zs,
+                             "son_kayit": son})
+        ed = VERI.get("energy_data") or [{}]
+        return {"olculme": datetime.now(timezone.utc).isoformat(),
+                "surum": "16.15 (simülasyon)",
+                "baslangic": (datetime.now(timezone.utc) - timedelta(days=3, hours=2)).isoformat(),
+                "saat_dilimi": "UTC", "veritabani_bayt": 12 * 1024 ** 2,
+                "baglantilar": [{"kullanici": "authenticator", "uygulama": "PostgREST 16.5", "adet": 3}],
+                "bekleyen_kilit": 0,
+                "istatistik": {"commit": SAYAC["istek"], "rollback": 0, "kilitlenme": 0,
+                               "gecici_dosya_bayt": 0, "sifirlanma": None},
+                "tablolar": tablolar,
+                "energy_data_sutunlari": [{"ad": k, "tur": "real"} for k in ed[0].keys()],
+                "sema_gecmisi": [{"dosya": "001_sql_durumu_olcumu.sql",
+                                  "ozet": "Yönetim sayfası canlı SQL durumu (simülasyon)",
+                                  "uygulayan": "canliizlemedev",
+                                  "uygulandi": datetime.now(timezone.utc).isoformat()}]}
+
     def do_POST(self):
         tablo = self._tablo()
+        if tablo == "rpc/synapse_sql_durumu":
+            self._govde_oku()
+            return self._yaz(self._sql_durumu())
         govde = self._govde_oku()
         if tablo is None or govde is None:
             return self._yaz([], 200)

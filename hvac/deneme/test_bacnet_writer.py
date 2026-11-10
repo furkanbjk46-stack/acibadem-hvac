@@ -358,11 +358,23 @@ c("[uctan uca] executed_at saat dilimi iceriyor (UTC)", _ea.endswith("+00:00"), 
 _mk = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                    "merkez", "app_merkez.py")
 _metin = open(_mk, encoding="utf-8").read()
-_m = re.search(r'"Hedef Değer \(°C\)",\s*min_value=([\d.]+),\s*max_value=([\d.]+)', _metin)
-c("Uzaktan Kontrol giris alani bulundu", bool(_m))
-if _m:
-    c("ekran alt siniri = KOMUT_DEGER_MIN", float(_m.group(1)) == bw.KOMUT_DEGER_MIN, _m.group(1))
-    c("ekran ust siniri = KOMUT_DEGER_MAX", float(_m.group(2)) == bw.KOMUT_DEGER_MAX, _m.group(2))
+# 10.11.2026: giris alani noktaya gore kisilir (_uc_aralik); her nokta tipinin
+# araligi bacnet_writer.NOKTA_ARALIKLARI ile, genel aralik KOMUT_DEGER_MIN/MAX ile ayni olmali.
+_m = re.search(r'"Hedef Değer \(°C\)",\s*min_value=_uc_alt,\s*max_value=_uc_ust', _metin)
+c("Uzaktan Kontrol giris alani nokta araligini kullaniyor", bool(_m))
+_fn = re.search(r"def _uc_aralik\(_n\):(.*?)\n\n", _metin, re.S)
+c("_uc_aralik bulundu", bool(_fn))
+if _fn:
+    _govde = _fn.group(1)
+    for _d, _a, _u in bw.NOKTA_ARALIKLARI:
+        _i = _govde.find('r"%s"' % _d)
+        _don = re.search(r"return ([\d.]+), ([\d.]+)", _govde[_i:]) if _i >= 0 else None
+        c("ekran araligi = saha: %s" % _d,
+          bool(_don) and (float(_don.group(1)), float(_don.group(2))) == (_a, _u),
+          _don.groups() if _don else "desen yok")
+    _genel = re.findall(r"return ([\d.]+), ([\d.]+)", _govde)[-1]
+    c("ekran genel araligi = KOMUT_DEGER_MIN/MAX",
+      (float(_genel[0]), float(_genel[1])) == (bw.KOMUT_DEGER_MIN, bw.KOMUT_DEGER_MAX), _genel)
 for _d in ("dogrulanamadi", "suresi_doldu"):
     c(f"ekran '{_d}' durumunu taniyor", f'"{_d}"' in _metin)
 

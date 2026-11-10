@@ -150,9 +150,13 @@ c("secrets dosyası yoksa st.secrets'e dokunulmaz", "secrets.toml" in _yon)
 c("canlı okuma için önbellek kısa (60 sn)", "ttl=60" in _yon)
 c("yenile düğmesi önbelleği temizler", "st.cache_data.clear()" in _yon)
 
-# ── Sekmeler: sunucu/veritabanı + agent katmanları ────────────────────────
-c("iki sekme: Sunucu ve veritabanı, Agent katmanları",
-  '_sekme_sunucu, _sekme_agent = st.tabs(["🖥️ Sunucu ve veritabanı", "🤖 Agent katmanları"])' in _yon)
+# ── Sekmeler: sunucu/veritabanı + canlı SQL + agent katmanları ────────────
+c("üç sekme: Sunucu ve veritabanı, SQL (canlı), Agent katmanları",
+  '_sekme_sunucu, _sekme_sql, _sekme_agent = st.tabs(\n'
+  '    ["🖥️ Sunucu ve veritabanı", "🗄️ SQL (canlı)", "🤖 Agent katmanları"])' in _yon)
+c("SQL sekmesi 30 sn'de bir kendini yeniler", '@st.fragment(run_every="30s")' in _yon)
+c("komut sayımı var olan created_at sütununu kullanır",
+  "created_at=gte." in _yon and "olusturma" not in _yon.split("komutlar?")[1][:80])
 _agv = os.path.join(BURASI, "sunum", "agent_katmanlari.html")
 c("agent katmanları sayfası depoda", os.path.exists(_agv))
 _agh = open(_agv, encoding="utf-8").read() if os.path.exists(_agv) else ""

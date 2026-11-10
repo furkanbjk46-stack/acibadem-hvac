@@ -44,8 +44,9 @@ st.markdown(
     f"Veriler her açılışta canlı okunur · {_dt.now(_IST).strftime('%d.%m.%Y %H:%M')}</div></div>",
     unsafe_allow_html=True)
 
-# Sekmeler: 1) canlı sunucu / veri durumu  2) agent katmanları tasarım simülasyonu
-_sekme_sunucu, _sekme_agent = st.tabs(["🖥️ Sunucu ve veritabanı", "🤖 Agent katmanları"])
+# Sekmeler: 1) canlı sunucu / veri durumu  2) canlı SQL durumu  3) agent katmanları simülasyonu
+_sekme_sunucu, _sekme_sql, _sekme_agent = st.tabs(
+    ["🖥️ Sunucu ve veritabanı", "🗄️ SQL (canlı)", "🤖 Agent katmanları"])
 
 with _sekme_sunucu:
     _y1, _y2 = st.columns([1, 6])
@@ -153,10 +154,9 @@ with _sekme_sunucu:
     _k = _kullanim(url, _anahtar)
     if not isinstance(_k, dict) or "veritabani_bayt" not in _k:
         st.warning(
-            "Veritabanı ölçümü okunamadı. İki sebebi olabilir: (1) `merkez/izleme_kurulum.sql` "
-            "henüz çalıştırılmadı, (2) fonksiyon yalnızca service_role'a açık ve portal anon "
-            "anahtar kullanıyor. Çözüm: SQL dosyasındaki isteğe bağlı GRANT satırını çalıştırın "
-            "ya da Streamlit secrets içine `[supabase] service_key` ekleyin."
+            "Veritabanı ölçümü (`synapse_kullanim`) okunamadı. Ölçüm fonksiyonu yalnızca "
+            "service_role anahtarına açıktır; sunucudaki `merkez/.streamlit/secrets.toml` "
+            "dosyasında `[supabase] service_key` tanımlı olmalı."
             + ("" if _servis_mi else "  ·  Şu an **anon** anahtar kullanılıyor."))
     else:
         _top, _kota, _oran = _IZ.disk_orani(_k, _lim)
@@ -166,7 +166,7 @@ with _sekme_sunucu:
                      "iyi": _T.IYI}[_IZ.disk_seviye(_oran, _lim)]
         _serit([
             _kutu("Veritabanı", _IZ.boyut(_top),
-                  "%d GB kotanın %%%.1f'i" % (_lim["plan_disk_gb"], _oran), _bar_renk),
+                  "%d GB sınırın %%%.1f'i" % (_lim["plan_disk_gb"], _oran), _bar_renk),
             _kutu("Önbellek isabeti", "%%%s" % (_s.get("onbellek_isabet_yuzde") or "—"),
                   "yüksek olan iyi"),
             _kutu("Aktif bağlantı", "%s / %s" % (_s.get("aktif_baglanti", "—"),
@@ -259,11 +259,13 @@ with _sekme_sunucu:
                      "&order=created_at.desc&limit=10")
     _bekleyen = [y for y in _yamalar if y.get("durum") == "bekliyor"] if _yamalar else []
 
-    _sinir = (_dt.now(_IST) - _td(hours=24)).strftime("%Y-%m-%dT%H:%M:%S")
+    # komutlar.created_at UTC tutulur; sınır da UTC verilir. (Eskiden var olmayan
+    # 'olusturma' sütunu sorgulanıyordu: istek 400 dönüyor, kutular hep 0 kalıyordu.)
+    _sinir = (_dt.now(_tz.utc) - _td(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
     _komut = _rest(url, _anahtar,
-                   "komutlar?select=durum,olusturma&olusturma=gte.%s&limit=500" % _sinir)
-    _kom_hata = [k for k in _komut if str(k.get("durum", "")).lower() in ("hata", "dogrulanamadi")] \
-        if _komut else []
+                   "komutlar?select=durum,created_at&created_at=gte.%s&limit=1000" % _sinir)
+    _kom_hata = [k for k in _komut if str(k.get("durum", "")).lower()
+                 in ("hata", "dogrulanamadi", "suresi_doldu")] if _komut else []
 
     _serit([
         _kutu("Bekleyen yama", str(len(_bekleyen)),
@@ -272,18 +274,136 @@ with _sekme_sunucu:
         _kutu("24 saatte komut", str(len(_komut) if isinstance(_komut, list) else 0),
               "oto-set + elle gönderilen"),
         _kutu("Başarısız komut", str(len(_kom_hata)),
-              "hata / doğrulanamadı", _T.KRITIK if _kom_hata else _T.IYI),
+              "hata / doğrulanamadı / süresi doldu", _T.KRITIK if _kom_hata else _T.IYI),
     ])
 
     if _yamalar:
         import pandas as _pd3
+        import sql_durumu as _SQ0
+
+        def _ist_saat(m):
+            z = _SQ0.zaman(m)
+            return z.strftime("%d.%m.%Y %H:%M") if z else "—"
         st.dataframe(_pd3.DataFrame([
             {"Versiyon": y.get("versiyon"), "Hedef": y.get("hedef"),
-             "Durum": y.get("durum"), "Zaman": str(y.get("created_at", ""))[:16].replace("T", " ")}
+             "Durum": y.get("durum"), "Zaman": _ist_saat(y.get("created_at"))}
             for y in _yamalar]), hide_index=True, use_container_width=True)
 
     st.caption("Eşikler: merkez/configs/izleme_limitleri.json · Ölçüm fonksiyonu: "
-               "merkez/izleme_kurulum.sql · Aynı mantık statik şema sayfasında da kullanılır.")
+               "synapse_kullanim() · Saatler İstanbul saatidir.")
+
+with _sekme_sql:
+    import sql_durumu as _SQ
+
+    def _sql_kutu(baslik, deger, alt, renk=None):
+        return (f"<div style='flex:1;min-width:150px;background:{_T.YUZEY};"
+                f"border:1px solid {_T.CERCEVE};border-radius:14px;padding:11px 13px;"
+                f"box-shadow:{_T.GOLGE};'>"
+                f"<div style='font-size:9px;letter-spacing:1.4px;text-transform:uppercase;"
+                f"color:{_T.SOLUK};'>{baslik}</div>"
+                f"<div style='font-size:19px;font-weight:650;margin-top:3px;"
+                f"color:{renk or _T.MUREKKEP};'>{deger}</div>"
+                f"<div style='font-size:10.5px;color:{_T.SOLUK};'>{alt}</div></div>")
+
+    def _sql_alarm(sev, baslik, aciklama):
+        renk = {"kritik": (_T.KRITIK_YAZI, "rgba(208,59,59,.07)", "rgba(208,59,59,.45)", "⛔"),
+                "dikkat": (_T.UYARI_YAZI, "rgba(250,178,25,.10)", "rgba(250,178,25,.5)", "⚠️"),
+                "iyi": (_T.IYI_YAZI, "rgba(12,163,12,.07)", "rgba(12,163,12,.4)", "✓")}[sev]
+        return (f"<div style='background:{renk[1]};border:1px solid {renk[2]};border-radius:9px;"
+                f"padding:10px 13px;margin-bottom:8px;'>"
+                f"<div style='font-size:12.5px;font-weight:600;color:{renk[0]};'>"
+                f"{renk[3]} {baslik}</div>"
+                f"<div style='font-size:11.5px;color:{_T.MUREKKEP_2};margin-top:2px;'>"
+                f"{aciklama}</div></div>")
+
+    _sql_anahtar = _anahtar          # Sunucu sekmesinde seçilen anahtar (service_role varsa o)
+
+    # Yalnız bu bölüm 30 sn'de bir kendini yeniler; sayfanın geri kalanı yeniden çizilmez.
+    @st.fragment(run_every="30s")
+    def _sql_canli():
+        import pandas as _pds
+        _v, _ms, _hata = _SQ.oku(url, _sql_anahtar)
+        _simdi = _dt.now(_IST)
+        st.markdown(
+            f"<div style='font-size:11px;color:{_T.SOLUK};margin:4px 0 2px;'>"
+            f"<span style='display:inline-block;width:8px;height:8px;border-radius:50%;"
+            f"background:{_T.IYI if _v else _T.KRITIK};margin-right:6px;'></span>"
+            f"Canlı · 30 sn'de bir yenilenir · son ölçüm {_simdi.strftime('%H:%M:%S')}</div>",
+            unsafe_allow_html=True)
+        if _v is None:
+            if _hata == "fonksiyon_yok":
+                st.info("SQL durum ölçümü henüz kurulmamış. "
+                        "`veritabani/degisiklikler/001_sql_durumu_olcumu.sql` uygulanınca görünür.")
+            elif _hata == "yetki_yok":
+                st.warning("Ölçüm fonksiyonu yalnızca service_role anahtarına açık; "
+                           "portal şu an başka bir anahtarla bağlı.")
+            else:
+                st.error("Veritabanına ulaşılamadı (%s)." % _hata)
+            return
+
+        _yed = _SQ.yedekler()
+        _dsk = _SQ.disk()
+        _top_b, _b_parca = _SQ.baglanti_ozeti(_v)
+        _ist = _v.get("istatistik") or {}
+        _son_yedek = _yed[0] if _yed else None
+        _kutular = [
+            _sql_kutu("PostgreSQL", str(_v.get("surum", "—")).split(" ")[0],
+                      "açık: " + _SQ.calisma_suresi(_v.get("baslangic"), _simdi)),
+            _sql_kutu("API yanıtı", "%d ms" % _ms if _ms is not None else "—",
+                      "PostgREST, bu ölçümün süresi",
+                      _T.IYI if (_ms or 0) < 1000 else _T.UYARI),
+            _sql_kutu("Bağlantı", str(_top_b), _b_parca or "—"),
+            _sql_kutu("Bekleyen kilit", str(_v.get("bekleyen_kilit", 0)),
+                      "%s deadlock · %s rollback" % (_ist.get("kilitlenme", 0),
+                                                     _IZ.sayi(_ist.get("rollback"))),
+                      _T.UYARI if _v.get("bekleyen_kilit") else _T.IYI),
+            _sql_kutu("Gece yedeği",
+                      _son_yedek["zaman"].strftime("%d.%m %H:%M") if _son_yedek else "—",
+                      ("%s · %d dosya" % (_IZ.boyut(_son_yedek["bayt"]), len(_yed)))
+                      if _son_yedek else "/opt/Backup okunamadı"),
+            _sql_kutu("Sunucu diski",
+                      ("%%%.0f" % (_dsk[0] / _dsk[1] * 100)) if _dsk else "—",
+                      ("%s boş / %s" % (_IZ.boyut(_dsk[2]), _IZ.boyut(_dsk[1]))) if _dsk else "—"),
+        ]
+        st.markdown("<div style='display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 14px;'>"
+                    + "".join(_kutular) + "</div>", unsafe_allow_html=True)
+
+        st.markdown("".join(_sql_alarm(*a) for a in
+                            _SQ.uyarilar(_v, _yed if _os.path.isdir(_SQ.YEDEK_KLASORU) else None,
+                                         _dsk, _simdi)),
+                    unsafe_allow_html=True)
+
+        st.markdown(f"<div style='font-size:12px;font-weight:650;color:{_T.LACIVERT};"
+                    f"margin:14px 0 6px;'>Tablolar · son kayda göre</div>", unsafe_allow_html=True)
+        st.dataframe(_pds.DataFrame(_SQ.tablo_satirlari(_v, _simdi)), hide_index=True,
+                     use_container_width=True)
+        st.caption("Eklenen / Güncellenen / Silinen: istatistik sıfırlandığından beri toplam. "
+                   "Ölü satır: güncelleme/silme sonrası temizlenmeyi bekleyen satırlar; "
+                   "veritabanı kendiliğinden temizler (Son bakım).")
+
+        _sut = _v.get("energy_data_sutunlari") or []
+        with st.expander("energy_data sütunları (%d) — yeni sayaç sütunu buraya eklenir" % len(_sut)):
+            st.dataframe(_pds.DataFrame([{"#": i + 1, "Sütun": s.get("ad"), "Tür": s.get("tur")}
+                                         for i, s in enumerate(_sut)]),
+                         hide_index=True, use_container_width=True, height=320)
+            st.caption("Sahadaki energy_data.csv sütun adları bunlarla birebir aynı olmalı. "
+                       "Yeni sütun önce veritabanına eklenir (veritabani/degisiklikler/), "
+                       "sonra sahaya yama gider.")
+
+        _gec = _v.get("sema_gecmisi") or []
+        with st.expander("Şema değişiklik geçmişi (%d)" % len(_gec)):
+            if _gec:
+                st.dataframe(_pds.DataFrame([
+                    {"Dosya": g.get("dosya"), "Açıklama": g.get("ozet"),
+                     "Uygulayan": g.get("uygulayan"),
+                     "Zaman": (_SQ.zaman(g.get("uygulandi")) or _simdi).strftime("%d.%m.%Y %H:%M")}
+                    for g in _gec]), hide_index=True, use_container_width=True)
+            else:
+                st.caption("Henüz kayıtlı değişiklik yok.")
+            st.caption("Değişiklikler repodaki veritabani/degisiklikler/NNN_*.sql dosyalarıdır; "
+                       "veritabani/sema_degistir.py ile yedek alınarak uygulanır.")
+
+    _sql_canli()
 
 with _sekme_agent:
     # Statik tasarım simülasyonu: canlı veri okumaz, sistemde henüz agent kodu yoktur.

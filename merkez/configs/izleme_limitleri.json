@@ -2,7 +2,7 @@
   "_aciklama": "Şema/izleme ekranının alarm eşikleri. sema_diyagram_uret.py okur.",
 
   "plan_disk_gb": 8,
-  "_plan_disk_gb": "Supabase planının disk kotası (Free 0.5, Pro 8). Toplam veritabanı boyutu bunun yüzdesiyle kıyaslanır.",
+  "_plan_disk_gb": "Veritabanı (synapse_db) için kabul edilen boyut sınırı, GB. thapps diski 96 GB; sunucu diskinin kendisi Yönetim > SQL (canlı) sekmesinde ayrıca izlenir. Toplam veritabanı boyutu bu sınırın yüzdesiyle kıyaslanır.",
 
   "disk_dikkat_yuzde": 70,
   "disk_kritik_yuzde": 85,

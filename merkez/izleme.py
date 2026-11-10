@@ -95,11 +95,11 @@ def alarmlar(kullanim, lim):
     _top, _kota, oran = disk_orani(kullanim, lim)
     _sev = disk_seviye(oran, lim)
     if _sev == "kritik":
-        cikti.append(("kritik", "Disk kotası %%%.0f dolu" % oran,
-                      "Kota dolduğunda Supabase istekleri reddeder: lokasyon "
-                      "senkronu ve Synapse veri alamaz. Acil temizlik gerekir."))
+        cikti.append(("kritik", "Veritabanı sınırının %%%.0f'i dolu" % oran,
+                      "Veritabanı belirlenen boyut sınırına yaklaştı: büyüyen tablolar "
+                      "temizlenmeli ya da sınır (izleme_limitleri.json) gözden geçirilmeli."))
     elif _sev == "dikkat":
-        cikti.append(("dikkat", "Disk kotası %%%.0f dolu" % oran,
+        cikti.append(("dikkat", "Veritabanı sınırının %%%.0f'i dolu" % oran,
                       "Büyüme hızını izleyin; biriken tabloları temizleyin."))
 
     for t in kullanim.get("tablolar", []):
