@@ -90,6 +90,47 @@ def _oz_test_baslat():
         logger.warning(f"Öz test başlatılamadı: {e}")   # portal çalışmaya devam eder
 
 
+# ── Enerji Portal Agent'ı ─────────────────────────────────────────────────
+# Portallardan AYRI izlenir: agent ölürse yalnızca agent yeniden başlatılır,
+# portallar ve veri toplama etkilenmez (yukarıdaki procs listesine BİLEREK
+# eklenmez — o listedeki bir süreç durunca hepsi yeniden başlatılıyor).
+_agent = {"surec": None, "son_baslatma": 0.0}
+_AGENT_BEKLEME_SN = 60          # art arda çökerse en sık bu aralıkla yeniden dener
+
+
+def _agent_baslat():
+    """Enerji agent'ı çalışmıyorsa başlatır (enerji_agent.py yoksa sessizce geçer)."""
+    p = _agent["surec"]
+    if p is not None and p.poll() is None:
+        return
+    if not os.path.exists(os.path.join(BASE_DIR, "enerji_agent.py")):
+        return
+    if time.time() - _agent["son_baslatma"] < _AGENT_BEKLEME_SN:
+        return
+    try:
+        _agent["son_baslatma"] = time.time()
+        _agent["surec"] = subprocess.Popen([sys.executable, "enerji_agent.py"],
+                                           cwd=BASE_DIR, env=_COCUK_ENV)
+        logger.info(f"🤖 Enerji Portal Agent'ı başlatıldı (PID: {_agent['surec'].pid})")
+    except Exception as e:
+        logger.warning(f"Enerji agent'ı başlatılamadı: {e}")   # portallar çalışmaya devam eder
+
+
+def _agent_durdur():
+    p = _agent["surec"]
+    if p is None:
+        return
+    try:
+        p.terminate()
+        p.wait(timeout=5)
+    except Exception:
+        try:
+            p.kill()
+        except Exception:
+            pass
+    _agent["surec"], _agent["son_baslatma"] = None, 0.0
+
+
 def stop_portals(procs):
     for p in procs:
         try:
@@ -127,10 +168,12 @@ def main():
     logger.info("=" * 50)
 
     procs = start_portals()
+    _agent_baslat()
     logger.info("Portallar çalışıyor. Güncelleme sinyali bekleniyor...")
 
     while True:
         time.sleep(10)
+        _agent_baslat()          # agent durduysa yalnızca agent yeniden başlar
 
         # Süreç ölmüş mü kontrol et
         for i, p in enumerate(procs):
@@ -144,6 +187,7 @@ def main():
         # TAM yeniden başlatma (cloud_sync.py / portal_watchdog.py değiştiyse)
         if os.path.exists(FULL_RESTART_FLAG):
             logger.info("🔄 TAM yeniden başlatma sinyali alındı — sistem sıfırlanıyor...")
+            _agent_durdur()      # yeni watchdog yeni kodla kendi agent'ını başlatır
             stop_portals(procs)
             try:
                 os.remove(FULL_RESTART_FLAG)
@@ -158,6 +202,7 @@ def main():
         # Normal yeniden başlatma (sadece portallar)
         if os.path.exists(FLAG_FILE):
             logger.info("🔄 Güncelleme sinyali alındı — portallar yeniden başlatılıyor...")
+            _agent_durdur()      # yama agent kodunu da değiştirmiş olabilir
             stop_portals(procs)
             try:
                 os.remove(FLAG_FILE)
