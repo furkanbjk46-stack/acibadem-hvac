@@ -445,7 +445,13 @@ with _sekme_agent:
                        "uygulanmış olmalı ve portal service_role anahtarıyla bağlı olmalı.")
             return
         _v = _AG.gorunum(_turlar, _bulgular, _acik + _kapali, ust_durum=_UA.arka_plan_durumu())
-        st.caption("Canlı · dakikada bir yenilenir · %s" % _v["zaman"])
+        _ay1, _ay2 = st.columns([1, 6])
+        with _ay1:
+            # Tıklama yalnızca bu bölümü (şema + iş emirleri) yeniden okur; sayfa yenilenmez.
+            if st.button("🔄 Yenile", key="ag_yenile", use_container_width=True):
+                st.rerun(scope="fragment")
+        with _ay2:
+            st.caption("Canlı · dakikada bir kendiliğinden yenilenir · son okuma %s" % _v["zaman"])
         if _sablon:
             _bilesen.html(_AG.sayfa(_sablon, _v), height=2050, scrolling=True)
         else:

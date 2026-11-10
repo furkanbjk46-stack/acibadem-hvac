@@ -155,6 +155,8 @@ c("üç sekme: Sunucu ve veritabanı, SQL (canlı), Agent katmanları",
   '_sekme_sunucu, _sekme_sql, _sekme_agent = st.tabs(\n'
   '    ["🖥️ Sunucu ve veritabanı", "🗄️ SQL (canlı)", "🤖 Agent katmanları"])' in _yon)
 c("SQL sekmesi 30 sn'de bir kendini yeniler", '@st.fragment(run_every="30s")' in _yon)
+c("Agent katmanları sekmesinde Yenile düğmesi şemayı yeniden okur",
+  'key="ag_yenile"' in _yon and 'st.rerun(scope="fragment")' in _yon.split('key="ag_yenile"')[1][:200])
 c("komut sayımı var olan created_at sütununu kullanır",
   "created_at=gte." in _yon and "olusturma" not in _yon.split("komutlar?")[1][:80])
 _agv = os.path.join(BURASI, "sunum", "agent_katmanlari.html")
