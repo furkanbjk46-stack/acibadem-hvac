@@ -257,8 +257,26 @@ def rapor_no(db, an):
     return "%s%03d" % (onek, n)
 
 
-def tur(db, an=None):
-    """Tek üst agent turu. Dönüş: {"acilan": [...], "guncellenen": n, "ozet": {...}}."""
+SERVIS_TAZE_DK = 5             # servis bu kadar dk içinde tur attıysa merkezdeki yedek kopya çalışmaz
+
+
+def servis_aktif(db, an=None):
+    """Ayrı agent servisi (agent_servisi.py) son SERVIS_TAZE_DK dakikada tur attı mı?"""
+    an = an or simdi_utc()
+    try:
+        r = db.oku("agent_turlar?select=tur_zamani,ozet&lokasyon_id=eq.merkez&agent=eq.ust")
+    except Exception:
+        return False
+    if not r or (r[0].get("ozet") or {}).get("kaynak") != "servis":
+        return False
+    z = zaman(r[0].get("tur_zamani"))
+    return bool(z and an - z < timedelta(minutes=SERVIS_TAZE_DK))
+
+
+def tur(db, an=None, kaynak="merkez"):
+    """Tek üst agent turu. Dönüş: {"acilan": [...], "guncellenen": n, "ozet": {...}}.
+
+    kaynak: "servis" (agent_servisi.py) ya da "merkez" (portal içindeki yedek kopya)."""
     an = an or simdi_utc()
     raporlar = db.oku("agent_raporlar?select=*&durum=in.(acik,duzeltiliyor,dogrulaniyor)")
     acik_bulgu = db.oku("agent_bulgular?select=*&durum=eq.acik")
@@ -280,7 +298,7 @@ def tur(db, an=None):
         db.degistir("agent_raporlar", "id=eq.%d" % rid, alanlar)
     ozet = {"acik_bulgu": len(acik_bulgu), "acik_rapor": len(raporlar) + len(acilan)
             - sum(1 for _, a in k["guncelle"] if a.get("durum") == "kapandi"),
-            "acilan": len(acilan), "guncellenen": len(k["guncelle"])}
+            "acilan": len(acilan), "guncellenen": len(k["guncelle"]), "kaynak": kaynak}
     db.ust_tur_yaz(ozet, an)
     return {"acilan": acilan, "guncellenen": len(k["guncelle"]), "ozet": ozet}
 
@@ -323,9 +341,14 @@ _ARKA_KILIT = threading.Lock()
 
 
 def _dongu(url, key, bekle=TUR_SN):
+    """Merkez portalının içindeki YEDEK kopya: ayrı servis çalışıyorsa hiçbir şey yapmaz."""
     db = Db(url, key)
     while True:
         try:
+            if servis_aktif(db):
+                _ARKA["son"], _ARKA["hata"] = simdi_utc(), None
+                time.sleep(bekle)
+                continue
             s = tur(db)
             _ARKA["son"], _ARKA["hata"] = simdi_utc(), None
             if s["acilan"] or s["guncellenen"]:

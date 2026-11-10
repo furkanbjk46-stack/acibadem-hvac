@@ -135,7 +135,12 @@ _KILIT = threading.Lock()
 
 
 def _dongu(url, key, koordinatlar):
+    """Merkez portalının içindeki YEDEK kopya: ayrı agent servisi çalışıyorsa beslemeyi ona bırakır."""
+    import ust_agent
     while True:
+        if ust_agent.servis_aktif(ust_agent.Db(url, key)):
+            time.sleep(600)
+            continue
         try:
             _ARKA["sonuc"] = tur(url, key, koordinatlar)
             _ARKA["son"] = datetime.now(timezone.utc)

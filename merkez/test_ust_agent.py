@@ -178,6 +178,16 @@ c("gece yarısı İstanbul gününe göre numara",
   U.rapor_no(SahteDb({"agent_raporlar": []}), datetime(2026, 11, 10, 22, 30, tzinfo=timezone.utc))
   == "RPR-2026-1111-001")
 
+print("servis / merkez devri")
+c("tur satırına kaynak yazılır", U.tur(SahteDb({"agent_bulgular": [], "agent_raporlar": [], "agent_turlar": []}), AN,
+                                       kaynak="servis")["ozet"]["kaynak"] == "servis")
+_sv = lambda dk, kaynak: SahteDb({"agent_turlar": [{"lokasyon_id": "merkez", "agent": "ust", "tur_zamani": iso(dk),
+                                                    "ozet": {"kaynak": kaynak}}]})
+c("servis 2 dk önce tur attıysa merkezdeki yedek çalışmaz", U.servis_aktif(_sv(2, "servis"), AN))
+c("servis 10 dk'dır susuyorsa merkez yedeği devreye girer", not U.servis_aktif(_sv(10, "servis"), AN))
+c("son turu merkez yedeği attıysa servis yok sayılır", not U.servis_aktif(_sv(1, "merkez"), AN))
+c("tur satırı yoksa servis yok", not U.servis_aktif(SahteDb({"agent_turlar": []}), AN))
+
 print("eylemler (Synapse düğmeleri)")
 r0 = rapor()
 a = U.eylem_alanlari(r0, "baslat", "furkan", an=AN)

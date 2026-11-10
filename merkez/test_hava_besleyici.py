@@ -66,5 +66,31 @@ c("bir lokasyonun hatası diğerlerini durdurmaz, hata metni döner",
 os.environ["SYNAPSE_HAVA_BESLEYICI"] = "0"
 c("ortam değişkeniyle kapatılabilir", H.baslat_arka_plan("http://db", "k", {}) is False)
 
+import json as _json  # noqa: E402
+import re as _re  # noqa: E402
+_dz = os.path.dirname(os.path.abspath(__file__))
+_k = _json.load(open(os.path.join(_dz, "configs", "lokasyon_koordinat.json"), encoding="utf-8"))
+_m = open(os.path.join(_dz, "app_merkez.py"), encoding="utf-8").read()
+_m = _m[_m.index("HASTANELER = {"):_m.index("CONFIG_FILE =")]
+_h = {m.group(1): [float(m.group(2)), float(m.group(3))]
+      for m in _re.finditer(r'"(\w+)":\s*\{[^}]*"lat":\s*([\d.]+),\s*"lon":\s*([\d.]+)', _m)}
+c("agent servisi koordinatları app_merkez HASTANELER ile aynı",
+  {k: v for k, v in _k.items() if not k.startswith("_")} == _h and len(_h) == 20)
+import agent_servisi as _AS  # noqa: E402
+c("agent servisi koordinatları okur (maslak)", _AS.koordinatlar()["maslak"] == (41.1273, 29.0246))
+_kaynak = open(os.path.join(_dz, "agent_servisi.py"), encoding="utf-8").read()
+_ithal = set(_re.findall(r"^(?:import|from) (\w+)", _kaynak, _re.M))
+c("agent servisi yalnızca stdlib + kendi modüllerini kullanır (yeni paket yok)",
+  _ithal <= {"json", "logging", "os", "sys", "threading", "time", "hava_besleyici", "ust_agent"}, _ithal)
+c("agent servisi diske yazmaz", not _re.search(r"open\([^)]*['\"]w", _kaynak))
+_ua = open(os.path.join(_dz, "ust_agent.py"), encoding="utf-8").read()
+_hb = open(os.path.join(_dz, "hava_besleyici.py"), encoding="utf-8").read()
+_sql = open(os.path.join(_dz, "..", "veritabani", "06_ust_agent_rolu.sql"), encoding="utf-8").read()
+_eris = set(_re.findall(r'(?:rest/v1/|")(agent_turlar|agent_bulgular|agent_raporlar|lokasyonlar|hava_gunluk|'
+                        r'energy_data|komutlar|guncellemeler|ayarlar)[?"]', _ua + _hb))
+c("servisin eriştiği her tablo kısıtlı rolde tanımlı, başka tablo yok",
+  _eris and all(("ON public.%s " % t) in _sql for t in _eris) and not ({"energy_data", "komutlar", "guncellemeler", "ayarlar"} & _eris),
+  _eris)
+
 print("\n%d geçti, %d kaldı" % (gecti, kaldi))
 sys.exit(1 if kaldi else 0)
