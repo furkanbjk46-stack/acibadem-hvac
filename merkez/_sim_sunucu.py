@@ -457,7 +457,56 @@ def veri_uret():
         "ai_analizler": [],
         "dis_hava_log": [],
         "lisanslar": [],
+        **agent_ornek_veri(),
     }
+
+
+def agent_ornek_veri():
+    """Agent katmanları için örnek tur, bulgu ve rapor (Yönetim > Agent katmanları).
+
+    Maslak'ın Enerji agent'ı turunu atmış, bir açık bulgusu var; üst agent bu bulgu
+    için raporu henüz açmamış (sunucudaki üst agent döngüsü açar). Bir de kapanmış
+    örnek rapor var. Bodrum'un agent'ı 2 saattir susuyor (çapraz kontrol örneği).
+    """
+    an = datetime.now(timezone.utc)
+    iso = lambda dk: (an - timedelta(minutes=dk)).isoformat()
+    kontroller = [{"kod": k, "ad": a, "durum": d, "mesaj": m} for k, a, d, m in (
+        ("gunluk_dongu", "Günlük döngü", "gecti", ""),
+        ("sayac_erisimi", "Sayaç erişimi", "gecti", ""),
+        ("donmus_veri", "Donmuş veri", "gecti", ""),
+        ("veri_kalitesi", "Veri kalitesi", "gecti", ""),
+        ("diyagram_toplami", "Enerji diyagramı toplamları", "gecti", ""),
+        ("yerel_bulut", "Yerel ↔ bulut", "gecti", ""),
+        ("hava_durumu", "Hava durumu", "sorun", "09.11.2026 gününün hava verisi boş"),
+        ("portal_sagligi", "Portal sağlığı", "gecti", ""))]
+    turlar = [
+        {"lokasyon_id": "maslak", "agent": "enerji", "tur_zamani": iso(4), "sure_sn": 3.1, "surum": "1.0",
+         "ozet": {"toplam": 8, "gecti": 7, "sorun": 1, "atlandi": 0, "hata": 0}, "kontroller": kontroller},
+        {"lokasyon_id": "bodrum", "agent": "enerji", "tur_zamani": iso(130), "sure_sn": 2.4, "surum": "1.0",
+         "ozet": {"toplam": 8, "gecti": 8, "sorun": 0, "atlandi": 0, "hata": 0},
+         "kontroller": [dict(k, durum="gecti", mesaj="") for k in kontroller]},
+    ]
+    bulgular = [{"id": 1, "lokasyon_id": "maslak", "agent": "enerji", "anahtar": "hava_durumu:2026-11-09",
+                 "kontrol": "hava_durumu", "bolum": "Tahmin ve trend", "onem": "uyari",
+                 "baslik": "09.11.2026 gününün hava verisi boş", "beklenen": "günlük hava özeti dolu",
+                 "bulunan": "boş alanlar: Hava_Sicaklik_Ort_C, Hava_Nem_Ort_Yuzde · hava servisi yanıt veriyor",
+                 "denenen": "hava servisini yokladı → yanıt veriyor",
+                 "tekrar_adimi": "Tahmin ve trend kartlarına bak; Veri Görüntüleme'de Hava_ sütunları",
+                 "olasi_yer": "data_bridge.py hava_doldur (açılışta tamamlar)", "kanit": {},
+                 "durum": "acik", "ilk_gorulme": iso(300), "son_gorulme": iso(4), "gorulme_sayisi": 20,
+                 "acilma_sayisi": 1, "kapanma": None}]
+    raporlar = [{"id": 1, "rapor_no": "RPR-%s-001" % (an + timedelta(hours=3)).strftime("%Y-%m%d"),
+                 "bulgu_id": None, "lokasyon_id": "maslak", "agent": "enerji", "tur": "ariza", "onem": "orta",
+                 "durum": "kapandi", "baslik": "KOJEN-2 sayacı okunamıyor",
+                 "icerik": {"agent_ad": "Enerji Portal Agent'ı", "lokasyon": "maslak", "bolum": "Sayaç erişimi",
+                            "kontrol": "sayac_erisimi", "beklenen": "günlük okumada kWh değeri",
+                            "bulunan": "[Baglanti Hatasi] (192.168.1.32)", "acilma": 1},
+                 "olaylar": [{"zaman": iso(600), "olay": "acildi", "metin": "Enerji Portal Agent'ı bildirdi"},
+                             {"zaman": iso(420), "olay": "kendiliginden",
+                              "metin": "Sorun kendiliğinden geçti: agent sonraki turda görmedi."}],
+                 "cozum": "Sorun kendiliğinden geçti: agent sonraki turda görmedi.",
+                 "olusturma": iso(600), "guncelleme": iso(420), "kapanma": iso(420)}]
+    return {"agent_turlar": turlar, "agent_bulgular": bulgular, "agent_raporlar": raporlar}
 
 
 VERI = veri_uret()
@@ -661,6 +710,9 @@ def _filtre_uygula(satirlar, sorgu):
             sonuc = [r for r in sonuc if str(r.get(alan)) > deger]
         elif op == "lt":
             sonuc = [r for r in sonuc if str(r.get(alan)) < deger]
+        elif op == "like":
+            onek = deger.rstrip("*%")
+            sonuc = [r for r in sonuc if str(r.get(alan)).startswith(onek)]
     return sonuc
 
 
@@ -817,6 +869,7 @@ class Islek(BaseHTTPRequestHandler):
             # YAZILIR. Mock bunu taklit etmezse ayni cihaz icin mukerrer satir
             # olusur ve test yaniltici sonuc verir.
             ANAHTAR = {
+                "agent_turlar": ("lokasyon_id", "agent"),
                 "ayarlar": ("key",),
                 "bakim_kartlari": ("lokasyon_id", "cihaz"),
                 "lokasyonlar": ("lokasyon_id",),
@@ -835,6 +888,8 @@ class Islek(BaseHTTPRequestHandler):
             else:
                 for k in kayitlar:
                     k.setdefault("created_at", datetime.now(timezone.utc).isoformat())
+                    if tablo == "agent_raporlar":     # kimlik sütunu taklidi
+                        k.setdefault("id", max([r.get("id", 0) for r in VERI[tablo]] or [0]) + 1)
                 VERI[tablo].extend(kayitlar)
                 if tablo == "komutlar":
                     SAYAC["komut"] += len(kayitlar)

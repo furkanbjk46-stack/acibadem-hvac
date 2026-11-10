@@ -406,23 +406,95 @@ with _sekme_sql:
     _sql_canli()
 
 with _sekme_agent:
-    # Statik tasarım simülasyonu: canlı veri okumaz, sistemde henüz agent kodu yoktur.
-    # Kaynak: merkez/sunum/agent_katmanlari.html (koyu tema kapatılır, Synapse açık temalı).
+    # CANLI: tasarım sayfası (merkez/sunum/agent_katmanlari.html) agent tablolarından gelen
+    # veriyle canlı modda çizilir. Altta iş emri düğmeleri, en altta tasarım simülasyonu.
     import streamlit.components.v1 as _bilesen
-    # Bu dosya app_merkez içinde exec edildiğinde __file__ app_merkez.py'yi gösterir;
-    # doğrudan sayfa olarak açılırsa pages/yonetim.py'yi. İki durumda da merkez/sunum bulunur.
+    import agent_gorunum as _AG
+    import ust_agent as _UA
+
+    def _agent_oku(yol):
+        """Agent tabloları; tablo yoksa / yetki yoksa None (önbelleksiz: canlı)."""
+        try:
+            _r = _ureq.Request(url.rstrip("/") + "/rest/v1/" + yol,
+                               headers={"apikey": _anahtar, "Authorization": "Bearer " + _anahtar})
+            with _ureq.urlopen(_r, timeout=20) as _c:
+                return _json.load(_c)
+        except Exception:
+            return None
+
     _burasi = _os.path.dirname(_os.path.abspath(__file__))
-    _agent_html = None
+    _sablon = None
     for _aday in (_burasi, _os.path.dirname(_burasi)):
         try:
             with open(_os.path.join(_aday, "sunum", "agent_katmanlari.html"), encoding="utf-8") as _f:
-                _agent_html = _f.read().replace('<html lang="tr">', '<html lang="tr" data-tema="acik">', 1)
+                _sablon = _f.read()
             break
         except OSError:
             continue
-    if _agent_html:
-        st.caption("Tasarım simülasyonu · örnek senaryolar ve örnek raporlar · "
-                   "gerçek arıza ya da canlı veri değildir.")
-        _bilesen.html(_agent_html, height=1900, scrolling=True)
-    else:
-        st.info("Agent katmanları sayfası bulunamadı (merkez/sunum/agent_katmanlari.html).")
+
+    @st.fragment(run_every="60s")
+    def _agent_canli():
+        _turlar = _agent_oku("agent_turlar?select=*")
+        _bulgular = _agent_oku("agent_bulgular?select=*&durum=eq.acik")
+        _sinir_k = (_dt.now(_tz.utc) - _td(days=14)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        _acik = _agent_oku("agent_raporlar?select=*&durum=neq.kapandi&order=olusturma.desc")
+        _kapali = _agent_oku("agent_raporlar?select=*&durum=eq.kapandi&kapanma=gte.%s"
+                             "&order=kapanma.desc&limit=20" % _sinir_k)
+        if None in (_turlar, _bulgular, _acik, _kapali):
+            st.warning("Agent tabloları okunamadı. `veritabani/degisiklikler/002_agent_tablolari.sql` "
+                       "uygulanmış olmalı ve portal service_role anahtarıyla bağlı olmalı.")
+            return
+        _v = _AG.gorunum(_turlar, _bulgular, _acik + _kapali, ust_durum=_UA.arka_plan_durumu())
+        st.caption("Canlı · dakikada bir yenilenir · %s" % _v["zaman"])
+        if _sablon:
+            _bilesen.html(_AG.sayfa(_sablon, _v), height=2050, scrolling=True)
+        else:
+            st.info("Agent katmanları sayfası bulunamadı (merkez/sunum/agent_katmanlari.html).")
+
+        # ── İş emri düğmeleri (sürüm 1: düzelten sensin) ──
+        st.markdown(f"<div style='font-size:12px;font-weight:650;color:{_T.LACIVERT};margin:10px 0 4px;'>"
+                    f"İş emri işlemleri</div>", unsafe_allow_html=True)
+        if not _acik:
+            st.caption("Açık iş emri yok.")
+            return
+        _secenek = {"%s · %s · %s" % (r.get("rapor_no"), _AG.DURUM_METIN.get(r.get("durum"), r.get("durum")),
+                                      r.get("baslik")): r for r in _acik}
+        _sec = st.selectbox("İş emri", list(_secenek), key="ag_rapor_sec")
+        _not = st.text_input("Not (isteğe bağlı: ne yapıldı, hangi commit/yama)", key="ag_rapor_not")
+        _b1, _b2, _b3 = st.columns(3)
+        _eylem = None
+        with _b1:
+            if st.button("🔧 Düzeltmeye başladım", use_container_width=True, key="ag_baslat"):
+                _eylem = "baslat"
+        with _b2:
+            if st.button("📦 Düzeltildi, yama gönderildi", use_container_width=True, key="ag_yama"):
+                _eylem = "yama"
+        with _b3:
+            if st.button("✖ Gereksiz, kapat", use_container_width=True, key="ag_kapat"):
+                _eylem = "kapat"
+        st.caption("Yama gönderildi dendikten sonra agent aynı kontrolü tekrar çalıştırır: geçerse iş emri "
+                   "kendiliğinden kapanır; %d dk sonra sorun hâlâ görülüyorsa 'düzeltme tutmadı' diye yeniden "
+                   "açılır." % _UA.DOGRULAMA_PAYI_DK)
+        if _eylem:
+            _r = _secenek[_sec]
+            try:                                     # tek kullanıcılı giriş: ayardaki kullanıcı adı
+                import giris as _gr
+                _kim = _gr._ayarlar()[0] or "kullanıcı"
+            except Exception:
+                _kim = "kullanıcı"
+            try:
+                _UA.Db(url, _anahtar).degistir("agent_raporlar", "id=eq.%d" % int(_r["id"]),
+                                               _UA.eylem_alanlari(_r, _eylem, _kim, _not))
+                st.success("%s güncellendi." % _r.get("rapor_no"))
+                st.rerun(scope="fragment")
+            except Exception as _ee:
+                st.error("Güncellenemedi: %s" % _ee)
+
+    _agent_canli()
+
+    with st.expander("Tasarım simülasyonu (örnek senaryolar)"):
+        if _sablon:
+            st.caption("Tasarım simülasyonu · örnek senaryolar ve örnek raporlar · "
+                       "gerçek arıza ya da canlı veri değildir.")
+            _bilesen.html(_sablon.replace('<html lang="tr">', '<html lang="tr" data-tema="acik">', 1),
+                          height=1900, scrolling=True)

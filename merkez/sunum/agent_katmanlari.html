@@ -113,6 +113,14 @@ ul.kontrol li.ek::after { content:"eklendi"; font:700 10px var(--yazi); color:va
 .paket circle { stroke:var(--yuzey); stroke-width:2; }
 .paket text { font:700 11px var(--yazi); fill:currentColor; paint-order:stroke; stroke:var(--yuzey); stroke-width:4px; }
 @media (prefers-reduced-motion: reduce) { .akis, .nabiz { animation:none !important; } }
+/* CANLI MOD (Synapse > Yönetim > Agent katmanları): window.SYNAPSE_CANLI verisiyle çizilir */
+body.canli .cubuk { display:none; }
+body.canli ul.kontrol li.ek::after { content:none; }
+.dcip { font:700 10px var(--yazi); padding:0 7px; border-radius:999px; margin-left:6px; vertical-align:1px; white-space:nowrap; }
+.dcip.gecti { color:var(--yesil); background:var(--yesil-z); } .dcip.sorun, .dcip.hata { color:var(--kirmizi); background:var(--kirmizi-z); }
+.dcip.atlandi, .dcip.bekliyor { color:var(--sari); background:var(--sari-z); } .dcip.sonra { color:var(--soluk); background:var(--bant); }
+.canli-not { font-size:13px; color:var(--soluk); margin:10px 0 0; padding-top:8px; border-top:1px dashed var(--cizgi); }
+.rapor .canli-ust { display:flex; gap:8px; align-items:center; }
 </style>
 </head>
 <body>
@@ -626,8 +634,58 @@ ul.kontrol li.ek::after { content:"eklendi"; font:700 10px var(--yazi); color:va
   $("oynat").addEventListener("click", oynat);
   $("dur").addEventListener("click", function () { duraklat = true; });
   $("sifirla").addEventListener("click", sifirla);
-  sifirla();
-  if (!azHareket) { setTimeout(oynat, 700); }
+  // ══ CANLI MOD ══ Synapse veriyi window.SYNAPSE_CANLI olarak verir; değerler sunucuda kaçırılmıştır.
+  var KONTROL_KOD = { "Enerji diyagramı": "diyagram_toplami", "Günlük döngü": "gunluk_dongu",
+    "Sayaç erişimi": "sayac_erisimi", "Donmuş veri": "donmus_veri", "Veri kalitesi": "veri_kalitesi",
+    "Hava durumu servisi": "hava_durumu", "Yerel ↔ bulut": "yerel_bulut", "Portal sağlığı": "portal_sagligi" };
+  var DCIP = { gecti: "✓ geçti", sorun: "✗ sorun", atlandi: "– atlandı", hata: "! kontrol hatası" };
+  function canliRaporHtml(r) {
+    var kapali = r.durum === "kapandi";
+    var s = "<article class='rapor" + (kapali ? " kapandi" : "") + "'>"
+      + "<div class='ust'><span class='no'>" + r.no + "</span><span class='cip2 " + r.onem + "'>Önem: " + ONEM[r.onem] + "</span>"
+      + "<span class='cip2 " + (kapali ? "kapali" : "acik") + "'>" + r.durum_metin + "</span></div>"
+      + "<p class='baslik'>" + r.baslik + "</p><dl>";
+    r.alanlar.forEach(function (a) { s += "<dt>" + a[0] + "</dt><dd>" + a[1] + "</dd>"; });
+    return s + "</dl></article>";
+  }
+  function canliCiz(v) {
+    document.body.classList.add("canli");
+    document.querySelector("header h1").textContent = "Synapse Agent Katmanları · canlı";
+    document.querySelector("header .alt").textContent = "Canlı veri · " + v.zaman + ". Sürüm 1: portal agent'ları "
+      + "bulduklarını üst agent'a bildirir, üst agent iş emri açar; raporu sen inceler, düzeltir ve yamayı gönderirsin. "
+      + "Agent aynı kontrolü tekrar geçince iş emri kendiliğinden kapanır.";
+    surum = 1; temizle(); surumUygula();
+    ["e", "m", "s"].forEach(function (x) { var a = v.agentlar[x]; durum("ag-" + x, a.durum); rozet("rz-" + x, a.rozet, a.renk); });
+    durum("wf-e", v.agentlar.e.durum === "hata" ? "hata" : null);
+    durum("ust", v.ust.durum); [1, 2, 3, 4].forEach(function (n) { cip(n, v.ust.cip); });
+    var ur = document.createElementNS(NS, "text"); ur.setAttribute("class", "s rozet"); ur.setAttribute("x", "917");
+    ur.setAttribute("y", "432"); ur.setAttribute("text-anchor", "end"); ur.textContent = v.ust.rozet; $("ust").appendChild(ur);
+    rozet("rz-duz", v.duz, "var(--mavi)"); durum("duz", v.duz ? "aktif" : null);
+    rozet("rz-test", v.test, "var(--sari)"); durum("test", v.test ? "bekle" : null);
+    rozet("rz-kayit", v.kayit + " kayıt", "var(--yesil)");
+    $("anlat-baslik").innerHTML = v.su_an.baslik; $("anlat-metin").innerHTML = v.su_an.metin; $("adimlar").innerHTML = "";
+    $("gecmis").innerHTML = v.su_an.gecmis.map(function (o) { return "<li><b>" + o.no + "</b> <span>" + o.zaman + " · " + o.metin + "</span></li>"; }).join("");
+    $("anlik-rapor").innerHTML = v.anlik ? canliRaporHtml(v.anlik) : "<p class='bos'>Açık iş emri yok.</p>";
+    var kutular = document.querySelectorAll(".kutu.ag");
+    kutular[0].querySelectorAll("ul.kontrol li").forEach(function (li) {
+      var b = li.querySelector("b"); var ad = b ? b.textContent.replace(/:\s*$/, "").trim() : "";
+      var kod = KONTROL_KOD[ad], k = kod && v.kontroller[kod], c = document.createElement("span");
+      if (k) { c.className = "dcip " + k.durum; c.textContent = DCIP[k.durum] || k.durum; c.title = (k.lokasyon + " · " + k.zaman + (k.mesaj ? " · " + k.mesaj : "")).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;/g, "'"); }
+      else if (kod) { c.className = "dcip bekliyor"; c.textContent = "tur bekleniyor"; }
+      else { c.className = "dcip sonra"; c.textContent = "aşama 3"; }
+      li.appendChild(c);
+    });
+    var not1 = document.createElement("p"); not1.className = "canli-not";
+    not1.textContent = "Canlı: veri kontrolleri (aşama 1). Ekran ve buton kontrolleri aşama 3'te eklenecek. Agent sürüm 1'de yalnızca izler; dosyaya yazmaz, portalı yeniden başlatmaz.";
+    kutular[0].appendChild(not1);
+    [1, 2].forEach(function (i) { var p = document.createElement("p"); p.className = "canli-not"; p.textContent = "Bu agent henüz kurulmadı."; kutular[i].appendChild(p); });
+    var bas = document.querySelectorAll("h2.bolum"); bas[bas.length - 1].textContent = "İş emirleri";
+    bas[bas.length - 1].nextElementSibling.textContent = v.acik_sayisi + " açık · son kapananlar altta. Durumu değiştirmek için bu sayfanın altındaki düğmeleri kullan.";
+    $("ornekler").innerHTML = v.raporlar.length ? v.raporlar.map(canliRaporHtml).join("") : "<p class='bos'>Henüz iş emri yok.</p>";
+  }
+
+  if (window.SYNAPSE_CANLI) { canliCiz(window.SYNAPSE_CANLI); }
+  else { sifirla(); if (!azHareket) { setTimeout(oynat, 700); } }
 })();
 </script>
 </body>

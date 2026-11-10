@@ -1047,6 +1047,16 @@ url  = config.get("supabase_url","")
 key  = config.get("supabase_key","")
 bagli = bool(url and "BURAYA" not in url)
 
+# ÜST AGENT (raporlayıcı): thapps'te bu sürecin içinde TEK kopya arka plan döngüsü.
+# Yalnızca sunucuda (secrets.toml, service_role) ve yerel simülasyonda başlar; demo ve
+# yerel dosya modunda başlamaz. Kapatmak için ortam: SYNAPSE_UST_AGENT=0.
+if bagli and config.get("_kaynak") in ("secrets", "simulasyon"):
+    try:
+        import ust_agent as _ust_agent
+        _ust_agent.baslat_arka_plan(url, key)
+    except Exception as _ua_e:                 # üst agent hatası portalı asla durdurmaz
+        logging.getLogger(__name__).warning("Üst agent başlatılamadı: %s", _ua_e)
+
 
 # NOT: Oto-set kontrolü ve onu çalıştıran arka plan thread'i buradan
 # kaldırıldı (01.10.2026). Sebep, Streamlit Cloud uygulamayı kimse açmayınca
