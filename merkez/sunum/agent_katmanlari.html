@@ -115,6 +115,12 @@ ul.kontrol li.ek::after { content:"eklendi"; font:700 10px var(--yazi); color:va
 @media (prefers-reduced-motion: reduce) { .akis, .nabiz { animation:none !important; } }
 /* CANLI MOD (Synapse > Yönetim > Agent katmanları): window.SYNAPSE_CANLI verisiyle çizilir */
 body.canli .cubuk { display:none; }
+/* Synapse'in içinde ayrı sayfa gibi durmasın: arka plan şeffaf, kenar boşluğu ve
+   genişlik sınırı yok (şema sayfanın tam genişliğine yayılır), iç kaydırma yok. */
+html.canli, body.canli { background:transparent; overflow:hidden; }
+body.canli main { max-width:none; padding:0 0 8px; }
+body.canli .sema { overflow:visible; }
+body.canli header h1 { font-size:22px; }
 body.canli ul.kontrol li.ek::after { content:none; }
 .dcip { font:700 10px var(--yazi); padding:0 7px; border-radius:999px; margin-left:6px; vertical-align:1px; white-space:nowrap; }
 .dcip.gecti { color:var(--yesil); background:var(--yesil-z); } .dcip.sorun, .dcip.hata { color:var(--kirmizi); background:var(--kirmizi-z); }
@@ -648,7 +654,16 @@ body.canli ul.kontrol li.ek::after { content:none; }
     r.alanlar.forEach(function (a) { s += "<dt>" + a[0] + "</dt><dd>" + a[1] + "</dd>"; });
     return s + "</dl></article>";
   }
+  // Çerçeveyi (Streamlit iframe) içerik kadar uzat: sayfanın kendisi kayar, çerçeve değil.
+  function boyutla() {
+    try {
+      var f = window.frameElement; if (!f) { return; }
+      var h = Math.ceil(document.documentElement.scrollHeight);
+      if (Math.abs((parseInt(f.style.height, 10) || 0) - h) > 2) { f.style.height = h + "px"; f.setAttribute("height", h); }
+    } catch (e) {}
+  }
   function canliCiz(v) {
+    document.documentElement.classList.add("canli");
     document.body.classList.add("canli");
     document.querySelector("header h1").textContent = "Synapse Agent Katmanları · canlı";
     document.querySelector("header .alt").textContent = "Canlı veri · " + v.zaman + ". Sürüm 1: portal agent'ları "
@@ -684,6 +699,9 @@ body.canli ul.kontrol li.ek::after { content:none; }
     var bas = document.querySelectorAll("h2.bolum"); bas[bas.length - 1].textContent = "İş emirleri";
     bas[bas.length - 1].nextElementSibling.textContent = v.acik_sayisi + " açık · son kapananlar altta. Durumu değiştirmek için bu sayfanın altındaki düğmeleri kullan.";
     $("ornekler").innerHTML = v.raporlar.length ? v.raporlar.map(canliRaporHtml).join("") : "<p class='bos'>Henüz iş emri yok.</p>";
+    boyutla(); setTimeout(boyutla, 250); setTimeout(boyutla, 1200);
+    window.addEventListener("resize", boyutla);
+    if (window.ResizeObserver) { new ResizeObserver(boyutla).observe(document.body); }
   }
 
   if (window.SYNAPSE_CANLI) { canliCiz(window.SYNAPSE_CANLI); }
