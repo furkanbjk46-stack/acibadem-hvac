@@ -118,13 +118,21 @@ def gorunum(turlar, bulgular, raporlar, an=None, ust_durum=None):
             continue
         susan = [x["lokasyon_id"] for x in t if (_dk(zaman(x.get("tur_zamani")), an) or 1e9) > SUSMA_DK]
         son = max(t, key=lambda x: str(x.get("tur_zamani")))
+        # Kutu İŞ EMİRLERİNE göre renklenir (11.11.2026): açık bulgu olup iş emri olmayanlar
+        # ya "bilgi"dir ya da iş emri elle kapatılmış (bilinen) sorundur — kırmızı yakmaz.
+        is_emri = [r for r in acik_rapor if r.get("agent") == ad]
+        bilgi = sum(1 for x in b if x.get("onem") == "bilgi")
+        bilinen = len(b) - bilgi - len({r.get("bulgu_id") for r in is_emri if r.get("bulgu_id") is not None}
+                                        & {x.get("id") for x in b})
+        ek = (" · %d bilinen" % bilinen if bilinen > 0 else "") + (" · %d bilgi" % bilgi if bilgi else "")
+        tur_saat = saat(son.get("tur_zamani"), False)
         if susan:
             agentlar[dugum] = {"durum": "bekle", "rozet": "● susuyor: " + ", ".join(susan), "renk": "var(--sari)"}
-        elif b:
-            agentlar[dugum] = {"durum": "hata", "rozet": "● %d açık sorun · tur %s" % (len(b), saat(son.get("tur_zamani"), False)),
+        elif is_emri:
+            agentlar[dugum] = {"durum": "hata", "rozet": "● %d açık iş emri · tur %s" % (len(is_emri), tur_saat),
                                "renk": "var(--kirmizi)"}
         else:
-            agentlar[dugum] = {"durum": "ok", "rozet": "● kontrol ediyor · %s" % saat(son.get("tur_zamani"), False),
+            agentlar[dugum] = {"durum": "ok", "rozet": "● kontrol ediyor · tur %s%s" % (tur_saat, ek),
                                "renk": "var(--yesil)"}
 
     # ── Üst agent ──

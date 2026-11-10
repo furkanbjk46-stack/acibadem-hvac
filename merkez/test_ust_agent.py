@@ -235,7 +235,12 @@ kotu = dict(rapor(), baslik="<script>alert(1)</script>", rapor_no="RPR-1",
             icerik={"bulunan": "<img src=x onerror=alert(1)>", "olasi_yer": "a & b", "acilma": 1},
             olusturma=iso(30), guncelleme=iso(10))
 v = G.gorunum(turlar, [bulgu()], [kotu, dict(rapor(i=2), durum="kapandi", kapanma=iso(100))], AN)
-c("açık sorunlu agent 'hata' ve kırmızı rozet", v["agentlar"]["e"]["durum"] == "hata" and "1 açık sorun" in v["agentlar"]["e"]["rozet"])
+c("açık iş emri olan agent 'hata' ve kırmızı rozet", v["agentlar"]["e"]["durum"] == "hata"
+  and "1 açık iş emri" in v["agentlar"]["e"]["rozet"], v["agentlar"]["e"])
+_vb = G.gorunum(turlar, [bulgu(i=1), bulgu(i=2, onem="bilgi"), bulgu(i=3)], [dict(rapor(), durum="kapandi", kapanma=iso(5))], AN)
+c("iş emri yokken açık bulgular kırmızı yakmaz; bilinen ve bilgi ayrı yazılır",
+  _vb["agentlar"]["e"]["durum"] == "ok" and "2 bilinen" in _vb["agentlar"]["e"]["rozet"]
+  and "1 bilgi" in _vb["agentlar"]["e"]["rozet"], _vb["agentlar"]["e"])
 c("kurulmamış agent'lar boş durumda", v["agentlar"]["m"]["durum"] is None and v["agentlar"]["s"]["durum"] is None)
 c("üst agent 1 dk önce tur attı → çalışıyor, çipler yanık", v["ust"]["durum"] == "ok" and v["ust"]["cip"])
 c("kontrol durumları sayfaya gider", v["kontroller"]["diyagram_toplami"]["durum"] == "sorun")
