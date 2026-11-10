@@ -661,6 +661,8 @@ body.canli ul.kontrol li.ek::after { content:none; }
     var ur = document.createElementNS(NS, "text"); ur.setAttribute("class", "s rozet"); ur.setAttribute("x", "917");
     ur.setAttribute("y", "432"); ur.setAttribute("text-anchor", "end"); ur.textContent = v.ust.rozet; $("ust").appendChild(ur);
     rozet("rz-duz", v.duz, "var(--mavi)"); durum("duz", v.duz ? "aktif" : null);
+    var tt = $("test").querySelectorAll("text");          // canlıda bu kutu "agent tekrar kontrolü"dür
+    tt[0].textContent = "Doğrulama"; tt[1].textContent = "agent aynı kontrolü tekrar çalıştırır";
     rozet("rz-test", v.test, "var(--sari)"); durum("test", v.test ? "bekle" : null);
     rozet("rz-kayit", v.kayit + " kayıt", "var(--yesil)");
     $("anlat-baslik").innerHTML = v.su_an.baslik; $("anlat-metin").innerHTML = v.su_an.metin; $("adimlar").innerHTML = "";

@@ -79,6 +79,11 @@ def rapor_karti(r):
         ekle("Tekrarlayan", "%s. kez açıldı → kod incelemesi önerilir" % ic.get("acilma"))
     if ic.get("deneme"):
         ekle("Tutmayan düzeltme", "%s" % ic.get("deneme"))
+    if ic.get("testler"):
+        ekle("Yama öncesi testler", ic.get("testler"))
+    if r.get("durum") == "dogrulaniyor" and ic.get("dogrulama_sinir"):
+        ekle("Doğrulama", "agent aynı kontrolü tekrar çalıştırıyor · sorun görülmezse kapanır · "
+                          "en geç %s" % saat(ic.get("dogrulama_sinir")))
     if r.get("cozum"):
         ekle("Sonuç", r.get("cozum"))
     gecmis = r.get("olaylar") or []
@@ -136,7 +141,10 @@ def gorunum(turlar, bulgular, raporlar, an=None, ust_durum=None):
 
     # ── Düzelten / test / kayıt ──
     duz = sum(1 for r in acik_rapor if r.get("durum") == "duzeltiliyor")
-    dog = sum(1 for r in acik_rapor if r.get("durum") == "dogrulaniyor")
+    dog_r = [r for r in acik_rapor if r.get("durum") == "dogrulaniyor"]
+    dog = len(dog_r)
+    sinirlar = sorted(str((r.get("icerik") or {}).get("dogrulama_sinir") or "") for r in dog_r)
+    sinirlar = [x for x in sinirlar if x]
 
     # ── Şu an ──
     olaylar = []
@@ -178,7 +186,7 @@ def gorunum(turlar, bulgular, raporlar, an=None, ust_durum=None):
     return {
         "zaman": an.strftime("%d.%m.%Y %H:%M"),
         "agentlar": agentlar, "ust": ust,
-        "duz": "%d düzeltiliyor" % duz if duz else "", "test": "%d doğrulanıyor" % dog if dog else "",
+        "duz": "%d düzeltiliyor" % duz if duz else "", "test": ("%d doğrulanıyor" % dog + (" · en geç %s" % saat(sinirlar[-1]) if sinirlar else "")) if dog else "",
         "kayit": len(raporlar),
         "su_an": {"baslik": e(baslik), "metin": metin,          # metin içindeki başlık zaten kaçırıldı
                   "gecmis": [{"no": e(n), "zaman": e(saat(z)), "metin": e(m)} for z, n, m in olaylar[:8]]},

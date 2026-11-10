@@ -43,7 +43,14 @@ from datetime import datetime, timedelta, timezone
 SURUM = "1.0"
 TUR_SN = 120
 SUSMA_DK = 45                 # portal agent'ı 15 dk'da bir tur atar; 3 tur kaçırırsa susmuş sayılır
-DOGRULAMA_PAYI_DK = 60        # yama sahaya ulaşıp agent tekrar kontrol edene kadar bekleme
+DOGRULAMA_PAYI_DK = 60        # yama sahaya ulaşıp agent tekrar kontrol edene kadar EN AZ bekleme
+IST = timezone(timedelta(hours=3))
+# Doğrulama penceresi kontrolün verisinin ne zaman yenilendiğine göre: günde bir yeni
+# veri alan kontroller ancak bir sonraki okumadan sonra doğrulanabilir. Bu saate kadar
+# sorun sürse de "düzeltme tutmadı" denmez (11.11.2026, RPR-2026-1110-003 dersi).
+GECE_OKUMA_KONTROLLERI = {"sayac_erisimi"}            # sayaçlar 23:59'da okunur → 00:30
+GUNLUK_KONTROLLER = {"gunluk_dongu", "donmus_veri", "veri_kalitesi", "diyagram_toplami",
+                     "yerel_bulut", "hava_durumu"}    # köprü 00:05, BACnet 07:05, eşitleme 08:00 → 09:00
 TEKRAR_ESIGI = 3              # bulgu bu kadar kez açıldıysa tekrarlayan sorun
 ONEM = {"kritik": "yuksek", "uyari": "orta", "bilgi": "dusuk"}
 AGENT_AD = {"enerji": "Enerji Portal Agent'ı", "mekanik_zeka": "Mekanik Zeka Agent'ı",
@@ -66,6 +73,21 @@ def zaman(m):
     except ValueError:
         return None
     return z if z.tzinfo else z.replace(tzinfo=timezone.utc)
+
+
+def dogrulama_siniri(kontrol, yama_zamani):
+    """Yamadan sonra sorunun hâlâ görülmesinin "tutmadı" sayılacağı en erken an (UTC)."""
+    en_erken = yama_zamani.astimezone(IST) + timedelta(minutes=DOGRULAMA_PAYI_DK)
+    if kontrol in GECE_OKUMA_KONTROLLERI:
+        saat, dakika = 0, 30
+    elif kontrol in GUNLUK_KONTROLLER:
+        saat, dakika = 9, 0
+    else:
+        return en_erken.astimezone(timezone.utc)
+    t = en_erken.replace(hour=saat, minute=dakika, second=0, microsecond=0)
+    if t < en_erken:
+        t += timedelta(days=1)
+    return t.astimezone(timezone.utc)
 
 
 def olay(an, kod, metin):
@@ -135,6 +157,13 @@ def kararlar(bulgular, raporlar, turlar, an=None, gecmis=None):
         ic = dict(r.get("icerik") or {})
         olaylar = list(r.get("olaylar") or [])
         bu_acilma = (b.get("acilma_sayisi") or 1) == ic.get("acilma", 1)
+        if b.get("onem") == "bilgi" and b.get("durum") == "acik" and bu_acilma:
+            # Bulgu sonradan "bilgi" seviyesine indirildi: iş emri gerekmez
+            cozum = "Bulgu bilgi seviyesine indirildi (veri doğru, yalnız yerel kayıt eski); iş emri gerekmez."
+            olaylar.append(olay(an, "bilgi", cozum))
+            guncelle.append((r["id"], {"durum": "kapandi", "kapanma": an.isoformat(), "cozum": cozum,
+                                       "olaylar": olaylar, "guncelleme": an.isoformat()}))
+            continue
         if b.get("durum") == "kapandi" or not bu_acilma:
             # Bulgu kapandı (ya da kapanıp yeni bir açılışa geçti): bu rapor kapanır
             if r["durum"] == "dogrulaniyor":
@@ -154,11 +183,13 @@ def kararlar(bulgular, raporlar, turlar, an=None, gecmis=None):
         # Yamadan sonra sorun sürüyor → düzeltme tutmadı
         dz = zaman(ic.get("dogrulama_zamani"))
         sg = zaman(b.get("son_gorulme"))
-        if r["durum"] == "dogrulaniyor" and dz and sg and sg > dz + timedelta(minutes=DOGRULAMA_PAYI_DK):
+        sinir = zaman(ic.get("dogrulama_sinir")) or (dogrulama_siniri(ic.get("kontrol"), dz) if dz else None)
+        if r["durum"] == "dogrulaniyor" and sinir and sg and sg > sinir:
             ic["deneme"] = (ic.get("deneme") or 0) + 1
             olaylar.append(olay(an, "tutmadi", "Yama sonrası agent sorunu yine gördü → rapor yeniden açıldı "
                                                "(%d. deneme tutmadı)" % ic["deneme"]))
             ic.pop("dogrulama_zamani", None)
+            ic.pop("dogrulama_sinir", None)
             guncelle.append((r["id"], {"durum": "acik", "icerik": dict(ic, son_gorulme=b.get("son_gorulme"),
                                                                         gorulme_sayisi=b.get("gorulme_sayisi"),
                                                                         bulunan=b.get("bulunan")),
@@ -313,17 +344,24 @@ EYLEMLER = {
 }
 
 
-def eylem_alanlari(rapor, eylem, kim, not_=None, an=None):
-    """Bir rapora düğmeyle yapılan işlemin yazılacak alanları."""
+def eylem_alanlari(rapor, eylem, kim, not_=None, an=None, testler=None):
+    """Bir rapora düğmeyle yapılan işlemin yazılacak alanları.
+
+    testler: yamadan önce koşan test paketleri (ör. "test_enerji_agent 57/57") — "yama"da yazılır."""
     an = an or simdi_utc()
     durum, metin = EYLEMLER[eylem]
     ic = dict(rapor.get("icerik") or {})
     olaylar = list(rapor.get("olaylar") or [])
+    testler = (testler or "").strip()
     olaylar.append(olay(an, eylem, metin + (" — " + not_.strip() if not_ and not_.strip() else "")
+                       + (" · testler: " + testler if eylem == "yama" and testler else "")
                        + " (%s)" % kim))
     alanlar = {"durum": durum, "olaylar": olaylar, "duzelten": kim, "guncelleme": an.isoformat()}
     if eylem == "yama":
         ic["dogrulama_zamani"] = an.isoformat()
+        ic["dogrulama_sinir"] = dogrulama_siniri(ic.get("kontrol"), an).isoformat()
+        if testler:
+            ic["testler"] = testler
         alanlar["icerik"] = ic
     if eylem == "kapat":
         alanlar["kapanma"] = an.isoformat()

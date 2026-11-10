@@ -104,6 +104,31 @@ c("açık raporun kanıtı tazelenir (görülme sayısı)", k["guncelle"] and k[
 k = U.kararlar([bulgu()], [rapor()], [], AN)
 c("değişiklik yoksa yazma yapılmaz", k == {"yeni": [], "guncelle": []}, k)
 
+print("kararlar: doğrulama penceresi (kontrole göre)")
+_y = datetime(2026, 11, 10, 13, 25, tzinfo=timezone.utc)            # 16:25 İstanbul
+_ist = lambda z: z.astimezone(U.IST).strftime("%d.%m %H:%M")
+c("15 dk'lık kontrol (portal): yama + 60 dk", _ist(U.dogrulama_siniri("portal_sagligi", _y)) == "10.11 17:25")
+c("sayaç (23:59 okuma): ertesi 00:30", _ist(U.dogrulama_siniri("sayac_erisimi", _y)) == "11.11 00:30")
+c("günlük veri kontrolü: ertesi 09:00", _ist(U.dogrulama_siniri("diyagram_toplami", _y)) == "11.11 09:00")
+c("sabah 07:00 yaması: aynı gün 09:00", _ist(U.dogrulama_siniri("hava_durumu", datetime(2026, 11, 10, 4, 0, tzinfo=timezone.utc))) == "10.11 09:00")
+c("00:00 sayaç yaması 00:30'a 60 dk kalmadan: ertesi gece", _ist(U.dogrulama_siniri("sayac_erisimi", datetime(2026, 11, 10, 21, 10, tzinfo=timezone.utc))) == "12.11 00:30")
+_sayac = lambda son, **ic: U.kararlar([bulgu(kontrol="sayac_erisimi", onem="uyari", son=son)],
+                                      [rapor(durum="dogrulaniyor", kontrol="sayac_erisimi", **ic)], [], AN)
+_g = _sayac(2, dogrulama_zamani=iso(120))
+c("sayaç yaması 2 saat sonra hâlâ görülse de (gece okuması gelmedi) 'tutmadı' denmez",
+  not any(a.get("durum") == "acik" for _, a in _g["guncelle"]), _g["guncelle"])
+_g = U.kararlar([bulgu(kontrol="sayac_erisimi", onem="uyari", son=2)],
+                [rapor(durum="dogrulaniyor", kontrol="sayac_erisimi", dogrulama_zamani=iso(1500),
+                       dogrulama_sinir=iso(600))], [], AN)
+c("gece okumasından sonra da görülüyorsa 'tutmadı'", any(a.get("durum") == "acik" for _, a in _g["guncelle"]))
+_g = U.kararlar([bulgu(onem="bilgi")], [rapor(durum="dogrulaniyor")], [], AN)
+c("bulgu 'bilgi'ye indiyse açık iş emri kendiliğinden kapanır",
+  _g["guncelle"] and _g["guncelle"][0][1]["durum"] == "kapandi" and _g["guncelle"][0][1]["olaylar"][-1]["olay"] == "bilgi")
+_a = U.eylem_alanlari(rapor(kontrol="sayac_erisimi"), "yama", "f", "kablo değişti", _y, testler="test_enerji_agent 57/57")
+c("yama: doğrulama sınırı ve koşan testler iş emrine yazılır",
+  _ist(U.zaman(_a["icerik"]["dogrulama_sinir"])) == "11.11 00:30" and _a["icerik"]["testler"] == "test_enerji_agent 57/57"
+  and "testler: test_enerji_agent 57/57" in _a["olaylar"][-1]["metin"])
+
 print("kararlar: çapraz (susan agent)")
 k = U.kararlar([], [], [tur_satiri("bodrum", 130), tur_satiri("maslak", 5), tur_satiri("merkez", 1, "ust")], AN)
 c("45 dk'dır tur atmayan agent için çapraz rapor açılır",
@@ -235,6 +260,8 @@ c("enjekte edilen JSON </script> içeremez", "</script" not in sy.split("window.
 c("sayfada canlı mod var, simülasyon canlıda otomatik oynamaz",
   "function canliCiz" in sablon and re.search(r"if \(window\.SYNAPSE_CANLI\) \{ canliCiz", sablon)
   and "else { sifirla(); if (!azHareket)" in sablon)
+c("canlıda 'Tam test kapısı' kutusu 'Doğrulama' olarak adlandırılır (sunucuda test koşmaz)",
+  'tt[0].textContent = "Doğrulama"' in sablon)
 c("sayfadaki kontrol eşlemesi enerji_agent kontrol kodlarıyla aynı",
   all(k in sablon for k in ("diyagram_toplami", "gunluk_dongu", "sayac_erisimi", "donmus_veri", "veri_kalitesi",
                             "hava_durumu", "yerel_bulut", "portal_sagligi")))

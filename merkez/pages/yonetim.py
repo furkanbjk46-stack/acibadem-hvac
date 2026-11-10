@@ -467,6 +467,8 @@ with _sekme_agent:
                                       r.get("baslik")): r for r in _acik}
         _sec = st.selectbox("İş emri", list(_secenek), key="ag_rapor_sec")
         _not = st.text_input("Not (isteğe bağlı: ne yapıldı, hangi commit/yama)", key="ag_rapor_not")
+        _testler = st.text_input("Yama öncesi koşan testler (isteğe bağlı, ör. test_enerji_agent 57/57)",
+                                 key="ag_rapor_testler")
         _b1, _b2, _b3 = st.columns(3)
         _eylem = None
         with _b1:
@@ -478,9 +480,11 @@ with _sekme_agent:
         with _b3:
             if st.button("✖ Gereksiz, kapat", use_container_width=True, key="ag_kapat"):
                 _eylem = "kapat"
-        st.caption("Yama gönderildi dendikten sonra agent aynı kontrolü tekrar çalıştırır: geçerse iş emri "
-                   "kendiliğinden kapanır; %d dk sonra sorun hâlâ görülüyorsa 'düzeltme tutmadı' diye yeniden "
-                   "açılır." % _UA.DOGRULAMA_PAYI_DK)
+        st.caption("Yama gönderildi dendikten sonra sunucuda test koşmaz: Maslak'taki agent aynı kontrolü "
+                   "tekrar çalıştırır, sorun görülmezse iş emri kendiliğinden kapanır. Sorun doğrulama sınırından "
+                   "sonra hâlâ görülürse 'düzeltme tutmadı' diye yeniden açılır. Sınır kontrole göre: anlık "
+                   "kontroller %d dk, sayaçlar ertesi gece 00:30 (23:59 okuması), günlük veri kontrolleri "
+                   "ertesi 09:00." % _UA.DOGRULAMA_PAYI_DK)
         if _eylem:
             _r = _secenek[_sec]
             try:                                     # tek kullanıcılı giriş: ayardaki kullanıcı adı
@@ -490,7 +494,7 @@ with _sekme_agent:
                 _kim = "kullanıcı"
             try:
                 _UA.Db(url, _anahtar).degistir("agent_raporlar", "id=eq.%d" % int(_r["id"]),
-                                               _UA.eylem_alanlari(_r, _eylem, _kim, _not))
+                                               _UA.eylem_alanlari(_r, _eylem, _kim, _not, testler=_testler))
                 st.success("%s güncellendi." % _r.get("rapor_no"))
                 st.rerun(scope="fragment")
             except Exception as _ee:
