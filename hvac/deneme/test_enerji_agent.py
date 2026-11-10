@@ -69,6 +69,8 @@ class Kur:
         self.istekler = []
         self.bulut_satirlari = None      # None → yereldekiyle aynı
         self.portal_kodu = 200
+        self.internet_kodu = 200
+        self.yedek_gunleri = None        # None → hava_gunluk isteği başarısız
         self.bulut_kodu = 200
         self.yazma_kodu = 201
         self.bekleme = []
@@ -103,7 +105,9 @@ class Kur:
         if "_stcore/health" in url:
             return self.portal_kodu, "ok"
         if "open-meteo" in url:
-            return 200, "{}"
+            return (200, "{}") if self.internet_kodu == 200 else (None, "getaddrinfo failed")
+        if "hava_gunluk" in url:
+            return (200, json.dumps([{"tarih": t} for t in self.yedek_gunleri]))                 if self.yedek_gunleri is not None else (503, "hata")
         if yontem == "GET" and "energy_data" in url:
             if self.bulut_kodu != 200:
                 return self.bulut_kodu, "hata"
@@ -139,6 +143,7 @@ k.bulut_satirlari = saglikli_gunler()                 # cloud_sync buluta KURALL
 s = k.tur()
 b = [x for x in s["bulgular"] if x["kontrol"] == "diyagram_toplami"]
 c("kayıtlı toplam kuralla tutmuyorsa yakalanır", len(b) == 1 and b[0]["anahtar"].startswith("diyagram_toplami:kayit:"), anahtarlar(s))
+c("yalnız yerel dosya eskiyse önem 'bilgi' (iş emri açılmaz)", bool(b) and b[0]["onem"] == "bilgi")
 c("bulguda beklenen / bulunan / denenen / tekrar / olası yer dolu",
   bool(b) and all(b[0][a] for a in ("beklenen", "bulunan", "denenen", "tekrar_adimi", "olasi_yer")))
 c("buluta giden değer kuralla hesaplandığı için yerel↔bulut bundan etkilenmez",
@@ -267,6 +272,32 @@ s = k.tur()
 b = [x for x in s["bulgular"] if x["kontrol"] == "hava_durumu"]
 c("dünün hava verisi boşsa yakalanır ve servis yoklanır",
   len(b) == 1 and "yanıt veriyor" in b[0]["denenen"] and any("open-meteo" in u for _, u, _ in k.istekler))
+g = saglikli_gunler()
+for r in g[-2:]:
+    r.update(Hava_Sicaklik_Ort_C="")
+g[-12]["Hava_Sicaklik_Ort_C"] = ""                    # 7 günlük pencerenin dışında
+k = Kur(g)
+k.internet_kodu = None
+k.yedek_gunleri = ["2026-11-08", "2026-11-09"]
+s = k.tur()
+b = [x for x in s["bulgular"] if x["kontrol"] == "hava_durumu"]
+c("son 7 gündeki bütün boş günler tek bulguda; anahtar en eski boş gün",
+  len(b) == 1 and b[0]["anahtar"] == "hava_durumu:2026-11-08" and b[0]["kanit"]["bos_gunler"] == ["2026-11-08", "2026-11-09"],
+  b[0]["anahtar"] if b else "")
+c("internete ulaşılamadığı sebebiyle yazılır", bool(b) and "ulaşılamıyor (getaddrinfo failed)" in b[0]["bulunan"], b[0]["bulunan"] if b else "")
+c("Synapse yedek yolunda kaç günün hazır olduğu yazılır", bool(b) and "2/2 gün hazır" in b[0]["bulunan"]
+  and "hava_doldur" in b[0]["olasi_yer"])
+k.yedek_gunleri = None
+s = k.tur()
+b = [x for x in s["bulgular"] if x["kontrol"] == "hava_durumu"]
+c("iki kaynak da yoksa erişim kontrolü önerilir", bool(b) and "internet erişimi" in b[0]["olasi_yer"]
+  and b[0]["gorulme_sayisi"] == 2)
+g = saglikli_gunler()
+g[-1]["Hava_Sicaklik_Ort_C"] = ""
+k = Kur(g)
+k.o._simdi = datetime(2026, 11, 10, 0, 10)             # köprü henüz yazmadı: dün pencere dışında
+s = k.tur()
+c("00:30'dan önce dünün boş havası sayılmaz", not any(x["kontrol"] == "hava_durumu" for x in s["bulgular"]))
 k = Kur()
 k.portal_kodu = None
 s = k.tur()
@@ -352,6 +383,8 @@ _govde = _kod.split('"""', 2)[2]
 c("agent oto_set / bacnet_writer kullanmaz", "import oto_set" not in _govde and "bacnet_writer" not in _govde)
 c("agent süreç başlatmaz / durdurmaz", "subprocess" not in _govde and "os.kill" not in _govde)
 c("agent energy_data.csv'ye yazmaz", "to_csv" not in _govde)
+c("açılışta ilk turdan önce bekler (portal ayağa kalksın)", A.BASLANGIC_BEKLEME_SN >= 60
+  and "time.sleep(BASLANGIC_BEKLEME_SN)" in _kod)
 _wd = open(os.path.join(BURASI, "portal_watchdog.py"), encoding="utf-8").read()
 c("watchdog agent'ı portallardan AYRI izler (ölürse portallar yeniden başlamaz)",
   "enerji_agent.py" in _wd and "_agent_baslat" in _wd and "procs.append(_agent" not in _wd)

@@ -75,17 +75,23 @@ def olay(an, kod, metin):
 # ══════════════════════════════════════════════════════════════════════════
 # KARAR — saf fonksiyon: veriden yapılacak işler (test edilir, ağ yok)
 # ══════════════════════════════════════════════════════════════════════════
-def kararlar(bulgular, raporlar, turlar, an=None):
+def kararlar(bulgular, raporlar, turlar, an=None, gecmis=None):
     """Dönüş: {"yeni": [rapor satırı], "guncelle": [(id, alanlar)]}.
 
     bulgular : agent_bulgular satırları (açık olanlar + raporu açık olanların bulguları)
     raporlar : kapanmamış agent_raporlar satırları
     turlar   : agent_turlar satırları
+    gecmis   : açık bulgulara ait KAPANMIŞ raporlar. Aynı açılış için kapanmış rapor
+               varsa yenisi açılmaz: elle kapatılan iş emri, sorun gerçekten geçip
+               yeniden çıkana (açılma sayısı artana) kadar sessiz kalır.
     """
     an = an or simdi_utc()
     yeni, guncelle = [], []
     bulgu_id = {b["id"]: b for b in bulgular}
     rapor_bulgu = {}
+    for r in gecmis or []:
+        if r.get("bulgu_id") is not None:
+            rapor_bulgu[(r["bulgu_id"], (r.get("icerik") or {}).get("acilma", 1))] = r
     capraz = {}
     for r in raporlar:
         ic = r.get("icerik") or {}
@@ -96,8 +102,8 @@ def kararlar(bulgular, raporlar, turlar, an=None):
 
     # 2) Açık bulgu → rapor
     for b in bulgular:
-        if b.get("durum") != "acik":
-            continue
+        if b.get("durum") != "acik" or b.get("onem") == "bilgi":
+            continue                                   # "bilgi" bulgusu iş emri açmaz
         acilma = b.get("acilma_sayisi") or 1
         if (b["id"], acilma) in rapor_bulgu:
             continue
@@ -259,7 +265,10 @@ def tur(db, an=None):
     gerekli = {r["bulgu_id"] for r in raporlar if r.get("bulgu_id") is not None} - {b["id"] for b in acik_bulgu}
     ek = db.oku("agent_bulgular?select=*&id=in.(%s)" % ",".join(str(i) for i in sorted(gerekli))) if gerekli else []
     turlar = db.oku("agent_turlar?select=lokasyon_id,agent,tur_zamani")
-    k = kararlar(acik_bulgu + ek, raporlar, turlar, an)
+    acik_id = sorted({b["id"] for b in acik_bulgu})
+    gecmis = db.oku("agent_raporlar?select=id,bulgu_id,icerik,durum&durum=eq.kapandi&bulgu_id=in.(%s)"
+                    % ",".join(str(i) for i in acik_id)) if acik_id else []
+    k = kararlar(acik_bulgu + ek, raporlar, turlar, an, gecmis)
 
     acilan = []
     for satir in k["yeni"]:

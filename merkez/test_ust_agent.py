@@ -73,6 +73,12 @@ c("3. kez açılan bulgu tekrarlayan sayılır, önem yükselir",
   k["yeni"][0]["icerik"].get("tekrarlayan") and k["yeni"][0]["onem"] == "yuksek"
   and any(o["olay"] == "tekrarlayan" for o in k["yeni"][0]["olaylar"]))
 c("kapanmış bulgu için rapor açılmaz", U.kararlar([bulgu(durum="kapandi")], [], [], AN)["yeni"] == [])
+_elle = dict(rapor(durum="kapandi"), icerik={"acilma": 1})
+c("elle kapatılan iş emri, sorun sürse de yeniden açılmaz",
+  U.kararlar([bulgu()], [], [], AN, gecmis=[_elle])["yeni"] == [])
+c("aynı sorun kapanıp YENİDEN çıkarsa (açılma 2) yeni iş emri açılır",
+  len(U.kararlar([bulgu(acilma=2)], [], [], AN, gecmis=[_elle])["yeni"]) == 1)
+c("'bilgi' önemindeki bulgu iş emri açmaz", U.kararlar([bulgu(onem="bilgi")], [], [], AN)["yeni"] == [])
 
 print("kararlar: takip ve kapanış")
 k = U.kararlar([bulgu(durum="kapandi")], [rapor()], [], AN)
@@ -163,6 +169,9 @@ db.t["agent_bulgular"][0]["durum"] = "kapandi"
 s = U.tur(db, AN)
 r = [x for x in db.t["agent_raporlar"] if x.get("rapor_no") == "RPR-2026-1110-005"][0]
 c("bulgu kapanınca (açık bulgu sorgusunda yok) bağlı rapor yine bulunur ve kapanır", r["durum"] == "kapandi", r)
+db2 = SahteDb({"agent_bulgular": [bulgu(i=7)], "agent_turlar": [], "agent_raporlar": [
+    {"id": 70, "rapor_no": "RPR-2026-1110-009", "durum": "kapandi", "bulgu_id": 7, "icerik": {"acilma": 1}}]})
+c("tur: elle kapatılmış iş emrinin bulgusu için yeni rapor açılmaz", U.tur(db2, AN)["acilan"] == [])
 c("üst agent bulgulara ve diğer tablolara YAZMAZ",
   {y[1] for y in db.yazilan if y[0] in ("ekle", "degistir")} == {"agent_raporlar"})
 c("gece yarısı İstanbul gününe göre numara",

@@ -1056,6 +1056,15 @@ if bagli and config.get("_kaynak") in ("secrets", "simulasyon"):
         _ust_agent.baslat_arka_plan(url, key)
     except Exception as _ua_e:                 # üst agent hatası portalı asla durdurmaz
         logging.getLogger(__name__).warning("Üst agent başlatılamadı: %s", _ua_e)
+    # Hava yedek yolu: internete çıkamayan lokasyonlar havayı hava_gunluk'tan okur.
+    # Simülasyonda dışarıya istek atılmasın diye yalnız sunucuda (secrets).
+    if config.get("_kaynak") == "secrets":
+        try:
+            import hava_besleyici as _hava_besleyici
+            _hava_besleyici.baslat_arka_plan(
+                url, key, {k: (v["lat"], v["lon"]) for k, v in HASTANELER.items()})
+        except Exception as _hb_e:
+            logging.getLogger(__name__).warning("Hava besleyici başlatılamadı: %s", _hb_e)
 
 
 # NOT: Oto-set kontrolü ve onu çalıştıran arka plan thread'i buradan

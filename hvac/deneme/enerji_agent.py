@@ -52,11 +52,13 @@ import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
 
-SURUM = "1.0"
+SURUM = "1.1"
 AGENT = "enerji"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TUR_DAKIKA = 15
+BASLANGIC_BEKLEME_SN = 120    # açılışta portallar ayağa kalksın (yanlış "8501 yanıt vermiyor" olmasın)
+HAVA_GUN = 7                  # hava kontrolü penceresi
 DONMA_GUN = 4                 # sayaç sütunu bu kadar gün birebir aynıysa donmuş
 KOJEN_SIFIR_GUN = 3
 KALITE_GUN = 30               # veri kalitesi penceresi
@@ -447,8 +449,10 @@ def k_diyagram_toplami(o):
                 if (a or 0) != (b or 0) and abs((a or 0) - (b or 0)) > TOLERANS_KWH:
                     fark.append("%s: kayıtlı %s, kural %s" % (c, _say(a or 0), _say(b or 0)))
         if fark:
+            # BİLGİ: buluta giden değer cloud_sync'te bu kuralla yeniden hesaplanır; yalnızca
+            # yereldeki dosya eski kalmıştır. İş emri açılmaz (yerel↔bulut farkı ayrıca denetlenir).
             cikti.append(bulgu(
-                "diyagram_toplami", "kayit:%s" % t, "uyari", "Enerji Diyagramı",
+                "diyagram_toplami", "kayit:%s" % t, "bilgi", "Enerji Diyagramı",
                 "%s günü kayıtlı toplamlar hesap kuralıyla tutmuyor" % _tr(t),
                 "kayıtlı değer = hesap kuralının sonucu", "; ".join(fark[:3]),
                 denenen="günü bellekte yeniden hesapladı → kural değeri farklı; dosya değiştirilmedi",
@@ -519,43 +523,61 @@ def k_yerel_bulut(o):
 
 
 def k_hava_durumu(o):
+    """Son HAVA_GUN günde internet hava alanları boş gün var mı; varsa iki kaynağı yoklar."""
     simdi = o.simdi()
-    if not _gecti_mi(simdi, KOPRU_SON):
-        return []
-    dun = (simdi.date() - timedelta(days=1)).isoformat()
+    dun = simdi.date() - timedelta(days=1)
+    son = dun if _gecti_mi(simdi, KOPRU_SON) else dun - timedelta(days=1)
     df = enerji_df(o)
-    satir = df[df["Tarih"] == dun]
-    if satir.empty or "Hava_Sicaklik_Ort_C" not in df.columns:
-        raise Atla("dünün satırı ya da hava sütunları yok")
-    bos = [c for c in ("Hava_Sicaklik_Ort_C", "Hava_Sicaklik_Max_C", "Hava_Sicaklik_Min_C", "Hava_Nem_Ort_Yuzde")
-           if c in df.columns and _sayi(satir.iloc[-1][c]) is None]
+    if "Hava_Sicaklik_Ort_C" not in df.columns:
+        raise Atla("hava sütunları yok")
+    pencere = df[(df["Tarih"] > (son - timedelta(days=HAVA_GUN)).isoformat()) & (df["Tarih"] <= son.isoformat())]
+    bos = sorted({r["Tarih"] for _, r in pencere.iterrows() if _sayi(r["Hava_Sicaklik_Ort_C"]) is None})
     if not bos:
         return []
-    # Boşsa: servis mi yanıt vermiyor, yoksa doldurma mı çalışmadı?
-    kod, _ = o.http("https://api.open-meteo.com/v1/forecast?latitude=41&longitude=29"
-                    "&daily=temperature_2m_mean&forecast_days=1", zaman_asimi=10)
-    servis = "hava servisi yanıt veriyor (HTTP 200)" if kod == 200 else "hava servisi yanıt vermiyor (%s)" % kod
+    # Kaynak 1: internet (Open-Meteo)
+    kod, metin = o.http("https://api.open-meteo.com/v1/forecast?latitude=41&longitude=29"
+                        "&daily=temperature_2m_mean&forecast_days=1", zaman_asimi=10)
+    internet = kod == 200
+    # Kaynak 2: Synapse yedek yolu (merkezin yazdığı hava_gunluk)
+    yedek = None
+    if o.bulut:
+        k2, m2 = o.http("%s/rest/v1/hava_gunluk?select=tarih&lokasyon_id=eq.%s&tarih=gte.%s&tarih=lte.%s&tahmin=eq.false"
+                        % (o.bulut["url"], urllib.parse.quote(o.bulut["lokasyon_id"]), bos[0], bos[-1]),
+                        basliklar=_bulut_baslik(o), zaman_asimi=15)
+        try:
+            yedek = len(json.loads(m2)) if k2 == 200 else None
+        except (TypeError, ValueError):
+            yedek = None
+    durum = ["internet: %s" % ("yanıt veriyor" if internet else "ulaşılamıyor (%s)" % str(metin)[:80])]
+    durum.append("Synapse yedek yolu: %s" % ("ayar yok" if not o.bulut else
+                                             "ulaşılamıyor" if yedek is None else "%d/%d gün hazır" % (yedek, len(bos))))
+    if internet or yedek:
+        yer = ("Veri bir kaynakta hazır: data_bridge.py hava_doldur portal yeniden başlatılınca (açılışta) "
+               "boş günleri doldurur; günlük satır 00:05'te zaten bu yolla yazılır.")
+    else:
+        yer = ("Lokasyonun internet erişimi (api.open-meteo.com, archive-api.open-meteo.com) ve "
+               "Synapse'teki hava_gunluk tablosu (merkez hava_besleyici) birlikte kontrol edilmeli.")
     return [bulgu(
-        "hava_durumu", dun, "uyari", "Tahmin ve trend",
-        "%s gününün hava verisi boş" % _tr(dun), "günlük hava özeti dolu",
-        "boş alanlar: %s · %s" % (", ".join(bos), servis),
-        denenen="hava servisini yokladı → " + ("yanıt veriyor" if kod == 200 else "yanıt yok"),
+        "hava_durumu", bos[0], "uyari", "Tahmin ve trend",
+        "Hava verisi boş: %s" % ", ".join(_tr(t) for t in bos),
+        "son %d günün günlük hava özeti dolu" % HAVA_GUN,
+        "%d gün boş · %s" % (len(bos), " · ".join(durum)),
+        denenen="iki kaynağı yokladı → " + " · ".join(durum),
         tekrar_adimi="Tahmin ve trend kartlarına bak; Veri Görüntüleme'de Hava_ sütunları",
-        olasi_yer=("data_bridge.py hava_doldur (açılışta tamamlar)" if kod == 200
-                   else "internet erişimi / Open-Meteo; hava_durumu.py"))]
+        olasi_yer=yer, kanit={"bos_gunler": bos, "internet": internet, "yedek_gun": yedek})]
 
 
 def k_portal_sagligi(o):
     cikti = []
     adres = o.portal_url.rstrip("/") + "/_stcore/health"
-    kod, _ = o.http(adres, zaman_asimi=8)
+    kod, neden = o.http(adres, zaman_asimi=8)
     if kod != 200:
         o.bekle(20)                                   # workflow: bir kez yeniden dene
-        kod, _ = o.http(adres, zaman_asimi=8)
+        kod, neden = o.http(adres, zaman_asimi=8)
         if kod != 200:
             cikti.append(bulgu(
                 "portal_sagligi", "8501", "kritik", "Portal sağlığı",
-                "Enerji portalı (8501) yanıt vermiyor", "HTTP 200", "yanıt: %s" % kod,
+                "Enerji portalı (8501) yanıt vermiyor", "HTTP 200", "yanıt: %s · %s" % (kod, str(neden)[:80]),
                 denenen="20 sn sonra yeniden denedi → yine yanıt yok (portalı yeniden başlatmadı)",
                 tekrar_adimi="Lokasyon PC'sinde http://localhost:8501 adresini aç",
                 olasi_yer="app_portal.py süreci; watchdog penceresi (PORTAL_BASLAT.bat)"))
@@ -760,7 +782,9 @@ def dongu():
     except Exception as e:
         logger.warning("Tek kopya kilidi kullanılamadı: %s", e)
 
-    logger.info("Enerji Portal Agent'ı başladı (sürüm %s, her %d dk)", SURUM, TUR_DAKIKA)
+    logger.info("Enerji Portal Agent'ı başladı (sürüm %s, her %d dk; ilk tur %d sn sonra)",
+                SURUM, TUR_DAKIKA, BASLANGIC_BEKLEME_SN)
+    time.sleep(BASLANGIC_BEKLEME_SN)
     while True:
         o = Ortam()
         ayar = o.ayar()

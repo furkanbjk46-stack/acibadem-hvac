@@ -22,6 +22,12 @@ portal listede olmayan sütunu her açılışta SİLER, o yüzden liste tek yerd
 
 İnternet yoksa hiçbir şey patlamaz: alanlar boş kalır, data_bridge bir
 sonraki açılışta boş günleri geriye dönük doldurur.
+
+SYNAPSE YEDEK YOLU (10.11.2026, RPR-2026-1110-004): Maslak 09.11'den sonra
+Open-Meteo'ya ulaşamadı, hava alanları boş kaldı. thapps ulaşabiliyor: merkez
+(hava_besleyici.py) her lokasyonun havasını public.hava_gunluk tablosuna yazar.
+İnternet isteği hata verirse aynı veri oradan okunur (supabase_config.json'daki
+adres ve anahtarla, yalnızca okuma). Değerler birebir aynı biçimdedir.
 """
 from __future__ import annotations
 
@@ -105,6 +111,31 @@ def _cevir(gunluk: dict) -> Dict[str, dict]:
     return sonuc
 
 
+def _synapse_hava(bas: str, son: str, tahmin: bool) -> Dict[str, dict]:
+    """Yedek yol: merkezin yazdığı hava_gunluk tablosu. Hata olursa boş sözlük."""
+    try:
+        with open(os.path.join(BASE_DIR, "supabase_config.json"), encoding="utf-8-sig") as f:
+            c = json.load(f)
+        url, key, lok = c.get("supabase_url", ""), c.get("supabase_key", ""), c.get("lokasyon_id", "")
+        if not url or not key or not lok or "BURAYA" in url:
+            return {}
+        try:
+            from sb_kimlik import basliklar as _bas
+            h = _bas(key)
+        except Exception:
+            h = {"apikey": key, "Authorization": "Bearer " + key}
+        yol = ("%s/rest/v1/hava_gunluk?select=tarih,veri&lokasyon_id=eq.%s&tarih=gte.%s&tarih=lte.%s"
+               "&tahmin=eq.%s&order=tarih" % (url.rstrip("/"), lok, bas, son, "true" if tahmin else "false"))
+        with urllib.request.urlopen(urllib.request.Request(yol, headers=h), timeout=ZAMAN_ASIMI) as r:
+            sonuc = {str(x["tarih"])[:10]: x["veri"] for x in json.load(r) if isinstance(x.get("veri"), dict)}
+        if sonuc:
+            logger.info("Hava durumu Synapse yedek yolundan alındı (%s → %s, %d gün)", bas, son, len(sonuc))
+        return sonuc
+    except Exception as e:
+        logger.warning("Hava durumu Synapse yedek yolundan da alınamadı: %s", e)
+        return {}
+
+
 def gunluk_hava(bas: str, son: str, bugun: date = None) -> Dict[str, dict]:
     """{ 'YYYY-AA-GG': {Hava_...: değer} }. Hata olursa boş sözlük (asla istisna atmaz).
 
@@ -133,7 +164,10 @@ def gunluk_hava(bas: str, son: str, bugun: date = None) -> Dict[str, dict]:
                 if b.isoformat() <= t <= s.isoformat():
                     sonuc.setdefault(t, v)
     except Exception as e:
-        logger.warning("Hava durumu alınamadı (%s → %s): %s — alanlar boş kalacak", bas, son, e)
+        logger.warning("Hava durumu internetten alınamadı (%s → %s): %s — Synapse yedek yolu deneniyor",
+                       bas, son, e)
+        for t, v in _synapse_hava(bas, son, tahmin=False).items():
+            sonuc.setdefault(t, v)
     return sonuc
 
 
@@ -154,5 +188,7 @@ def ileri_tahmin(gun: int = TAHMIN_EN_COK_GUN, bugun: date = None) -> Dict[str, 
                % (TAHMIN, kd[0], kd[1], min(gun + 1, TAHMIN_EN_COK_GUN), GUNLUK))
         return {t: v for t, v in _cevir(_getir(url)).items() if t > bugun.isoformat()}
     except Exception as e:
-        logger.warning("Hava tahmini alınamadı: %s — geçmiş ortalama kullanılacak", e)
-        return {}
+        logger.warning("Hava tahmini internetten alınamadı: %s — Synapse yedek yolu deneniyor", e)
+        son = (bugun + timedelta(days=gun)).isoformat()
+        return {t: v for t, v in _synapse_hava((bugun + timedelta(days=1)).isoformat(), son, tahmin=True).items()
+                if t > bugun.isoformat()}

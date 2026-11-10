@@ -142,6 +142,58 @@ c("hava alanları 0 değil BOŞ başlıyor", "_hf = None if _hv is None or pd.is
 c("hava durumu seçenekleri hava_durumu.py ile aynı",
   all(HD.durum_metni(k, 5) in ["", "güneşli", "bulutlu", "yağmurlu", "karlı", "sisli"] for k in (0, 2, 45, 61, 73)))
 
+# ── Synapse yedek yolu (RPR-2026-1110-004): internet yoksa hava_gunluk'tan okunur ──
+import io as _io, json as _json, urllib.request as _ur  # noqa: E402
+_yedek_tmp = tempfile.mkdtemp()
+with open(os.path.join(_yedek_tmp, "supabase_config.json"), "w", encoding="utf-8") as _f:
+    _json.dump({"supabase_url": "http://db", "supabase_key": "k", "lokasyon_id": "maslak"}, _f)
+_eski_base, _eski_urlopen = HD.BASE_DIR, _ur.urlopen
+_istenen = []
+
+
+class _Cevap(_io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+def _sahte_urlopen(istek, timeout=None):
+    u = istek.full_url if hasattr(istek, "full_url") else istek
+    _istenen.append(u)
+    if "hava_gunluk" in u and "tahmin=eq.false" in u:
+        return _Cevap(_json.dumps([{"tarih": "2026-11-09", "veri": {"Hava_Sicaklik_Ort_C": 5.5, "Hava_Durumu": "bulutlu"}}]).encode())
+    if "hava_gunluk" in u and "tahmin=eq.true" in u:
+        return _Cevap(_json.dumps([{"tarih": "2026-11-11", "veri": {"Hava_Sicaklik_Ort_C": 9.0}},
+                                   {"tarih": "2026-11-10", "veri": {"Hava_Sicaklik_Ort_C": 8.0}}]).encode())
+    raise OSError("beklenmeyen istek: " + u)
+
+
+HD.BASE_DIR, _ur.urlopen = _yedek_tmp, _sahte_urlopen
+HD.koordinat = lambda: (41.1273, 29.0246)
+HD._getir = lambda url: (_ for _ in ()).throw(OSError("getaddrinfo failed"))
+_v = HD.gunluk_hava("2026-11-09", "2026-11-09", bugun=date(2026, 11, 10))
+c("internet yoksa gün Synapse yedek yolundan gelir", _v.get("2026-11-09", {}).get("Hava_Sicaklik_Ort_C") == 5.5, _v)
+c("yedek yol lokasyonun kendi satırını ve tarih aralığını ister",
+  any("lokasyon_id=eq.maslak" in u and "tarih=gte.2026-11-09" in u and "tarih=lte.2026-11-09" in u for u in _istenen), _istenen)
+_t = HD.ileri_tahmin(gun=3, bugun=date(2026, 11, 10))
+c("internet yoksa tahmin de yedek yoldan gelir, yalnız yarından sonrası", list(_t) == ["2026-11-11"], _t)
+_ur.urlopen = lambda *a, **k: (_ for _ in ()).throw(OSError("db de yok"))
+c("iki kaynak da yoksa boş sözlük, istisna yok", HD.gunluk_hava("2026-11-09", "2026-11-09", bugun=date(2026, 11, 10)) == {})
+os.remove(os.path.join(_yedek_tmp, "supabase_config.json"))
+c("ayar dosyası olmayan PC (geliştirme) hiçbir yere istek atmaz", HD._synapse_hava("2026-11-09", "2026-11-09", False) == {})
+HD.BASE_DIR, _ur.urlopen = _eski_base, _eski_urlopen
+_hb = os.path.join(BURASI, "..", "..", "merkez", "hava_besleyici.py")
+if os.path.exists(_hb):                     # yalnız geliştirme deposunda: merkez dönüşümü AYNI olmalı
+    import importlib.util as _iu
+    _sp = _iu.spec_from_file_location("hava_besleyici", _hb)
+    HB = _iu.module_from_spec(_sp)
+    _sp.loader.exec_module(HB)
+    _orn = sahte_cevap(date(2026, 11, 1), 4, kod=61, yagis=0.4)
+    c("merkez hava_besleyici ile lokasyon hava_durumu aynı dönüşümü üretir", HB._cevir(_orn) == HD._cevir(_orn))
+    c("iki taraf aynı günlük alanları ister", HB.GUNLUK == HD.GUNLUK)
+
 hata = [x for x in T if not x[1]]
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)[:300]))
