@@ -335,17 +335,30 @@ c("Synapse okunamazsa tutarlılık atlanır (yerel ↔ bulut zaten bildirir)",
   durumlar(s)["portal_tutarliligi"] == "atlandi", durumlar(s))
 
 k = Kur()
-alanlar = SUTUNLAR + ["Kule1_kWh", "Kule2_kWh", "Hava_Gunes_Radyasyon_kWh_m2"]
+alanlar = SUTUNLAR + ["Kule1_kWh", "Kule9_kWh", "Kule8_kWh", "Hava_Gunes_Radyasyon_kWh_m2"]
 with open(k.yol("energy_data.csv"), "w", newline="", encoding="utf-8") as f:
     w = csv.DictWriter(f, fieldnames=alanlar)
     w.writeheader()
-    w.writerows([dict(r, Kule1_kWh=150, Kule2_kWh=0, Hava_Gunes_Radyasyon_kWh_m2=3.1) for r in k.gunler])
+    w.writerows([dict(r, Kule1_kWh=150 + i, Kule9_kWh=150 + i, Kule8_kWh=0, Hava_Gunes_Radyasyon_kWh_m2=3.1)
+                 for i, r in enumerate(k.gunler)])
 s = k.tur()
 b = [x for x in s["bulgular"] if x["kontrol"] == "kapsam"]
 c("veri gelen ama izlenmeyen sayaç kapsam bulgusu (bilgi)", len(b) == 1 and b[0]["onem"] == "bilgi"
-  and b[0]["kanit"]["sutunlar"] == ["Kule1_kWh"], b)
-c("hep sıfır sayaç ve kWh_m2 hava alanı sayılmaz", b and "Kule2_kWh" not in b[0]["bulunan"]
+  and b[0]["kanit"]["sutunlar"] == ["Kule9_kWh"] and "donmuş veri" in b[0]["baslik"], b)
+c("listedeki sayaç (Kule1) kapsam bulgusu olmaz", b and "Kule1_kWh" not in b[0]["bulunan"])
+c("hep sıfır sayaç ve kWh_m2 hava alanı sayılmaz", b and "Kule8_kWh" not in b[0]["bulunan"]
   and "Radyasyon" not in b[0]["bulunan"])
+
+_sb = ("Kule1_kWh Kule2_kWh Kule3_kWh MCC_2BK_D01_kWh MCC_2BK_D02_kWh MCC_4BK_E01_kWh MCC_4BK_E02_kWh "
+       "MCC_4BK_F01_kWh MCC_CK_D01_kWh MCC_CK_E01_kWh MCC_CK_F01_kWh").split()
+c("Kule ve bina MCC sayaçları donmuş veri listesinde", set(_sb) <= set(A.SAYAC_SUTUNLARI), set(_sb) - set(A.SAYAC_SUTUNLARI))
+k = Kur()
+with open(k.yol("energy_data.csv"), "w", newline="", encoding="utf-8") as f:
+    w = csv.DictWriter(f, fieldnames=SUTUNLAR + ["MCC_4BK_E02_kWh"])
+    w.writeheader()
+    w.writerows([dict(r, MCC_4BK_E02_kWh=(700 + i) if i < 34 else 777) for i, r in enumerate(k.gunler)])
+a = anahtarlar(k.tur())
+c("donmuş bina MCC sayacı yakalanır (4BK-MCC-E02, 6 gün aynı)", "donmus_veri:MCC_4BK_E02_kWh" in a, a)
 
 # ── 9) Bulgu ömrü: açılma → tekrar → kapanma → yeniden açılma ────────────
 k = Kur()

@@ -26,7 +26,7 @@ KONTROLLER (aşama 1 — ekran açmadan yapılabilenler)
   diyagram_toplami Hastane Genel = Şebeke + Kojen; kayıtlı değer = hesap kuralı
   yerel_bulut      yereldeki günlük değer = Synapse'e giden değer
   portal_tutarliligi bu ay / geçen ay toplamı Enerji portalı = Synapse lokasyon detayı; mükerrer gün
-  kapsam           veri gelen ama hiçbir kontrolün bakmadığı sayaç sütunu (bilgi)
+  kapsam           veri gelen ama donmuş veri kontrolünde olmayan sayaç sütunu (bilgi)
   hava_durumu      dünün hava alanları dolu mu; boşsa servis yanıt veriyor mu
   portal_sagligi   8501 açık mı; eşitleme kaydında yeni hata var mı
   (Aşama 3: ekran ve buton kontrolleri — bu dosyada YOK.)
@@ -79,7 +79,11 @@ KRITIK_SAYAC = ("SEBEKE", "KOJEN", "TRDP", "CHILLER")
 SAYAC_SUTUNLARI = (["Sebeke_Tuketim_kWh", "Kojen1_kWh", "Kojen2_kWh", "Kojen3_kWh", "Kojen4_kWh",
                     "TRDP1_kWh", "TRDP2_kWh", "TRDP3_kWh", "TRDP4_kWh"]
                    + ["Chiller%d_kWh" % i for i in range(1, 6)]
-                   + ["MCC%d_kWh" % i for i in range(1, 8)])
+                   + ["MCC%d_kWh" % i for i in range(1, 8)]
+                   # 11.11.2026: kapsam kontrolü buldu — Kule ve bina MCC sayaçları (data_collector ANALYZERS)
+                   + ["Kule%d_kWh" % i for i in range(1, 4)]
+                   + ["MCC_2BK_D01_kWh", "MCC_2BK_D02_kWh", "MCC_4BK_E01_kWh", "MCC_4BK_E02_kWh",
+                      "MCC_4BK_F01_kWh", "MCC_CK_D01_kWh", "MCC_CK_E01_kWh", "MCC_CK_F01_kWh"])
 BULUT_SUTUNLARI = ["Toplam_Hastane_Tuketim_kWh", "Sebeke_Tuketim_kWh", "Kojen_Uretim_kWh",
                    "Chiller_Tuketim_kWh", "MCC_Tuketim_kWh"]
 TURETILMIS = ["Toplam_Hastane_Tuketim_kWh", "Sebeke_Tuketim_kWh", "Kojen_Uretim_kWh",
@@ -586,13 +590,14 @@ def k_portal_tutarliligi(o):
     return cikti
 
 
-# Agent'ın bir kontrolünde bakılan sayaç sütunları; buraya girmeyen yeni sayaç "kapsam" bulgusu olur.
+# Donmuş veri kontrolünün baktığı sayaçlar + toplam/türetilmiş sütunlar (sayaç değil, kapsam dışı).
 IZLENEN = set(SAYAC_SUTUNLARI) | set(TURETILMIS) | set(BULUT_SUTUNLARI)
 
 
 def k_kapsam(o):
-    """Kapsam: energy_data.csv'de veri gelen ama hiçbir agent kontrolünün bakmadığı sayaç sütunu
-    var mı (yeni sayaç eklenince agent'ın listesine de eklenmesi gerekir). Yalnızca bilgi."""
+    """Kapsam: energy_data.csv'de veri gelen ama DONMUŞ VERİ kontrolünün bakmadığı sayaç sütunu var mı.
+    (Okuma ve canlı veri kontrolleri ANALYZERS'taki bütün sayaçlara zaten bakar; günlük değerin
+    günlerce aynı kalması ise yalnızca SAYAC_SUTUNLARI listesindekilerde yakalanır.) Yalnızca bilgi."""
     df = enerji_df(o)
     son = df[df["Tarih"] >= (o.simdi().date() - timedelta(days=KALITE_GUN)).isoformat()]
     yeni = []
@@ -605,8 +610,8 @@ def k_kapsam(o):
         return []
     return [bulgu(
         "kapsam", "sayac", "bilgi", "Kapsam",
-        "%d sayaç sütunu hiçbir agent kontrolünde yok" % len(yeni),
-        "veri gelen her sayaç donmuş veri / sayaç erişimi kontrolünde",
+        "%d sayaç sütunu donmuş veri kontrolünde yok" % len(yeni),
+        "veri gelen her sayaç donmuş veri kontrolünde (okuma ve canlı veri kontrolleri bütün sayaçlara bakar)",
         ", ".join(sorted(yeni)), tekrar_adimi="energy_data.csv sütunları ↔ enerji_agent.py SAYAC_SUTUNLARI",
         olasi_yer="enerji_agent.py SAYAC_SUTUNLARI (yeni sayaç eklenince buraya da eklenmeli)",
         kanit={"sutunlar": sorted(yeni)})]
