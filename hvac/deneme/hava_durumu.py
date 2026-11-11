@@ -85,9 +85,26 @@ def durum_metni(kod, yagis) -> str:
     return "güneşli"
 
 
+# İnternet yokken her istek bağlantı zaman aşımını bekliyordu: Enerji portalının ilk
+# açılışı yalnız hava tahmini yüzünden +20 sn (11.11.2026, Maslak ölçümü: 61 sn).
+# Artık kısa bekleme ve başarısızlık hatırlanır: INTERNET_YOK_SN boyunca internet hiç
+# denenmez, doğrudan Synapse yedek yoluna geçilir.
+INTERNET_ZAMAN_ASIMI = 6
+INTERNET_YOK_SN = 1800
+_INTERNET = {"yok_bitis": 0.0}
+
+
 def _getir(url: str) -> dict:
-    with urllib.request.urlopen(url, timeout=ZAMAN_ASIMI) as r:
-        return json.load(r).get("daily") or {}
+    import time
+    kalan = _INTERNET["yok_bitis"] - time.monotonic()
+    if kalan > 0:
+        raise OSError("internet yok (son deneme başarısızdı; %d dk sonra yeniden denenecek)" % (kalan // 60 + 1))
+    try:
+        with urllib.request.urlopen(url, timeout=INTERNET_ZAMAN_ASIMI) as r:
+            return json.load(r).get("daily") or {}
+    except (OSError, ValueError):
+        _INTERNET["yok_bitis"] = time.monotonic() + INTERNET_YOK_SN
+        raise
 
 
 def _cevir(gunluk: dict) -> Dict[str, dict]:

@@ -3282,13 +3282,21 @@ def _internetsiz_html(html: str) -> str:
     Lokasyon PC'si internete çıkamayınca tarayıcı her sayfada Google Fonts / cdnjs /
     unsplash'i zaman aşımına kadar bekliyordu (yavaş açılış). static/portal.html
     lokasyonda elle de değişebildiği için dosyaya DOKUNULMAZ; ayıklama gönderim anında
-    bellekte yapılır. Yazı tipi Windows'un kendi tipine düşer, ikonlar static/vendor'dan,
-    arka plan fotoğrafları yerine düz renk kalır.
+    bellekte yapılır. Yazı tipi Windows'un kendi tipine düşer; ikonlar ve arka plan
+    fotoğrafları static/vendor'daki gömülü kopyalardan gelir.
     """
     html = _INTERNET_KAYNAK_SATIRI.sub("", html)
     html = re.sub(r'<link[^>]+cdnjs\.cloudflare\.com/ajax/libs/font-awesome/[^>]*>',
-                  '<script src="/static/vendor/fontawesome-all.min.js"></script>', html)
-    html = re.sub(r"background-image:\s*url\(['\"]?https://images\.unsplash\.com[^)]*\);?", "", html)
+                  '<link rel="stylesheet" href="/static/vendor/fontawesome-all.css">', html)
+    # Unsplash arka plan görselleri: static/vendor/portal_gorseller.css'te base64 gömülü
+    # (--gorsel-photo-<id>). Bilinen fotoğraf o değişkene bağlanır; dosyada olmayan bir
+    # fotoğrafsa var() boş kalır ve arka plan düz renge düşer (internet beklenmez).
+    html, n = re.subn(r"url\(['\"]?https://images\.unsplash\.com/(photo-[0-9a-f-]+)[^)]*\)",
+                      r"var(--gorsel-\1)", html)
+    # Dosyada karşılığı olmayan başka bir Unsplash adresi kalırsa o da kaldırılır (internet beklenmez)
+    html = re.sub(r"url\(['\"]?https://images\.unsplash\.com[^)]*\)", "none", html)
+    if n and "portal_gorseller.css" not in html:
+        html = html.replace("</head>", '  <link rel="stylesheet" href="/static/vendor/portal_gorseller.css">\n</head>', 1)
     return html
 
 

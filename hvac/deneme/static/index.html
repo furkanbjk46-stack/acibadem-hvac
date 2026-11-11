@@ -9,9 +9,10 @@
          yüklenir. Maslak internete çıkamıyordu: sayfa her açılışta CDN'i zaman aşımına kadar
          bekliyor (yavaşlık), Chart.js gelmediği için grafikler hiç çizilmiyordu. Google Fonts
          kaldırıldı; yazı tipi Windows'un kendi tipine (Segoe UI) düşer. -->
-    <!-- İkonlar anında (eşzamanlı) çizilsin: animasyon karesi beklenmez, ikonsuz an görünmez -->
-    <script>window.FontAwesomeConfig = { mutateApproach: 'sync' };</script>
-    <script src="/static/vendor/fontawesome-all.min.js"></script>
+    <!-- Font Awesome CSS sürümü (yazı tipleri dosyanın içine gömülü). JS sürümü KULLANILMAZ:
+         <i class="fas ..."> etiketlerini SVG'ye çevirip synapse_tema.js'in animasyonlu
+         simgelerini engelliyordu (11.11.2026). -->
+    <link rel="stylesheet" href="/static/vendor/fontawesome-all.css">
     <script src="/static/vendor/chart.umd.min.js"></script>
     <!-- SheetJS for XLSX generation (0.18.5 — cdn.sheetjs.com'daki 0.20.1 ile aynı API) -->
     <script src="/static/vendor/xlsx.full.min.js"></script>

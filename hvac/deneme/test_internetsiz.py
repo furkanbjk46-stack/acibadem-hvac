@@ -27,10 +27,16 @@ def oku(*p):
 idx = oku("static", "index.html")
 dis = re.findall(r'<(?:script|link)[^>]+(?:src|href)="(https?://[^"]+)"', idx)
 c("index.html internetten betik/stil yüklemez", dis == [], dis)
-yerel = re.findall(r'<script src="/static/vendor/([^"]+)"', idx)
+yerel = re.findall(r'<(?:script src|link rel="stylesheet" href)="/static/vendor/([^"]+)"', idx)
 c("index.html kütüphaneleri static/vendor'dan yükler",
-  set(yerel) == {"fontawesome-all.min.js", "chart.umd.min.js", "xlsx.full.min.js", "html2canvas.min.js",
+  set(yerel) == {"fontawesome-all.css", "chart.umd.min.js", "xlsx.full.min.js", "html2canvas.min.js",
                  "jspdf.umd.min.js", "jspdf.plugin.autotable.min.js"}, yerel)
+_fa = oku("static", "vendor", "fontawesome-all.css")
+c("Font Awesome CSS: yazı tipleri gömülü, dışarıya adres yok",
+  _fa.count("data:font/woff2;base64,") == _fa.count("@font-face") > 0 and "../webfonts" not in _fa
+  and not re.search(r"url\((?!data:)", _fa))
+c("Font Awesome JS sürümü kullanılmaz (animasyonlu Synapse simgelerini engelliyordu)",
+  "fontawesome-all.min.js" not in idx)
 for ad in yerel:
     yol = os.path.join(BURASI, "static", "vendor", ad)
     c("vendor/%s var ve dolu" % ad, os.path.exists(yol) and os.path.getsize(yol) > 30000,
@@ -58,8 +64,13 @@ ornek = ('<head>\n  <link rel="preconnect" href="https://fonts.googleapis.com">\
          '  .a { background-image: url(\'https://images.unsplash.com/x.jpg?w=1\'); color: red; }\n</style>')
 t = ns["_internetsiz_html"](ornek)
 c("Google Fonts satırları ve @import silinir", "googleapis" not in t)
-c("Font Awesome CSS → yerel JS", '/static/vendor/fontawesome-all.min.js' in t and "cdnjs" not in t)
-c("arka plan fotoğrafı silinir, diğer stil kalır", "unsplash" not in t and "color: red" in t)
+c("Font Awesome CSS → yerel CSS", '/static/vendor/fontawesome-all.css' in t and "cdnjs" not in t)
+c("tanınmayan arka plan fotoğrafı kaldırılır, diğer stil kalır", "unsplash" not in t and "color: red" in t)
+_bil = ns["_internetsiz_html"]("<head></head><style>.a{background-image:url('https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=1000');}</style>")
+c("bilinen fotoğraf gömülü kopyaya bağlanır ve görsel CSS'i eklenir",
+  "var(--gorsel-photo-1581094794329-c8112a89af12)" in _bil and "/static/vendor/portal_gorseller.css" in _bil and "unsplash" not in _bil)
+_gc = oku("static", "vendor", "portal_gorseller.css")
+c("görsel CSS'inde iki fotoğraf da gömülü", _gc.count("data:image/jpeg;base64,") == 2 and "https://images" not in _gc)
 c("üretilen giriş sayfası şablonu da internetsiz sunulur", "_internetsiz_html(_portal_html_oku())" in mp)
 c("ikinci sayfa şablonunda Google Fonts yok",
   mp.count("fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800") == 0)
@@ -86,6 +97,30 @@ _sahte = AC.urllib.request.urlopen
 AC.urllib.request.urlopen = lambda *a, **k: (_ for _ in ()).throw(OSError("timed out"))
 c("internet yoksa _oat_cek yedeğe düşer", AC._oat_cek(41.1, 29.0, {"DIS HAVA": 8.8}) == 8.8)
 AC.urllib.request.urlopen = _sahte
+
+# ── Hava: internet yokken her istekte zaman aşımı beklenmez ──────────────
+import urllib.request as _ur  # noqa: E402
+_sayac = {"n": 0}
+_eski_uo = _ur.urlopen
+
+
+def _asim(*a, **k):
+    _sayac["n"] += 1
+    raise OSError("timed out")
+
+
+_ur.urlopen = _asim
+HD._INTERNET["yok_bitis"] = 0.0
+for _ in range(3):
+    try:
+        HD._getir("https://api.open-meteo.com/v1/forecast?x=1")
+    except OSError:
+        pass
+c("internet yoksa yalnız ilk istek denenir; sonrakiler beklemeden yedek yola geçer", _sayac["n"] == 1, _sayac)
+c("internet bekleme süresi kısa (≤ 6 sn) ve başarısızlık 30 dk hatırlanır",
+  HD.INTERNET_ZAMAN_ASIMI <= 6 and HD.INTERNET_YOK_SN == 1800)
+HD._INTERNET["yok_bitis"] = 0.0
+_ur.urlopen = _eski_uo
 
 hata = [x for x in T if not x[1]]
 for ad, ok, ek in T:
