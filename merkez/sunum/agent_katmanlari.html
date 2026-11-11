@@ -641,9 +641,43 @@ body.canli ul.kontrol li.ek::after { content:none; }
   $("dur").addEventListener("click", function () { duraklat = true; });
   $("sifirla").addEventListener("click", sifirla);
   // ══ CANLI MOD ══ Synapse veriyi window.SYNAPSE_CANLI olarak verir; değerler sunucuda kaçırılmıştır.
-  var KONTROL_KOD = { "Enerji diyagramı": "diyagram_toplami", "Günlük döngü": "gunluk_dongu",
-    "Sayaç erişimi": "sayac_erisimi", "Donmuş veri": "donmus_veri", "Veri kalitesi": "veri_kalitesi",
-    "Hava durumu servisi": "hava_durumu", "Yerel ↔ bulut": "yerel_bulut", "Portal sağlığı": "portal_sagligi" };
+  // Sorumluluk listesindeki madde → agent'ın kontrol kodu(ları). Kod yoksa madde "aşama 3"tür.
+  var KONTROL_KOD = {
+    e: { "Enerji diyagramı": ["diyagram_toplami"], "Günlük döngü": ["gunluk_dongu"],
+         "Sayaç erişimi": ["sayac_erisimi"], "Donmuş veri": ["donmus_veri"], "Veri kalitesi": ["veri_kalitesi"],
+         "Hava durumu servisi": ["hava_durumu"], "Yerel ↔ bulut": ["yerel_bulut"], "Portal sağlığı": ["portal_sagligi"] },
+    m: { "Tüm kurallar": ["oz_test"], "Sayfadaki tüm butonlar ve grafikler": ["talep_uretim"],
+         "BACnet okuma": ["donmus_ahu", "ahu_veri"], "Sensör arızası": ["sensor_mantigi"],
+         "Eşikler ve talimatlar": ["oz_test"], "API uçları": ["portal_api"], "Sabah analizi": ["otomatik_analiz"],
+         "Watchdog": ["portal_api"], "Koruma alanı": ["oto_set"] }
+  };
+  var DURUM_SIRA = { sorun: 0, hata: 1, atlandi: 2, gecti: 3 };
+  function cipYap(kodlar, kontroller) {
+    var c = document.createElement("span"), en = null;
+    kodlar.forEach(function (kod) { var k = kontroller[kod]; if (k && (!en || DURUM_SIRA[k.durum] < DURUM_SIRA[en.durum])) { en = k; } });
+    if (en) { c.className = "dcip " + en.durum; c.textContent = DCIP[en.durum] || en.durum;
+              c.title = (en.lokasyon + " · " + en.zaman + (en.mesaj ? " · " + en.mesaj : "")).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;/g, "'"); }
+    else if (kodlar.length) { c.className = "dcip bekliyor"; c.textContent = "tur bekleniyor"; }
+    else { c.className = "dcip sonra"; c.textContent = "aşama 3"; }
+    return c;
+  }
+  // Bir agent kutusunu canlı durumla işaretler; listede karşılığı olmayan kontrolleri sona ekler.
+  function kutuIsle(kutu, harita, kontroller) {
+    var kullanilan = {};
+    kutu.querySelectorAll("ul.kontrol li").forEach(function (li) {
+      var b = li.querySelector("b"); var ad = b ? b.textContent.replace(/:\s*$/, "").trim() : "";
+      var kodlar = harita[ad] || [];
+      kodlar.forEach(function (k) { kullanilan[k] = 1; });
+      li.appendChild(cipYap(kodlar, kontroller));
+    });
+    var listeler = kutu.querySelectorAll("ul.kontrol"), son = listeler[listeler.length - 1];
+    Object.keys(kontroller).forEach(function (kod) {
+      if (kullanilan[kod]) { return; }
+      var li = document.createElement("li"); li.className = "ek";
+      li.innerHTML = "<b>" + kontroller[kod].ad + "</b>";
+      li.appendChild(cipYap([kod], kontroller)); son.appendChild(li);
+    });
+  }
   var DCIP = { gecti: "✓ geçti", sorun: "✗ sorun", atlandi: "– atlandı", hata: "! kontrol hatası" };
   function canliRaporHtml(r) {
     var kapali = r.durum === "kapandi";
@@ -684,18 +718,16 @@ body.canli ul.kontrol li.ek::after { content:none; }
     $("gecmis").innerHTML = v.su_an.gecmis.map(function (o) { return "<li><b>" + o.no + "</b> <span>" + o.zaman + " · " + o.metin + "</span></li>"; }).join("");
     $("anlik-rapor").innerHTML = v.anlik ? canliRaporHtml(v.anlik) : "<p class='bos'>Açık iş emri yok.</p>";
     var kutular = document.querySelectorAll(".kutu.ag");
-    kutular[0].querySelectorAll("ul.kontrol li").forEach(function (li) {
-      var b = li.querySelector("b"); var ad = b ? b.textContent.replace(/:\s*$/, "").trim() : "";
-      var kod = KONTROL_KOD[ad], k = kod && v.kontroller[kod], c = document.createElement("span");
-      if (k) { c.className = "dcip " + k.durum; c.textContent = DCIP[k.durum] || k.durum; c.title = (k.lokasyon + " · " + k.zaman + (k.mesaj ? " · " + k.mesaj : "")).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;/g, "'"); }
-      else if (kod) { c.className = "dcip bekliyor"; c.textContent = "tur bekleniyor"; }
-      else { c.className = "dcip sonra"; c.textContent = "aşama 3"; }
-      li.appendChild(c);
-    });
+    kutuIsle(kutular[0], KONTROL_KOD.e, v.kontroller.e || {});
+    kutuIsle(kutular[1], KONTROL_KOD.m, v.kontroller.m || {});
     var not1 = document.createElement("p"); not1.className = "canli-not";
     not1.textContent = "Canlı: veri kontrolleri (aşama 1). Ekran ve buton kontrolleri aşama 3'te eklenecek. Agent sürüm 1'de yalnızca izler; dosyaya yazmaz, portalı yeniden başlatmaz.";
     kutular[0].appendChild(not1);
-    [1, 2].forEach(function (i) { var p = document.createElement("p"); p.className = "canli-not"; p.textContent = "Bu agent henüz kurulmadı."; kutular[i].appendChild(p); });
+    var not2 = document.createElement("p"); not2.className = "canli-not";
+    not2.textContent = "Canlı: servis ve veri kontrolleri. Oto-set yalnızca izlenir (koruma alanı); bakım kartı, ayarlar ve PDF ekranları aşama 3.";
+    kutular[1].appendChild(not2);
+    var not3 = document.createElement("p"); not3.className = "canli-not"; not3.textContent = "Bu agent henüz kurulmadı.";
+    kutular[2].appendChild(not3);
     var bas = document.querySelectorAll("h2.bolum"); bas[bas.length - 1].textContent = "İş emirleri";
     bas[bas.length - 1].nextElementSibling.textContent = v.acik_sayisi + " açık · son kapananlar altta. Durumu değiştirmek için bu sayfanın altındaki düğmeleri kullan.";
     $("ornekler").innerHTML = v.raporlar.length ? v.raporlar.map(canliRaporHtml).join("") : "<p class='bos'>Henüz iş emri yok.</p>";

@@ -243,7 +243,11 @@ c("iş emri yokken açık bulgular kırmızı yakmaz; bilinen ve bilgi ayrı yaz
   and "1 bilgi" in _vb["agentlar"]["e"]["rozet"], _vb["agentlar"]["e"])
 c("kurulmamış agent'lar boş durumda", v["agentlar"]["m"]["durum"] is None and v["agentlar"]["s"]["durum"] is None)
 c("üst agent 1 dk önce tur attı → çalışıyor, çipler yanık", v["ust"]["durum"] == "ok" and v["ust"]["cip"])
-c("kontrol durumları sayfaya gider", v["kontroller"]["diyagram_toplami"]["durum"] == "sorun")
+c("kontrol durumları agent'a göre sayfaya gider", v["kontroller"]["e"]["diyagram_toplami"]["durum"] == "sorun"
+  and v["kontroller"]["m"] == {})
+_vm = G.gorunum([dict(tur_satiri(agent="mekanik_zeka"), kontroller=[{"kod": "oto_set", "durum": "sorun", "mesaj": "x"}])], [], [], AN)
+c("Mekanik Zeka turu kendi düğümünde ve adıyla görünür", _vm["kontroller"]["m"]["oto_set"]["ad"] == "Oto-set geçişi"
+  and _vm["agentlar"]["m"]["durum"] == "ok" and _vm["kontroller"]["e"] == {})
 c("açık rapor önce, kapanan sonra", [r["durum"] for r in v["raporlar"]] == ["acik", "kapandi"])
 dok = json.dumps(v, ensure_ascii=False)
 c("DB'den gelen HTML kaçırılır (script/img/&)", "<script>" not in dok and "<img" not in dok and "<b>x" not in dok
@@ -273,7 +277,13 @@ c("sayfadaki kontrol eşlemesi enerji_agent kontrol kodlarıyla aynı",
 _ea = os.path.join(BURASI, "..", "hvac", "deneme", "enerji_agent.py")
 if os.path.exists(_ea):
     _kodlar = set(re.findall(r'\("([a-z_]+)", "[^"]+", k_', open(_ea, encoding="utf-8").read()))
-    c("enerji_agent'ın 8 kontrolünün hepsi ekranda adlandırılmış", _kodlar == set(G.KONTROL_AD), _kodlar ^ set(G.KONTROL_AD))
+    _mz = os.path.join(BURASI, "..", "hvac", "deneme", "mekanik_zeka_agent.py")
+    _kodlar |= set(re.findall(r'\("([a-z_]+)", "[^"]+", k_', open(_mz, encoding="utf-8").read()))
+    c("iki agent'ın 18 kontrolünün hepsi ekranda adlandırılmış", _kodlar == set(G.KONTROL_AD) and len(_kodlar) == 18,
+      _kodlar ^ set(G.KONTROL_AD))
+    _sayfa_kod = set(re.findall(r'\["([a-z_]+)"[\],]', sablon.split("var KONTROL_KOD")[1].split("var DURUM_SIRA")[0]))
+    _sayfa_kod |= set(re.findall(r', "([a-z_]+)"\]', sablon.split("var KONTROL_KOD")[1].split("var DURUM_SIRA")[0]))
+    c("sayfadaki eşlemede geçen her kod gerçek bir kontrol", _sayfa_kod and _sayfa_kod <= _kodlar, _sayfa_kod - _kodlar)
 
 print("\n%d geçti, %d kaldı" % (gecti, kaldi))
 sys.exit(1 if kaldi else 0)

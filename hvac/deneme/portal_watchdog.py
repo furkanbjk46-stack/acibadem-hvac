@@ -90,45 +90,51 @@ def _oz_test_baslat():
         logger.warning(f"Öz test başlatılamadı: {e}")   # portal çalışmaya devam eder
 
 
-# ── Enerji Portal Agent'ı ─────────────────────────────────────────────────
-# Portallardan AYRI izlenir: agent ölürse yalnızca agent yeniden başlatılır,
+# ── Portal agent'ları (Enerji, Mekanik Zeka) ───────────────────────────────
+# Portallardan AYRI izlenir: bir agent ölürse yalnızca o agent yeniden başlatılır,
 # portallar ve veri toplama etkilenmez (yukarıdaki procs listesine BİLEREK
 # eklenmez — o listedeki bir süreç durunca hepsi yeniden başlatılıyor).
-_agent = {"surec": None, "son_baslatma": 0.0}
+_AGENTLAR = {
+    "enerji_agent.py": "Enerji Portal Agent'ı",
+    "mekanik_zeka_agent.py": "Mekanik Zeka Agent'ı",
+}
+_agent = {d: {"surec": None, "son_baslatma": 0.0} for d in _AGENTLAR}
 _AGENT_BEKLEME_SN = 60          # art arda çökerse en sık bu aralıkla yeniden dener
 
 
 def _agent_baslat():
-    """Enerji agent'ı çalışmıyorsa başlatır (enerji_agent.py yoksa sessizce geçer)."""
-    p = _agent["surec"]
-    if p is not None and p.poll() is None:
-        return
-    if not os.path.exists(os.path.join(BASE_DIR, "enerji_agent.py")):
-        return
-    if time.time() - _agent["son_baslatma"] < _AGENT_BEKLEME_SN:
-        return
-    try:
-        _agent["son_baslatma"] = time.time()
-        _agent["surec"] = subprocess.Popen([sys.executable, "enerji_agent.py"],
-                                           cwd=BASE_DIR, env=_COCUK_ENV)
-        logger.info(f"🤖 Enerji Portal Agent'ı başlatıldı (PID: {_agent['surec'].pid})")
-    except Exception as e:
-        logger.warning(f"Enerji agent'ı başlatılamadı: {e}")   # portallar çalışmaya devam eder
+    """Çalışmayan agent'ları başlatır (dosyası olmayan agent sessizce geçilir)."""
+    for dosya, ad in _AGENTLAR.items():
+        a = _agent[dosya]
+        p = a["surec"]
+        if p is not None and p.poll() is None:
+            continue
+        if not os.path.exists(os.path.join(BASE_DIR, dosya)):
+            continue
+        if time.time() - a["son_baslatma"] < _AGENT_BEKLEME_SN:
+            continue
+        try:
+            a["son_baslatma"] = time.time()
+            a["surec"] = subprocess.Popen([sys.executable, dosya], cwd=BASE_DIR, env=_COCUK_ENV)
+            logger.info(f"🤖 {ad} başlatıldı (PID: {a['surec'].pid})")
+        except Exception as e:
+            logger.warning(f"{ad} başlatılamadı: {e}")   # portallar çalışmaya devam eder
 
 
 def _agent_durdur():
-    p = _agent["surec"]
-    if p is None:
-        return
-    try:
-        p.terminate()
-        p.wait(timeout=5)
-    except Exception:
+    for a in _agent.values():
+        p = a["surec"]
+        if p is None:
+            continue
         try:
-            p.kill()
+            p.terminate()
+            p.wait(timeout=5)
         except Exception:
-            pass
-    _agent["surec"], _agent["son_baslatma"] = None, 0.0
+            try:
+                p.kill()
+            except Exception:
+                pass
+        a["surec"], a["son_baslatma"] = None, 0.0
 
 
 def stop_portals(procs):

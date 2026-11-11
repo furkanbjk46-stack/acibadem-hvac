@@ -54,6 +54,8 @@ from datetime import date, datetime, timedelta
 
 SURUM = "1.1"
 AGENT = "enerji"
+# Agent kimliği: tur/gönderim/döngü çekirdeği Mekanik Zeka agent'ı ile ORTAK (mekanik_zeka_agent.py)
+ENERJI = {"agent": "enerji", "ad": "Enerji Portal Agent'ı", "on": "enerji_agent"}
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 TUR_DAKIKA = 15
@@ -93,7 +95,8 @@ class Atla(Exception):
 # ══════════════════════════════════════════════════════════════════════════
 class Ortam:
     def __init__(self, dizin=BASE_DIR, simdi=None, bulut="oku", http=None, bekle=None,
-                 portal_url="http://127.0.0.1:8501"):
+                 portal_url="http://127.0.0.1:8501", kim=None):
+        self.kim = kim or ENERJI
         self.dizin = dizin
         self._simdi = simdi
         self.portal_url = portal_url
@@ -121,7 +124,7 @@ class Ortam:
 
     def ayar(self):
         try:
-            with open(self.yol("configs", "enerji_agent.json"), encoding="utf-8-sig") as f:
+            with open(self.yol("configs", self.kim["on"] + ".json"), encoding="utf-8-sig") as f:
                 a = json.load(f)
             return a if isinstance(a, dict) else {}
         except Exception:
@@ -620,7 +623,7 @@ KONTROLLER = [
 # ══════════════════════════════════════════════════════════════════════════
 def _durum_oku(o):
     try:
-        with open(o.yol("configs", "enerji_agent_durum.json"), encoding="utf-8") as f:
+        with open(o.yol("configs", o.kim["on"] + "_durum.json"), encoding="utf-8") as f:
             d = json.load(f)
         if isinstance(d, dict):
             d.setdefault("acik", {})
@@ -634,7 +637,7 @@ def _durum_oku(o):
 
 def _durum_yaz(o, d):
     os.makedirs(o.yol("configs"), exist_ok=True)
-    yol = o.yol("configs", "enerji_agent_durum.json")
+    yol = o.yol("configs", o.kim["on"] + "_durum.json")
     with open(yol + ".tmp", "w", encoding="utf-8") as f:
         json.dump(d, f, ensure_ascii=False, indent=1)
     os.replace(yol + ".tmp", yol)
@@ -713,7 +716,7 @@ def gonder(o, sonuc, d):
     hatalar = []
 
     kod, m = o.http(taban + "agent_turlar?on_conflict=lokasyon_id,agent", "POST", _bulut_baslik(o, ust),
-                    {"lokasyon_id": lok, "agent": AGENT, "tur_zamani": sonuc["zaman"],
+                    {"lokasyon_id": lok, "agent": o.kim["agent"], "tur_zamani": sonuc["zaman"],
                      "sure_sn": sonuc["sure_sn"], "surum": SURUM, "ozet": sonuc["ozet"],
                      "kontroller": sonuc["kontroller"]})
     if kod not in (200, 201, 204):
@@ -723,7 +726,7 @@ def gonder(o, sonuc, d):
         alanlar = ("anahtar", "kontrol", "bolum", "onem", "baslik", "beklenen", "bulunan", "denenen",
                    "tekrar_adimi", "olasi_yer", "kanit", "durum", "ilk_gorulme", "son_gorulme",
                    "gorulme_sayisi", "acilma_sayisi")
-        govde = [dict({a: b.get(a) for a in alanlar}, lokasyon_id=lok, agent=AGENT, kapanma=None)
+        govde = [dict({a: b.get(a) for a in alanlar}, lokasyon_id=lok, agent=o.kim["agent"], kapanma=None)
                  for b in sonuc["bulgular"]]
         kod, m = o.http(taban + "agent_bulgular?on_conflict=lokasyon_id,agent,anahtar", "POST",
                         _bulut_baslik(o, ust), govde)
@@ -736,7 +739,7 @@ def gonder(o, sonuc, d):
         if k["anahtar"] in d["acik"]:
             continue                                  # bu arada yeniden açıldı
         kod, m = o.http(taban + "agent_bulgular?lokasyon_id=eq.%s&agent=eq.%s&anahtar=eq.%s"
-                        % (urllib.parse.quote(lok), AGENT, urllib.parse.quote(k["anahtar"], safe="")),
+                        % (urllib.parse.quote(lok), o.kim["agent"], urllib.parse.quote(k["anahtar"], safe="")),
                         "PATCH", _bulut_baslik(o, {"Content-Type": "application/json",
                                                    "Prefer": "return=minimal"}),
                         {"durum": "kapandi", "kapanma": k["kapanma"]})
@@ -750,9 +753,9 @@ def gonder(o, sonuc, d):
 # ══════════════════════════════════════════════════════════════════════════
 # SÜREÇ
 # ══════════════════════════════════════════════════════════════════════════
-def yazdir(s):
+def yazdir(s, ad="Enerji Portal Agent'ı"):
     simge = {"gecti": "✓", "sorun": "✗", "atlandi": "–", "hata": "!"}
-    print("Enerji Portal Agent'ı · tur %s · %.1f sn" % (s["zaman"], s["sure_sn"]))
+    print("%s · tur %s · %.1f sn" % (ad, s["zaman"], s["sure_sn"]))
     for k in s["kontroller"]:
         print("  %s %-28s %s" % (simge[k["durum"]], k["ad"], k["mesaj"]))
     for b in s["bulgular"]:
@@ -765,10 +768,14 @@ def yazdir(s):
     print("  kayıt: %s" % s["gonderim"])
 
 
-def dongu():
+def dongu(kim=None, kontroller=None, ortam_ek=None):
+    """Sürekli döngü. kim: agent kimliği (varsayılan Enerji); kontroller: kontrol listesi;
+    ortam_ek: Ortam'a ek argümanlar (ör. Mekanik Zeka'nın portal adresi)."""
+    kim = kim or ENERJI
+    ortam_ek = ortam_ek or {}
     try:
         from logging.handlers import RotatingFileHandler
-        fh = RotatingFileHandler(os.path.join(BASE_DIR, "enerji_agent.log"), maxBytes=1_000_000,
+        fh = RotatingFileHandler(os.path.join(BASE_DIR, kim["on"] + ".log"), maxBytes=1_000_000,
                                  backupCount=2, encoding="utf-8")
         fh.setFormatter(logging.Formatter("%(asctime)s [AGENT] %(levelname)s %(message)s"))
         logging.getLogger().addHandler(fh)
@@ -776,23 +783,23 @@ def dongu():
         pass
     try:
         from kilit import surec_kilidi_al
-        if not surec_kilidi_al("enerji_agent"):
-            logger.info("Enerji agent'ı başka bir süreçte çalışıyor — bu kopya kapanıyor.")
+        if not surec_kilidi_al(kim["on"]):
+            logger.info("%s başka bir süreçte çalışıyor — bu kopya kapanıyor.", kim["ad"])
             return
     except Exception as e:
         logger.warning("Tek kopya kilidi kullanılamadı: %s", e)
 
-    logger.info("Enerji Portal Agent'ı başladı (sürüm %s, her %d dk; ilk tur %d sn sonra)",
-                SURUM, TUR_DAKIKA, BASLANGIC_BEKLEME_SN)
+    logger.info("%s başladı (sürüm %s, her %d dk; ilk tur %d sn sonra)",
+                kim["ad"], SURUM, TUR_DAKIKA, BASLANGIC_BEKLEME_SN)
     time.sleep(BASLANGIC_BEKLEME_SN)
     while True:
-        o = Ortam()
+        o = Ortam(kim=kim, **ortam_ek)
         ayar = o.ayar()
         if ayar.get("aktif", True) is False:
-            logger.info("Agent kapalı (configs/enerji_agent.json) — bekliyor")
+            logger.info("Agent kapalı (configs/%s.json) — bekliyor", kim["on"])
         else:
             try:
-                s = tur(o)
+                s = tur(o, kontroller)
                 logger.info("Tur: %d geçti, %d sorun, %d atlandı, %d hata · %s",
                             s["ozet"]["gecti"], s["ozet"]["sorun"], s["ozet"]["atlandi"],
                             s["ozet"]["hata"], s["gonderim"])

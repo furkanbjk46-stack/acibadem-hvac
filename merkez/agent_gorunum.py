@@ -25,6 +25,11 @@ KONTROL_AD = {
     "gunluk_dongu": "Günlük döngü", "sayac_erisimi": "Sayaç erişimi", "donmus_veri": "Donmuş veri",
     "veri_kalitesi": "Veri kalitesi", "diyagram_toplami": "Enerji diyagramı",
     "yerel_bulut": "Yerel ↔ bulut", "hava_durumu": "Hava durumu", "portal_sagligi": "Portal sağlığı",
+    # Mekanik Zeka agent'ı (hvac/deneme/mekanik_zeka_agent.py)
+    "portal_api": "API uçları (8005)", "otomatik_analiz": "Otomatik analiz", "dis_hava": "Dış hava kaynağı",
+    "ahu_veri": "AHU verisi", "sensor_mantigi": "Sensör arızası mantığı", "donmus_ahu": "Donmuş AHU okuması",
+    "talep_uretim": "Talep / üretim grafiği", "oz_test": "Öz test", "oto_set": "Oto-set geçişi",
+    "internet": "İnternet erişimi",
 }
 DUGUM = {"enerji": "e", "mekanik_zeka": "m", "synapse": "s"}
 
@@ -177,17 +182,20 @@ def gorunum(turlar, bulgular, raporlar, an=None, ust_durum=None):
     elif kapali:
         anlik = rapor_karti(sorted(kapali, key=lambda r: str(r.get("kapanma") or ""), reverse=True)[0])
 
-    # ── Enerji kontrolleri: her lokasyonun son turundaki durum (en kötüsü) ──
-    kontroller = {}
+    # ── Agent kontrolleri: şema düğümüne göre, her lokasyonun son turundaki durum (en kötüsü) ──
+    kontroller = {d: {} for d in DUGUM.values()}
     sira = {"sorun": 0, "hata": 1, "atlandi": 2, "gecti": 3}
     for t in turlar:
-        if t.get("agent") != "enerji":
+        dugum = DUGUM.get(t.get("agent"))
+        if dugum is None:
             continue
         for k in t.get("kontroller") or []:
-            onceki = kontroller.get(k.get("kod"))
+            onceki = kontroller[dugum].get(k.get("kod"))
             if onceki is None or sira.get(k.get("durum"), 9) < sira.get(onceki["durum"], 9):
-                kontroller[k.get("kod")] = {"durum": k.get("durum"), "mesaj": e(k.get("mesaj")),
-                                            "lokasyon": e(t.get("lokasyon_id")), "zaman": saat(t.get("tur_zamani"), False)}
+                kontroller[dugum][k.get("kod")] = {"durum": k.get("durum"), "mesaj": e(k.get("mesaj")),
+                                                   "ad": e(KONTROL_AD.get(k.get("kod"), k.get("ad") or k.get("kod"))),
+                                                   "lokasyon": e(t.get("lokasyon_id")),
+                                                   "zaman": saat(t.get("tur_zamani"), False)}
 
     kartlar = sorted(acik_rapor, key=lambda r: (ONEM_SIRA.get(r.get("onem"), 1), str(r.get("olusturma"))))
     kartlar += sorted(kapali, key=lambda r: str(r.get("kapanma") or ""), reverse=True)[:10]
