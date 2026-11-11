@@ -300,6 +300,12 @@ c("enjekte edilen JSON </script> içeremez", "</script" not in sy.split("window.
 c("sayfada canlı mod var, simülasyon canlıda otomatik oynamaz",
   "function canliCiz" in sablon and re.search(r"if \(window\.SYNAPSE_CANLI\) \{ canliCiz", sablon)
   and "else { sifirla(); if (!azHareket)" in sablon)
+_boy = sablon.split("function boyutla()")[1].split("function canliCiz")[0]
+c("canlı ekran çerçeveyle birlikte Streamlit kabını da uzatır (alttaki düğmelerin üstüne binmez)",
+  "childElementCount === 1" in _boy and "el.style.height = h" in _boy and "minHeight" in _boy)
+_yon = open(os.path.join(BURASI, "pages", "yonetim.py"), encoding="utf-8").read()
+c("Agent katmanları ilk çizim yüksekliği içeriği alacak kadar (≥ 2400)",
+  int(re.search(r"_bilesen\.html\(_AG\.sayfa\(_sablon, _v\), height=(\d+)", _yon).group(1)) >= 2400)
 c("canlıda 'Tam test kapısı' kutusu 'Doğrulama' olarak adlandırılır (sunucuda test koşmaz)",
   'tt[0].textContent = "Doğrulama"' in sablon)
 c("sayfadaki kontrol eşlemesi enerji_agent kontrol kodlarıyla aynı",

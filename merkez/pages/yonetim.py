@@ -453,9 +453,9 @@ with _sekme_agent:
         with _ay2:
             st.caption("Canlı · dakikada bir kendiliğinden yenilenir · son okuma %s" % _v["zaman"])
         if _sablon:
-            # Yükseklik sayfanın içindeki betikle içeriğe göre ayarlanır (iç kaydırma yok);
-            # buradaki değer yalnızca ilk çizim içindir.
-            _bilesen.html(_AG.sayfa(_sablon, _v), height=1700, scrolling=False)
+            # Yükseklik sayfanın içindeki betikle içeriğe göre ayarlanır (çerçeve VE kabı, iç kaydırma
+            # yok); buradaki değer ilk çizim içindir — betik çalışmazsa da içerik sığsın diye bol tutulur.
+            _bilesen.html(_AG.sayfa(_sablon, _v), height=2600, scrolling=False)
         else:
             st.info("Agent katmanları sayfası bulunamadı (merkez/sunum/agent_katmanlari.html).")
 

@@ -695,11 +695,19 @@ body.canli ul.kontrol li.ek::after { content:none; }
     return s + "</dl></article>";
   }
   // Çerçeveyi (Streamlit iframe) içerik kadar uzat: sayfanın kendisi kayar, çerçeve değil.
+  // Streamlit çerçevenin KABINI da html(height=...) değerine sabitler; yalnız çerçeve uzarsa
+  // içerik kabın dışına taşar ve alttaki düğmelerin üstüne biner (11.11.2026). Bu yüzden
+  // yalnızca çerçeveyi saran tek çocuklu kaplar da aynı yüksekliğe getirilir (sayfa düzenine dokunulmaz).
   function boyutla() {
     try {
       var f = window.frameElement; if (!f) { return; }
       var h = Math.ceil(document.documentElement.scrollHeight);
       if (Math.abs((parseInt(f.style.height, 10) || 0) - h) > 2) { f.style.height = h + "px"; f.setAttribute("height", h); }
+      var el = f.parentElement;
+      for (var i = 0; i < 4 && el && el.childElementCount === 1; i++, el = el.parentElement) {
+        if (Math.abs((parseInt(el.style.height, 10) || 0) - h) > 2) { el.style.height = h + "px"; }
+        el.style.minHeight = h + "px"; el.style.maxHeight = "none"; el.style.overflow = "visible";
+      }
     } catch (e) {}
   }
   function canliCiz(v) {
