@@ -35,6 +35,8 @@ code { font:13px var(--mono); background:var(--bant); padding:1px 5px; border-ra
 .kart { background:var(--kart); border:1px solid var(--cizgi); border-radius:10px; padding:16px 18px; }
 .ozet { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-top:20px; }
 .karar { border-left:4px solid var(--mavi); }
+.hedef { margin-top:20px; border-left:4px solid var(--yesil); }
+.hedef p:last-child { margin:0; }
 .karar p:last-child { margin:0; }
 .sayilar { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .sayi { background:var(--kart); border:1px solid var(--cizgi); border-radius:10px; padding:10px 12px; }
@@ -102,18 +104,27 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
 
 <header>
   <h1>Synapse · 1 lokasyondan 10+ lokasyona yol haritası</h1>
-  <p class="alt">11.11.2026 · Bugünkü kod (LpRumu/Canliizleme <code>cafb547</code>), thapps veritabanı ve Maslak sahası incelenerek hazırlandı.
-  Amaç: tek lokasyon varken, ikinci lokasyon gelmeden önce yapısal sorunları çözmek.</p>
+  <p class="alt">11.11.2026 · 2. sürüm. İncelenenler: bugünkü kod (LpRumu/Canliizleme), thapps veritabanı kuralları ve tablo boyutları,
+  Maslak sahasının tam paketi (06.11.2026 kopyası, 3.810 dosya: kod, ayarlar, durum dosyaları, loglar, yerel geçmiş).
+  Amaç: tek lokasyon varken, ikinci lokasyon (Ataşehir) gelmeden önce yapısal sorunları çözmek.</p>
 </header>
+
+<div class="kart hedef">
+  <h3>Hedef</h3>
+  <p><b>Tek kod, lokasyon başına tek ayar klasörü.</b> Yeni bir lokasyon; aynı kurulum paketi, kendi ayar dosyaları ve kendi lokasyon anahtarıyla,
+  <b>internet olmadan</b> bir günde canlıya alınır. Kod bütün lokasyonlara aynı anda ve geri alınabilir gider. Hiçbir lokasyon başka bir lokasyonun verisine ya da ayarına dokunamaz.
+  Ayarları lokasyondaki teknik ekip değiştirir; <b>her değişiklik merkezde görünür</b>. Merkez her lokasyonun sürümünü, sağlığını, ayarlarını ve geçmişini tek ekranda izler.</p>
+</div>
 
 <div class="ozet">
   <div class="kart karar">
     <h3>Karar</h3>
     <p><b>Mimari 10–20 lokasyona dayanır; zorlanacak olan sunucu değil, işin yapılış şekli.</b>
-    Sunucu, veritabanı boyutu ve agent katmanları rahat büyür. Ama bugün dört şey tek lokasyona göre kurulu:
-    yama yayını, ortak veritabanı anahtarı, koda gömülü sayaç ve ısıtma hattı listeleri ve tüm lokasyonlar için tek oto-set ayarı.</p>
-    <p>Bunlardan ikisi <b>ikinci lokasyon geldiği gün</b> sorun çıkarır: hedefi <code>all</code> olan yama yalnızca bir lokasyona gider,
-    ve bir lokasyon PC'sindeki ortak anahtar bütün lokasyonların enerji verisini silebilir. Bu yüzden önce Faz 0, sonra Faz 1 bitmeden ikinci lokasyon açılmamalı.</p>
+    Sunucu, veritabanı ve ağ trafiği rahat büyür (lokasyon başına saatte ~210 istek; 10 lokasyonda saniyede 0,6). Ama bugün işin önemli bir kısmı Maslak'a göre kurulu:
+    yama yayını, ortak veritabanı anahtarı, koda ve repoya gömülü Maslak ayarları, internet isteyen kurulum ve bütün lokasyonlar için tek oto-set ayarı.</p>
+    <p>Bunlardan üçü <b>Ataşehir'in açıldığı gün</b> sorun çıkarır: hedefi <code>all</code> olan yama yalnızca bir lokasyona gider;
+    kurulum paketi Maslak'ın ayarlarıyla gelir ve internetsiz ağda paketleri kuramaz; bir PC'deki ortak anahtar bütün lokasyonların enerji verisini silebilir.
+    Bu yüzden <b>Faz 0, 1 ve 2 bitmeden Ataşehir canlıya alınmamalı.</b></p>
   </div>
   <div class="sayilar">
     <div class="sayi"><b>%16</b><span>sunucu diski dolu (78 GB boş)</span></div>
@@ -121,20 +132,34 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
     <div class="sayi"><b>75</b><span>sütun enerji tablosunda (lokasyona özel olanlar dahil)</span></div>
     <div class="sayi"><b>32</b><span>sayaç IP adresi kodun içinde (<code>data_collector.py</code>)</span></div>
     <div class="sayi"><b>5,8 MB</b><span>yama tablosu, 29 kayıt (en büyük tablo)</span></div>
-    <div class="sayi"><b>4 yerde</b><span>ayrı ayrı tutulan hastane listesi</span></div>
+    <div class="sayi"><b>~1 GB/yıl</b><span>yalnızca PC'de duran, hiç silinmeyen AHU okuma geçmişi</span></div>
+    <div class="sayi"><b>~3 gün</b><span>sahadaki log geçmişi (4 × 2 MB)</span></div>
+    <div class="sayi"><b>0</b><span>sahada olup repoda olmayan kod (saha ile repo ayrışmamış)</span></div>
   </div>
 </div>
 
+<h2>Lokasyonlar hakkında bilinenler</h2>
+<div class="tablo"><table>
+  <thead><tr><th>Konu</th><th>Durum</th><th>Yol haritasına etkisi</th></tr></thead>
+  <tbody>
+    <tr><td>İkinci lokasyon</td><td><b>Ataşehir</b>; tarih belli değil</td><td>Faz 0–2 Ataşehir'den önce bitmeli; Ataşehir pilot olarak kurulur</td></tr>
+    <tr><td>Ağ</td><td>İnternet yok. Acıbadem ortak ağı üzerinden yalnızca merkezdeki teknik sunucuya (thapps) erişim; Maslak bugün ASGv3 ağında bu şekilde</td><td>Kurulum, yama, hava verisi, lisans, kütüphaneler: <b>her şey thapps üzerinden</b> gelmeli (N4)</td></tr>
+    <tr><td>Enerji analizörleri</td><td>Siemens ve Janitza</td><td>Marka okuma kodu ortak kalır; hangi lokasyonda hangi sayaçların olduğu ayar dosyasına geçer (C1)</td></tr>
+    <tr><td>Otomasyon</td><td>Siemens, BACnet. Maslak'ta noktalar bir ağ geçidi üzerinden (ağ ve cihaz numarasıyla) okunuyor; bazı lokasyonlarda cihazlar doğrudan IP'li olabilir</td><td>Nokta ayar dosyası iki yolu da desteklemeli: ağ geçidi üzerinden ve doğrudan IP (C3)</td></tr>
+    <tr><td>Ayarları kim değiştirir</td><td>Lokasyondaki teknik ekip; merkezde sen izlersin</td><td>Yerelde ayar ekranları + doğrulama; her değişiklik kim, ne, ne zaman bilgisiyle merkeze (K1)</td></tr>
+  </tbody>
+</table></div>
+
 <h2>Fazlar</h2>
 <div class="fazlar">
-  <div class="faz f0"><div class="no">FAZ 0 · HEMEN</div><h3>Riskleri kapat</h3><p>Yama dağıtımı, lokasyon anahtarı, sürüm takibi, test hattı</p></div>
-  <div class="faz f1"><div class="no">FAZ 1</div><h3>Koddan lokasyonu çıkar</h3><p>Sayaç, hat, hastane listeleri ayara; oto-set lokasyon başına</p></div>
-  <div class="faz f2"><div class="no">FAZ 2</div><h3>Yama ve kurulum hattı</h3><p>Pilot → hepsi yayını, geri alma, yeni lokasyon kurulumu</p></div>
-  <div class="faz f3"><div class="no">FAZ 3</div><h3>Veri modeli</h3><p>Sayaç verisi ince tabloya; Synapse sorguları pencereli</p></div>
-  <div class="faz f4"><div class="no">FAZ 4</div><h3>Operasyon</h3><p>Bildirim, lokasyon seçici, PC geri yükleme, agent aşama 3</p></div>
+  <div class="faz f0"><div class="no">FAZ 0 · HEMEN</div><h3>Riskleri kapat</h3><p>Yama dağıtımı, lokasyon anahtarı, sürüm takibi, test hattı, tek nokta dosyası</p></div>
+  <div class="faz f1"><div class="no">FAZ 1</div><h3>Kod ile ayarı ayır</h3><p>Dört katman; sayaç, hat, BACnet ayara; ayar değişikliği merkezde; oto-set lokasyon başına</p></div>
+  <div class="faz f2"><div class="no">FAZ 2</div><h3>Ataşehir'e hazır kurulum</h3><p>İnternetsiz kurulum paketi, pilot → hepsi yayın, geri alma, ilk gün kontrolü</p></div>
+  <div class="faz f3"><div class="no">FAZ 3</div><h3>Veri modeli</h3><p>Sayaç verisi ince tabloya; AHU geçmişi saklama ve merkeze özet</p></div>
+  <div class="faz f4"><div class="no">FAZ 4</div><h3>Operasyon</h3><p>Bildirim, lokasyon seçici, merkezi hata özeti, PC geri yükleme, agent aşama 3</p></div>
 </div>
 <div class="kapi">
-  <span><b>2. lokasyon</b> açılmadan önce: Faz 0 + Faz 1 + Faz 2</span>
+  <span><b>Ataşehir</b> canlıya alınmadan önce: Faz 0 + Faz 1 + Faz 2</span>
   <span><b>4. lokasyondan</b> önce: Faz 3</span>
   <span><b>10 lokasyon</b> öncesi: Faz 4</span>
 </div>
@@ -179,7 +204,55 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
   <dl class="govde">
     <dt>Ne oluyor</dt><dd>Analizörlerin adı, IP'si ve markası (<code>data_collector.py</code> <code>ANALYZERS</code>, 32 IP), köprünün hangi sayacı hangi sütuna yazdığı (<code>data_bridge.py</code> <code>ALL_ANALYZERS</code>) ve agent'ın izlediği sayaçlar (<code>enerji_agent.py</code> <code>SAYAC_SUTUNLARI</code>) kodun içinde ve Maslak'a ait.</dd>
     <dt>10 lokasyonda</dt><dd>Kod herkes için aynı olduğundan, bir lokasyona yapılan yama diğerinin sayaç listesini ezer. Ya her lokasyona ayrı kod kolu açılır (yönetilemez) ya da sayaçlar okunmaz.</dd>
-    <dt>Çözüm</dt><dd>Lokasyon başına tek dosya: <code>configs/sayaclar.json</code> (ad, IP, marka, tür: şebeke / üretim / alt sayaç, sütun adı, kritik mi). <code>data_collector</code>, <code>data_bridge</code>, <code>canli_guc</code> ve <code>enerji_agent</code> listeyi buradan okur. Yamalar artık bu dosyayı taşımaz. Maslak'ın bugünkü listesi bu dosyaya birebir aktarılır ve ikisinin aynı sonucu verdiği testle doğrulanır.</dd>
+    <dt>Çözüm</dt><dd>Lokasyon başına tek dosya: <code>ayar/sayaclar.json</code> (ad, IP, marka, tür: şebeke / üretim / alt sayaç, sütun adı, kritik mi). <code>data_collector</code>, <code>data_bridge</code>, <code>canli_guc</code> ve <code>enerji_agent</code> listeyi buradan okur. Yamalar artık bu dosyayı taşımaz. Maslak'ın bugünkü listesi bu dosyaya birebir aktarılır ve ikisinin aynı sonucu verdiği testle doğrulanır.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="kritik" open>
+  <summary><span class="kod">N1</span><span class="bas">Kod, lokasyon ayarı, çalışma durumu ve veri iç içe; repoda Maslak'ın ayarları var</span>
+    <span class="sag"><span class="cip kritik">Kritik</span><span class="cip biz">biz</span><span class="cip">Faz 1</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Sahada kök klasörde 82 dosya var. <code>configs/</code> içinde gerçek lokasyon ayarları (BACnet noktaları, SAT sınırları, tasarım kapasiteleri, Chiller/FCU) ile çalışma durumu dosyaları (<code>oto_set_durum</code>, <code>canli_guc_son</code>, <code>on_kosul_durum</code>) ve büyüyen kayıtlar (<code>bakim_audit_log.jsonl</code> 4,8 MB) yan yana duruyor.</dd>
+    <dt>Kanıt</dt><dd>Repoda Maslak'ın ayar dosyaları duruyor: <code>configs/hvac_settings.json</code>, <code>ahu_sat_limitleri.json</code>, <code>ahu_tasarim_kapasiteleri.json</code>, <code>chiller_fcu_ayarlari.json</code>, <code>hastane_merkez.json</code> (sahadakilerle 1 bayt farklı). <code>GUNCELLE.bat</code> bu yüzden <code>configs/</code>'un tamamını yedekleyip geri yüklüyor.</dd>
+    <dt>Ataşehir'de</dt><dd>Kurulum paketi Maslak'ın ayarlarıyla gelir: Ataşehir Maslak'ın SAT sınırları ve kapasiteleriyle analiz yapar. Ayar taşıyan bir yama da lokasyonun kendi ayarını ezer.</dd>
+    <dt>Çözüm</dt><dd>Dört katman: <b>kod</b> (yama günceller), <b>ayar/</b> (lokasyona ait, yama asla dokunmaz; repoda yalnızca <code>ornek_ayar/</code> şablonu), <b>durum/</b> (programların çalışma dosyaları, yedeklenmez), <b>veri/</b> (enerji verisi, geçmiş, raporlar; saklama kuralıyla). Program açılışta eski yerdeki dosyayı yeni yerine bir kez taşır; Maslak'ta elle iş gerekmez.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="kritik" open>
+  <summary><span class="kod">N4</span><span class="bas">Kurulum internet istiyor; yeni lokasyonlarda internet olmayacak</span>
+    <span class="sag"><span class="cip kritik">Kritik</span><span class="cip biz">biz</span><span class="cip alp">Alp Bey</span><span class="cip">Faz 2</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd><code>KURULUM.bat</code> Python paketlerini internetten kuruyor (<code>pip install -r requirements.txt</code>); Python yoksa python.org'u gösteriyor. Ataşehir ve sonrakiler yalnızca Acıbadem ortak ağı üzerinden thapps'e erişebilecek.</dd>
+    <dt>Çözüm</dt><dd>İnternetsiz kurulum paketi: Python yükleyicisi + bütün paketlerin önceden indirilmiş hâli (wheel) + program + <code>ornek_ayar/</code>. Kurulum USB'den ya da thapps'ten indirilerek tek komutla yapılır. Seçenek olarak thapps üzerinde bir paket aynası (<span class="cip alp">Alp Bey</span>). Lisans, hava verisi, yama ve kütüphaneler zaten thapps üzerinden çalışıyor (Maslak'ta denendi).</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">K1</span><span class="bas">Lokasyonda değiştirilen ayarlar merkezde görünmüyor</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 1</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Ayarları lokasyondaki teknik ekip değiştirecek (her lokasyon farklı olabilir); sen merkezden izleyeceksin. Bugün Mekanik Zeka ayarları, Chiller/FCU kapasiteleri, BACnet noktaları ve sayaçlar yalnızca PC'de duruyor. Bakım kartları hariç hiçbir ayar merkeze gitmiyor, değişikliklerin kaydı da yok.</dd>
+    <dt>Çözüm</dt><dd>Her ayar kaydı kim, ne, eski ve yeni değer, zaman bilgisiyle yerel bir kayda yazılır ve merkeze gönderilir. Synapse'te her lokasyonun ayarları ve varsayılandan farkları görünür. Koruma alanındaki ayarlarda (oto-set saatleri, BACnet yazma) değişiklik merkeze bildirim düşürür. Agent'lar ayarı geçersiz aralıkta görürse (bugün Mekanik Zeka'nın "Ayarlar" kontrolü yapıyor) iş emri açar.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">N2</span><span class="bas">BACnet nokta dosyası iki ayrı yerden okunuyor</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 0</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd><code>ahu_collector.py</code> kök klasördeki <code>ahu_nokta_konfig.json</code>'u, <code>main_portal.py</code> ise <code>configs/ahu_nokta_konfig.json</code>'u okuyor. Sahada iki kopya var (ikisi de 75 KB).</dd>
+    <dt>Risk</dt><dd>Teknik ekip birini güncelleyip diğerini unutursa okuma ile ekran farklı noktalara bakar; bugün Maslak'ta da geçerli.</dd>
+    <dt>Çözüm</dt><dd>Tek dosya (<code>ayar/bacnet_noktalari.json</code>), iki program da aynı yardımcıdan okur.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">C3</span><span class="bas">BACnet nokta ayarı yalnızca ağ geçidi düzenini biliyor</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 1</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Maslak'ta Siemens noktaları bir ağ geçidi üzerinden (ağ ve cihaz numarasıyla) okunuyor; nokta dosyası bu düzene göre. Bazı lokasyonlarda cihazlar doğrudan IP'li olacak.</dd>
+    <dt>Çözüm</dt><dd>Nokta dosyası iki yolu da tanır: "ağ geçidi + ağ/cihaz" ya da "doğrudan IP". Okuma kodu tek; kurulumda bir keşif aracı noktaları tarayıp dosyayı önerir, teknik ekip onaylar.</dd>
   </dl>
 </details>
 
@@ -188,7 +261,7 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
     <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 1</span></span></summary>
   <dl class="govde">
     <dt>Kanıt</dt><dd><code>data_bridge.py</code> (MAS-1/MAS-2 → <code>Mas1_*</code>), <code>ahu_collector.py</code> (MAS-1/MAS-2 soğutma ve ısıtma ortalaması), <code>app_portal.py</code> sıcaklık sütunları, <code>saha_teshis.py</code>, <code>veri_alarm.py</code>; <code>location_manager.py</code> başlığı "Tek lokasyon yönetimi — Maslak".</dd>
-    <dt>Çözüm</dt><dd>Hat listesi lokasyon profiline (<code>configs/lokasyon_profili.json</code> zaten var ve koordinat için kullanılıyor) taşınır; kod "hat" kavramıyla genel çalışır. <code>location_manager.py</code> sabit sözlük yerine profil dosyasını okur.</dd>
+    <dt>Çözüm</dt><dd>Hat listesi lokasyon profiline (<code>ayar/lokasyon_profili.json</code>; bugün <code>configs/</code> altında var ve koordinat için kullanılıyor) taşınır; kod "hat" kavramıyla genel çalışır. <code>location_manager.py</code> sabit sözlük yerine profil dosyasını okur.</dd>
   </dl>
 </details>
 
@@ -243,6 +316,25 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
   <dl class="govde">
     <dt>Ne oluyor</dt><dd>Lokasyon programının tam test çalıştırması bitmiyor (<code>test_degismez_kurallar</code> eski kodla da takılıyor). Testler elle, tek tek çalıştırılıyor.</dd>
     <dt>Çözüm</dt><dd>Takılan testi düzelt; her push'ta bütün testleri koşan GitHub Actions. 10 lokasyona giden her yama önce bu kapıdan geçer.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">N3</span><span class="bas">AHU geçmişi sınırsız büyüyor ve yalnızca PC'de duruyor</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 3</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd>Sahada <code>ahu_okuma_gecmis</code> 9 günde 1.294 dosya, 23 MB (yılda ~1 GB); <code>ahu_analiz_gecmis</code> yılda ~350 MB. İkisi de hiç silinmiyor (<code>static/outputs</code> ise 7 günde temizleniyor). 10 dakikalık AHU geçmişi merkeze gitmiyor.</dd>
+    <dt>Risk</dt><dd>PC diski dolar; PC arızalanırsa geçmiş kaybolur; lokasyonlar arası karşılaştırma ve agent'ların geçmişe bakması mümkün değil.</dd>
+    <dt>Çözüm</dt><dd>Saklama kuralı (ham okuma 90 gün, sonra günlük özet) ve santral başına günlük AHU özetinin Synapse'e gitmesi.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">N5</span><span class="bas">Sahadaki loglar ~3 günü tutuyor; merkezde log yok</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 4</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd><code>cloud_sync.log</code> 4 dosya × 2 MB: 03.11 21:14 → 06.11 16:40. Hafta sonu çıkan bir arıza pazartesi incelenemeyebilir. 06.11 loglarında bağlantı zaman aşımları yalnızca sahada görülüyordu.</dd>
+    <dt>Çözüm</dt><dd>Hata ve uyarıların özeti (tür, sayı, ilk ve son zaman) heartbeat ile merkeze; Synapse'te lokasyon başına "son 30 gün hataları". Agent'lar bunun bir kısmını bugün yapıyor.</dd>
   </dl>
 </details>
 
@@ -350,75 +442,83 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
   <div class="kart k0">
     <h3>Faz 0 · Riskleri kapat (tek lokasyonken, hemen)</h3>
     <ol>
-      <li>Yama dağıtımını lokasyonlardan ayır: <code>yama_uygulamalari</code> tablosu + <code>cloud_sync</code> değişikliği; o güne kadar <code>all</code> yasak (A1).</li>
-      <li>Uygulanan sürümü heartbeat'e yaz; Yönetim'de sürüm tablosu (A2).</li>
-      <li><code>cloud_sync</code>'i lokasyon anahtarına geçir; Maslak anahtarı (Alp Bey); bir hafta izle; ortak anahtarın <code>true</code> kurallarını kaldır (B1).</li>
-      <li>Takılan testi düzelt, GitHub Actions ile her push'ta test (F5).</li>
+      <li>Yama dağıtımını lokasyonlardan ayır: <code>yama_uygulamalari</code> tablosu ve <code>cloud_sync</code> değişikliği. O güne kadar <code>all</code> kullanılmaz (A1).</li>
+      <li>Uygulanan sürümü ve dosya özetini heartbeat'e yaz; Yönetim'de lokasyon × sürüm tablosu (A2).</li>
+      <li><code>cloud_sync</code>'i lokasyon anahtarına geçir; Maslak anahtarını üret (Alp Bey); bir hafta izle; ortak anahtarın <code>true</code> kurallarını kaldır (B1).</li>
+      <li>BACnet nokta dosyasını teke indir (N2).</li>
+      <li>Takılan testi düzelt; GitHub Actions ile her push'ta test (F5).</li>
     </ol>
-    <p class="bitti"><b>Bitti sayılır:</b> Maslak lokasyon anahtarıyla çalışıyor; ortak anahtarla <code>energy_data</code> silme denemesi reddediliyor; sahte ikinci lokasyonla deneme ortamında <code>all</code> yaması iki lokasyona da uygulanıyor; testler her push'ta yeşil.</p>
+    <p class="bitti"><b>Bitti sayılır:</b> Maslak lokasyon anahtarıyla çalışıyor ve ortak anahtarla <code>energy_data</code> silme denemesi reddediliyor. Deneme ortamında sahte ikinci lokasyonla <code>all</code> yaması iki lokasyona da uygulanıyor. Nokta dosyası tek. Testler her push'ta yeşil.</p>
   </div>
   <div class="kart k1">
-    <h3>Faz 1 · Koddan lokasyonu çıkar</h3>
+    <h3>Faz 1 · Kod ile ayarı ayır</h3>
     <ol>
-      <li><code>configs/sayaclar.json</code>: Maslak'ın sayaçları birebir aktarılır; <code>data_collector</code>, <code>data_bridge</code>, <code>canli_guc</code>, <code>enerji_agent</code> buradan okur (C1).</li>
-      <li>Isıtma hatları <code>lokasyon_profili.json</code>'a; <code>location_manager</code> profil dosyasını okur (C2).</li>
+      <li>Dört katman: kod / <code>ayar/</code> / <code>durum/</code> / <code>veri/</code>. Program açılışta eski yerlerdeki dosyaları bir kez taşır. Repodaki Maslak ayarları <code>ornek_ayar/</code> şablonuna dönüşür (N1).</li>
+      <li><code>ayar/sayaclar.json</code>: Maslak'ın sayaçları birebir aktarılır; <code>data_collector</code>, <code>data_bridge</code>, <code>canli_guc</code> ve <code>enerji_agent</code> buradan okur. Marka okuma kodu (Siemens, Janitza) kodda kalır (C1).</li>
+      <li>Isıtma hatları <code>ayar/lokasyon_profili.json</code>'a; <code>location_manager</code> profil dosyasını okur (C2).</li>
+      <li>BACnet nokta dosyası iki yolu da tanır: ağ geçidi üzerinden ve doğrudan IP (C3).</li>
+      <li>Ayar değişikliği kaydı ve merkezde görünmesi: kim, ne, eski/yeni değer, zaman (K1).</li>
       <li>Hastane listesi tek kaynak (<code>lokasyonlar</code> tablosu); "sadece Maslak" blokları sayaç listesinden (D3).</li>
-      <li>Oto-set ayarları lokasyon başına (E1) — tasarım ve yama ayrıca onayına sunulur.</li>
+      <li>Oto-set ayarları lokasyon başına (E1). Tasarım ve yama ayrıca onayına sunulur.</li>
     </ol>
-    <p class="bitti"><b>Bitti sayılır:</b> lokasyon programının kodunda <code>maslak</code>, <code>MAS-1</code> ya da sayaç IP'si geçmiyor (bunu kontrol eden test var); Maslak eskisiyle aynı sayıları üretiyor (bir hafta yan yana karşılaştırma).</p>
+    <p class="bitti"><b>Bitti sayılır:</b> Lokasyon programının kodunda <code>maslak</code>, <code>MAS-1</code> ya da sayaç IP'si geçmiyor (bunu bir test kontrol ediyor). Repoda lokasyona ait ayar yok. Maslak eskisiyle aynı sayıları üretiyor (bir hafta yan yana karşılaştırma). Maslak'ta değiştirilen bir ayar 5 dakika içinde Synapse'te görünüyor.</p>
   </div>
   <div class="kart k2">
-    <h3>Faz 2 · Yama ve kurulum hattı</h3>
+    <h3>Faz 2 · Ataşehir'e hazır kurulum</h3>
     <ol>
+      <li>İnternetsiz kurulum paketi: Python, bütün paketler, program ve <code>ornek_ayar/</code>; USB'den ya da thapps'ten tek komut (N4).</li>
       <li>Yayın aracı: commit'ten değişen dosyalar → pilot lokasyon → yama sonrası kontrol → diğerleri (A3).</li>
-      <li>Geri alma: <code>_yedek/&lt;sürüm&gt;</code> ve "önceki sürüme dön" (A4).</li>
-      <li>Yama içeriği temizliği (A5).</li>
-      <li>Yeni lokasyon kurulum listesi ve "ilk gün" agent turu (F4).</li>
-      <li>Yama bilgisayarı yeni veritabanına; eski Supabase / Streamlit Cloud kapanış kararı (G1, senin kararın).</li>
+      <li>Geri alma: <code>_yedek/&lt;sürüm&gt;</code> ve "önceki sürüme dön" (A4). Yama içeriği temizliği (A5).</li>
+      <li>Kurulum listesi ve "ilk gün" agent turu: sayaçlar, BACnet noktaları, Synapse'e veri, lokasyon anahtarı (F4).</li>
+      <li>Yama bilgisayarının yeni veritabanına geçmesi; eski Supabase ve Streamlit Cloud kapanış kararı (G1, senin kararın).</li>
     </ol>
-    <p class="bitti"><b>Bitti sayılır:</b> bir yama tek komutla pilot lokasyona, onaydan sonra hepsine gidiyor; bozuk yama 5 dakikada geri alınabiliyor; deneme ortamında sıfırdan bir lokasyon listeye göre kurulup ilk gün turunu geçiyor.</p>
+    <p class="bitti"><b>Bitti sayılır:</b> İnterneti olmayan bir deneme PC'sine Ataşehir ayarlarıyla sıfırdan kurulum yapılıyor ve ilk gün turunu geçiyor. Bir yama tek komutla pilot lokasyona, onaydan sonra hepsine gidiyor. Bozuk bir yama 5 dakikada geri alınabiliyor.</p>
   </div>
   <div class="kart">
     <h3>Faz 3 · Veri modeli (4. lokasyondan önce)</h3>
     <ol>
-      <li><code>sayac_gunluk</code> ince tablosu; <code>data_bridge</code> ve <code>cloud_sync</code> iki yere de yazar (geçiş dönemi) (D1).</li>
-      <li>Synapse lokasyon detayındaki sayaç kırılımı ince tablodan; toplamlar <code>energy_data</code>'dan (D1).</li>
+      <li>İnce sayaç tablosu <code>sayac_gunluk</code>; geçiş döneminde <code>data_bridge</code> ve <code>cloud_sync</code> iki yere de yazar (D1).</li>
+      <li>Synapse lokasyon detayındaki sayaç kırılımı ince tablodan, toplamlar <code>energy_data</code>'dan gelir (D1).</li>
       <li>Ana sayfa için özet görünüm; detay sayfası pencereli sorgu (D2).</li>
+      <li>AHU geçmişi: saklama kuralı ve santral başına günlük özetin Synapse'e gitmesi (N3).</li>
     </ol>
-    <p class="bitti"><b>Bitti sayılır:</b> yeni bir sayaç yalnızca <code>sayaclar.json</code>'a bir satır eklenerek Synapse'te görünüyor; SQL değişikliği yok. Synapse ana sayfası 10 lokasyonluk deneme verisiyle 3 saniyenin altında açılıyor.</p>
+    <p class="bitti"><b>Bitti sayılır:</b> Yeni bir sayaç yalnızca <code>ayar/sayaclar.json</code>'a bir satır eklenerek Synapse'te görünüyor; SQL değişikliği gerekmiyor. Synapse ana sayfası 10 lokasyonluk deneme verisiyle 3 saniyenin altında açılıyor. PC'deki AHU geçmişi sınırlı büyüyor.</p>
   </div>
   <div class="kart k4">
     <h3>Faz 4 · Operasyon (10 lokasyon öncesi)</h3>
     <ol>
-      <li>Bildirim: kritik anında, diğerleri günlük özet (F1).</li>
-      <li>Agent ekranında lokasyon seçici ve matris (F2).</li>
-      <li>PC geri yükleme: <code>configs/</code> yedeği ve "Synapse'ten geri yükle" (F3).</li>
+      <li>Bildirim: kritik iş emri anında, diğerleri günlük özet (F1).</li>
+      <li>Agent ekranında lokasyon seçici ve lokasyon × agent matrisi (F2).</li>
+      <li>Merkezi hata özeti: lokasyon başına son 30 gün (N5).</li>
+      <li>PC geri yükleme: <code>ayar/</code> klasörünün günlük kopyası Synapse'te; "Synapse'ten geri yükle" (F3).</li>
       <li>Agent aşama 3 (ekran kontrolleri) ve sürüm 2 (güvenli işleri agent'ın kendisinin düzeltmesi).</li>
       <li>Kapasite izleme (G2).</li>
     </ol>
-    <p class="bitti"><b>Bitti sayılır:</b> bir lokasyonda kritik sorun çıktığında 5 dakika içinde bildirim geliyor; arızalı PC yerine yenisi bir saat içinde aynı verilerle çalışıyor.</p>
+    <p class="bitti"><b>Bitti sayılır:</b> Bir lokasyonda kritik sorun çıktığında 5 dakika içinde bildirim geliyor. Arızalı PC yerine yenisi bir saat içinde aynı ayarlar ve verilerle çalışıyor.</p>
   </div>
 </div>
 
-<h2>Hedef: yeni lokasyon kurulum listesi (Faz 2 sonrası)</h2>
+<h2>Hedef: Ataşehir kurulum listesi (Faz 2 sonrası)</h2>
 <div class="iki">
   <div class="kart">
-    <h3>Merkezde</h3>
+    <h3>Merkezde (sen)</h3>
     <ul class="duz">
-      <li><code>lokasyonlar</code> tablosuna satır: kimlik, ad, m², renk, koordinat.</li>
+      <li><code>lokasyonlar</code> tablosuna satır: kimlik (<code>atasehir</code>), ad, m², renk, koordinat.</li>
       <li>Lokasyon anahtarı üretimi (<span class="cip alp">Alp Bey</span>, <code>04_anahtar_uret.py</code>).</li>
-      <li>Oto-set: lokasyon ayarları (varsayılan ya da özel saatler), başlangıçta kapalı.</li>
+      <li>Oto-set: lokasyon ayarları; başlangıçta kapalı.</li>
       <li>Yayın aracında lokasyonu "pilot dışı" olarak ekle.</li>
+      <li>Ağ: lokasyon PC'sinden thapps'e (443) erişimin açık olduğunu doğrula (Maslak'taki ASGv3 düzeni).</li>
     </ul>
   </div>
   <div class="kart">
-    <h3>Lokasyon PC'sinde</h3>
+    <h3>Lokasyon PC'sinde (teknik ekip)</h3>
     <ul class="duz">
-      <li>Kurulum paketi (kod herkes için aynı) + lisans.</li>
-      <li><code>configs/lokasyon_profili.json</code>: kimlik, koordinat, ısıtma hatları.</li>
-      <li><code>configs/sayaclar.json</code>: sayaçlar (ad, IP, marka, tür).</li>
-      <li><code>configs/ahu_nokta_konfig.json</code>: BACnet noktaları.</li>
-      <li><code>supabase_config.json</code> + <code>configs/lokasyon_anahtari.json</code>.</li>
+      <li>İnternetsiz kurulum paketi (kod herkes için aynı) + lisans.</li>
+      <li><code>ayar/lokasyon_profili.json</code>: kimlik, koordinat, ısıtma hatları.</li>
+      <li><code>ayar/sayaclar.json</code>: Siemens / Janitza analizörleri (ad, IP, marka, tür).</li>
+      <li><code>ayar/bacnet_noktalari.json</code>: ağ geçidi ya da doğrudan IP; keşif aracının önerisi onaylanır.</li>
+      <li><code>ayar/</code> içindeki Mekanik Zeka ayarları: SAT sınırları, tasarım kapasiteleri, Chiller/FCU (şablondan başlanır).</li>
+      <li>Bağlantı dosyası + lokasyon anahtarı.</li>
       <li>İlk gün agent turu yeşil → lokasyon canlıya alınır.</li>
     </ul>
   </div>
@@ -429,17 +529,19 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
   <thead><tr><th>Konu</th><th>Kim</th><th>Ne zaman</th></tr></thead>
   <tbody>
     <tr><td>Maslak için lokasyon anahtarı üretimi (sonra her yeni lokasyon için bir tane)</td><td><span class="cip alp">Alp Bey</span></td><td>Faz 0</td></tr>
-    <tr><td>Ortak anahtar kurallarının kaldırılması (şema yetkimizle yapılabilir; Alp Bey'e bilgi)</td><td><span class="cip biz">biz</span></td><td>Faz 0, bir hafta izlemeden sonra</td></tr>
+    <tr><td>Ortak anahtar kurallarının kaldırılması (şema yetkimizle yapılabilir; Alp Bey'e bilgi verilir)</td><td><span class="cip biz">biz</span></td><td>Faz 0, bir hafta izlemeden sonra</td></tr>
     <tr><td>Oto-set'in lokasyon başına ayara geçmesi (koruma alanı)</td><td><span class="cip sen">sen</span></td><td>Faz 1</td></tr>
+    <tr><td>Hangi ayarları teknik ekip değiştirebilir, hangileri yalnızca merkezden değişir</td><td><span class="cip sen">sen</span></td><td>Faz 1</td></tr>
+    <tr><td>Kurulum paketinin dağıtımı: USB mü, thapps'ten indirme mi (paket aynası Alp Bey'den)</td><td><span class="cip sen">sen</span> / <span class="cip alp">Alp Bey</span></td><td>Faz 2</td></tr>
     <tr><td>Eski Supabase ve Streamlit Cloud kapanışı</td><td><span class="cip sen">sen</span></td><td>Faz 2</td></tr>
-    <tr><td>İkinci lokasyonun hangisi olacağı ve pilot lokasyon (Maslak mı, yeni lokasyon mu)</td><td><span class="cip sen">sen</span></td><td>Faz 2 sonu</td></tr>
+    <tr><td>Ataşehir'in açılış tarihi ve sahadaki PC / ağ hazırlığı</td><td><span class="cip sen">sen</span></td><td>Tarih belli olunca</td></tr>
     <tr><td>Sunucuya çekirdek eklenmesi (gerekirse)</td><td><span class="cip alp">Alp Bey</span></td><td>Faz 4, izlemeye göre</td></tr>
   </tbody>
 </table></div>
 
 <footer>
-  Hazırlayan: Claude Code, 11.11.2026. İnceleme kapsamı: <code>hvac/deneme</code> (lokasyon programı), <code>merkez</code> (Synapse),
-  <code>veritabani</code>, thapps veritabanı kuralları ve tablo boyutları. Süre tahmini verilmedi; her faz bitiş ölçütüyle kapanır.
+  Hazırlayan: Claude Code, 11.11.2026 (2. sürüm: Maslak saha paketi ve lokasyon bilgileriyle güncellendi). İnceleme kapsamı: <code>hvac/deneme</code> (lokasyon programı), <code>merkez</code> (Synapse),
+  <code>veritabani</code>, thapps veritabanı kuralları ve tablo boyutları, Maslak saha paketi (06.11.2026). Süre tahmini verilmedi; her faz bitiş ölçütüyle kapanır.
   Dosya: <code>merkez/sunum/olcekleme_yol_haritasi.html</code> (iki repoda aynı).
 </footer>
 
