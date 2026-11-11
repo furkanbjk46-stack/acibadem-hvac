@@ -843,8 +843,32 @@ def _ahu_row_olustur(ahu_adi: str, lokasyon: str, veriler: dict,
 # OAT (DIŞ HAVA) — Open-Meteo'dan anlık sıcaklık
 # ================================================================
 
-def _oat_cek(lat: float | None = None, lon: float | None = None) -> float:
-    """Open-Meteo'dan anlık dış hava sıcaklığını çek. Hata → 20.0.
+def _oat_yedek(enerji_verileri: dict = None) -> tuple[float, str]:
+    """İnternet yokken dış hava (11.11.2026, Maslak). Eskiden 20 °C varsayılıyordu: dışarısı
+    10 °C iken analiz ısıtma/soğutma kararını yanlış sıcaklıkla veriyordu.
+
+    Sıra: canlı BACnet dış hava sensörü → Synapse'teki bugünün günlük ortalaması
+    (merkez hava besleyici) → 07:05 BACnet okuması (hedefli_enerji_verileri.csv) → 20 °C.
+    """
+    v = (enerji_verileri or {}).get("DIS HAVA")
+    if isinstance(v, (int, float)) and -40 < v < 60:
+        return float(v), "BACnet dış hava sensörü (canlı)"
+    try:
+        import hava_durumu
+        bugun = datetime.now().strftime("%Y-%m-%d")
+        g = hava_durumu._synapse_hava(bugun, bugun, tahmin=False).get(bugun) or {}
+        if g.get("Hava_Sicaklik_Ort_C") is not None:
+            return float(g["Hava_Sicaklik_Ort_C"]), "Synapse günlük ortalama"
+    except Exception as e:
+        logger.debug("Synapse dış hava okunamadı: %s", e)
+    v = _enerji_nokta_csv_oku("DIS HAVA")
+    if v is not None and -40 < v < 60:
+        return float(v), "BACnet 07:05 okuması"
+    return 20.0, "varsayılan"
+
+
+def _oat_cek(lat: float | None = None, lon: float | None = None, enerji_verileri: dict = None) -> float:
+    """Open-Meteo'dan anlık dış hava sıcaklığını çek. Hata → _oat_yedek (sensör / Synapse / 20).
 
     Koordinat verilmezse lokasyonun kendi profilinden okunur
     (configs/lokasyon_profili.json — oto_set ile AYNI kaynak). Önceden
@@ -868,8 +892,9 @@ def _oat_cek(lat: float | None = None, lon: float | None = None) -> float:
             data = json.loads(r.read().decode())
         return float(data["current"]["temperature_2m"])
     except Exception as e:
-        logger.warning("OAT çekilemedi: %s — varsayılan 20°C", e)
-        return 20.0
+        deger, kaynak = _oat_yedek(enerji_verileri)
+        logger.warning("OAT internetten çekilemedi: %s — %s kullanıldı: %.1f°C", e, kaynak, deger)
+        return deger
 
 
 # ================================================================
@@ -1156,16 +1181,16 @@ def hvac_analiz_calistir() -> dict | None:
 
     logger.info("═══ HVAC AHU ANALİZİ BAŞLADI (%d nokta) ═══", len(config))
 
-    # Dış hava sıcaklığını çek
-    oat = _oat_cek()
-    logger.info("Dış hava sıcaklığı: %.1f°C", oat)
-
     # hedefli_enerji_verileri.csv bayatsa uyar (fallback olarak kullanılacaksa)
     _csv_tazelik_kontrol()
 
     # Kolektör/Chiller/Kazan noktalarını canlı BACnet ile oku (config varsa)
     enerji_config = load_energy_config()
     enerji_verileri = energy_verileri_oku(enerji_config) if enerji_config else None
+
+    # Dış hava sıcaklığı — internet yoksa canlı BACnet sensörü / Synapse (bu yüzden BACnet'ten SONRA)
+    oat = _oat_cek(enerji_verileri=enerji_verileri)
+    logger.info("Dış hava sıcaklığı: %.1f°C", oat)
 
     # Soğutma suyu Outlet (gidiş) sıcaklığını çek (MAS-1 + MAS-2 ortalaması)
     outlet = sogutma_outlet_oku(enerji_verileri)

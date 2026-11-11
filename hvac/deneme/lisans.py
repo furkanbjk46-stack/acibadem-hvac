@@ -34,7 +34,45 @@ def _load_config() -> dict:
 
 
 # ── Lisans kontrolu ───────────────────────────────────
-def lisans_kontrol() -> dict:
+# Açılışta ağ henüz hazır değilse (PC yeni açıldı, ad çözümleme gecikiyor) tek deneme
+# "getaddrinfo failed" ile düşüp programı HİÇ başlatmıyordu (11.11.2026, Maslak).
+# Yalnızca BAĞLANTI hatası yeniden denenir; "lisans yok / pasif" cevabı hemen döner.
+# Watchdog'un alt süreçlerinde (Enerji portalı her sayfa etkileşiminde çağırır) yeniden
+# deneme YAPILMAZ: aksi halde bağlantı sorununda her tıklama 1 dk beklerdi.
+BAGLANTI_DENEME = 6
+BAGLANTI_BEKLEME_SN = 10
+# Geçerli sonuç süreç belleğinde tutulur: Enerji portalı her etkileşimde yeniden sorup
+# her tıklamaya bir ağ isteği ekliyordu. Geçersiz/hatalı sonuç tutulmaz.
+GECERLI_ONBELLEK_SN = 600
+_SON_GECERLI = {"zaman": 0.0, "sonuc": None}
+
+
+def lisans_kontrol(deneme: int = None, bekleme: float = None, _bekle=None) -> dict:
+    """Bağlantı hatasında yeniden dener (watchdog açılışında 6 × 10 sn ≈ 1 dk).
+    Geçerli sonuç GECERLI_ONBELLEK_SN boyunca bellekten döner. Dönüş: _lisans_kontrol_tek ile aynı."""
+    import time
+    if _SON_GECERLI["sonuc"] and time.monotonic() - _SON_GECERLI["zaman"] < GECERLI_ONBELLEK_SN:
+        return dict(_SON_GECERLI["sonuc"])
+    if deneme is None:
+        deneme = 1 if os.environ.get("HVAC_WATCHDOG") == "1" else BAGLANTI_DENEME
+    deneme = max(1, int(deneme))
+    bekleme = BAGLANTI_BEKLEME_SN if bekleme is None else bekleme
+    _bekle = _bekle or time.sleep
+    sonuc = None
+    for i in range(deneme):
+        sonuc = _lisans_kontrol_tek()
+        if sonuc.get("gecerli"):
+            _SON_GECERLI.update({"zaman": time.monotonic(), "sonuc": dict(sonuc)})
+        if sonuc.get("gecerli") or not str(sonuc.get("hata") or "").startswith("Lisans sunucusuna"):
+            return sonuc                        # geçerli, ya da kesin "lisans yok" cevabı
+        if i < deneme - 1:
+            print("Lisans sunucusuna ulasilamadi (%d/%d), %d sn sonra tekrar denenecek..."
+                  % (i + 1, deneme, bekleme), flush=True)
+            _bekle(bekleme)
+    return sonuc
+
+
+def _lisans_kontrol_tek() -> dict:
     """
     Donus: {
         "gecerli": True/False,

@@ -9,9 +9,6 @@ if hasattr(sys.stdout, 'reconfigure'):
 import os
 import sys
 import time
-import socket
-import threading
-import webbrowser
 import subprocess
 import logging
 
@@ -132,74 +129,6 @@ def _agent_durdur():
         except Exception:
             pass
     _agent["surec"], _agent["son_baslatma"] = None, 0.0
-# ── Tarayıcı: portallar GERÇEKTEN hazır olunca açılır ───────────────────
-# 11.11.2026 — "portal çok geç açılıyor" şikayetinin sebebi buydu:
-# PORTAL_BASLAT.bat 5 saniye bekleyip tarayıcıyı açıyordu, AMA watchdog
-# bat'ın en sonunda çalışıyor; yani tarayıcı sunucular daha BAŞLAMADAN
-# açılıyordu. Kullanıcı ölü bir sayfa görüp elle yenilemek zorunda
-# kalıyordu. Sahadaki ölçüm: watchdog 10:50:59'da başladı, Streamlit
-# 10:52:22'de hazır oldu — tarayıcı 10:51:04'te, yani 78 saniye erken
-# açılmıştı.
-#
-# Artık port DİNLEMEYE BAŞLAYINCA açılır. Bekleme süreleri de loglanır:
-# yavaşlığın hangi tarafta olduğu bir daha tahmin edilmesin.
-TARAYICI_URL   = "http://127.0.0.1:8005"
-HVAC_PORT      = 8005
-ENERJI_PORT    = 8501
-HAZIR_BEKLE_SN = 300          # bu kadar beklenir; dolarsa tarayıcı yine açılır
-
-
-def _port_dinliyor_mu(port, ip="127.0.0.1", zaman_asimi=1.0) -> bool:
-    """Porta TCP bağlantısı kuruluyor mu — sunucu ayağa kalktı mı."""
-    s = socket.socket()
-    s.settimeout(zaman_asimi)
-    try:
-        s.connect((ip, int(port)))
-        return True
-    except OSError:
-        return False
-    finally:
-        try:
-            s.close()
-        except Exception:
-            pass
-
-
-def _hazir_bekle(port, ad, t0, bitis):
-    """Port açılana kadar bekler. (hazir_mi, baslangictan_bu_yana_sn) döner."""
-    while time.time() < bitis:
-        if _port_dinliyor_mu(port):
-            gecen = time.time() - t0
-            logger.info("⏱️ %s hazır (%.1f sn)", ad, gecen)
-            return True, gecen
-        time.sleep(0.5)
-    gecen = time.time() - t0
-    logger.warning("⚠️ %s %.0f sn içinde yanıt vermedi — tarayıcı yine de açılıyor", ad, gecen)
-    return False, gecen
-
-
-def tarayici_hazir_olunca(url=TARAYICI_URL, bekle_sn=HAZIR_BEKLE_SN):
-    """Arka planda bekler, HVAC portalı cevap verince tarayıcıyı açar.
-
-    YALNIZ İLK AÇILIŞTA çağrılır (main). Güncelleme sonrası yeniden
-    başlatmalarda tarayıcı tekrar açılmaz — kullanıcının açık sekmesi var.
-    """
-    t0 = time.time()
-    bitis = t0 + bekle_sn
-
-    def _is():
-        _hazir_bekle(HVAC_PORT, "HVAC Portal", t0, bitis)
-        try:
-            webbrowser.open(url)
-            logger.info("🌐 Tarayıcı açıldı: %s", url)
-        except Exception as e:
-            logger.warning("Tarayıcı açılamadı: %s", e)
-        # Enerji portalı (Streamlit) geç kalkıyor; süresi ayrıca ölçülür.
-        _hazir_bekle(ENERJI_PORT, "Enerji Portal", t0, bitis)
-
-    t = threading.Thread(target=_is, daemon=True)
-    t.start()
-    return t
 
 
 def stop_portals(procs):
@@ -240,7 +169,6 @@ def main():
 
     procs = start_portals()
     _agent_baslat()
-    tarayici_hazir_olunca()          # hazır olunca açar, erken değil
     logger.info("Portallar çalışıyor. Güncelleme sinyali bekleniyor...")
 
     while True:

@@ -5,18 +5,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HVAC ΔT Analiz Motoru — Acıbadem Sağlık Grubu</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <!-- SheetJS for XLSX generation -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- 11.11.2026: Kütüphaneler İNTERNETTEN DEĞİL programın kendi klasöründen (static/vendor/)
+         yüklenir. Maslak internete çıkamıyordu: sayfa her açılışta CDN'i zaman aşımına kadar
+         bekliyor (yavaşlık), Chart.js gelmediği için grafikler hiç çizilmiyordu. Google Fonts
+         kaldırıldı; yazı tipi Windows'un kendi tipine (Segoe UI) düşer. -->
+    <!-- İkonlar anında (eşzamanlı) çizilsin: animasyon karesi beklenmez, ikonsuz an görünmez -->
+    <script>window.FontAwesomeConfig = { mutateApproach: 'sync' };</script>
+    <script src="/static/vendor/fontawesome-all.min.js"></script>
+    <script src="/static/vendor/chart.umd.min.js"></script>
+    <!-- SheetJS for XLSX generation (0.18.5 — cdn.sheetjs.com'daki 0.20.1 ile aynı API) -->
+    <script src="/static/vendor/xlsx.full.min.js"></script>
     <!-- PDF export for maintenance cards -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="/static/vendor/html2canvas.min.js"></script>
+    <script src="/static/vendor/jspdf.umd.min.js"></script>
+    <script src="/static/vendor/jspdf.plugin.autotable.min.js"></script>
     <!-- QR kod üretimi (saha bakım kartı etiketleri) — lokal gömülü, internet gerektirmez -->
     <script src="/static/qrcode_generator.js"></script>
     <!-- Türkçe karakter destekli DejaVu fontu (base64 gömülü, /static/fonts_dejavu_b64.js) -->
@@ -2450,12 +2452,15 @@
 
         // Initialize on load
         document.addEventListener('DOMContentLoaded', () => {
-            loadLocations();
-            checkConnection();
-            initChart();
-            initUretimTuketimChart();
-            loadUretimTuketimGecmis();
-            setInterval(loadUretimTuketimGecmis, 60000); // canlı: her 1 dk
+            // Her adım ayrı korunur: biri hata verirse (ör. grafik kütüphanesi yüklenemedi)
+            // diğerleri yine çalışır. Eskiden ilk grafik hatası talep/üretim grafiğini de durduruyordu.
+            [loadLocations, checkConnection, initChart, initUretimTuketimChart, loadUretimTuketimGecmis]
+                .forEach(function (adim) {
+                    try { adim(); } catch (e) { console.error('Açılış adımı hata verdi: ' + adim.name, e); }
+                });
+            setInterval(function () {
+                try { loadUretimTuketimGecmis(); } catch (e) { console.error(e); }
+            }, 60000); // canlı: her 1 dk
         });
 
         // QR derin bağlantısı: /bakim/AHU-6 → ?bakim=AHU-6 → bakım kartı doğrudan açılır.

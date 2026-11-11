@@ -9,7 +9,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-import csv, io, os, datetime, uuid, logging, json, shutil
+import csv, io, os, re, datetime, uuid, logging, json, shutil
 import pandas as pd
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass, asdict
@@ -3271,8 +3271,33 @@ def _bootstrap_static_assets():
         # sessiz geç: portal yine de çalışır
         pass
 
+_INTERNET_KAYNAK_SATIRI = re.compile(
+    r"^[ \t]*(<link[^>]+(fonts\.googleapis\.com|fonts\.gstatic\.com)[^>]*>"
+    r"|@import url\(['\"]?https://fonts\.googleapis\.com[^)]*\);?)[ \t]*\r?\n", re.M)
+
+
+def _internetsiz_html(html: str) -> str:
+    """Sayfadaki internet kaynaklarını yerel karşılıklarına çevirir (11.11.2026).
+
+    Lokasyon PC'si internete çıkamayınca tarayıcı her sayfada Google Fonts / cdnjs /
+    unsplash'i zaman aşımına kadar bekliyordu (yavaş açılış). static/portal.html
+    lokasyonda elle de değişebildiği için dosyaya DOKUNULMAZ; ayıklama gönderim anında
+    bellekte yapılır. Yazı tipi Windows'un kendi tipine düşer, ikonlar static/vendor'dan,
+    arka plan fotoğrafları yerine düz renk kalır.
+    """
+    html = _INTERNET_KAYNAK_SATIRI.sub("", html)
+    html = re.sub(r'<link[^>]+cdnjs\.cloudflare\.com/ajax/libs/font-awesome/[^>]*>',
+                  '<script src="/static/vendor/fontawesome-all.min.js"></script>', html)
+    html = re.sub(r"background-image:\s*url\(['\"]?https://images\.unsplash\.com[^)]*\);?", "", html)
+    return html
+
+
 def _load_or_create_portal_html() -> str:
-    """Portal HTML'ini static/portal.html olarak tut; yoksa üret."""
+    """Portal HTML'ini static/portal.html olarak tut; yoksa üret. İnternet kaynakları ayıklanır."""
+    return _internetsiz_html(_portal_html_oku())
+
+
+def _portal_html_oku() -> str:
     _bootstrap_static_assets()
     portal_path = os.path.join(STATIC_DIR, "portal.html")
     if not os.path.exists(portal_path):
@@ -3663,9 +3688,6 @@ def _iframe_wrapper_html(title: str, iframe_src: str) -> str:
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{title}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {{
       --acibadem: {ACIBADEM_PRIMARY};
