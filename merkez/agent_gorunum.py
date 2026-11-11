@@ -30,6 +30,11 @@ KONTROL_AD = {
     "ahu_veri": "AHU verisi", "sensor_mantigi": "Sensör arızası mantığı", "donmus_ahu": "Donmuş AHU okuması",
     "talep_uretim": "Talep / üretim grafiği", "oz_test": "Öz test", "oto_set": "Oto-set geçişi",
     "internet": "İnternet erişimi",
+    # Synapse agent'ı (merkez/synapse_agent.py)
+    "lokasyon_baglanti": "Lokasyon bağlantısı", "gunluk_esitleme": "Lokasyon eşitlemesi",
+    "canli_sayac": "Canlı sayaçlar", "yama_kuyrugu": "Yama kuyruğu", "komutlar": "Saha komutları",
+    "surum": "Lokasyon sürümleri", "anahtarsiz_erisim": "Anahtarsız erişim", "synapse_portal": "Synapse portalı",
+    "sunucu": "Yerel sunucu",
 }
 DUGUM = {"enerji": "e", "mekanik_zeka": "m", "synapse": "s"}
 

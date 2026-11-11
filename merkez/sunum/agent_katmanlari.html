@@ -350,9 +350,9 @@ body.canli ul.kontrol li.ek::after { content:none; }
       <ul class="kontrol">
         <li class="ek"><b>Giriş ve oturum:</b> parola, izleyici bağlantısı; parola değişince açık oturum düşüyor mu</li>
         <li class="ek"><b>Lokasyon eşitlemesi:</b> her lokasyonun günlük verisi 08:00'den sonra geldi mi</li>
-        <li class="ek"><b>Canlı bayat sayaç:</b> 120 sn'den eski sayaç toplamdan çıkıyor ve not olarak görünüyor mu</li>
-        <li class="ek"><b>Yama kuyruğu:</b> "bekliyor" durumunda takılı kalan yama var mı</li>
-        <li class="ek"><b>Güvenlik:</b> tablo erişim kuralları (RLS), anahtarla dışarıdan okunabilen veri</li>
+        <li class="ek"><b>Canlı bayat sayaç:</b> canlı ölçümü bayatlayan sayaçlar (lokasyonun sayaçlarının çoğu 15 dk'dan eskiyse)</li>
+        <li class="ek"><b>Yama kuyruğu:</b> "bekliyor" durumunda takılı kalan ya da hata veren yama var mı; lokasyonlar aynı sürümde mi</li>
+        <li class="ek"><b>Güvenlik:</b> veritabanı anahtarsız isteği reddediyor mu (dışarıdan okunabilen veri var mı)</li>
         <li class="ek"><b>Yerel sunucu:</b> disk, bellek, servis ayakta mı, yedek alındı mı</li>
       </ul>
       <p class="kural">Kendi workflow'ları: önbelleği tazeleme, veriyi yeniden çekme, yerel sunucudaki Synapse'i yeniden başlatma.</p>
@@ -649,7 +649,11 @@ body.canli ul.kontrol li.ek::after { content:none; }
     m: { "Tüm kurallar": ["oz_test"], "Sayfadaki tüm butonlar ve grafikler": ["talep_uretim"],
          "BACnet okuma": ["donmus_ahu", "ahu_veri"], "Sensör arızası": ["sensor_mantigi"],
          "Eşikler ve talimatlar": ["oz_test"], "API uçları": ["portal_api"], "Sabah analizi": ["otomatik_analiz"],
-         "Watchdog": ["portal_api"], "Koruma alanı": ["oto_set"] }
+         "Watchdog": ["portal_api"], "Koruma alanı": ["oto_set"] },
+    s: { "Harita": ["lokasyon_baglanti"], "Canlı izleme": ["canli_sayac", "synapse_portal"],
+         "Lokasyon eşitlemesi": ["gunluk_esitleme"], "Canlı bayat sayaç": ["canli_sayac"],
+         "Yama kuyruğu": ["yama_kuyrugu", "surum"], "Güvenlik": ["anahtarsiz_erisim"],
+         "Yerel sunucu": ["sunucu", "synapse_portal"] }
   };
   var DURUM_SIRA = { sorun: 0, hata: 1, atlandi: 2, gecti: 3 };
   function cipYap(kodlar, kontroller) {
@@ -720,13 +724,14 @@ body.canli ul.kontrol li.ek::after { content:none; }
     var kutular = document.querySelectorAll(".kutu.ag");
     kutuIsle(kutular[0], KONTROL_KOD.e, v.kontroller.e || {});
     kutuIsle(kutular[1], KONTROL_KOD.m, v.kontroller.m || {});
+    kutuIsle(kutular[2], KONTROL_KOD.s, v.kontroller.s || {});
     var not1 = document.createElement("p"); not1.className = "canli-not";
     not1.textContent = "Canlı: veri kontrolleri (aşama 1). Ekran ve buton kontrolleri aşama 3'te eklenecek. Agent sürüm 1'de yalnızca izler; dosyaya yazmaz, portalı yeniden başlatmaz.";
     kutular[0].appendChild(not1);
     var not2 = document.createElement("p"); not2.className = "canli-not";
     not2.textContent = "Canlı: servis ve veri kontrolleri. Oto-set yalnızca izlenir (koruma alanı); bakım kartı, ayarlar ve PDF ekranları aşama 3.";
     kutular[1].appendChild(not2);
-    var not3 = document.createElement("p"); not3.className = "canli-not"; not3.textContent = "Bu agent henüz kurulmadı.";
+    var not3 = document.createElement("p"); not3.className = "canli-not"; not3.textContent = "Canlı: lokasyon, eşitleme, yama, komut ve sunucu kontrolleri (15 dk'da bir, thapps'teki agent servisinde). Ana sayfa, canlı uyarılar ve lokasyon detayı ekranları aşama 3. Yalnızca izler.";
     kutular[2].appendChild(not3);
     var bas = document.querySelectorAll("h2.bolum"); bas[bas.length - 1].textContent = "İş emirleri";
     bas[bas.length - 1].nextElementSibling.textContent = v.acik_sayisi + " açık · son kapananlar altta. Durumu değiştirmek için bu sayfanın altındaki düğmeleri kullan.";

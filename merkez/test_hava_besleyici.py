@@ -81,7 +81,7 @@ c("agent servisi koordinatları okur (maslak)", _AS.koordinatlar()["maslak"] == 
 _kaynak = open(os.path.join(_dz, "agent_servisi.py"), encoding="utf-8").read()
 _ithal = set(_re.findall(r"^(?:import|from) (\w+)", _kaynak, _re.M))
 c("agent servisi yalnızca stdlib + kendi modüllerini kullanır (yeni paket yok)",
-  _ithal <= {"json", "logging", "os", "sys", "threading", "time", "hava_besleyici", "ust_agent"}, _ithal)
+  _ithal <= {"json", "logging", "os", "sys", "threading", "time", "hava_besleyici", "ust_agent", "synapse_agent"}, _ithal)
 c("agent servisi diske yazmaz", not _re.search(r"open\([^)]*['\"]w", _kaynak))
 _ua = open(os.path.join(_dz, "ust_agent.py"), encoding="utf-8").read()
 _hb = open(os.path.join(_dz, "hava_besleyici.py"), encoding="utf-8").read()

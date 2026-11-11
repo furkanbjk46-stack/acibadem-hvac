@@ -9,8 +9,9 @@ Yönetici systemd servisi olarak kurar (veritabani/UST_AGENT_SERVIS_TALEBI.md):
     EnvironmentFile=/etc/canliizleme/ust_agent.env     # SYNAPSE_URL, SYNAPSE_AGENT_KEY
     ExecStart=/opt/canliizleme_app/venv/bin/python agent_servisi.py
 
-İki iş parçacığı çalıştırır:
+Üç iş parçacığı çalıştırır:
   * üst agent (ust_agent.py)        her 120 sn: bulgu → iş emri, takip, kapatma
+  * Synapse agent'ı (synapse_agent.py) her 15 dk: merkez ve lokasyonların genel durumu
   * hava besleyici (hava_besleyici.py) her 3 saat: lokasyonların günlük havası
 
 Bu servis çalışırken merkez portalının içindeki yedek kopyalar kendiliğinden
@@ -32,6 +33,7 @@ import time
 BURASI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BURASI)
 import hava_besleyici  # noqa: E402
+import synapse_agent  # noqa: E402
 import ust_agent  # noqa: E402
 
 KOORDINAT_DOSYA = os.path.join(BURASI, "configs", "lokasyon_koordinat.json")
@@ -62,6 +64,17 @@ def hava_dongu(url, key, koor):
         time.sleep(hava_besleyici.ARALIK_SN)
 
 
+def synapse_dongu(url, key, ilk_bekleme=60):
+    time.sleep(ilk_bekleme)                       # servis açılışında üst agent ile çakışmasın
+    while True:
+        try:
+            s = synapse_agent.tur(synapse_agent.Ortam(url, key))
+            logger.info("Synapse agent'ı: %s · %s", s["ozet"], s["gonderim"])
+        except Exception as e:
+            logger.warning("Synapse agent turu tamamlanamadı: %s: %s", type(e).__name__, e)
+        time.sleep(synapse_agent.TUR_SN)
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -72,11 +85,14 @@ def main():
     db = ust_agent.Db(url, key)
     if "--tek" in sys.argv:
         print(json.dumps({"ust_agent": ust_agent.tur(db, kaynak="servis"),
-                          "hava": hava_besleyici.tur(url, key, koor)}, ensure_ascii=False, indent=1))
+                          "synapse": synapse_agent.tur(synapse_agent.Ortam(url, key)),
+                          "hava": hava_besleyici.tur(url, key, koor)}, ensure_ascii=False, indent=1,
+                         default=str))
         return
-    logger.info("Agent servisi başladı (üst agent her %d sn, hava her %d sn)",
-                ust_agent.TUR_SN, hava_besleyici.ARALIK_SN)
+    logger.info("Agent servisi başladı (üst agent her %d sn, Synapse agent'ı her %d sn, hava her %d sn)",
+                ust_agent.TUR_SN, synapse_agent.TUR_SN, hava_besleyici.ARALIK_SN)
     threading.Thread(target=hava_dongu, args=(url, key, koor), name="hava", daemon=True).start()
+    threading.Thread(target=synapse_dongu, args=(url, key), name="synapse", daemon=True).start()
     while True:                                   # üst agent ana iş parçacığında
         try:
             s = ust_agent.tur(db, kaynak="servis")
