@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ölçekleme Yol Haritası</title>
+<style>
+:root {
+  --zemin:#f5f6f8; --kart:#ffffff; --yazi:#18202b; --soluk:#5c6675; --cizgi:#e1e5eb; --bant:#eef1f5;
+  --mavi:#1f5fbf; --mavi-z:#e6eefb; --kirmizi:#b42318; --kirmizi-z:#fde8e6; --turuncu:#b54708; --turuncu-z:#fdf0e1;
+  --sari:#8a6d00; --sari-z:#fbf5d9; --yesil:#1b7a3d; --yesil-z:#e3f4e8; --mor:#6b3fb3; --mor-z:#efe8fa;
+  --font:"Segoe UI", system-ui, -apple-system, Roboto, sans-serif; --mono:Consolas, "Cascadia Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --zemin:#11161d; --kart:#19202a; --yazi:#e6eaf0; --soluk:#9aa5b4; --cizgi:#2b3442; --bant:#212a36;
+    --mavi:#7fb0ff; --mavi-z:#1b2c47; --kirmizi:#ff8a80; --kirmizi-z:#3a1d1b; --turuncu:#ffb26b; --turuncu-z:#3a2a19;
+    --sari:#e9cc5c; --sari-z:#352f17; --yesil:#7fd69a; --yesil-z:#183223; --mor:#c3a5ff; --mor-z:#2a2140;
+  }
+}
+:root[data-theme="dark"] {
+  --zemin:#11161d; --kart:#19202a; --yazi:#e6eaf0; --soluk:#9aa5b4; --cizgi:#2b3442; --bant:#212a36;
+  --mavi:#7fb0ff; --mavi-z:#1b2c47; --kirmizi:#ff8a80; --kirmizi-z:#3a1d1b; --turuncu:#ffb26b; --turuncu-z:#3a2a19;
+  --sari:#e9cc5c; --sari-z:#352f17; --yesil:#7fd69a; --yesil-z:#183223; --mor:#c3a5ff; --mor-z:#2a2140;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--zemin); color:var(--yazi); font:15px/1.6 var(--font); }
+.sayfa { max-width:1100px; margin:0 auto; padding:32px 16px 64px; }
+header h1 { font-size:28px; line-height:1.25; margin:0 0 6px; }
+header .alt { color:var(--soluk); margin:0; }
+h2 { font-size:20px; margin:40px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--cizgi); }
+h3 { font-size:16px; margin:0 0 6px; }
+p { margin:0 0 10px; }
+code { font:13px var(--mono); background:var(--bant); padding:1px 5px; border-radius:4px; overflow-wrap:anywhere; }
+.kart { background:var(--kart); border:1px solid var(--cizgi); border-radius:10px; padding:16px 18px; }
+.ozet { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-top:20px; }
+.karar { border-left:4px solid var(--mavi); }
+.karar p:last-child { margin:0; }
+.sayilar { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.sayi { background:var(--kart); border:1px solid var(--cizgi); border-radius:10px; padding:10px 12px; }
+.sayi b { display:block; font-size:22px; line-height:1.2; }
+.sayi span { color:var(--soluk); font-size:12.5px; }
+.cip { display:inline-block; font:700 11px var(--font); padding:1px 8px; border-radius:999px; white-space:nowrap; vertical-align:2px; }
+.kritik { color:var(--kirmizi); background:var(--kirmizi-z); }
+.yuksek { color:var(--turuncu); background:var(--turuncu-z); }
+.orta { color:var(--sari); background:var(--sari-z); }
+.iyi { color:var(--yesil); background:var(--yesil-z); }
+.biz { color:var(--mavi); background:var(--mavi-z); }
+.alp { color:var(--mor); background:var(--mor-z); }
+.sen { color:var(--turuncu); background:var(--turuncu-z); }
+/* Fazlar */
+.fazlar { display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; margin:14px 0 6px; }
+.faz { background:var(--kart); border:1px solid var(--cizgi); border-top:4px solid var(--mavi); border-radius:10px; padding:12px; }
+.faz .no { font:700 12px var(--font); color:var(--soluk); letter-spacing:.04em; }
+.faz h3 { margin:2px 0 4px; font-size:15px; }
+.faz p { font-size:13px; color:var(--soluk); margin:0; }
+.faz.f0 { border-top-color:var(--kirmizi); } .faz.f1 { border-top-color:var(--turuncu); }
+.faz.f2 { border-top-color:var(--sari); } .faz.f3 { border-top-color:var(--mavi); } .faz.f4 { border-top-color:var(--yesil); }
+.kapi { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; font-size:13.5px; }
+.kapi span { background:var(--bant); border-radius:8px; padding:6px 10px; }
+/* Bulgular */
+.filtre { display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 14px; }
+.filtre button { font:600 13px var(--font); color:var(--yazi); background:var(--kart); border:1px solid var(--cizgi);
+  border-radius:999px; padding:5px 12px; cursor:pointer; }
+.filtre button[aria-pressed="true"] { background:var(--yazi); color:var(--kart); border-color:var(--yazi); }
+.bulgu { background:var(--kart); border:1px solid var(--cizgi); border-radius:10px; margin-bottom:10px; }
+.bulgu > summary { list-style:none; cursor:pointer; padding:12px 16px; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+.bulgu > summary::-webkit-details-marker { display:none; }
+.bulgu > summary .kod { font:700 12px var(--mono); color:var(--soluk); min-width:30px; }
+.bulgu > summary .bas { font-weight:650; flex:1 1 420px; }
+.bulgu > summary .sag { display:flex; gap:6px; flex-wrap:wrap; }
+.bulgu[open] > summary { border-bottom:1px solid var(--cizgi); }
+.govde { padding:12px 16px 14px; display:grid; grid-template-columns:150px 1fr; gap:6px 14px; font-size:14px; }
+.govde dt { color:var(--soluk); font-weight:600; }
+.govde dd { margin:0; }
+/* Faz detayları */
+.fazdetay { display:grid; gap:12px; }
+.fazdetay .kart { border-left:4px solid var(--mavi); }
+.fazdetay .k0 { border-left-color:var(--kirmizi); } .fazdetay .k1 { border-left-color:var(--turuncu); }
+.fazdetay .k2 { border-left-color:var(--sari); } .fazdetay .k4 { border-left-color:var(--yesil); }
+.fazdetay ol { margin:6px 0 8px; padding-left:22px; } .fazdetay li { margin:3px 0; }
+.bitti { font-size:13.5px; background:var(--bant); border-radius:8px; padding:8px 10px; }
+.bitti b { color:var(--yesil); }
+table { width:100%; border-collapse:collapse; font-size:14px; background:var(--kart); border:1px solid var(--cizgi); border-radius:10px; overflow:hidden; }
+th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--cizgi); vertical-align:top; }
+th { background:var(--bant); font-size:12.5px; color:var(--soluk); }
+tr:last-child td { border-bottom:0; }
+.tablo { overflow-x:auto; }
+.iki { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+ul.duz { margin:6px 0; padding-left:20px; } ul.duz li { margin:3px 0; }
+footer { margin-top:40px; color:var(--soluk); font-size:13px; }
+@media (max-width: 860px) {
+  .ozet, .iki { grid-template-columns:1fr; }
+  .fazlar { grid-template-columns:1fr 1fr; }
+  .govde { grid-template-columns:1fr; gap:2px; } .govde dd { margin-bottom:8px; }
+}
+@media (max-width: 480px) { .fazlar { grid-template-columns:1fr; } header h1 { font-size:23px; } }
+</style>
+</head>
+<body>
+<div class="sayfa">
+
+<header>
+  <h1>Synapse · 1 lokasyondan 10+ lokasyona yol haritası</h1>
+  <p class="alt">11.11.2026 · Bugünkü kod (LpRumu/Canliizleme <code>cafb547</code>), thapps veritabanı ve Maslak sahası incelenerek hazırlandı.
+  Amaç: tek lokasyon varken, ikinci lokasyon gelmeden önce yapısal sorunları çözmek.</p>
+</header>
+
+<div class="ozet">
+  <div class="kart karar">
+    <h3>Karar</h3>
+    <p><b>Mimari 10–20 lokasyona dayanır; zorlanacak olan sunucu değil, işin yapılış şekli.</b>
+    Sunucu, veritabanı boyutu ve agent katmanları rahat büyür. Ama bugün dört şey tek lokasyona göre kurulu:
+    yama yayını, ortak veritabanı anahtarı, koda gömülü sayaç ve ısıtma hattı listeleri ve tüm lokasyonlar için tek oto-set ayarı.</p>
+    <p>Bunlardan ikisi <b>ikinci lokasyon geldiği gün</b> sorun çıkarır: hedefi <code>all</code> olan yama yalnızca bir lokasyona gider,
+    ve bir lokasyon PC'sindeki ortak anahtar bütün lokasyonların enerji verisini silebilir. Bu yüzden önce Faz 0, sonra Faz 1 bitmeden ikinci lokasyon açılmamalı.</p>
+  </div>
+  <div class="sayilar">
+    <div class="sayi"><b>%16</b><span>sunucu diski dolu (78 GB boş)</span></div>
+    <div class="sayi"><b>25 GB</b><span>boş bellek (31 GB), 2 çekirdek</span></div>
+    <div class="sayi"><b>75</b><span>sütun enerji tablosunda (lokasyona özel olanlar dahil)</span></div>
+    <div class="sayi"><b>32</b><span>sayaç IP adresi kodun içinde (<code>data_collector.py</code>)</span></div>
+    <div class="sayi"><b>5,8 MB</b><span>yama tablosu, 29 kayıt (en büyük tablo)</span></div>
+    <div class="sayi"><b>4 yerde</b><span>ayrı ayrı tutulan hastane listesi</span></div>
+  </div>
+</div>
+
+<h2>Fazlar</h2>
+<div class="fazlar">
+  <div class="faz f0"><div class="no">FAZ 0 · HEMEN</div><h3>Riskleri kapat</h3><p>Yama dağıtımı, lokasyon anahtarı, sürüm takibi, test hattı</p></div>
+  <div class="faz f1"><div class="no">FAZ 1</div><h3>Koddan lokasyonu çıkar</h3><p>Sayaç, hat, hastane listeleri ayara; oto-set lokasyon başına</p></div>
+  <div class="faz f2"><div class="no">FAZ 2</div><h3>Yama ve kurulum hattı</h3><p>Pilot → hepsi yayını, geri alma, yeni lokasyon kurulumu</p></div>
+  <div class="faz f3"><div class="no">FAZ 3</div><h3>Veri modeli</h3><p>Sayaç verisi ince tabloya; Synapse sorguları pencereli</p></div>
+  <div class="faz f4"><div class="no">FAZ 4</div><h3>Operasyon</h3><p>Bildirim, lokasyon seçici, PC geri yükleme, agent aşama 3</p></div>
+</div>
+<div class="kapi">
+  <span><b>2. lokasyon</b> açılmadan önce: Faz 0 + Faz 1 + Faz 2</span>
+  <span><b>4. lokasyondan</b> önce: Faz 3</span>
+  <span><b>10 lokasyon</b> öncesi: Faz 4</span>
+</div>
+
+<h2>Bulgular</h2>
+<p>Her bulgu kanıtıyla birlikte. Önem, <b>10 lokasyonda</b> doğuracağı sonuca göre verildi. Kimin yapacağı: <span class="cip biz">biz</span> kod ve şema değişikliği (şema yetkimiz var),
+<span class="cip alp">Alp Bey</span> sunucu yöneticisi gerektiren iş, <span class="cip sen">sen</span> senin kararın.</p>
+<div class="filtre" role="group" aria-label="Önem filtresi">
+  <button type="button" data-f="hepsi" aria-pressed="true">Hepsi</button>
+  <button type="button" data-f="kritik" aria-pressed="false">Kritik</button>
+  <button type="button" data-f="yuksek" aria-pressed="false">Yüksek</button>
+  <button type="button" data-f="orta" aria-pressed="false">Orta</button>
+</div>
+
+<div id="bulgular">
+
+<details class="bulgu" data-onem="kritik" open>
+  <summary><span class="kod">A1</span><span class="bas">"Hepsine" gönderilen yama yalnızca bir lokasyona gider</span>
+    <span class="sag"><span class="cip kritik">Kritik</span><span class="cip biz">biz</span><span class="cip">Faz 0</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Yama tablosunda tek satır var ve tek bir <code>durum</code> alanı var. <code>hedef='all'</code> olan yamayı ilk alan lokasyon satırı <code>tamamlandi</code> yapıyor; diğer lokasyonlar yalnızca <code>bekliyor</code> satırları aradığı için o yamayı hiç görmüyor. Tekrar oynatma koruması da satırın yeniden <code>bekliyor</code> yapılmasını engelliyor.</dd>
+    <dt>Kanıt</dt><dd><code>hvac/deneme/cloud_sync.py</code> <code>check_and_apply_update</code>: <code>.eq("durum","bekliyor").in_("hedef",[lokasyon_id,"all"])</code>; veritabanında <code>hvac_guncelleme_koru</code> tetiği ("Tamamlanmış yama yeniden kuyruğa alınamaz").</dd>
+    <dt>Bugün neden görünmüyor</dt><dd>Tek lokasyon var ve yamalar hep <code>hedef='maslak'</code> ile gönderiliyor.</dd>
+    <dt>Çözüm</dt><dd>Yamayı lokasyonlardan ayır: yeni <code>yama_uygulamalari</code> tablosu (yama_id, lokasyon_id, durum, zaman, hata). Lokasyon kendi satırını yazar, yamanın kendisi değişmez. Bu kurulana kadar geçici kural: <code>all</code> kullanılmaz, her lokasyona ayrı satır açılır (yayın aracı bunu kendisi yapar).</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="kritik" open>
+  <summary><span class="kod">B1</span><span class="bas">Ortak anahtar bütün lokasyonların enerji verisini okuyup silebiliyor</span>
+    <span class="sag"><span class="cip kritik">Kritik</span><span class="cip biz">biz</span><span class="cip alp">Alp Bey</span><span class="cip">Faz 0</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd><code>energy_data</code> tablosundaki <code>energy_all</code> ve <code>energy_tam_erisim</code> kuralları, ortak (anon) anahtara bütün lokasyonların satırlarında okuma, yazma ve silme izni veriyor. Aynı anahtar her lokasyon PC'sindeki <code>supabase_config.json</code> içinde. 10 lokasyonda 10 PC'den herhangi birinden bütün grubun verisi silinebilir.</dd>
+    <dt>Kanıt</dt><dd>Veritabanı kuralları (<code>pg_policies</code>); <code>veritabani/KURULUM.md</code> "kaldırılmalı" notu. <code>cloud_sync.py</code> hâlâ ortak anahtarla yazıyor (<code>sb_kimlik</code>'i kullanmıyor).</dd>
+    <dt>İyi haber</dt><dd>Altyapı hazır: lokasyon anahtarları, <code>hvac_lok()</code> ve "yalnız kendi lokasyonuna yaz" kuralları veritabanında zaten var; <code>sb_kimlik.py</code> 8 dosyada kullanılıyor. Eksik olan son adım.</dd>
+    <dt>Çözüm</dt><dd>1) <code>cloud_sync.py</code>'yi <code>sb_kimlik.istemci</code>'ye geçir. 2) Maslak için lokasyon anahtarı üret (<span class="cip alp">Alp Bey</span>, sunucuda <code>04_anahtar_uret.py</code>) ve <code>configs/lokasyon_anahtari.json</code> olarak gönder. 3) Bir hafta izle. 4) <code>energy_data</code>, <code>lokasyonlar</code>, <code>canli_guc</code>, <code>agent_*</code>, <code>guncellemeler</code> tablolarındaki ortak anahtar <code>true</code> kurallarını <code>sema_degistir.py</code> ile kaldır.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="kritik" open>
+  <summary><span class="kod">C1</span><span class="bas">Sayaç listeleri koda gömülü</span>
+    <span class="sag"><span class="cip kritik">Kritik</span><span class="cip biz">biz</span><span class="cip">Faz 1</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Analizörlerin adı, IP'si ve markası (<code>data_collector.py</code> <code>ANALYZERS</code>, 32 IP), köprünün hangi sayacı hangi sütuna yazdığı (<code>data_bridge.py</code> <code>ALL_ANALYZERS</code>) ve agent'ın izlediği sayaçlar (<code>enerji_agent.py</code> <code>SAYAC_SUTUNLARI</code>) kodun içinde ve Maslak'a ait.</dd>
+    <dt>10 lokasyonda</dt><dd>Kod herkes için aynı olduğundan, bir lokasyona yapılan yama diğerinin sayaç listesini ezer. Ya her lokasyona ayrı kod kolu açılır (yönetilemez) ya da sayaçlar okunmaz.</dd>
+    <dt>Çözüm</dt><dd>Lokasyon başına tek dosya: <code>configs/sayaclar.json</code> (ad, IP, marka, tür: şebeke / üretim / alt sayaç, sütun adı, kritik mi). <code>data_collector</code>, <code>data_bridge</code>, <code>canli_guc</code> ve <code>enerji_agent</code> listeyi buradan okur. Yamalar artık bu dosyayı taşımaz. Maslak'ın bugünkü listesi bu dosyaya birebir aktarılır ve ikisinin aynı sonucu verdiği testle doğrulanır.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">C2</span><span class="bas">Isıtma hatları (MAS-1 / MAS-2) ve hat sütunları kodda</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 1</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd><code>data_bridge.py</code> (MAS-1/MAS-2 → <code>Mas1_*</code>), <code>ahu_collector.py</code> (MAS-1/MAS-2 soğutma ve ısıtma ortalaması), <code>app_portal.py</code> sıcaklık sütunları, <code>saha_teshis.py</code>, <code>veri_alarm.py</code>; <code>location_manager.py</code> başlığı "Tek lokasyon yönetimi — Maslak".</dd>
+    <dt>Çözüm</dt><dd>Hat listesi lokasyon profiline (<code>configs/lokasyon_profili.json</code> zaten var ve koordinat için kullanılıyor) taşınır; kod "hat" kavramıyla genel çalışır. <code>location_manager.py</code> sabit sözlük yerine profil dosyasını okur.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">E1</span><span class="bas">Oto-set ayarları bütün lokasyonlar için tek</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip sen">sen (koruma alanı)</span><span class="cip">Faz 1</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd><code>ayarlar</code> tablosundaki <code>oto_set_aktif</code>, <code>oto_gunduz_saat</code>, <code>oto_gece_saat</code>, <code>oto_mod_*</code> anahtarlarında lokasyon yok. 10 lokasyonda hepsi aynı saatte geçer; tek bir lokasyonda oto-set'i kapatmak bütün grubu kapatır.</dd>
+    <dt>Çözüm</dt><dd>Varsayılan + lokasyon geçersiz kılma: <code>oto_gunduz_saat</code> varsayılan, <code>oto_gunduz_saat:maslak</code> varsa o kullanılır. Synapse ayar ekranında lokasyon seçimi. Oto-set koruma alanı olduğu için tasarım ve yama ayrıca onayına sunulur.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">A2</span><span class="bas">Hangi lokasyonun hangi sürümde olduğu bilinmiyor</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 0</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd><code>lokasyonlar.versiyon</code> Maslak için <code>2.0</code>; son uygulanan yama 13.8. Yama uygulanınca bu alan güncellenmiyor.</dd>
+    <dt>Çözüm</dt><dd><code>cloud_sync</code> uyguladığı son yama sürümünü ve dosya özetini (hash) heartbeat ile yazar. Synapse Yönetim'de lokasyon × sürüm tablosu. Synapse agent'ının "Lokasyon sürümleri" kontrolü bu alana bakar (bugün 2 lokasyon olmadığı için atlanıyor).</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">A3</span><span class="bas">Yama yayını elle; yama bilgisayarı hâlâ eski Supabase'te</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 2</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Son 8 yama bu bilgisayardan elle SQL ile gönderildi. <code>guncelleme_yayinla.py</code> menüsü altunizade/maslak sabit ve eski Supabase adresine bakıyor.</dd>
+    <dt>Çözüm</dt><dd>Tek yayın aracı: git'teki commit'ten değişen dosyaları alır, önce pilot lokasyona gönderir, agent'ların "yama sonrası" kontrolü geçince diğerlerine açar. Her yama commit kimliğini taşır (hangi kod sahada, kesin bilinir). Yama bilgisayarı yeni veritabanına çevrilir ya da araç Synapse Yönetim'e taşınır.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">D1</span><span class="bas">Enerji tablosu "geniş": her yeni sayaç yeni bir SQL sütunu</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 3</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd><code>energy_data</code> 75 sütun; <code>Mas1_*</code>, <code>Mas2_*</code>, <code>Atz_*</code>, <code>MCC_2BK_*</code> gibi lokasyona özel sütunlar ortak tabloda. 10 lokasyonda 300'ü aşan, çoğu boş sütun olur.</dd>
+    <dt>Çözüm</dt><dd>Sayaç kırılımı için ince tablo <code>sayac_gunluk</code> (lokasyon_id, tarih, sayac, deger, birim). Toplam sütunları (şebeke, kojen, hastane toplamı, chiller, MCC) <code>energy_data</code>'da kalır, böylece raporlar ve ekranlar bozulmaz. Yeni sayaç = yalnızca <code>sayaclar.json</code>'a bir satır; SQL değişikliği gerekmez.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">F1</span><span class="bas">Bütün iş emirleri tek kişiye; bildirim yok</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 4</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Agent'lar sürüm 1'de yalnızca izliyor ve iş emri açıyor; iş emirleri yalnızca Synapse Yönetim'de görünüyor. 10 lokasyonda günde onlarca iş emri olabilir.</dd>
+    <dt>Çözüm</dt><dd>Kritik iş emri için anında bildirim (Canlı Uyarılar ve e-posta), diğerleri için günlük özet. Ardından agent sürüm 2: güvenli işleri agent'ın kendisinin yapması (yeniden okuma, önbelleği yenileme); koruma alanı yine insanda.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="yuksek">
+  <summary><span class="kod">F5</span><span class="bas">Tam test seti takılıyor; otomatik test yok</span>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 0</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Lokasyon programının tam test çalıştırması bitmiyor (<code>test_degismez_kurallar</code> eski kodla da takılıyor). Testler elle, tek tek çalıştırılıyor.</dd>
+    <dt>Çözüm</dt><dd>Takılan testi düzelt; her push'ta bütün testleri koşan GitHub Actions. 10 lokasyona giden her yama önce bu kapıdan geçer.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">A4</span><span class="bas">Yama geri alınamıyor</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 2</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Yama dosyanın üzerine yazıyor, eski hâli saklanmıyor. Bozuk bir yamada geri dönmek için yeni yama hazırlamak gerekiyor.</dd>
+    <dt>Çözüm</dt><dd>Uygulamadan önce <code>_yedek/&lt;sürüm&gt;/</code> kopyası; Synapse'ten "önceki sürüme dön" komutu.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">A5</span><span class="bas">Yama tablosu dosyaların tam içeriğini sonsuza kadar tutuyor</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 2</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd>29 kayıt = 5,8 MB; veritabanının en büyük tablosu. 10 lokasyonda lokasyon başına satır açılırsa her yama 10 kez saklanır.</dd>
+    <dt>Çözüm</dt><dd>A1'deki ayrımla içerik bir kez saklanır; bütün lokasyonlarda tamamlanan yamaların içeriği 30 gün sonra temizlenir (özet ve commit kimliği kalır).</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">D2</span><span class="bas">Synapse bütün enerji geçmişini 5 dakikada bir çekiyor</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 3</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd><code>merkez/app_merkez.py</code>: <code>energy_data</code> <code>select("*")</code>, bütün lokasyonlar, bütün tarihler, 5 dk önbellek; ana sayfa 10 sn'de bir yenileniyor.</dd>
+    <dt>10 lokasyonda</dt><dd>3 yılda yaklaşık 11.000 satır × 75 sütun. Çalışır ama açılış yavaşlar; ince tabloya geçişte daha da büyür.</dd>
+    <dt>Çözüm</dt><dd>Ana sayfa için aylık / günlük toplam görünümü (veritabanında hazır özet), detay sayfası yalnızca seçilen lokasyon ve tarih aralığı.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">D3</span><span class="bas">Hastane listesi dört ayrı yerde</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 1</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd><code>merkez/app_merkez.py</code> <code>HASTANELER</code>, <code>pages/lokasyon_detay.py</code>, <code>pages/rapor_olustur.py</code>, <code>configs/lokasyon_koordinat.json</code> (ad, m², renk, koordinat). Ayrıca <code>lokasyon_detay.py</code>'de "sadece Maslak" TRDP bloğu.</dd>
+    <dt>Çözüm</dt><dd>Tek kaynak: <code>lokasyonlar</code> tablosuna ad, kısa ad, m², renk, koordinat sütunları; sayfalar oradan okur. TRDP bloğu sayaç listesinden çizilir.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">F2</span><span class="bas">Agent ekranı lokasyonları ayırmıyor</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 4</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Agent katmanları ekranında her agent kutusu bütün lokasyonların en kötü durumunu gösteriyor.</dd>
+    <dt>Çözüm</dt><dd>Lokasyon seçici ve lokasyon × agent durum matrisi (10 satır × 3 sütun, tek bakışta).</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">F3</span><span class="bas">Lokasyon PC'si arızalanırsa geri yükleme yolu tanımsız</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 4</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Enerji verisinin ana kaynağı PC'deki <code>energy_data.csv</code>; ayarlar (<code>configs/</code>, bakım kartları, lisans) yalnızca PC'de. Synapse'te veri kopyası var ama geri yükleme aracı yok.</dd>
+    <dt>Çözüm</dt><dd><code>configs/</code> klasörünün günlük kopyası Synapse'e; yeni PC'de "Synapse'ten geri yükle" adımı (veri + ayarlar).</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">F4</span><span class="bas">Yeni lokasyon kurulumu elle ve belgesiz</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip alp">Alp Bey</span><span class="cip">Faz 2</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd>Kurulum <code>KURULUM.bat</code>, lisans, <code>supabase_config.json</code>, sayaç ve BACnet ayarları ile elle yapılıyor. Doğru kurulduğunu söyleyen tek bir kontrol yok.</dd>
+    <dt>Çözüm</dt><dd>Kurulum listesi (aşağıda) + kurulum sonrası "ilk gün" agent turu: sayaçlar okunuyor mu, BACnet noktaları geliyor mu, Synapse'e veri gidiyor mu, lokasyon anahtarı doğru mu.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">G1</span><span class="bas">Eski Supabase ve Streamlit Cloud hâlâ açık</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip sen">sen</span><span class="cip">Faz 2</span></span></summary>
+  <dl class="govde">
+    <dt>Ne oluyor</dt><dd><code>acibadem-hvac</code>'a yapılan her push Streamlit Cloud'u da güncelliyor; yama bilgisayarı eski Supabase'e bakıyor. İki kopya, iki doğruluk kaynağı.</dd>
+    <dt>Çözüm</dt><dd>Kapanış senin kararın: yama bilgisayarı taşındıktan sonra eski Supabase ve Streamlit Cloud kapatılır, <code>acibadem-hvac</code> yalnız ayna olarak kalır.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">G2</span><span class="bas">Tek sunucu, 2 çekirdek: kapasite izlenmiyor</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip alp">Alp Bey</span><span class="cip">Faz 4</span></span></summary>
+  <dl class="govde">
+    <dt>Değerlendirme</dt><dd>10 lokasyon ve 10 eş zamanlı kullanıcı için yeterli (Streamlit tek süreç; veritabanı küçük). Sınır işlemci; bellek ve disk bol.</dd>
+    <dt>Çözüm</dt><dd>Synapse agent'ına işlemci yükü ve sayfa yanıt süresi kontrolü. Eşik aşılırsa Alp Bey'den çekirdek artırımı.</dd>
+  </dl>
+</details>
+
+</div>
+
+<h2>Rahat ölçeklenenler</h2>
+<div class="tablo"><table>
+  <thead><tr><th>Konu</th><th>Bugün</th><th>10–20 lokasyonda</th></tr></thead>
+  <tbody>
+    <tr><td>Sunucu kaynakları</td><td>Disk %16, bellek 25/31 GB boş</td><td><span class="cip iyi">Yeterli</span> (yalnız işlemci izlenmeli, G2)</td></tr>
+    <tr><td>Veritabanı boyutu</td><td>Enerji 720 KB, toplam birkaç MB</td><td><span class="cip iyi">Yeterli</span> yılda birkaç MB</td></tr>
+    <tr><td>Lokasyon agent'ları</td><td>Her biri kendi PC'sinde</td><td><span class="cip iyi">Doğrusal</span> merkeze yük binmez</td></tr>
+    <tr><td>Üst agent, Synapse agent'ı</td><td>Her turda birkaç küçük sorgu</td><td><span class="cip iyi">Yeterli</span></td></tr>
+    <tr><td>Hava besleyici</td><td>20 hastanenin koordinatı hazır</td><td><span class="cip iyi">Hazır</span></td></tr>
+    <tr><td>Lokasyon anahtarı altyapısı</td><td><code>hvac_lok()</code> ve kurallar kurulu</td><td><span class="cip iyi">Hazır</span> (yalnız devreye alınmalı, B1)</td></tr>
+    <tr><td>Gece yedeği</td><td>Her gece, <code>/opt/Backup</code></td><td><span class="cip iyi">Değişmez</span></td></tr>
+    <tr><td>İnternetsiz lokasyon</td><td>Maslak: kütüphaneler yerel, hava Synapse'ten</td><td><span class="cip iyi">Hazır</span> yeni lokasyonlar da aynı yolla çalışır</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Faz faz yapılacaklar</h2>
+<div class="fazdetay">
+  <div class="kart k0">
+    <h3>Faz 0 · Riskleri kapat (tek lokasyonken, hemen)</h3>
+    <ol>
+      <li>Yama dağıtımını lokasyonlardan ayır: <code>yama_uygulamalari</code> tablosu + <code>cloud_sync</code> değişikliği; o güne kadar <code>all</code> yasak (A1).</li>
+      <li>Uygulanan sürümü heartbeat'e yaz; Yönetim'de sürüm tablosu (A2).</li>
+      <li><code>cloud_sync</code>'i lokasyon anahtarına geçir; Maslak anahtarı (Alp Bey); bir hafta izle; ortak anahtarın <code>true</code> kurallarını kaldır (B1).</li>
+      <li>Takılan testi düzelt, GitHub Actions ile her push'ta test (F5).</li>
+    </ol>
+    <p class="bitti"><b>Bitti sayılır:</b> Maslak lokasyon anahtarıyla çalışıyor; ortak anahtarla <code>energy_data</code> silme denemesi reddediliyor; sahte ikinci lokasyonla deneme ortamında <code>all</code> yaması iki lokasyona da uygulanıyor; testler her push'ta yeşil.</p>
+  </div>
+  <div class="kart k1">
+    <h3>Faz 1 · Koddan lokasyonu çıkar</h3>
+    <ol>
+      <li><code>configs/sayaclar.json</code>: Maslak'ın sayaçları birebir aktarılır; <code>data_collector</code>, <code>data_bridge</code>, <code>canli_guc</code>, <code>enerji_agent</code> buradan okur (C1).</li>
+      <li>Isıtma hatları <code>lokasyon_profili.json</code>'a; <code>location_manager</code> profil dosyasını okur (C2).</li>
+      <li>Hastane listesi tek kaynak (<code>lokasyonlar</code> tablosu); "sadece Maslak" blokları sayaç listesinden (D3).</li>
+      <li>Oto-set ayarları lokasyon başına (E1) — tasarım ve yama ayrıca onayına sunulur.</li>
+    </ol>
+    <p class="bitti"><b>Bitti sayılır:</b> lokasyon programının kodunda <code>maslak</code>, <code>MAS-1</code> ya da sayaç IP'si geçmiyor (bunu kontrol eden test var); Maslak eskisiyle aynı sayıları üretiyor (bir hafta yan yana karşılaştırma).</p>
+  </div>
+  <div class="kart k2">
+    <h3>Faz 2 · Yama ve kurulum hattı</h3>
+    <ol>
+      <li>Yayın aracı: commit'ten değişen dosyalar → pilot lokasyon → yama sonrası kontrol → diğerleri (A3).</li>
+      <li>Geri alma: <code>_yedek/&lt;sürüm&gt;</code> ve "önceki sürüme dön" (A4).</li>
+      <li>Yama içeriği temizliği (A5).</li>
+      <li>Yeni lokasyon kurulum listesi ve "ilk gün" agent turu (F4).</li>
+      <li>Yama bilgisayarı yeni veritabanına; eski Supabase / Streamlit Cloud kapanış kararı (G1, senin kararın).</li>
+    </ol>
+    <p class="bitti"><b>Bitti sayılır:</b> bir yama tek komutla pilot lokasyona, onaydan sonra hepsine gidiyor; bozuk yama 5 dakikada geri alınabiliyor; deneme ortamında sıfırdan bir lokasyon listeye göre kurulup ilk gün turunu geçiyor.</p>
+  </div>
+  <div class="kart">
+    <h3>Faz 3 · Veri modeli (4. lokasyondan önce)</h3>
+    <ol>
+      <li><code>sayac_gunluk</code> ince tablosu; <code>data_bridge</code> ve <code>cloud_sync</code> iki yere de yazar (geçiş dönemi) (D1).</li>
+      <li>Synapse lokasyon detayındaki sayaç kırılımı ince tablodan; toplamlar <code>energy_data</code>'dan (D1).</li>
+      <li>Ana sayfa için özet görünüm; detay sayfası pencereli sorgu (D2).</li>
+    </ol>
+    <p class="bitti"><b>Bitti sayılır:</b> yeni bir sayaç yalnızca <code>sayaclar.json</code>'a bir satır eklenerek Synapse'te görünüyor; SQL değişikliği yok. Synapse ana sayfası 10 lokasyonluk deneme verisiyle 3 saniyenin altında açılıyor.</p>
+  </div>
+  <div class="kart k4">
+    <h3>Faz 4 · Operasyon (10 lokasyon öncesi)</h3>
+    <ol>
+      <li>Bildirim: kritik anında, diğerleri günlük özet (F1).</li>
+      <li>Agent ekranında lokasyon seçici ve matris (F2).</li>
+      <li>PC geri yükleme: <code>configs/</code> yedeği ve "Synapse'ten geri yükle" (F3).</li>
+      <li>Agent aşama 3 (ekran kontrolleri) ve sürüm 2 (güvenli işleri agent'ın kendisinin düzeltmesi).</li>
+      <li>Kapasite izleme (G2).</li>
+    </ol>
+    <p class="bitti"><b>Bitti sayılır:</b> bir lokasyonda kritik sorun çıktığında 5 dakika içinde bildirim geliyor; arızalı PC yerine yenisi bir saat içinde aynı verilerle çalışıyor.</p>
+  </div>
+</div>
+
+<h2>Hedef: yeni lokasyon kurulum listesi (Faz 2 sonrası)</h2>
+<div class="iki">
+  <div class="kart">
+    <h3>Merkezde</h3>
+    <ul class="duz">
+      <li><code>lokasyonlar</code> tablosuna satır: kimlik, ad, m², renk, koordinat.</li>
+      <li>Lokasyon anahtarı üretimi (<span class="cip alp">Alp Bey</span>, <code>04_anahtar_uret.py</code>).</li>
+      <li>Oto-set: lokasyon ayarları (varsayılan ya da özel saatler), başlangıçta kapalı.</li>
+      <li>Yayın aracında lokasyonu "pilot dışı" olarak ekle.</li>
+    </ul>
+  </div>
+  <div class="kart">
+    <h3>Lokasyon PC'sinde</h3>
+    <ul class="duz">
+      <li>Kurulum paketi (kod herkes için aynı) + lisans.</li>
+      <li><code>configs/lokasyon_profili.json</code>: kimlik, koordinat, ısıtma hatları.</li>
+      <li><code>configs/sayaclar.json</code>: sayaçlar (ad, IP, marka, tür).</li>
+      <li><code>configs/ahu_nokta_konfig.json</code>: BACnet noktaları.</li>
+      <li><code>supabase_config.json</code> + <code>configs/lokasyon_anahtari.json</code>.</li>
+      <li>İlk gün agent turu yeşil → lokasyon canlıya alınır.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Kararlar ve dış bağımlılıklar</h2>
+<div class="tablo"><table>
+  <thead><tr><th>Konu</th><th>Kim</th><th>Ne zaman</th></tr></thead>
+  <tbody>
+    <tr><td>Maslak için lokasyon anahtarı üretimi (sonra her yeni lokasyon için bir tane)</td><td><span class="cip alp">Alp Bey</span></td><td>Faz 0</td></tr>
+    <tr><td>Ortak anahtar kurallarının kaldırılması (şema yetkimizle yapılabilir; Alp Bey'e bilgi)</td><td><span class="cip biz">biz</span></td><td>Faz 0, bir hafta izlemeden sonra</td></tr>
+    <tr><td>Oto-set'in lokasyon başına ayara geçmesi (koruma alanı)</td><td><span class="cip sen">sen</span></td><td>Faz 1</td></tr>
+    <tr><td>Eski Supabase ve Streamlit Cloud kapanışı</td><td><span class="cip sen">sen</span></td><td>Faz 2</td></tr>
+    <tr><td>İkinci lokasyonun hangisi olacağı ve pilot lokasyon (Maslak mı, yeni lokasyon mu)</td><td><span class="cip sen">sen</span></td><td>Faz 2 sonu</td></tr>
+    <tr><td>Sunucuya çekirdek eklenmesi (gerekirse)</td><td><span class="cip alp">Alp Bey</span></td><td>Faz 4, izlemeye göre</td></tr>
+  </tbody>
+</table></div>
+
+<footer>
+  Hazırlayan: Claude Code, 11.11.2026. İnceleme kapsamı: <code>hvac/deneme</code> (lokasyon programı), <code>merkez</code> (Synapse),
+  <code>veritabani</code>, thapps veritabanı kuralları ve tablo boyutları. Süre tahmini verilmedi; her faz bitiş ölçütüyle kapanır.
+  Dosya: <code>merkez/sunum/olcekleme_yol_haritasi.html</code> (iki repoda aynı).
+</footer>
+
+</div>
+<script>
+(function () {
+  var dugmeler = document.querySelectorAll(".filtre button");
+  dugmeler.forEach(function (d) {
+    d.addEventListener("click", function () {
+      var f = d.getAttribute("data-f");
+      dugmeler.forEach(function (x) { x.setAttribute("aria-pressed", String(x === d)); });
+      document.querySelectorAll("#bulgular .bulgu").forEach(function (b) {
+        b.style.display = (f === "hepsi" || b.getAttribute("data-onem") === f) ? "" : "none";
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
