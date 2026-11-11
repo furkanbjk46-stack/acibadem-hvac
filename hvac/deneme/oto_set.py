@@ -613,8 +613,36 @@ def tahmin_al(zorla=False):
         _tahmin_onbellek.update({"zaman": simdi, "veri": veri, "nokta": nokta})
         return veri
     except Exception as e:
-        logger.warning("oto_set tahmin alinamadi: %s", e)
-        return _tahmin_onbellek["veri"]
+        logger.warning("oto_set tahmin internetten alinamadi: %s — Synapse yedek yolu deneniyor", e)
+    # YEDEK YOL (11.11.2026, kullanıcı onaylı — RPR-2026-1111-001): Maslak internete
+    # çıkamadığı için 05.11'den beri her geçiş "tahmin yok" diye ertelendi, setler 6 gün
+    # aynı kaldı. thapps aynı servisten (Open-Meteo, aynı koordinat) günlük tahmini
+    # Synapse'teki hava_gunluk tablosuna yazıyor; buradan okunur. YALNIZCA tahminin
+    # kaynağı değişir: geçiş kuralı, eşikler ve set değerleri aynıdır.
+    veri = _synapse_tahmini(simdi)
+    if veri:
+        logger.info("oto_set tahmini Synapse yedek yolundan alindi: bugun max %.1f, yarin min %.1f",
+                    veri["bugun_max"], veri["yarin_min"])
+        _tahmin_onbellek.update({"zaman": simdi, "veri": veri, "nokta": nokta})
+        return veri
+    return _tahmin_onbellek["veri"]
+
+
+def _synapse_tahmini(simdi):
+    """Synapse hava_gunluk'tan {bugun_max, yarin_min}; ikisi birden yoksa None."""
+    try:
+        import hava_durumu
+        bugun = simdi.strftime("%Y-%m-%d")
+        yarin = (simdi + timedelta(days=1)).strftime("%Y-%m-%d")
+        b = hava_durumu._synapse_hava(bugun, bugun, tahmin=False).get(bugun) or {}
+        y = hava_durumu._synapse_hava(yarin, yarin, tahmin=True).get(yarin) or {}
+        bmax, ymin = b.get("Hava_Sicaklik_Max_C"), y.get("Hava_Sicaklik_Min_C")
+        if bmax is None or ymin is None:
+            return None
+        return {"bugun_max": round(float(bmax), 1), "yarin_min": round(float(ymin), 1)}
+    except Exception as e:
+        logger.warning("oto_set Synapse tahmini okunamadi: %s", e)
+        return None
 
 
 # ══════════════════════════════════════════════════════════════════════════
