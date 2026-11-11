@@ -13,6 +13,10 @@ Watchdog'un yanında ayrı süreç olarak çalışır.
 
 KONTROLLER
   portal_api        8005 ve /api uçları yanıt veriyor mu (health, son analiz, talimat, grafik)
+  giris_qr          giriş ekranı, /hvac, /enerji, QR bakım kartı bağlantısı, QR ayarı
+  watchdog          agent'ı başlatan watchdog hâlâ çalışıyor mu
+  bakim_karti       bakım kartları yükleniyor mu, durumları geçerli mi, tek kart açılıyor mu
+  ayarlar           ayarlar okunuyor mu, her ayar izin verilen aralıkta mı, Chiller/FCU ayarları
   otomatik_analiz   10 dk'lık AHU analizi zamanında mı; analiz edilen santral sayısı
   dis_hava          analiz gerçek dış havayla mı yapıldı (20 °C varsayılan değil)
   ahu_veri          santrallerden veri geliyor mu ("Veri Alınamadı" oranı)
@@ -307,8 +311,153 @@ def k_internet(o):
         olasi_yer="hastane ağı / güvenlik duvarı; hava, dış hava ve sayfa kaynakları yedek yollardan geliyor")]
 
 
+def _json(o, uc):
+    """8005'ten JSON okur: (kod, veri | None)."""
+    kod, metin = o.http(o.portal_url.rstrip("/") + uc, zaman_asimi=10)
+    if kod != 200:
+        return kod, None
+    try:
+        return kod, json.loads(metin)
+    except ValueError:
+        return kod, None
+
+
+def k_giris_qr(o):
+    """Portal giriş ekranı, HVAC / Enerji geçişleri ve QR bakım kartı bağlantısı açılıyor mu.
+    (Yönlendirmeler izlenir: /hvac → arayüz, /enerji → 8501, /bakim/X → arayüz + bakım kartı.)"""
+    taban = o.portal_url.rstrip("/")
+    kod, metin = o.http(taban + "/", zaman_asimi=10)
+    if kod is None:
+        raise Atla("8005 yanıt vermiyor (portal_api kontrolüne bakın)")
+    sorun = []
+    if kod != 200:
+        sorun.append("giriş ekranı (/) → HTTP %s" % kod)
+    elif "/hvac" not in metin or "/enerji" not in metin:
+        sorun.append("giriş ekranında HVAC / Enerji bağlantısı yok")
+    for uc, ad in (("/hvac", "HVAC arayüzü"), ("/enerji", "Enerji portalına geçiş"),
+                   ("/bakim/AGENT-TEST", "QR bakım kartı bağlantısı")):
+        k, m = o.http(taban + uc, zaman_asimi=15)
+        if k != 200:
+            sorun.append("%s (%s) → HTTP %s %s" % (ad, uc, k, str(m)[:40] if k is None else ""))
+    k, d = _json(o, "/api/qr-config")
+    if k != 200:
+        sorun.append("QR ayarı (/api/qr-config) → HTTP %s" % k)
+    elif not (d or {}).get("lokasyon_id"):
+        sorun.append("QR ayarında lokasyon kimliği boş (supabase_config.json lokasyon_id)")
+    if not sorun:
+        return []
+    return [bulgu(
+        "giris_qr", "giris", "uyari", "Giriş ekranı ve QR",
+        "Giriş ekranı / QR bağlantısında %d sorun" % len(sorun), "giriş ekranı, /hvac, /enerji, /bakim/… açılır",
+        "; ".join(sorun),
+        tekrar_adimi="Lokasyon PC'sinde http://127.0.0.1:8005/ aç, HVAC ve Enerji düğmelerine bas; "
+                     "telefonla bir santral QR etiketini okut",
+        olasi_yer="main_portal.py portal_home / hvac_entry / enerji_entry / bakim_qr_link")]
+
+
+def _surec_canli(pid):
+    """Windows'ta süreç yaşıyor mu (OpenProcess + WaitForSingleObject); diğerlerinde os.kill(pid, 0)."""
+    if os.name == "nt":
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x00100000 | 0x1000, False, pid)     # SYNCHRONIZE | QUERY_LIMITED
+        if not h:
+            return False
+        try:
+            return k32.WaitForSingleObject(h, 0) == 0x102          # WAIT_TIMEOUT → çalışıyor
+        finally:
+            k32.CloseHandle(h)
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
+def k_watchdog(o):
+    """Bu agent'ı watchdog başlatır; watchdog'un kendisi hâlâ ayakta mı (ölürse portallar
+    düştüğünde kimse yeniden başlatmaz). Agent elle başlatıldıysa atlanır."""
+    if os.environ.get("HVAC_WATCHDOG") != "1" and not getattr(o, "watchdog_pid", None):
+        raise Atla("agent watchdog'dan başlatılmamış (elle çalıştırma)")
+    pid = getattr(o, "watchdog_pid", None) or os.getppid()
+    canli = getattr(o, "surec_canli", None) or _surec_canli
+    if canli(pid):
+        return []
+    return [bulgu(
+        "watchdog", "surec", "kritik", "Watchdog",
+        "Watchdog çalışmıyor (PID %s)" % pid, "portal_watchdog.py çalışır, düşen portalı yeniden başlatır",
+        "watchdog süreci yok; portallar düşerse kendiliğinden kalkmaz",
+        tekrar_adimi="Lokasyon PC'sinde watchdog penceresi açık mı; görev yöneticisinde python portal_watchdog.py",
+        olasi_yer="watchdog penceresi kapatıldı ya da çöktü (BASLAT.bat ile yeniden başlatın)")]
+
+
+def k_bakim_karti(o):
+    kod, d = _json(o, "/api/maintenance")
+    if kod is None:
+        raise Atla("8005 yanıt vermiyor (portal_api kontrolüne bakın)")
+    if kod != 200 or not (d or {}).get("success"):
+        return [bulgu("bakim_karti", "api", "uyari", "Bakım kartları", "Bakım kartları yüklenemiyor",
+                      "/api/maintenance → success", "HTTP %s" % kod,
+                      tekrar_adimi="Mekanik Zeka → Bakım Kartları",
+                      olasi_yer="main_portal.py load_maintenance_cards (bakım kartı JSON dosyası bozuk olabilir)")]
+    kartlar = (d.get("data") or {}).get("cards") or {}
+    gecerli, bilesen = set(d.get("statuses") or []), d.get("components") or []
+    bozuk = ["%s/%s=%s" % (c, b, (k or {}).get(b)) for c, k in sorted(kartlar.items()) for b in bilesen
+             if (k or {}).get(b) is not None and (k or {}).get(b) not in gecerli]
+    cikti = []
+    if bozuk:
+        cikti.append(bulgu(
+            "bakim_karti", "durum", "uyari", "Bakım kartları",
+            "%d bakım kartı alanında geçersiz durum" % len(bozuk), "durum: " + "/".join(sorted(gecerli)),
+            ", ".join(bozuk[:6]), tekrar_adimi="Mekanik Zeka → Bakım Kartları",
+            olasi_yer="bakım kartı JSON dosyası elle düzenlenmiş ya da eski biçimde"))
+    if kartlar:
+        ilk = sorted(kartlar)[0]
+        k, tek = _json(o, "/api/maintenance/" + urllib.parse.quote(ilk, safe=""))
+        if k != 200 or not (tek or {}).get("success"):
+            cikti.append(bulgu(
+                "bakim_karti", "tek", "uyari", "Bakım kartları", "Tek cihazın bakım kartı açılmıyor (%s)" % ilk,
+                "HTTP 200", "HTTP %s" % k, tekrar_adimi="QR etiketi / Bakım Kartları → %s" % ilk,
+                olasi_yer="main_portal.py get_equipment_maintenance"))
+    return cikti
+
+
+def k_ayarlar(o):
+    kod, d = _json(o, "/api/settings")
+    if kod is None:
+        raise Atla("8005 yanıt vermiyor (portal_api kontrolüne bakın)")
+    cikti = []
+    if kod != 200 or not (d or {}).get("success"):
+        cikti.append(bulgu("ayarlar", "api", "uyari", "Ayarlar", "Mekanik Zeka ayarları okunamıyor",
+                           "/api/settings → success", "HTTP %s" % kod, tekrar_adimi="Mekanik Zeka → Ayarlar",
+                           olasi_yer="main_portal.py get_settings / ayar dosyası"))
+    else:
+        disari = []
+        for ad, (alt, ust) in sorted((d.get("limits") or {}).items()):
+            v = (d.get("settings") or {}).get(ad)
+            if isinstance(v, (int, float)) and not alt <= v <= ust:
+                disari.append("%s=%s (%s–%s)" % (ad, v, alt, ust))
+        if disari:
+            cikti.append(bulgu(
+                "ayarlar", "sinir", "uyari", "Ayarlar", "%d Mekanik Zeka ayarı izin verilen aralık dışında" % len(disari),
+                "her ayar CONFIG_LIMITS içinde", ", ".join(disari[:6]),
+                tekrar_adimi="Mekanik Zeka → Ayarlar (bu değerle Kaydet reddedilir)",
+                olasi_yer="ayar dosyası elle düzenlenmiş ya da sınırlar sonradan daraltılmış"))
+    kod, d = _json(o, "/api/chiller_fcu_ayarlari")
+    if kod != 200 or not (d or {}).get("success"):
+        cikti.append(bulgu("ayarlar", "chiller_fcu", "uyari", "Ayarlar", "Chiller/FCU kapasite ayarları okunamıyor",
+                           "/api/chiller_fcu_ayarlari → success", "HTTP %s" % kod,
+                           tekrar_adimi="Mekanik Zeka → Ayarlar → Chiller/FCU",
+                           olasi_yer="main_portal.py get_chiller_fcu_ayarlari"))
+    return cikti
+
+
 KONTROLLER = [
     ("portal_api", "API uçları (8005)", k_portal_api),
+    ("giris_qr", "Giriş ekranı ve QR", k_giris_qr),
+    ("watchdog", "Watchdog", k_watchdog),
+    ("bakim_karti", "Bakım kartları", k_bakim_karti),
+    ("ayarlar", "Ayarlar", k_ayarlar),
     ("otomatik_analiz", "Otomatik analiz", k_otomatik_analiz),
     ("dis_hava", "Dış hava kaynağı", k_dis_hava),
     ("ahu_veri", "AHU verisi", k_ahu_veri),

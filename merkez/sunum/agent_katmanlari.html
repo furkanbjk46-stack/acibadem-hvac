@@ -362,11 +362,11 @@ body.canli ul.kontrol li.ek::after { content:none; }
   <section class="kutu capraz">
     <h3>Üst agent'ın çapraz kontrolleri · tek agent'ın göremediği yerler</h3>
     <ul class="kontrol">
-      <li class="ek"><b>Portallar arası tutarlılık:</b> Enerji portalındaki günlük toplam = Synapse'teki toplam = lokasyon detayındaki SQL toplamı</li>
+      <li class="ek"><b>Portallar arası tutarlılık:</b> Enerji portalındaki günlük ve aylık toplam = Synapse'teki toplam = lokasyon detayındaki SQL toplamı (aynı gün iki kez yazılmışsa yakalanır)</li>
       <li class="ek"><b>Agent'ların kendisi:</b> üç agent da zamanında kontrol turunu bitirdi mi; susan agent da arıza sayılır</li>
-      <li class="ek"><b>Yama sonrası:</b> her lokasyonda sürüm aynı mı, yama sonrası iki portal da açıldı mı</li>
+      <li class="ek"><b>Yama sonrası:</b> yamadan sonraki ilk turda iki portal da açıldı mı; lokasyonlar aynı sürümde mi (Synapse agent'ı)</li>
       <li class="ek"><b>Tekrarlayan sorun:</b> agent'ın kendi çözdüğü bir sorun sık tekrarlıyorsa kod incelemesine yükseltilir</li>
-      <li class="ek"><b>Kapsam:</b> yeni eklenen bir sayfa, buton ya da sayaç hiçbir agent'ın listesinde değilse rapor edilir</li>
+      <li class="ek"><b>Kapsam:</b> veri gelen bir sayaç hiçbir agent'ın listesinde değilse bildirilir (yeni sayfa ve buton kapsamı aşama 3)</li>
     </ul>
   </section>
 
@@ -649,7 +649,8 @@ body.canli ul.kontrol li.ek::after { content:none; }
     m: { "Tüm kurallar": ["oz_test"], "Sayfadaki tüm butonlar ve grafikler": ["talep_uretim"],
          "BACnet okuma": ["donmus_ahu", "ahu_veri"], "Sensör arızası": ["sensor_mantigi"],
          "Eşikler ve talimatlar": ["oz_test"], "API uçları": ["portal_api"], "Sabah analizi": ["otomatik_analiz"],
-         "Watchdog": ["portal_api"], "Koruma alanı": ["oto_set"] },
+         "Watchdog": ["watchdog", "portal_api"], "Koruma alanı": ["oto_set"], "Bakım kartları": ["bakim_karti"],
+         "Ayarlar": ["ayarlar"], "Giriş ekranı ve QR bağlantı": ["giris_qr"] },
     s: { "Harita": ["lokasyon_baglanti"], "Canlı izleme": ["canli_sayac", "synapse_portal"],
          "Lokasyon eşitlemesi": ["gunluk_esitleme"], "Canlı bayat sayaç": ["canli_sayac"],
          "Yama kuyruğu": ["yama_kuyrugu", "surum"], "Güvenlik": ["anahtarsiz_erisim"],
@@ -658,6 +659,7 @@ body.canli ul.kontrol li.ek::after { content:none; }
   var DURUM_SIRA = { sorun: 0, hata: 1, atlandi: 2, gecti: 3 };
   function cipYap(kodlar, kontroller) {
     var c = document.createElement("span"), en = null;
+    if (kodlar === "ust") { c.className = "dcip gecti"; c.textContent = "● üst agent, her tur"; return c; }
     kodlar.forEach(function (kod) { var k = kontroller[kod]; if (k && (!en || DURUM_SIRA[k.durum] < DURUM_SIRA[en.durum])) { en = k; } });
     if (en) { c.className = "dcip " + en.durum; c.textContent = DCIP[en.durum] || en.durum;
               c.title = (en.lokasyon + " · " + en.zaman + (en.mesaj ? " · " + en.mesaj : "")).replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#x27;/g, "'"); }
@@ -671,7 +673,7 @@ body.canli ul.kontrol li.ek::after { content:none; }
     kutu.querySelectorAll("ul.kontrol li").forEach(function (li) {
       var b = li.querySelector("b"); var ad = b ? b.textContent.replace(/:\s*$/, "").trim() : "";
       var kodlar = harita[ad] || [];
-      kodlar.forEach(function (k) { kullanilan[k] = 1; });
+      if (kodlar !== "ust") { kodlar.forEach(function (k) { kullanilan[k] = 1; }); }
       li.appendChild(cipYap(kodlar, kontroller));
     });
     var listeler = kutu.querySelectorAll("ul.kontrol"), son = listeler[listeler.length - 1];
@@ -725,6 +727,10 @@ body.canli ul.kontrol li.ek::after { content:none; }
     kutuIsle(kutular[0], KONTROL_KOD.e, v.kontroller.e || {});
     kutuIsle(kutular[1], KONTROL_KOD.m, v.kontroller.m || {});
     kutuIsle(kutular[2], KONTROL_KOD.s, v.kontroller.s || {});
+    var ke = v.kontroller.e || {}, kc = {};          // çapraz kutu: Enerji agent'ının iki kontrolü + üst agent kuralları
+    ["portal_tutarliligi", "kapsam"].forEach(function (k) { if (ke[k]) { kc[k] = ke[k]; } });
+    kutuIsle(document.querySelector(".kutu.capraz"), { "Portallar arası tutarlılık": ["portal_tutarliligi"],
+      "Kapsam": ["kapsam"], "Agent'ların kendisi": "ust", "Yama sonrası": "ust", "Tekrarlayan sorun": "ust" }, kc);
     var not1 = document.createElement("p"); not1.className = "canli-not";
     not1.textContent = "Canlı: veri kontrolleri (aşama 1). Ekran ve buton kontrolleri aşama 3'te eklenecek. Agent sürüm 1'de yalnızca izler; dosyaya yazmaz, portalı yeniden başlatmaz.";
     kutular[0].appendChild(not1);

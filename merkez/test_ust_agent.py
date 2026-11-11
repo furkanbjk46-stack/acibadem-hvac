@@ -141,6 +141,37 @@ c("agent yeniden tur atınca çapraz rapor kapanır", k["guncelle"][0][1]["durum
 c("üst agent'ın kendi tur satırı susan agent sayılmaz",
   U.kararlar([], [], [tur_satiri("merkez", 500, "ust")], AN)["yeni"] == [])
 
+print("yama sonrası (çapraz)")
+
+
+def tk(agent, dk, durum="gecti", lok="maslak"):
+    kod = U.PORTAL_KONTROLU[agent][0]
+    return dict(tur_satiri(lok, dk, agent), kontroller=[{"kod": kod, "durum": durum, "mesaj": "8501 yanıt vermiyor"}])
+
+
+def yama(dk, hedef="maslak", v="13.7"):
+    return {"id": "y-%s" % dk, "versiyon": v, "hedef": hedef, "created_at": (AN - timedelta(minutes=dk)).isoformat()}
+
+
+k = U.kararlar([], [], [tk("enerji", 5, "sorun"), tk("mekanik_zeka", 5)], AN, yamalar=[yama(30)])
+y = [r for r in k["yeni"] if (r["icerik"] or {}).get("capraz") == "yama_sonrasi:maslak"]
+c("yamadan sonraki turda Enerji portalı açılmadıysa yama sonrası raporu", len(y) == 1
+  and "13.7" in y[0]["baslik"] and "Enerji portalı" in y[0]["baslik"] and y[0]["onem"] == "yuksek", k["yeni"])
+c("yamadan önceki tur sayılmaz (henüz karar yok)",
+  U.kararlar([], [], [tk("enerji", 40, "sorun")], AN, yamalar=[yama(30)])["yeni"] == [])
+c("24 saatten eski yama izlenmez",
+  U.kararlar([], [], [tk("enerji", 5, "sorun")], AN, yamalar=[yama(25 * 60)])["yeni"] == [])
+c("portallar açıksa rapor yok",
+  U.kararlar([], [], [tk("enerji", 5), tk("mekanik_zeka", 5)], AN, yamalar=[yama(30)])["yeni"] == [])
+c("hedef 'all' her lokasyonu kapsar", len(U.kararlar([], [], [tk("mekanik_zeka", 5, "sorun", "altunizade")], AN,
+                                                     yamalar=[yama(30, "all")])["yeni"]) == 1)
+acik = {"id": 80, "durum": "acik", "bulgu_id": None, "icerik": {"capraz": "yama_sonrasi:maslak"}, "olaylar": []}
+k = U.kararlar([], [acik], [tk("enerji", 5), tk("mekanik_zeka", 5)], AN, yamalar=[yama(30)])
+c("portallar açılınca yama sonrası raporu kapanır", k["guncelle"] and k["guncelle"][0][1]["durum"] == "kapandi", k)
+k = U.kararlar([], [acik], [tk("enerji", 5, "sorun")], AN, yamalar=[yama(30)])
+c("açık yama sonrası raporu ikinci kez açılmaz", k["yeni"] == [] and k["guncelle"] == [], k)
+
+
 print("tur (sahte veritabanı)")
 
 
@@ -281,7 +312,7 @@ if os.path.exists(_ea):
     _kodlar |= set(re.findall(r'\("([a-z_]+)", "[^"]+", k_', open(_mz, encoding="utf-8").read()))
     _kodlar |= set(re.findall(r'\("([a-z_]+)", "[^"]+", k_', open(os.path.join(BURASI, "synapse_agent.py"),
                                                                encoding="utf-8").read()))
-    c("üç agent'ın 27 kontrolünün hepsi ekranda adlandırılmış", _kodlar == set(G.KONTROL_AD) and len(_kodlar) == 27,
+    c("üç agent'ın 33 kontrolünün hepsi ekranda adlandırılmış", _kodlar == set(G.KONTROL_AD) and len(_kodlar) == 33,
       _kodlar ^ set(G.KONTROL_AD))
     _sayfa_kod = set(re.findall(r'\["([a-z_]+)"[\],]', sablon.split("var KONTROL_KOD")[1].split("var DURUM_SIRA")[0]))
     _sayfa_kod |= set(re.findall(r', "([a-z_]+)"\]', sablon.split("var KONTROL_KOD")[1].split("var DURUM_SIRA")[0]))

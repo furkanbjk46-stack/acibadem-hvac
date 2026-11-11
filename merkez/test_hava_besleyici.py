@@ -85,11 +85,13 @@ c("agent servisi yalnızca stdlib + kendi modüllerini kullanır (yeni paket yok
 c("agent servisi diske yazmaz", not _re.search(r"open\([^)]*['\"]w", _kaynak))
 _ua = open(os.path.join(_dz, "ust_agent.py"), encoding="utf-8").read()
 _hb = open(os.path.join(_dz, "hava_besleyici.py"), encoding="utf-8").read()
-_sql = open(os.path.join(_dz, "..", "veritabani", "06_ust_agent_rolu.sql"), encoding="utf-8").read()
+_sql = "".join(open(os.path.join(_dz, "..", "veritabani", f), encoding="utf-8").read()
+               for f in ("06_ust_agent_rolu.sql", "07_synapse_agent_yetkisi.sql"))
+_sa = open(os.path.join(_dz, "synapse_agent.py"), encoding="utf-8").read()
 _eris = set(_re.findall(r'(?:rest/v1/|")(agent_turlar|agent_bulgular|agent_raporlar|lokasyonlar|hava_gunluk|'
-                        r'energy_data|komutlar|guncellemeler|ayarlar)[?"]', _ua + _hb))
-c("servisin eriştiği her tablo kısıtlı rolde tanımlı, başka tablo yok",
-  _eris and all(("ON public.%s " % t) in _sql for t in _eris) and not ({"energy_data", "komutlar", "guncellemeler", "ayarlar"} & _eris),
+                        r'energy_data|komutlar|guncellemeler|ayarlar|canli_guc)[?"]', _ua + _hb + _sa))
+c("servisin eriştiği her tablo kısıtlı rolde (06 + 07) tanımlı, ayarlar tablosu yok",
+  _eris and all(("ON public.%s " % t) in _sql for t in _eris) and "ayarlar" not in _eris,
   _eris)
 
 print("\n%d geçti, %d kaldı" % (gecti, kaldi))

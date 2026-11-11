@@ -131,7 +131,7 @@ def durumlar(s):
 k = Kur()
 s = k.tur()
 c("sağlıklı lokasyonda bulgu yok", s["bulgular"] == [], anahtarlar(s))
-c("sekiz kontrolün hepsi geçti", set(durumlar(s).values()) == {"gecti"} and len(s["kontroller"]) == 8, durumlar(s))
+c("on kontrolün hepsi geçti", set(durumlar(s).values()) == {"gecti"} and len(s["kontroller"]) == 10, durumlar(s))
 c("energy_data.csv DEĞİŞMEDİ (agent salt okur)",
   open(k.yol("energy_data.csv"), encoding="utf-8").read().count("\n") == 41)
 
@@ -312,6 +312,41 @@ s = k.tur()
 b = [x for x in s["bulgular"] if x["anahtar"] == "portal_sagligi:esitleme_hatasi"]
 c("eşitleme kaydındaki YENİ hata yakalanır, eskisi sayılmaz", len(b) == 1 and "1 hata" in b[0]["baslik"] and "PGRST204" in b[0]["bulunan"])
 
+# ── 8b) Portallar arası tutarlılık ve kapsam ───────────────────────────
+k = Kur()
+k.bulut_satirlari = [dict(r) for r in k.gunler] + [dict(k.gunler[-3])]      # 07.11 iki kez yazılmış
+a = anahtarlar(k.tur())
+c("Synapse'te mükerrer gün yakalanır (detay toplamı şişer)", "portal_tutarliligi:mukerrer:2026-11" in a, a)
+c("mükerrer gün aylık toplamı da bozar", "portal_tutarliligi:toplam:2026-11" in a, a)
+c("günlük karşılaştırma mükerreri görmez (bu yüzden ayrı kontrol)", not any(x.startswith("yerel_bulut") for x in a), a)
+
+k = Kur()
+k.bulut_satirlari = [dict(r) for r in k.gunler]
+eski = [r for r in k.bulut_satirlari if r["Tarih"] == "2026-10-15"][0]
+eski["Toplam_Hastane_Tuketim_kWh"] += 500                                   # 7 günlük pencerenin dışında
+a = anahtarlar(k.tur())
+c("7 günden eski farklı gün aylık toplamda yakalanır (geçen ay)", "portal_tutarliligi:toplam:2026-10" in a
+  and "portal_tutarliligi:toplam:2026-11" not in a, a)
+
+k = Kur()
+k.bulut_kodu = 503
+s = k.tur()
+c("Synapse okunamazsa tutarlılık atlanır (yerel ↔ bulut zaten bildirir)",
+  durumlar(s)["portal_tutarliligi"] == "atlandi", durumlar(s))
+
+k = Kur()
+alanlar = SUTUNLAR + ["Kule1_kWh", "Kule2_kWh", "Hava_Gunes_Radyasyon_kWh_m2"]
+with open(k.yol("energy_data.csv"), "w", newline="", encoding="utf-8") as f:
+    w = csv.DictWriter(f, fieldnames=alanlar)
+    w.writeheader()
+    w.writerows([dict(r, Kule1_kWh=150, Kule2_kWh=0, Hava_Gunes_Radyasyon_kWh_m2=3.1) for r in k.gunler])
+s = k.tur()
+b = [x for x in s["bulgular"] if x["kontrol"] == "kapsam"]
+c("veri gelen ama izlenmeyen sayaç kapsam bulgusu (bilgi)", len(b) == 1 and b[0]["onem"] == "bilgi"
+  and b[0]["kanit"]["sutunlar"] == ["Kule1_kWh"], b)
+c("hep sıfır sayaç ve kWh_m2 hava alanı sayılmaz", b and "Kule2_kWh" not in b[0]["bulunan"]
+  and "Radyasyon" not in b[0]["bulunan"])
+
 # ── 9) Bulgu ömrü: açılma → tekrar → kapanma → yeniden açılma ────────────
 k = Kur()
 k.modbus_yaz(hatali=("KOJEN-1",))
@@ -345,7 +380,7 @@ post = {u.split("/rest/v1/")[1].split("?")[0]: g for y, u, g in k.istekler if y 
 c("tur ve bulgu doğru tablolara yazılır", set(post) == {"agent_turlar", "agent_bulgular"}, list(post))
 c("tur satırı: lokasyon, agent, özet, kontroller",
   post["agent_turlar"]["lokasyon_id"] == "maslak" and post["agent_turlar"]["agent"] == "enerji"
-  and post["agent_turlar"]["ozet"]["sorun"] == 1 and len(post["agent_turlar"]["kontroller"]) == 8)
+  and post["agent_turlar"]["ozet"]["sorun"] == 1 and len(post["agent_turlar"]["kontroller"]) == 10)
 c("bulgu satırı tablo sütunlarıyla uyumlu",
   set(post["agent_bulgular"][0]) == {"lokasyon_id", "agent", "anahtar", "kontrol", "bolum", "onem", "baslik",
                                      "beklenen", "bulunan", "denenen", "tekrar_adimi", "olasi_yer", "kanit",

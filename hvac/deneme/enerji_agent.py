@@ -25,6 +25,8 @@ KONTROLLER (aşama 1 — ekran açmadan yapılabilenler)
   veri_kalitesi    eksik gün, mükerrer tarih, eksi değer, aykırı toplam
   diyagram_toplami Hastane Genel = Şebeke + Kojen; kayıtlı değer = hesap kuralı
   yerel_bulut      yereldeki günlük değer = Synapse'e giden değer
+  portal_tutarliligi bu ay / geçen ay toplamı Enerji portalı = Synapse lokasyon detayı; mükerrer gün
+  kapsam           veri gelen ama hiçbir kontrolün bakmadığı sayaç sütunu (bilgi)
   hava_durumu      dünün hava alanları dolu mu; boşsa servis yanıt veriyor mu
   portal_sagligi   8501 açık mı; eşitleme kaydında yeni hata var mı
   (Aşama 3: ekran ve buton kontrolleri — bu dosyada YOK.)
@@ -525,6 +527,91 @@ def k_yerel_bulut(o):
     return cikti
 
 
+def _ay_araliklari(son):
+    """Eşitlenmiş son güne göre (bu ay başı → son), (geçen ay başı → geçen ay sonu)."""
+    bu_bas = son.replace(day=1)
+    gecen_son = bu_bas - timedelta(days=1)
+    return [(bu_bas, son), (gecen_son.replace(day=1), gecen_son)]
+
+
+def k_portal_tutarliligi(o):
+    """Portallar arası tutarlılık: Enerji portalının aylık toplamı = Synapse lokasyon detayının
+    toplamı. Synapse detayı veritabanındaki SATIRLARI toplar; aynı gün iki kez yazılmışsa
+    detaydaki toplam şişer (yerel ↔ bulut günlük karşılaştırması bunu göremez)."""
+    if not o.bulut:
+        raise Atla("bulut ayarı yok (supabase_config.json) — bu PC veri göndermiyor")
+    if os.path.exists(o.yol("_sync_disabled.flag")):
+        raise Atla("enerji eşitlemesi kapalı (_sync_disabled.flag)")
+    simdi = o.simdi()
+    dun = simdi.date() - timedelta(days=1)
+    son = dun if _gecti_mi(simdi, BULUT_SON) else dun - timedelta(days=1)
+    h = hesaplanmis(enerji_df(o).drop_duplicates(subset=["Tarih"], keep="last"))
+    cikti = []
+    for bas, bit in _ay_araliklari(son):
+        yerel = h[(h["Tarih"] >= bas.isoformat()) & (h["Tarih"] <= bit.isoformat())]
+        if yerel.empty:
+            continue
+        sorgu = ("%s/rest/v1/energy_data?lokasyon_id=eq.%s&Tarih=gte.%s&Tarih=lte.%sT23:59:59&select=Tarih,%s"
+                 % (o.bulut["url"], urllib.parse.quote(o.bulut["lokasyon_id"]), bas, bit, ",".join(BULUT_SUTUNLARI)))
+        kod, metin = o.http(sorgu, basliklar=_bulut_baslik(o))
+        if kod != 200:
+            raise Atla("Synapse okunamadı (HTTP %s) — yerel ↔ bulut kontrolüne bakın" % kod)
+        satirlar = [r for r in json.loads(metin) if bas.isoformat() <= str(r.get("Tarih"))[:10] <= bit.isoformat()]
+        ay = bas.strftime("%m.%Y")
+        gunler = [str(r.get("Tarih"))[:10] for r in satirlar]
+        mukerrer = sorted({g for g in gunler if gunler.count(g) > 1})
+        if mukerrer:
+            cikti.append(bulgu(
+                "portal_tutarliligi", "mukerrer:%s" % bas.strftime("%Y-%m"), "uyari", "Portallar arası tutarlılık",
+                "Synapse'te %s ayında %d gün iki kez kayıtlı" % (ay, len(mukerrer)),
+                "her gün Synapse'te tek satır", ", ".join(_tr(g) for g in mukerrer[:6]),
+                tekrar_adimi="Synapse → lokasyon detayı → %s toplamı ile Enerji portalını karşılaştır" % ay,
+                olasi_yer="cloud_sync.py sync_energy_data (aynı günü UPSERT yerine yeniden ekliyor); "
+                          "lokasyon detayı mükerrer satırları da toplar"))
+        fark = []
+        for c in BULUT_SUTUNLARI:
+            a = float(sum(_sayi(v) or 0 for v in yerel[c])) if c in yerel.columns else 0.0
+            b = float(sum(_sayi(r.get(c)) or 0 for r in satirlar))
+            if abs(a - b) > TOLERANS_KWH * max(1, len(yerel)):
+                fark.append("%s: Enerji %s, Synapse %s" % (c.replace("_kWh", ""), _say(a), _say(b)))
+        if fark:
+            cikti.append(bulgu(
+                "portal_tutarliligi", "toplam:%s" % bas.strftime("%Y-%m"), "uyari", "Portallar arası tutarlılık",
+                "%s aylık toplamı Enerji portalı ile Synapse'te farklı" % ay,
+                "Enerji portalı toplamı = Synapse lokasyon detayı toplamı", "; ".join(fark[:3]),
+                tekrar_adimi="Enerji portalı (%s, %s–%s) ve Synapse lokasyon detayı aynı aralık"
+                             % (ay, _tr(bas.isoformat()), _tr(bit.isoformat())),
+                olasi_yer="ay içinde sonradan düzeltilen bir gün eşitlenmemiş olabilir (yerel ↔ bulut 7 günü görür); "
+                          "sürüyorsa cloud_sync.py sync_energy_data", kanit={"farklar": fark}))
+    return cikti
+
+
+# Agent'ın bir kontrolünde bakılan sayaç sütunları; buraya girmeyen yeni sayaç "kapsam" bulgusu olur.
+IZLENEN = set(SAYAC_SUTUNLARI) | set(TURETILMIS) | set(BULUT_SUTUNLARI)
+
+
+def k_kapsam(o):
+    """Kapsam: energy_data.csv'de veri gelen ama hiçbir agent kontrolünün bakmadığı sayaç sütunu
+    var mı (yeni sayaç eklenince agent'ın listesine de eklenmesi gerekir). Yalnızca bilgi."""
+    df = enerji_df(o)
+    son = df[df["Tarih"] >= (o.simdi().date() - timedelta(days=KALITE_GUN)).isoformat()]
+    yeni = []
+    for c in df.columns:
+        if not c.endswith("_kWh") or c in IZLENEN:
+            continue
+        if any((_sayi(v) or 0) != 0 for v in son[c]):
+            yeni.append(c)
+    if not yeni:
+        return []
+    return [bulgu(
+        "kapsam", "sayac", "bilgi", "Kapsam",
+        "%d sayaç sütunu hiçbir agent kontrolünde yok" % len(yeni),
+        "veri gelen her sayaç donmuş veri / sayaç erişimi kontrolünde",
+        ", ".join(sorted(yeni)), tekrar_adimi="energy_data.csv sütunları ↔ enerji_agent.py SAYAC_SUTUNLARI",
+        olasi_yer="enerji_agent.py SAYAC_SUTUNLARI (yeni sayaç eklenince buraya da eklenmeli)",
+        kanit={"sutunlar": sorted(yeni)})]
+
+
 def k_hava_durumu(o):
     """Son HAVA_GUN günde internet hava alanları boş gün var mı; varsa iki kaynağı yoklar."""
     simdi = o.simdi()
@@ -613,6 +700,8 @@ KONTROLLER = [
     ("veri_kalitesi", "Veri kalitesi", k_veri_kalitesi),
     ("diyagram_toplami", "Enerji diyagramı toplamları", k_diyagram_toplami),
     ("yerel_bulut", "Yerel ↔ bulut", k_yerel_bulut),
+    ("portal_tutarliligi", "Portallar arası tutarlılık", k_portal_tutarliligi),
+    ("kapsam", "Kapsam (izlenmeyen sayaç)", k_kapsam),
     ("hava_durumu", "Hava durumu", k_hava_durumu),
     ("portal_sagligi", "Portal sağlığı", k_portal_sagligi),
 ]

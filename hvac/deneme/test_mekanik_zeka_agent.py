@@ -63,6 +63,18 @@ class Kur:
         self.kural = kural
         self.api = {"/api/health": 200, "/api/last_auto_analysis": 200, "/api/instruction-guide": 200,
                     "/api/uretim_tuketim_gecmis": 200}
+        self.sayfalar = {
+            "/": (200, '<a href="/hvac">HVAC</a> <a href="/enerji">Enerji</a>'), "/hvac": (200, "<html>"),
+            "/enerji": (200, "<html>"), "/bakim/AGENT-TEST": (200, "<html>"),
+            "/api/qr-config": (200, json.dumps({"lokasyon_id": "maslak", "merkez_url": ""})),
+            "/api/maintenance": (200, json.dumps({"success": True, "data": {"cards": {
+                "AHU-1": {"supply_sensor": "OK", "return_sensor": "FAULTY"}}},
+                "components": ["supply_sensor", "return_sensor"], "statuses": ["OK", "FAULTY", "MAINTENANCE", "N/A"]})),
+            "/api/maintenance/AHU-1": (200, json.dumps({"success": True})),
+            "/api/settings": (200, json.dumps({"success": True, "settings": {"TARGET_DT_CHILLER": 5.0},
+                                                "limits": {"TARGET_DT_CHILLER": [2.0, 7.0]}})),
+            "/api/chiller_fcu_ayarlari": (200, json.dumps({"success": True, "ayarlar": {}})),
+        }
         self.internet = 200
         self.istekler = []
         self.bekleme = []
@@ -75,6 +87,10 @@ class Kur:
 
     def http(self, url, yontem="GET", basliklar=None, govde=None, zaman_asimi=15):
         self.istekler.append((yontem, url, govde))
+        if url.startswith(M.PORTAL):
+            yol = url[len(M.PORTAL):] or "/"
+            if yol in self.sayfalar:
+                return self.sayfalar[yol]
         for uc, kod in self.api.items():
             if url.endswith(uc):
                 return kod, "x"
@@ -104,7 +120,7 @@ def durumlar(s):
 k = Kur()
 s = k.tur()
 c("sağlıklı Mekanik Zeka'da bulgu yok", s["bulgular"] == [], anahtarlar(s))
-c("on kontrolün hepsi geçti", set(durumlar(s).values()) == {"gecti"} and len(s["kontroller"]) == 10, durumlar(s))
+c("on dört kontrolün hepsi geçti (watchdog elle çalıştırmada atlanır)", set(durumlar(s).values()) <= {"gecti", "atlandi"} and durumlar(s)["watchdog"] == "atlandi" and len(s["kontroller"]) == 14, durumlar(s))
 post = [g for y, u, g in k.istekler if y == "POST" and "agent_turlar" in u]
 c("tur 'mekanik_zeka' agent'ı olarak yazılır", post and post[0]["agent"] == "mekanik_zeka", post[:1])
 c("durum dosyası Enerji agent'ınkinden ayrı", os.path.exists(os.path.join(k.d, "configs", "mekanik_zeka_agent_durum.json"))
@@ -190,6 +206,54 @@ c("internet yoksa 'bilgi' bulgusu (iş emri açmaz), sebep yazılır", b and b[0
 _wd = open(os.path.join(BURASI, "portal_watchdog.py"), encoding="utf-8").read()
 c("watchdog Enerji ve Mekanik Zeka agent'larını ayrı ayrı başlatır",
   '"enerji_agent.py"' in _wd and '"mekanik_zeka_agent.py"' in _wd and "procs.append(_agent" not in _wd)
+
+# 10) Giriş ekranı / QR, watchdog, bakım kartı, ayarlar
+k = Kur()
+k.sayfalar["/hvac"] = (500, "hata")
+k.sayfalar["/api/qr-config"] = (200, json.dumps({"lokasyon_id": ""}))
+b = [x for x in k.tur()["bulgular"] if x["kontrol"] == "giris_qr"]
+c("açılmayan /hvac ve boş QR lokasyonu tek bulguda", len(b) == 1 and "/hvac" in b[0]["bulunan"]
+  and "lokasyon kimliği" in b[0]["bulunan"], b)
+k = Kur()
+k.sayfalar["/"] = (200, "<html>bos</html>")
+c("giriş ekranında HVAC/Enerji bağlantısı yoksa bulgu", "giris_qr:giris" in anahtarlar(k.tur()))
+k = Kur()
+k.api["/api/health"] = None
+for uc in ("/", "/api/maintenance", "/api/settings"):
+    k.sayfalar[uc] = (None, "refused")
+d = durumlar(k.tur())
+c("8005 kapalıyken giriş / bakım / ayar kontrolleri atlanır (portal_api bildirir)",
+  d["giris_qr"] == d["bakim_karti"] == d["ayarlar"] == "atlandi", d)
+
+k = Kur()
+k.o.watchdog_pid, k.o.surec_canli = 4321, lambda pid: False
+b = [x for x in k.tur()["bulgular"] if x["kontrol"] == "watchdog"]
+c("watchdog süreci yoksa kritik", len(b) == 1 and b[0]["onem"] == "kritik" and "4321" in b[0]["baslik"], b)
+k = Kur()
+k.o.watchdog_pid, k.o.surec_canli = 4321, lambda pid: pid == 4321
+c("watchdog çalışıyorsa geçer", durumlar(k.tur())["watchdog"] == "gecti")
+c("süreç denetimi gerçek süreçte çalışır (kendisi ve üst süreci canlı)",
+  M._surec_canli(os.getpid()) and M._surec_canli(os.getppid()))
+
+k = Kur()
+k.sayfalar["/api/maintenance"] = (200, json.dumps({"success": True, "data": {"cards": {
+    "AHU-1": {"supply_sensor": "BOZUK"}}}, "components": ["supply_sensor"], "statuses": ["OK", "FAULTY"]}))
+a = anahtarlar(k.tur())
+c("bakım kartında geçersiz durum yakalanır", "bakim_karti:durum" in a, a)
+k = Kur()
+k.sayfalar["/api/maintenance/AHU-1"] = (500, "x")
+c("tek cihazın bakım kartı açılmazsa bulgu", "bakim_karti:tek" in anahtarlar(k.tur()))
+
+k = Kur()
+k.sayfalar["/api/settings"] = (200, json.dumps({"success": True, "settings": {"TARGET_DT_CHILLER": 9.0},
+                                                "limits": {"TARGET_DT_CHILLER": [2.0, 7.0]}}))
+b = [x for x in k.tur()["bulgular"] if x["anahtar"] == "ayarlar:sinir"]
+c("aralık dışı ayar yakalanır", len(b) == 1 and "TARGET_DT_CHILLER=9.0" in b[0]["bulunan"], b)
+k = Kur()
+k.sayfalar["/api/chiller_fcu_ayarlari"] = (500, "x")
+c("Chiller/FCU ayarları okunamazsa bulgu", "ayarlar:chiller_fcu" in anahtarlar(k.tur()))
+c("yeni kontroller portala yalnız GET atar (ayar / bakım kartı kaydetmez)",
+  not any(y != "GET" and u.startswith(M.PORTAL) for y, u, _ in k.istekler))
 
 print("\n%d/%d PASS" % (gecti, gecti + kaldi))
 sys.exit(1 if kaldi else 0)

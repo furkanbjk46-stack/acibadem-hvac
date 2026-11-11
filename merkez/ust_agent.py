@@ -23,6 +23,8 @@ KURALLAR (her turda, sırayla)
                → "düzeltme tutmadı", rapor yeniden açılır, deneme sayısı artar.
   4. Çapraz  : turunu bitirmeyen (susan) agent ayrı rapor açar; agent yeniden
                tur atınca kapanır.
+  5. Yama sonrası: lokasyonun son yamasından (24 sa) sonraki ilk turda Enerji (8501)
+               ya da Mekanik Zeka (8005) açılmadıysa rapor; portallar açılınca kapanır.
 
 SÜRÜM 1 SINIRLARI
   * Yalnızca agent_raporlar'a ve kendi tur satırına yazar. Bulgulara, enerji
@@ -97,7 +99,7 @@ def olay(an, kod, metin):
 # ══════════════════════════════════════════════════════════════════════════
 # KARAR — saf fonksiyon: veriden yapılacak işler (test edilir, ağ yok)
 # ══════════════════════════════════════════════════════════════════════════
-def kararlar(bulgular, raporlar, turlar, an=None, gecmis=None):
+def kararlar(bulgular, raporlar, turlar, an=None, gecmis=None, yamalar=None):
     """Dönüş: {"yeni": [rapor satırı], "guncelle": [(id, alanlar)]}.
 
     bulgular : agent_bulgular satırları (açık olanlar + raporu açık olanların bulguları)
@@ -106,6 +108,7 @@ def kararlar(bulgular, raporlar, turlar, an=None, gecmis=None):
     gecmis   : açık bulgulara ait KAPANMIŞ raporlar. Aynı açılış için kapanmış rapor
                varsa yenisi açılmaz: elle kapatılan iş emri, sorun gerçekten geçip
                yeniden çıkana (açılma sayısı artana) kadar sessiz kalır.
+    yamalar  : son 24 saatte "tamamlandi" olan yamalar (guncellemeler: id, versiyon, hedef, created_at)
     """
     an = an or simdi_utc()
     yeni, guncelle = [], []
@@ -228,7 +231,73 @@ def kararlar(bulgular, raporlar, turlar, an=None, gecmis=None):
             guncelle.append((r["id"], {"durum": "kapandi", "kapanma": an.isoformat(),
                                        "cozum": "Agent yeniden tur attı.", "olaylar": olaylar,
                                        "guncelleme": an.isoformat()}))
+    # 5) Çapraz: yama sonrası — lokasyonun son yamasından sonra iki portal da açıldı mı
+    durumlar = yama_sonrasi(turlar, yamalar or [], an)
+    for t in turlar:
+        if t.get("agent") in PORTAL_KONTROLU and t.get("lokasyon_id") not in durumlar:
+            durumlar[t.get("lokasyon_id")] = None
+    for lok, d in sorted(durumlar.items()):
+        anahtar = "yama_sonrasi:%s" % lok
+        r = capraz.get(anahtar)
+        if d and r is None:
+            yeni.append({"bulgu_id": None, "lokasyon_id": lok, "agent": d["agent"], "tur": "capraz",
+                         "onem": "yuksek", "durum": "acik",
+                         "baslik": "Yama %s sonrası %s açılmadı (%s)" % (d["versiyon"], d["portal"], lok),
+                         "icerik": {"capraz": anahtar, "agent_ad": "Üst agent", "lokasyon": lok,
+                                    "bolum": "Yama sonrası", "kontrol": "yamadan sonra iki portal da açılır",
+                                    "beklenen": "yamadan sonraki ilk turda portal kontrolü geçer",
+                                    "bulunan": d["bulunan"], "yama": d["versiyon"],
+                                    "tekrar_adimi": "Lokasyonda %s portalını aç; watchdog penceresine bak" % d["portal"],
+                                    "olasi_yer": "yama %s ile gelen dosyalar (gerekirse önceki sürüme dön)" % d["versiyon"]},
+                         "olaylar": [olay(an, "acildi", "Üst agent: yama %s sonrası %s"
+                                          % (d["versiyon"], d["bulunan"]))]})
+        elif not d and r is not None and r.get("durum") in ACIK_DURUMLAR:
+            olaylar = list(r.get("olaylar") or []) + [olay(an, "kendiliginden", "Portallar yeniden açık.")]
+            guncelle.append((r["id"], {"durum": "kapandi", "kapanma": an.isoformat(),
+                                       "cozum": "Yamadan sonra portallar açıldı.", "olaylar": olaylar,
+                                       "guncelleme": an.isoformat()}))
     return {"yeni": yeni, "guncelle": guncelle}
+
+
+# Yama sonrası çapraz kontrol: her portal agent'ının "portal açık mı" kontrolü
+PORTAL_KONTROLU = {"enerji": ("portal_sagligi", "Enerji portalı (8501)"),
+                   "mekanik_zeka": ("portal_api", "Mekanik Zeka (8005)")}
+YAMA_PENCERE_SA = 24          # bu kadar saatten eski yama izlenmez
+YAMA_UYGULAMA_DK = 5          # lokasyon yamayı ~2 dk'da alır; tur bundan sonra sayılır
+
+
+def yama_sonrasi(turlar, yamalar, an):
+    """{lokasyon: None | {agent, portal, versiyon, bulunan}} — son yamadan sonraki ilk turda
+    portal kontrolü geçmediyse sorun. Yamadan sonra henüz tur yoksa karar verilmez (susan agent
+    kontrolü ayrıca yakalar)."""
+    sonuc = {}
+    lokasyonlar = {t.get("lokasyon_id") for t in turlar if t.get("agent") in PORTAL_KONTROLU}
+    son_yama = {}
+    for y in yamalar:
+        z = zaman(y.get("created_at"))
+        if z is None or an - z > timedelta(hours=YAMA_PENCERE_SA):
+            continue
+        hedefler = lokasyonlar if y.get("hedef") in ("all", "hepsi") else {y.get("hedef")}
+        for lok in hedefler:
+            if lok not in son_yama or z > son_yama[lok][0]:
+                son_yama[lok] = (z, y)
+    for lok, (z, y) in son_yama.items():
+        sorun = []
+        for t in turlar:
+            if t.get("lokasyon_id") != lok or t.get("agent") not in PORTAL_KONTROLU:
+                continue
+            tz = zaman(t.get("tur_zamani"))
+            if tz is None or tz < z + timedelta(minutes=YAMA_UYGULAMA_DK):
+                continue                               # yamadan sonra henüz tur yok
+            kod, ad = PORTAL_KONTROLU[t["agent"]]
+            k = next((k for k in t.get("kontroller") or [] if k.get("kod") == kod), None)
+            if k and k.get("durum") not in ("gecti", "atlandi"):
+                sorun.append((t["agent"], ad, k.get("mesaj") or k.get("durum")))
+        if sorun:
+            sonuc[lok] = {"agent": sorun[0][0], "portal": " ve ".join(s[1] for s in sorun),
+                          "versiyon": y.get("versiyon"),
+                          "bulunan": "; ".join("%s: %s" % (s[1], s[2]) for s in sorun)}
+    return sonuc
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -313,11 +382,17 @@ def tur(db, an=None, kaynak="merkez"):
     acik_bulgu = db.oku("agent_bulgular?select=*&durum=eq.acik")
     gerekli = {r["bulgu_id"] for r in raporlar if r.get("bulgu_id") is not None} - {b["id"] for b in acik_bulgu}
     ek = db.oku("agent_bulgular?select=*&id=in.(%s)" % ",".join(str(i) for i in sorted(gerekli))) if gerekli else []
-    turlar = db.oku("agent_turlar?select=lokasyon_id,agent,tur_zamani")
+    turlar = db.oku("agent_turlar?select=lokasyon_id,agent,tur_zamani,kontroller")
+    try:
+        yamalar = db.oku("guncellemeler?select=id,versiyon,hedef,created_at&durum=eq.tamamlandi&created_at=gte.%s"
+                         % (an - timedelta(hours=YAMA_PENCERE_SA)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+    except Exception as e:                         # yetki / ağ: yalnız bu çapraz kontrol atlanır
+        logger.warning("Yama listesi okunamadı: %s", e)
+        yamalar = []
     acik_id = sorted({b["id"] for b in acik_bulgu})
     gecmis = db.oku("agent_raporlar?select=id,bulgu_id,icerik,durum&durum=eq.kapandi&bulgu_id=in.(%s)"
                     % ",".join(str(i) for i in acik_id)) if acik_id else []
-    k = kararlar(acik_bulgu + ek, raporlar, turlar, an, gecmis)
+    k = kararlar(acik_bulgu + ek, raporlar, turlar, an, gecmis, yamalar)
 
     acilan = []
     for satir in k["yeni"]:
