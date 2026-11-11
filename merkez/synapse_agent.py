@@ -107,7 +107,10 @@ class Ortam:
         try:
             with urllib.request.urlopen(istek, timeout=zaman_asimi) as c:
                 metin = c.read().decode("utf-8")
-                return c.status, (json.loads(metin) if metin.strip() else None)
+                try:
+                    return c.status, (json.loads(metin) if metin.strip() else None)
+                except ValueError:
+                    return c.status, metin[:300]              # sağlık adresi düz metin döner ("ok")
         except urllib.error.HTTPError as e:
             return e.code, e.read().decode("utf-8", "replace")[:300]
         except Exception as e:
