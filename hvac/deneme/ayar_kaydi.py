@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 import yollar
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
-GIZLI = {"supabase_config.json", "lokasyon_anahtari.json"}
+GIZLI = {"supabase_config.json", "lokasyon_anahtari.json", "panel_sifresi.json"}
 ALAN_SINIRI = 200          # bir dosyada bir turda en çok bu kadar alan farkı kaydedilir
 DEGER_SINIRI = 500         # eski/yeni değer metni bu uzunlukta kesilir
 logger = logging.getLogger("ayar_kaydi")

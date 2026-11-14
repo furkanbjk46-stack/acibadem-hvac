@@ -12,8 +12,8 @@ from datetime import date, timedelta
 
 TABLO = "sayac_gunluk"
 TUR_ADI = {"trafo": "Trafo", "sebeke": "Şebeke", "uretim": "Üretim (kojen)", "chiller": "Chiller",
-           "alt_sayac": "Alt sayaç"}
-TUR_SIRA = ["sebeke", "trafo", "uretim", "chiller", "alt_sayac"]
+           "alt_sayac": "Alt sayaç", "kontrol": "Kontrol sayacı"}
+TUR_SIRA = ["sebeke", "trafo", "uretim", "chiller", "alt_sayac", "kontrol"]
 
 
 def _sayfali(sorgu_kur, parti=1000, ust=200):

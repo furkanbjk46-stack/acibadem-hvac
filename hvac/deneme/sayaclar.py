@@ -11,7 +11,10 @@ data_bridge (hangi sayaç hangi sütuna, chiller/MCC grupları), enerji_agent (i
 Kod Maslak'a ait olduğundan her lokasyona ayrı kod gerekecekti.
 
 Satır: {"ad", "ip", "marka", "tur", "sutun", "kritik"}
-  tur: trafo | sebeke | uretim | chiller | alt_sayac
+  tur: trafo | sebeke | uretim | chiller | alt_sayac | kontrol
+  kontrol (14.11.2026): okunur ve günlük değeri kaydedilir, HİÇBİR toplama girmez — başka sayaçların
+  toplamını ölçen karşılaştırma sayacı (ör. Maslak STEP-UP/3 = KOJEN-3 + KOJEN-4). Enerji, üretim
+  sayaçları gibi yönden bağımsız okunur (giren + verilen; tüketim sayacında verilen ≈ 0).
 """
 import json
 import logging
@@ -20,7 +23,7 @@ import os
 import yollar
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
-TURLER = ("trafo", "sebeke", "uretim", "chiller", "alt_sayac")
+TURLER = ("trafo", "sebeke", "uretim", "chiller", "alt_sayac", "kontrol")
 logger = logging.getLogger("sayaclar")
 _ONBELLEK = {}
 
@@ -55,7 +58,7 @@ def analizorler(base_dir: str = None) -> list:
     cikti = []
     for s in yukle(base_dir):
         a = {"ip": s.get("ip", ""), "name": s["ad"], "brand": s.get("marka", "")}
-        if s["tur"] == "uretim":
+        if s["tur"] in ("uretim", "kontrol"):      # yön bağımsız okuma (toplama girmek ayrı: tur)
             a["uretim"] = True
         if s["tur"] == "sebeke":
             a["sebeke"] = True

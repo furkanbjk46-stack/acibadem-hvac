@@ -35,7 +35,7 @@ BURASI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BURASI)
 import yollar  # noqa: E402
 
-GIZLI = {"supabase_config.json", "lokasyon_anahtari.json"}
+GIZLI = {"supabase_config.json", "lokasyon_anahtari.json", "panel_sifresi.json"}
 ENERJI_ATLA = {"id", "lokasyon_id", "created_at", "updated_at"}
 
 

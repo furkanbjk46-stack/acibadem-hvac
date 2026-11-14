@@ -144,6 +144,7 @@ SEKMELER = [
     ("Veri Görüntüleme", "verim"),
     ("Aylık Birleşik Rapor", "yonetim"),
     ("Tahmin & Trend", "zeka"),
+    ("Lokasyon Donanımı", "ayar"),
 ]
 SEKME_KAP = "enerji_sekmeler"
 

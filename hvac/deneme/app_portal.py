@@ -3280,10 +3280,11 @@ TAB_NAMES = [
     "Veri Görüntüleme",
     "Aylık Birleşik Rapor",
     "Tahmin & Trend",
+    "Lokasyon Donanımı",
 ]
 
 with st.container(key="enerji_sekmeler"):
-    tab_diyagram, tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(TAB_NAMES)
+    tab_diyagram, tab1, tab2, tab3, tab4, tab5, tab6, tab_donanim = st.tabs(TAB_NAMES)
 
 # ══════════════════════════════════════════════════════════════════
 # ENERJİ DİYAGRAMI — lokasyona özgü enerji topolojisi (şimdilik Maslak)
@@ -5282,3 +5283,15 @@ with tab6:
 
     except Exception as _fc_err:
         st.warning(f"Tahmin modülü hatası: {_fc_err}")
+
+
+# ══════════════════════════════════════════════════════════════════
+# LOKASYON DONANIMI — şifreli ayar paneli: analizörler, BMS ve AHU noktaları (donanim_paneli.py)
+# Excel ile toplu ya da tablodan tek tek; doğrulama + önizleme + yedekli kayıt (14.11.2026)
+# ══════════════════════════════════════════════════════════════════
+with tab_donanim:
+    try:
+        import donanim_paneli as _donanim_paneli
+        _donanim_paneli.ciz()
+    except Exception as _dp_err:
+        st.error(f"Lokasyon donanımı paneli açılamadı: {_dp_err}")
