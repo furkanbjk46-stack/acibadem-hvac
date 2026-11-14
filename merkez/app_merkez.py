@@ -734,6 +734,13 @@ def fetch_is_emirleri(url, anahtar):
 
 
 @st.cache_data(ttl=30, show_spinner=False)
+@st.cache_data(ttl=60, show_spinner=False)
+def _lisans_talepleri(url, key):
+    """Lisans talepleri (ana sayfa uyarısı; 60 sn önbellek). Tablo yoksa []."""
+    import lisans_yonetim as _LYf
+    return _LYf.talepleri_oku(url, key) or []
+
+
 def fetch_lokasyonlar(url, key):
     try:
         from supabase import create_client
@@ -2446,7 +2453,15 @@ with sag:
         _isim = HASTANELER.get(_lid, {}).get("kisa", "Merkez" if _lid == _AGc.MERKEZ else _lid)
         lok_uyari_map.setdefault(_lid, []).extend((_s, "%s: %s" % (_isim, _m)) for _s, _m in _sat)
 
-    # 4) Çevrimdışı uyarıları — sol kolonda kart olarak gösterildiği için burada yok
+    # 4) Lisans onayı bekleyen yeni PC'ler (008; onay Yönetim → Lisanslar)
+    try:
+        import lisans_yonetim as _LYc
+        for _lid, _sat in _LYc.canli_uyarilar(_lisans_talepleri(url, key), HASTANELER).items():
+            lok_uyari_map.setdefault(_lid, []).extend(_sat)
+    except Exception:
+        pass
+
+    # 5) Çevrimdışı uyarıları — sol kolonda kart olarak gösterildiği için burada yok
 
     # Lokasyonları arıza sayısına göre sırala (en fazla arıza önce)
     def lok_ariza_skoru(lok_id):
@@ -2460,6 +2475,8 @@ with sag:
     sirali_loklar = sorted(HASTANELER.keys(), key=lok_ariza_skoru, reverse=True)
     if lok_uyari_map.get(_AGc.MERKEZ):            # sunucu / güvenlik iş emirleri en üstte
         sirali_loklar = [_AGc.MERKEZ] + sirali_loklar
+    # Hastane listesinde olmayan lokasyondan gelen uyarı (ör. kimliği yanlış yazılmış yeni PC'nin lisans talebi)
+    sirali_loklar += [_k for _k in lok_uyari_map if _k not in sirali_loklar and lok_uyari_map[_k]]
 
     # ── Uyarıları lokasyon bazında grupla ve göster ──────
     lok_ile_uyari = [(lid, lok_uyari_map.get(lid, []))

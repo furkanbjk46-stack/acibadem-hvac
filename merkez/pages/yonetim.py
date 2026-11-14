@@ -44,9 +44,16 @@ st.markdown(
     f"Veriler her açılışta canlı okunur · {_dt.now(_IST).strftime('%d.%m.%Y %H:%M')}</div></div>",
     unsafe_allow_html=True)
 
-# Sekmeler: 1) canlı sunucu / veri durumu  2) canlı SQL durumu  3) agent katmanları simülasyonu
-_sekme_sunucu, _sekme_sql, _sekme_agent = st.tabs(
-    ["🖥️ Sunucu ve veritabanı", "🗄️ SQL (canlı)", "🤖 Agent katmanları"])
+# Sekmeler: 1) canlı sunucu / veri durumu  2) canlı SQL durumu  3) agent katmanları  4) lisanslar (008)
+import lisans_yonetim as _LY
+_lis_talepler = _LY.talepleri_oku(url, key) or []
+_lis_bekleyen = len(_LY.bekleyenler(_lis_talepler))
+_sekme_sunucu, _sekme_sql, _sekme_agent, _sekme_lisans = st.tabs(
+    ["🖥️ Sunucu ve veritabanı", "🗄️ SQL (canlı)", "🤖 Agent katmanları",
+     "🔑 Lisanslar" + (" (%d bekliyor)" % _lis_bekleyen if _lis_bekleyen else "")])
+
+with _sekme_lisans:
+    _LY.ciz(st, url, key, HASTANELER)
 
 with _sekme_sunucu:
     _y1, _y2 = st.columns([1, 6])

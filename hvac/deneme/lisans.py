@@ -95,6 +95,45 @@ def lisans_kontrol(deneme: int = None, bekleme: float = None, _bekle=None) -> di
     return sonuc
 
 
+# ── Lisans talebi (008_lisans_talepleri, 14.11.2026) ─────────────────────────────────
+# Lisansı olmayan PC merkeze kendisi talep bırakır (makine kimliği, lokasyon, bilgisayar adı);
+# Synapse → Yönetim → Lisanslar'da onaylanınca lisans aktif açılır ve watchdog (onay beklerken
+# dakikada bir yeniden sorar) programı kendiliğinden başlatır. Makine ID kimseye okutulmaz.
+TALEP_MESAJ = {
+    "bekliyor": "Lisans onayi bekleniyor — talep Synapse'e gonderildi (Yonetim > Lisanslar'dan onaylanacak).",
+    "reddedildi": "Bu cihazin lisans talebi Synapse'te reddedildi (Yonetim > Lisanslar).",
+    "sinir": "Bu lokasyonda cok sayida bekleyen lisans talebi var; Synapse'te bekleyenleri karara baglayin.",
+}
+
+
+def _surum() -> str:
+    for goreli in ("durum/son_yama.json", "yama_surumu.json"):
+        try:
+            with open(Path(__file__).parent.joinpath(*goreli.split("/")), encoding="utf-8") as f:
+                v = (json.load(f) or {}).get("versiyon")
+            if v:
+                return str(v)
+        except (OSError, ValueError):
+            continue
+    return ""
+
+
+def talep_birak(sb, lokasyon_id: str, kimlikler: list) -> str | None:
+    """Merkeze lisans talebi bırakır / tazeler. Dönüş: 'bekliyor' | 'reddedildi' | 'aktif' | 'sinir';
+    merkezde işlev yoksa (008 uygulanmamış) ya da hata varsa None — eski davranış sürer."""
+    if not lokasyon_id or not kimlikler:
+        return None
+    try:
+        import socket
+        r = sb.rpc("lisans_talep_et", {
+            "p_lokasyon": lokasyon_id, "p_makine": kimlikler[0], "p_kimlikler": list(kimlikler),
+            "p_makine_adi": socket.gethostname()[:80], "p_surum": _surum()}).execute()
+        d = r.data
+        return d if isinstance(d, str) else None
+    except Exception:
+        return None
+
+
 def _lisans_kontrol_tek() -> dict:
     """
     Donus: {
@@ -152,11 +191,13 @@ def _lisans_kontrol_tek() -> dict:
                 "hata": None,
             }
         else:
+            talep = talep_birak(sb, lok_id, kimlikler)
             return {
                 "gecerli": False,
                 "makine_id": makine_id,
                 "lokasyon_id": lok_id,
-                "hata": "Bu cihaz icin lisans tanimli degil veya pasif.",
+                "talep": talep,
+                "hata": TALEP_MESAJ.get(talep, "Bu cihaz icin lisans tanimli degil veya pasif."),
             }
 
     except Exception as e:

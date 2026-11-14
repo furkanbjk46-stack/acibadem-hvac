@@ -18,6 +18,7 @@ import json
 import os
 import socket
 import sys
+import time
 import urllib.request
 from datetime import datetime
 
@@ -97,6 +98,27 @@ def _portlar(base=None):
         return portlar.yukle(base or BURASI)
     except Exception:
         return {"enerji": 8501, "mekanik_zeka": 8005}
+
+
+def lisans_onayini_bekle(sure_sn, lisans=None, _bekle=None, aralik_sn=20) -> bool:
+    """Kurulumun son adımı: lisans talebi Synapse'te onay bekliyorsa en çok sure_sn bekler
+    (portallar onaydan sonra açılır). Dönüş: lisans geçerli mi."""
+    lisans = lisans or _lisans_sor
+    _bekle = _bekle or time.sleep
+    lis = lisans() or {}
+    if lis.get("gecerli") or lis.get("talep") != "bekliyor":
+        return bool(lis.get("gecerli"))
+    print("\n Lisans talebi Synapse'e gönderildi. Synapse → Yönetim → Lisanslar'dan onaylayın.")
+    print(" Makine ID: %s — onay bekleniyor (en çok %d dk)..." % (lis.get("makine_id"), sure_sn // 60), flush=True)
+    sinir = time.monotonic() + sure_sn
+    while time.monotonic() < sinir:
+        _bekle(aralik_sn)
+        lis = lisans() or {}
+        if lis.get("gecerli"):
+            print(" Lisans onaylandı.", flush=True)
+            return True
+    print(" Lisans bu sürede onaylanmadı; onaydan sonra program kendiliğinden açılır.", flush=True)
+    return False
 
 
 def portallari_bekle(sure_sn, http=None, _bekle=None, base=None):
@@ -180,6 +202,8 @@ def kontrol(base=None, tcp=None, http=None, agent_turu=True, lisans=None):
             lis = {"gecerli": False, "hata": str(e)}
         ekle("Lisans", TAMAM if lis.get("gecerli") else EKSIK,
              ("%s (makine: %s)" % (lis.get("makine_adi") or "geçerli", lis.get("makine_id")) if lis.get("gecerli")
+              else "Onay bekleniyor: talep Synapse'e gönderildi — Yönetim → Lisanslar'dan onaylayın (Makine ID: %s)"
+              % lis.get("makine_id") if lis.get("talep") == "bekliyor"
               else "%s — Makine ID: %s (Genel Merkez Enerji Yönetimi'ne iletin)" % (lis.get("hata"), lis.get("makine_id"))))
     surum = _surum(base)
     ekle("Program sürümü", TAMAM if surum else UYARI, surum or "sürüm dosyası yok (yama_surumu.json)")
@@ -258,6 +282,10 @@ def main():
         else:
             print("Şablondan kopyalanacak yeni ayar yok (lokasyonun ayarları zaten var).")
     if a.bekle and not a.agentsiz:
+        try:
+            lisans_onayini_bekle(1800)              # yeni PC: Synapse'te onay gelene kadar (en çok 30 dk)
+        except Exception:
+            pass
         print("Portalların açılması bekleniyor (en çok %d sn)..." % a.bekle, flush=True)
         if not portallari_bekle(a.bekle):
             print("Portallar bu sürede açılmadı; agent turu yine çalıştırılıyor (sonuçta görünür).")

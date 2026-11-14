@@ -204,6 +204,46 @@ def tek_kopya(bekleme_sn=TEK_KOPYA_BEKLEME_SN, _bekle=time.sleep, _al=None):
         _bekle(2)
 
 
+ONAY_ARALIK_SN = 60          # lisans onayı beklenirken merkeze bu aralıkla yeniden sorulur
+ONAY_BEKLEYEN = ("bekliyor", "reddedildi", "sinir")
+
+
+def lisans_onayini_bekle(lis: dict, aralik_sn: float = ONAY_ARALIK_SN, _kontrol=None, _bekle=None,
+                         en_cok_tur: int = None) -> dict:
+    """Lisans talebi merkezde karar bekliyorsa (008) program kapanmaz: dakikada bir yeniden sorar,
+    Synapse'te onaylanınca geçerli sonucu döner ve açılış sürer. Talep yoksa (eski merkez) hemen döner."""
+    if lis.get("gecerli") or lis.get("talep") not in ONAY_BEKLEYEN:
+        return lis
+    if _kontrol is None:
+        from lisans import lisans_kontrol as _lk
+        _kontrol = lambda: _lk(deneme=1)          # noqa: E731
+    _bekle = _bekle or time.sleep
+    print("=" * 62)
+    print("  LISANS ONAYI BEKLENIYOR — program onaydan sonra kendiliginden acilir")
+    print("=" * 62)
+    print(f"  Lokasyon  : {lis.get('lokasyon_id')}")
+    print(f"  Makine ID : {lis.get('makine_id')}")
+    print("  Synapse > Yonetim > Lisanslar'dan onaylayin (talep otomatik gonderildi).")
+    print("=" * 62, flush=True)
+    son_durum, tur = lis.get("talep"), 0
+    while en_cok_tur is None or tur < en_cok_tur:
+        tur += 1
+        _bekle(aralik_sn)
+        try:
+            yeni = _kontrol() or {}
+        except Exception as e:                       # ağ sorunu: beklemeye devam
+            yeni = {"gecerli": False, "talep": son_durum, "hata": str(e)}
+        if yeni.get("gecerli"):
+            logger.info("[LISANS] Onaylandi — %s", yeni.get("makine_adi") or yeni.get("makine_id"))
+            return yeni
+        durum = yeni.get("talep") or son_durum
+        if durum != son_durum or tur % 10 == 0:
+            print("  [%s] %s" % (time.strftime("%H:%M"), yeni.get("hata") or "Onay bekleniyor"), flush=True)
+        son_durum = durum
+        lis = yeni if yeni.get("talep") else lis
+    return lis
+
+
 def main():
     if not tek_kopya():
         logger.warning("Başka bir watchdog zaten çalışıyor — bu kopya kapanıyor (portallar o kopyada).")
@@ -213,6 +253,8 @@ def main():
     try:
         from lisans import lisans_kontrol
         _lis = lisans_kontrol()
+        if not _lis["gecerli"]:
+            _lis = lisans_onayini_bekle(_lis)       # talep bırakıldıysa onay gelene kadar bekler
         if not _lis["gecerli"]:
             print("=" * 55)
             print("  LISANSSIZ ERISIM — PROGRAM BASLATILMIYOR")

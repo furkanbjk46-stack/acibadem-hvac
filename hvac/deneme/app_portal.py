@@ -48,13 +48,13 @@ try:
                 Lisanssiz Erisim
             </div>
             <div style='font-size:14px;color:#24324d;margin-bottom:24px;'>
-                Bu cihaz icin gecerli bir lisans bulunamadi.
+                Bu cihaz icin gecerli bir lisans bulunamadi.<br>LISANS_MESAJI
             </div>
             <div style='font-size:12px;color:#46536b;'>
                 Yetkili: Acibadem Genel Merkez Enerji Yonetimi
             </div>
         </div></div>
-        """, unsafe_allow_html=True)
+        """.replace("LISANS_MESAJI", __import__("html").escape(str(_lis.get("hata") or ""))), unsafe_allow_html=True)
         st.caption(f"Makine ID: `{_lis['makine_id']}`")
         st.stop()
 except ImportError:
