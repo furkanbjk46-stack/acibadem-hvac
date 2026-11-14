@@ -36,6 +36,7 @@ def _df(tur, satirlar, karsilik=None):
             df[a] = pd.to_numeric(df[a], errors="coerce").astype("Int64")
         else:
             df[a] = df[a].astype(object).where(df[a].notna(), "")     # boş hücre "None" yazmasın
+    df.insert(0, SIL, False)
     if tur == "bms" and karsilik is not None:
         df["Sistem karşılığı"] = [karsilik.get(s.get("Point Name"))
                                   or ("oto-set yazar" if s.get("Durum") == D.YAZILABILIR else None)
@@ -44,6 +45,13 @@ def _df(tur, satirlar, karsilik=None):
 
 
 def _sutun_ayari(tur):
+    cc = st.column_config
+    sil = {SIL: cc.CheckboxColumn("🗑 Sil", default=False, width="small",
+                                  help="İşaretlenen satır kaydedince silinir (önizlemede 'silinen' görünür)")}
+    return dict(sil, **_sutun_ayari_tur(tur))
+
+
+def _sutun_ayari_tur(tur):
     cc = st.column_config
     if tur == "analizorler":
         return {
@@ -78,8 +86,13 @@ def _sutun_ayari(tur):
     })
 
 
+SIL = "Sil"
+
+
 def _kayitlar(df, tur):
-    return [{a: r.get(a) for a in D.SUTUNLAR[tur]} for r in df.to_dict("records")]
+    """Tablodaki satırlar; 'Sil' işaretli olanlar çıkarılır (önizlemede 'silinen' görünür)."""
+    return [{a: r.get(a) for a in D.SUTUNLAR[tur]} for r in df.to_dict("records")
+            if not (r.get(SIL) == True)]  # noqa: E712  (numpy bool da olabilir)
 
 
 def _sifre_kapisi(base) -> bool:
@@ -206,16 +219,29 @@ def ciz(base: str = None):
     sekmeler = st.tabs(["Analizörler", "BMS okuma noktaları", "AHU noktaları"])
     aciklama = {
         "analizorler": "Enerji analizörleri (Modbus). IP'si olmayan satır bekleyen listede durur, okunmaz. "
-                       "Satır eklemek için tablonun altındaki + satırını kullanın; silmek için satırı seçip çöp "
-                       "kutusuna basın.",
+                       "Satır eklemek için tablonun sağ üstündeki + düğmesini kullanın; silmek için satırın "
+                       "'🗑 Sil' kutusunu işaretleyin.",
         "bms": "Enerji / tesis BACnet noktaları. Yalnız 'okunan değer' satırları okunur. 'yazılabilir değer' "
                "noktaları oto-set'in kendi ayarındadır; bu panel onları yalnız listeler.",
-        "ahu": "Mekanik Zeka'nın okuduğu santral noktaları. Bina + Santral + Nokta Tipi tekil olmalı.",
+        "ahu": "Mekanik Zeka'nın okuduğu santral noktaları (Start/Stop ve Basınç dahil), santral santral sıralı. "
+               "Bina + Santral + Nokta Tipi tekil olmalı. Silmek için '🗑 Sil' kutusunu işaretleyin.",
     }
     for sekme, tur in zip(sekmeler, ("analizorler", "bms", "ahu")):
         with sekme:
             st.caption(aciklama[tur])
-            df = _df(tur, taslak.get(tur) or [], karsilik if tur == "bms" else None)
+            satirlar = taslak.get(tur) or []
+            if tur == "ahu":
+                satirlar = D.ahu_sirala(satirlar)
+                eksik = D.ahu_eksikler(satirlar)
+                for t in ("Start/Stop", "Basınç (Pa)"):
+                    if eksik.get(t):
+                        st.warning("**%s** noktası olmayan santral (%d): %s — adresi biliniyorsa + ile ekleyin."
+                                   % (t, len(eksik[t]), ", ".join(eksik[t])))
+                diger = {t: v for t, v in eksik.items() if t not in ("Start/Stop", "Basınç (Pa)")}
+                if diger:
+                    st.info("Eksik diğer noktalar: " + " · ".join("%s: %s" % (t, ", ".join(v[:6]) + (" …" if len(v) > 6 else ""))
+                                                                    for t, v in diger.items()))
+            df = _df(tur, satirlar, karsilik if tur == "bms" else None)
             yeni_df = st.data_editor(df, key="%sed_%s_%d" % (_ON, tur, surum), num_rows="dynamic",
                                      hide_index=True, use_container_width=True, column_config=_sutun_ayari(tur),
                                      height=min(38 + 35 * (len(df) + 1), 560))

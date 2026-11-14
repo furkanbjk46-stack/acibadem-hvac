@@ -256,6 +256,32 @@ def _bms_satir(d):
     return s
 
 
+def _dogal(s):
+    return [int(p) if p.isdigit() else p.lower() for p in re.split(r"(\d+)", str(s or ""))]
+
+
+def ahu_sirala(liste: list) -> list:
+    """Santral santral: Bina, santral no (Ahu-3 < Ahu-10), nokta tipi standart sırada — her santralin
+    noktaları alt alta (dosyada Start/Basınç sonradan eklendiği için en sonda duruyordu)."""
+    sira = {t: i for i, t in enumerate(NOKTA_TIPLERI)}
+    return sorted(liste, key=lambda s: (_dogal(s.get("Bina")), _dogal(s.get("Santral")),
+                                        sira.get(s.get("Nokta Tipi"), 99)))
+
+
+def ahu_eksikler(liste: list) -> dict:
+    """{nokta tipi: [santral, ...]} — bir santralde hiç olmayan nokta tipleri (panelde uyarı)."""
+    santral = {}
+    for s in liste:
+        if s.get("Bina") and s.get("Santral"):
+            santral.setdefault((s["Bina"], s["Santral"]), set()).add(s.get("Nokta Tipi"))
+    eksik = {}
+    for (bina, ad), tipler in sorted(santral.items(), key=lambda x: (_dogal(x[0][0]), _dogal(x[0][1]))):
+        for t in NOKTA_TIPLERI:
+            if t not in tipler:
+                eksik.setdefault(t, []).append("%s %s" % (bina, ad))
+    return eksik
+
+
 def sistem_karsiligi(base: str = None) -> dict:
     """{Point Name: programdaki karşılığı} — panelde bilgi sütunu (bacnet_esleme'den)."""
     try:

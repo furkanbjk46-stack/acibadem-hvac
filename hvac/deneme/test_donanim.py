@@ -188,6 +188,42 @@ import geri_yukle  # noqa: E402
 c("şifre dosyası merkeze gitmez ve geri yüklenmez",
   "panel_sifresi.json" in ayar_kaydi.GIZLI and "panel_sifresi.json" in geri_yukle.GIZLI)
 
+# ── AHU: santral santral sıra, eksik Start/Basınç ──
+sirali = D.ahu_sirala(m["ahu"])
+c("AHU sırası: santral noktaları alt alta, Start/Stop ve Basınç santralin içinde",
+  [(s["Santral"], s["Nokta Tipi"]) for s in sirali[:9]] ==
+  [("Ahu-3", t) for t in D.NOKTA_TIPLERI[:5]] + [("Ahu-4", t) for t in D.NOKTA_TIPLERI[:4]],
+  [(s["Santral"], s["Nokta Tipi"]) for s in sirali[:9]])
+c("doğal sıra (Ahu-3 < Ahu-10)", [s["Santral"] for s in D.ahu_sirala(
+    [{"Bina": "A", "Santral": "Ahu-10", "Nokta Tipi": "SAT (°C)"},
+     {"Bina": "A", "Santral": "Ahu-3", "Nokta Tipi": "SAT (°C)"}])] == ["Ahu-3", "Ahu-10"])
+ek = D.ahu_eksikler(m["ahu"])
+c("eksik Start/Stop ve Basınç santralleri bulunur (Maslak: Ahu-3; Basınç 5 santral)",
+  ek.get("Start/Stop") == ["MAS-1 Ahu-3"] and len(ek.get("Basınç (Pa)", [])) == 5, ek)
+c("Start/Basınç noktaları ayrı dosyadan değil bacnet_noktalari'ndan gelir",
+  sum(1 for s in m["ahu"] if s["Nokta Tipi"] in ("Start/Stop", "Basınç (Pa)")) == 106
+  and not os.path.exists(os.path.join(BURASI, "ornek_ayar", "maslak", "yeni_noktalar_start_basinc.json")))
+
+# ── Silme ──
+import donanim_paneli as DP  # noqa: E402
+_t = DP._df("analizorler", [{"AD": "A1", "IP ADRESI": "10.0.0.1"}, {"AD": "A2", "IP ADRESI": "10.0.0.2"}])
+_t.loc[1, DP.SIL] = True
+c("'Sil' işaretli satır tablodan çıkar", [r["AD"] for r in DP._kayitlar(_t, "analizorler")] == ["A1"])
+m3 = D.mevcut(d)
+sil = {"analizorler": [s for s in m3["analizorler"] if s["AD"] not in ("STEP-UP/3", "SU")]}
+f = D.fark(m3, D.normalize(sil))
+c("silme önizlemede görünür", sorted(f["analizorler"]["silinen"]) ==
+  ["STEP-UP/3 (172.17.91.124)", "SU (IP yok)"], f["analizorler"])
+D.kaydet(sil, d, yeniden_baslat=False)
+m4 = D.mevcut(d)
+c("silinen okunan ve bekleyen sayaç listeden çıkar",
+  not any(s["AD"] in ("STEP-UP/3", "SU") for s in m4["analizorler"]) and len(m4["analizorler"]) == 32,
+  [s["AD"] for s in m4["analizorler"]][-3:])
+ahu_sil = {"ahu": [s for s in m4["ahu"] if not (s["Bina"] == "MAS-1" and s["Santral"] == "Ahu-4"
+                                                and s["Nokta Tipi"] == "Basınç (Pa)")]}
+D.kaydet(ahu_sil, d, yeniden_baslat=False)
+c("AHU noktası silinir", len(D.mevcut(d)["ahu"]) == 385)
+
 # ── Enerji portalı yeni sayaç sütununu CSV'den silmez (app_portal.ensure_schema) ──
 import ast  # noqa: E402
 import re  # noqa: E402
