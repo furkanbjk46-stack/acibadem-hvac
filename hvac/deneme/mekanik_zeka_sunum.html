@@ -167,9 +167,9 @@
                 Eşanjör ekipmanlarının sıcaklık/vana verilerini her gün otomatik analiz eder, sorunları teşhis eder
                 ve sahaya uygulanabilir aksiyon önerileri üretir.
                 <br><br>
-                <strong>Sürüm v11.1 — 24 Ekim 2026</strong> &nbsp;|&nbsp; 35 teşhis kuralı &nbsp;|&nbsp;
+                <strong>Sürüm v14.4 — 14 Kasım 2026</strong> &nbsp;|&nbsp; 35 teşhis kuralı &nbsp;|&nbsp;
                 talep esaslı mod çözümü &nbsp;|&nbsp; çıkış denetimi (15 değişmez kural) &nbsp;|&nbsp;
-                197 kontrollük öz test + saha teşhisi
+                197 kontrollük öz test + saha teşhisi &nbsp;|&nbsp; Mekanik Zeka Agent'ı (14 kontrol)
             </div>
         </div>
 
@@ -217,7 +217,7 @@
                 B --> C["🔍 Mod Çözümü<br />(talep esaslı)<br />+ ΔT Hesaplama"]:::proc
                 C --> D["📏 35 Kural<br />Band Kontrolü<br />Severity Skoru"]:::proc
                 D --> G["🧪 Çıkış Denetimi<br />15 değişmez kural"]:::audit
-                G --> E["📲 Personel Bildirimi<br />Supabase bildirimler"]:::output
+                G --> E["📲 Portal + Synapse<br />kritik / uyarı listesi"]:::output
                 E --> F["✅ Onay + Excel<br />İndir / Saha Uygula"]:::output
 
                 classDef input fill:#3b82f6,stroke:#1e40af,color:#fff
@@ -234,14 +234,15 @@
 
             <h3>Çalışma Zamanlaması</h3>
             <div class="kpi-strip">
-                <div class="kpi-item"><div class="val">07:00</div><div class="lbl">Modbus okuma</div></div>
-                <div class="kpi-item"><div class="val">07:05</div><div class="lbl">BACnet okuma</div></div>
-                <div class="kpi-item"><div class="val">07:10</div><div class="lbl">Günlük snapshot</div></div>
-                <div class="kpi-item"><div class="val">08:30</div><div class="lbl">Mekanik Zeka analizi</div></div>
-                <div class="kpi-item"><div class="val">13:00</div><div class="lbl">AHU analiz tekrarı</div></div>
+                <div class="kpi-item"><div class="val">10 dk</div><div class="lbl">BACnet okuma + Mekanik Zeka analizi</div></div>
+                <div class="kpi-item"><div class="val">15 dk</div><div class="lbl">Mekanik Zeka Agent'ı turu</div></div>
+                <div class="kpi-item"><div class="val">07:05</div><div class="lbl">Enerji tablosu için BACnet okuma</div></div>
+                <div class="kpi-item"><div class="val">13:00</div><div class="lbl">Günlük AHU özeti merkeze</div></div>
+                <div class="kpi-item"><div class="val">açılış</div><div class="lbl">Öz test + saha teşhisi</div></div>
             </div>
-            <p>Zamanlamalar kasıtlı olarak 5 dk arayla yapılır; böylece veri okuma ve analiz adımları birbirine
-                çakışmaz, her analiz güncel veri üzerinden çalışır.</p>
+            <p>Analiz artık günde bir kez değil 10 dakikada bir koşar: canlı talep/üretim grafiği ve
+                kritik listesi güncel kalır. Her tur aynı ham veriyle (son BACnet okuması) çalışır; okuma
+                bitmeden analiz başlamaz.</p>
 
             <h3>Ekipman Tipleri ve Hedef ΔT Değerleri</h3>
             <table>
@@ -825,12 +826,11 @@
             <p>Her lokasyonun <strong>kendi ayarları</strong> vardır (üfleme bandı, tolerans, chiller hedefi).
                 Aynı kod farklı ayarla farklı karar verir — bu yüzden 197 kontrol lokasyon PC'sinde de koşar.
                 Sonuç heartbeat ile Synapse'e gider ve lokasyon kartında görünür:</p>
-            <div class="alert alert-warning">
-                🧪 <strong>Maslak, 24.10.2026: 192 / 197</strong> — kural kataloğu, kural tutarlılığı ve
-                öncelik matrisi paketlerinde 5 kontrol <strong>21.10'dan beri sahada kalıyor</strong>.
-                Aynı paketler geliştirme makinesinde tam geçiyor (lokasyon tarafı 1.103 / 1.103); fark
-                Maslak'ın kendi ayar dosyalarından geliyor ve açık kalem olarak inceleniyor. Öz testin
-                amacı tam olarak budur: "bende yeşildi" ile "sahada yeşil" aynı şey değildir.
+            <div class="alert alert-green">
+                🧪 <strong>Maslak, 14.11.2026: 197 / 197</strong> — 21.10'dan beri sahada kalan 5 kontrolün
+                (kural kataloğu, tutarlılık, öncelik) sebebi Maslak'ın kendi ayar dosyalarındaydı; giderildi.
+                Öz testin amacı tam olarak budur: "bende yeşildi" ile "sahada yeşil" aynı şey değildir.
+                Sonuç ayrıca <strong>Mekanik Zeka Agent'ı</strong> tarafından her turda denetlenir.
             </div>
             <p>Böylece bozuk bir yama, bozulmuş bir ayar dosyası veya motoru anlamsız bir noktaya iten bir
                 lokasyon ayarı açılışta yakalanır.</p>
@@ -897,7 +897,7 @@
             <h3>Günlük Akış</h3>
             <div class="mermaid">
                 graph LR
-                A["📲 Bildirim<br />08:30 analizi hazır"]:::input --> B["📋 Portal<br />Mekanik Zeka sekmesi"]:::proc
+                A["📲 Portal<br />Analiz 10 dk'da bir güncel"]:::input --> B["📋 Portal<br />Mekanik Zeka sekmesi"]:::proc
                 B --> C["🔍 Kritik/Uyarı<br />Listesini İncele"]:::proc
                 C --> D["✅ Onayla<br />veya Not Ekle"]:::proc
                 D --> E["📥 Excel İndir<br />Saha Ekibine Ver"]:::output
@@ -1083,6 +1083,48 @@
             </div>
         </div>
 
+        <!-- ========== v11.1 → v14.4 ========== -->
+        <div class="section page-break">
+            <h2>🆕 24 Ekim'den Bu Yana Ne Değişti? (v11.1 → v14.4)</h2>
+            <p>Teşhis motorunun <strong>35 kuralı, eşikleri ve mod çözümü değişmedi</strong>. Değişenler:
+                motoru 7/24 izleyen bir agent, AHU noktalarının yönetimi, ölçekleme ve internetsiz çalışma.</p>
+            <table>
+                <thead>
+                    <tr><th>Konu</th><th>Ne değişti</th><th>Neden</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Mekanik Zeka Agent'ı</strong></td>
+                        <td>15 dakikada bir 14 kontrol: API uçları, giriş ve QR, watchdog, bakım kartları,
+                            ayarlar, otomatik analiz, dış hava kaynağı, AHU verisi, sensör arızası mantığı,
+                            donmuş AHU okuması, talep/üretim grafiği, öz test, oto-set geçişi, internet.
+                            Sonuç merkeze yazılır; sorun Synapse'te iş emri ve Canlı Uyarı olur</td>
+                        <td>Öz test yalnız açılışta koşuyordu; arada bozulan bir uç ya da donan okuma
+                            ancak birisi fark edince görülüyordu</td></tr>
+                    <tr><td><strong>AHU noktaları</strong></td>
+                        <td>Tek dosya: <code>ayar/bacnet_noktalari.json</code> — 56 santral, 386 nokta
+                            (SAT, dönüş, vanalar, set, <strong>Start/Stop 55, Basınç 51</strong>). İki kopyanın
+                            ayrışması agent tarafından yakalanır</td>
+                        <td>Nokta dosyası kökte ve <code>configs/</code>'ta iki kopyaydı; Maslak'ta ayrışmıştı</td></tr>
+                    <tr><td><strong>Lokasyon Donanımı paneli</strong></td>
+                        <td>AHU noktaları Enerji portalındaki şifreli panelden Excel ya da tablo ile eklenir,
+                            düzenlenir, silinir; santral santral sıralı; Start/Stop ya da Basınç noktası olmayan
+                            santraller üstte listelenir (Maslak: Ahu-3; Basınç 5 santralde yok)</td>
+                        <td>Ön koşul kapısı (fan basmıyor, lokal çalışma) bu noktalara dayanır; eksik nokta
+                            görünür olmalı</td></tr>
+                    <tr><td><strong>AHU geçmişi</strong></td>
+                        <td>90 günden eski ham analiz dosyaları günlük özete indirilir, ham dosya silinir</td>
+                        <td>10 dakikalık analiz diski dolduruyordu; trend için günlük özet yeterli</td></tr>
+                    <tr><td><strong>İnternetsiz çalışma</strong></td>
+                        <td>Dış hava ve tahmin internet yoksa Synapse'ten; simgeler ve yazı tipleri yerel</td>
+                        <td>Yeni lokasyonların otomasyon PC'lerinde internet yok (yalnız kurum içi sunucu)</td></tr>
+                    <tr><td><strong>Ölçekleme</strong></td>
+                        <td>Ayarlar <code>ayar/</code>'da (yama dokunmaz) ve merkezde kayıtlı; port kurulumda
+                            seçilir; sürüm heartbeat'te; yama sonrası program kendini yeniden başlatır</td>
+                        <td>Aynı kod her hastanede yalnız ayarla çalışsın</td></tr>
+                </tbody>
+            </table>
+        </div>
+
         <!-- ========== KOD VE DOSYA ========== -->
         <div class="section">
             <h2>📦 Mekanik Zeka — Kod ve Dosya Yapısı</h2>
@@ -1095,44 +1137,47 @@
                     <tr><th>Dosya</th><th>Satır</th><th>Görev</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td><code>main_portal.py</code></td><td>5.479</td><td>Kural motoru, ΔT/hedef/skor,
+                    <tr><td><code>main_portal.py</code></td><td>5.525</td><td>Kural motoru, ΔT/hedef/skor,
                         talimat rehberi, API uçları, portal girişi</td></tr>
-                    <tr><td><code>static/index.html</code></td><td>4.732</td><td>Analiz arayüzü, filtreler,
+                    <tr><td><code>static/index.html</code></td><td>4.348</td><td>Analiz arayüzü, filtreler,
                         talimat penceresi, PDF üretimi</td></tr>
                     <tr><td><code>static/synapse_tema.css / .js / synapse_ikon.js</code></td><td>415 + üretilen</td>
                         <td>Synapse tasarım katmanı ve animasyonlu simgeler (<code>merkez/ikon_js_uret.py</code>
                         ile <code>ikonlar.py</code>'den üretilir)</td></tr>
-                    <tr><td><code>ahu_collector.py</code></td><td>1.339</td><td>BACnet okuma → motora besleme,
+                    <tr><td><code>ahu_collector.py</code></td><td>1.393</td><td>BACnet okuma → motora besleme,
                         ek ekipman satırları (kollektör/chiller/kazan), ısıtma talep/üretim</td></tr>
-                    <tr><td><code>saha_teshis.py</code></td><td>302</td><td>Veri toplama zincirinin salt okuma
+                    <tr><td><code>saha_teshis.py</code></td><td>304</td><td>Veri toplama zincirinin salt okuma
                         teşhisi — öz testle birlikte heartbeat'e</td></tr>
-                    <tr><td><code>bakim_raporu.py</code></td><td>485</td><td>Aylık bakım raporu PDF'i —
+                    <tr><td><code>bakim_raporu.py</code></td><td>513</td><td>Aylık bakım raporu PDF'i —
                         ekrandaki bakım kartı PDF'i ile aynı kalıpta</td></tr>
-                    <tr><td><code>on_kosul.py</code></td><td>441</td><td>Ön koşul kapısı: start/stop, kanal
+                    <tr><td><code>on_kosul.py</code></td><td>442</td><td>Ön koşul kapısı: start/stop, kanal
                         basıncı, sensör aralığı (2/3 – 3/3 onay)</td></tr>
                     <tr><td><code>kural_denetim.py</code></td><td>169</td><td>15 değişmez kural — motor ve
                         testler için tek kaynak</td></tr>
-                    <tr><td><code>oz_test.py</code></td><td>144</td><td>Lokasyon öz testi (197 kontrol) +
+                    <tr><td><code>oz_test.py</code></td><td>172</td><td>Lokasyon öz testi (197 kontrol) +
                         saha teşhisi, sonucun heartbeat'e aktarılması</td></tr>
+                    <tr><td><code>mekanik_zeka_agent.py</code></td><td>502</td><td>Mekanik Zeka Agent'ı — 14 kontrol,
+                        15 dk'da bir; Enerji agent'ıyla ortak çekirdek</td></tr>
                     <tr><td>Test dosyaları (6 paket)</td><td>1.334</td><td>Golden, katalog, tutarlılık, mod,
                         öncelik, değişmez kurallar</td></tr>
                 </tbody>
             </table>
 
             <div class="alert alert-green">
-                <strong>Sistem geneli (24.10.2026):</strong> 212 takipli dosya; Python
-                <strong>49.894 satır</strong> (16.10'da 42.125); kod + yapılandırma dosyaları
-                (py, html, js, css, sql, bat, md, json, toml — 181 dosya) <strong>73.266 ham satır</strong>.
-                40 test dosyasında 8.345 satır test kodu (16.10'da 27 dosya / 5.932). Lokasyon tarafının
-                26 test dosyasında <strong>1.103 kontrolün tamamı</strong> geçiyor.
+                <strong>Sistem geneli (14.11.2026):</strong> 338 takipli dosya; Python
+                <strong>70.139 satır</strong> (24.10'da 49.894); kod + yapılandırma dosyaları
+                (py, html, js, css, sql, bat, md, json, toml — 305 dosya) <strong>97.617 ham satır</strong>.
+                83 test dosyasında 15.160 satır test kodu (24.10'da 40 / 8.345). Tam test setinde
+                <strong>81 test dosyasının tamamı</strong> geçiyor.
             </div>
         </div>
 
         <!-- FOOTER -->
         <div class="footer">
             <strong>Mekanik Zeka</strong> — Synapse (SYN) HVAC Analiz Modülü — Acıbadem Hastanesi<br>
-            Sürüm <strong>v11.1</strong> — 24 Ekim 2026 | 35 kural | 52 ayar eşiği | 617 karar dalı |
-            197 kontrollük öz test + saha teşhisi | 15 değişmez kuralla canlı çıkış denetimi<br>
+            Sürüm <strong>v14.4</strong> — 14 Kasım 2026 | 35 kural | 52 ayar eşiği | 617 karar dalı |
+            197 kontrollük öz test + saha teşhisi | 15 değişmez kuralla canlı çıkış denetimi |
+            Mekanik Zeka Agent'ı (14 kontrol, 15 dk)<br>
             <em>Bu belge motorun güncel davranışını anlatır; kural eşikleri ayarlar panelinden değiştirilebilir.</em>
         </div>
     </div>

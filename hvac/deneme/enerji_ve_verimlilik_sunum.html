@@ -163,9 +163,10 @@
                 chiller tüketimini günlük takip eder, anomalileri tespit eder ve maliyet düşürme
                 fırsatlarını otomatik olarak raporlar.
                 <br><br>
-                <strong>Sürüm v11.1 — 24 Ekim 2026</strong> &nbsp;|&nbsp; <code>app_portal.py</code> (Streamlit,
-                port 8501) &nbsp;|&nbsp; 27 Modbus analizör + canlı güç &nbsp;|&nbsp; günlük hava durumu
-                &nbsp;|&nbsp; 12 tasarruf kuralı &nbsp;|&nbsp; GM Merkez'de lokasyon karşılaştırma
+                <strong>Sürüm v14.4 — 14 Kasım 2026</strong> &nbsp;|&nbsp; <code>app_portal.py</code> (Streamlit,
+                port 8501) &nbsp;|&nbsp; 33 Modbus sayaç + canlı güç &nbsp;|&nbsp; günlük hava durumu
+                &nbsp;|&nbsp; 12 tasarruf kuralı &nbsp;|&nbsp; Lokasyon Donanımı paneli &nbsp;|&nbsp;
+                Enerji Portal Agent'ı
             </div>
         </div>
 
@@ -201,7 +202,8 @@
 
             <h3>Sistemdeki Yeri</h3>
             <p>Lokasyon PC'sinde iki uygulama birlikte çalışır; kullanıcı ikisine de <strong>tek portal
-                girişinden</strong> (port Değişken):</p>
+                girişinden</strong> ulaşır. Portlar kurulumda bir kez seçilir (<code>ayar/portlar.json</code>);
+                varsayılanlar aşağıdadır:</p>
             <table>
                 <thead>
                     <tr><th>Modül</th><th>Dosya</th><th>Port</th><th>Kapsam</th></tr>
@@ -210,30 +212,35 @@
                     <tr>
                         <td>⚡ <strong>Enerji ve Verimlilik</strong></td>
                         <td><code>app_portal.py</code> </td>
-                        <td>Değişken</td>
-                        <td>Enerji verisi girişi, tüketim takibi, anomali, tasarruf önerileri, raporlama</td>
+                        <td>8501</td>
+                        <td>Enerji verisi girişi, tüketim takibi, anomali, tasarruf önerileri, raporlama,
+                            Lokasyon Donanımı paneli</td>
                     </tr>
                     <tr>
                         <td>🧠 Mekanik Zeka</td>
                         <td><code>main_portal.py</code> </td>
-                        <td>Değişken</td>
+                        <td>8005</td>
                         <td>HVAC teşhis motoru (ayrı belge)</td>
                     </tr>
                 </tbody>
             </table>
-            <p>Enerji tarafının yardımcı modülleri: <code>data_collector.py</code> (Modbus 07:00 ve BACnet
-                07:05 günlük okuma + 15 sn'lik canlı güç), <code>data_bridge.py</code> (her gece 00:55
-                dünün satırını yazar), <code>hava_durumu.py</code> (lokasyonun kendi koordinatından günlük
-                hava), <code>veri_alarm.py</code> (veri toplama alarmları), <code>daily_report.py</code>,
-                <code>monthly_summary_report.py</code> ve <code>monthly_report/</code> klasöründeki
-                aylık rapor ve tahmin motoru (3.921 satır).</p>
+            <p>Enerji tarafının yardımcı modülleri: <code>data_collector.py</code> (Modbus 23:59 ve BACnet
+                07:05 günlük okuma + 15 sn'lik canlı güç), <code>data_bridge.py</code> (her gece 00:05
+                dünün satırını yazar), <code>sayaclar.py</code> (sayaç listesi tek kaynak:
+                <code>ayar/sayaclar.json</code>), <code>donanim.py</code> (Lokasyon Donanımı paneli),
+                <code>hava_durumu.py</code> (lokasyonun kendi koordinatından günlük hava; internet yoksa
+                Synapse'ten), <code>veri_alarm.py</code> (veri toplama alarmları), <code>enerji_agent.py</code>
+                (15 dk'da bir 10 kontrol), <code>daily_report.py</code>, <code>monthly_summary_report.py</code>
+                ve <code>monthly_report/</code> klasöründeki aylık rapor motoru (3.310 satır).</p>
         </div>
 
         <!-- ========== 2. TAKİP EDİLEN VERİLER ========== -->
         <div class="section">
             <h2>📊 Takip Edilen Enerji Verileri</h2>
-            <p>Modül, Modbus üzerinden 32 enerji analizöründen, BACnet'ten (52 nokta), internetten
-                (günlük hava) ve manuel girişlerden gelen verileri günlük olarak kaydeder.</p>
+            <p>Modül, Modbus üzerinden 33 enerji sayacından (trafo, şebeke giriş, kojen üretim, chiller,
+                MCC/kule ve kontrol sayaçları), BACnet'ten (51 nokta), internetten (günlük hava) ve manuel
+                girişlerden gelen verileri günlük olarak kaydeder. Her sayacın günlük değeri merkezde ayrı satır
+                olarak da tutulur (<code>sayac_gunluk</code>) — yeni sayaç için sütun açmak gerekmez.</p>
 
             <div class="kpi-strip">
                 <div class="kpi-item">
@@ -271,13 +278,13 @@
                     <tr>
                         <td>Toplam Hastane Tüketim</td>
                         <td>kWh</td>
-                        <td>/kWh</td>
+                        <td>—</td>
                         <td>Ana elektrik analizi</td>
                     </tr>
                     <tr>
                         <td>Chiller Tüketim</td>
                         <td>kWh</td>
-                        <td>/kWh</td>
+                        <td>—</td>
                         <td>Soğutma yükü analizi</td>
                     </tr>
                     <tr>
@@ -496,7 +503,7 @@
                     <tr>
                         <td>📄 Aylık PDF</td>
                         <td>Her ayın 5'i 17:00</td>
-                        <td>Aylık trend, YoY karşılaştırma, maliyet analizi</td>
+                        <td>Aylık trend, YoY karşılaştırma (verisi olmayan ayda üretilmez)</td>
                     </tr>
                     <tr>
                         <td>📊 Dashboard</td>
@@ -566,13 +573,14 @@
                 iyileştirme potansiyelini görünür kılar.
             </div>
 
-            <h3>Bilinen Açık Kalem</h3>
-            <div class="alert alert-warning">
-                <strong>Kojen / şebekeye satış:</strong> Toplam tüketim hesabında şebekeye satılan
-                elektrik kalemi henüz düşülmüyor. 27.09.2026'da çift sayım düzeltildi — şebeke artık
-                <strong>yalnızca ölçülen TRDP'lerin toplamıdır</strong>, MCC/Chiller alt sayaçları yedek
-                olarak kullanılmaz (aynı enerji iki kez sayılıyordu: günde ~16.000 kWh). Kalan kalemler:
-                TRDP-2 step-up sayacı ve şebekeye satış.
+            <h3>Şebeke, Kojen ve Toplam — Bugünkü Kural</h3>
+            <div class="alert alert-info">
+                <strong>Hastane Genel = Şebeke + Kojen üretimi</strong> (29.10.2026'dan beri). Şebeke, EDAŞ giriş
+                sayacından (PAC3200) her gece otomatik okunan <strong>net</strong> değerdir: eksi değer şebekeye
+                verildi demektir — şebekeye satış böylece kendiliğinden düşülür. Kojen üretimi KOJEN-1..4
+                sayaçlarından (yönden bağımsız okunur). Trafolar (TRDP-1..4) bilgi olarak izlenir.
+                Kojen-3 + 4'ün ortak step-up sayacı (<strong>STEP-UP/3</strong>) <strong>kontrol</strong> türünde
+                eklendi: okunur ve kaydedilir ama hiçbir toplama girmez (aksi hâlde kojen iki kez sayılırdı).
             </div>
         </div>
 
@@ -779,9 +787,52 @@
                 üzere bağımsız paket olarak duruyor (veri kalite kontrolü, Türkiye bayram takvimi, GES/kojen/şebeke
                 ayrımı, hasta ve ameliyat sayısı için hazır girdiler). Dışarıdan önerilen bir alternatif (Gemini
                 "v2") aynı adil düzenekte ölçüldü: başa baş çıktı (%3,29'a karşı %3,35), işe yarayan fikirleri
-                (bayram takvimi, Cumartesi/Pazar ayrımı, üç veri hatası türü) pakete alındı. Portal henüz eski
-                modeli kullanıyor; sırada yeni modelin portala kıyaslamalı eklenmesi var.
+                (bayram takvimi, Cumartesi/Pazar ayrımı, üç veri hatası türü) pakete alındı.
+                <strong>30.10.2026'dan beri portal yalnız günlük modeli kullanır</strong>: yarın, 7 gün ve
+                30 gün tahmini (16 günlük hava tahminiyle), dönem tahmini ve kojen planı; eski GradientBoosting
+                motoru kaldırıldı. Internet yoksa hava tahmini Synapse'ten gelir.
             </div>
+        </div>
+
+        <!-- ========== v11.1 → v14.4 ========== -->
+        <div class="section page-break">
+            <h2>🆕 24 Ekim'den Bu Yana Ne Değişti? (v11.1 → v14.4)</h2>
+            <table>
+                <thead>
+                    <tr><th>Konu</th><th>Ne değişti</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Sayaçlar</strong></td>
+                        <td>KOJEN-1..4 üretim sayaçları ve şebeke (EDAŞ giriş) sayacı otomatik; günlük sayaç
+                            okuması 07:00 → <strong>23:59</strong> (gün takvim günü), köprü 00:05</td></tr>
+                    <tr><td><strong>Lokasyon Donanımı</strong></td>
+                        <td>Şifreli sekme: analizör, BMS ve AHU listeleri <strong>Excel</strong> (standart şablon)
+                            ya da <strong>tablodan</strong> eklenir / düzenlenir / silinir. Doğrulama, önizleme,
+                            tür etkisi uyarısı (ör. "trafo şebeke toplamına girer"), önce yedek, sonra kayıt</td></tr>
+                    <tr><td><strong>Sayaç türü "kontrol"</strong></td>
+                        <td>Okunur, kaydedilir, merkezde görünür; hiçbir toplama girmez. İlk kullanım: STEP-UP/3</td></tr>
+                    <tr><td><strong>Yeni sayaç verisi</strong></td>
+                        <td>Panelden eklenen sayaç kendi sütununu alır (ör. <code>S_STEP_UP_3_kWh</code>);
+                            portal bu sütunu artık silmez. Enerji Diyagramı'nın altında ve veri girişi formunda
+                            <strong>"Diğer sayaçlar"</strong> bölümü (0 / boş değer yazılmaz)</td></tr>
+                    <tr><td><strong>Fiyatlar</strong></td>
+                        <td>TL / birim fiyat tamamen kaldırıldı — ekranlar ve raporlar tüketim birimleriyle</td></tr>
+                    <tr><td><strong>Tahmin</strong></td>
+                        <td>Yalnız günlük model (yarın / 7 / 30 gün), dönem tahmini ve kojen planı</td></tr>
+                    <tr><td><strong>Görünüm</strong></td>
+                        <td>Synapse tasarım dili: başlık kartı, sekme / kart / simge dili; grafikler düz
+                            (animasyonsuz); 15 metrikli grafik seçici, Yıl/Ay + karşılaştırma ayı</td></tr>
+                    <tr><td><strong>Enerji Portal Agent'ı</strong></td>
+                        <td>15 dk'da bir 10 kontrol: günlük döngü, sayaç erişimi, donmuş veri, veri kalitesi,
+                            diyagram toplamları, yerel ↔ merkez, portallar arası tutarlılık, kapsam (izlenmeyen
+                            sayaç), hava durumu, portal sağlığı</td></tr>
+                    <tr><td><strong>Merkez</strong></td>
+                        <td>Veri Supabase yerine kurum içi sunucuda (thapps); Synapse son 800 günü okur;
+                            ayar değişiklikleri ve sahadaki hata özeti merkezde; internetsiz lokasyon desteği</td></tr>
+                    <tr><td><strong>Raporlar</strong></td>
+                        <td>Verisi olmayan ayda otomatik aylık rapor ve bakım raporu üretilmez</td></tr>
+                </tbody>
+            </table>
         </div>
 
         <!-- ========== 6. KULLANIM ========== -->
@@ -832,7 +883,7 @@
                     <h4>📄 Raporlar</h4>
                     <ul>
                         <li>Günlük PDF (17:00) — özet + grafikler</li>
-                        <li>Aylık PDF (her ayın 5'i) — trend + maliyet</li>
+                        <li>Aylık PDF (her ayın 5'i) — trend + YoY (verisi olmayan ayda üretilmez)</li>
                         <li>Geçmiş raporlara portal üzerinden erişim</li>
                     </ul>
                 </div>
@@ -848,13 +899,13 @@
         <!-- FOOTER -->
         <div class="footer">
             <strong>Enerji ve Verimlilik</strong> — Synapse (SYN) Enerji Modülü — Acıbadem Hastanesi<br>
-            Sürüm <strong>v11.1</strong> — 24 Ekim 2026 | <code>app_portal.py</code> (5.453 satır) +
-            aylık rapor ve tahmin motoru (3.921 satır) | 27 Modbus analizör + 52 BACnet noktası | günlük hava
-            durumu | 12 tasarruf kuralı<br>
-            Lokasyon tarafında 26 test dosyasında 1.103 kontrol yayından önce çalıştırılır; açılışta 197
-            kontrollük öz test ve veri toplama zincirinin saha teşhisi koşar.<br>
-            <em>Bu belge modülün güncel davranışını anlatır; birim fiyatlar ve eşikler ayarlar panelinden
-            değiştirilebilir.</em>
+            Sürüm <strong>v14.4</strong> — 14 Kasım 2026 | <code>app_portal.py</code> (5.357 satır) +
+            aylık rapor motoru (3.310 satır) | 33 Modbus sayaç + 51 BACnet noktası | günlük hava
+            durumu | 12 tasarruf kuralı | Lokasyon Donanımı paneli | Enerji Portal Agent'ı (10 kontrol)<br>
+            Yayından önce 81 test dosyası (2.600+ kontrol) çalıştırılır; açılışta 197 kontrollük öz test ve
+            veri toplama zincirinin saha teşhisi koşar.<br>
+            <em>Bu belge modülün güncel davranışını anlatır; eşikler ayarlar panelinden, donanım listeleri
+            Lokasyon Donanımı panelinden değiştirilebilir.</em>
         </div>
     </div>
 

@@ -337,9 +337,9 @@
     <h1>Synapse (SYN)</h1>
     <div class="subtitle">Gelecek Vizyon Belgesi</div>
     <div class="meta">
-      <span>📅 Son Güncelleme: 24 Ekim 2026 (v11.1)</span>
+      <span>📅 Son Güncelleme: 14 Kasım 2026 (v14.4)</span>
       <span>🚀 Proje Başlangıcı: 5 Ağustos 2025</span>
-      <span>⏱️ Toplam Süre: ~14,5 ay (kavramdan üretime)</span>
+      <span>⏱️ Toplam Süre: ~15,5 ay (kavramdan üretime)</span>
     </div>
   </div>
 
@@ -356,7 +356,11 @@ graph LR
     F4 --> F5["Faz 5&lt;br/&gt;Makine Öğrenmesi"]:::done
     F5 --> F55["Faz 5.5&lt;br/&gt;BACnet + Bulut"]:::done
     F55 --> F6["Faz 6&lt;br/&gt;Otonom Kontrol"]:::done
-    F6 --> F7["Faz 7&lt;br/&gt;Doğrulama &amp; Güvence"]:::active
+    F6 --> F7["Faz 7&lt;br/&gt;Doğrulama &amp; Güvence"]:::done
+    F7 --> F8["Faz 8&lt;br/&gt;Çok Lokasyon &amp; Görünürlük"]:::done
+    F8 --> F9["Faz 9&lt;br/&gt;Kurum İçi Altyapı &amp; Agent'lar"]:::done
+    F9 --> F10["Faz 10&lt;br/&gt;Ölçekleme"]:::active
+    F10 --> F11["Faz 11&lt;br/&gt;Yeni Lokasyonlar"]:::future
 
     classDef done fill:#10b981,stroke:#065f46,color:#fff
     classDef active fill:#f59e0b,stroke:#92400e,color:#fff
@@ -377,16 +381,20 @@ graph LR
         <tr class="phase-row-done"><td><strong>5.5</strong></td><td><span class="badge badge-done">✅</span></td><td>Nis-May 2026</td><td><strong>BACnet otomasyon (56 AHU), GM Merkez portal, Supabase bulut, Lisans sistemi, YoY badge, Personel bildirim + onay</strong></td></tr>
         <tr class="phase-row-done"><td><strong>6</strong></td><td><span class="badge badge-done">✅</span></td><td>May-Eyl 2026</td><td><strong>BACnet write aktif: oto-set ile chiller/kollektör setleri geçiş saatlerinde otomatik gönderiliyor, geri okuma ile doğrulanıyor</strong></td></tr>
         <tr class="phase-row-done"><td><strong>7</strong></td><td><span class="badge badge-done">✅</span></td><td>Eylül 2026</td><td><strong>Doğrulama ve Güvence: test altyapısı, canlı çıkış denetimi, lokasyon öz testi (197 kontrol)</strong></td></tr>
-        <tr class="phase-row-active"><td><strong>8</strong></td><td><span class="badge badge-active">🔄</span></td><td>Ekim 2026</td><td><strong>Çok lokasyon, görünürlük ve veri güvenilirliği: her hastane kendi koordinatı/saati/setleriyle; 27 sayaç canlı izleme; günlük hava durumu internetten; saha teşhisi ve BACnet donma alarmları; tüketim tahmininin gerçek başarısı ölçüldü, yeni model ayrı paket olarak hazır</strong> — sırada yeni modelin portala eklenmesi ve Altunizade</td></tr>
+        <tr class="phase-row-done"><td><strong>8</strong></td><td><span class="badge badge-done">✅</span></td><td>Ekim 2026</td><td><strong>Çok lokasyon, görünürlük ve veri güvenilirliği: her hastane kendi koordinatı/saati/setleriyle; canlı izleme; günlük hava durumu; saha teşhisi ve BACnet donma alarmları; kojen ve şebeke sayaçları otomatik; tahmin günlük modele geçti</strong></td></tr>
+        <tr class="phase-row-done"><td><strong>9</strong></td><td><span class="badge badge-done">✅</span></td><td>Kasım 2026 (1-11)</td><td><strong>Kurum içi altyapı ve agent katmanları: veritabanı ve Synapse Supabase'ten thapps'e; lokasyon anahtarı; Enerji, Mekanik Zeka, Synapse ve üst agent; iş emirleri ve Canlı Uyarılar; internetsiz lokasyon desteği</strong></td></tr>
+        <tr class="phase-row-active"><td><strong>10</strong></td><td><span class="badge badge-active">🔄</span></td><td>Kasım 2026 (11-14)</td><td><strong>Ölçekleme: aynı kod her hastanede yalnız ayarla — klasör düzeni, ayarlar merkezde, yama dağıtımı ve sürüm takibi, internetsiz kurulum paketi, Lokasyon Donanımı paneli, lisans talebi ve Synapse onayı. 14.0 yayını 14.11'de Maslak'ta</strong> — sırada Maslak sıfır kurulum testi</td></tr>
+        <tr><td><strong>11</strong></td><td><span class="badge">⬜</span></td><td>Kasım 2026 →</td><td>Yeni lokasyonlar: Ataşehir (internetsiz, doğrudan IP'li BACnet), agent katmanlarının 3. aşaması</td></tr>
       </tbody>
     </table>
 
     <div class="alert alert-highlight">
       Proje 5 Ağustos 2025'te başladı. Faz 5 (ML), Faz 5.5 (BACnet + Bulut), Faz 6 (Otonom set gönderimi)
-      ve Faz 7 (Doğrulama ve Güvence) tamamlandı; motorun kararları artık hem yayından önce hem sahada
-      canlı olarak denetleniyor. Faz 8 (Ekim 2026) sistemi <strong>tek hastaneden çok hastaneye</strong>
-      taşıyor: koordinat, geçiş saati ve set değerleri lokasyona özel; kararın dayandığı veri sahadan
-      bildiriliyor, merkez kopya tutmuyor.
+      ve Faz 7 (Doğrulama ve Güvence) tamamlandı; motorun kararları hem yayından önce hem sahada
+      canlı olarak denetleniyor. Faz 8–9 sistemi <strong>tek hastaneden çok hastaneye</strong> taşıdı:
+      lokasyona özel koordinat, saat ve setler; merkez kurum içi sunucuda; agent'lar 7/24 izliyor.
+      Faz 10 ile (14.0, 14.11.2026) aynı kod her hastanede yalnız ayar dosyalarıyla çalışıyor; yeni bir
+      hastane kurulum paketi, Lokasyon Donanımı paneli ve Synapse'te lisans onayıyla devreye alınır.
     </div>
   </div>
 
@@ -441,12 +449,11 @@ graph LR
         <tr>
           <td><strong>ML Tüketim Tahmini</strong></td>
           <td><span class="badge badge-done">ÇALIŞIYOR</span></td>
-          <td>GradientBoosting modeli aylık tahmin ve senaryo tahmini üretiyor (<code>forecast_engine.py</code>).
-            <strong>24.10'da gerçek başarısı ölçüldü</strong> (her ay yalnız önceki veriyle): ortalama hata
-            <strong>%4,0</strong> — "geçen yılın aynı ayı" kuralı da %3,6 veriyor, yani model şu an bir
-            satırlık kuraldan iyi değil. Ekrandaki "Sapma" eğitimde görülen aylarla kıyaslandığı için
-            olduğundan iyi görünüyor; yeniden eğitim koşulu da veri azalınca tetiklenmiyor.
-            Yeni model (günlük, hava + takvim + kojen planı) ayrı pakette <strong>%2,8</strong></td>
+          <td><strong>30.10.2026'dan beri portal yalnız günlük modeli kullanır</strong> (hava + takvim +
+            kojen planı): yarın, 7 gün ve 30 gün tahmini, 16 günlük hava tahminiyle. İleriye dönük sınamada
+            aylık toplam hatası <strong>%2,8</strong> — eski GradientBoosting motorunun %4,0'ı ve "geçen yılın
+            aynı ayı" kuralının %3,6'sı geride kaldı; eski motor kaldırıldı. Internet yoksa hava tahmini
+            Synapse'ten gelir.</td>
         </tr>
         <tr>
           <td><strong>Geri Bildirim Filtresi</strong></td>
@@ -640,7 +647,7 @@ graph TD
       <tbody>
         <tr><td>İstatistiksel Anomali</td><td>z-score + mevsimsel desen</td><td>900+ veri ✅</td></tr>
         <tr><td>Hava Durumu API</td><td>Günlük hava geçmişi + oto-set tahmini (Open-Meteo, anahtar gerekmez)</td><td>✅ Bağlandı (24.10)</td></tr>
-        <tr><td>Tüketim Tahmini</td><td>ML Motor (GradientBoosting) + Senaryo; yeni günlük model ayrı pakette (toplam %2,8, soğutma %22,6, kojen planıyla ısıtma gazı %30)</td><td>✅ Çalışıyor — yeni model portala eklenecek</td></tr>
+        <tr><td>Tüketim Tahmini</td><td>Günlük model portalda (toplam %2,8, soğutma %22,6, kojen planıyla ısıtma gazı %30); eski GradientBoosting kaldırıldı</td><td>✅ Çalışıyor (30.10)</td></tr>
         <tr><td>Geri Bildirim Filtresi</td><td>Reddedileni gizle, öne çıkar</td><td>⚠️ <strong>Kurulmadı</strong> — kayıt var, kullanım yok</td></tr>
       </tbody>
     </table>
@@ -648,16 +655,18 @@ graph TD
 
   <!-- 5. FAZ 6 -->
   <div class="section">
-    <h2>🔄 Faz 6: Otonom Kontrol (Devam Ediyor)</h2>
+    <h2>✅ Faz 6: Otonom Kontrol (Tamamlandı — sırada yeni lokasyonlar)</h2>
     <div class="alert alert-info" style="margin-bottom:12px;">
-      <strong>ℹ️ Kısmi tamamlandı:</strong> BACnet okuma (56 AHU) aktif. BACnet write (setpoint gönderimi) ve Altunizade BACnet entegrasyonu sıradaki adımlar.
+      <strong>ℹ️ Durum:</strong> BACnet okuma (56 AHU, 386 nokta) ve yazma (oto-set: chiller, kollektör, FCU ve
+      klima santrali setleri, geri okumalı) Maslak'ta aktif. Sıradaki adım yeni lokasyonlar (Ataşehir) ve
+      FCU tarafı.
     </div>
     <div class="mermaid">
 graph TD
     subgraph "Faz 6 — Otonom Kontrol"
-        D0["BACnet Okuma&lt;br/&gt;✅ 56 AHU, 08:30"]:::done
-        D1["BACnet Write&lt;br/&gt;🔄 Setpoint Gönderim"]:::active
-        D2["Altunizade BACnet&lt;br/&gt;⬜ ATZ Entegrasyon"]:::future
+        D0["BACnet Okuma&lt;br/&gt;✅ 56 AHU, 10 dk"]:::done
+        D1["BACnet Write&lt;br/&gt;✅ Oto-set + geri okuma"]:::done
+        D2["Yeni lokasyon&lt;br/&gt;⬜ Ataşehir"]:::future
         D3["FCU Kilitleme&lt;br/&gt;⬜ Otomatik Konfor"]:::future
         D4["Tam Otonom&lt;br/&gt;⬜ Self-Optimize"]:::future
     end
@@ -671,12 +680,12 @@ graph TD
     <table>
       <thead><tr><th>Bileşen</th><th>Açıklama</th><th>Durum</th></tr></thead>
       <tbody>
-        <tr><td>BACnet Okuma (Maslak)</td><td>56 AHU otomatik okuma, 08:30 trigger</td><td>✅ Aktif</td></tr>
-        <tr><td>BACnet Write</td><td>Analiz sonrası setpoint BMS'e gönderim</td><td>🔄 Geliştiriliyor</td></tr>
-        <tr><td>Altunizade BACnet</td><td>ATZ lokasyonu AHU noktaları eklenmeli</td><td>⬜ Bekliyor</td></tr>
+        <tr><td>BACnet Okuma (Maslak)</td><td>56 AHU / 386 nokta, 10 dakikada bir</td><td>✅ Aktif</td></tr>
+        <tr><td>BACnet Write (oto-set)</td><td>Geçiş saatlerinde set gönderimi, dar aralık koruması, geri okuma</td><td>✅ Aktif</td></tr>
+        <tr><td>Ataşehir</td><td>İnternetsiz lokasyon; Siemens/Janitza + BACnet (doğrudan IP'li olabilir)</td><td>⬜ Sırada</td></tr>
         <tr><td>Kolektör Inlet Noktası</td><td>KOLLEKTOR DONUS SICAKLIK BACnet nokta ekleme</td><td>⬜ Saha ziyareti</td></tr>
         <tr><td>FCU Set Kilitleme</td><td>FCU setpoint otomatik optimize</td><td>⬜ Gelecek</td></tr>
-        <tr><td>Multi-lokasyon otonom</td><td>Hem Maslak hem ATZ özerk çalışma</td><td>⬜ Gelecek</td></tr>
+        <tr><td>Multi-lokasyon otonom</td><td>Her lokasyon kendi saat, koordinat ve setleriyle (altyapı hazır)</td><td>⬜ Gelecek</td></tr>
       </tbody>
     </table>
   </div>
@@ -709,8 +718,8 @@ graph LR
         <tr><td>Kurallar</td><td>⚙️ 12 tasarruf + 35 teşhis kuralı aktif</td><td>⚙️ Feedback bazlı yeni kurallar</td></tr>
         <tr><td>Öğrenme</td><td>📝 Feedback <strong>kaydediliyor</strong> (henüz karara dönüşmüyor)</td><td>🤖 Reddedileni bastır + eşik kişiselleştirme</td></tr>
         <tr><td>Öneri</td><td>💡 Dinamik + bağlamsal öneriler</td><td>💡 Tam kişiselleştirilmiş</td></tr>
-        <tr><td>Tahmin</td><td>✅ ML Motor aktif (gerçek hata %4,0); yeni günlük model hazır (%2,8)</td><td>📈 Yeni model portalda + hava tahminiyle haftalık/günlük tahmin</td></tr>
-        <tr><td>Otomasyon</td><td>✅ BACnet okuma 08:30 otomatik</td><td>🤖 BACnet write + FCU kilitleme</td></tr>
+        <tr><td>Tahmin</td><td>✅ Günlük model portalda (%2,8): yarın / 7 / 30 gün</td><td>📈 Lokasyon başına kendi verisiyle</td></tr>
+        <tr><td>Otomasyon</td><td>✅ BACnet okuma 10 dk + oto-set yazma; 4 agent 7/24 izliyor</td><td>🤖 FCU kilitleme + agent aşama 3</td></tr>
       </tbody>
     </table>
   </div>
@@ -771,8 +780,18 @@ timeline
         Çok Lokasyon ve Görünürlük
         : Lokasyona özel koordinat ve saat
         : Setler sahadan bildiriliyor
-        : Sabah analizinde kıyas ve trend
-        : Enerji portalı veri bütünlüğü
+        : Kojen ve şebeke sayaçları
+        : Günlük tahmin modeli
+    section Faz 9 (Kasım 2026)
+        Kurum İçi Altyapı
+        : Veritabanı thapps'e taşındı
+        : Lokasyon anahtarı
+        : Dört agent ve iş emirleri
+    section Faz 10 (Kasım 2026)
+        Ölçekleme
+        : 14.0 yayını
+        : Lokasyon Donanımı paneli
+        : Lisans talebi ve onayı
     </div>
 
     <h3>Fazlara Göre Kronoloji</h3>
@@ -837,6 +856,21 @@ gantt
         Sabah analizi kiyas + trend   :done, f8d, 2026-10-11, 2026-10-11
         Enerji portali veri butunlugu :done, f8e, 2026-10-12, 2026-10-13
         Kollektor iki esik (23 / 15)  :done, f8f, 2026-10-16, 2026-10-16
+        Kojen + sebeke sayaclari      :done, f8g, 2026-10-27, 2026-11-05
+        Gunluk tahmin modeli          :done, f8h, 2026-10-30, 2026-10-31
+
+    section Faz 9 — Kurum Ici Altyapi ve Agentlar
+        Lokasyon anahtari + RLS       :done, f9a, 2026-10-29, 2026-10-29
+        Veritabani thapps'e tasima    :done, f9b, 2026-11-04, 2026-11-10
+        Agent katmanlari              :done, f9c, 2026-11-10, 2026-11-12
+        Internetsiz calisma           :done, f9d, 2026-11-11, 2026-11-11
+
+    section Faz 10 — Olcekleme
+        Faz 0-4 (klasor, ayar, yama)  :done, f10a, 2026-11-11, 2026-11-12
+        Kurulum + yayin provasi       :done, f10b, 2026-11-12, 2026-11-13
+        14.0 yayini (Maslak)          :done, f10c, 2026-11-14, 2026-11-14
+        Donanim paneli + lisans onayi :done, f10d, 2026-11-14, 2026-11-14
+        Maslak sifir kurulum testi    :active, f10e, 2026-11-15, 2026-11-20
     </div>
   </div>
 
@@ -1193,23 +1227,78 @@ gantt
         <li>Bulut senkronunda boş hücreli adet sütunlarının "2.0" gitmesi (toplu gönderimi düşürecekti) yarın sabahki senkrondan önce giderildi</li>
       </ul>
     </div>
+
+    <div class="log-entry">
+      <h4>📌 25 Ekim – 5 Kasım 2026 — Kojen, şebeke ve tahmin</h4>
+      <ul>
+        <li><strong>Kojen-1..4 üretim sayaçları</strong> canlı izlemeye ve günlük satıra alındı (yönden bağımsız okuma); <strong>şebeke giriş sayacı</strong> (EDAŞ, PAC3200) otomatik — Hastane Genel = Şebeke + Kojen</li>
+        <li>Günlük sayaç okuması 07:00 → <strong>23:59</strong> (gün takvim günü); TL / birim fiyat tamamen kaldırıldı</li>
+        <li>Tüketim tahmini <strong>yalnız günlük modele</strong> geçti: yarın / 7 gün / 30 gün, 16 günlük hava tahminiyle; eski ML motoru kaldırıldı</li>
+        <li>Enerji portalı Synapse tasarım diline geçti; Synapse'te canlı değerler son gerçek ölçümler arasında akıyor</li>
+        <li><strong>Lokasyon anahtarı</strong>: her PC kendi imzalı anahtarıyla yalnız kendi satırlarına yazar; set komutlarında nokta bazlı dar aralık</li>
+      </ul>
+    </div>
+
+    <h3 style="color:var(--blue-dark); margin-top: 30px;">🏢 Faz 9: Kurum İçi Altyapı ve Agent'lar (Kasım 2026)</h3>
+
+    <div class="log-entry">
+      <h4>📌 4 – 10 Kasım 2026 — Supabase'ten thapps'e</h4>
+      <ul>
+        <li>Synapse ve veritabanı kurum içi sunucuya taşındı (PostgreSQL 16 + PostgREST); Maslak 09.11'de, merkez 10.11'de yeni uca geçti</li>
+        <li>Şema değişiklikleri sürüm kontrollü SQL dosyalarıyla: önce sunucuda denenir, geri alınır, sonra yedekle uygulanır</li>
+        <li>İki kod deposu (Canlı İzleme ve acibadem-hvac) eşit tutulur; eşitleme aracı ayrışmada durur</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 10 – 12 Kasım 2026 — Agent katmanları ve internetsiz çalışma</h4>
+      <ul>
+        <li><strong>Enerji Portal Agent'ı</strong> (10 kontrol) ve <strong>Mekanik Zeka Agent'ı</strong> (14 kontrol) lokasyonda 15 dk'da bir; <strong>Synapse agent'ı</strong> ve <strong>üst agent</strong> sunucuda — bulgular iş emri olur, Synapse ana sayfasında Canlı Uyarılar'da görünür (e-posta yok)</li>
+        <li>Lokasyon programı internetsiz çalışır: hava ve tahmin Synapse'ten, simgeler ve yazı tipleri yerel</li>
+        <li>Oto-set: internet yokken dış hava tahmini Synapse'ten</li>
+      </ul>
+    </div>
+
+    <h3 style="color:var(--blue-dark); margin-top: 30px;">📈 Faz 10: Ölçekleme (Kasım 2026)</h3>
+
+    <div class="log-entry">
+      <h4>📌 11 – 13 Kasım 2026 — Aynı kod, her hastane yalnız ayarla</h4>
+      <ul>
+        <li><strong>Dört katmanlı klasör düzeni</strong>: kod / <code>ayar/</code> (yama dokunmaz) / <code>durum/</code> / <code>veri/</code>; ilk açılışta yedekli taşıma</li>
+        <li>Sayaç listesi, BACnet eşlemesi ve ısıtma hatları ayar dosyalarında; repoda Maslak'a gömülü ayar kalmadı</li>
+        <li>Merkezde: ayar değişiklikleri (K1), sahadaki hata özeti (N5), ince sayaç tablosu (D1), lokasyon × agent matrisi; PC değişince ayarlar geri yüklenir</li>
+        <li>Yama yayın aracı (git'ten, geri almalı), yama dağıtımı ve sürüm takibi; internetsiz kurulum paketi (Python dahil, SHA-256); kurulum programı 7 adım; port kurulumda seçilir</li>
+        <li><strong>Yayın provası</strong>: Maslak'ın sahadaki gerçek kodu bu PC'de kuruldu, yama uygulandı, öz test 197/197 ve çıktılar yayın öncesiyle aynı</li>
+        <li>Maslak öz testindeki 5 kontrol (21.10'dan beri 192/197) giderildi; oto-set gece geçişindeki hata (13.9) bulundu ve düzeltildi</li>
+      </ul>
+    </div>
+
+    <div class="log-entry">
+      <h4>📌 14 Kasım 2026 — 14.0 yayını ve Lokasyon Donanımı</h4>
+      <ul>
+        <li><strong>14.0 ölçekleme yayını</strong> Maslak'ta: veritabanı değişiklikleri 004–007, Synapse güncellendi, yama 1 dakikada uygulandı, agent turları temiz</li>
+        <li><strong>Lokasyon Donanımı paneli</strong> (şifreli): analizör, BMS ve AHU listeleri Excel ile ya da tablodan; doğrulama, önizleme, tür etkisi uyarısı, yedekli kayıt, Sil; eksik Start/Basınç noktaları görünür</li>
+        <li>Sayaç türü <strong>"kontrol"</strong>: okunur ve kaydedilir, toplama girmez — ilk kullanım STEP-UP/3 (Kojen-3+4 ortak sayacı); yeni sayacın günlük verisi portalda korunur, diyagram ve formda "Diğer sayaçlar"</li>
+        <li><strong>Lisans talebi ve onayı</strong>: yeni PC talep bırakır, Synapse → Yönetim → Lisanslar'dan onay şifresiyle onaylanır; program kendiliğinden açılır</li>
+      </ul>
+    </div>
   </div>
 
   <!-- KOD İSTATİSTİKLERİ -->
   <div class="section">
-    <h2>📦 Sistem Büyüklüğü (24 Ekim 2026)</h2>
+    <h2>📦 Sistem Büyüklüğü (14 Kasım 2026)</h2>
     <div class="progress-grid">
       <div class="progress-item">
-        <div class="label"><span>📄 Kod satırı (ham)</span><span class="score" style="color:var(--blue);">73.266</span></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Kod + yapılandırma (py, html, js, css, sql, bat, md, json, toml), 181 dosya</div>
+        <div class="label"><span>📄 Kod satırı (ham)</span><span class="score" style="color:var(--blue);">97.617</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">Kod + yapılandırma (py, html, js, css, sql, bat, md, json, toml), 305 dosya — Canlı İzleme deposu</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🐍 Python</span><span class="score" style="color:var(--green);">49.894</span></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">16.10'da 42.125; 212 takipli dosya</div>
+        <div class="label"><span>🐍 Python</span><span class="score" style="color:var(--green);">70.139</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">24.10'da 49.894; 338 takipli dosya (lokasyon 44.263, Synapse 21.517)</div>
       </div>
       <div class="progress-item">
-        <div class="label"><span>🧪 Test kodu</span><span class="score" style="color:var(--purple);">8.345</span></div>
-        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">40 test dosyası (16.10'da 27); lokasyon tarafında 1.103 kontrolün tamamı geçiyor, öz testte 197'si açılışta koşar</div>
+        <div class="label"><span>🧪 Test kodu</span><span class="score" style="color:var(--purple);">15.160</span></div>
+        <div style="font-size:11px; color:var(--text-light); margin-top:4px;">83 test dosyası (24.10'da 40); tam sette 81 dosya, 2.600+ kontrolün tamamı geçiyor; öz testte 197'si açılışta koşar</div>
       </div>
       <div class="progress-item">
         <div class="label"><span>⚙️ Teşhis kuralı</span><span class="score" style="color:var(--orange);">35</span></div>
@@ -1219,15 +1308,16 @@ gantt
     <table>
       <thead><tr><th>Bileşen</th><th>Satır</th><th>Görev</th></tr></thead>
       <tbody>
-        <tr><td>main_portal.py</td><td>5.479</td><td>Mekanik Zeka motoru + portal girişi</td></tr>
-        <tr><td>app_portal.py</td><td>5.453</td><td>Enerji ve Verimlilik uygulaması</td></tr>
-        <tr><td>static/index.html</td><td>4.732</td><td>Mekanik Zeka arayüzü</td></tr>
-        <tr><td>merkez/app_merkez.py</td><td>3.929</td><td>Synapse GM Merkez portalı</td></tr>
-        <tr><td>monthly_report/</td><td>3.921</td><td>Aylık rapor ve tahmin motoru</td></tr>
-        <tr><td>merkez/pages/lokasyon_detay.py</td><td>2.037</td><td>Lokasyon detayı — Dashboard + Canlı İzleme</td></tr>
-        <tr><td>ahu_collector.py</td><td>1.339</td><td>BACnet okuma, ekipman satırları, ısıtma talep/üretim</td></tr>
-        <tr><td>disa_aktarim/tuketim_tahmin/</td><td>1.153</td><td>Bağımsız tüketim tahmini paketi (başka programlara)</td></tr>
-        <tr><td>cloud_sync.py</td><td>1.027</td><td>Heartbeat, uzak yama, enerji senkronu, canlı güç</td></tr>
+        <tr><td>main_portal.py</td><td>5.525</td><td>Mekanik Zeka motoru + portal girişi</td></tr>
+        <tr><td>app_portal.py</td><td>5.357</td><td>Enerji ve Verimlilik uygulaması</td></tr>
+        <tr><td>merkez/app_merkez.py</td><td>4.505</td><td>Synapse GM Merkez portalı</td></tr>
+        <tr><td>static/index.html</td><td>4.348</td><td>Mekanik Zeka arayüzü</td></tr>
+        <tr><td>monthly_report/</td><td>3.310</td><td>Aylık rapor motoru</td></tr>
+        <tr><td>merkez/pages/lokasyon_detay.py</td><td>2.317</td><td>Lokasyon detayı — Dashboard + Canlı İzleme + sayaçlar</td></tr>
+        <tr><td>Agent'lar (lokasyon + merkez)</td><td>2.482</td><td>Enerji, Mekanik Zeka, Synapse ve üst agent</td></tr>
+        <tr><td>ahu_collector.py</td><td>1.393</td><td>BACnet okuma, ekipman satırları, ısıtma talep/üretim</td></tr>
+        <tr><td>cloud_sync.py</td><td>1.210</td><td>Heartbeat, yama, enerji senkronu, ayar kaydı, hata özeti</td></tr>
+        <tr><td>donanim.py + donanim_paneli.py</td><td>1.169</td><td>Lokasyon Donanımı paneli</td></tr>
       </tbody>
     </table>
   </div>
@@ -1283,10 +1373,10 @@ gantt
         <h4>5. BACnet Otomasyon (6 özellik)</h4>
         <ul>
           <li>ahu_collector.py — UDP socket BACnet okuma</li>
-          <li>ahu_nokta_konfig.json — 280 nokta, 56 AHU</li>
-          <li>cloud_sync.py 08:30 HVAC tetikleyici</li>
+          <li>bacnet_noktalari.json — 386 nokta, 56 AHU (Start/Basınç dahil)</li>
+          <li>cloud_sync.py 10 dk'da bir HVAC analizi</li>
           <li>Otomatik tip algılama (AHU/FCU/Chiller)</li>
-          <li>Supabase bildirimler push mesajı</li>
+          <li>Portal ve Synapse'te kritik / uyarı listesi</li>
           <li>ReadProperty / WriteProperty altyapısı</li>
         </ul>
       </div>
@@ -1314,7 +1404,7 @@ gantt
       <div class="feature-card">
         <h4>9. Canlı İzleme ve Veri Güvenilirliği (8 özellik) <span class="badge badge-done">YENİ</span></h4>
         <ul>
-          <li>27 sayacın anlık gücü, Synapse Canlı İzleme</li>
+          <li>Sayaçların anlık gücü, Synapse Canlı İzleme</li>
           <li>İzleyici linki (salt okunur, şifresiz)</li>
           <li>Günlük hava durumu (lokasyonun kendi koordinatı)</li>
           <li>Dış hava nem sensörü, Kojen Adet</li>
@@ -1325,17 +1415,41 @@ gantt
         </ul>
       </div>
       <div class="feature-card">
-        <h4>6. Bulut Altyapı + GM Merkez (9 özellik)</h4>
+        <h4>6. Merkez Altyapı + GM Merkez (9 özellik)</h4>
         <ul>
-          <li>Supabase güncellemeler — uzak yama mekanizması</li>
-          <li>Lisans sistemi (makine UUID doğrulama)</li>
-          <li>GM Merkez portal (Streamlit Cloud)</li>
-          <li>Çok lokasyon: Maslak + Altunizade</li>
+          <li>Kurum içi sunucu (thapps): PostgreSQL 16 + PostgREST, RLS</li>
+          <li>Uzak yama, yama dağıtımı ve sürüm takibi</li>
+          <li>Synapse thapps'te (deploy → yeniden başlatma → sağlık)</li>
+          <li>20 hastane kartı; heartbeat atan lokasyon kendiliğinden canlanır</li>
           <li>YoY karşılaştırma badge (5 grafik)</li>
-          <li>GitHub → Streamlit Cloud otomatik deploy</li>
-          <li>Supabase bildirimler tablosu</li>
-          <li>run_portal.py lisans guard</li>
-          <li>data_collector.py Modbus (22 analizör)</li>
+          <li>Lokasyon anahtarı (her PC yalnız kendi satırına)</li>
+          <li>Yönetim: sunucu, canlı SQL, agent katmanları, lisanslar</li>
+          <li>Lisans: talep + Synapse onayı (onay şifreli)</li>
+          <li>data_collector.py Modbus (33 sayaç, ayar dosyasından)</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h4>10. Ölçekleme ve Yönetim (8 özellik) <span class="badge badge-done">YENİ</span></h4>
+        <ul>
+          <li>Dört katmanlı klasör düzeni, yedekli taşıma</li>
+          <li>Lokasyon Donanımı paneli (Excel + tablo, şifreli)</li>
+          <li>Sayaç türü "kontrol" (toplama girmez)</li>
+          <li>Ayar kaydı, hata özeti, sayaç günlüğü merkezde</li>
+          <li>İnternetsiz kurulum paketi + 7 adımlı kurulum</li>
+          <li>PC geri yükleme (ayarlar merkezden)</li>
+          <li>Port kurulumda seçilir, sonra sabit</li>
+          <li>Yayın provası (sahadaki gerçek kodla)</li>
+        </ul>
+      </div>
+      <div class="feature-card">
+        <h4>11. Agent Katmanları (6 özellik) <span class="badge badge-done">YENİ</span></h4>
+        <ul>
+          <li>Enerji Portal Agent'ı — 10 kontrol, 15 dk</li>
+          <li>Mekanik Zeka Agent'ı — 14 kontrol, 15 dk</li>
+          <li>Synapse agent'ı — sunucu, yanıt süresi, yük</li>
+          <li>Üst agent — bulgulardan iş emri</li>
+          <li>Canlı Uyarılar (Synapse içi bildirim)</li>
+          <li>Lokasyon × agent matrisi</li>
         </ul>
       </div>
     </div>
@@ -1345,15 +1459,15 @@ gantt
   <div class="footer">
     <strong>Sonuç:</strong> Proje <strong>5 Ağustos 2025'te</strong> bir fikirle başladı.
     ~5 ay Faz 0 kavram doğrulama (ChatGPT), ardından Faz 1-5 tam geliştirme,
-    Faz 5.5 (BACnet + Supabase bulut + GM Merkez), <strong>Faz 6 (otonom set gönderimi)</strong> ve
-    <strong>Faz 7 (doğrulama ve güvence)</strong>.
-    Toplam <strong>~14,5 ayda 90+ özellik</strong> aktif, <strong>73.266 satır kod</strong>.
-    AI olgunluk puanı lokasyona göre <strong>%60–85</strong> (kodun kendi hesabı); öğrenen tek bileşen
-    ML tüketim tahminidir (gerçek hata %4,0; yeni günlük model %2,8), geri bildirim döngüsü henüz açık maddedir.
-    56 AHU BACnet okuma + yazma, 27 sayaç canlı izleme, günlük hava durumu, uzak yama, lisans sistemi,
-    GM Merkez portalı, 35 teşhis kuralı ve 1.103 otomatik kontrol üretimde.
-    Sırada: yeni tahmin modelinin portala eklenmesi, Maslak öz testindeki 5 kontrolün incelenmesi ve
-    Altunizade BACnet entegrasyonu! 🤖🚀
+    Faz 5.5 (BACnet + bulut + GM Merkez), <strong>Faz 6 (otonom set gönderimi)</strong>,
+    <strong>Faz 7 (doğrulama ve güvence)</strong>, Faz 8–9 (çok lokasyon, kurum içi altyapı, agent'lar) ve
+    <strong>Faz 10 (ölçekleme, 14.0)</strong>.
+    Toplam <strong>~15,5 ayda 100+ özellik</strong> aktif, <strong>97.617 satır kod</strong>.
+    AI olgunluk puanı lokasyona göre <strong>%60–85</strong> (kodun kendi hesabı); öğrenen bileşen günlük
+    tüketim tahminidir (%2,8), geri bildirim döngüsü henüz açık maddedir.
+    56 AHU BACnet okuma + yazma, 33 sayaç, günlük hava durumu, 4 agent, uzak yama ve sürüm takibi,
+    lisans talebi / onayı, Lokasyon Donanımı paneli, 35 teşhis kuralı ve 81 test dosyası üretimde.
+    Sırada: Maslak sıfır kurulum testi, Ataşehir kurulumu ve agent katmanlarının 3. aşaması! 🤖🚀
   </div>
 
 </div>
