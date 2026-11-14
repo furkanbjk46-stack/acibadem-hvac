@@ -188,6 +188,21 @@ import geri_yukle  # noqa: E402
 c("şifre dosyası merkeze gitmez ve geri yüklenmez",
   "panel_sifresi.json" in ayar_kaydi.GIZLI and "panel_sifresi.json" in geri_yukle.GIZLI)
 
+# ── Enerji portalı yeni sayaç sütununu CSV'den silmez (app_portal.ensure_schema) ──
+import ast  # noqa: E402
+import re  # noqa: E402
+import pandas as pd  # noqa: E402
+_kaynak = open(os.path.join(BURASI, "app_portal.py"), encoding="utf-8").read()
+_fn = next(n for n in ast.parse(_kaynak).body if isinstance(n, ast.FunctionDef) and n.name == "ensure_schema")
+c("portal şemasına sayaclar.json sütunları eklenir",
+  'SCHEMA = SCHEMA + [s["sutun"] for s in _SAYAC_LISTESI' in _kaynak)
+_ns = {"pd": pd, "SCHEMA": ["Tarih", "S_STEP_UP_3_kWh"], "_PANEL_SUTUN": re.compile(r"^S_[A-Z0-9_]+_kWh$")}
+exec(compile(ast.Module(body=[_fn], type_ignores=[]), "ensure_schema", "exec"), _ns)
+_cik = _ns["ensure_schema"](pd.DataFrame({"Tarih": ["2026-11-14"], "S_STEP_UP_3_kWh": [1.0],
+                                          "S_ESKI_SAYAC_kWh": [2.0], "Cop": [3]}))
+c("ensure_schema: yeni ve panelden silinmiş sayaç sütunu korunur, ilgisiz sütun atılır",
+  list(_cik.columns) == ["Tarih", "S_STEP_UP_3_kWh", "S_ESKI_SAYAC_kWh"], list(_cik.columns))
+
 shutil.rmtree(d, ignore_errors=True)
 print("\n%d/%d PASS" % (gecti, gecti + basarisiz))
 sys.exit(1 if basarisiz else 0)

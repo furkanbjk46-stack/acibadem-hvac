@@ -1498,6 +1498,22 @@ NUMERIC_COLS = [
     "MCC_CK_F01_kWh",
 ] + _HAVA_SAYISAL
 
+# Lokasyonun sayaç sütunları (ayar/sayaclar.json; panelden eklenen yeni sayaçlar dahil, 14.11.2026).
+# ensure_schema listede olmayan sütunu sildiği için buraya eklenir — yoksa yeni sayacın günlük değeri
+# portal her açıldığında CSV'den silinirdi. Sabit listede olmayanlar formda / diyagramda "Diğer sayaçlar".
+_SABIT_SCHEMA = list(SCHEMA)
+try:
+    import sayaclar as _sayaclar
+    _SAYAC_LISTESI = [s for s in _sayaclar.yukle() if s.get("sutun")]
+except Exception:
+    _SAYAC_LISTESI = []
+SCHEMA = SCHEMA + [s["sutun"] for s in _SAYAC_LISTESI if s["sutun"] not in SCHEMA]
+NUMERIC_COLS = NUMERIC_COLS + [s["sutun"] for s in _SAYAC_LISTESI if s["sutun"] not in NUMERIC_COLS]
+_EK_SAYACLAR = [s for s in _SAYAC_LISTESI if s["sutun"] not in _SABIT_SCHEMA]
+_TUR_ETIKET = {"trafo": "trafo", "sebeke": "şebeke", "uretim": "üretim", "chiller": "chiller",
+               "alt_sayac": "alt sayaç", "kontrol": "kontrol — toplama girmez"}
+_PANEL_SUTUN = re.compile(r"^S_[A-Z0-9_]+_kWh$")      # panelin ürettiği sayaç sütunu (donanim.sutun_uret)
+
 TR_MAP = str.maketrans({
     "ş": "s", "Ş": "s",
     "ı": "i", "İ": "i",
@@ -1659,7 +1675,9 @@ def ensure_schema(df: pd.DataFrame) -> pd.DataFrame:
     for c in SCHEMA:
         if c not in df.columns:
             df[c] = pd.NA
-    return df[SCHEMA]
+    # Panelden silinmiş sayacın sütunu (S_..._kWh) silinmez: geçmiş veri kaybolmasın
+    _artik = [c for c in df.columns if c not in SCHEMA and _PANEL_SUTUN.match(str(c))]
+    return df[SCHEMA + _artik]
 
 
 def coerce_types(df: pd.DataFrame) -> pd.DataFrame:
@@ -3589,6 +3607,29 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
     )
     st.markdown(html, unsafe_allow_html=True)
 
+    # ── Diyagramda yeri olmayan sayaçlar (panelden eklenen; ör. kontrol sayacı) ──
+    _yerli = {c for _, c in topo["genel"] + topo["mekanik"]} | {c for _, _, l in topo["kumeler"] for _, c in l}         | {"Kojen%d_kWh" % _i for _i in range(1, 5)}
+    _digerleri = [s for s in _SAYAC_LISTESI if s["sutun"] not in _yerli and s.get("tur") != "sebeke"]
+    if _digerleri:
+        _cipler = "".join(
+            "<div style='background:#fff;border:1px solid rgba(19,50,115,.14);border-radius:10px;padding:8px 12px;"
+            "min-width:150px;'><div class='bdlbl'>%s</div><div style='font-size:18px;font-weight:700;"
+            "color:#133273;'>%s <span style='font-size:11px;font-weight:500;'>kWh</span></div>"
+            "<div class='hsub' style='font-size:10px;letter-spacing:0;'>%s</div></div>"
+            % (_html_kac(s["ad"]), _ed_num(_ed_val(row, s["sutun"])),
+               _html_kac(_TUR_ETIKET.get(s.get("tur"), s.get("tur") or "")))
+            for s in _digerleri)
+        st.markdown(
+            "<div style='margin-top:14px;'><div class='bdlbl' style='margin-bottom:6px;'>Diğer sayaçlar "
+            "<span class='hsub' style='font-size:10px;letter-spacing:0;'>(diyagramda yeri yok — Lokasyon "
+            "Donanımı'ndan eklenen)</span></div><div style='display:flex;flex-wrap:wrap;gap:10px;'>"
+            + _cipler + "</div></div>", unsafe_allow_html=True)
+
+
+def _html_kac(v) -> str:
+    import html as _h
+    return _h.escape(str(v))
+
 
 with tab_diyagram:
     _ed_lok = _loc_mgr.get_active_location_id() if "_loc_mgr" in dir() else "maslak"
@@ -3625,6 +3666,8 @@ with tab1:
                     pass
             st.session_state[key] = default
 
+        for _ek in _EK_SAYACLAR:
+            _set_ss("entry_ek_" + _ek["sutun"], _ek["sutun"], 0.0)
         _set_ss("entry_dis_hava",         "Dis_Hava_Sicakligi_C",    0.0)
         _set_ss("entry_chiller_load_pct", "Chiller_Load_Percent",     0.0)
         _set_ss("entry_kar",              "Kar_Eritme_Aktif",         False)
@@ -3827,6 +3870,19 @@ with tab1:
             mcc_kwh = st.number_input("MCC Tüketim (kWh)", step=50.0, min_value=0.0, key="entry_mcc_kwh")
             vrf_kwh = st.number_input("VRF/Split Tüketim (kWh) (varsa)", step=25.0, min_value=0.0, key="entry_vrf_kwh")
 
+        # Panelden eklenen sayaçlar (Lokasyon Donanımı): her gece sayaçtan otomatik yazılır; okunamadıysa elle
+        _ek_degerler = {}
+        if _EK_SAYACLAR:
+            st.markdown("**Diğer sayaçlar** <span style='font-size:12px;color:#5b6b85;'>(Lokasyon Donanımı'ndan "
+                        "eklenen; her gece sayaçtan otomatik yazılır — boş / 0 bırakılırsa kaydedilmez)</span>",
+                        unsafe_allow_html=True)
+            _ek_kol = st.columns(4)
+            for _i, _ek in enumerate(_EK_SAYACLAR):
+                with _ek_kol[_i % 4]:
+                    _ek_degerler[_ek["sutun"]] = st.number_input(
+                        f"{_ek['ad']} (kWh)", step=50.0, key="entry_ek_" + _ek["sutun"],
+                        help="Tür: %s" % _TUR_ETIKET.get(_ek.get("tur"), _ek.get("tur")))
+
         preview_bina_yuk = trdp1 + trdp3
         preview_mekanik = trdp2 + trdp4
         preview_total_cool = ch_kwh + vrf_kwh
@@ -3935,6 +3991,10 @@ with tab1:
                 "Dis_Hava_Sicakligi_C": dis_hava,
                 "Chiller_Load_Percent": chiller_load_pct if chiller_load_pct > 0 else None,
             })
+            # Diğer sayaçlar: 0 / boş girilen değer yazılmaz (okunmayan sayaç 0 sayılmasın; eski değer korunur)
+            for _c, _v in _ek_degerler.items():
+                if _v:
+                    new_row[_c] = _v
             
             # ANOMALİ KONTROLÜ
             existing_data = load_data()
