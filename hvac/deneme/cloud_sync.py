@@ -2,6 +2,7 @@
 # Lokasyondan Supabase'e enerji verisi senkronizasyonu
 # Bu dosya her lokasyonun acıbadem/ klasörüne kopyalanır
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -13,6 +14,7 @@ import os
 import time
 import threading
 import logging
+import re
 from datetime import datetime, date, timezone
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [SYNC] %(message)s')
@@ -25,18 +27,24 @@ logger = logging.getLogger(__name__)
 # 2 MB'ta yenilenir, 3 yedek tutulur — disk şişmez.
 try:
     from logging.handlers import RotatingFileHandler as _RFH
-    _LOG_DOSYA = os.path.join(os.path.dirname(__file__), "cloud_sync.log")
+    _LOG_DOSYA = yollar.yol("cloud_sync.log", os.path.dirname(__file__))
     _fh = _RFH(_LOG_DOSYA, maxBytes=2_000_000, backupCount=3, encoding="utf-8")
     _fh.setFormatter(logging.Formatter('%(asctime)s [SYNC] %(levelname)s %(message)s'))
     logging.getLogger().addHandler(_fh)
 except Exception as _le:      # log kurulamazsa program yine de çalışmalı
     logger.warning(f"Log dosyasi kurulamadi: {_le}")
+# Uyarı / hata özeti: log 3 gün tutuyor; gün gün özet 30 gün durur ve merkeze gider (N5)
+try:
+    import hata_ozeti
+    hata_ozeti.kur("sync")
+except Exception:
+    hata_ozeti = None
 
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "supabase_config.json")
-DATA_FILE = os.path.join(os.path.dirname(__file__), "energy_data.csv")
-HVAC_FILE = os.path.join(os.path.dirname(__file__), "hvac_analysis_history.csv")
-HVAC_SON_CALISMA_FILE = os.path.join(os.path.dirname(__file__), "hvac_son_calisma.txt")
-ALARM_RAPORU_SON_AY_FILE = os.path.join(os.path.dirname(__file__), "alarm_raporu_son_ay.txt")
+CONFIG_FILE = yollar.yol("supabase_config.json", os.path.dirname(__file__))
+DATA_FILE = yollar.yol("energy_data.csv", os.path.dirname(__file__))
+HVAC_FILE = yollar.yol("hvac_analysis_history.csv", os.path.dirname(__file__))
+HVAC_SON_CALISMA_FILE = yollar.yol("hvac_son_calisma.txt", os.path.dirname(__file__))
+ALARM_RAPORU_SON_AY_FILE = yollar.yol("alarm_raporu_son_ay.txt", os.path.dirname(__file__))
 
 
 def load_config():
@@ -57,13 +65,46 @@ def get_supabase_client(config):
         if "BURAYA" in url or "BURAYA" in key:
             logger.error("supabase_config.json içindeki URL ve KEY değerleri henüz ayarlanmamış!")
             return None
-        return create_client(url, key)
+        # Lokasyon anahtarı (configs/lokasyon_anahtari.json) varsa istekler onunla imzalanır:
+        # veritabanı bu PC'ye yalnız kendi lokasyonunun satırlarında izin verir (yol haritası B1).
+        # Dosya yoksa ya da sb_kimlik yüklenemezse bugünkü gibi ortak anahtar.
+        try:
+            import sb_kimlik
+            return sb_kimlik.istemci(url, key)
+        except ImportError:
+            return create_client(url, key)
     except ImportError:
         logger.error("supabase kütüphanesi yüklü değil! pip install supabase")
         return None
     except Exception as e:
         logger.error(f"Supabase bağlantı hatası: {e}")
         return None
+
+
+_EKSIK_SUTUN = re.compile(r"Could not find the '([^']+)' column")
+
+
+def _ekle_bilinmeyen_sutunsuz(client, tablo, batch, dusen, deneme=20):
+    """Toplu insert; merkezde OLMAYAN sütun hatasında (PGRST204) o sütunu çıkarıp yeniden dener.
+
+    Eskiden energy_data.csv'deki tek bir yeni sütun (yeni sayaç) lokasyonun BÜTÜN gönderimini
+    düşürüyordu. Artık o sütun energy_data'ya gitmez ama satırlar gider; sayacın değeri
+    sayac_gunluk'a (D1) zaten satır olarak yazılır. dusen: bu turda çıkarılan sütunlar (paylaşılır).
+    """
+    for _ in range(deneme):
+        gidecek = [{k: v for k, v in r.items() if k not in dusen} for r in batch] if dusen else batch
+        try:
+            client.table(tablo).insert(gidecek).execute()
+            return
+        except Exception as e:
+            m = _EKSIK_SUTUN.search(str(e))
+            if not m or m.group(1) in dusen:
+                raise
+            dusen.add(m.group(1))
+            logger.warning("⚠️ %s'da '%s' sütunu yok — bu sütun gönderilmeden devam ediliyor "
+                           "(sayaç ise değeri sayac_gunluk'a gider; sütun gerekiyorsa merkezde açılmalı)",
+                           tablo, m.group(1))
+    raise RuntimeError("%s: çok fazla eksik sütun (%s)" % (tablo, ", ".join(sorted(dusen))))
 
 
 def sync_energy_data(client, lokasyon_id: str):
@@ -118,6 +159,13 @@ def sync_energy_data(client, lokasyon_id: str):
         df["lokasyon_id"] = lokasyon_id
 
         records = df.to_dict(orient="records")
+
+        # Sayaç başına ince tablo (D1): energy_data'dan bağımsız; hata olursa enerji gönderimi sürer
+        try:
+            import sayac_gunluk
+            sayac_gunluk.gonder(client, records, lokasyon_id)
+        except Exception as _sge:
+            logger.warning(f"sayac_gunluk gönderilemedi: {_sge}")
 
         # Float/int dönüşüm (numpy tiplerini standart Python'a çevir + NaN temizle)
         clean_records = []
@@ -174,9 +222,10 @@ def sync_energy_data(client, lokasyon_id: str):
 
         batch_size = 500
         total = 0
+        dusen = set()
         for i in range(0, len(clean_records), batch_size):
             batch = clean_records[i:i + batch_size]
-            client.table("energy_data").insert(batch).execute()
+            _ekle_bilinmeyen_sutunsuz(client, "energy_data", batch, dusen)
             total += len(batch)
 
         # Insert başarılıysa eski ID'leri toplu sil
@@ -256,8 +305,65 @@ def sync_hvac_summary(client, lokasyon_id: str):
         return 0
 
 
-def check_and_apply_update(client, lokasyon_id: str):
-    """Supabase'de bekleyen güncellemeleri KRONOLOJIK sırayla TÜMÜNÜ uygula.
+SON_YAMA_FILE = yollar.yol("son_yama.json", os.path.dirname(__file__))
+YAMA_SURUMU_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yama_surumu.json")  # yamayla gelir
+
+
+def son_yama_surumu():
+    """Bu PC'de uygulanan son yamanın sürümü (heartbeat ile merkeze gider). Yoksa None.
+
+    Önce durum/son_yama.json (bu programın uyguladığı son yama); yoksa yamanın kendi getirdiği
+    yama_surumu.json — ilk büyük yamayı sahadaki eski program uygular ve son_yama.json'u yazmaz.
+    """
+    for p in (SON_YAMA_FILE, YAMA_SURUMU_FILE):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                v = (json.load(f) or {}).get("versiyon")
+            if v:
+                return v
+        except Exception:
+            continue
+    return None
+
+
+def _guvenli_yol(base_dir: str, dosya_yolu: str):
+    """Yamadaki dosya yolu program klasörünün İÇİNDE mi? Değilse None (../, mutlak yol, sürücü)."""
+    if not dosya_yolu or os.path.isabs(dosya_yolu) or ":" in dosya_yolu:
+        return None
+    kok = os.path.realpath(base_dir)
+    tam = os.path.realpath(os.path.join(kok, dosya_yolu))
+    return tam if tam.startswith(kok + os.sep) else None
+
+
+YAMA_YEDEK_SAKLA = 10      # son kaç yamanın yedeği tutulur
+
+
+def _yama_yedekle(base_dir, versiyon, dosya_yolu, tam_yol):
+    """Yamanın değiştireceği dosyanın ESKİ hâlini durum/yama_yedek/<sürüm>/<yol> altına kopyalar
+    (yol haritası A4: bozuk bir yamada eski koda dönülebilsin). Son YAMA_YEDEK_SAKLA sürüm tutulur.
+    Yedek alınamazsa yama yine uygulanır (yedek kolaylıktır; asıl geri alma git'ten yapılır)."""
+    try:
+        if not os.path.isfile(tam_yol):
+            return
+        import re as _re_y
+        import shutil as _sh
+        kok = yollar.klasor("durum/yama_yedek", base_dir)
+        surum_dizini = os.path.join(kok, _re_y.sub(r"[^\w.\-]", "_", str(versiyon)) or "bilinmeyen")
+        hedef = os.path.join(surum_dizini, *dosya_yolu.replace("\\", "/").split("/"))
+        if os.path.exists(hedef):
+            return                      # aynı yamada ilk (gerçek eski) hâl korunur
+        os.makedirs(os.path.dirname(hedef), exist_ok=True)
+        _sh.copy2(tam_yol, hedef)
+        surumler = sorted((os.path.join(kok, d) for d in os.listdir(kok) if os.path.isdir(os.path.join(kok, d))),
+                          key=os.path.getmtime)
+        for eski in surumler[:-YAMA_YEDEK_SAKLA]:
+            _sh.rmtree(eski, ignore_errors=True)
+    except Exception as e:
+        logger.warning(f"Yama yedeği alınamadı ({dosya_yolu}): {e}")
+
+
+def check_and_apply_update(client, lokasyon_id: str, base_dir: str = None):
+    """Bekleyen güncellemeleri KRONOLOJİK sırayla TÜMÜNÜ uygula.
 
     Eski davranış (limit(1) + en yeni kayıt) birden fazla bekleyen kayıt
     biriktiğinde yalnız sonuncusunu uygulayıp diğerlerini sonsuza dek
@@ -265,6 +371,16 @@ def check_and_apply_update(client, lokasyon_id: str):
     Artık tüm bekleyenler eskiden yeniye uygulanır (aynı dosya birden fazla
     kayıtta varsa son yazılan — en yeni — kazanır), restart bayrağı en sonda
     bir kez yazılır.
+
+    ÇOK LOKASYON (12.11.2026, yol haritası A1): her uygulama yama_uygulamalari
+    tablosuna (yama_id, lokasyon_id) olarak yazılır.
+      * hedef=<bu lokasyon> → eskisi gibi satırın durumu da güncellenir.
+      * hedef='all' → satırın durumuna DOKUNULMAZ (yoksa ilk lokasyon kapatır, diğerleri
+        hiç almaz). Bu lokasyonun uygulama kaydı varsa yama atlanır. Bütün lokasyonlar
+        uygulayınca veritabanı tetiği (yama_all_kapat) satırı kapatır.
+      * Uygulama kayıtları okunamazsa 'all' yamaları bu turda uygulanmaz (aynı yamanın
+        her turda yeniden uygulanmasındansa beklemek güvenli); lokasyona özel yamalar sürer.
+    GÜVENLİK: yamadaki dosya yolu program klasörünün dışını gösteriyorsa yazılmaz.
     """
     try:
         r = client.table("guncellemeler") \
@@ -277,26 +393,54 @@ def check_and_apply_update(client, lokasyon_id: str):
         if not r.data:
             return
 
-        base_dir = os.path.dirname(__file__)
+        all_idler = [k["id"] for k in r.data if k.get("hedef") == "all"]
+        uygulanmis, kayit_okunur = set(), True
+        if all_idler:
+            try:
+                u = client.table("yama_uygulamalari").select("yama_id") \
+                    .eq("lokasyon_id", lokasyon_id).in_("yama_id", all_idler).execute()
+                uygulanmis = {x["yama_id"] for x in (u.data or [])}
+            except Exception as e:
+                kayit_okunur = False
+                logger.error(f"Yama uygulama kayıtları okunamadı — 'all' yamaları bu turda atlandı: {e}")
+
+        bekleyen = [k for k in r.data if k.get("hedef") != "all"
+                    or (kayit_okunur and k["id"] not in uygulanmis)]
+        if not bekleyen:
+            return
+
+        base_dir = base_dir or os.path.dirname(__file__)
         tum_dosyalar = set()   # restart kararı için (tüm kayıtların birleşimi)
         son_versiyon = "?"
 
-        logger.info(f"🔄 {len(r.data)} bekleyen güncelleme bulundu — kronolojik sırayla uygulanıyor...")
+        logger.info(f"🔄 {len(bekleyen)} bekleyen güncelleme bulundu — kronolojik sırayla uygulanıyor...")
 
-        for kayit in r.data:
+        for kayit in bekleyen:
             kayit_id = kayit["id"]
             versiyon = kayit.get("versiyon", "?")
             dosyalar = kayit.get("dosyalar", {})
             son_versiyon = versiyon
 
-            logger.info(f"🔄 v{versiyon} uygulanıyor ({len(dosyalar)} dosya)...")
+            logger.info(f"🔄 v{versiyon} uygulanıyor ({len(dosyalar)} dosya, hedef {kayit.get('hedef')})...")
 
             uygulanan = 0
             hatalar = []
 
             for dosya_yolu, icerik in dosyalar.items():
                 try:
-                    tam_yol = os.path.join(base_dir, dosya_yolu)
+                    tam_yol = _guvenli_yol(base_dir, dosya_yolu)
+                    if tam_yol is None:
+                        hatalar.append(dosya_yolu)
+                        logger.error(f"  ⛔ {dosya_yolu}: program klasörünün dışı — yazılmadı")
+                        continue
+                    if not yollar.yama_yazabilir_mi(dosya_yolu):
+                        # Faz 1: yama yalnız KODU günceller; lokasyon ayarı, durum ve veri
+                        # (ayar/ durum/ veri/ ve eski adları) yamayla ezilmez.
+                        hatalar.append(dosya_yolu)
+                        logger.error(f"  ⛔ {dosya_yolu}: lokasyon ayarı/verisi — yama yazmaz")
+                        continue
+                    # Geri alma (yol haritası A4): değişecek dosyanın ESKİ hâli yedeklenir
+                    _yama_yedekle(base_dir, versiyon, dosya_yolu, tam_yol)
                     # Boş içerik = dosyayı sil
                     if icerik == "":
                         if os.path.exists(tam_yol):
@@ -315,23 +459,37 @@ def check_and_apply_update(client, lokasyon_id: str):
                     hatalar.append(dosya_yolu)
                     logger.error(f"  ❌ {dosya_yolu}: {e}")
 
-            # Durumu güncelle (sadece mevcut kolon, ek kolon gerekmez)
             yeni_durum = "tamamlandi" if not hatalar else "hata"
-            client.table("guncellemeler").update({
-                "durum": yeni_durum,
-            }).eq("id", kayit_id).execute()
+            try:
+                client.table("yama_uygulamalari").insert({
+                    "yama_id": kayit_id, "lokasyon_id": lokasyon_id, "durum": yeni_durum,
+                    "versiyon": versiyon, "hatali_dosyalar": hatalar,
+                }).execute()
+            except Exception as e:
+                logger.warning(f"Yama uygulama kaydı yazılamadı (v{versiyon}): {e}")
+            if kayit.get("hedef") != "all":
+                # Lokasyona özel satırın durumu (sadece mevcut kolon)
+                client.table("guncellemeler").update({
+                    "durum": yeni_durum,
+                }).eq("id", kayit_id).execute()
 
             logger.info(f"✅ v{versiyon} tamamlandı — {uygulanan} dosya uygulandı")
+
+        try:
+            with open(yollar.yol("son_yama.json", base_dir), "w", encoding="utf-8") as f:
+                json.dump({"versiyon": son_versiyon, "zaman": datetime.now().isoformat(timespec="seconds")}, f)
+        except Exception as e:
+            logger.warning(f"son_yama.json yazılamadı: {e}")
 
         # Kritik dosya değiştiyse tam yeniden başlatma gerekir (tek sefer, en sonda)
         KRITIK_DOSYALAR = {"cloud_sync.py", "portal_watchdog.py"}
         tam_restart = bool(tum_dosyalar & KRITIK_DOSYALAR)
 
         if tam_restart:
-            flag_path = os.path.join(os.path.dirname(__file__), "_full_restart.flag")
+            flag_path = os.path.join(base_dir, "_full_restart.flag")
             logger.info("🔄 Kritik dosya güncellendi — TAM yeniden başlatma sinyali gönderildi (_full_restart.flag)")
         else:
-            flag_path = os.path.join(os.path.dirname(__file__), "_restart.flag")
+            flag_path = os.path.join(base_dir, "_restart.flag")
             logger.info("🔄 Yeniden başlatma sinyali gönderildi (_restart.flag)")
 
         with open(flag_path, "w") as f:
@@ -353,7 +511,7 @@ def get_bakim_ozet() -> dict:
         "pressure_sensor":      "Basınç Sensörü",
     }
     try:
-        mc_file = os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
+        mc_file = yollar.yol("configs/maintenance_cards.json", os.path.dirname(__file__))
         if not os.path.exists(mc_file):
             return {}
         with open(mc_file, "r", encoding="utf-8") as f:
@@ -436,7 +594,7 @@ def sync_bakim_kartlari(client, lokasyon_id: str):
     çekilir (~60 byte/kart); `kart` gövdesi SADECE buluttaki sürümü yerelden yeni
     olan cihazlar için indirilir. Tipik turda 0 gövde iner.
     """
-    mc_file = os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
+    mc_file = yollar.yol("configs/maintenance_cards.json", os.path.dirname(__file__))
     try:
         data = {"last_updated": None, "updated_by": None, "cards": {}}
         if os.path.exists(mc_file):
@@ -575,8 +733,7 @@ def _geri_bildirim_ozet() -> dict:
             from location_manager import get_manager
             yol = get_manager().get_data_path("ml_training_data.json")
         except Exception:
-            yol = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               "ml_training_data.json")
+            yol = yollar.yol("ml_training_data.json", os.path.dirname(os.path.abspath(__file__)))
         if not os.path.exists(yol):
             return {"kayit": 0, "geri_bildirim": 0}
         with open(yol, "r", encoding="utf-8") as f:
@@ -662,6 +819,9 @@ def send_heartbeat(client, lokasyon_id: str):
             "durum": "online",
             "bakim_ozet": _ozet,
         }
+        _surum = son_yama_surumu()
+        if _surum:
+            payload["versiyon"] = _surum      # uygulanan son yama (yol haritası A2)
         # returning="minimal": yazılan satır geri DÖNMESİN — bakim_ozet JSONB'si
         # (arızalı/bakımda cihaz listeleri) her 2 dakikada boşuna indiriliyordu (egress).
         # GÜVENLİK: heartbeat kritik (kesilirse lokasyon 'çevrimdışı' görünür ve Synapse
@@ -695,7 +855,7 @@ def sync_location_info(client, lokasyon_id: str):
             "isim": loc_config.get("name", lokasyon_id),
             "son_sync": datetime.now().isoformat(),
             "ping_zamani": datetime.now().isoformat(),
-            "versiyon": "2.0",
+            "versiyon": son_yama_surumu() or "2.0",
             "durum": "online"
         }
 
@@ -716,7 +876,8 @@ def run_sync():
     if not client:
         return False
 
-    lokasyon_id = config.get("lokasyon_id", "bilinmeyen")
+    import location_manager as _lm_k   # kimlik: lokasyon profili (Faz 1)
+    lokasyon_id = _lm_k.lokasyon_id(None, config.get("lokasyon_id")) or "bilinmeyen"
     logger.info(f"🔄 Senkronizasyon başlıyor: {lokasyon_id}")
 
     # Energy sync devre dışı flag kontrolü
@@ -778,13 +939,14 @@ def start_background_sync():
         logger.info("Otomatik senkronizasyon kapalı (supabase_config.json)")
         return
 
-    lokasyon_id = config.get("lokasyon_id", "bilinmeyen")
+    import location_manager as _lm_k   # kimlik: lokasyon profili (Faz 1)
+    lokasyon_id = _lm_k.lokasyon_id(None, config.get("lokasyon_id")) or "bilinmeyen"
     client = get_supabase_client(config)
 
     # Günlük sync saati: 08:00
     _SYNC_SAAT   = 8
     _SYNC_DAKIKA = 0
-    _SYNC_SON_FILE = os.path.join(os.path.dirname(__file__), "sync_son_calisma.txt")
+    _SYNC_SON_FILE = yollar.yol("sync_son_calisma.txt", os.path.dirname(__file__))
 
     def _sync_son_gun_oku():
         try:
@@ -890,11 +1052,32 @@ def start_background_sync():
                     if _tick % 2 == 0:
                         send_heartbeat(client, lokasyon_id)
                         check_and_apply_update(client, lokasyon_id)
+                        # Ayar değişiklikleri (ayar/ klasörü) merkeze — Faz 1 / K1. Hata olursa
+                        # heartbeat ve yama akışı etkilenmez; gönderilemeyen sonraki turda gider.
+                        try:
+                            import ayar_kaydi
+                            ayar_kaydi.tara_ve_gonder(client, lokasyon_id)
+                        except Exception as _ake:
+                            logger.warning(f"Ayar kaydı turu tamamlanamadı: {_ake}")
                     # Bakım kartı senkronu: her 10 turda bir (≈10 dk) — EGRESS optimizasyonu.
                     # Sahadan QR ile yapılan kart değişikliğinin lokasyona inmesi için
                     # 2 dk gereksiz hassastı; 10 dk saha akışı için fazlasıyla yeterli.
                     if _tick % 10 == 0:
                         sync_bakim_kartlari(client, lokasyon_id)
+                        # Uyarı / hata özeti merkeze (N5): yalnız değişen gün + şablon satırları
+                        if hata_ozeti is not None:
+                            try:
+                                hata_ozeti.gonder(client, lokasyon_id)
+                            except Exception as _hoe:
+                                logger.warning(f"Hata özeti gönderilemedi: {_hoe}")
+                    # AHU geçmişi: 90 günden eskiler günlük özete, ham dosyalar silinir
+                    # (yol haritası N3; günde bir kez, kendi işaretiyle).
+                    if _tick % 30 == 0:
+                        try:
+                            import gecmis_bakim
+                            gecmis_bakim.gunluk_calistir()
+                        except Exception as _gbe:
+                            logger.warning(f"AHU geçmiş bakımı yapılamadı: {_gbe}")
                     # HVAC analizi: her _HVAC_PERIYOT_DK dakikada bir
                     # son çalışma zamanı DOSYAYA yazılır — program restart'ta tekrar tetiklenmez
                     if _ahu_ok:

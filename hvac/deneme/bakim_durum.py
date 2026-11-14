@@ -4,12 +4,13 @@
 # main_portal (API), app_portal (banner + PDF notu), daily_report, monthly_summary_report,
 # bakim_raporu ve cloud_sync (heartbeat) bu modülü kullanır.
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import os
 import json
 import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TAKVIM_FILE = os.path.join(BASE_DIR, "configs", "bakim_takvimi.json")
+TAKVIM_FILE = yollar.yol("configs/bakim_takvimi.json", BASE_DIR)
 BAKIM_UYARI_GUNU = 25  # ayın bu gününden itibaren işaret yoksa uyarı
 
 

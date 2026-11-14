@@ -2,6 +2,7 @@
 """
 HVAC Delta-T Motoru - Kural Parametreleri ve Esik Degerleri Raporu (PDF)
 """
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import os
 from fpdf import FPDF
 
@@ -248,7 +249,7 @@ def build():
         "Bu onceliklendirme INSTRUCTION_GUIDE skor tablosuna gore otomatik yapilir; esit skorlarda onceden set edilen kural korunur."
     )
 
-    out_path = os.path.join(os.path.dirname(__file__), "static", "outputs", "kural_parametreleri_raporu.pdf")
+    out_path = os.path.join(yollar.klasor("static/outputs", os.path.dirname(__file__)), "kural_parametreleri_raporu.pdf")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     pdf.output(out_path)
     print("OK:", out_path)

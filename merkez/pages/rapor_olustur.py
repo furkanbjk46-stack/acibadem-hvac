@@ -83,36 +83,9 @@ html, body, [data-testid="stAppViewContainer"] { background: #162d47 !important;
 """, unsafe_allow_html=True)
 
 # ── Lokasyon tanımları (app_merkez.py ile senkron) ────────
-HASTANELER = {
-    # ── İstanbul ──
-    "maslak":        {"isim": "Acibadem Maslak",         "kisa": "MASLAK",      "m2": 15000, "renk": "#2a78d6"},
-    "altunizade":    {"isim": "Acibadem Altunizade",     "kisa": "ALTUNIZADE",  "m2": 10000, "renk": "#c98500"},
-    "kozyatagi":     {"isim": "Acibadem Kozyatagi",      "kisa": "KOZYATAGI",   "m2": 12000, "renk": "#0ca30c"},
-    "taksim":        {"isim": "Acibadem Taksim",         "kisa": "TAKSIM",      "m2":  8000, "renk": "#4a3aa7"},
-    "atakent":       {"isim": "Acibadem Atakent",        "kisa": "ATAKENT",     "m2": 20000, "renk": "#eb6834"},
-    "atasehir":      {"isim": "Acibadem Atasehir",       "kisa": "ATASEHIR",    "m2": 14000, "renk": "#256abf"},
-    "bakirkoy":      {"isim": "Acibadem Bakirkoy",       "kisa": "BAKIRKOY",    "m2": 12000, "renk": "#84cc16"},
-    "fulya":         {"isim": "Acibadem Fulya",          "kisa": "FULYA",       "m2":  9000, "renk": "#e87ba4"},
-    "international": {"isim": "Acibadem International",  "kisa": "INTERNAT.",   "m2": 18000, "renk": "#14b8a6"},
-    "kadikoy":       {"isim": "Acibadem Kadikoy",        "kisa": "KADIKOY",     "m2":  8000, "renk": "#ec4899"},
-    "kartal":        {"isim": "Acibadem Kartal",         "kisa": "KARTAL",      "m2": 11000, "renk": "#d03b3b"},
-    # ── Ankara ──
-    "ankara":          {"isim": "Acibadem Ankara",           "kisa": "ANKARA",      "m2": 16000, "renk": "#fb7185"},
-    "bayindir":        {"isim": "Acibadem Bayindir Sogutozu", "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
-    # ── Bursa ──
-    "bursa":           {"isim": "Acibadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#c98500"},
-    # ── Eskişehir ──
-    "eskisehir":       {"isim": "Acibadem Eskisehir",         "kisa": "ESKISEHIR",   "m2":  9000, "renk": "#818cf8"},
-    # ── İzmir ──
-    "izmir":           {"isim": "Acibadem Izmir Kent",        "kisa": "IZMIR",       "m2": 15000, "renk": "#2a78d6"},
-    # ── Kayseri ──
-    "kayseri":         {"isim": "Acibadem Kayseri",           "kisa": "KAYSERI",     "m2": 11000, "renk": "#a78bfa"},
-    # ── Adana ──
-    "adana":           {"isim": "Acibadem Adana",             "kisa": "ADANA",       "m2": 12000, "renk": "#f472b6"},
-    "adana_ortopedia": {"isim": "Acibadem Adana Ortopedia",   "kisa": "ADANA ORT.",  "m2":  5000, "renk": "#e87ba4"},
-    # ── Bodrum ──
-    "bodrum":          {"isim": "Acibadem Bodrum",            "kisa": "BODRUM",      "m2":  7000, "renk": "#2dd4bf"},
-}
+import hastaneler as _hastaneler  # tek kaynak: configs/hastaneler.json (Faz 1 / D3)
+# Rapor adları Türkçe karaktersiz (PDF yazı tipi bulunamazsa Helvetica'ya düşer)
+HASTANELER = _hastaneler.yukle_ascii()
 
 # ── Config ────────────────────────────────────────────────
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs", "merkez_config.json")

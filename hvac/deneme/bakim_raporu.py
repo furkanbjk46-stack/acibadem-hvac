@@ -17,6 +17,7 @@
 # değişikliği YALNIZCA ikisinde birden yapılır; test_bakim_raporu.py iki kalıbın
 # da aynı başlıkları/sütunları ürettiğini doğrular.
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import os
 import json
 import datetime
@@ -24,10 +25,10 @@ import logging
 from pathlib import Path
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CARDS_FILE = os.path.join(BASE_DIR, "configs", "maintenance_cards.json")
-TAKVIM_FILE = os.path.join(BASE_DIR, "configs", "bakim_takvimi.json")
-AUDIT_FILE = os.path.join(BASE_DIR, "configs", "bakim_audit_log.jsonl")
-OUT_DIR = os.path.join(BASE_DIR, "monthly_reports_summary")
+CARDS_FILE = yollar.yol("configs/maintenance_cards.json", BASE_DIR)
+TAKVIM_FILE = yollar.yol("configs/bakim_takvimi.json", BASE_DIR)
+AUDIT_FILE = yollar.yol("configs/bakim_audit_log.jsonl", BASE_DIR)
+OUT_DIR = yollar.yol("monthly_reports_summary", BASE_DIR)
 
 # Bileşen sırası ekrandaki ile AYNI (index.html → components)
 BILESENLER = ["heating_valve_body", "heating_valve_signal",
@@ -255,6 +256,33 @@ def _durum_bandi(ciz, y, metin, renk, zemin):
     ciz.kutu(KENAR, y, SAYFA_W - 2 * KENAR, 22, zemin, renk, 1, 4)
     ciz.yazi(KENAR + 12, y + 15, metin, 9, True, renk)
     return y + 28
+
+
+def veri_var(year: int = None, month: int = None) -> bool:
+    """Raporlanacak bir şey var mı: bakım kartı, o ayın takvim işareti ya da o ayın denetim kaydı.
+
+    Otomatik aylık bakım raporu hiçbiri yoksa ÜRETİLMEZ (yeni kurulan lokasyonda boş rapor; 13.11.2026
+    kurulum provası). Elle üretim etkilenmez.
+    """
+    if year is None or month is None:
+        onceki = datetime.datetime.now().replace(day=1) - datetime.timedelta(days=1)
+        year, month = onceki.year, onceki.month
+    ay_str = "%04d-%02d" % (year, month)
+    try:
+        if _oku(CARDS_FILE).get("cards") or _oku(TAKVIM_FILE).get(ay_str):
+            return True
+        with open(AUDIT_FILE, "r", encoding="utf-8") as f:
+            for satir in f:
+                try:
+                    if str(json.loads(satir).get("ts", "")).startswith(ay_str):
+                        return True
+                except ValueError:
+                    continue
+        return False
+    except FileNotFoundError:
+        return False
+    except Exception:
+        return True                      # emin değilsek eski davranış: rapor üretilir
 
 
 def generate(year: int = None, month: int = None) -> str:

@@ -104,7 +104,7 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
 
 <header>
   <h1>Synapse · 1 lokasyondan 10+ lokasyona yol haritası</h1>
-  <p class="alt">11.11.2026 · 2. sürüm. İncelenenler: bugünkü kod (LpRumu/Canliizleme), thapps veritabanı kuralları ve tablo boyutları,
+  <p class="alt">12.11.2026 · 3. sürüm (durum tablosu eklendi; 2. sürüm 11.11.2026). İncelenenler: bugünkü kod (LpRumu/Canliizleme), thapps veritabanı kuralları ve tablo boyutları,
   Maslak sahasının tam paketi (06.11.2026 kopyası, 3.810 dosya: kod, ayarlar, durum dosyaları, loglar, yerel geçmiş).
   Amaç: tek lokasyon varken, ikinci lokasyon (Ataşehir) gelmeden önce yapısal sorunları çözmek.</p>
 </header>
@@ -150,13 +150,91 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
   </tbody>
 </table></div>
 
+<h2>Durum (13.11.2026)</h2>
+<div class="kart" style="margin:10px 0 16px">
+<h3 style="margin-top:0">Yayına hazır mıyız?</h3>
+<p><b>Kod tamam</b> — Faz 0–4'ün yayına girecek işleri bitti (agent aşama 3 / sürüm 2 bilerek ertelendi; C3, R2, R3
+Ataşehir'i bekliyor). Tam test 78/78. Yayın yaması: 62 dosya, 1,5 MB, silme yok; kritik dosyalar (cloud_sync,
+portal_watchdog) değiştiği için sahada TAM yeniden başlatma olur.</p>
+<p><b>Yayından önce kalan üç kapı:</b></p>
+<ol>
+  <li><s>Son yayın provası</s> — <b>geçti</b> (13.11): Maslak'ın GERÇEK kodu (06.11 kopyası + 13.1–13.9) üzerine güncel
+  yama (14.0+bb0c43a, 63 dosya, 1,6 MB, silme yok) sahadaki eski cloud_sync ile uygulandı; yeni watchdog açılışı (tek kopya
+  kilidi, lisans, 55 öğe taşındı / 3.705 dosya içeriği aynı / hata yok, Ahu-31 doğru kopya, portlar varsayılan 8501/8005),
+  öz test 197/197, iki agent (yamasız sürümle aynı sonuç), Enerji diyagramı ve Mekanik Zeka'nın API çıktıları yamasız
+  sürümle birebir aynı, heartbeat sürümü doğru, merkeze gidecekler (1.233 enerji, 17 ayar, 39.456 sayaç satırı).</li>
+  <li><s>Alp Bey'in 004–007 görüşü</s> — <b>tamam</b> (13.11, sözlü onay).</li>
+  <li><b>13.9 doğrulaması</b> — oto-set'in 13.11 20:00 gece geçişi (kullanıcı akşam ve yarın loglardan bakacak).</li>
+</ol>
+<p>Maslak lokasyon anahtarı 14.11'de elle konacak (<code>maslak\configs\lokasyon_anahtari.json</code>); yayını beklemez,
+bugünkü kod da tanıyor.</p>
+</div>
+<p>Faz 0–4'ün kodu yerel <code>olcekleme</code> dalında hazır; sunucuya ve Maslak'a <b>henüz hiçbir şey gitmedi</b>
+(karar: yapı bitince tek günde). GitHub'a yalnız Alp Bey'e talep belgesi gitti
+(<code>veritabani/SUNUCU_TALEPLERI_OLCEKLEME.md</code>, <code>main</code> 29da07d; e-posta 12.11). Her adım deneme sahasında
+Maslak'ın gerçek verileriyle (06.11.2026 kopyası) denendi; tam test 76/76.</p>
+<p><b>13.11.2026:</b> Maslak lokasyon anahtarı sunucudan alındı (repo dışında, yalnız kullanıcı okuyabilir); Maslak PC'sine kullanıcı elle koyacak — yayından ÖNCE <code>configs\lokasyon_anahtari.json</code> (bugünkü kod orada arıyor; yayın günü <code>ayar\</code>'a kendiliğinden taşınır). Veritabanı değişiklikleri 004–007 sunucuda iz bırakmadan denendi ve Alp Bey incelemesi için <code>main</code>'e gönderildi (f4ce8d1). Oto-set'in 05.11'den beri geçiş yapmamasının nedeni bulundu ve 13.9 ile düzeltildi (aşağıda).</p>
+<div class="tablo"><table>
+  <thead><tr><th>Madde</th><th>Durum</th><th>Not</th></tr></thead>
+  <tbody>
+    <tr><td>A1 "hepsine" yaması, A2 sürüm takibi</td><td><span class="cip iyi">Kod hazır</span></td><td>Veritabanı değişikliği 004 bitiş günü uygulanacak</td></tr>
+    <tr><td>B1 lokasyon anahtarı</td><td><span class="cip orta">Kod hazır</span></td><td>Maslak anahtarı hazır (6.11'de üretilmiş, 5.11.2029'a kadar geçerli; Alp Bey yalnız Maslak satırlarına eriştiğini denedi). Sunucudan <code>scp</code> ile alınacak, alınınca Alp Bey'e haber verilir; Maslak PC'sine <code>ayar\lokasyon_anahtari.json</code> olarak elle konur (e-posta / mesaj / yama ile asla). Ortak anahtar kuralları bir hafta sorunsuz çalışmadan sonra kalkar; SQL dosyası Alp Bey'e önceden gönderilir</td></tr>
+    <tr><td>N2 tek BACnet nokta dosyası, F5 test hattı</td><td><span class="cip iyi">Bitti</span></td><td>Tam test 66/66, ~2,5 dk (eskiden bitmiyordu)</td></tr>
+    <tr><td>N1 dört katman (ayar/ durum/ veri/)</td><td><span class="cip iyi">Bitti</span></td><td>Maslak kopyasında 58 öğe taşındı, hata yok; kod klasörü taşınmaz koruması</td></tr>
+    <tr><td>Lokasyon kimliği tek yerden</td><td><span class="cip iyi">Bitti</span></td><td>ayar/lokasyon_profili.json</td></tr>
+    <tr><td>C1 sayaç listesi</td><td><span class="cip iyi">Bitti</span></td><td>ayar/sayaclar.json; enerji hesabı 12 senaryoda eski kodla birebir aynı</td></tr>
+    <tr><td>C2 ısıtma hatları ve BACnet eşlemesi</td><td><span class="cip iyi">Bitti</span></td><td>ayar/bacnet_esleme.json; Enerji giriş formu hat listesinden</td></tr>
+    <tr><td>C3 doğrudan IP'li BACnet</td><td><span class="cip orta">Bekliyor</span></td><td>Ataşehir'deki sistem görüldükten sonra (kararın: görmeden eklenmez)</td></tr>
+    <tr><td>K1 ayar değişiklikleri merkezde</td><td><span class="cip iyi">Kod hazır</span></td><td>Veritabanı değişikliği 005 bitiş günü</td></tr>
+    <tr><td>D3 hastane listesi tek kaynak</td><td><span class="cip iyi">Bitti</span></td><td>merkez/configs/hastaneler.json (5 kopya vardı)</td></tr>
+    <tr><td>E1 oto-set lokasyon başına</td><td><span class="cip iyi">Bitti</span></td><td>Saatler 11.10.2026'dan beri vardı; eksik olan lokasyon başına aç/kapa eklendi</td></tr>
+    <tr><td>Repoda Maslak ayarı</td><td><span class="cip iyi">Bitti</span></td><td>ornek_ayar/maslak/; eksik ayar şablondan bir kez kopyalanır</td></tr>
+    <tr><td>A3 yama yayın aracı, A4 geri alma</td><td><span class="cip iyi">Bitti</span></td><td>araclar/yama_yayinla.py (pilot → liste / all, --geri-al, --durum); sahada son 10 yamanın yedeği</td></tr>
+    <tr><td>N4 internetsiz kurulum paketi</td><td><span class="cip iyi">Araç hazır</span></td><td>araclar/kurulum_paketi.py + sabit sürümler (requirements-kilit.txt); 82 wheel ve Python 3.13 yükleyicisi indirildi (repo dışında), boş ortama internetsiz kurulum denendi. Dağıtım: thapps'ten indirme (kararın, 12.11; USB yok). Adres açıldı: <code>https://thapps.acibadem.com.tr/canliizleme-kurulum/&lt;paket&gt;.zip</code>, klasör <code>/opt/canliizleme_kurulum</code> (biz yazarız). Yalnız 10.0.0.0/8 ağına açık (Maslak sunucuya NAT ile 10.80.54.175 olarak geliyor); kimlik doğrulamasız olduğu için pakette anahtar / parola bulunmaz (araç bunları dışarıda bırakıyor, kodda gömülü anahtar yok). Paketin yanına SHA-256 özet dosyası konacak — paket aracına eklenecek</td></tr>
+    <tr><td>F4 kurulum kontrolü / ilk gün</td><td><span class="cip iyi">Bitti</span></td><td>kurulum_kontrol.py; Maslak kopyasında bütün ayarlar TAMAM</td></tr>
+    <tr><td>R2 Enerji formu sayaç alanları + R3 diyagram / hesap topolojisi</td><td><span class="cip orta">Bekliyor</span></td><td>Ataşehir'in elektrik topolojisi görüldükten sonra (C3 ile aynı karar)</td></tr>
+    <tr><td>N3 AHU geçmişi saklama kuralı</td><td><span class="cip iyi">Bitti</span></td><td>90 günden eski günler günlük özete, ham dosyalar sonra silinir; Maslak kopyasında 31,9 MB → 13,0 MB</td></tr>
+    <tr><td>D1 ince sayaç tablosu</td><td><span class="cip iyi">Kod hazır</span></td><td>sayac_gunluk (006): sayaç bir satır, yeni sayaç SQL'siz gelir; yalnız değişen günler gider (Maslak ilk gönderim 1.233 gün / 39.456 satır). energy_data'da olmayan sütun artık gönderimi düşürmez. Synapse lokasyon detayında "Sayaçlar (tek tek)" grafiği</td></tr>
+    <tr><td>D2 Synapse enerji sorgusu</td><td><span class="cip iyi">Kod hazır</span></td><td>Ana sayfa ve karşılaştırma son 800 günü çeker (eskiden bütün lokasyonların bütün geçmişi); lokasyon detayı tek lokasyonun tüm geçmişini çekmeye devam eder</td></tr>
+    <tr><td>Şema aracı</td><td><span class="cip iyi">Düzeltildi</span></td><td>REVOKE ... TRUNCATE satırını silme sanıyordu; 004 ve 005 bitiş günü reddedilecekti</td></tr>
+    <tr><td>R1 raporlarda ısıtma hatları</td><td><span class="cip iyi">Bitti</span></td><td>Aylık rapor ve santral dengesizlik kuralı hat listesini ayar/bacnet_esleme.json'dan alır (1, 2, 3+ hat); Maslak'ın 35 aylık çıktısı ve kural mesajları eskisiyle birebir aynı</td></tr>
+    <tr><td>F2 agent ekranında lokasyon seçici</td><td><span class="cip iyi">Bitti</span></td><td>Lokasyon × agent matrisi (Enerji, Mekanik Zeka, Synapse; sorunlular üstte) ve şemayı tek lokasyona süzen seçici; simülasyonda 21 lokasyonla denendi</td></tr>
+    <tr><td>N5 merkezi hata özeti</td><td><span class="cip iyi">Kod hazır</span></td><td>Üç süreç (arka plan, Enerji, Mekanik Zeka) uyarı / hatayı şablona indirip gün gün sayar, 30 gün tutar; 10 dk'da bir değişenler lokasyon_hatalari'na (007). Synapse: lokasyon seçilince "son 30 gün uyarı ve hataları"</td></tr>
+    <tr><td>F3 PC geri yükleme</td><td><span class="cip iyi">Kod hazır</span></td><td>geri_yukle.py: ayarlar (xlsx dahil), enerji geçmişi ve bakım kartları merkezden; var olanın üzerine yazmaz. Maslak kopyasında 17 ayar, 1.233 gün / 66 sütun, 57 kart birebir döndü. Portallar açılmadan önce çalıştırılmalı (boş PC'ye kartlar kendiliğinden inmez)</td></tr>
+    <tr><td>G2 kapasite izleme</td><td><span class="cip iyi">Kod hazır</span></td><td>Synapse agent'ı: 15 dk işlemci yükü / çekirdek (≥0,8 uyarı, ≥1,5 kritik) ve Synapse yanıt süresi (&gt;3 sn uyarı)</td></tr>
+    <tr><td>F1 bildirim</td><td><span class="cip iyi">Bitti (Synapse içi)</span></td><td>Açık agent iş emirleri ana sayfadaki Canlı Uyarılar'da (dakikada bir okunur): yüksek önemli açık iş emri kırmızı ve en üstte, diğerleri sarı; sunucu iş emirleri "Merkez" kartında. E-posta yok (kararın, 12.11.2026)</td></tr>
+    <tr><td>Agent aşama 3 (ekran kontrolleri) ve sürüm 2 (güvenli işleri agent düzeltir)</td><td><span class="cip orta">Ertelendi</span></td><td>Kararın (12.11): şimdilik kalsın, unutulmayacak — yayından sonra ele alınır</td></tr>
+    <tr><td>Yayın provası</td><td><span class="cip iyi">Bitti</span></td><td>12.11.2026, bu PC'de: Maslak kopyası + bugünkü Maslak kodu (13.8) üzerine asıl yayın yaması (61 dosya, 1,4 MB, silme yok) <b>sahadaki eski cloud_sync ile</b> uygulandı → yeni watchdog açılışı (lisans, klasör taşıma: 55 öğe, 3.705 dosya içeriği aynı, hata yok) → iki portal, öz test 197/197, iki agent turu, merkeze gidecekler (1.233 enerji satırı, 17 ayar, 39.456 sayaç satırı). Yamasız kopyayla karşılaştırma: Enerji diyagramı ve Mekanik Zeka'nın 8 API çıktısı birebir aynı; agent sorunları aynı (kopyanın 6 günlük olmasından), yamalıda bir kontrol daha geçiyor. Bulunup düzeltilenler: (1) yama içeriğindeki CRLF, GUNCELLE.bat'ta çift CR üretiyordu; (2) ilk yamayı eski program uyguladığı için heartbeat sürümü "2.0" kalacaktı — her yamaya sürüm dosyası eklendi. Doğrulanan: Maslak'ta aynı AHU nokta dosyasının iki ayrı kopyası var (Ahu-31 ağ geçidi .5 / .6); taşıma dosya tarihine göre okuyucunun kullandığı yeni kopyayı (31.10) seçiyor, eskisi durum/tasima_yedek'te kalıyor</td></tr>
+    <tr><td>Lokasyon donanımı ayar paneli</td><td><span class="cip orta">Yayından sonra</span></td><td>Kararın (13.11): Enerji portalı → Ayarlar'a <b>şifreli</b> bir panel; lokasyon profili, enerji analizörleri (Siemens / Janitza; sütun adı otomatik, "bağlantıyı dene"), BACnet noktaları ve ısıtma hatları buradan girilir. Saha ekibi listeleri <b>Excel</b> olarak veriyor: panel boş şablon verir, doldurulan Excel'i doğrular, önizleme gösterir, onaydan sonra doğru ayar dosyalarına (sayaclar.json, bacnet_noktalari.json, bacnet_esleme.json, bacnet_okuma_sablonu.xlsx, lokasyon_profili.json) yazar; her kayıttan önce yedek, değişiklik merkezde (K1). Doğrudan IP'li BACnet (C3) Ataşehir görülünce eklenir. Ataşehir'den önce bitmeli; saha ekibinden örnek bir Excel listesi istenecek</td></tr>
+    <tr><td>Otomatik aylık raporlar (boş kurulum)</td><td><span class="cip iyi">Bitti</span></td><td>Enerji raporu önceki ayın enerji verisi yoksa, bakım raporu bakım kartı / o ayın takvim işareti / o aya ait denetim kaydı yoksa üretilmez (yeni lokasyonda boş rapor ve "rapor hazır" bildirimi çıkıyordu). Elle üretim ve Maslak'taki davranış aynı</td></tr>
+    <tr><td>Kurulum provası (bu PC, Python kaldırılmadan)</td><td><span class="cip iyi">Yapıldı</span></td><td>13.11: paket thapps biçiminde açılıp KURULUM.bat kullanıcıyla adım adım çalıştırıldı (kütüphaneler zaten kuruluydu, hiçbiri değişmedi); boş kurulumda iki portal ve agent'lar hatasız. Bulunan ve düzeltilen: (1) profil şablondaki koordinatı almıyordu; (2) boş kurulumda boş aylık rapor + "rapor hazır" bildirimi üretiliyordu; (3) <b>port ayarı</b>: portlar artık lokasyon ayarı (ayar/portlar.json), kurulumda bir kez seçilir — bu PC'de 8005 dolu olduğu için Mekanik Zeka 8006 seçildi; sonra SABİT (QR etiketleri portu taşır), dolarsa watchdog uyarır, kaydırmaz. Ayar yoksa 8501/8005 (Maslak değişmez). Terminal panelinde <code>choice</code> girişi okunmuyor — kurulum ayrı komut penceresinde çalıştırılmalı. Python'un sıfırdan kurulduğu 1. adım boş bir PC'de / Ataşehir'de görülecek</td></tr>
+    <tr><td>Windows Sandbox provası</td><td><span class="cip orta">Yapılamıyor</span></td><td>Python'suz, internetsiz, temiz Windows'ta paketin uçtan uca kurulumu (KURULUM.bat). Ayrıca aylık özet raporu grafikleri: Chrome'suz PC'de (Sandbox'ta yalnız Edge var) çiziliyor mu. Windows Sandbox özelliğinin bu PC'de açılması gerekir (Windows ayarı; sende)</td></tr>
+    <tr><td>Kurulum programı eksikleri</td><td><span class="cip iyi">Kod hazır</span></td><td>KURULUM.bat yeni sıra: Python → kütüphaneler → lokasyon kimliği → merkez bağlantı dosyası (yoksa nereye konacağını gösterip bekler) → <b>merkezden geri yükleme şablondan ÖNCE</b> (var olanı ezmez) → şablon (yalnız eksikler) → kontrol listesi (lisans: geçersizse Makine ID; program sürümü) → masaüstü kısayolu, isteğe bağlı otomatik başlatma → isteğe bağlı başlatma ve portallar açılınca agent'lı ilk gün kontrolü. Watchdog'a tek kopya koruması (ikinci başlatma zarar vermez; tam yeniden başlatmada eskisini 60 sn bekler). Paket: sürüm dosyası, SHA-256 özeti, gizli bilgi taraması (anahtar / parola varsa paket reddedilir), <code>--yukle</code> ile thapps indirme klasörüne. Gerçek paket: 194 MB, tarama temiz, PowerShell <code>Get-FileHash</code> aynı özeti veriyor. KURULUM.bat uçtan uca henüz çalıştırılmadı (bu PC'ye kurulum yapar) — Windows Sandbox provasında</td></tr>
+    <tr><td>Lisans makine kimliği</td><td><span class="cip iyi">Çözüldü</span></td><td><code>wmic</code> yoksa aynı anakart UUID'si PowerShell'den okunur (geliştirme PC'sinde wmic zaten yok, denendi); lisans sorgusu UUID ve ağ kartı adresini birlikte sorar — eskiden ağ kartı adresiyle lisanslanmış bir PC de çalışmaya devam eder. Lokasyon anahtarıyla lisans okuma kuralı (hvac_lok_lisans_sel) var; ortak anahtar daraltılınca da çalışır</td></tr>
+    <tr><td>F3 kapsamı: yalnız PC'de duran veriler</td><td><span class="cip iyi">Karar verildi</span></td><td>Kararın (12.11): AHU okuma / analiz geçmişi, tüketim tahmini modeli ve eğitim verisi, raporlar, onay ve bakım denetim kayıtları lokasyon PC'sinde kalır; merkeze taşınmaz. PC arızasında bunlar yeniden birikir; geri yüklenenler ayarlar, enerji geçmişi ve bakım kartlarıdır</td></tr>
+    <tr><td>Oto-set geçişleri (05.11–13.11)</td><td><span class="cip orta">Düzeltildi, doğrulama bu akşam</span></td><td>29.10 "komut güvenliği" bacnet_writer.py + oto_set.py'yi birlikte değiştirdi; 05.11 12.8 yamasıyla yalnız oto_set.py gitti → her gece geçişi <code>komut_degeri_gecerli()</code> argüman hatasıyla düştü, 05.11 08:00'den beri hiç set yazılmadı (agent her geçişte bildirdi, RPR-2026-1111-001). Maslak'ın gerçek kodunda yeniden üretildi; 13.9 (yalnız bacnet_writer.py, main sürümü) gönderildi, 1 dk'da uygulandı (13.11 08:42). İlk yazım 13.11 20:00 gece geçişinde; geri alma yaması hazır</td></tr>
+    <tr><td>Maslak'ın gerçek kodu ≠ main</td><td><span class="cip iyi">Tespit</span></td><td>06.11 kopyası + 13.1–13.8 yamalarından kurulan gerçek kod main'den 6 dosyada farklıydı (bacnet_writer, veri_alarm, iki kural açıklama dosyası, GUNCELLE.bat, portal.html'de bir boşluk). 14.0 yaması portal.html dışında hepsini değiştiriyor; yayın provası geçerli. Ders: yama tabanı main değil sahanın gerçek kodu; bir commit'in değiştirdiği lokasyon dosyaları birlikte gider</td></tr>
+    <tr><td>A5 yama içeriği temizliği, G1 eski Supabase kapanışı</td><td><span class="cip orta">Bekliyor</span></td><td>A5 <b>yapılmayacak</b> (kararın, 13.11: disk sorunu yok, yama geçmişi kalsın). G1: eski Supabase hesabı kapatıldı, bağlantı yok (13.11); proje henüz silinmedi. Repoda eski adres geçen 9 dosya temizlenecek (yalnız herkese açık anahtar; gizli anahtar yok)</td></tr>
+  </tbody>
+</table></div>
+<h3>Bundan sonraki sıra</h3>
+<ol>
+  <li><s>Alp Bey'in yanıtı</s> — geldi (12.11). Anahtar alındı (13.11); 004–007 Alp Bey incelemesine gönderildi (<code>main</code> f4ce8d1, sunucu denemesi temiz). <b>Bekleniyor:</b> Alp Bey'in 004–007 görüşü.</li>
+  <li><s>Yayın provası</s> — yapıldı (12.11): iki sorun bulundu ve düzeltildi, yama yeni sorun getirmiyor. Yayın günü kontrolü: taşımadan sonra <code>ayar/bacnet_noktalari.json</code>'da MAS-2 Ahu-31 ağ geçidi 192.168.0.6 olmalı.</li>
+  <li><s>Kurulum programının eksikleri</s> — kod hazır, kurulum provası bu PC'de yapıldı (13.11); bulunan 3 eksik + port ayarı düzeltildi. <b>Sırada: son yayın provası</b> (Maslak'ın gerçek kodu + güncel yama).</li>
+  <li><b>Yayın günü</b> (kullanıcı Maslak'tayken): <b>önce Maslak program klasörünün TAM yedeği</b> (zip; geri dönüş yolu — klasör taşımasının otomatik geri alması yok, eski kod <code>configs\</code>'de arar) → veritabanı değişiklikleri (004, 005, 006, 007) → Synapse deploy, yeniden başlatma, sağlık ve agent kontrolü → Maslak yaması (tek seferde; ilk açılışta klasör taşıması) → Maslak lokasyon anahtarı → <code>olcekleme</code> dalı <code>main</code>'e alınır, iki repo eşitlenir.</li>
+  <li><b>En az bir gün çalışma:</b> Maslak'ın ayarları (K1), sayaç satırları (D1) ve hata özeti (N5) merkeze dolar. Geri yükleme ancak bundan sonra denenebilir.</li>
+  <li><b>Maslak'ta sıfır kurulum testi</b> ("PC arızalandı, yenisi kuruldu" senaryosu): çalışan program kapatılır; klasör <b>silinmez</b>, adı değiştirilir ve ayrıca zip yedeği alınır; yeni kurulum ayrı klasöre, thapps'ten indirilen paketle yapılır; ayarlar, enerji geçmişi ve kartlar merkezden geri yüklenir. Sorun çıkarsa geri dönüş: yeni programı kapat, eski klasörü geri adlandır (≈5 dk). Zaman: 08:00 eşitlemesinden sonra, oto-set geçişlerinden (05:00, 22:00) uzak, ~1 saat; saha ekibine haber verilir (program kapalıyken oto-set, AHU okuması ve enerji toplama durur).</li>
+  <li><b>Bir hafta sonra:</b> ortak anahtara her şeyi açan kurallar kaldırılır (talep belgesi B3). SQL dosyası uygulanmadan önce Alp Bey'e gönderilir (isteği, 12.11).</li>
+</ol>
+
 <h2>Fazlar</h2>
 <div class="fazlar">
   <div class="faz f0"><div class="no">FAZ 0 · HEMEN</div><h3>Riskleri kapat</h3><p>Yama dağıtımı, lokasyon anahtarı, sürüm takibi, test hattı, tek nokta dosyası</p></div>
   <div class="faz f1"><div class="no">FAZ 1</div><h3>Kod ile ayarı ayır</h3><p>Dört katman; sayaç, hat, BACnet ayara; ayar değişikliği merkezde; oto-set lokasyon başına</p></div>
   <div class="faz f2"><div class="no">FAZ 2</div><h3>Ataşehir'e hazır kurulum</h3><p>İnternetsiz kurulum paketi, pilot → hepsi yayın, geri alma, ilk gün kontrolü</p></div>
   <div class="faz f3"><div class="no">FAZ 3</div><h3>Veri modeli</h3><p>Sayaç verisi ince tabloya; AHU geçmişi saklama ve merkeze özet</p></div>
-  <div class="faz f4"><div class="no">FAZ 4</div><h3>Operasyon</h3><p>Bildirim, lokasyon seçici, merkezi hata özeti, PC geri yükleme, agent aşama 3</p></div>
+  <div class="faz f4"><div class="no">FAZ 4</div><h3>Operasyon</h3><p>Bildirim (Synapse içi), lokasyon seçici, merkezi hata özeti, PC geri yükleme, kapasite; agent aşama 3 ertelendi</p></div>
 </div>
 <div class="kapi">
   <span><b>Ataşehir</b> canlıya alınmadan önce: Faz 0 + Faz 1 + Faz 2</span>
@@ -249,8 +327,9 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
 
 <details class="bulgu" data-onem="yuksek">
   <summary><span class="kod">C3</span><span class="bas">BACnet nokta ayarı yalnızca ağ geçidi düzenini biliyor</span>
-    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip">Faz 1</span></span></summary>
+    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip sen">Ataşehir keşfi</span><span class="cip">Faz 2</span></span></summary>
   <dl class="govde">
+    <dt>Karar (12.11.2026)</dt><dd>Ataşehir'deki otomasyon sistemi görülmeden doğrudan IP desteği eklenmez; gerekirse kurulum hazırlığında kod düzenlenir.</dd>
     <dt>Ne oluyor</dt><dd>Maslak'ta Siemens noktaları bir ağ geçidi üzerinden (ağ ve cihaz numarasıyla) okunuyor; nokta dosyası bu düzene göre. Bazı lokasyonlarda cihazlar doğrudan IP'li olacak.</dd>
     <dt>Çözüm</dt><dd>Nokta dosyası iki yolu da tanır: "ağ geçidi + ağ/cihaz" ya da "doğrudan IP". Okuma kodu tek; kurulumda bir keşif aracı noktaları tarayıp dosyayı önerir, teknik ekip onaylar.</dd>
   </dl>
@@ -266,11 +345,11 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
 </details>
 
 <details class="bulgu" data-onem="yuksek">
-  <summary><span class="kod">E1</span><span class="bas">Oto-set ayarları bütün lokasyonlar için tek</span>
-    <span class="sag"><span class="cip yuksek">Yüksek</span><span class="cip biz">biz</span><span class="cip sen">sen (koruma alanı)</span><span class="cip">Faz 1</span></span></summary>
+  <summary><span class="kod">E1</span><span class="bas">Oto-set: lokasyon başına aç/kapa Synapse'te yoktu (düzeltildi)</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 1</span></span></summary>
   <dl class="govde">
-    <dt>Ne oluyor</dt><dd><code>ayarlar</code> tablosundaki <code>oto_set_aktif</code>, <code>oto_gunduz_saat</code>, <code>oto_gece_saat</code>, <code>oto_mod_*</code> anahtarlarında lokasyon yok. 10 lokasyonda hepsi aynı saatte geçer; tek bir lokasyonda oto-set'i kapatmak bütün grubu kapatır.</dd>
-    <dt>Çözüm</dt><dd>Varsayılan + lokasyon geçersiz kılma: <code>oto_gunduz_saat</code> varsayılan, <code>oto_gunduz_saat:maslak</code> varsa o kullanılır. Synapse ayar ekranında lokasyon seçimi. Oto-set koruma alanı olduğu için tasarım ve yama ayrıca onayına sunulur.</dd>
+    <dt>Düzeltme (12.11.2026)</dt><dd>2. sürümdeki "oto-set ayarları tek" bulgusu yanlıştı: veritabanında yalnız genel anahtarlar duruyordu, kod okunmadan sonuca varılmıştı. Lokasyon 11.10.2026'dan beri önce <code>oto_&lt;anahtar&gt;_&lt;lokasyon&gt;</code> değerini okuyor, yoksa genele düşüyor; Synapse lokasyon detayı lokasyona özel saat yazabiliyordu.</dd>
+    <dt>Eksik olan</dt><dd>Lokasyon başına <b>aç/kapa</b> Synapse'te ayarlanamıyordu (lokasyon <code>oto_set_aktif_&lt;lokasyon&gt;</code>'u okuyordu); tek hastanede kapatmak için bütün grubu kapatmak gerekiyordu. Lokasyon detayına "Genel kurala uy / Açık / Kapalı" seçimi eklendi.</dd>
   </dl>
 </details>
 
@@ -316,6 +395,33 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
   <dl class="govde">
     <dt>Ne oluyor</dt><dd>Lokasyon programının tam test çalıştırması bitmiyor (<code>test_degismez_kurallar</code> eski kodla da takılıyor). Testler elle, tek tek çalıştırılıyor.</dd>
     <dt>Çözüm</dt><dd>Takılan testi düzelt; her push'ta bütün testleri koşan GitHub Actions. 10 lokasyona giden her yama önce bu kapıdan geçer.</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">R1</span><span class="bas">Aylık rapor ve tasarruf analizi iki ısıtma hattına göre yazılmış</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 3</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd><code>monthly_report/data_merger.py</code> ve <code>savings_engine.py</code> MAS-1 / MAS-2 sıcaklık ortalamalarını ve aralarındaki farkı hesaplıyor (deneme sahasında C2 sırasında görüldü).</dd>
+    <dt>Etki</dt><dd>Tek hatlı bir lokasyonda hata vermez, bu bölüm boş kalır. Hat sayısına göre genelleştirilmeli (ayar/bacnet_esleme.json'daki hat listesi).</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">R2</span><span class="bas">Enerji portalı elle giriş formunda sayaç alanları sabit</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip biz">biz</span><span class="cip">Faz 2</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd><code>app_portal.py</code> giriş formunda TRDP, kojen ve chiller alanları Maslak'ın sayaçlarına göre tek tek yazılı (18 alan). Isıtma hatları C2'de listeden üretilir hâle geldi; sayaç alanları henüz değil.</dd>
+    <dt>Çözüm</dt><dd>Form alanları ayar/sayaclar.json'dan üretilir (C2'deki hat alanları gibi; Maslak'ın form anahtarları korunur).</dd>
+  </dl>
+</details>
+
+<details class="bulgu" data-onem="orta">
+  <summary><span class="kod">R3</span><span class="bas">Enerji diyagramı ve günlük hesap Maslak'ın elektrik topolojisine göre</span>
+    <span class="sag"><span class="cip orta">Orta</span><span class="cip sen">Ataşehir keşfi</span><span class="cip">Faz 2</span></span></summary>
+  <dl class="govde">
+    <dt>Kanıt</dt><dd><code>enerji_hesap.py</code> toplamları TRDP-1..4 / Kojen-1..4 sütunlarıyla kurar; Enerji portalının diyagramı ve düzenleme ekranı Maslak'ın yapısına göre: bina yükü = TRDP-1 + TRDP-3, mekanik = TRDP-2 + TRDP-4, "MCC panoları (Siemens / Janitza)" kümeleri. Giriş formundaki sayaç alanları (R2) bu kurallara bağlı.</dd>
+    <dt>Karar (12.11.2026)</dt><dd>Ataşehir'in trafo / yük / pano yapısı görülmeden genelleştirilmez. Görüldüğünde: lokasyon başına <code>ayar/enerji_topolojisi.json</code> (trafo grupları, kümeler, kaynaklar); hesap, diyagram ve form bu dosyadan. Maslak'ın bugünkü çıktısı altın kayıtla korunur (C1/C2'deki yöntem).</dd>
   </dl>
 </details>
 
@@ -487,14 +593,14 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
   <div class="kart k4">
     <h3>Faz 4 · Operasyon (10 lokasyon öncesi)</h3>
     <ol>
-      <li>Bildirim: kritik iş emri anında, diğerleri günlük özet (F1).</li>
+      <li>Bildirim: açık iş emirleri Synapse ana sayfasındaki Canlı Uyarılar'da; kritik olan kırmızı ve en üstte (F1). E-posta yok (karar 12.11).</li>
       <li>Agent ekranında lokasyon seçici ve lokasyon × agent matrisi (F2).</li>
       <li>Merkezi hata özeti: lokasyon başına son 30 gün (N5).</li>
       <li>PC geri yükleme: <code>ayar/</code> klasörünün günlük kopyası Synapse'te; "Synapse'ten geri yükle" (F3).</li>
-      <li>Agent aşama 3 (ekran kontrolleri) ve sürüm 2 (güvenli işleri agent'ın kendisinin düzeltmesi).</li>
+      <li>Agent aşama 3 (ekran kontrolleri) ve sürüm 2 (güvenli işleri agent'ın kendisinin düzeltmesi) — <b>ertelendi</b> (karar 12.11).</li>
       <li>Kapasite izleme (G2).</li>
     </ol>
-    <p class="bitti"><b>Bitti sayılır:</b> Bir lokasyonda kritik sorun çıktığında 5 dakika içinde bildirim geliyor. Arızalı PC yerine yenisi bir saat içinde aynı ayarlar ve verilerle çalışıyor.</p>
+    <p class="bitti"><b>Bitti sayılır:</b> Bir lokasyonda kritik sorun çıktığında birkaç dakika içinde Synapse'te kırmızı görünüyor. Arızalı PC yerine yenisi bir saat içinde aynı ayarlar ve verilerle çalışıyor (Maslak'ta sıfır kurulum testiyle doğrulanacak).</p>
   </div>
 </div>
 
@@ -507,13 +613,13 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
       <li>Lokasyon anahtarı üretimi (<span class="cip alp">Alp Bey</span>, <code>04_anahtar_uret.py</code>).</li>
       <li>Oto-set: lokasyon ayarları; başlangıçta kapalı.</li>
       <li>Yayın aracında lokasyonu "pilot dışı" olarak ekle.</li>
-      <li>Ağ: lokasyon PC'sinden thapps'e (443) erişimin açık olduğunu doğrula (Maslak'taki ASGv3 düzeni).</li>
+      <li>Ağ: lokasyon PC'sinden thapps'e (443) erişimin açık olduğunu doğrula (Maslak'taki ASGv3 düzeni). Network ekibine talebi Alp Bey açacak; tarih belli olunca haber verilir (12.11). Ataşehir 10.0.0.0/8 dışından gelirse indirme adresine de eklenecek.</li>
     </ul>
   </div>
   <div class="kart">
     <h3>Lokasyon PC'sinde (teknik ekip)</h3>
     <ul class="duz">
-      <li>İnternetsiz kurulum paketi (kod herkes için aynı) + lisans.</li>
+      <li>İnternetsiz kurulum paketi thapps'ten indirilir (kod herkes için aynı) + lisans.</li>
       <li><code>ayar/lokasyon_profili.json</code>: kimlik, koordinat, ısıtma hatları.</li>
       <li><code>ayar/sayaclar.json</code>: Siemens / Janitza analizörleri (ad, IP, marka, tür).</li>
       <li><code>ayar/bacnet_noktalari.json</code>: ağ geçidi ya da doğrudan IP; keşif aracının önerisi onaylanır.</li>
@@ -528,11 +634,17 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
 <div class="tablo"><table>
   <thead><tr><th>Konu</th><th>Kim</th><th>Ne zaman</th></tr></thead>
   <tbody>
-    <tr><td>Maslak için lokasyon anahtarı üretimi (sonra her yeni lokasyon için bir tane)</td><td><span class="cip alp">Alp Bey</span></td><td>Faz 0</td></tr>
+    <tr><td>Maslak için lokasyon anahtarı üretimi (sonra her yeni lokasyon için bir tane)</td><td><span class="cip alp">Alp Bey</span></td><td>Tamam (12.11); anahtar sunucudan alınacak</td></tr>
     <tr><td>Ortak anahtar kurallarının kaldırılması (şema yetkimizle yapılabilir; Alp Bey'e bilgi verilir)</td><td><span class="cip biz">biz</span></td><td>Faz 0, bir hafta izlemeden sonra</td></tr>
     <tr><td>Oto-set'in lokasyon başına ayara geçmesi (koruma alanı)</td><td><span class="cip sen">sen</span></td><td>Faz 1</td></tr>
     <tr><td>Hangi ayarları teknik ekip değiştirebilir, hangileri yalnızca merkezden değişir</td><td><span class="cip sen">sen</span></td><td>Faz 1</td></tr>
-    <tr><td>Kurulum paketinin dağıtımı: USB mü, thapps'ten indirme mi (paket aynası Alp Bey'den)</td><td><span class="cip sen">sen</span> / <span class="cip alp">Alp Bey</span></td><td>Faz 2</td></tr>
+    <tr><td>Kurulum paketinin dağıtımı: <b>thapps'ten indirme</b> (karar 12.11; USB yok). Sunucu klasörü + nginx adresi</td><td><span class="cip alp">Alp Bey</span></td><td>Tamam (12.11)</td></tr>
+    <tr><td>Veritabanı değişiklikleri 004–007'nin incelenmesi (özellikle 004'teki SECURITY DEFINER işlevi)</td><td><span class="cip alp">Alp Bey</span></td><td>Dosyalar repoya gelince, yayından önce</td></tr>
+    <tr><td>Ortak anahtar daraltma SQL'inin önceden gönderilmesi</td><td><span class="cip biz">biz</span></td><td>Maslak bir hafta sorunsuz çalıştıktan sonra, uygulamadan önce</td></tr>
+    <tr><td>Bildirim kanalı: <b>Synapse içi</b>, e-posta yok</td><td><span class="cip sen">sen</span></td><td>Karar verildi (12.11)</td></tr>
+    <tr><td>Agent aşama 3 ve sürüm 2</td><td><span class="cip sen">sen</span></td><td>Ertelendi (12.11); yayından sonra</td></tr>
+    <tr><td>Merkezde tutulacak ek PC verileri (AHU geçmişi, tahmin modeli, raporlar): <b>tutulmaz, PC'de kalır</b></td><td><span class="cip sen">sen</span></td><td>Karar verildi (12.11)</td></tr>
+    <tr><td>Ataşehir lokasyon anahtarı ve PC'den thapps erişimi</td><td><span class="cip alp">Alp Bey</span></td><td>Tarih belli olunca; ağ talebini Alp Bey Network ekibine açacak</td></tr>
     <tr><td>Eski Supabase ve Streamlit Cloud kapanışı</td><td><span class="cip sen">sen</span></td><td>Faz 2</td></tr>
     <tr><td>Ataşehir'in açılış tarihi ve sahadaki PC / ağ hazırlığı</td><td><span class="cip sen">sen</span></td><td>Tarih belli olunca</td></tr>
     <tr><td>Sunucuya çekirdek eklenmesi (gerekirse)</td><td><span class="cip alp">Alp Bey</span></td><td>Faz 4, izlemeye göre</td></tr>
@@ -540,7 +652,7 @@ footer { margin-top:40px; color:var(--soluk); font-size:13px; }
 </table></div>
 
 <footer>
-  Hazırlayan: Claude Code, 11.11.2026 (2. sürüm: Maslak saha paketi ve lokasyon bilgileriyle güncellendi). İnceleme kapsamı: <code>hvac/deneme</code> (lokasyon programı), <code>merkez</code> (Synapse),
+  Hazırlayan: Claude Code, 11.11.2026; 3. sürüm 12.11.2026 akşam (Faz 0–4 durumu, Alp Bey talebi, sıfır kurulum testi planı). İnceleme kapsamı: <code>hvac/deneme</code> (lokasyon programı), <code>merkez</code> (Synapse),
   <code>veritabani</code>, thapps veritabanı kuralları ve tablo boyutları, Maslak saha paketi (06.11.2026). Süre tahmini verilmedi; her faz bitiş ölçütüyle kapanır.
   Dosya: <code>merkez/sunum/olcekleme_yol_haritasi.html</code> (iki repoda aynı).
 </footer>

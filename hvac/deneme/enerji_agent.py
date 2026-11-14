@@ -42,6 +42,7 @@ SINIRLAR (sürüm 1)
 
 KAPATMA: configs/enerji_agent.json → {"aktif": false}
 """
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import argparse
 import csv
 import json
@@ -75,6 +76,8 @@ KOPRU_SON = (0, 30)           # köprü 00:05
 BACNET_SON = (7, 40)          # BACnet 07:05
 BULUT_SON = (8, 30)           # bulut eşitleme 08:00
 
+# Sayaçlar ve kritik olanlar ayar/sayaclar.json'dan gelir (sayaclar.py; Faz 1 / C1). Aşağıdaki
+# iki liste YALNIZCA sayaç dosyası okunamazsa kullanılan yedektir (Maslak'ın 12.11.2026 hâli).
 KRITIK_SAYAC = ("SEBEKE", "KOJEN", "TRDP", "CHILLER")
 SAYAC_SUTUNLARI = (["Sebeke_Tuketim_kWh", "Kojen1_kWh", "Kojen2_kWh", "Kojen3_kWh", "Kojen4_kWh",
                     "TRDP1_kWh", "TRDP2_kWh", "TRDP3_kWh", "TRDP4_kWh"]
@@ -99,12 +102,23 @@ class Atla(Exception):
 # ══════════════════════════════════════════════════════════════════════════
 # ORTAM — dosya yolları, saat ve ağ. Testler bunu sahteleriyle değiştirir.
 # ══════════════════════════════════════════════════════════════════════════
+def _port(url):
+    """'http://127.0.0.1:8501' → '8501' (iş emri metinleri için)."""
+    return str(url).rstrip("/").rsplit(":", 1)[-1]
+
+
 class Ortam:
     def __init__(self, dizin=BASE_DIR, simdi=None, bulut="oku", http=None, bekle=None,
-                 portal_url="http://127.0.0.1:8501", kim=None):
+                 portal_url=None, kim=None):
         self.kim = kim or ENERJI
         self.dizin = dizin
         self._simdi = simdi
+        if portal_url is None:              # Enerji portalı portu: ayar/portlar.json (yoksa 8501)
+            try:
+                import portlar
+                portal_url = portlar.enerji_url(dizin)
+            except Exception:
+                portal_url = "http://127.0.0.1:8501"
         self.portal_url = portal_url
         self.http = http or _http
         self.bekle = bekle or time.sleep
@@ -114,7 +128,8 @@ class Ortam:
         return self._simdi or datetime.now()
 
     def yol(self, *p):
-        return os.path.join(self.dizin, *p)
+        # ayar/ durum/ veri/ katmanları (yollar.py, Faz 1); eski kurulumda bugünkü yerler
+        return yollar.yol("/".join(p), self.dizin)
 
     def _bulut_oku(self):
         """supabase_config.json → {url, key, lokasyon_id} ya da None (bu PC göndermez)."""
@@ -124,7 +139,9 @@ class Ortam:
             u, k = c.get("supabase_url", ""), c.get("supabase_key", "")
             if not u or not k or "BURAYA" in u or "BURAYA" in k:
                 return None
-            return {"url": u.rstrip("/"), "key": k, "lokasyon_id": c.get("lokasyon_id") or "bilinmeyen"}
+            import location_manager as _lm_k   # kimlik: lokasyon profili (Faz 1)
+            return {"url": u.rstrip("/"), "key": k,
+                    "lokasyon_id": _lm_k.lokasyon_id(self.dizin, c.get("lokasyon_id")) or "bilinmeyen"}
         except Exception:
             return None
 
@@ -296,11 +313,16 @@ def k_sayac_erisimi(o):
         raise Atla("analizor_guncel_veriler.csv yok")
     with open(yol, newline="", encoding="utf-8") as f:
         satirlar = list(csv.DictReader(f))
+    try:                                     # kritik sayaçlar: ayar/sayaclar.json (Faz 1 / C1)
+        import sayaclar
+        _kritikler = sayaclar.kritik_adlar(o.dizin)
+    except Exception:
+        _kritikler = set()
     cikti = []
     for r in satirlar:
         ad, durum = (r.get("Cihaz_Adi") or "").strip(), (r.get("Durum") or "").strip()
         if ad and "hata" in durum.lower():
-            kritik = any(k in ad.upper() for k in KRITIK_SAYAC)
+            kritik = (ad in _kritikler) if _kritikler else any(k in ad.upper() for k in KRITIK_SAYAC)
             cikti.append(bulgu(
                 "sayac_erisimi", ad, "kritik" if kritik else "uyari", "Sayaç erişimi",
                 "%s sayacı okunamıyor" % ad, "günlük okumada kWh değeri",
@@ -328,7 +350,7 @@ def k_donmus_veri(o):
         logger.debug("veri_alarm kullanılamadı: %s", e)
 
     son = df.tail(30)
-    for c in SAYAC_SUTUNLARI:
+    for c in sayac_sutunlari(o):
         if c not in son.columns:
             continue
         v = [x for x in (_sayi(x) for x in son[c]) if x is not None]
@@ -591,18 +613,28 @@ def k_portal_tutarliligi(o):
 
 
 # Donmuş veri kontrolünün baktığı sayaçlar + toplam/türetilmiş sütunlar (sayaç değil, kapsam dışı).
-IZLENEN = set(SAYAC_SUTUNLARI) | set(TURETILMIS) | set(BULUT_SUTUNLARI)
+def sayac_sutunlari(o):
+    """Donmuş veri kontrolünün baktığı sayaç sütunları: ayar/sayaclar.json (yoksa yedek liste)."""
+    try:
+        import sayaclar
+        return sayaclar.sutunlar(base_dir=o.dizin) or list(SAYAC_SUTUNLARI)
+    except Exception:
+        return list(SAYAC_SUTUNLARI)
+
+
+def izlenen(o):
+    return set(sayac_sutunlari(o)) | set(TURETILMIS) | set(BULUT_SUTUNLARI)
 
 
 def k_kapsam(o):
     """Kapsam: energy_data.csv'de veri gelen ama DONMUŞ VERİ kontrolünün bakmadığı sayaç sütunu var mı.
     (Okuma ve canlı veri kontrolleri ANALYZERS'taki bütün sayaçlara zaten bakar; günlük değerin
-    günlerce aynı kalması ise yalnızca SAYAC_SUTUNLARI listesindekilerde yakalanır.) Yalnızca bilgi."""
+    günlerce aynı kalması ise yalnızca ayar/sayaclar.json'dakilerde yakalanır.) Yalnızca bilgi."""
     df = enerji_df(o)
     son = df[df["Tarih"] >= (o.simdi().date() - timedelta(days=KALITE_GUN)).isoformat()]
     yeni = []
     for c in df.columns:
-        if not c.endswith("_kWh") or c in IZLENEN:
+        if not c.endswith("_kWh") or c in izlenen(o):
             continue
         if any((_sayi(v) or 0) != 0 for v in son[c]):
             yeni.append(c)
@@ -612,8 +644,8 @@ def k_kapsam(o):
         "kapsam", "sayac", "bilgi", "Kapsam",
         "%d sayaç sütunu donmuş veri kontrolünde yok" % len(yeni),
         "veri gelen her sayaç donmuş veri kontrolünde (okuma ve canlı veri kontrolleri bütün sayaçlara bakar)",
-        ", ".join(sorted(yeni)), tekrar_adimi="energy_data.csv sütunları ↔ enerji_agent.py SAYAC_SUTUNLARI",
-        olasi_yer="enerji_agent.py SAYAC_SUTUNLARI (yeni sayaç eklenince buraya da eklenmeli)",
+        ", ".join(sorted(yeni)), tekrar_adimi="energy_data.csv sütunları ↔ ayar/sayaclar.json (sutun alanı)",
+        olasi_yer="ayar/sayaclar.json (yeni sayaç eklenince buraya da eklenmeli)",
         kanit={"sutunlar": sorted(yeni)})]
 
 
@@ -671,10 +703,11 @@ def k_portal_sagligi(o):
         kod, neden = o.http(adres, zaman_asimi=8)
         if kod != 200:
             cikti.append(bulgu(
-                "portal_sagligi", "8501", "kritik", "Portal sağlığı",
-                "Enerji portalı (8501) yanıt vermiyor", "HTTP 200", "yanıt: %s · %s" % (kod, str(neden)[:80]),
+                "portal_sagligi", "8501", "kritik", "Portal sağlığı",   # anahtar sabit (bulgu kimliği)
+                "Enerji portalı (%s) yanıt vermiyor" % _port(o.portal_url), "HTTP 200",
+                "yanıt: %s · %s" % (kod, str(neden)[:80]),
                 denenen="20 sn sonra yeniden denedi → yine yanıt yok (portalı yeniden başlatmadı)",
-                tekrar_adimi="Lokasyon PC'sinde http://localhost:8501 adresini aç",
+                tekrar_adimi="Lokasyon PC'sinde %s adresini aç" % o.portal_url.rstrip("/"),
                 olasi_yer="app_portal.py süreci; watchdog penceresi (PORTAL_BASLAT.bat)"))
 
     # Eşitleme kaydında son iki tur içinde yeni HATA satırı
@@ -730,8 +763,8 @@ def _durum_oku(o):
 
 
 def _durum_yaz(o, d):
-    os.makedirs(o.yol("configs"), exist_ok=True)
     yol = o.yol("configs", o.kim["on"] + "_durum.json")
+    os.makedirs(os.path.dirname(yol), exist_ok=True)
     with open(yol + ".tmp", "w", encoding="utf-8") as f:
         json.dump(d, f, ensure_ascii=False, indent=1)
     os.replace(yol + ".tmp", yol)

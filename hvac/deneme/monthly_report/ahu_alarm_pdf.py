@@ -5,6 +5,7 @@ AHU Alarm Tekrar Raporu (PDF)
 ahu_alarm_takip.ay_sonu_raporu() sonucunu, Mahal bazinda gruplanmis
 bir PDF rapora donusturur.
 """
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import os
 from datetime import datetime
 from fpdf import FPDF
@@ -13,7 +14,7 @@ from monthly_report.ahu_alarm_takip import ay_sonu_raporu, TEKRAR_ESIK
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # hvac/deneme
 FONT_DIR = os.path.join(BASE_DIR, "fonts")
-OUTPUT_DIR = os.path.join(BASE_DIR, "monthly_report", "ahu_alarm_raporlari")
+OUTPUT_DIR = yollar.yol("monthly_report/ahu_alarm_raporlari", BASE_DIR)
 
 NAVY = (0, 43, 94)
 GRAY = (90, 90, 90)

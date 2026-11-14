@@ -1,0 +1,165 @@
+{
+ "_aciklama": "Synapse'teki hastane listesi — TEK KAYNAK (Faz 1 / D3, 12.11.2026). Ana sayfa, harita, lokasyon detayı, rapor ve hava besleyici buradan okur. m2 değerini Synapse ayarları (ayarlar.m2_degerler) geçersiz kılabilir. Yeni hastane = buraya bir satır.",
+ "hastaneler": {
+  "maslak": {
+   "isim": "Acıbadem Maslak",
+   "kisa": "MASLAK",
+   "lat": 41.1273,
+   "lon": 29.0246,
+   "m2": 15000,
+   "renk": "#2a78d6"
+  },
+  "altunizade": {
+   "isim": "Acıbadem Altunizade",
+   "kisa": "ALTUNİZADE",
+   "lat": 41.0189,
+   "lon": 29.0458,
+   "m2": 10000,
+   "renk": "#c98500"
+  },
+  "kozyatagi": {
+   "isim": "Acıbadem Kozyatağı",
+   "kisa": "KOZYATAĞİ",
+   "lat": 40.9766,
+   "lon": 29.0928,
+   "m2": 12000,
+   "renk": "#0ca30c"
+  },
+  "taksim": {
+   "isim": "Acıbadem Taksim",
+   "kisa": "TAKSİM",
+   "lat": 41.0417,
+   "lon": 28.9827,
+   "m2": 8000,
+   "renk": "#4a3aa7"
+  },
+  "atakent": {
+   "isim": "Acıbadem Atakent",
+   "kisa": "ATAKENT",
+   "lat": 41.0349,
+   "lon": 28.7789,
+   "m2": 20000,
+   "renk": "#eb6834"
+  },
+  "atasehir": {
+   "isim": "Acıbadem Ataşehir",
+   "kisa": "ATAŞEHİR",
+   "lat": 40.9934,
+   "lon": 29.1213,
+   "m2": 14000,
+   "renk": "#256abf"
+  },
+  "bakirkoy": {
+   "isim": "Acıbadem Bakırköy",
+   "kisa": "BAKIRKÖY",
+   "lat": 40.9776,
+   "lon": 28.8731,
+   "m2": 12000,
+   "renk": "#84cc16"
+  },
+  "fulya": {
+   "isim": "Acıbadem Fulya",
+   "kisa": "FULYA",
+   "lat": 41.0557,
+   "lon": 28.9994,
+   "m2": 9000,
+   "renk": "#e87ba4"
+  },
+  "international": {
+   "isim": "Acıbadem International",
+   "kisa": "INTERNAT.",
+   "lat": 40.959,
+   "lon": 28.8354,
+   "m2": 18000,
+   "renk": "#14b8a6"
+  },
+  "kadikoy": {
+   "isim": "Acıbadem Kadıköy",
+   "kisa": "KADİKÖY",
+   "lat": 41.0072,
+   "lon": 29.0429,
+   "m2": 8000,
+   "renk": "#ec4899"
+  },
+  "kartal": {
+   "isim": "Acıbadem Kartal",
+   "kisa": "KARTAL",
+   "lat": 40.886,
+   "lon": 29.2041,
+   "m2": 11000,
+   "renk": "#d03b3b"
+  },
+  "ankara": {
+   "isim": "Acıbadem Ankara",
+   "kisa": "ANKARA",
+   "lat": 39.9179,
+   "lon": 32.8626,
+   "m2": 16000,
+   "renk": "#fb7185"
+  },
+  "bayindir": {
+   "isim": "Acıbadem Bayındır Söğütözü",
+   "kisa": "BAYINDIR",
+   "lat": 39.898,
+   "lon": 32.824,
+   "m2": 12000,
+   "renk": "#f43f5e"
+  },
+  "bursa": {
+   "isim": "Acıbadem Bursa",
+   "kisa": "BURSA",
+   "lat": 40.209,
+   "lon": 28.979,
+   "m2": 13000,
+   "renk": "#c98500"
+  },
+  "eskisehir": {
+   "isim": "Acıbadem Eskişehir",
+   "kisa": "ESKİŞEHİR",
+   "lat": 39.7767,
+   "lon": 30.5206,
+   "m2": 9000,
+   "renk": "#818cf8"
+  },
+  "izmir": {
+   "isim": "Acıbadem İzmir Kent",
+   "kisa": "İZMİR",
+   "lat": 38.4192,
+   "lon": 27.1287,
+   "m2": 15000,
+   "renk": "#2a78d6"
+  },
+  "kayseri": {
+   "isim": "Acıbadem Kayseri",
+   "kisa": "KAYSERİ",
+   "lat": 38.7225,
+   "lon": 35.4875,
+   "m2": 11000,
+   "renk": "#a78bfa"
+  },
+  "adana": {
+   "isim": "Acıbadem Adana",
+   "kisa": "ADANA",
+   "lat": 37.0,
+   "lon": 35.3213,
+   "m2": 12000,
+   "renk": "#f472b6"
+  },
+  "adana_ortopedia": {
+   "isim": "Acıbadem Adana Ortopedia",
+   "kisa": "ADANA ORT.",
+   "lat": 37.01,
+   "lon": 35.335,
+   "m2": 5000,
+   "renk": "#e87ba4"
+  },
+  "bodrum": {
+   "isim": "Acıbadem Bodrum",
+   "kisa": "BODRUM",
+   "lat": 37.0344,
+   "lon": 27.4305,
+   "m2": 7000,
+   "renk": "#2dd4bf"
+  }
+ }
+}

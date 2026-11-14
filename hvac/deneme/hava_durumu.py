@@ -30,6 +30,7 @@ Open-Meteo'ya ulaşamadı, hava alanları boş kaldı. thapps ulaşabiliyor: mer
 adres ve anahtarla, yalnızca okuma). Değerler birebir aynı biçimdedir.
 """
 from __future__ import annotations
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 
 import json
 import logging
@@ -40,7 +41,7 @@ from typing import Dict
 
 logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROFIL = os.path.join(BASE_DIR, "configs", "lokasyon_profili.json")
+PROFIL = yollar.yol("configs/lokasyon_profili.json", BASE_DIR)
 
 SENSOR_NEM = "Dis_Hava_Nem_Yuzde"
 INTERNET_SUTUNLARI = [
@@ -131,9 +132,10 @@ def _cevir(gunluk: dict) -> Dict[str, dict]:
 def _synapse_hava(bas: str, son: str, tahmin: bool) -> Dict[str, dict]:
     """Yedek yol: merkezin yazdığı hava_gunluk tablosu. Hata olursa boş sözlük."""
     try:
-        with open(os.path.join(BASE_DIR, "supabase_config.json"), encoding="utf-8-sig") as f:
+        with open(yollar.yol("supabase_config.json", BASE_DIR), encoding="utf-8-sig") as f:
             c = json.load(f)
-        url, key, lok = c.get("supabase_url", ""), c.get("supabase_key", ""), c.get("lokasyon_id", "")
+        import location_manager as _lm_k   # kimlik: lokasyon profili (Faz 1)
+        url, key, lok = c.get("supabase_url", ""), c.get("supabase_key", ""), _lm_k.lokasyon_id(BASE_DIR, c.get("lokasyon_id"))
         if not url or not key or not lok or "BURAYA" in url:
             return {}
         try:

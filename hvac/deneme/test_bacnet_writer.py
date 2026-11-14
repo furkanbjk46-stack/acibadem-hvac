@@ -23,6 +23,7 @@ import threading
 from datetime import datetime, timezone, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import yollar  # noqa: E402  (ayar/ durum/ veri/; Faz 1)
 import logging
 logging.disable(logging.CRITICAL)
 import bacnet_writer as bw
@@ -379,7 +380,7 @@ for _d in ("dogrulanamadi", "suresi_doldu"):
     c(f"ekran '{_d}' durumunu taniyor", f'"{_d}"' in _metin)
 
 # ── 7) Geri okuma haritasi (configs/geri_okuma.json) ────────────────────
-_yol = os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs", "geri_okuma.json")
+_yol = yollar.yol("configs/geri_okuma.json", os.path.dirname(os.path.abspath(__file__)))
 try:
     _h = json.load(open(_yol, encoding="utf-8"))
     c("geri_okuma.json gecerli JSON", True)

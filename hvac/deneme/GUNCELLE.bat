@@ -84,6 +84,17 @@ if exist "static\outputs" (
     set /a SAYAC+=1
 )
 
+:: ─── Faz 1 klasör düzeni: ayar\ durum\ veri\ (tamamı; 12.11.2026) ───
+:: Lokasyon ayarı, çalışma durumu ve veri bu klasörlerdedir. Pakette OLMAMALIDIR;
+:: olsa bile lokasyonun kendi hâli geri yüklenir (lokasyon kazanır).
+for %%D in (ayar durum veri) do (
+    if exist "%%D" (
+        xcopy /E /I /Y /Q "%%D" "!YEDEK!\%%D" >nul
+        echo       ✓ %%D\ (tamamı)
+        set /a SAYAC+=1
+    )
+)
+
 echo       → !SAYAC! öğe yedeklendi
 
 :: === ADIM 3: YENİ KLASÖRÜN TAMAMINI KOPYALA ===
@@ -133,6 +144,14 @@ if exist "!YEDEK!\static\outputs" (
     echo       ✓ static\outputs\ (geri yüklendi)
 )
 
+:: ─── Faz 1 klasörleri: lokasyonun ayar\ durum\ veri\ hâli geri konur ───
+for %%D in (ayar durum veri) do (
+    if exist "!YEDEK!\%%D" (
+        xcopy /E /I /Y /Q "!YEDEK!\%%D" "%%D" >nul
+        echo       ✓ %%D\ (geri yüklendi)
+    )
+)
+
 
 
 :: === ADIM 5: DOĞRULAMA RAPORU ===
@@ -173,7 +192,12 @@ for %%F in (rules\location_config.py rules\temperature_cascade.py) do (
 )
 
 :: Kritik klasör kontrolü
-for %%D in (rules configs static .streamlit monthly_report tuketim_tahmin fonts) do (
+:: configs\ ve tuketim_tahmin\ Faz 1'de ayar\ durum\ veri\ altına taşınır; artık zorunlu değil.
+if not exist "yollar.py" (
+    echo       ❌ yollar.py — EKSİK! (dosya yolları modülü)
+    set "HATA=1"
+)
+for %%D in (rules static .streamlit monthly_report fonts) do (
     if exist "%%D" (
         echo       ✅ %%D\ — mevcut
     ) else (
@@ -194,6 +218,12 @@ for %%F in (fonts\DejaVuSans.ttf fonts\DejaVuSans-Bold.ttf fonts\DejaVuSans-Obli
 
 :: Korunan veri dosyaları kontrolü
 echo       ─────── Korunan Veriler ───────
+for %%F in (veri\energy_data.csv veri\maintenance_cards.json ayar\supabase_config.json ayar\lokasyon_profili.json ayar\bacnet_noktalari.json) do (
+    if exist "%%F" (
+        echo       💾 %%F — korundu ✓
+    )
+)
+:: Taşınmamış (eski düzen) kurulum için eski yerler:
 for %%F in (energy_data.csv ml_training_data.json hvac_analysis_history.csv) do (
     if exist "%%F" (
         echo       💾 %%F — korundu ✓

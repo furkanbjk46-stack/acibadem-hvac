@@ -11,6 +11,7 @@
 #
 # İLKE: Bu modül HİÇBİR BACnet yazma çağrısı yapmaz — yalnızca okur/karar verir (Not 10.5).
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import os
 import json
 import logging
@@ -19,9 +20,9 @@ import datetime
 logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DURUM_FILE = os.path.join(BASE_DIR, "configs", "on_kosul_durum.json")
-CARDS_FILE = os.path.join(BASE_DIR, "configs", "maintenance_cards.json")
-AUDIT_FILE = os.path.join(BASE_DIR, "configs", "bakim_audit_log.jsonl")
+DURUM_FILE = yollar.yol("configs/on_kosul_durum.json", BASE_DIR)
+CARDS_FILE = yollar.yol("configs/maintenance_cards.json", BASE_DIR)
+AUDIT_FILE = yollar.yol("configs/bakim_audit_log.jsonl", BASE_DIR)
 
 # Varsayılanlar — main_portal CONFIG bunları override edebilir (FAZ 5 anahtarları)
 DEFAULTS = {

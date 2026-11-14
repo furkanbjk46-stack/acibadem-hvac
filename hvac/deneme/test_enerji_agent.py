@@ -412,11 +412,11 @@ k.tur()
 k.modbus_yaz()
 k.yazma_kodu = 500                                    # veritabanı yazmayı reddediyor
 s = k.tur()
-d = json.load(open(k.yol("configs", "enerji_agent_durum.json"), encoding="utf-8"))
+d = json.load(open(k.o.yol("configs", "enerji_agent_durum.json"), encoding="utf-8"))
 c("gönderilemeyen kapanış saklanır", "gönderim hatası" in s["gonderim"] and len(d["bekleyen_kapanis"]) == 1)
 k.yazma_kodu = 204
 k.tur()
-d = json.load(open(k.yol("configs", "enerji_agent_durum.json"), encoding="utf-8"))
+d = json.load(open(k.o.yol("configs", "enerji_agent_durum.json"), encoding="utf-8"))
 c("sonraki turda yeniden gönderilir", d["bekleyen_kapanis"] == [])
 
 # ── 11) Dayanıklılık ve sınırlar ─────────────────────────────────────────

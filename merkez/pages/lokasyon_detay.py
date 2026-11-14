@@ -274,36 +274,8 @@ hr { border-color:#133273 !important; }
 
 
 # ── Lokasyon bilgileri (app_merkez.py ile senkron) ───────
-HASTANELER = {
-    # ── İstanbul ──
-    "maslak":        {"isim": "Acıbadem Maslak",         "kisa": "MASLAK",       "m2": 15000, "renk": "#2a78d6"},
-    "altunizade":    {"isim": "Acıbadem Altunizade",     "kisa": "ALTUNİZADE",   "m2": 10000, "renk": "#c98500"},
-    "kozyatagi":     {"isim": "Acıbadem Kozyatağı",      "kisa": "KOZYATAĞİ",   "m2": 12000, "renk": "#0ca30c"},
-    "taksim":        {"isim": "Acıbadem Taksim",         "kisa": "TAKSİM",       "m2":  8000, "renk": "#4a3aa7"},
-    "atakent":       {"isim": "Acıbadem Atakent",        "kisa": "ATAKENT",      "m2": 20000, "renk": "#eb6834"},
-    "atasehir":      {"isim": "Acıbadem Ataşehir",       "kisa": "ATAŞEHİR",     "m2": 14000, "renk": "#256abf"},
-    "bakirkoy":      {"isim": "Acıbadem Bakırköy",       "kisa": "BAKIRKÖY",     "m2": 12000, "renk": "#84cc16"},
-    "fulya":         {"isim": "Acıbadem Fulya",          "kisa": "FULYA",        "m2":  9000, "renk": "#e87ba4"},
-    "international": {"isim": "Acıbadem International",  "kisa": "INTERNAT.",    "m2": 18000, "renk": "#14b8a6"},
-    "kadikoy":       {"isim": "Acıbadem Kadıköy",        "kisa": "KADİKÖY",      "m2":  8000, "renk": "#ec4899"},
-    "kartal":        {"isim": "Acıbadem Kartal",         "kisa": "KARTAL",       "m2": 11000, "renk": "#d03b3b"},
-    # ── Ankara ──
-    "ankara":          {"isim": "Acıbadem Ankara",           "kisa": "ANKARA",      "m2": 16000, "renk": "#fb7185"},
-    "bayindir":        {"isim": "Acıbadem Bayındır Söğütözü", "kisa": "BAYINDIR",    "m2": 12000, "renk": "#f43f5e"},
-    # ── Bursa ──
-    "bursa":           {"isim": "Acıbadem Bursa",             "kisa": "BURSA",       "m2": 13000, "renk": "#c98500"},
-    # ── Eskişehir ──
-    "eskisehir":       {"isim": "Acıbadem Eskişehir",         "kisa": "ESKİŞEHİR",   "m2":  9000, "renk": "#818cf8"},
-    # ── İzmir ──
-    "izmir":           {"isim": "Acıbadem İzmir Kent",        "kisa": "İZMİR",       "m2": 15000, "renk": "#2a78d6"},
-    # ── Kayseri ──
-    "kayseri":         {"isim": "Acıbadem Kayseri",           "kisa": "KAYSERİ",     "m2": 11000, "renk": "#a78bfa"},
-    # ── Adana ──
-    "adana":           {"isim": "Acıbadem Adana",             "kisa": "ADANA",       "m2": 12000, "renk": "#f472b6"},
-    "adana_ortopedia": {"isim": "Acıbadem Adana Ortopedia",   "kisa": "ADANA ORT.",  "m2":  5000, "renk": "#e87ba4"},
-    # ── Bodrum ──
-    "bodrum":          {"isim": "Acıbadem Bodrum",            "kisa": "BODRUM",      "m2":  7000, "renk": "#2dd4bf"},
-}
+import hastaneler as _hastaneler  # tek kaynak: configs/hastaneler.json (Faz 1 / D3)
+HASTANELER = _hastaneler.yukle()
 
 # ── Config & Lokasyon seç ────────────────────────────
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs", "merkez_config.json")
@@ -458,6 +430,28 @@ def fetch_lok_data(url, key, lok_id):
     except:
         pass
     return pd.DataFrame()
+
+# Sayaç başına günlük değerler (ince tablo sayac_gunluk, yol haritası D1). Tablo yoksa ya da
+# lokasyon henüz göndermiyorsa liste boş döner ve "Sayaçlar" grafiği listelenmez.
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_sayac_listesi(url, key, lok_id):
+    try:
+        from supabase import create_client
+        import sayac_veri as _SV
+        return _SV.sayac_listesi(create_client(url, key), lok_id)
+    except Exception:
+        return []
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def fetch_sayac_degerleri(url, key, lok_id, sayaclar, bas, bit):
+    try:
+        from supabase import create_client
+        import sayac_veri as _SV
+        return _SV.gunluk_degerler(create_client(url, key), lok_id, list(sayaclar), bas, bit)
+    except Exception:
+        return {}
+
 
 @st.cache_data(ttl=120, show_spinner=False)
 def fetch_tum_lokasyonlar_debug(url, key):
@@ -703,12 +697,14 @@ with tab1:
             [c for c in df.columns if re.fullmatch(r"TRDP\d+_kWh", str(c))
              and pd.to_numeric(df[c], errors="coerce").fillna(0).sum() > 0],
             key=lambda c: int(re.findall(r"\d+", c)[0]))
+        _sayac_liste = fetch_sayac_listesi(url, key, lok_id)
         _GRAFIK_GRUPLARI = [
             ("SU & ENERJİ KAYNAKLARI", [
                 ("Su Tüketimi", "su", "m³"),
                 ("Tüketim", "tuketim", "kWh"),
                 ("Şebeke Tüketimi", "sebeke", "kWh"),
-            ] + ([("Trafolar (TRDP)", "trafo", "kWh")] if _trafo_kolonlar else [])),
+            ] + ([("Trafolar (TRDP)", "trafo", "kWh")] if _trafo_kolonlar else [])
+              + ([("Sayaçlar (tek tek)", "sayaclar", "kWh")] if _sayac_liste else [])),
             ("KOJENERASYON & GAZ SİSTEMLERİ", [
                 ("Kojen Üretim", "kojen", "kWh · m³"),
                 ("Kazan Doğalgaz", "kazan", "m³"),
@@ -731,7 +727,8 @@ with tab1:
         _GRAFIK_IKON = {"tuketim": "enerji", "chiller": "sogutma", "verimlilik": "verim",
                         "sogutma": "sogutma", "su": "su", "kojen": "kojen", "sebeke": "sebeke",
                         "mcc": "mcc", "kazan": "kazan", "ay_karsilastir": "takvim",
-                        "kpi_ozet": "kayit", "enerji_kirilim": "grafik", "trafo": "trdp"}
+                        "kpi_ozet": "kayit", "enerji_kirilim": "grafik", "trafo": "trdp",
+                        "sayaclar": "sebeke"}
 
         # Lokasyon değişince önceki seçim bu listede olmayabilir (ör. Maslak'ta
         # trafo grafiği seçiliyken trafosuz lokasyona geçmek); Streamlit böyle
@@ -1122,6 +1119,45 @@ with tab1:
             else:
                 st.info("Trafo (TRDP) verisi bulunamadı.")
 
+        # ── Sayaçlar (tek tek) — sayac_gunluk'tan; yeni sayaç SQL sütunu beklemeden burada görünür ──
+        elif grafik_tip == "sayaclar":
+            import sayac_veri as _SV
+            _sv_ad = {s["sayac"]: s for s in _sayac_liste}
+            _sv_sec = st.multiselect(
+                "Sayaçlar", list(_sv_ad), default=_SV.varsayilan_secim(_sayac_liste),
+                format_func=lambda a: "%s · %s" % (a, _SV.TUR_ADI.get(_sv_ad[a]["tur"], _sv_ad[a]["tur"])),
+                key="sayac_sec_%s" % lok_id, label_visibility="collapsed", placeholder="Sayaç seçin")
+            _sv_deg = fetch_sayac_degerleri(url, key, lok_id, tuple(_sv_sec), str(tarih_bas), str(tarih_bit))
+            if _sv_sec and any(_sv_deg.get(a) for a in _sv_sec):
+                st.caption(tarih_aralik_str)
+                _sv_renk = ["#4a3aa7", "#256abf", "#c98500", "#0ca30c", "#d03b3b", "#6da7ec", "#8b5cf6", "#14b8a6"]
+                fig_sv = go.Figure()
+                for _i, _a in enumerate(_sv_sec):
+                    _g = sorted(_sv_deg.get(_a, {}).items())
+                    if not _g:
+                        continue
+                    fig_sv.add_trace(go.Scatter(
+                        x=[pd.Timestamp(t) for t, _ in _g], y=[v for _, v in _g], name=_a, mode="lines+markers",
+                        line=dict(color=_sv_renk[_i % len(_sv_renk)], width=2), marker=dict(size=4),
+                        hovertemplate="<b>%{x|%d.%m.%Y}</b><br>%{y:,.0f} " + _sv_ad[_a]["birim"]
+                                      + "<extra>%{fullData.name}</extra>",
+                    ))
+                fig_sv.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
+                    margin=dict(t=10, b=20, l=50, r=10), height=330,
+                    xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
+                    yaxis=dict(gridcolor="rgba(19,50,115,0.07)", title=dict(text="kWh", font=dict(size=10))),
+                    legend=dict(orientation="h", y=1.1, x=0, font=dict(size=10), bgcolor="rgba(0,0,0,0)"),
+                )
+                st.plotly_chart(_tr_eksen(fig_sv), use_container_width=True, config={"displayModeBar": False})
+                st.caption(" · ".join("%s: %s kWh (%d gün)" % (a, f"{t:,.0f}".replace(",", "."), n)
+                                      for a, t, n in _SV.ozet({a: _sv_deg.get(a, {}) for a in _sv_sec})))
+            elif _sv_sec:
+                st.info("Seçilen sayaçlar için bu tarih aralığında veri yok.")
+            else:
+                st.info("Grafik için en az bir sayaç seçin.")
+
         # ── MCC Tüketimi ──
         elif grafik_tip == "mcc":
             if "MCC_Tuketim_kWh" in secili_df.columns and not secili_df.empty:
@@ -1432,8 +1468,11 @@ with tab1:
     st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
                 + _ik.ikon("kojen", 15) + 'KOJEN & KAYNAK</div>', unsafe_allow_html=True)
 
-    # ── TRDP Kırılımı (sadece Maslak) ──
-    if lok_id == "maslak":
+    # ── TRDP (trafo) kırılımı: lokasyonun verisinde trafo sayacı varsa (Faz 1 / D3; eskiden
+    #    yalnızca lok_id == "maslak" koşuluyla gösteriliyordu) ──
+    _trafo_var = any(re.fullmatch(r"TRDP\d+_kWh", str(c))
+                     and pd.to_numeric(df[c], errors="coerce").fillna(0).sum() > 0 for c in df.columns)
+    if _trafo_var:
         trdp1_val = son_df["TRDP1_kWh"].sum() if "TRDP1_kWh" in son_df.columns else None
         trdp2_val = son_df["TRDP2_kWh"].sum() if "TRDP2_kWh" in son_df.columns else None
         trdp3_val = son_df["TRDP3_kWh"].sum() if "TRDP3_kWh" in son_df.columns else None
@@ -1479,7 +1518,7 @@ with tab1:
             _kaynak_item("su", "Su Tüketimi",    su_str,     "m³",  "#2a78d6"),
         ] + _trdp_kart
 
-    _cols_count = 4 if (lok_id == "maslak" or len(_kaynak_items) > 6) else 3
+    _cols_count = 4 if (_trafo_var or len(_kaynak_items) > 6) else 3
     _grid_items = "".join(_kaynak_items)
     st.markdown(
         f"<div style='display:grid;grid-template-columns:repeat({_cols_count},1fr);gap:10px;margin-bottom:8px;'>"
@@ -1845,6 +1884,31 @@ with tab1:
                         _ayar_yaz("oto_gunduz_saat_%s" % lok_id, "")
                         _ayar_yaz("oto_gece_saat_%s" % lok_id, "")
                         st.success("%s genel kurala döndü." % lok_info["kisa"])
+                    except Exception as _e:
+                        st.error("Ayar yazılamadı: %s" % _e)
+
+                # ── BU LOKASYONDA OTO-SET AÇIK / KAPALI (Faz 1 / E1, 12.11.2026) ──
+                # Lokasyon `oto_set_aktif_<lokasyon>` anahtarını 11.10.2026'dan beri okuyor
+                # (oto_set._kural_oku); ama burada ayarlanamıyordu — tek bir hastanede oto-set'i
+                # kapatmak için genel anahtarı kapatmak, yani BÜTÜN hastaneleri kapatmak gerekiyordu.
+                # Boş değer = genel kural (satır silmek RLS'e takılabiliyor).
+                _akt_secenek = ["Genel kurala uy", "Bu lokasyonda AÇIK", "Bu lokasyonda KAPALI"]
+                if "oto_set_aktif" in _ozel_anahtarlar:
+                    _akt_simdi = 1 if _krl.get("aktif") else 2
+                else:
+                    _akt_simdi = 0
+                st.markdown("**Oto-set bu lokasyonda**")
+                _akt_yeni = st.radio("Oto-set bu lokasyonda", _akt_secenek, index=_akt_simdi,
+                                     key="lok_oto_aktif_%s" % lok_id, horizontal=True,
+                                     label_visibility="collapsed", disabled=_demo)
+                _akt_kaydet = st.button("Oto-set durumunu kaydet", key="lok_oto_aktif_kaydet_%s" % lok_id,
+                                        disabled=(_demo or _akt_secenek.index(_akt_yeni) == _akt_simdi))
+                if _akt_kaydet:
+                    _deger = {0: "", 1: "true", 2: "false"}[_akt_secenek.index(_akt_yeni)]
+                    try:
+                        _ayar_yaz("oto_set_aktif_%s" % lok_id, _deger)
+                        st.success("Kaydedildi — %s: %s. Lokasyon bir sonraki turda uygular."
+                                   % (lok_info["kisa"], _akt_yeni.lower()))
                     except Exception as _e:
                         st.error("Ayar yazılamadı: %s" % _e)
             st.caption("Setler yalnızca bu saatlerde gönderilir. Burada "

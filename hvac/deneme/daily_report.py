@@ -3,6 +3,7 @@
 # Her gün saat 17:00'da önceki günün verilerini derleyerek modern PDF rapor üretir.
 
 from __future__ import annotations
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 
 import os
 import json
@@ -33,9 +34,9 @@ try:
     SETTINGS_FILE = _lm.get_data_path("configs/hvac_settings.json")
     REPORTS_DIR = _lm.get_data_path("daily_reports")
 except Exception:
-    DATA_FILE = os.path.join(BASE_DIR, "energy_data.csv")
-    SETTINGS_FILE = os.path.join(BASE_DIR, "configs", "hvac_settings.json")
-    REPORTS_DIR = os.path.join(BASE_DIR, "daily_reports")
+    DATA_FILE = yollar.yol("energy_data.csv", BASE_DIR)
+    SETTINGS_FILE = yollar.yol("configs/hvac_settings.json", BASE_DIR)
+    REPORTS_DIR = yollar.yol("daily_reports", BASE_DIR)
 GAS_TO_KWH = 10.64  # 1 m³ doğalgaz ≈ 10.64 kWh
 
 
@@ -145,7 +146,7 @@ def load_building_area() -> float:
 def load_last_analysis() -> List[Dict]:
     """Son HVAC analiz sonuçlarını yükle."""
     try:
-        results_file = os.path.join(BASE_DIR, "configs", "last_analysis.json")
+        results_file = yollar.yol("configs/last_analysis.json", BASE_DIR)
         if os.path.exists(results_file):
             with open(results_file, "r", encoding="utf-8") as f:
                 return json.load(f)

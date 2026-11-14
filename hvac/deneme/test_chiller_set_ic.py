@@ -10,6 +10,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import yollar  # noqa: E402  (ayar/ durum/ veri/; Faz 1)
 import pandas as pd  # noqa: E402
 import data_bridge as B  # noqa: E402
 
@@ -45,7 +46,7 @@ c("esitlikte ortanca", hesap({1: 7.5, 5: 3.3}, {1: 1, 5: 1}) == 5.4)
 c("IC SET okunamadiysa bos (0 yazilmaz)", hesap({}, {1: 1}) == "")
 c("BACnet hic yoksa bos", B.build_daily_row("2026-10-28", {}, {})["Chiller_Set_Temp_C"] == "")
 
-sb = pd.read_excel(os.path.join(os.path.dirname(os.path.abspath(__file__)), "configs", "hedefli_okuma_sablonu_2.xlsx"))
+sb = pd.read_excel(yollar.yol("configs/hedefli_okuma_sablonu_2.xlsx", os.path.dirname(os.path.abspath(__file__))))
 c("depodaki sablonda CH SET satiri yok", not (sb["Point Name"].astype(str).str.strip() == "CH SET").any())
 c("sablonda bes IC SET var", all(((sb["Point Name"] == "CH-%d IC SET" % i).any()) for i in range(1, 6)))
 

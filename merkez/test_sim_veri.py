@@ -32,9 +32,9 @@ lok_ids = {l for l, _, _ in S.LOKASYONLAR}
 # ── Kimlik butunlugu: portal ile ayni id'ler ──────────────────────────────
 sys.path.insert(0, KOK)
 import re
-kaynak = open(os.path.join(KOK, "merkez", "app_merkez.py"), encoding="utf-8").read()
-blok = kaynak.split("HASTANELER", 1)[1][:6000]
-portal_ids = set(re.findall(r'^\s*"([a-z_]+)":\s*\{"isim"', blok, re.M))
+sys.path.insert(0, os.path.join(KOK, "merkez"))
+import hastaneler as _HS  # tek kaynak: merkez/configs/hastaneler.json
+portal_ids = set(_HS.yukle())
 c("portal ile ayni lokasyon kimlikleri", lok_ids == portal_ids,
   "sim fazla=%s portal fazla=%s" % (lok_ids - portal_ids, portal_ids - lok_ids))
 

@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import os
 import pandas as pd
 
-OUT = os.path.join(os.path.dirname(__file__), "static", "outputs", "kural_parametreleri_raporu.xlsx")
+OUT = os.path.join(yollar.klasor("static/outputs", os.path.dirname(__file__)), "kural_parametreleri_raporu.xlsx")
 
 df1 = pd.DataFrame([
     ["AHU SOĞUTMA HEDEFİ", "DİNAMİK: emiş−16.5, 4-8°C bandı", "AHU hava ΔT hedefi artık sabit değil; emişe göre hesaplanır (fallback TARGET_AIR_DT_AHU_COOL=6)", "Inlet/Outlet (coil su giriş-çıkış); yoksa Plant Supply/Return. AHU+soğutma+OAT varsa ±2°C OAT bias eklenir"],

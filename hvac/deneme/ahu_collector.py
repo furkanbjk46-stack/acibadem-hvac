@@ -4,6 +4,7 @@
 # Her 30 dakikada bir: BACnet oku → JSON satırları oluştur → /api/recommend_json POST → sonucu kaydet
 # cloud_sync._heartbeat_loop tarafından çağrılır (veya bağımsız çalıştırılır).
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import socket
 import struct
 import random
@@ -22,23 +23,39 @@ except Exception:
 logger = logging.getLogger(__name__)
 
 BASE_DIR          = os.path.dirname(os.path.abspath(__file__))
-AHU_CONFIG_FILE   = os.path.join(BASE_DIR, "ahu_nokta_konfig.json")
-AHU_RESULTS_FILE  = os.path.join(BASE_DIR, "hvac_ahu_analiz_sonuclari.json")
-AHU_TRIGGER_FILE  = os.path.join(BASE_DIR, "hvac_analiz_trigger.txt")
-AHU_TASARIM_KAPASITE_FILE = os.path.join(BASE_DIR, "configs", "ahu_tasarim_kapasiteleri.json")
-AHU_TASARIM_ISITMA_KAPASITE_FILE = os.path.join(BASE_DIR, "configs",
-                                                "ahu_tasarim_isitma_kapasiteleri.json")
-SETTINGS_FILE     = os.path.join(BASE_DIR, "configs", "hvac_settings.json")
-URETIM_TUKETIM_GECMIS_FILE = os.path.join(BASE_DIR, "configs", "uretim_tuketim_gecmis.json")
+AHU_CONFIG_FILE   = yollar.yol("ahu_nokta_konfig.json", BASE_DIR)   # yalnız testler/simülasyon değiştirir
+_AHU_CONFIG_OTOMATIK = AHU_CONFIG_FILE
+
+
+def _nokta_dosyasi() -> str:
+    """Geçerli BACnet nokta dosyası (ayar_yollari: iki kopyadan en son düzenlenen; 12.11.2026).
+    AHU_CONFIG_FILE dışarıdan değiştirildiyse (simülasyon) o kullanılır."""
+    if AHU_CONFIG_FILE != _AHU_CONFIG_OTOMATIK:
+        return AHU_CONFIG_FILE
+    try:
+        import ayar_yollari
+        return ayar_yollari.nokta_konfig_yolu(BASE_DIR)
+    except Exception:            # yarım güncelleme: eski davranış
+        return AHU_CONFIG_FILE
+AHU_RESULTS_FILE  = yollar.yol("hvac_ahu_analiz_sonuclari.json", BASE_DIR)
+AHU_TRIGGER_FILE  = yollar.yol("hvac_analiz_trigger.txt", BASE_DIR)
+AHU_TASARIM_KAPASITE_FILE = yollar.yol("configs/ahu_tasarim_kapasiteleri.json", BASE_DIR)
+AHU_TASARIM_ISITMA_KAPASITE_FILE = yollar.yol("configs/ahu_tasarim_isitma_kapasiteleri.json", BASE_DIR)
+SETTINGS_FILE     = yollar.yol("configs/hvac_settings.json", BASE_DIR)
+URETIM_TUKETIM_GECMIS_FILE = yollar.yol("configs/uretim_tuketim_gecmis.json", BASE_DIR)
 GECMIS_MAKS_KAYIT = 1008  # 10 dk aralıkla ~1 hafta
 ENERGY_CSV_TAZELIK_ESIK_SAAT = 3  # bu süreden eski hedefli_enerji_verileri.csv için uyarı
 
 # data_collector.py ile aynı Excel kaynağı — enerji/kolektör/chiller/kazan noktaları
-_ENERGY_EXCEL_CONFIGS = os.path.join(BASE_DIR, "configs", "hedefli_okuma_sablonu_2.xlsx")
-_ENERGY_EXCEL_ROOT    = os.path.join(BASE_DIR, "hedefli_okuma_sablonu_2.xlsx")
+_ENERGY_EXCEL_CONFIGS = yollar.yol("configs/hedefli_okuma_sablonu_2.xlsx", BASE_DIR)
+_ENERGY_EXCEL_ROOT    = yollar.yol("hedefli_okuma_sablonu_2.xlsx", BASE_DIR)
 ENERGY_EXCEL_FILE     = _ENERGY_EXCEL_CONFIGS if os.path.exists(_ENERGY_EXCEL_CONFIGS) else _ENERGY_EXCEL_ROOT
 
-MAIN_PORTAL_URL   = "http://localhost:8005/api/recommend_json"
+try:  # Mekanik Zeka portu: ayar/portlar.json (yoksa 8005)
+    import portlar as _portlar
+    MAIN_PORTAL_URL = "http://localhost:%d/api/recommend_json" % _portlar.mekanik_zeka(BASE_DIR)
+except Exception:
+    MAIN_PORTAL_URL = "http://localhost:8005/api/recommend_json"
 BACNET_PORT       = 47808
 BACNET_TIMEOUT    = 4.0
 PROP_PRESENT_VAL  = 85
@@ -86,11 +103,12 @@ def _ahu_adi(point_name: str) -> str:
 
 def load_ahu_config() -> list:
     """AHU nokta konfigürasyonunu JSON dosyasından yükle."""
-    if not os.path.exists(AHU_CONFIG_FILE):
-        logger.warning("AHU konfig dosyası bulunamadı: %s", AHU_CONFIG_FILE)
+    yol = _nokta_dosyasi()
+    if not os.path.exists(yol):
+        logger.warning("AHU konfig dosyası bulunamadı: %s", yol)
         logger.warning("Çalıştır: python ahu_collector.py --setup <Book2.xlsx>")
         return []
-    with open(AHU_CONFIG_FILE, "r", encoding="utf-8") as f:
+    with open(yol, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -134,10 +152,11 @@ def build_config_from_excel(excel_path: str) -> list:
         except Exception as e:
             logger.warning("Satır atlandı (%s): %s", point_name, e)
 
-    with open(AHU_CONFIG_FILE, "w", encoding="utf-8") as f:
+    yol = _nokta_dosyasi()
+    with open(yol, "w", encoding="utf-8") as f:
         json.dump(config, f, ensure_ascii=False, indent=2)
 
-    logger.info("AHU konfig oluşturuldu: %d nokta → %s", len(config), AHU_CONFIG_FILE)
+    logger.info("AHU konfig oluşturuldu: %d nokta → %s", len(config), yol)
     return config
 
 
@@ -330,7 +349,7 @@ def energy_verileri_oku(config: list) -> dict:
 def _csv_tazelik_kontrol(csv_yolu: str = None, esik_saat: float = ENERGY_CSV_TAZELIK_ESIK_SAAT):
     """hedefli_enerji_verileri.csv'nin son satırının Timestamp'i çok eskiyse uyarı logla."""
     if csv_yolu is None:
-        csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+        csv_yolu = yollar.yol("hedefli_enerji_verileri.csv", BASE_DIR)
     try:
         import csv as _csv
         son_ts = None
@@ -357,7 +376,7 @@ def _csv_tazelik_kontrol(csv_yolu: str = None, esik_saat: float = ENERGY_CSV_TAZ
 def _enerji_nokta_csv_oku(point_name: str, csv_yolu: str = None) -> float | None:
     """hedefli_enerji_verileri.csv'den tek bir Point_Name değerini okur. Yoksa None."""
     if csv_yolu is None:
-        csv_yolu = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+        csv_yolu = yollar.yol("hedefli_enerji_verileri.csv", BASE_DIR)
     try:
         import csv as _csv
         with open(csv_yolu, "r", encoding="utf-8") as f:
@@ -379,7 +398,9 @@ def sogutma_outlet_oku(enerji_verileri: dict = None, csv_yolu: str = None) -> fl
     MAS-1 ve MAS-2 soğutma sıcaklıklarının ortalamasını döndür.
     Önce canlı BACnet (enerji_verileri), yoksa hedefli_enerji_verileri.csv. Veri yoksa None.
     """
-    noktalar = ("MAS-1 SOGUTMA SICAKLIK", "MAS-2 SOGUTMA SICAKLIK")
+    # Hatların soğutma noktaları: ayar/bacnet_esleme.json (Maslak: MAS-1 / MAS-2 SOGUTMA SICAKLIK)
+    import bacnet_esleme
+    noktalar = tuple(bacnet_esleme.nokta_adlari("sogutma", BASE_DIR))
     degerler = []
     for pn in noktalar:
         val = None
@@ -401,7 +422,9 @@ def isitma_outlet_oku(enerji_verileri: dict = None, csv_yolu: str = None) -> flo
     MAS-1 ve MAS-2 ısıtma sıcaklıklarının (ısıtma kolektör gidiş) ortalamasını döndür.
     Önce canlı BACnet (enerji_verileri), yoksa hedefli_enerji_verileri.csv. Veri yoksa None.
     """
-    noktalar = ("MAS-1 ISITMA SICAKLIK", "MAS-2 ISITMA SICAKLIK")
+    # Hatların ısıtma noktaları: ayar/bacnet_esleme.json (Maslak: MAS-1 / MAS-2 ISITMA SICAKLIK)
+    import bacnet_esleme
+    noktalar = tuple(bacnet_esleme.nokta_adlari("isitma", BASE_DIR))
     degerler = []
     for pn in noktalar:
         val = None
@@ -551,7 +574,7 @@ def chiller_uretim_hesapla(enerji_verileri: dict = None) -> dict:
             "fcu_kapasite_kw": float}
     """
     try:
-        chiller_fcu_dosya = os.path.join(BASE_DIR, "configs", "chiller_fcu_ayarlari.json")
+        chiller_fcu_dosya = yollar.yol("configs/chiller_fcu_ayarlari.json", BASE_DIR)
         with open(chiller_fcu_dosya, "r", encoding="utf-8") as f:
             ayarlar = json.load(f)
         birim_kw = float(ayarlar.get("chiller_birim_kw", 0))
@@ -633,7 +656,7 @@ def kazan_uretim_hesapla(enerji_verileri: dict = None) -> dict:
     En kaba yöntem kazanır: biri "kapasite" ise sonuç "kapasite" döner.
     """
     try:
-        kazan_dosya = os.path.join(BASE_DIR, "configs", "chiller_fcu_ayarlari.json")
+        kazan_dosya = yollar.yol("configs/chiller_fcu_ayarlari.json", BASE_DIR)
         with open(kazan_dosya, "r", encoding="utf-8") as f:
             ayarlar = json.load(f)
         birim_kw = float(ayarlar.get("kazan_birim_kw", 0))
@@ -935,7 +958,7 @@ def bacnet_okuma_csv_kaydet(veriler: dict, zaman_damgasi: str) -> str:
     Dönüş: Kaydedilen dosya adı
     """
     import csv as _csv
-    klasor = os.path.join(BASE_DIR, "ahu_okuma_gecmis")
+    klasor = yollar.yol("ahu_okuma_gecmis", BASE_DIR)
     os.makedirs(klasor, exist_ok=True)
     dosya_adi = f"ahu_bacnet_{zaman_damgasi}.csv"
     tam_yol   = os.path.join(klasor, dosya_adi)
@@ -963,7 +986,7 @@ def analiz_detay_csv_kaydet(results: list, zaman_damgasi: str) -> str:
     Dönüş: Kaydedilen dosya adı
     """
     import csv as _csv
-    klasor = os.path.join(BASE_DIR, "ahu_analiz_gecmis")
+    klasor = yollar.yol("ahu_analiz_gecmis", BASE_DIR)
     os.makedirs(klasor, exist_ok=True)
     dosya_adi = f"hvac_analysis_{zaman_damgasi}.csv"
     tam_yol   = os.path.join(klasor, dosya_adi)
@@ -1013,7 +1036,7 @@ def analiz_detay_csv_kaydet(results: list, zaman_damgasi: str) -> str:
 
 
 _BILDIRIM_SAATI = 13
-BILDIRIM_SON_GUN_FILE = os.path.join(BASE_DIR, "bildirim_son_gun.txt")
+BILDIRIM_SON_GUN_FILE = yollar.yol("bildirim_son_gun.txt", BASE_DIR)
 
 
 def _bildirim_gunde_bir_gonder(kritik: int, uyari: int, optimal: int, toplam: int):
@@ -1052,14 +1075,15 @@ def _bildirim_gonder(kritik: int, uyari: int, optimal: int, toplam: int):
     Personel app_portal.py'deki banner'da görür.
     """
     try:
-        config_yolu = os.path.join(BASE_DIR, "supabase_config.json")
+        config_yolu = yollar.yol("supabase_config.json", BASE_DIR)
         if not os.path.exists(config_yolu):
             return
         with open(config_yolu, "r", encoding="utf-8") as f:
             cfg = json.load(f)
         sb_url = cfg.get("supabase_url", "")
         sb_key = cfg.get("supabase_key", "")
-        lok_id = cfg.get("lokasyon_id", "maslak")
+        import location_manager as _lm_k   # kimlik: lokasyon profili (Faz 1)
+        lok_id = _lm_k.lokasyon_id(BASE_DIR, cfg.get("lokasyon_id")) or "bilinmeyen"
         if not sb_url or not sb_key:
             return
 
@@ -1133,7 +1157,7 @@ def sonuclari_kaydet(sonuc: dict, veriler: dict, ahu_sayisi: int, oat: float):
     # 3b) Aylık alarm sayacını güncelle (gün-gün karşılaştırma)
     try:
         from monthly_report.ahu_alarm_takip import gunluk_analiz_isle
-        detay_yolu = os.path.join(BASE_DIR, "ahu_analiz_gecmis", detay_dosya_adi)
+        detay_yolu = os.path.join(yollar.yol("ahu_analiz_gecmis", BASE_DIR), detay_dosya_adi)
         karsilastirma = gunluk_analiz_isle(detay_yolu)
         logger.info(
             "Alarm sayacı güncellendi — yeni: %s, devam eden: %s, düzelen: %s",
@@ -1274,7 +1298,7 @@ def hvac_analiz_calistir() -> dict | None:
                     for col in range(1, 4):
                         ws_enerji.cell(row=ws_enerji.max_row, column=col).fill = none_fill
 
-        debug_dosya = os.path.join(BASE_DIR, "bacnet_ham_veriler.xlsx")
+        debug_dosya = yollar.yol("bacnet_ham_veriler.xlsx", BASE_DIR)
         wb_debug.save(debug_dosya)
         logger.info("Ham BACnet verileri kaydedildi: %s", debug_dosya)
     except Exception as _e:
@@ -1358,7 +1382,7 @@ if __name__ == "__main__":
         excel_yolu = sys.argv[2]
         print(f"Excel okunuyor: {excel_yolu}")
         cfg = build_config_from_excel(excel_yolu)
-        print(f"Konfig oluşturuldu: {len(cfg)} nokta → {AHU_CONFIG_FILE}")
+        print(f"Konfig oluşturuldu: {len(cfg)} nokta → {_nokta_dosyasi()}")
     else:
         print("Kullanım:")
         print("  AHU konfig oluştur : python ahu_collector.py --setup <Book2.xlsx>")

@@ -122,6 +122,13 @@ c("internet bekleme süresi kısa (≤ 6 sn) ve başarısızlık 30 dk hatırlan
 HD._INTERNET["yok_bitis"] = 0.0
 _ur.urlopen = _eski_uo
 
+# Enerji portalı (app_portal + portal_tasarim) da internetten yazı tipi istememeli: deneme sahasında
+# görüldü (12.11.2026) — sayfa her açılışta iki Google Fonts isteği atıyordu (Maslak'ta zaman aşımı).
+_dz = os.path.dirname(os.path.abspath(__file__))
+_enerji = "".join(open(os.path.join(_dz, f), encoding="utf-8").read() for f in ("app_portal.py", "portal_tasarim.py"))
+c("Enerji portalı internetten yazı tipi istemez (googleapis / gstatic yok)",
+  "fonts.googleapis.com" not in _enerji and "fonts.gstatic.com" not in _enerji)
+
 hata = [x for x in T if not x[1]]
 for ad, ok, ek in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(ek)[:300]))

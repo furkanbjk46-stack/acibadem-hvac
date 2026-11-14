@@ -158,6 +158,12 @@ def main():
     print(f"Mekanik Zeka değişmez kural taraması — {SAYI} senaryo, tohum {TOHUM}\n")
 
     for i in range(SAYI):
+        # Her senaryo yeni santral adı (E1, E2, ...) kullanır; ön koşul durum dosyası bu adlarla
+        # büyüyor ve her analiz onu baştan okuyup yazıyordu → süre karesel artıyordu (2.000 senaryo
+        # 16 sn, 50.000 ~3 saat: "tam test bitmiyor"). Adlar tekil olduğundan eski kayıtlar bir daha
+        # okunmaz; dosyayı aralıklı boşaltmak sonucu değiştirmez, süreyi doğrusal yapar (12.11.2026).
+        if i % 200 == 0 and os.path.exists(ok.DURUM_FILE):
+            os.remove(ok.DURUM_FILE)
         s = _uret(rnd)
         try:
             r, p, az = _calistir(s)

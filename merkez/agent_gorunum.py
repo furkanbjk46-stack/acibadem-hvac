@@ -36,7 +36,7 @@ KONTROL_AD = {
     "lokasyon_baglanti": "Lokasyon bağlantısı", "gunluk_esitleme": "Lokasyon eşitlemesi",
     "canli_sayac": "Canlı sayaçlar", "yama_kuyrugu": "Yama kuyruğu", "komutlar": "Saha komutları",
     "surum": "Lokasyon sürümleri", "anahtarsiz_erisim": "Anahtarsız erişim", "synapse_portal": "Synapse portalı",
-    "sunucu": "Yerel sunucu",
+    "sunucu": "Yerel sunucu", "ayar_degisikligi": "Lokasyon ayar değişiklikleri",
 }
 DUGUM = {"enerji": "e", "mekanik_zeka": "m", "synapse": "s"}
 
@@ -217,6 +217,158 @@ def gorunum(turlar, bulgular, raporlar, an=None, ust_durum=None):
         "raporlar": [rapor_karti(r) for r in kartlar],
         "acik_sayisi": len(acik_rapor),
     }
+
+
+# ── Lokasyon × agent matrisi ve lokasyon seçici (yol haritası F2, 12.11.2026) ──────────────────
+# Şemadaki her agent kutusu bütün lokasyonların EN KÖTÜ durumunu gösterir; 10 lokasyonda hangisinin
+# sorunlu olduğu görünmez. Matris her lokasyonu ayrı satırda, seçici de şemayı tek lokasyona süzer.
+# Synapse agent'ının turu lokasyon_id='merkez' ile yazılır; lokasyona özgü bulgularının anahtarı
+# "kontrol:<lokasyon>" biçimindedir (synapse_agent.bul) — lokasyon oradan çıkarılır.
+MATRIS_AGENTLAR = (("enerji", "Enerji"), ("mekanik_zeka", "Mekanik Zeka"), ("synapse", "Synapse"))
+MERKEZ = "merkez"
+
+
+def _synapse_lokasyonu(bulgu, lokasyonlar):
+    ayirt = str((bulgu or {}).get("anahtar") or "").split(":", 1)[-1]
+    return ayirt if ayirt in lokasyonlar else None
+
+
+def matris(turlar, bulgular, raporlar, lokasyonlar, an=None):
+    """[{lokasyon_id, ad, hucreler: {agent: {durum, metin}}}] — durum: ok | hata | bekle | yok.
+
+    lokasyonlar: [{"lokasyon_id", "isim"}] (lokasyonlar tablosu; kayıtlı her lokasyon bir satır).
+    Hücre: açık iş emri varsa hata, son tur SUSMA_DK'dan eskiyse bekle, tur yoksa yok, yoksa ok.
+    """
+    an = (an or datetime.now(timezone.utc)).astimezone(IST)
+    idler = [l.get("lokasyon_id") for l in lokasyonlar if l.get("lokasyon_id") and l.get("lokasyon_id") != MERKEZ]
+    bulgu_id = {b.get("id"): b for b in bulgular}
+    acik = [r for r in raporlar if r.get("durum") != "kapandi"]
+    syn_tur = next((t for t in turlar if t.get("agent") == "synapse"), None)
+    satirlar = []
+    for l in lokasyonlar:
+        lok = l.get("lokasyon_id")
+        if lok not in idler:
+            continue
+        h = {}
+        for agent, _ in MATRIS_AGENTLAR:
+            if agent == "synapse":
+                tur = syn_tur
+                emir = [r for r in acik if r.get("agent") == "synapse"
+                        and _synapse_lokasyonu(bulgu_id.get(r.get("bulgu_id")), idler) == lok]
+            else:
+                tur = next((t for t in turlar if t.get("agent") == agent and t.get("lokasyon_id") == lok), None)
+                emir = [r for r in acik if r.get("agent") == agent and r.get("lokasyon_id") == lok]
+            dk = _dk(zaman((tur or {}).get("tur_zamani")), an)
+            if emir:
+                h[agent] = {"durum": "hata", "metin": "%d iş emri" % len(emir)}
+            elif tur is None:
+                h[agent] = {"durum": "yok", "metin": "tur yok"}
+            elif dk is None or dk > SUSMA_DK:
+                h[agent] = {"durum": "bekle", "metin": "susuyor · %s" % saat(tur.get("tur_zamani"))}
+            else:
+                h[agent] = {"durum": "ok", "metin": "tur %s" % saat(tur.get("tur_zamani"), False)}
+        satirlar.append({"lokasyon_id": lok, "ad": l.get("isim") or lok, "hucreler": h})
+    sira = {"hata": 0, "bekle": 1, "yok": 2, "ok": 3}
+    satirlar.sort(key=lambda s: (min(sira[c["durum"]] for c in s["hucreler"].values()), str(s["ad"])))
+    return satirlar
+
+
+def matris_html(satirlar):
+    """Matrisin tablosu (değerler kaçırılmış)."""
+    renk = {"ok": ("#0ca30c", "#e8f6e8"), "hata": ("#d03b3b", "#fbeaea"), "bekle": ("#b57a00", "#fdf4e1"),
+            "yok": ("#8b97ab", "#f3f5f8")}
+    ust = "".join("<th style='text-align:left;padding:6px 10px;font-size:11px;color:#46536b;'>%s</th>" % e(a)
+                  for _, a in MATRIS_AGENTLAR)
+    govde = []
+    for s in satirlar:
+        hucre = []
+        for agent, _ in MATRIS_AGENTLAR:
+            c = s["hucreler"][agent]
+            yazi, zemin = renk[c["durum"]]
+            hucre.append("<td style='padding:5px 10px;'><span style='display:inline-block;padding:2px 9px;"
+                         "border-radius:8px;font-size:11.5px;font-weight:650;color:%s;background:%s;'>● %s</span></td>"
+                         % (yazi, zemin, e(c["metin"])))
+        govde.append("<tr style='border-top:1px solid #edf0f5;'><td style='padding:5px 10px;font-size:12.5px;"
+                     "font-weight:650;color:#24324d;'>%s</td>%s</tr>" % (e(s["ad"]), "".join(hucre)))
+    return ("<table style='border-collapse:collapse;width:100%%;background:#fff;border-radius:12px;'>"
+            "<thead><tr><th style='text-align:left;padding:6px 10px;font-size:11px;color:#46536b;'>Lokasyon</th>"
+            "%s</tr></thead><tbody>%s</tbody></table>" % (ust, "".join(govde)))
+
+
+def canli_uyarilar(raporlar, syn_bulgular, lokasyon_idleri):
+    """Açık agent iş emirleri → ana sayfadaki Canlı Uyarılar satırları (yol haritası F1, Synapse içi).
+
+    Dönüş: {lokasyon_id | "merkez": [(önem, metin)]} — önem "r" (kırmızı) | "y" (sarı); metin kaçırılmış.
+    Yüksek önemli ve açık iş emri kırmızı; düzeltiliyor / doğrulanıyor ya da orta / düşük önemli sarı.
+    Synapse agent'ının iş emri bulgu anahtarındaki lokasyona ("kontrol:<lokasyon>") yazılır;
+    lokasyona özgü değilse (sunucu, güvenlik) "merkez" altında toplanır.
+    """
+    bulgu_id = {b.get("id"): b for b in syn_bulgular}
+    cikti = {}
+    sira = sorted((r for r in raporlar if r.get("durum") != "kapandi"),
+                  key=lambda r: (0 if (r.get("onem") == "yuksek" and r.get("durum") == "acik") else 1,
+                                 ONEM_SIRA.get(r.get("onem"), 1), str(r.get("olusturma") or "")))
+    for r in sira:
+        if r.get("agent") == "synapse":
+            lok = _synapse_lokasyonu(bulgu_id.get(r.get("bulgu_id")), lokasyon_idleri) or MERKEZ
+        else:
+            lok = r.get("lokasyon_id") or MERKEZ
+        kirmizi = r.get("onem") == "yuksek" and r.get("durum") == "acik"
+        ek = "" if r.get("durum") == "acik" else " · %s" % DURUM_METIN.get(r.get("durum"), r.get("durum")).lower()
+        cikti.setdefault(lok, []).append(
+            ("r" if kirmizi else "y", "🤖 %s <span style='opacity:.7'>(%s%s)</span>" % (
+                e(r.get("baslik")), e(r.get("rapor_no")), e(ek))))
+    return cikti
+
+
+KAYNAK_AD = {"sync": "Arka plan (cloud_sync)", "enerji": "Enerji portalı", "mz": "Mekanik Zeka"}
+SEVIYE_AD = {"WARNING": "Uyarı", "ERROR": "Hata", "CRITICAL": "Kritik"}
+
+
+def hata_ozeti(satirlar):
+    """lokasyon_hatalari satırları (son 30 gün) → şablon başına tek satır, en yeni üstte.
+
+    [{seviye, kaynak, mesaj, adet, gun, ilk, son, ornek}] — Synapse'te tablo olarak gösterilir (N5).
+    """
+    grup = {}
+    for r in satirlar:
+        g = grup.setdefault(r.get("anahtar"), {"seviye": SEVIYE_AD.get(r.get("seviye"), r.get("seviye")),
+                                              "kaynak": KAYNAK_AD.get(r.get("kaynak"), r.get("kaynak")),
+                                              "mesaj": r.get("sablon"), "adet": 0, "gunler": set(),
+                                              "ilk": r.get("ilk"), "son": r.get("son"), "ornek": r.get("ornek")})
+        g["adet"] += int(r.get("adet") or 0)
+        g["gunler"].add(str(r.get("gun")))
+        if str(r.get("ilk") or "") < str(g["ilk"] or "~"):
+            g["ilk"] = r.get("ilk")
+        if str(r.get("son") or "") >= str(g["son"] or ""):
+            g["son"], g["ornek"] = r.get("son"), r.get("ornek")
+    cikti = [dict(g, gun=len(g.pop("gunler")), ilk=saat(g["ilk"]), son_ham=str(g["son"]), son=saat(g["son"]))
+             for g in grup.values()]
+    cikti.sort(key=lambda x: x.pop("son_ham"), reverse=True)
+    return cikti
+
+
+def suz(turlar, bulgular, raporlar, lokasyon_id, lokasyonlar=()):
+    """Şemayı tek lokasyona süzer. Üst agent ve Synapse turu kalır; Synapse bulgu / iş emirlerinden
+    yalnız bu lokasyonunkiler ile lokasyona özgü olmayanlar (sunucu, güvenlik) kalır."""
+    if not lokasyon_id:
+        return turlar, bulgular, raporlar
+    idler = [l.get("lokasyon_id") if isinstance(l, dict) else l for l in lokasyonlar]
+    bulgu_id = {b.get("id"): b for b in bulgular}
+
+    def tut_b(b):
+        if b.get("agent") == "synapse":
+            return _synapse_lokasyonu(b, idler) in (None, lokasyon_id)
+        return b.get("lokasyon_id") == lokasyon_id
+
+    def tut_r(r):
+        if r.get("agent") == "synapse":
+            b = bulgu_id.get(r.get("bulgu_id"))
+            return b is None or _synapse_lokasyonu(b, idler) in (None, lokasyon_id)
+        return r.get("lokasyon_id") == lokasyon_id
+
+    return ([t for t in turlar if t.get("lokasyon_id") in (lokasyon_id, MERKEZ) or t.get("agent") in ("ust", "synapse")],
+            [b for b in bulgular if tut_b(b)], [r for r in raporlar if tut_r(r)])
 
 
 def sayfa(sablon_html, veri):

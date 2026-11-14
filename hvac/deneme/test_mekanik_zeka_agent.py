@@ -123,8 +123,9 @@ c("sağlıklı Mekanik Zeka'da bulgu yok", s["bulgular"] == [], anahtarlar(s))
 c("on dört kontrolün hepsi geçti (watchdog elle çalıştırmada atlanır)", set(durumlar(s).values()) <= {"gecti", "atlandi"} and durumlar(s)["watchdog"] == "atlandi" and len(s["kontroller"]) == 14, durumlar(s))
 post = [g for y, u, g in k.istekler if y == "POST" and "agent_turlar" in u]
 c("tur 'mekanik_zeka' agent'ı olarak yazılır", post and post[0]["agent"] == "mekanik_zeka", post[:1])
-c("durum dosyası Enerji agent'ınkinden ayrı", os.path.exists(os.path.join(k.d, "configs", "mekanik_zeka_agent_durum.json"))
-  and not os.path.exists(os.path.join(k.d, "configs", "enerji_agent_durum.json")))
+c("durum dosyası Enerji agent'ınkinden ayrı (durum/ katmanında)",
+  os.path.exists(os.path.join(k.d, "durum", "mekanik_zeka_agent_durum.json"))
+  and not os.path.exists(os.path.join(k.d, "durum", "enerji_agent_durum.json")))
 
 # 2) Portal / API
 k = Kur()
@@ -252,6 +253,15 @@ c("aralık dışı ayar yakalanır", len(b) == 1 and "TARGET_DT_CHILLER=9.0" in 
 k = Kur()
 k.sayfalar["/api/chiller_fcu_ayarlari"] = (500, "x")
 c("Chiller/FCU ayarları okunamazsa bulgu", "ayarlar:chiller_fcu" in anahtarlar(k.tur()))
+k = Kur()
+with open(os.path.join(k.d, "ahu_nokta_konfig.json"), "w", encoding="utf-8") as f:
+    f.write('[{"gateway_ip": "192.168.0.6"}]')
+with open(os.path.join(k.d, "configs", "ahu_nokta_konfig.json"), "w", encoding="utf-8") as f:
+    f.write('[{"gateway_ip": "192.168.0.5"}]')
+b = [x for x in k.tur()["bulgular"] if x["anahtar"] == "ayarlar:nokta_kopya"]
+c("BACnet nokta dosyasının iki kopyası farklıysa bilgi bulgusu", len(b) == 1 and b[0]["onem"] == "bilgi", b)
+k = Kur()
+k.sayfalar["/api/chiller_fcu_ayarlari"] = (500, "x")
 c("yeni kontroller portala yalnız GET atar (ayar / bakım kartı kaydetmez)",
   not any(y != "GET" and u.startswith(M.PORTAL) for y, u, _ in k.istekler))
 

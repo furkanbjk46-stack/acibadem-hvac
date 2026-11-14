@@ -2,6 +2,7 @@
 # Yapay Zeka / Makine Öğrenmesi İlerleme Hesaplayıcı
 # Dashboard'da gösterilecek AI olgunluk seviyesini hesaplar.
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import os
 import json
 import logging
@@ -18,11 +19,11 @@ try:
     _ML_TRAINING_FILE = _lm.get_data_path("ml_training_data.json")
     _AI_FEATURES_FILE = _lm.get_data_path("configs/ai_features.json")
 except Exception:
-    _ENERGY_CSV = os.path.join(_BASE, "energy_data.csv")
-    _SETTINGS_FILE = os.path.join(_BASE, "configs", "hvac_settings.json")
-    _TRAINING_FILE = os.path.join(_BASE, "savings_training_data.json")
-    _ML_TRAINING_FILE = os.path.join(_BASE, "ml_training_data.json")
-    _AI_FEATURES_FILE = os.path.join(_BASE, "configs", "ai_features.json")
+    _ENERGY_CSV = yollar.yol("energy_data.csv", _BASE)
+    _SETTINGS_FILE = yollar.yol("configs/hvac_settings.json", _BASE)
+    _TRAINING_FILE = yollar.yol("savings_training_data.json", _BASE)
+    _ML_TRAINING_FILE = yollar.yol("ml_training_data.json", _BASE)
+    _AI_FEATURES_FILE = yollar.yol("configs/ai_features.json", _BASE)
 
 # ─── Varsayılan AI Özellik Durumları ───
 _DEFAULT_FEATURES = {

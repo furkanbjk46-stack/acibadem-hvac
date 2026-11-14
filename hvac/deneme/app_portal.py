@@ -7,6 +7,9 @@
 # - PDF Unicode font fix (Türkçe karakterler güvenli)
 
 from __future__ import annotations
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
+import hata_ozeti as _hata_ozeti  # uyarı / hata özeti merkeze (N5); bir kez kurulur
+_hata_ozeti.kur("enerji")
 
 import os
 import re
@@ -75,7 +78,7 @@ if os.environ.get("HVAC_WATCHDOG") != "1":
 def _bina_alani() -> float:
     import json
     try:
-        with open(os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json"), encoding="utf-8") as f:
+        with open(yollar.yol("configs/hvac_settings.json", os.path.dirname(__file__)), encoding="utf-8") as f:
             return float(json.load(f).get("BUILDING_AREA_M2", 0) or 0)
     except Exception:
         return 0.0
@@ -129,7 +132,7 @@ def _gunluk_model_gelecek_ay(yil: int, ay: int, kojen_gun, veri_imzasi: float) -
 # Custom Dark Theme CSS
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    /* Inter internetten alınmaz (lokasyonda internet yok, istek açılışı bekletiyordu; 12.11.2026). */
 
     /* Mat plastik beyaz — duz govde, parlama yok */
     .stApp {
@@ -1333,7 +1336,12 @@ components.html("""
 """, height=0)
 
 # ---- Portal navigasyon (HVAC / Enerji ana menü) ----
-PORTAL_URL = os.environ.get("PORTAL_URL", "http://localhost:8005/")
+try:  # port: ayar/portlar.json (yoksa 8005); watchdog PORTAL_URL'i ayrıca verir
+    import portlar as _portlar
+    _MZ_PORT = _portlar.mekanik_zeka()
+except Exception:
+    _MZ_PORT = 8005
+PORTAL_URL = os.environ.get("PORTAL_URL", "http://localhost:%d/" % _MZ_PORT)
 
 from location_manager import get_manager as get_location_manager
 _loc_mgr = get_location_manager()
@@ -1346,14 +1354,18 @@ _loc_config = _loc_mgr.get_location_config()
 DATA_FILE = _loc_mgr.get_data_path("energy_data.csv")
 
 _energy_schema = _loc_config.get("energy_schema", {})
-_has_dual_lines = bool(_energy_schema.get("heating_lines", []))
+# Isıtma hatları: ayar/bacnet_esleme.json (Faz 1 / C2; Maslak: MAS-1 + MAS-2). Hat yoksa tek hat sütunları.
+_HATLAR = [h for h in _energy_schema.get("lines", []) if h.get("isitma")]
+_has_dual_lines = bool(_HATLAR)
 
-# Sıcaklık sütunları: Maslak=Mas1+Mas2, Altunizade=tek hat
+
+def _hat_anahtar(h):
+    """Form anahtarı için hat kısa adı: 'Mas1_Isitma_Temp' → 'mas1' (Maslak'ta eski anahtarlar korunur)."""
+    return h["isitma"].split("_")[0].lower()
+
+
 if _has_dual_lines:
-    _TEMP_COLS_SCHEMA = [
-        "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
-        "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
-    ]
+    _TEMP_COLS_SCHEMA = [h[a] for h in _HATLAR for a in ("isitma", "kazan", "sogutma") if h.get(a)]
 else:
     _TEMP_COLS_SCHEMA = [
         "Isitma_Temp_C", "Kazan_Temp_C", "Sogutma_Temp_C",
@@ -1570,19 +1582,18 @@ def infer_canonical_col(col_name: str) -> str | None:
     if ("kazan" in k or "boiler" in k) and ("adet" in k or "count" in k or "sayi" in k):
         return "Kazan_Adet"
 
-    if ("mas 1" in k or "mas1" in k) and ("isit" in k or "heating" in k):
-        return "Mas1_Isitma_Temp"
-    if ("mas 1" in k or "mas1" in k) and ("kazan" in k or "boiler" in k):
-        return "Mas1_Kazan_Temp"
-    if ("mas 1" in k or "mas1" in k) and ("sogut" in k or "cool" in k):
-        return "Mas1_Sogutma_Temp"
-
-    if ("mas 2" in k or "mas2" in k) and ("isit" in k or "heating" in k):
-        return "Mas2_Isitma_Temp"
-    if ("mas 2" in k or "mas2" in k) and ("kazan" in k or "boiler" in k):
-        return "Mas2_Kazan_Temp"
-    if ("mas 2" in k or "mas2" in k) and ("sogut" in k or "cool" in k):
-        return "Mas2_Sogutma_Temp"
+    # Isıtma hatları (ayar/bacnet_esleme.json): "Mas-1 Isıtma", "mas1 kazan", "MAS 2 soğutma"...
+    for _h in _HATLAR:
+        _et = str(_h.get("etiket") or _h["ad"]).lower()
+        _adlar = {_et, _et.replace("-", " "), _et.replace("-", ""), _h["ad"].lower(),
+                  _h["ad"].lower().replace("-", " "), _h["ad"].lower().replace("-", ""), _hat_anahtar(_h)}
+        if any(a and a in k for a in _adlar):
+            if ("isit" in k or "heating" in k) and _h.get("isitma"):
+                return _h["isitma"]
+            if ("kazan" in k or "boiler" in k) and _h.get("kazan"):
+                return _h["kazan"]
+            if ("sogut" in k or "cool" in k) and _h.get("sogutma"):
+                return _h["sogutma"]
 
     return None
 
@@ -1682,7 +1693,7 @@ def load_data() -> pd.DataFrame:
         return empty_df()
     # 30.10.2026 şebeke geçişi (tek sefer; işaret dosyası varsa hiçbir şey yapmaz)
     try:
-        _enerji_hesap.sebeke_gecisi_uygula(DATA_FILE, os.path.join(os.path.dirname(__file__), "configs"))
+        _enerji_hesap.sebeke_gecisi_uygula(DATA_FILE, yollar.klasor("veri/eski_yedekler"))
     except Exception:
         pass
     df = pd.read_csv(DATA_FILE)
@@ -2928,7 +2939,7 @@ def _baslik_ciz():
         _son_txt = _son_t.strftime("%d.%m.%Y") if pd.notna(_son_t) else "—"
     except Exception:
         _son_txt = "—"
-    _lok_adi = _loc_config.get("name", "ACIBADEM MASLAK HASTANESİ")
+    _lok_adi = _loc_config.get("name") or "ACIBADEM"
     _ana = PORTAL_URL if PORTAL_URL.endswith("/") else PORTAL_URL + "/"
     if _pt is None:
         st.title("⚡ Enerji ve Verimlilik")
@@ -2947,7 +2958,7 @@ _baslik_ciz()
 # Sağ üst: Günlük + Aylık Rapor butonları
 # Otomatik rapor bildirimlerini kontrol et
 import json as _notif_json
-_notif_file = os.path.join(os.path.dirname(__file__), "configs", "report_notifications.json")
+_notif_file = yollar.yol("configs/report_notifications.json", os.path.dirname(__file__))
 _auto_notifs = {}
 if os.path.exists(_notif_file):
     try:
@@ -3106,14 +3117,15 @@ def _bildirim_panel():
         pass
 
     # ── 2) Supabase bildirimleri ──
-    _cfg_path = os.path.join(os.path.dirname(__file__), "supabase_config.json")
+    _cfg_path = yollar.yol("supabase_config.json", os.path.dirname(__file__))
     _url = _key = _lok = ""
     if os.path.exists(_cfg_path):
         try:
             with open(_cfg_path, "r", encoding="utf-8") as _f:
                 _cfg = _bj.load(_f)
+            import location_manager as _lm_k   # kimlik: lokasyon profili (Faz 1)
             _url, _key, _lok = (_cfg.get("supabase_url", ""), _cfg.get("supabase_key", ""),
-                                _cfg.get("lokasyon_id", ""))
+                                _lm_k.lokasyon_id(os.path.dirname(__file__), _cfg.get("lokasyon_id")))
         except Exception:
             pass
 
@@ -3635,12 +3647,10 @@ with tab1:
                 st.session_state[_hk] = None
         _hd = _ex_pre.get("Hava_Durumu") if _ex_pre is not None else None
         st.session_state["entry_hava_durumu"] = _hd if isinstance(_hd, str) and _hd in _HAVA_DURUMLARI else ""
-        _set_ss("entry_mas1_h",           "Mas1_Isitma_Temp",         0.0)
-        _set_ss("entry_mas1_k",           "Mas1_Kazan_Temp",          0.0)
-        _set_ss("entry_mas1_c",           "Mas1_Sogutma_Temp",        0.0)
-        _set_ss("entry_mas2_h",           "Mas2_Isitma_Temp",         0.0)
-        _set_ss("entry_mas2_k",           "Mas2_Kazan_Temp",          0.0)
-        _set_ss("entry_mas2_c",           "Mas2_Sogutma_Temp",        0.0)
+        for _h in _HATLAR:                     # ısıtma hatları (ayar/bacnet_esleme.json)
+            for _ek, _alan in (("h", "isitma"), ("k", "kazan"), ("c", "sogutma")):
+                if _h.get(_alan):
+                    _set_ss("entry_%s_%s" % (_hat_anahtar(_h), _ek), _h[_alan], 0.0)
         _set_ss("entry_single_h",         "Isitma_Temp_C",            0.0)
         _set_ss("entry_single_k",         "Kazan_Temp_C",             0.0)
         _set_ss("entry_single_c",         "Sogutma_Temp_C",           0.0)
@@ -3734,15 +3744,16 @@ with tab1:
 
         with c3:
             # Lokasyona göre sıcaklık alanları
+            _hat_degerleri = {}
             if _has_dual_lines:
-                # Maslak: çift hat
-                st.markdown("**Mas-1 / Mas-2 Sıcaklıkları**")
-                mas1_h = st.number_input("Mas-1 Isıtma Temp", step=0.5, key="entry_mas1_h")
-                mas1_k = st.number_input("Mas-1 Kazan Temp", step=0.5, key="entry_mas1_k")
-                mas1_c = st.number_input("Mas-1 Soğutma Temp", step=0.5, key="entry_mas1_c")
-                mas2_h = st.number_input("Mas-2 Isıtma Temp", step=0.5, key="entry_mas2_h")
-                mas2_k = st.number_input("Mas-2 Kazan Temp", step=0.5, key="entry_mas2_k")
-                mas2_c = st.number_input("Mas-2 Soğutma Temp", step=0.5, key="entry_mas2_c")
+                # Isıtma hatları (ayar/bacnet_esleme.json; Maslak: Mas-1 / Mas-2)
+                st.markdown("**%s Sıcaklıkları**" % " / ".join(str(h.get("etiket") or h["ad"]) for h in _HATLAR))
+                for _h in _HATLAR:
+                    _et = str(_h.get("etiket") or _h["ad"])
+                    for _ek, _alan, _yazi in (("h", "isitma", "Isıtma"), ("k", "kazan", "Kazan"), ("c", "sogutma", "Soğutma")):
+                        if _h.get(_alan):
+                            _hat_degerleri[_h[_alan]] = st.number_input(
+                                "%s %s Temp" % (_et, _yazi), step=0.5, key="entry_%s_%s" % (_hat_anahtar(_h), _ek))
             else:
                 # Altunizade vb.: tek hat
                 _single_labels = _energy_schema.get("single_labels", {})
@@ -3893,14 +3904,7 @@ with tab1:
                 new_row["Hava_Durumu"] = hava_durumu
             # Lokasyona göre sıcaklık sütunları
             if _has_dual_lines:
-                new_row.update({
-                    "Mas1_Isitma_Temp": mas1_h,
-                    "Mas1_Kazan_Temp": mas1_k,
-                    "Mas1_Sogutma_Temp": mas1_c,
-                    "Mas2_Isitma_Temp": mas2_h,
-                    "Mas2_Kazan_Temp": mas2_k,
-                    "Mas2_Sogutma_Temp": mas2_c,
-                })
+                new_row.update(_hat_degerleri)
             else:
                 new_row.update({
                     "Isitma_Temp_C": single_h,

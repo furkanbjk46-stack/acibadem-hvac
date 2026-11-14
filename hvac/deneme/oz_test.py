@@ -17,6 +17,7 @@ Synapse'e gider; lokasyon kartında "öz test: 164/164" olarak görünür.
 Testler sahadan gelen veriyi DEĞİL, kendi senaryolarını kullanır: motorun
 doğru çalışıp çalışmadığını ölçer, santrallerin durumunu değil.
 """
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import json
 import os
 import re
@@ -25,7 +26,7 @@ import sys
 from datetime import datetime
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
-SONUC_DOSYASI = os.path.join(BURASI, "configs", "oz_test_sonuc.json")
+SONUC_DOSYASI = yollar.yol("configs/oz_test_sonuc.json", BURASI)
 
 # (dosya, ek argümanlar) — değişmez kural taraması sahada kısa tutulur (hız)
 TESTLER = [
@@ -143,7 +144,7 @@ def _kalanlar_ve_ayarlar(s: dict) -> dict:
     ayarlar = {}
     for ad in ("hvac_settings.json", "chiller_fcu_ayarlari.json"):
         try:
-            with open(os.path.join(BURASI, "configs", ad), encoding="utf-8") as f:
+            with open(yollar.yol("configs/" + ad, BURASI), encoding="utf-8") as f:
                 ayarlar[ad] = json.load(f)
         except Exception as e:
             ayarlar[ad] = "okunamadı: %s" % type(e).__name__

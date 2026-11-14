@@ -31,6 +31,7 @@ kaldı — yalnız Modbus'a bakıyordu. Artık iki BACnet alarmı da var:
 UYARI: kırılım eksilir ama toplam hesabı ayakta kalır.
 """
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import json
 import os
 from datetime import datetime
@@ -41,12 +42,12 @@ except Exception:
         return "Bearer " + _k
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODBUS_CSV = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
-BACNET_CSV = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
-ENERGY_CSV = os.path.join(BASE_DIR, "energy_data.csv")
+MODBUS_CSV = yollar.yol("analizor_guncel_veriler.csv", BASE_DIR)
+BACNET_CSV = yollar.yol("hedefli_enerji_verileri.csv", BASE_DIR)
+ENERGY_CSV = yollar.yol("energy_data.csv", BASE_DIR)
 BACNET_BAYAT_SAAT = 26
 DONMA_GUN = 4
-DURUM_DOSYA = os.path.join(BASE_DIR, "configs", "veri_alarmlari.json")
+DURUM_DOSYA = yollar.yol("configs/veri_alarmlari.json", BASE_DIR)
 
 # Cihaz adından grup: önem ve mesaj bundan belirlenir
 GRUPLAR = (
@@ -163,7 +164,8 @@ def bacnet_alarmlari(simdi=None, bacnet_csv=None, energy_csv=None, tarih=None) -
             donmus = []
             # Ondalıklı ÖLÇÜMLER: günlerce birebir aynı kalmaları olanaksız.
             # (Chiller set / cihaz adedi bilerek yok — sabit kalmaları normal.)
-            for c in ("Dis_Hava_Sicakligi_C", "Chiller_Load_Percent", "Mas1_Isitma_Temp", "Mas2_Isitma_Temp"):
+            import bacnet_esleme as _be   # ısıtma hatları: ayar/bacnet_esleme.json
+            for c in ["Dis_Hava_Sicakligi_C", "Chiller_Load_Percent"] + _be.hat_sutunlari(None, ("isitma",)):
                 v = [r.get(c, "") for r in satir if r.get(c, "") not in ("", None)]
                 if len(v) >= DONMA_GUN and len(set(v[-DONMA_GUN:])) == 1:
                     n = 0
@@ -295,7 +297,7 @@ def bildirim_gonder(sb_url, sb_key, lokasyon_id, alarmlar, _imza_dosya=None) -> 
     import urllib.request
     if not (alarmlar and sb_url and sb_key):
         return False
-    imza_dosya = _imza_dosya or os.path.join(BASE_DIR, "configs", "veri_alarm_imza.txt")
+    imza_dosya = _imza_dosya or yollar.yol("configs/veri_alarm_imza.txt", BASE_DIR)
     yeni = _imza(alarmlar)
     try:
         with open(imza_dosya, encoding="utf-8") as f:

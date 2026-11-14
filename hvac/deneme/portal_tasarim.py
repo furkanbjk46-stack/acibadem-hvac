@@ -31,7 +31,7 @@ def renk(ad: str) -> str:
 # ── Genel tema: yazı tipi, başlık, sekmeler, bölüm başlıkları, kartlar ──────
 CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* Inter yazı tipi internetten ALINMAZ (lokasyonda internet yok; 12.11.2026). Yüklü değilse system-ui / Segoe UI. */
 /* Yazı tipi: Mekanik Zeka ile aynı (Inter). Simge yazı tipleri hariç. */
 html, body, .stApp, .stApp p, .stApp span, .stApp div, .stApp label, .stApp button,
 .stApp input, .stApp textarea, .stApp select, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp li, .stApp td, .stApp th {

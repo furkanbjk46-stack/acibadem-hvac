@@ -69,27 +69,31 @@ c("ortam değişkeniyle kapatılabilir", H.baslat_arka_plan("http://db", "k", {}
 import json as _json  # noqa: E402
 import re as _re  # noqa: E402
 _dz = os.path.dirname(os.path.abspath(__file__))
-_k = _json.load(open(os.path.join(_dz, "configs", "lokasyon_koordinat.json"), encoding="utf-8"))
+import hastaneler as _HS  # noqa: E402
 _m = open(os.path.join(_dz, "app_merkez.py"), encoding="utf-8").read()
-_m = _m[_m.index("HASTANELER = {"):_m.index("CONFIG_FILE =")]
-_h = {m.group(1): [float(m.group(2)), float(m.group(3))]
-      for m in _re.finditer(r'"(\w+)":\s*\{[^}]*"lat":\s*([\d.]+),\s*"lon":\s*([\d.]+)', _m)}
-c("agent servisi koordinatları app_merkez HASTANELER ile aynı",
-  {k: v for k, v in _k.items() if not k.startswith("_")} == _h and len(_h) == 20)
+c("hastane listesi tek kaynakta (configs/hastaneler.json, 20 hastane); sayfalarda kopya yok",
+  len(_HS.yukle()) == 20 and "HASTANELER = _hastaneler.yukle()" in _m and not any(
+      'HASTANELER = {' in open(os.path.join(_dz, f), encoding="utf-8").read()
+      for f in ("app_merkez.py", "pages/lokasyon_detay.py", "pages/rapor_olustur.py")))
 import agent_servisi as _AS  # noqa: E402
-c("agent servisi koordinatları okur (maslak)", _AS.koordinatlar()["maslak"] == (41.1273, 29.0246))
+c("agent servisi koordinatları hastane listesinden okur (maslak)",
+  _AS.koordinatlar()["maslak"] == (41.1273, 29.0246) and _AS.koordinatlar() == _HS.koordinatlar())
+c("rapor sayfası adları Türkçe karaktersiz (PDF yedek yazı tipi)",
+  _HS.yukle_ascii()["atasehir"]["isim"] == "Acibadem Atasehir" and _HS.yukle_ascii()["izmir"]["kisa"] == "IZMIR")
 _kaynak = open(os.path.join(_dz, "agent_servisi.py"), encoding="utf-8").read()
 _ithal = set(_re.findall(r"^(?:import|from) (\w+)", _kaynak, _re.M))
 c("agent servisi yalnızca stdlib + kendi modüllerini kullanır (yeni paket yok)",
-  _ithal <= {"json", "logging", "os", "sys", "threading", "time", "hava_besleyici", "ust_agent", "synapse_agent"}, _ithal)
+  _ithal <= {"json", "logging", "os", "sys", "threading", "time", "hava_besleyici", "ust_agent", "synapse_agent", "hastaneler"}, _ithal)
 c("agent servisi diske yazmaz", not _re.search(r"open\([^)]*['\"]w", _kaynak))
 _ua = open(os.path.join(_dz, "ust_agent.py"), encoding="utf-8").read()
 _hb = open(os.path.join(_dz, "hava_besleyici.py"), encoding="utf-8").read()
 _sql = "".join(open(os.path.join(_dz, "..", "veritabani", f), encoding="utf-8").read()
-               for f in ("06_ust_agent_rolu.sql", "07_synapse_agent_yetkisi.sql"))
+               for f in ("06_ust_agent_rolu.sql", "07_synapse_agent_yetkisi.sql",
+                         os.path.join("degisiklikler", "004_yama_uygulamalari.sql"),
+                         os.path.join("degisiklikler", "005_lokasyon_ayarlari.sql")))
 _sa = open(os.path.join(_dz, "synapse_agent.py"), encoding="utf-8").read()
 _eris = set(_re.findall(r'(?:rest/v1/|")(agent_turlar|agent_bulgular|agent_raporlar|lokasyonlar|hava_gunluk|'
-                        r'energy_data|komutlar|guncellemeler|ayarlar|canli_guc)[?"]', _ua + _hb + _sa))
+                        r'energy_data|komutlar|guncellemeler|ayarlar|canli_guc|yama_uygulamalari|ayar_degisiklikleri)[?"]', _ua + _hb + _sa))
 c("servisin eriştiği her tablo kısıtlı rolde (06 + 07) tanımlı, ayarlar tablosu yok",
   _eris and all(("ON public.%s " % t) in _sql for t in _eris) and "ayarlar" not in _eris,
   _eris)

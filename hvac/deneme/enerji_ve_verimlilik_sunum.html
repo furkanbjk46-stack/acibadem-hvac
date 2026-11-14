@@ -201,7 +201,7 @@
 
             <h3>Sistemdeki Yeri</h3>
             <p>Lokasyon PC'sinde iki uygulama birlikte çalışır; kullanıcı ikisine de <strong>tek portal
-                girişinden</strong> (port 8005) ulaşır:</p>
+                girişinden</strong> (port Değişken):</p>
             <table>
                 <thead>
                     <tr><th>Modül</th><th>Dosya</th><th>Port</th><th>Kapsam</th></tr>
@@ -209,20 +209,20 @@
                 <tbody>
                     <tr>
                         <td>⚡ <strong>Enerji ve Verimlilik</strong></td>
-                        <td><code>app_portal.py</code> (Streamlit)</td>
-                        <td>8501</td>
+                        <td><code>app_portal.py</code> </td>
+                        <td>Değişken</td>
                         <td>Enerji verisi girişi, tüketim takibi, anomali, tasarruf önerileri, raporlama</td>
                     </tr>
                     <tr>
                         <td>🧠 Mekanik Zeka</td>
-                        <td><code>main_portal.py</code> (FastAPI)</td>
-                        <td>8005</td>
+                        <td><code>main_portal.py</code> </td>
+                        <td>Değişken</td>
                         <td>HVAC teşhis motoru (ayrı belge)</td>
                     </tr>
                 </tbody>
             </table>
             <p>Enerji tarafının yardımcı modülleri: <code>data_collector.py</code> (Modbus 07:00 ve BACnet
-                07:05 günlük okuma + 15 sn'lik canlı güç), <code>data_bridge.py</code> (her sabah 07:10
+                07:05 günlük okuma + 15 sn'lik canlı güç), <code>data_bridge.py</code> (her gece 00:55
                 dünün satırını yazar), <code>hava_durumu.py</code> (lokasyonun kendi koordinatından günlük
                 hava), <code>veri_alarm.py</code> (veri toplama alarmları), <code>daily_report.py</code>,
                 <code>monthly_summary_report.py</code> ve <code>monthly_report/</code> klasöründeki
@@ -232,7 +232,7 @@
         <!-- ========== 2. TAKİP EDİLEN VERİLER ========== -->
         <div class="section">
             <h2>📊 Takip Edilen Enerji Verileri</h2>
-            <p>Modül, Modbus üzerinden 27 enerji analizöründen, BACnet'ten (52 nokta), internetten
+            <p>Modül, Modbus üzerinden 32 enerji analizöründen, BACnet'ten (52 nokta), internetten
                 (günlük hava) ve manuel girişlerden gelen verileri günlük olarak kaydeder.</p>
 
             <div class="kpi-strip">
@@ -263,7 +263,7 @@
                     <tr>
                         <th>Veri Alanı</th>
                         <th>Birim</th>
-                        <th>Birim Fiyat</th>
+                        <th></th>
                         <th>Kullanım</th>
                     </tr>
                 </thead>
@@ -271,25 +271,25 @@
                     <tr>
                         <td>Toplam Hastane Tüketim</td>
                         <td>kWh</td>
-                        <td>₺6,37/kWh</td>
-                        <td>Ana elektrik faturalandırma</td>
+                        <td>/kWh</td>
+                        <td>Ana elektrik analizi</td>
                     </tr>
                     <tr>
                         <td>Chiller Tüketim</td>
                         <td>kWh</td>
-                        <td>₺6,37/kWh</td>
+                        <td>/kWh</td>
                         <td>Soğutma yükü analizi</td>
                     </tr>
                     <tr>
                         <td>Kojen Doğalgaz</td>
-                        <td>m³</td>
-                        <td>₺14,74/m³</td>
+                        <td></td>
+                        <td></td>
                         <td>Kojenerasyon verimlilik</td>
                     </tr>
                     <tr>
                         <td>Su Tüketimi</td>
-                        <td>m³</td>
-                        <td>₺195,51/m³</td>
+                        <td></td>
+                        <td></td>
                         <td>Su anomali tespiti</td>
                     </tr>
                     <tr>
@@ -500,7 +500,7 @@
                     </tr>
                     <tr>
                         <td>📊 Dashboard</td>
-                        <td>Anlık (Streamlit)</td>
+                        <td>Anlık</td>
                         <td>KPI kartları, interaktif grafikler, veri tabloları</td>
                     </tr>
                 </tbody>
@@ -533,7 +533,7 @@
 
         <!-- ========== GM MERKEZ KARŞILAŞTIRMA ========== -->
         <div class="section page-break">
-            <h2>🌐 GM Merkez'de Lokasyon Karşılaştırma <span class="badge badge-purple">YENİ</span></h2>
+            <h2>🌐 GM Merkez'de Lokasyon Karşılaştırma <span class="badge badge-purple"></h2>
             <p>Synapse GM Merkez portalındaki <strong>Global Özet</strong> kartlarının beşi de artık
                 tıklanabilir. Bir başlığa tıklandığında tüm lokasyonların o kalemdeki performansı yan yana
                 karşılaştırılır.</p>

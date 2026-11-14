@@ -19,6 +19,7 @@ import sys
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BURASI)
+import yollar  # noqa: E402  (ayar/ durum/ veri/; Faz 1)
 try:
     sys.stdout.reconfigure(errors="replace")
 except Exception:
@@ -66,7 +67,7 @@ for _f in ("talep_hesapla", "talep_isitma_hesapla", "kazan_uretim_hesapla",
 
 # ── 2) Tesis değerleri configs'ten geliyor ───────────────────────────────
 saha = sim.Saha("kis", tohum=1, arizali=True)
-_ayar = json.load(open(os.path.join(BURASI, "configs", "chiller_fcu_ayarlari.json"),
+_ayar = json.load(open(yollar.yol("configs/chiller_fcu_ayarlari.json", BURASI),
                        encoding="utf-8"))
 c("kazan birim gücü ayarlardan", saha.kazan_birim == float(_ayar["kazan_birim_kw"]),
   saha.kazan_birim)
@@ -242,7 +243,7 @@ c("tek ekipman %25'in altına düşmez", _oran == 0.25, _oran)
 import ahu_collector as ac  # noqa: E402
 
 if not os.path.exists(ac.AHU_CONFIG_FILE):
-    ac.AHU_CONFIG_FILE = os.path.join(BURASI, "configs", "ahu_nokta_konfig.json")
+    ac.AHU_CONFIG_FILE = yollar.yol("configs/ahu_nokta_konfig.json", BURASI)
 harita, ahu_konfig, enerji_konfig, cakisma = sim.harita_kur(ac)
 c("AHU nokta haritası okundu", len(ahu_konfig) > 300, len(ahu_konfig))
 c("enerji nokta haritası okundu", len(enerji_konfig) > 30, len(enerji_konfig))

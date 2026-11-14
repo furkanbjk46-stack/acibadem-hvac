@@ -117,6 +117,17 @@ c("yogun_sogutma -> alt esik alti -> isitma (kademesiz)",
   dig(_ALT - _H - 1, "yogun_sogutma") == "isitma",
   dig(_ALT - _H - 1, "yogun_sogutma"))
 
+# Lokasyona özel oto-set aç/kapa (Faz 1 / E1, 12.11.2026): lokasyon oto_set_aktif_<lokasyon>'u okuyor;
+# Synapse lokasyon detayı artık bunu yazabiliyor (genel anahtarı kapatmadan tek hastane kapatılır)
+_ld = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "pages", "lokasyon_detay.py"),
+           encoding="utf-8").read()
+c("lokasyon detayı lokasyona özel oto-set aç/kapa anahtarını yazar (boş = genel kural)",
+  '_ayar_yaz("oto_set_aktif_%s" % lok_id, _deger)' in _ld and '{0: "", 1: "true", 2: "false"}' in _ld)
+_os = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "hvac", "deneme", "oto_set.py"),
+           encoding="utf-8").read()
+c("lokasyon oto-set kuralında önce lokasyona özel anahtar aranır",
+  'o = "%s_%s" % (anahtar, lokasyon_id)' in _os and '"oto_set_aktif"' in _os)
+
 hata = sum(1 for _, ok, _ in T if not ok)
 print()
 for ad, ok, d in T:

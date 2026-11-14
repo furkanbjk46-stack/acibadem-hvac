@@ -172,6 +172,11 @@ def _rt(a, b):
 _ihlal = []
 _sayim = {"simul": 0, "ters": 0, "sogutmuyor": 0, "isitmiyor": 0}
 for _i in range(_ADET):
+    # Tekil santral adları ön koşul durum dosyasını büyütüyordu; her analiz onu baştan okuyup
+    # yazdığı için süre karesel artıyordu (300 sn'yi aşıyordu). Eski adlar bir daha okunmaz;
+    # aralıklı boşaltmak sonucu değiştirmez (12.11.2026, test_degismez_kurallar ile aynı).
+    if _i % 200 == 0 and os.path.exists(ok.DURUM_FILE):
+        os.remove(ok.DURUM_FILE)
     _senaryo = _rnd.choice(("simul", "ters", "sogutmuyor", "isitmiyor"))
     _ret = _rt(20, 28)
     if _senaryo == "simul":                       # iki vana birden açık

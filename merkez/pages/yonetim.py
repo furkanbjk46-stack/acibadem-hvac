@@ -255,7 +255,7 @@ with _sekme_sunucu:
                 f"📦 Yama kuyruğu ve komut trafiği</div>", unsafe_allow_html=True)
 
     _yamalar = _rest(url, _anahtar,
-                     "guncellemeler?select=versiyon,hedef,durum,created_at"
+                     "guncellemeler?select=id,versiyon,hedef,durum,created_at"
                      "&order=created_at.desc&limit=10")
     _bekleyen = [y for y in _yamalar if y.get("durum") == "bekliyor"] if _yamalar else []
 
@@ -284,10 +284,43 @@ with _sekme_sunucu:
         def _ist_saat(m):
             z = _SQ0.zaman(m)
             return z.strftime("%d.%m.%Y %H:%M") if z else "—"
+        # Lokasyon başına uygulama (yama_uygulamalari, 12.11.2026): "all" yamasının
+        # satır durumu bütün lokasyonlar uygulayınca kapanır; kim uyguladı burada görünür.
+        _uyg = _rest(url, _anahtar, "yama_uygulamalari?select=yama_id,lokasyon_id,durum&yama_id=in.(%s)"
+                     % ",".join(str(y.get("id")) for y in _yamalar if y.get("id"))) if _yamalar else []
+        _uyg_harita = {}
+        for _u in _uyg if isinstance(_uyg, list) else []:
+            _uyg_harita.setdefault(_u.get("yama_id"), []).append(
+                "%s%s" % (_u.get("lokasyon_id"), "" if _u.get("durum") == "tamamlandi" else " (hata)"))
         st.dataframe(_pd3.DataFrame([
             {"Versiyon": y.get("versiyon"), "Hedef": y.get("hedef"),
-             "Durum": y.get("durum"), "Zaman": _ist_saat(y.get("created_at"))}
+             "Durum": y.get("durum"), "Uygulayan": ", ".join(sorted(_uyg_harita.get(y.get("id"), []))) or "—",
+             "Zaman": _ist_saat(y.get("created_at"))}
             for y in _yamalar]), hide_index=True, use_container_width=True)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # 4) LOKASYON AYAR DEĞİŞİKLİKLERİ (Faz 1 / K1): teknik ekibin lokasyonda yaptığı ayar
+    #    değişiklikleri alan alan (ayar_kaydi.py → ayar_degisiklikleri)
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown(f"<div style='font-size:11px;font-weight:700;letter-spacing:2.2px;"
+                f"text-transform:uppercase;color:{_T.LACIVERT};padding-bottom:8px;"
+                f"border-bottom:2px solid {_T.LACIVERT};margin:22px 0 12px;'>"
+                f"⚙️ Lokasyon ayar değişiklikleri</div>", unsafe_allow_html=True)
+    _ayar_deg = _rest(url, _anahtar, "ayar_degisiklikleri?select=lokasyon_id,zaman,dosya,alan,eski,yeni,kullanici"
+                                     "&order=zaman.desc&limit=50")
+    if not _ayar_deg:
+        st.caption("Henüz kayıt yok (lokasyonlar yeni sürüme geçince ayar değişiklikleri burada görünür).")
+    else:
+        import pandas as _pd4
+        import sql_durumu as _SQ1
+        st.dataframe(_pd4.DataFrame([
+            {"Lokasyon": a.get("lokasyon_id"),
+             "Zaman": (_SQ1.zaman(a.get("zaman")).strftime("%d.%m.%Y %H:%M") if _SQ1.zaman(a.get("zaman")) else "—"),
+             "Dosya": a.get("dosya"), "Alan": a.get("alan") or "—",
+             "Eski": a.get("eski") if a.get("eski") is not None else "—",
+             "Yeni": a.get("yeni") if a.get("yeni") is not None else "—",
+             "Kullanıcı": a.get("kullanici") or "—"} for a in _ayar_deg]),
+            hide_index=True, use_container_width=True, height=320)
 
     st.caption("Eşikler: merkez/configs/izleme_limitleri.json · Ölçüm fonksiyonu: "
                "synapse_kullanim() · Saatler İstanbul saatidir.")
@@ -382,7 +415,7 @@ with _sekme_sql:
                    "veritabanı kendiliğinden temizler (Son bakım).")
 
         _sut = _v.get("energy_data_sutunlari") or []
-        with st.expander("energy_data sütunları (%d) — yeni sayaç sütunu buraya eklenir" % len(_sut)):
+        with st.expander("energy_data sütunları (%d) — sayaç değeri sütunsuz da sayac_gunluk tablosuna gider" % len(_sut)):
             st.dataframe(_pds.DataFrame([{"#": i + 1, "Sütun": s.get("ad"), "Tür": s.get("tur")}
                                          for i, s in enumerate(_sut)]),
                          hide_index=True, use_container_width=True, height=320)
@@ -444,7 +477,45 @@ with _sekme_agent:
             st.warning("Agent tabloları okunamadı. `veritabani/degisiklikler/002_agent_tablolari.sql` "
                        "uygulanmış olmalı ve portal service_role anahtarıyla bağlı olmalı.")
             return
-        _v = _AG.gorunum(_turlar, _bulgular, _acik + _kapali, ust_durum=_UA.arka_plan_durumu())
+        # Lokasyon × agent matrisi + lokasyon seçici (F2). Synapse bulgularının anahtarı lokasyonu
+        # taşır ("kontrol:<lokasyon>"); kapanmış bulgunun iş emri de eşlensin diye hepsi okunur.
+        _loklar = _agent_oku("lokasyonlar?select=lokasyon_id,isim&order=lokasyon_id") or []
+        _syn_b = _agent_oku("agent_bulgular?select=id,agent,anahtar&agent=eq.synapse") or []
+        _syn_b = [b for b in _syn_b if b.get("id") not in {x.get("id") for x in _bulgular}]
+        _mat = _AG.matris(_turlar, _bulgular + _syn_b, _acik + _kapali, _loklar)
+        _gor_t, _gor_b, _gor_r = _turlar, _bulgular, _acik + _kapali
+        if _mat:
+            _ad_lok = {s["ad"]: s["lokasyon_id"] for s in _mat}
+            _m1, _m2 = st.columns([1.6, 4])
+            with _m1:
+                _secim_lok = st.selectbox("Lokasyon", ["Tüm lokasyonlar"] + sorted(_ad_lok), key="ag_lokasyon",
+                                          help="Şema ve iş emirleri yalnız bu lokasyonu gösterir")
+            with _m2:
+                st.markdown(_AG.matris_html(_mat), unsafe_allow_html=True)
+            if _secim_lok in _ad_lok:
+                _gor_t, _gor_b, _gor_r = _AG.suz(_turlar, _bulgular + _syn_b, _acik + _kapali,
+                                                 _ad_lok[_secim_lok], _loklar)
+                _gor_b = [b for b in _gor_b if b.get("durum") == "acik"]
+                # Lokasyonun son 30 gün uyarı / hataları (N5; tablo: 007_lokasyon_hatalari)
+                _h_sinir = (_dt.now(_tz.utc) - _td(days=30)).strftime("%Y-%m-%d")
+                _h = _agent_oku("lokasyon_hatalari?select=gun,anahtar,seviye,kaynak,sablon,adet,ilk,son,ornek"
+                                "&lokasyon_id=eq.%s&gun=gte.%s&order=son.desc&limit=2000"
+                                % (_ad_lok[_secim_lok], _h_sinir))
+                with st.expander("Son 30 gün uyarı ve hataları · %s" % _secim_lok,
+                                 expanded=False):
+                    if _h is None:
+                        st.caption("Hata özeti tablosu okunamadı (007_lokasyon_hatalari uygulanmış olmalı).")
+                    elif not _h:
+                        st.caption("Bu lokasyondan son 30 günde uyarı / hata kaydı gelmedi.")
+                    else:
+                        _ho = _AG.hata_ozeti(_h)
+                        st.caption("%d farklı mesaj · %d kayıt · aynı mesajın sayıları birleştirilmiştir"
+                                   % (len(_ho), sum(x["adet"] for x in _ho)))
+                        st.dataframe(
+                            [{"Son": x["son"], "Düzey": x["seviye"], "Kaynak": x["kaynak"], "Mesaj": x["mesaj"],
+                              "Adet": x["adet"], "Gün": x["gun"], "İlk": x["ilk"], "Son örnek": x["ornek"]}
+                             for x in _ho], use_container_width=True, hide_index=True, height=320)
+        _v = _AG.gorunum(_gor_t, _gor_b, _gor_r, ust_durum=_UA.arka_plan_durumu())
         _ay1, _ay2 = st.columns([1, 6])
         with _ay1:
             # Tıklama yalnızca bu bölümü (şema + iş emirleri) yeniden okur; sayfa yenilenmez.

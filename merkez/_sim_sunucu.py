@@ -42,19 +42,9 @@ IST = timezone(timedelta(hours=3))
 #
 # m2 degerleri de portaldaki HASTANELER tablosuyla ayni; boylece kWh/m2/gun
 # gostergeleri hastaneler arasinda gercekci sekilde farklilasir.
-LOKASYONLAR = [
-    ("maslak", "MASLAK", 15000), ("altunizade", "ALTUNİZADE", 10000),
-    ("kozyatagi", "KOZYATAĞI", 12000), ("taksim", "TAKSİM", 8000),
-    ("atakent", "ATAKENT", 20000), ("atasehir", "ATAŞEHİR", 14000),
-    ("bakirkoy", "BAKIRKÖY", 12000), ("fulya", "FULYA", 9000),
-    ("international", "INTERNAT.", 18000), ("kadikoy", "KADİKÖY", 8000),
-    ("kartal", "KARTAL", 11000), ("ankara", "ANKARA", 16000),
-    ("bayindir", "BAYINDIR", 12000), ("bursa", "BURSA", 13000),
-    ("eskisehir", "ESKİŞEHİR", 9000),
-    ("izmir", "İZMİR", 15000), ("kayseri", "KAYSERİ", 11000),
-    ("adana", "ADANA", 12000), ("adana_ortopedia", "ADANA ORT.", 5000),
-    ("bodrum", "BODRUM", 7000),
-]
+# Liste tek kaynaktan: configs/hastaneler.json (hastaneler.py; Faz 1 / D3) — kimlik, kısa ad, m²
+import hastaneler as _hastaneler  # noqa: E402
+LOKASYONLAR = [(k, v["kisa"], int(v["m2"])) for k, v in _hastaneler.yukle().items()]
 
 # Sehirlere gore ortalama sicaklik farki (°C). Adana/Bodrum sicak, Ankara ve
 # Eskisehir karasal ve soguk. Portal artik her lokasyonun KENDI dis hava ve

@@ -3,6 +3,7 @@
 # Her 30 dakikada bir okuma yapar, sonuclari CSV'ye yazar.
 # portal_watchdog.py tarafindan subprocess olarak baslatilir.
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -31,67 +32,39 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # ================================================================
 # MODBUS YAPILANDIRMASI
 # ================================================================
-ANALYZERS = [
-    {"ip": "172.17.91.121", "name": "TRDP-1",       "brand": "janitza"},
-    # TRDP-2 (mekanik trafo) — 29.09.2026'da baglandi; dort trafo da artik
-    # otomatik okunuyor, sebeke hesabi eksiksiz. ALL_ANALYZERS'a EKLENMEZ.
-    {"ip": "172.17.91.119", "name": "TRDP-2",       "brand": "janitza"},
-    {"ip": "172.17.91.100", "name": "MCC-1",        "brand": "janitza"},
-    {"ip": "172.17.91.101", "name": "MCC-2",        "brand": "janitza"},
-    {"ip": "172.17.91.102", "name": "MCC-3",        "brand": "janitza"},
-    {"ip": "172.17.91.103", "name": "MCC-4",        "brand": "janitza"},
-    # MCC-5 — 29.09.2026'da sahada devreye alindi, MCC kirilimi artik tam.
-    {"ip": "172.17.91.104", "name": "MCC-5",        "brand": "janitza"},
-    {"ip": "172.17.91.105", "name": "MCC-6",        "brand": "janitza"},
-    {"ip": "172.17.91.106", "name": "MCC-7",        "brand": "janitza"},
-    {"ip": "172.17.91.107", "name": "CHILLER-1",    "brand": "janitza"},
-    {"ip": "172.17.91.108", "name": "CHILLER-2",    "brand": "janitza"},
-    {"ip": "172.17.91.109", "name": "CHILLER-3",    "brand": "janitza"},
-    {"ip": "172.17.91.110", "name": "KULE-2",       "brand": "siemens"},
-    {"ip": "172.17.91.111", "name": "KULE-3",       "brand": "siemens"},
-    {"ip": "172.17.91.117", "name": "CHILLER-4",    "brand": "siemens"},
-    {"ip": "172.17.91.118", "name": "CHILLER-5",    "brand": "siemens"},
-    {"ip": "172.17.91.122", "name": "KULE-1",       "brand": "siemens"},
-    {"ip": "172.18.91.130", "name": "2BK-MCC-D01",  "brand": "siemens"},
-    {"ip": "172.18.91.131", "name": "2BK-MCC-D02",  "brand": "siemens"},
-    {"ip": "172.18.91.132", "name": "4BK-MCC-E01",  "brand": "siemens"},
-    {"ip": "172.18.91.133", "name": "4BK-MCC-E02",  "brand": "siemens"},
-    {"ip": "172.18.91.134", "name": "4BK-MCC-F01",  "brand": "siemens"},
-    {"ip": "172.18.91.135", "name": "CK-MCC-D01",   "brand": "siemens"},
-    {"ip": "172.18.91.136", "name": "CK-MCC-E01",   "brand": "siemens"},
-    {"ip": "172.18.91.137", "name": "CK-MCC-F01",   "brand": "siemens"},
-    {"ip": "172.17.91.125", "name": "TRDP-3",       "brand": "siemens"},
-    # TRDP-4 (mekanik trafo) — Siemens PAC4200, 21.09.2026'da otomatik okumaya alındı.
-    # data_bridge'de ALL_ANALYZERS'a EKLENMEZ: TRDP'ler şebeke tarafıdır, MCC/Chiller
-    # alt sayaç toplamına girerse çift sayım olur.
-    {"ip": "172.17.91.123", "name": "TRDP-4",       "brand": "siemens"},
-    # KOJEN-1 / KOJEN-2 — Janitza UMG 512 PRO, 05.11.2026'da canlı izlemeye alındı.
-    # ÜRETİM sayacıdır: KOJEN-3/4 ile aynı kural — ALL_ANALYZERS'a EKLENMEZ,
-    # günlük farkı Kojen1/2_kWh'e yazılır (data_bridge kojen_n'i 1..4 jenerik
-    # okuduğu için orada değişiklik gerekmedi).
-    #
-    # Enerji register'ı 05.11.2026'da ÜRETİCİ KILAVUZUNDAN alındı
-    # (UMG 512-PRO, "Modbus address list" s.12) — bkz. URETIM_ENERJI_REG.
-    {"ip": "10.70.131.2",   "name": "KOJEN-1",      "brand": "janitza", "uretim": True},
-    {"ip": "10.70.131.3",   "name": "KOJEN-2",      "brand": "janitza", "uretim": True},
-    # KOJEN-3 / KOJEN-4 — Siemens PAC3200, 27.10.2026'da canlı izlemeye alındı
-    # (Synapse "KOJEN ÜRETİMİ"). ÜRETİM sayacıdır: data_bridge'de ALL_ANALYZERS'a
-    # EKLENMEZ (tüketim toplamına girmez); günlük farkı Kojen3/4_kWh'e yazılır.
-    # "uretim": güç ve enerji akım trafosu yönünden bağımsız okunur
-    # (URETIM_ENERJI_REG, canli_guc.guc_oku).
-    {"ip": "192.168.1.18",  "name": "KOJEN-3",      "brand": "siemens", "uretim": True},
-    {"ip": "192.168.1.19",  "name": "KOJEN-4",      "brand": "siemens", "uretim": True},
-    # ŞEBEKE — EDAŞ giriş sayacı, Siemens PAC3200 (OG, 3 telli bağlı), 02.11.2026'da
-    # sahada denendi (sebeke_deneme.py: register 65 ile sayaç farkı uyumlu).
-    # "sebeke": NET sayaç — kojen OG baraya bağlı olduğundan enerji iki yönlü
-    # akar; enerji = GİREN − VERİLEN (SEBEKE_ENERJI_REG), güç işaretiyle okunur
-    # (eksi = şebekeye veriliyor). data_bridge'de ALL_ANALYZERS'a EKLENMEZ;
-    # günlük farkı Sebeke_Tuketim_kWh'e yazılır.
-    {"ip": "192.168.1.15",  "name": "SEBEKE",       "brand": "siemens", "sebeke": True},
-]
+# Analizör listesi KODDA DEĞİL: ayar/sayaclar.json (sayaclar.py; Faz 1 / C1, 12.11.2026).
+# Lokasyon başına; teknik ekip düzenler, yama dokunmaz. Dosya yoksa ornek_ayar/<lokasyon>/
+# sayaclar.json'dan kopyalanır. Biçim (data_collector için): {ip, name, brand[, uretim][, sebeke]}.
+# Maslak listesindeki saha notları (bağlanma tarihleri, register kaynakları):
+#   TRDP-2 (mekanik trafo) — 29.09.2026'da baglandi; dort trafo da artik
+#   otomatik okunuyor, sebeke hesabi eksiksiz. ALL_ANALYZERS'a EKLENMEZ.
+#   MCC-5 — 29.09.2026'da sahada devreye alindi, MCC kirilimi artik tam.
+#   TRDP-4 (mekanik trafo) — Siemens PAC4200, 21.09.2026'da otomatik okumaya alındı.
+#   data_bridge'de ALL_ANALYZERS'a EKLENMEZ: TRDP'ler şebeke tarafıdır, MCC/Chiller
+#   alt sayaç toplamına girerse çift sayım olur.
+#   KOJEN-1 / KOJEN-2 — Janitza UMG 512 PRO, 05.11.2026'da canlı izlemeye alındı.
+#   ÜRETİM sayacıdır: KOJEN-3/4 ile aynı kural — ALL_ANALYZERS'a EKLENMEZ,
+#   günlük farkı Kojen1/2_kWh'e yazılır (data_bridge kojen_n'i 1..4 jenerik
+#   okuduğu için orada değişiklik gerekmedi).
+#   
+#   Enerji register'ı 05.11.2026'da ÜRETİCİ KILAVUZUNDAN alındı
+#   (UMG 512-PRO, "Modbus address list" s.12) — bkz. URETIM_ENERJI_REG.
+#   KOJEN-3 / KOJEN-4 — Siemens PAC3200, 27.10.2026'da canlı izlemeye alındı
+#   (Synapse "KOJEN ÜRETİMİ"). ÜRETİM sayacıdır: data_bridge'de ALL_ANALYZERS'a
+#   EKLENMEZ (tüketim toplamına girmez); günlük farkı Kojen3/4_kWh'e yazılır.
+#   "uretim": güç ve enerji akım trafosu yönünden bağımsız okunur
+#   (URETIM_ENERJI_REG, canli_guc.guc_oku).
+#   ŞEBEKE — EDAŞ giriş sayacı, Siemens PAC3200 (OG, 3 telli bağlı), 02.11.2026'da
+#   sahada denendi (sebeke_deneme.py: register 65 ile sayaç farkı uyumlu).
+#   "sebeke": NET sayaç — kojen OG baraya bağlı olduğundan enerji iki yönlü
+#   akar; enerji = GİREN − VERİLEN (SEBEKE_ENERJI_REG), güç işaretiyle okunur
+#   (eksi = şebekeye veriliyor). data_bridge'de ALL_ANALYZERS'a EKLENMEZ;
+#   günlük farkı Sebeke_Tuketim_kWh'e yazılır.
+import sayaclar as _sayaclar  # noqa: E402
+ANALYZERS = _sayaclar.analizorler(BASE_DIR)
 
 MODBUS_PORT    = 502
-MODBUS_CSV     = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
+MODBUS_CSV     = yollar.yol("analizor_guncel_veriler.csv", BASE_DIR)
 # Sayaçlara aynı anda iki okuma gitmesin: günlük okuma ile canlı güç okuması
 # (canli_guc.py) bu kilitleri paylaşır. Analizörlerin bir kısmı eşzamanlı TCP
 # bağlantısında yanıt vermiyor.
@@ -136,10 +109,10 @@ BACNET_TIMEOUT = 50.0
 # 21.09.2026 07:05) ve energy_data'ya 34 gün donmuş değer yazıldı.
 # Mekanik Zeka configs/'u da aradığı için çalışmaya devam etti, fark edilmedi.
 # Kanıt: saha_teshis 24.10.2026 — şablon configs'te, kökte yok, gateway 5/5 cevaplı.
-_EXCEL_FILE_CONFIGS = os.path.join(BASE_DIR, "configs", "hedefli_okuma_sablonu_2.xlsx")
-_EXCEL_FILE_ROOT = os.path.join(BASE_DIR, "hedefli_okuma_sablonu_2.xlsx")
+_EXCEL_FILE_CONFIGS = yollar.yol("configs/hedefli_okuma_sablonu_2.xlsx", BASE_DIR)
+_EXCEL_FILE_ROOT = yollar.yol("hedefli_okuma_sablonu_2.xlsx", BASE_DIR)
 EXCEL_FILE = _EXCEL_FILE_CONFIGS if os.path.exists(_EXCEL_FILE_CONFIGS) else _EXCEL_FILE_ROOT
-BACNET_CSV    = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+BACNET_CSV    = yollar.yol("hedefli_enerji_verileri.csv", BASE_DIR)
 PROP_PRESENT_VALUE = 85
 
 # ================================================================

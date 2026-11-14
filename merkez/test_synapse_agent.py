@@ -33,8 +33,13 @@ def iso(dk_once, saat_dilimsiz=False):
 
 
 class SahteSunucu:
-    def __init__(self, disk=(50, 100, 50), bellek=(4000, 16000), servis=None, yedek="var"):
-        self._disk, self._bellek, self._servis, self._yedek = disk, bellek, servis or {}, yedek
+    def __init__(self, disk=(50, 100, 50), bellek=(4000, 16000), servis=None, yedek="var", yuk=(0.4, 2)):
+        self._disk, self._bellek, self._servis, self._yedek, self._yuk = disk, bellek, servis or {}, yedek, yuk
+
+    def yuk(self):
+        if isinstance(self._yuk, Exception):
+            raise self._yuk
+        return self._yuk
 
     def disk(self):
         return self._disk
@@ -141,14 +146,14 @@ v["komutlar"] = [{"id": 1, "lokasyon": "maslak", "nokta_adi": "AHU1", "durum": "
                  {"id": 2, "lokasyon": "maslak", "nokta_adi": "AHU2", "durum": "bekliyor", "created_at": iso(3)},
                  {"id": 3, "lokasyon": "maslak", "nokta_adi": "AHU3", "durum": "dogrulanamadi", "created_at": iso(100)}]
 o, db = ortam(v, anahtarsiz=200, portal=502, disk=(93, 100, 7), bellek=(500, 16000),
-              servis={"nginx": "failed"}, yedek=[{"ad": "synapse_db_20261109_013000.dump", "bayt": 1,
+              servis={"nginx": "failed"}, yuk=(3.4, 2), yedek=[{"ad": "synapse_db_20261109_013000.dump", "bayt": 1,
                                                   "zaman": SIMDI - timedelta(hours=40)}])
 s = S.tur(o)
 b = {x["anahtar"]: x for x in s["bulgular"]}
 beklenen = {"lokasyon_baglanti:altunizade", "gunluk_esitleme:altunizade", "canli_sayac:maslak:bayat",
             "canli_sayac:altunizade:akis", "yama_kuyrugu:bekliyor:y1", "yama_kuyrugu:hata:y3", "komutlar:bekleyen",
             "komutlar:basarisiz", "surum:fark", "anahtarsiz_erisim:energy_data", "synapse_portal:saglik",
-            "sunucu:disk", "sunucu:bellek", "sunucu:servis:nginx", "sunucu:yedek"}
+            "sunucu:disk", "sunucu:bellek", "sunucu:servis:nginx", "sunucu:yedek", "sunucu:islemci"}
 c("beklenen bulguların hepsi, fazlası yok", set(b) == beklenen, set(b) ^ beklenen)
 c("çevrimdışı 25 dk → uyarı (60 dk altı)", b["lokasyon_baglanti:altunizade"]["onem"] == "uyari")
 c("5 dk'lık yama bekleme sayılmaz", "yama_kuyrugu:bekliyor:y2" not in b)
@@ -161,6 +166,21 @@ c("anahtarsız erişim açık → kritik", b["anahtarsiz_erisim:energy_data"]["o
 c("disk %93 kritik, servis kritik, 40 saatlik yedek uyarı",
   b["sunucu:disk"]["onem"] == "kritik" and b["sunucu:servis:nginx"]["onem"] == "kritik"
   and b["sunucu:yedek"]["onem"] == "uyari")
+c("işlemci yükü çekirdek başına 1.7 → kritik (G2)", b["sunucu:islemci"]["onem"] == "kritik"
+  and b["sunucu:islemci"]["kanit"] == {"yuk15": 3.4, "cekirdek": 2}, b.get("sunucu:islemci"))
+for _yk, _bek in (((1.7, 2), "uyari"), ((1.2, 2), None), (OSError("getloadavg yok"), None)):
+    _o, _ = ortam(saglikli_veri(), yuk=_yk)
+    _b = {x["anahtar"]: x for x in S.tur(_o)["bulgular"]}
+    c("işlemci yükü %s → %s" % (_yk, _bek), (_b.get("sunucu:islemci") or {}).get("onem") == _bek, _b.get("sunucu:islemci"))
+_saat = iter([100.0, 104.5] + [200.0] * 50)
+_gercek_monotonic = S.time.monotonic
+S.time.monotonic = lambda: next(_saat)
+try:
+    _yb = S.k_synapse_portal(ortam(saglikli_veri())[0])
+finally:
+    S.time.monotonic = _gercek_monotonic
+c("Synapse 4,5 sn'de yanıt verirse 'yavaş' uyarısı (G2)",
+  len(_yb) == 1 and _yb[0]["anahtar"] == "synapse_portal:yavas" and _yb[0]["onem"] == "uyari", _yb)
 c("her bulguda başlık, beklenen, bulunan dolu",
   all(x["baslik"] and x["beklenen"] and x["bulunan"] for x in s["bulgular"]))
 yaz = [y for y in db.yazilan if y[1].startswith("agent_bulgular?on_conflict")]
@@ -209,6 +229,41 @@ S.tur(o)
 r = [y for y in db.yazilan if y[1].startswith("agent_bulgular?on_conflict")][0][2][0]
 c("kapanmış bulgu yeniden açılınca açılma +1, görülme 1, ilk görülme yenilenir",
   r["acilma_sayisi"] == 3 and r["gorulme_sayisi"] == 1 and r["ilk_gorulme"] != ilk and r["kapanma"] is None)
+
+print("\n'all' yaması lokasyon başına (yama_uygulamalari)")
+v = saglikli_veri()
+v["guncellemeler"] = [{"id": "ya", "versiyon": "14.0", "hedef": "all", "durum": "bekliyor", "created_at": iso(45)},
+                      {"id": "yb", "versiyon": "14.1", "hedef": "all", "durum": "bekliyor", "created_at": iso(40)}]
+v["yama_uygulamalari"] = [{"yama_id": "ya", "lokasyon_id": "maslak", "durum": "tamamlandi"},
+                          {"yama_id": "yb", "lokasyon_id": "maslak", "durum": "hata"}]
+o, db = ortam(v)
+b = {x["anahtar"]: x for x in S.tur(o)["bulgular"]}
+c("'all' yamasını almayan lokasyon adıyla bildirilir", "bekliyor:ya" in str(b)
+  and "almayan: altunizade" in b["yama_kuyrugu:bekliyor:ya"]["baslik"], list(b))
+c("bir lokasyonda hata veren 'all' yaması kritik (satır henüz kapanmamış olsa da)",
+  b.get("yama_kuyrugu:hata:yb", {}).get("onem") == "kritik" and "maslak" in b["yama_kuyrugu:hata:yb"]["baslik"])
+v["yama_uygulamalari"] = None                     # tablo yok (004 uygulanmadan önce)
+o, db = ortam(v)
+gercek2 = db.__call__
+o.http = lambda url, yontem="GET", *a, **k: (404, "yok") if "yama_uygulamalari" in url else gercek2(url, yontem, *a, **k)
+d = {x["kod"]: x["durum"] for x in S.tur(o)["kontroller"]}
+c("uygulama tablosu okunamazsa yama kontrolü eski hâliyle çalışır", d["yama_kuyrugu"] == "sorun", d)
+
+print("\nLokasyon ayar değişiklikleri (K1)")
+v = saglikli_veri()
+v["ayar_degisiklikleri"] = [
+    {"lokasyon_id": "maslak", "zaman": iso(30), "dosya": "sayaclar.json", "alan": "sayaclar[KULE-9].ip", "kullanici": "teknik1"},
+    {"lokasyon_id": "maslak", "zaman": iso(20), "dosya": "hvac_settings.json", "alan": "TARGET_DT_CHILLER", "kullanici": "teknik1"},
+    {"lokasyon_id": "atasehir", "zaman": iso(10), "dosya": "hvac_settings.json", "alan": "SAT_COOLING_MIN", "kullanici": "x"},
+]
+o, db = ortam(v)
+b = [x for x in S.tur(o)["bulgular"] if x["kontrol"] == "ayar_degisikligi"]
+c("kritik ayar (sayaç listesi) değişince lokasyon başına bilgi bulgusu", len(b) == 1 and b[0]["onem"] == "bilgi"
+  and "maslak" in b[0]["baslik"] and "sayaclar.json" in b[0]["baslik"] and "teknik1" in b[0]["bulunan"], b)
+c("sıradan ayar değişikliği bulgu açmaz (yalnız Yönetim'de listelenir)",
+  not any("atasehir" in x["anahtar"] for x in b))
+c("ayar değişikliği okuması yalnız gerekli sütunlar", any(y.startswith("ayar_degisiklikleri?select=lokasyon_id,zaman,dosya,alan,kullanici")
+                                                         for y in db.okunan))
 
 print("\nHata dayanıklılığı")
 v = saglikli_veri()

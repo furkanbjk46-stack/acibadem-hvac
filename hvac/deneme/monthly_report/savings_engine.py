@@ -6,6 +6,9 @@ from datetime import datetime
 from typing import Dict, List, Optional, Callable
 import json
 import os
+import sys as _sys_y
+_sys_y.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 
 
 class SavingsRule:
@@ -30,7 +33,10 @@ class SavingsRecommendationEngine:
     Feedback loop ile kendi öğrenir.
     """
     
-    def __init__(self, training_data_path: str = "savings_training_data.json"):
+    def __init__(self, training_data_path: str = None):
+        # veri/savings_training_data.json (Faz 1); eskiden çalışma klasörüne göre aranıyordu
+        training_data_path = training_data_path or yollar.yol(
+            "savings_training_data.json", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         self.training_data_path = training_data_path
         self.training_data = self._load_training_data()
         self.rules = self._initialize_rules()
@@ -310,8 +316,7 @@ Free cooling ile Chiller'lar kapatılıp dış hava ile soğutma yapılabilir.
                 severity="INFO",
                 condition=self._check_mas_imbalance,
                 message_template="""Santral Sıcaklık Dengesizliği Tespit Edildi!
-🏭 MAS1 Ortalama: {mas1_temp:.1f}°C
-🏭 MAS2 Ortalama: {mas2_temp:.1f}°C
+{hat_satirlari}
 📏 Fark: {temp_diff:.1f}°C
 
 Santraller arasında dengesiz yük dağılımı var.
@@ -743,39 +748,34 @@ Her 1°C değişim yaklaşık %3-5 {benefit} sağlar.
         return None
     
     def _check_mas_imbalance(self, unified_data: Dict, yoy_data: Dict) -> Optional[Dict]:
-        """MAS santral sıcaklık dengesizliği var mı?"""
+        """Santraller (ısıtma hatları) arasında sıcaklık dengesizliği var mı?
+
+        Hat listesi lokasyona göre (summary["hat_ortalamalari"], yol haritası R1); eski özetlerde
+        yalnız avg_mas1_* / avg_mas2_* vardır. Önce soğutma, sonra ısıtma; en sıcak ile en soğuk hat
+        arasında 5 °C'den fazla fark (iki hatta eski kuralla aynı: |MAS1 - MAS2|).
+        """
         summary = unified_data.get("summary", {})
-        
-        # Önce soğutma modunu kontrol et
-        mas1_cooling = summary.get("avg_mas1_cooling_temp")
-        mas2_cooling = summary.get("avg_mas2_cooling_temp")
-        
-        # Sonra ısıtma modunu kontrol et
-        mas1_heating = summary.get("avg_mas1_heating_temp")
-        mas2_heating = summary.get("avg_mas2_heating_temp")
-        
-        # Soğutma modunda dengesizlik
-        if mas1_cooling is not None and mas2_cooling is not None:
-            temp_diff = abs(mas1_cooling - mas2_cooling)
+        hatlar = summary.get("hat_ortalamalari")
+        if not hatlar:
+            hatlar = [{"etiket": "MAS%d" % i, "sogutma": summary.get("avg_mas%d_cooling_temp" % i),
+                       "isitma": summary.get("avg_mas%d_heating_temp" % i)} for i in (1, 2)]
+
+        for alan in ("sogutma", "isitma"):
+            degerler = [(h.get("etiket") or h.get("ad") or "?", h[alan]) for h in hatlar if h.get(alan) is not None]
+            if len(degerler) < 2:
+                continue
+            en_cok, en_az = max(v for _, v in degerler), min(v for _, v in degerler)
+            temp_diff = abs(en_cok - en_az)
             if temp_diff > 5:  # 5°C'den fazla fark
                 return {
-                    "mas1_temp": mas1_cooling,
-                    "mas2_temp": mas2_cooling,
+                    "hat_satirlari": "\n".join("🏭 %s Ortalama: %.1f°C" % (e, v) for e, v in degerler),
+                    "mas1_temp": degerler[0][1],
+                    "mas2_temp": degerler[1][1],
                     "temp_diff": temp_diff
                 }
-        
-        # Isıtma modunda dengesizlik
-        if mas1_heating is not None and mas2_heating is not None:
-            temp_diff = abs(mas1_heating - mas2_heating)
-            if temp_diff > 5:  # 5°C'den fazla fark
-                return {
-                    "mas1_temp": mas1_heating,
-                    "mas2_temp": mas2_heating,
-                    "temp_diff": temp_diff
-                }
-        
+
         return None
-    
+
     def _check_water_anomaly(self, unified_data: Dict, yoy_data: Dict) -> Optional[Dict]:
         """Su tüketim anomalisi var mı?"""
         summary = unified_data.get("summary", {})

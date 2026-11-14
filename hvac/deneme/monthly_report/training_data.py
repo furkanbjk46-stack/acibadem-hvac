@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 import os
+import sys as _sys_y
+_sys_y.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import json
 import logging
 from datetime import datetime
@@ -23,7 +26,8 @@ class TrainingDataCollector:
         DATA_FILE = _get_loc_mgr().get_data_path("ml_training_data.json")
     except Exception as e:
         logging.getLogger(__name__).warning(f"location_manager yüklenemedi, varsayılan yol kullanılıyor: {e}")
-        DATA_FILE = "ml_training_data.json"
+        DATA_FILE = yollar.yol("ml_training_data.json",
+                               os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     
     def __init__(self, data_file: str = None):
         self.data_file = data_file or self.DATA_FILE

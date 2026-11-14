@@ -3,6 +3,7 @@
 # cloud_sync.py'nin arka plan heartbeat döngüsünden çağrılır.
 # Dış kütüphane gerektirmez — data_collector.py ile aynı yaklaşım.
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import socket
 import struct
 import random
@@ -489,8 +490,7 @@ def geri_okuma_haritasi(lokasyon_id: str) -> dict:
     geri okunur).
     """
     try:
-        yol = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                           "configs", "geri_okuma.json")
+        yol = yollar.yol("configs/geri_okuma.json", os.path.dirname(os.path.abspath(__file__)))
         with open(yol, encoding="utf-8") as f:
             return json.load(f).get(lokasyon_id, {}) or {}
     except Exception:

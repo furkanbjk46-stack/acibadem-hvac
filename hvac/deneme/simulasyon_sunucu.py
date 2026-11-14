@@ -50,6 +50,7 @@ from datetime import datetime, timedelta
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BURASI)
+import yollar  # noqa: E402  (ayar/ durum/ veri/; Faz 1)
 try:
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 except Exception:
@@ -110,7 +111,7 @@ class Saha:
     @staticmethod
     def _kapasite(ad: str) -> dict:
         try:
-            with open(os.path.join(BURASI, "configs", ad), encoding="utf-8") as f:
+            with open(yollar.yol("configs/" + ad, BURASI), encoding="utf-8") as f:
                 return json.load(f)
         except Exception:
             return {}
@@ -118,7 +119,7 @@ class Saha:
     @staticmethod
     def _tesis() -> tuple:
         try:
-            with open(os.path.join(BURASI, "configs", "chiller_fcu_ayarlari.json"),
+            with open(yollar.yol("configs/chiller_fcu_ayarlari.json", BURASI),
                       encoding="utf-8") as f:
                 a = json.load(f)
             return (float(a.get("kazan_birim_kw", 1950)), int(a.get("kazan_adedi", 3)),
@@ -129,7 +130,7 @@ class Saha:
     @staticmethod
     def _tasarim_dt() -> float:
         try:
-            with open(os.path.join(BURASI, "configs", "hvac_settings.json"),
+            with open(yollar.yol("configs/hvac_settings.json", BURASI),
                       encoding="utf-8") as f:
                 return float(json.load(f).get("TARGET_DT_HEAT_EXCHANGER", 8.0))
         except Exception:
@@ -532,7 +533,7 @@ def main() -> int:
 
     # Nokta haritası geliştirme kopyasında configs/ altında duruyor
     if not os.path.exists(ac.AHU_CONFIG_FILE):
-        alternatif = os.path.join(BURASI, "configs", "ahu_nokta_konfig.json")
+        alternatif = yollar.yol("configs/ahu_nokta_konfig.json", BURASI)
         if os.path.exists(alternatif):
             ac.AHU_CONFIG_FILE = alternatif
             print("• Nokta haritası: configs/ahu_nokta_konfig.json")
@@ -601,7 +602,7 @@ def main() -> int:
 def _temizle():
     """Simülasyonun bıraktığı test çıktılarını siler (saha dosyası değildir)."""
     silinen = 0
-    for yol in (os.path.join(BURASI, "configs", "uretim_tuketim_gecmis.json"),
+    for yol in (yollar.yol("configs/uretim_tuketim_gecmis.json", BURASI),
                 os.path.join(BURASI, "hvac_ahu_analiz_sonuclari.json")):
         try:
             if os.path.exists(yol):

@@ -14,17 +14,22 @@ echo.
 cd /d "%~dp0"
 cd deneme
 
+REM Portlar: deneme\ayar\portlar.json (kurulumda secilir); yoksa 8005 / 8501
+set "MZ_PORT=8005"
+set "EN_PORT=8501"
+for /f "usebackq tokens=1,2" %%A in (`python -c "import portlar;p=portlar.yukle();print(p['mekanik_zeka'],p['enerji'])" 2^>nul`) do (set "MZ_PORT=%%A" & set "EN_PORT=%%B")
+
 echo Tarayici aciliyor (5 saniye bekleniyor)...
 timeout /t 5 /nobreak > nul
-start "" "http://127.0.0.1:8005"
+start "" "http://127.0.0.1:%MZ_PORT%"
 
 echo.
 echo ====================================================
 echo    PORTAL ADRESLERI
 echo ====================================================
 echo.
-echo    HVAC Portal:   http://127.0.0.1:8005
-echo    Enerji Portal: http://localhost:8501
+echo    HVAC Portal:   http://127.0.0.1:%MZ_PORT%
+echo    Enerji Portal: http://localhost:%EN_PORT%
 echo.
 echo    Uzaktan guncelleme alindiktan sonra sistem
 echo    otomatik olarak yeniden baslatilacak.

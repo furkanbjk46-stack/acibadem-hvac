@@ -2,6 +2,7 @@
 # HVAC + Enerji verilerini birleştiren modül
 
 from __future__ import annotations
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import os
 import pandas as pd
 from datetime import date, datetime
@@ -24,7 +25,26 @@ def _safe_mean(values):
     return statistics.mean(clean) if clean else None
 
 # Enerji veri dosyası (app_portal.py ile aynı)
-DATA_FILE = "energy_data.csv"
+DATA_FILE = yollar.yol("energy_data.csv", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_LOKASYON_DIZINI = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _isitma_hatlari():
+    """Lokasyonun ısıtma / santral hatları: ayar/bacnet_esleme.json (yol haritası R1, 12.11.2026).
+
+    Eskiden rapor yalnız Maslak'ın iki hattını (Mas1_*, Mas2_* sütunları) biliyordu. Dosya yoksa []
+    (rapor sıcaklık bölümü boş kalır, hata vermez).
+    """
+    try:
+        import bacnet_esleme
+        return bacnet_esleme.hatlar(_LOKASYON_DIZINI) or []
+    except Exception:
+        return []
+
+
+def _hat_etiketi(hat):
+    """Rapor metnindeki kısa ad: 'MAS-1' → 'MAS1' (eski rapor metni korunur)."""
+    return str(hat.get("ad") or hat.get("etiket") or "?").replace("-", "").upper()
 
 class UnifiedDataMerger:
     """
@@ -75,7 +95,7 @@ class UnifiedDataMerger:
             return {}
         
         row = day_data.iloc[0]
-        return {
+        sonuc = {
             "date": target_date,
             "chiller_set_temp": row.get("Chiller_Set_Temp_C"),
             "chiller_count": row.get("Chiller_Adet"),
@@ -93,15 +113,22 @@ class UnifiedDataMerger:
             "total_hospital": row.get("Toplam_Hastane_Tuketim_kWh"),
             "total_cooling": row.get("Toplam_Sogutma_Tuketim_kWh"),
             "other_load": row.get("Diger_Yuk_kWh"),
-            # Sıcaklık verileri
-            "mas1_heating_temp": row.get("Mas1_Isitma_Temp"),
-            "mas1_boiler_temp": row.get("Mas1_Kazan_Temp"),
-            "mas1_cooling_temp": row.get("Mas1_Sogutma_Temp"),
-            "mas2_heating_temp": row.get("Mas2_Isitma_Temp"),
-            "mas2_boiler_temp": row.get("Mas2_Kazan_Temp"),
-            "mas2_cooling_temp": row.get("Mas2_Sogutma_Temp"),
+            # Sıcaklık verileri: hat başına (sütun adları ayar/bacnet_esleme.json'dan)
+            "hatlar": {h.get("ad"): {"etiket": _hat_etiketi(h),
+                                     "heating_temp": row.get(h["isitma"]) if h.get("isitma") else None,
+                                     "boiler_temp": row.get(h["kazan"]) if h.get("kazan") else None,
+                                     "cooling_temp": row.get(h["sogutma"]) if h.get("sogutma") else None}
+                       for h in _isitma_hatlari()},
         }
-    
+        # Eski anahtarlar (mas1_* / mas2_* = ilk iki hat): eski rapor şablonları bunları okur
+        for _i in (1, 2):
+            for _alan in ("heating_temp", "boiler_temp", "cooling_temp"):
+                sonuc["mas%d_%s" % (_i, _alan)] = None
+        for _i, _h in enumerate(list(sonuc["hatlar"].values())[:2], 1):
+            for _alan in ("heating_temp", "boiler_temp", "cooling_temp"):
+                sonuc["mas%d_%s" % (_i, _alan)] = _h[_alan]
+        return sonuc
+
     def get_energy_data_for_month(self, year: int, month: int) -> pd.DataFrame:
         """Belirli bir ay için tüm enerji verileri"""
         df = self.load_energy_data()
@@ -282,20 +309,34 @@ class UnifiedDataMerger:
         avg_chiller_set = _safe_mean(chiller_sets) if chiller_sets else None
         avg_outdoor_temp = _safe_mean(outdoor_temps) if outdoor_temps else None
         
-        # Yeni: MAS santral sıcaklıkları ortalaması
-        mas1_cooling_temps = [d["energy"].get("mas1_cooling_temp") for d in daily_data if d["energy"].get("mas1_cooling_temp") is not None]
-        mas2_cooling_temps = [d["energy"].get("mas2_cooling_temp") for d in daily_data if d["energy"].get("mas2_cooling_temp") is not None]
-        mas1_heating_temps = [d["energy"].get("mas1_heating_temp") for d in daily_data if d["energy"].get("mas1_heating_temp") is not None]
-        mas2_heating_temps = [d["energy"].get("mas2_heating_temp") for d in daily_data if d["energy"].get("mas2_heating_temp") is not None]
-        
-        avg_mas1_cooling = _safe_mean(mas1_cooling_temps) if mas1_cooling_temps else None
-        avg_mas2_cooling = _safe_mean(mas2_cooling_temps) if mas2_cooling_temps else None
-        avg_mas1_heating = _safe_mean(mas1_heating_temps) if mas1_heating_temps else None
-        avg_mas2_heating = _safe_mean(mas2_heating_temps) if mas2_heating_temps else None
-        
-        # Yeni: Dönüş sıcaklıkları ortalaması (iç ortam göstergesi olarak)
-        all_return_temps = mas1_cooling_temps + mas2_cooling_temps + mas1_heating_temps + mas2_heating_temps
-        # Düzeltme: NumPy tiplerini (int64/float64) standart float'a çevir
+        # Santral (ısıtma hattı) sıcaklık ortalamaları — hat sayısı lokasyona göre (R1)
+        def _hat_degerleri(ad, alan):
+            return [d["energy"]["hatlar"][ad][alan] for d in daily_data
+                    if ad in (d["energy"].get("hatlar") or {}) and d["energy"]["hatlar"][ad].get(alan) is not None]
+
+        _hat_adlari = []
+        for d in daily_data:
+            for _ad in (d["energy"].get("hatlar") or {}):
+                if _ad not in _hat_adlari:
+                    _hat_adlari.append(_ad)
+        _sogutma = {ad: _hat_degerleri(ad, "cooling_temp") for ad in _hat_adlari}
+        _isitma = {ad: _hat_degerleri(ad, "heating_temp") for ad in _hat_adlari}
+        hat_ortalamalari = []
+        for ad in _hat_adlari:
+            _et = next((d["energy"]["hatlar"][ad].get("etiket") for d in daily_data
+                        if ad in (d["energy"].get("hatlar") or {})), ad)
+            hat_ortalamalari.append({"ad": ad, "etiket": _et,
+                                     "sogutma": _safe_mean(_sogutma[ad]) if _sogutma[ad] else None,
+                                     "isitma": _safe_mean(_isitma[ad]) if _isitma[ad] else None})
+        _ilk2 = hat_ortalamalari[:2] + [{}] * (2 - len(hat_ortalamalari[:2]))
+        avg_mas1_cooling, avg_mas2_cooling = _ilk2[0].get("sogutma"), _ilk2[1].get("sogutma")
+        avg_mas1_heating, avg_mas2_heating = _ilk2[0].get("isitma"), _ilk2[1].get("isitma")
+
+        # Yeni: Dönüş sıcaklıkları ortalaması (iç ortam göstergesi olarak):
+        # önce bütün hatların soğutma, sonra ısıtma değerleri (eski sırayla aynı)
+        all_return_temps = [v for ad in _hat_adlari for v in _sogutma[ad]] + \
+                           [v for ad in _hat_adlari for v in _isitma[ad]]
+# Düzeltme: NumPy tiplerini (int64/float64) standart float'a çevir
         all_return_temps = [float(x) for x in all_return_temps if x is not None]
         avg_return_temp = _safe_mean(all_return_temps) if all_return_temps else None
         
@@ -339,8 +380,9 @@ class UnifiedDataMerger:
             "avg_mas2_cooling_temp": avg_mas2_cooling,
             "avg_mas1_heating_temp": avg_mas1_heating,
             "avg_mas2_heating_temp": avg_mas2_heating,
+            "hat_ortalamalari": hat_ortalamalari,      # [{"ad","etiket","sogutma","isitma"}], hat sırasıyla
             "avg_return_temp": avg_return_temp,
-            
+
             # Yeni: Enerji Verimlilik İndeksi (kWh/°C)
             "efficiency_index": efficiency_index,
             

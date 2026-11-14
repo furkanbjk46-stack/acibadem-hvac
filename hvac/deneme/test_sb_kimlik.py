@@ -66,8 +66,8 @@ _gi = open(os.path.join(BURASI, "..", "..", ".gitignore"), encoding="utf-8").rea
     if os.path.exists(os.path.join(BURASI, "..", "..", ".gitignore")) else None
 if _gi is not None:
     c("anahtar dosyası .gitignore'da", "lokasyon_anahtari.json" in _gi)
-c("anahtar configs/ altında (yama ve USB güncellemesi configs'e dokunmaz)",
-  K.ANAHTAR_DOSYA.replace("\\", "/").endswith("configs/lokasyon_anahtari.json"))
+c("anahtar lokasyon ayarında (ayar/ ya da taşınmamış kurulumda configs/; yama dokunmaz)",
+  K.ANAHTAR_DOSYA.replace("\\", "/").endswith(("ayar/lokasyon_anahtari.json", "configs/lokasyon_anahtari.json")))
 
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)[:300]))

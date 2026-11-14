@@ -47,7 +47,11 @@ import enerji_agent as C          # ortak çekirdek
 from enerji_agent import Atla, bulgu
 
 MZ = {"agent": "mekanik_zeka", "ad": "Mekanik Zeka Agent'ı", "on": "mekanik_zeka_agent"}
-PORTAL = "http://127.0.0.1:8005"
+try:                           # Mekanik Zeka portu: ayar/portlar.json (yoksa 8005)
+    import portlar as _portlar
+    PORTAL = _portlar.mekanik_zeka_url()
+except Exception:
+    PORTAL = "http://127.0.0.1:8005"
 
 ANALIZ_DIKKAT_DK = 40          # analiz 10 dk'da bir; 4 tur kaçarsa uyarı
 ANALIZ_KRITIK_DK = 180
@@ -104,11 +108,11 @@ def k_portal_api(o):
     kapali = hatali[0][0] == "/api/health"
     return [bulgu(
         "portal_api", "8005" if kapali else "uclar", "kritik" if kapali else "uyari", "Portal sağlığı",
-        "Mekanik Zeka (8005) yanıt vermiyor" if kapali else
+        "Mekanik Zeka (%s) yanıt vermiyor" % C._port(o.portal_url) if kapali else
         "Mekanik Zeka'da %d API ucu hata veriyor" % len(hatali),
         "HTTP 200", "; ".join("%s → %s %s" % (u, k, str(n)[:60]) for u, k, n in hatali),
         denenen="20 sn sonra yeniden denedi (portalı yeniden başlatmadı)" if kapali else "—",
-        tekrar_adimi="Lokasyon PC'sinde http://127.0.0.1:8005%s adresini aç" % hatali[0][0],
+        tekrar_adimi="Lokasyon PC'sinde %s%s adresini aç" % (o.portal_url.rstrip("/"), hatali[0][0]),
         olasi_yer="main_portal.py süreci; watchdog penceresi" if kapali else "main_portal.py ilgili uç")]
 
 
@@ -328,7 +332,7 @@ def k_giris_qr(o):
     taban = o.portal_url.rstrip("/")
     kod, metin = o.http(taban + "/", zaman_asimi=10)
     if kod is None:
-        raise Atla("8005 yanıt vermiyor (portal_api kontrolüne bakın)")
+        raise Atla("Mekanik Zeka yanıt vermiyor (portal_api kontrolüne bakın)")
     sorun = []
     if kod != 200:
         sorun.append("giriş ekranı (/) → HTTP %s" % kod)
@@ -350,7 +354,7 @@ def k_giris_qr(o):
         "giris_qr", "giris", "uyari", "Giriş ekranı ve QR",
         "Giriş ekranı / QR bağlantısında %d sorun" % len(sorun), "giriş ekranı, /hvac, /enerji, /bakim/… açılır",
         "; ".join(sorun),
-        tekrar_adimi="Lokasyon PC'sinde http://127.0.0.1:8005/ aç, HVAC ve Enerji düğmelerine bas; "
+        tekrar_adimi="Lokasyon PC'sinde " + o.portal_url.rstrip("/") + "/ aç, HVAC ve Enerji düğmelerine bas; "
                      "telefonla bir santral QR etiketini okut",
         olasi_yer="main_portal.py portal_home / hvac_entry / enerji_entry / bakim_qr_link")]
 
@@ -394,7 +398,7 @@ def k_watchdog(o):
 def k_bakim_karti(o):
     kod, d = _json(o, "/api/maintenance")
     if kod is None:
-        raise Atla("8005 yanıt vermiyor (portal_api kontrolüne bakın)")
+        raise Atla("Mekanik Zeka yanıt vermiyor (portal_api kontrolüne bakın)")
     if kod != 200 or not (d or {}).get("success"):
         return [bulgu("bakim_karti", "api", "uyari", "Bakım kartları", "Bakım kartları yüklenemiyor",
                       "/api/maintenance → success", "HTTP %s" % kod,
@@ -425,7 +429,7 @@ def k_bakim_karti(o):
 def k_ayarlar(o):
     kod, d = _json(o, "/api/settings")
     if kod is None:
-        raise Atla("8005 yanıt vermiyor (portal_api kontrolüne bakın)")
+        raise Atla("Mekanik Zeka yanıt vermiyor (portal_api kontrolüne bakın)")
     cikti = []
     if kod != 200 or not (d or {}).get("success"):
         cikti.append(bulgu("ayarlar", "api", "uyari", "Ayarlar", "Mekanik Zeka ayarları okunamıyor",
@@ -443,6 +447,17 @@ def k_ayarlar(o):
                 "her ayar CONFIG_LIMITS içinde", ", ".join(disari[:6]),
                 tekrar_adimi="Mekanik Zeka → Ayarlar (bu değerle Kaydet reddedilir)",
                 olasi_yer="ayar dosyası elle düzenlenmiş ya da sınırlar sonradan daraltılmış"))
+    try:                                   # BACnet nokta dosyasının iki kopyası ayrışmış mı (N2)
+        import ayar_yollari
+        if ayar_yollari.nokta_konfig_ayrisik(o.dizin):
+            gecerli = os.path.relpath(ayar_yollari.nokta_konfig_yolu(o.dizin), o.dizin)
+            cikti.append(bulgu(
+                "ayarlar", "nokta_kopya", "bilgi", "Ayarlar", "BACnet nokta dosyasının iki kopyası farklı",
+                "tek nokta dosyası", "geçerli olan (en son düzenlenen): %s" % gecerli,
+                tekrar_adimi="ahu_nokta_konfig.json ile configs/ahu_nokta_konfig.json'u karşılaştır",
+                olasi_yer="eski kopya elle düzenlenmiş olabilir; programlar en son düzenleneni kullanır"))
+    except ImportError:
+        pass
     kod, d = _json(o, "/api/chiller_fcu_ayarlari")
     if kod != 200 or not (d or {}).get("success"):
         cikti.append(bulgu("ayarlar", "chiller_fcu", "uyari", "Ayarlar", "Chiller/FCU kapasite ayarları okunamıyor",

@@ -1,4 +1,5 @@
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import sys
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -176,16 +177,16 @@ def config_dogrula(cfg: dict) -> list:
 # ================ AYAR YÖNETİMİ ================
 # Eski hardcoded yollar — geriye uyumluluk için tutuluyor
 # Yeni kod _get_settings_file() / _get_maintenance_file() kullanmalı
-SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json")
-MAINTENANCE_FILE = os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
+SETTINGS_FILE = yollar.yol("configs/hvac_settings.json", os.path.dirname(__file__))
+MAINTENANCE_FILE = yollar.yol("configs/maintenance_cards.json", os.path.dirname(__file__))
 DEFAULT_CONFIG = CONFIG.copy()  # Varsayılan ayarları sakla
 
-AHU_SAT_LIMITLERI_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_sat_limitleri.json")
+AHU_SAT_LIMITLERI_FILE = yollar.yol("configs/ahu_sat_limitleri.json", os.path.dirname(__file__))
 
 # Çıkış denetimi (değişmez kurallar) — testlerle ortak kaynak
 import kural_denetim
 DENETIM_SAYACI = {"kontrol": 0, "ihlal": 0}
-AHU_NOKTA_KONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_nokta_konfig.json")
+AHU_NOKTA_KONFIG_FILE = yollar.yol("configs/ahu_nokta_konfig.json", os.path.dirname(__file__))
 
 _NOKTA_SETI_CACHE = {"mtime": None, "veri": {}}
 
@@ -194,9 +195,15 @@ def _nokta_var(location: str, name: str) -> dict:
     {'basinc': bool, 'sat': bool, 'return': bool, 'start': bool}
     Konfig dosyası değişirse cache otomatik yenilenir."""
     try:
-        mt = os.path.getmtime(AHU_NOKTA_KONFIG_FILE)
+        # Okuma (ahu_collector) ile AYNI dosya: iki kopyadan en son düzenlenen (ayar_yollari, 12.11.2026)
+        try:
+            import ayar_yollari
+            _yol = ayar_yollari.nokta_konfig_yolu()
+        except Exception:
+            _yol = AHU_NOKTA_KONFIG_FILE
+        mt = (_yol, os.path.getmtime(_yol))
         if _NOKTA_SETI_CACHE["mtime"] != mt:
-            with open(AHU_NOKTA_KONFIG_FILE, "r", encoding="utf-8") as f:
+            with open(_yol, "r", encoding="utf-8") as f:
                 konfig = json.load(f)
             veri = {}
             for p in konfig:
@@ -217,9 +224,9 @@ def _nokta_var(location: str, name: str) -> dict:
             (location, name), {"basinc": False, "sat": True, "return": True, "start": False})
     except Exception:
         return {"basinc": False, "sat": True, "return": True, "start": False}
-AHU_TASARIM_KAPASITE_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_tasarim_kapasiteleri.json")
-AHU_TASARIM_ISITMA_KAPASITE_FILE = os.path.join(os.path.dirname(__file__), "configs", "ahu_tasarim_isitma_kapasiteleri.json")
-CHILLER_FCU_AYARLAR_FILE = os.path.join(os.path.dirname(__file__), "configs", "chiller_fcu_ayarlari.json")
+AHU_TASARIM_KAPASITE_FILE = yollar.yol("configs/ahu_tasarim_kapasiteleri.json", os.path.dirname(__file__))
+AHU_TASARIM_ISITMA_KAPASITE_FILE = yollar.yol("configs/ahu_tasarim_isitma_kapasiteleri.json", os.path.dirname(__file__))
+CHILLER_FCU_AYARLAR_FILE = yollar.yol("configs/chiller_fcu_ayarlari.json", os.path.dirname(__file__))
 
 def _ahu_sat_limit(location: str, name: str, tip: str):
     """Verilen AHU için tanımlı özel SAT limitini döndürür (yoksa None).
@@ -233,11 +240,11 @@ def _ahu_sat_limit(location: str, name: str, tip: str):
 
 def _get_settings_file(location_id: str = None) -> str:
     """Ayar dosyası yolunu döndür."""
-    return os.path.join(os.path.dirname(__file__), "configs", "hvac_settings.json")
+    return yollar.yol("configs/hvac_settings.json", os.path.dirname(__file__))
 
 def _get_maintenance_file(location_id: str = None) -> str:
     """Bakım kartı dosyası yolunu döndür."""
-    return os.path.join(os.path.dirname(__file__), "configs", "maintenance_cards.json")
+    return yollar.yol("configs/maintenance_cards.json", os.path.dirname(__file__))
 
 # ================ BAKIM KARTI YÖNETİMİ ================
 MAINTENANCE_COMPONENTS = [
@@ -3017,11 +3024,23 @@ logging.basicConfig(
     handlers=[_log_handler]
 )
 logger = logging.getLogger(__name__)
+try:                                    # uyarı / hata özeti merkeze (N5)
+    import hata_ozeti as _hata_ozeti
+    _hata_ozeti.kur("mz")
+except Exception:
+    pass
+
+# Portlar: ayar/portlar.json (kurulumda seçilir; yoksa 8501 / 8005) — portlar.py
+try:
+    import portlar as _portlar
+    _PORT = _portlar.yukle()
+except Exception:
+    _PORT = {"enerji": 8501, "mekanik_zeka": 8005}
 
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8005", "http://localhost:8501"],
+    allow_origins=["http://localhost:%d" % _PORT["mekanik_zeka"], "http://localhost:%d" % _PORT["enerji"]],
     allow_methods=["*"],
     allow_headers=["*"],
     allow_credentials=True,
@@ -3046,11 +3065,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 # Statik dosyalar
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(STATIC_DIR, exist_ok=True)
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-# Çıktı dizini
-OUTPUT_DIR = os.path.join(STATIC_DIR, "outputs")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# Çıktı dizini: veri/ciktilar (Faz 1). İndirme adresi eskisi gibi /static/outputs/...;
+# bu yüzden /static'ten ÖNCE ayrı bağlanır (eski kurulumda static/outputs'un kendisi).
+OUTPUT_DIR = yollar.klasor("static/outputs", os.path.dirname(__file__))
+app.mount("/static/outputs", StaticFiles(directory=OUTPUT_DIR), name="outputs")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # ================ INPUT VALIDATION ================
 
@@ -3213,7 +3233,7 @@ async def network_info(request: Request):
             ip = socket.gethostbyname(socket.gethostname())
         except Exception:
             ip = "127.0.0.1"
-    port = request.url.port or 8005
+    port = request.url.port or _PORT["mekanik_zeka"]
     return {"ip": ip, "port": port, "base_url": f"http://{ip}:{port}"}
 
 @app.get("/api/qr-config")
@@ -3224,14 +3244,18 @@ async def qr_config():
     lokasyon_id zorunlu, merkez_url opsiyoneldir (QR'ların hedefi —
     ör. https://acibadem-synapse.streamlit.app).
     """
-    cfg_path = os.path.join(os.path.dirname(__file__), "supabase_config.json")
+    cfg_path = yollar.yol("supabase_config.json", os.path.dirname(__file__))
     lokasyon_id, merkez_url = "", ""
     try:
         if os.path.exists(cfg_path):
             with open(cfg_path, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
-            lokasyon_id = str(cfg.get("lokasyon_id", "") or "")
             merkez_url = str(cfg.get("merkez_url", "") or "").rstrip("/")
+    except Exception:
+        pass
+    try:   # kimlik: lokasyon profili (Faz 1); profil yoksa bağlantı dosyasındaki değer
+        import location_manager as _lm_k
+        lokasyon_id = _lm_k.lokasyon_id(os.path.dirname(__file__))
     except Exception:
         pass
     return {"lokasyon_id": lokasyon_id, "merkez_url": merkez_url}
@@ -3252,7 +3276,7 @@ async def enerji_entry():
     # ÇERÇEVE KALDIRILDI (29.10.2026, /hvac ile aynı): üstteki "ACIBADEM SAĞLIK
     # GRUBU — Enerji Yönetimi & Raporlama" çubuğu kalktı; Ana Sayfa / Ayarlar
     # düğmeleri artık Enerji portalının kendi başlık kartında (Mekanik Zeka düzeni).
-    streamlit_url = os.environ.get("STREAMLIT_URL", "http://localhost:8501").rstrip("/")
+    streamlit_url = os.environ.get("STREAMLIT_URL", "http://localhost:%d" % _PORT["enerji"]).rstrip("/")
     return RedirectResponse(url=f"{streamlit_url}/?embed=true", status_code=302)
 
 # --- Portal yardımcıları (Acıbadem temalı ana sayfa) ---
@@ -3840,7 +3864,7 @@ async def get_ahu_tasarim_kapasiteleri():
 @app.get("/api/uretim_tuketim_gecmis")
 async def get_uretim_tuketim_gecmis():
     """Üretilen/talep edilen soğutma kW geçmişini döndürür (canlı çizgi grafik için)."""
-    gecmis_file = os.path.join(os.path.dirname(__file__), "configs", "uretim_tuketim_gecmis.json")
+    gecmis_file = yollar.yol("configs/uretim_tuketim_gecmis.json", os.path.dirname(__file__))
     try:
         with open(gecmis_file, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -4041,7 +4065,7 @@ async def get_equipment_maintenance(equipment_name: str):
 # Lokasyon geneli tek işaret: her ay "santral bakımları yapıldı" olarak işaretlenir.
 # Ayın BAKIM_UYARI_GUNU gününden itibaren işaret yoksa Synergy/Synapse'de uyarı
 # üretilir ve tüm raporlara "bu ay santral bakımları yapılmamıştır" notu düşülür.
-BAKIM_TAKVIMI_FILE = os.path.join(os.path.dirname(__file__), "configs", "bakim_takvimi.json")
+BAKIM_TAKVIMI_FILE = yollar.yol("configs/bakim_takvimi.json", os.path.dirname(__file__))
 BAKIM_UYARI_GUNU = 25
 
 def _bakim_takvimi_oku() -> dict:
@@ -4129,9 +4153,7 @@ _monthly_stop_event = threading.Event()
 def _write_report_notification(report_type: str, filepath: str):
     """Otomatik rapor oluşturulduğunda bildirim dosyası yaz."""
     try:
-        notif_dir = os.path.join(os.path.dirname(__file__), "configs")
-        os.makedirs(notif_dir, exist_ok=True)
-        notif_file = os.path.join(notif_dir, "report_notifications.json")
+        notif_file = yollar.yol("configs/report_notifications.json", os.path.dirname(__file__))
         
         # Mevcut bildirimleri oku
         notifications = {}
@@ -4186,7 +4208,7 @@ def _schedule_daily_report(from_settings_change=False):
     # Sunucu açılışında bugünün raporu zaten varsa işaretle (tekrar üretme)
     _today_check = datetime.datetime.now().strftime("%Y%m%d")
     _yesterday_check = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%Y%m%d")
-    _daily_report_dir = os.path.join(os.path.dirname(__file__), "daily_reports")
+    _daily_report_dir = yollar.yol("daily_reports", os.path.dirname(__file__))
     for _check_date in [_today_check, _yesterday_check]:
         _check_file = os.path.join(_daily_report_dir, f"gunluk_rapor_{_check_date}.pdf")
         if os.path.exists(_check_file):
@@ -4228,7 +4250,7 @@ def _check_existing_reports_on_startup():
     """Sunucu başladığında mevcut günlük/aylık raporları kontrol edip
     bildirim dosyası yoksa otomatik oluşturur."""
     try:
-        notif_file = os.path.join(os.path.dirname(__file__), "configs", "report_notifications.json")
+        notif_file = yollar.yol("configs/report_notifications.json", os.path.dirname(__file__))
         notifications = {}
         if os.path.exists(notif_file):
             with open(notif_file, "r", encoding="utf-8") as f:
@@ -4239,7 +4261,7 @@ def _check_existing_reports_on_startup():
         # Günlük rapor kontrolü — dünün raporunu ara
         if "daily" not in notifications or not notifications.get("daily", {}).get("filepath"):
             yesterday = (datetime.datetime.now() - datetime.timedelta(days=1)).strftime("%Y%m%d")
-            daily_dir = os.path.join(os.path.dirname(__file__), "daily_reports")
+            daily_dir = yollar.yol("daily_reports", os.path.dirname(__file__))
             if os.path.isdir(daily_dir):
                 # En son üretilen raporu bul
                 daily_files = sorted(
@@ -4263,7 +4285,7 @@ def _check_existing_reports_on_startup():
         
         # Aylık rapor kontrolü
         if "monthly" not in notifications or not notifications.get("monthly", {}).get("filepath"):
-            monthly_dir = os.path.join(os.path.dirname(__file__), "monthly_reports_summary")
+            monthly_dir = yollar.yol("monthly_reports_summary", os.path.dirname(__file__))
             if os.path.isdir(monthly_dir):
                 monthly_files = sorted(
                     [f for f in os.listdir(monthly_dir) if f.endswith(".pdf")],
@@ -4285,7 +4307,7 @@ def _check_existing_reports_on_startup():
                         logging.debug(f"Başlangıç: Mevcut aylık rapor bulundu → {latest}")
         
         if changed:
-            os.makedirs(os.path.join(os.path.dirname(__file__), "configs"), exist_ok=True)
+            os.makedirs(os.path.dirname(notif_file), exist_ok=True)
             with open(notif_file, "w", encoding="utf-8") as f:
                 json.dump(notifications, f, indent=2, ensure_ascii=False)
             logging.debug("Başlangıç: Rapor bildirimleri güncellendi.")
@@ -4302,16 +4324,23 @@ _schedule_daily_report()
 def _generate_monthly_report():
     """Aylık rapor PDF'i oluştur (önceki ay verileri)."""
     try:
-        from monthly_summary_report import MonthlyReportGenerator
-        gen = MonthlyReportGenerator()
-        filepath = gen.generate()
-        logging.info(f"Aylık rapor oluşturuldu: {filepath}")
-        _write_report_notification("monthly", filepath)
+        from monthly_summary_report import MonthlyReportGenerator, ay_verisi_var, onceki_ay
+        if not ay_verisi_var():
+            # Yeni kurulan lokasyonda geçen ayın verisi yok: boş rapor ve "rapor hazır" bildirimi üretilmez
+            logging.info("Aylık rapor atlandı: %04d-%02d için enerji verisi yok" % onceki_ay())
+        else:
+            gen = MonthlyReportGenerator()
+            filepath = gen.generate()
+            logging.info(f"Aylık rapor oluşturuldu: {filepath}")
+            _write_report_notification("monthly", filepath)
     except Exception as e:
         logging.error(f"Aylık rapor hatası: {e}")
     # Aylık BAKIM raporu — aynı zamanlayıcıda, önceki ayın bakım durumu
     try:
         import bakim_raporu
+        if not bakim_raporu.veri_var():
+            logging.info("Aylık bakım raporu atlandı: bakım kartı ve geçen aya ait bakım kaydı yok")
+            return
         bk_path = bakim_raporu.generate()
         logging.info(f"Aylık bakım raporu oluşturuldu: {bk_path}")
     except Exception as e:
@@ -4348,7 +4377,7 @@ def _schedule_monthly_report(from_settings_change=False):
     _monthly_generated_this_month = {"month": None}
     
     # Sunucu açılışında bu ayın raporu zaten varsa tekrar üretme
-    _monthly_report_dir = os.path.join(os.path.dirname(__file__), "monthly_reports_summary")
+    _monthly_report_dir = yollar.yol("monthly_reports_summary", os.path.dirname(__file__))
     if os.path.isdir(_monthly_report_dir):
         _existing_monthly = sorted(
             [f for f in os.listdir(_monthly_report_dir) if f.endswith(".pdf")],
@@ -4419,7 +4448,7 @@ async def scheduler_status():
     daily_m = int((daily_remaining % 3600) // 60)
     
     # Bugünün günlük raporu var mı?
-    daily_dir = os.path.join(os.path.dirname(__file__), "daily_reports")
+    daily_dir = yollar.yol("daily_reports", os.path.dirname(__file__))
     today_daily_file = os.path.join(daily_dir, f"gunluk_rapor_{now.strftime('%Y%m%d')}.pdf")
     daily_generated_today = os.path.exists(today_daily_file)
     
@@ -4428,7 +4457,7 @@ async def scheduler_status():
     monthly_hour = int(CONFIG.get("MONTHLY_REPORT_HOUR", 17))
     
     # Bu ayın aylık raporu var mı?
-    monthly_dir = os.path.join(os.path.dirname(__file__), "monthly_reports_summary")
+    monthly_dir = yollar.yol("monthly_reports_summary", os.path.dirname(__file__))
     monthly_generated_this_month = False
     monthly_last_file = None
     if os.path.isdir(monthly_dir):
@@ -4494,7 +4523,7 @@ async def generate_daily_report():
 @app.get("/api/daily-report/status")
 async def daily_report_status():
     """En son günlük raporun durumunu kontrol et."""
-    reports_dir = os.path.join(os.path.dirname(__file__), "daily_reports")
+    reports_dir = yollar.yol("daily_reports", os.path.dirname(__file__))
     if not os.path.exists(reports_dir):
         return {"success": True, "ready": False, "message": "Henüz rapor oluşturulmamış."}
     
@@ -4522,7 +4551,7 @@ async def daily_report_status():
 @app.get("/api/daily-report/download")
 async def download_daily_report(filename: str = None):
     """Günlük rapor PDF indirme."""
-    reports_dir = os.path.join(os.path.dirname(__file__), "daily_reports")
+    reports_dir = yollar.yol("daily_reports", os.path.dirname(__file__))
     
     if filename:
         filepath = os.path.join(reports_dir, filename)
@@ -4547,7 +4576,7 @@ async def download_daily_report(filename: str = None):
 @app.get("/api/daily-report/list")
 async def list_daily_reports():
     """Mevcut tüm günlük raporları listele."""
-    reports_dir = os.path.join(os.path.dirname(__file__), "daily_reports")
+    reports_dir = yollar.yol("daily_reports", os.path.dirname(__file__))
     if not os.path.exists(reports_dir):
         return {"success": True, "reports": []}
     
@@ -4591,7 +4620,7 @@ async def generate_bakim_raporu(year: int = None, month: int = None):
 @app.get("/api/monthly-report/status")
 async def monthly_report_status():
     """En son aylık raporun durumunu kontrol et."""
-    reports_dir = os.path.join(os.path.dirname(__file__), "monthly_reports_summary")
+    reports_dir = yollar.yol("monthly_reports_summary", os.path.dirname(__file__))
     if not os.path.exists(reports_dir):
         return {"success": True, "ready": False}
     pdfs = sorted([f for f in os.listdir(reports_dir) if f.endswith('.pdf')], reverse=True)
@@ -4610,7 +4639,7 @@ async def monthly_report_status():
 @app.get("/api/monthly-report/download")
 async def download_monthly_report(filename: str = None):
     """Aylık rapor PDF indirme."""
-    reports_dir = os.path.join(os.path.dirname(__file__), "monthly_reports_summary")
+    reports_dir = yollar.yol("monthly_reports_summary", os.path.dirname(__file__))
     if filename:
         filepath = os.path.join(reports_dir, filename)
     else:
@@ -4627,7 +4656,7 @@ async def download_monthly_report(filename: str = None):
 @app.get("/api/monthly-report/list")
 async def list_monthly_reports():
     """Mevcut tüm aylık raporları listele."""
-    reports_dir = os.path.join(os.path.dirname(__file__), "monthly_reports_summary")
+    reports_dir = yollar.yol("monthly_reports_summary", os.path.dirname(__file__))
     if not os.path.exists(reports_dir):
         return {"success": True, "reports": []}
     pdfs = sorted([f for f in os.listdir(reports_dir) if f.endswith('.pdf')], reverse=True)
@@ -5284,7 +5313,7 @@ async def analyze_data(rows: List[Dict[str, Any]],
 # OTOMATİK ANALİZ — Son sonucu getir + Onay & Excel export
 # ================================================================
 
-AUTO_RESULT_FILE = os.path.join(os.path.dirname(__file__), "hvac_ahu_analiz_sonuclari.json")
+AUTO_RESULT_FILE = yollar.yol("hvac_ahu_analiz_sonuclari.json", os.path.dirname(__file__))
 
 @app.get("/api/last_auto_analysis")
 async def last_auto_analysis():
@@ -5437,14 +5466,14 @@ async def onay_ver():
                 ws2.column_dimensions[ws2.cell(row=1, column=ci).column_letter].width = w
 
         # Kaydet
-        onay_klasor = os.path.join(os.path.dirname(__file__), "hvac_onaylanan")
+        onay_klasor = yollar.yol("hvac_onaylanan", os.path.dirname(__file__))
         os.makedirs(onay_klasor, exist_ok=True)
         excel_dosya = f"hvac_analiz_{ts}_ONAYLANDI.xlsx"
         excel_yolu  = os.path.join(onay_klasor, excel_dosya)
         wb.save(excel_yolu)
 
         # Onay logu
-        log_yolu = os.path.join(os.path.dirname(__file__), "hvac_onay_log.json")
+        log_yolu = yollar.yol("hvac_onay_log.json", os.path.dirname(__file__))
         log_data = []
         if os.path.exists(log_yolu):
             try:
@@ -5484,13 +5513,13 @@ if __name__ == "__main__":
     print("=" * 60)
     print("HVAC Delta-T Oneri Motoru - Engine v2")
     print(f"Baslatiliyor...")
-    print(f"API URL: http://localhost:8005")
-    print(f"API Docs: http://localhost:8005/docs")
+    print(f"API URL: http://localhost:{_PORT['mekanik_zeka']}")
+    print(f"API Docs: http://localhost:{_PORT['mekanik_zeka']}/docs")
     print("=" * 60)
-    
+
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8005,
+        port=_PORT["mekanik_zeka"],
         log_level="info"
     )

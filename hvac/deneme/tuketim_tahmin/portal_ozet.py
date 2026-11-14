@@ -13,6 +13,9 @@ from __future__ import annotations
 import calendar
 import json
 import os
+import sys as _sys_y
+_sys_y.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import warnings
 from typing import Dict, List, Optional
 
@@ -26,7 +29,7 @@ from sinama import olcutler
 
 warnings.filterwarnings("ignore", module="sklearn")
 
-AYARLAR = os.path.join(os.path.dirname(_BURASI), "configs", "tuketim_tahmin.json")
+AYARLAR = yollar.yol("configs/tuketim_tahmin.json", os.path.dirname(_BURASI))
 HEDEF_ADI = {"toplam": "Toplam tüketim", "sogutma": "Soğutma (chiller)", "isitma_gaz": "Isıtma gazı (kazan)"}
 HEDEF_BIRIM = {"toplam": "kWh", "sogutma": "kWh", "isitma_gaz": "m³"}
 AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",

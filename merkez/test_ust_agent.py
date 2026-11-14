@@ -318,7 +318,7 @@ if os.path.exists(_ea):
     _kodlar |= set(re.findall(r'\("([a-z_]+)", "[^"]+", k_', open(_mz, encoding="utf-8").read()))
     _kodlar |= set(re.findall(r'\("([a-z_]+)", "[^"]+", k_', open(os.path.join(BURASI, "synapse_agent.py"),
                                                                encoding="utf-8").read()))
-    c("üç agent'ın 33 kontrolünün hepsi ekranda adlandırılmış", _kodlar == set(G.KONTROL_AD) and len(_kodlar) == 33,
+    c("üç agent'ın 34 kontrolünün hepsi ekranda adlandırılmış", _kodlar == set(G.KONTROL_AD) and len(_kodlar) == 34,
       _kodlar ^ set(G.KONTROL_AD))
     _sayfa_kod = set(re.findall(r'\["([a-z_]+)"[\],]', sablon.split("var KONTROL_KOD")[1].split("var DURUM_SIRA")[0]))
     _sayfa_kod |= set(re.findall(r', "([a-z_]+)"\]', sablon.split("var KONTROL_KOD")[1].split("var DURUM_SIRA")[0]))

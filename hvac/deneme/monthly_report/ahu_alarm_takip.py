@@ -10,13 +10,14 @@ Her gunluk HVAC AHU analizi sonrasi calistirilir:
 Ay sonu: ay_sonu_raporu(yil, ay) -> ozet DataFrame (en cok tekrar eden kurallar)
 """
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import os
 import glob
 import pandas as pd
 from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # hvac/deneme
-GECMIS_DIR = os.path.join(BASE_DIR, "ahu_analiz_gecmis")
+GECMIS_DIR = yollar.yol("ahu_analiz_gecmis", BASE_DIR)
 SAYAC_DIR = os.path.dirname(os.path.abspath(__file__))  # monthly_report
 
 # Ay icinde kac gunden fazla tekrar eden kurallar "muhtemel ariza" sayilsin

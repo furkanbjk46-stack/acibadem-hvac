@@ -31,6 +31,7 @@ DURUM YERELDE TUTULUR (configs/oto_set_durum.json): böylece buluta yazma
 yetkisi gerekmez ve her lokasyon kendi durumunu bağımsız yönetir.
 """
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import json
 import logging
 import os
@@ -45,7 +46,7 @@ except Exception:
 logger = logging.getLogger(__name__)
 
 _BASE = os.path.dirname(os.path.abspath(__file__))
-DURUM_FILE = os.path.join(_BASE, "configs", "oto_set_durum.json")
+DURUM_FILE = yollar.yol("configs/oto_set_durum.json", _BASE)
 
 # ── LOKASYON KONUMU (hava tahmini için) ───────────────────────────────────
 # 11.10.2026'ya kadar tahmin koordinatı koda İSTANBUL olarak gömülüydü. Tek
@@ -55,7 +56,7 @@ DURUM_FILE = os.path.join(_BASE, "configs", "oto_set_durum.json")
 # okunur; profil yoksa İstanbul'a düşülür ve bu durum heartbeat'te
 # "varsayilan" olarak bildirilir — merkez hangi lokasyonun hâlâ varsayılanla
 # çalıştığını görebilsin.
-PROFIL_FILE = os.path.join(_BASE, "configs", "lokasyon_profili.json")
+PROFIL_FILE = yollar.yol("configs/lokasyon_profili.json", _BASE)
 VARSAYILAN_KONUM = {"enlem": 41.0082, "boylam": 28.9784, "ad": "İstanbul"}
 
 # ── Kural varsayılanları (merkez ile birebir aynı olmalı) ──────────────────
@@ -563,7 +564,7 @@ def konum_oku():
     tutulmaz (ikinci kaynak olur, biri güncellenmeyince ayrışır).
     """
     for dosya, etiket in ((PROFIL_FILE, "profil"),
-                          (os.path.join(_BASE, "supabase_config.json"), "config")):
+                          (yollar.yol("supabase_config.json", _BASE), "config")):
         try:
             with open(dosya, encoding="utf-8") as f:
                 d = json.load(f)

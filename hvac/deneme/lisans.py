@@ -3,30 +3,53 @@
 # Supabase'deki 'lisanslar' tablosunu kontrol eder
 
 from __future__ import annotations
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import subprocess, json, os, sys
 from pathlib import Path
 
 # ── Makine ID ────────────────────────────────────────
-def get_makine_id() -> str:
-    """Windows motherboard UUID'sini dondurur."""
-    try:
-        result = subprocess.check_output(
-            "wmic csproduct get uuid",
-            shell=True, stderr=subprocess.DEVNULL
-        ).decode().strip().split("\n")
-        for line in result:
+def _anakart_uuid():
+    """Anakart (SMBIOS) UUID'si; okunamazsa None.
+
+    Önce wmic; yeni Windows 11 sürümlerinde wmic kaldırıldığı için (12.11.2026: geliştirme PC'sinde
+    yok) PowerShell'den aynı değer okunur — 'wmic csproduct' = Win32_ComputerSystemProduct, aynı UUID.
+    """
+    komutlar = (
+        "wmic csproduct get uuid",
+        'powershell -NoProfile -NonInteractive -Command "(Get-CimInstance -ClassName '
+        'Win32_ComputerSystemProduct).UUID"',
+    )
+    for komut in komutlar:
+        try:
+            cikti = subprocess.check_output(komut, shell=True, stderr=subprocess.DEVNULL,
+                                            timeout=30).decode(errors="ignore")
+        except Exception:
+            continue
+        for line in cikti.splitlines():
             uid = line.strip()
             if uid and uid.upper() != "UUID":
                 return uid
-    except Exception:
-        pass
-    # Fallback: MAC adresi
+    return None
+
+
+def makine_kimlikleri() -> list:
+    """Bu PC'nin kabul edilen kimlikleri: [anakart UUID, ağ kartı adresi] (tekrarsız).
+
+    Lisans ikisinden biriyle tanımlı olabilir: wmic'in olmadığı PC eskiden ağ kartı adresine düşüyordu.
+    Kontrol ikisini de sorar; böyle lisanslanmış bir PC UUID okunabilir olunca da çalışmaya devam eder.
+    """
     import uuid
-    return str(uuid.getnode())
+    kimlikler = [k for k in (_anakart_uuid(), str(uuid.getnode())) if k]
+    return list(dict.fromkeys(kimlikler))
+
+
+def get_makine_id() -> str:
+    """Lisans için gösterilen / kaydedilen kimlik: anakart UUID'si, okunamazsa ağ kartı adresi."""
+    return makine_kimlikleri()[0]
 
 
 # ── Supabase config ───────────────────────────────────
-CONFIG_PATH = Path(__file__).parent / "supabase_config.json"
+CONFIG_PATH = Path(yollar.yol("supabase_config.json", str(Path(__file__).parent)))
 
 def _load_config() -> dict:
     with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -81,7 +104,8 @@ def _lisans_kontrol_tek() -> dict:
         "hata": None / "hata mesaji"
     }
     """
-    makine_id = get_makine_id()
+    kimlikler = makine_kimlikleri()
+    makine_id = kimlikler[0]
 
     # supabase_config.json yoksa: GELISTIRME ORTAMI — lisans kontrolu atlanir.
     # (Lokasyon PC'lerinde bu dosya her zaman vardir; sadece dev/repo'da yoktur.)
@@ -98,7 +122,9 @@ def _lisans_kontrol_tek() -> dict:
         cfg = _load_config()
         url = cfg["supabase_url"]
         key = cfg["supabase_key"]
-        lok_id = cfg.get("lokasyon_id", "")
+        import location_manager as _lm_k   # kimlik: lokasyon profili (Faz 1)
+        lok_id = _lm_k.lokasyon_id(str(CONFIG_PATH.parent.parent) if CONFIG_PATH.parent.name == "ayar"
+                                   else str(CONFIG_PATH.parent), cfg.get("lokasyon_id", ""))
 
         from supabase import create_client
         try:  # lokasyon anahtarı varsa istekler onunla imzalanır (sb_kimlik.py)
@@ -109,19 +135,20 @@ def _lisans_kontrol_tek() -> dict:
 
         sonuc = (
             sb.table("lisanslar")
-            .select("aktif, lokasyon_id, makine_adi")
-            .eq("makine_id", makine_id)
+            .select("aktif, lokasyon_id, makine_adi, makine_id")
+            .in_("makine_id", kimlikler)
             .eq("lokasyon_id", lok_id)
-            .single()
             .execute()
         )
+        satirlar = sonuc.data if isinstance(sonuc.data, list) else ([sonuc.data] if sonuc.data else [])
+        aktif = [s for s in satirlar if s.get("aktif")]
 
-        if sonuc.data and sonuc.data.get("aktif"):
+        if aktif:
             return {
                 "gecerli": True,
-                "makine_id": makine_id,
+                "makine_id": aktif[0].get("makine_id") or makine_id,
                 "lokasyon_id": lok_id,
-                "makine_adi": sonuc.data.get("makine_adi", ""),
+                "makine_adi": aktif[0].get("makine_adi", ""),
                 "hata": None,
             }
         else:
@@ -139,7 +166,7 @@ def _lisans_kontrol_tek() -> dict:
             return {
                 "gecerli": False,
                 "makine_id": makine_id,
-                "lokasyon_id": cfg.get("lokasyon_id", "") if "cfg" in dir() else "",
+                "lokasyon_id": lok_id if "lok_id" in dir() else "",
                 "hata": "Lisans bulunamadi. Lutfen yetkili ile iletisime gecin.",
             }
         return {

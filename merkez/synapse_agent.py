@@ -25,6 +25,7 @@ SINIRLAR
 """
 import json
 import logging
+import os
 import shutil
 import subprocess
 import time
@@ -51,6 +52,9 @@ YAMA_BEKLEME_DK = 30
 KOMUT_BEKLEME_DK = 10
 DISK_DIKKAT, DISK_KRITIK = 85, 92
 BELLEK_DIKKAT_YUZDE = 10            # boş bellek bu yüzdenin altına inerse
+# Kapasite (yol haritası G2): sunucu 2 çekirdek; sınır işlemci. 15 dk yük ortalaması / çekirdek
+YUK_DIKKAT, YUK_KRITIK = 0.8, 1.5
+YANIT_DIKKAT_SN = 3.0               # Synapse sağlık yanıtı bundan yavaşsa
 YEDEK_DIKKAT_SAAT = 26
 YEDEK_KLASORU = "/opt/Backup"
 
@@ -137,6 +141,10 @@ class Sunucu:
                 ad, _, deger = satir.partition(":")
                 degerler[ad] = int(deger.split()[0])
         return degerler["MemAvailable"], degerler["MemTotal"]
+
+    def yuk(self):
+        """(15 dk yük ortalaması, çekirdek sayısı) — Linux; başka sistemde OSError / AttributeError."""
+        return os.getloadavg()[2], os.cpu_count() or 1
 
     def servis(self, ad):
         r = subprocess.run(["systemctl", "is-active", ad], capture_output=True, text=True, timeout=10)
@@ -227,8 +235,29 @@ def k_yama_kuyrugu(o):
     satir = o.oku("guncellemeler?select=id,versiyon,hedef,durum,created_at&durum=in.(bekliyor,hata)"
                   "&order=created_at.desc&limit=50")
     cikti = []
+    # "all" yamaları lokasyon başına uygulanır (yama_uygulamalari, 12.11.2026): satır bütün
+    # lokasyonlar uygulayana kadar 'bekliyor' kalır. Hangi lokasyonun eksik / hatalı olduğu buradan.
+    all_id = [str(y["id"]) for y in satir if y.get("hedef") == "all" and y.get("durum") == "bekliyor"]
+    uyg, loklar = {}, []
+    if all_id:
+        try:
+            for u in o.oku("yama_uygulamalari?select=yama_id,lokasyon_id,durum&yama_id=in.(%s)" % ",".join(all_id)):
+                uyg.setdefault(str(u.get("yama_id")), {})[u.get("lokasyon_id")] = u.get("durum")
+            loklar = sorted(l["lokasyon_id"] for l in o.oku("lokasyonlar?select=lokasyon_id"))
+        except Atla:
+            pass                                    # tablo henüz yok / okunamadı: eski davranış
     for y in satir:
         z = zaman(y.get("created_at"))
+        u = uyg.get(str(y["id"]), {})
+        hatali = sorted(l for l, d in u.items() if d == "hata")
+        if hatali:
+            cikti.append(bulgu(
+                "yama_kuyrugu", "hata:%s" % y["id"], "kritik", "Yama kuyruğu",
+                "Yama %s (all) %s lokasyonunda hata ile bitti" % (y.get("versiyon"), ", ".join(hatali)),
+                "her lokasyonda tamamlandı", "hata: %s" % ", ".join(hatali),
+                tekrar_adimi="Lokasyonda cloud_sync.log içinde yamanın dosya satırları",
+                olasi_yer="lokasyonda dosya yazma izni / disk; cloud_sync.check_and_apply_update"))
+            continue
         if y.get("durum") == "hata":
             cikti.append(bulgu(
                 "yama_kuyrugu", "hata:%s" % y["id"], "kritik", "Yama kuyruğu",
@@ -237,13 +266,46 @@ def k_yama_kuyrugu(o):
                 tekrar_adimi="Lokasyonda cloud_sync.log içinde yamanın dosya satırları",
                 olasi_yer="lokasyonda dosya yazma izni / disk; cloud_sync.check_and_apply_update"))
         elif z and (simdi - z).total_seconds() / 60 > YAMA_BEKLEME_DK:
+            eksik = [l for l in loklar if l not in u] if y.get("hedef") == "all" and loklar else []
             cikti.append(bulgu(
                 "yama_kuyrugu", "bekliyor:%s" % y["id"], "uyari", "Yama kuyruğu",
                 "Yama %s (%s) %d dakikadır bekliyor" % (y.get("versiyon"), y.get("hedef"),
-                                                       (simdi - z).total_seconds() / 60),
-                "lokasyon 2 dk içinde alır", "gönderildi: %s, hâlâ 'bekliyor'" % tr(z),
+                                                       (simdi - z).total_seconds() / 60)
+                + (" — almayan: %s" % ", ".join(eksik) if eksik else ""),
+                "lokasyon 2 dk içinde alır", "gönderildi: %s, hâlâ 'bekliyor'" % tr(z)
+                + ("; uygulayan: %s" % (", ".join(sorted(u)) or "yok") if y.get("hedef") == "all" and loklar else ""),
                 tekrar_adimi="Yönetim → Yama kuyruğu",
                 olasi_yer="hedef lokasyon çevrimdışı ya da cloud_sync güncelleme kontrolü çalışmıyor"))
+    return cikti
+
+
+# Lokasyonun YAPISINI değiştiren ayar dosyaları: değişirse merkez bilsin (Faz 1 / K1)
+KRITIK_AYARLAR = ("sayaclar.json", "bacnet_esleme.json", "bacnet_noktalari.json", "geri_okuma.json",
+                  "lokasyon_profili.json", "bacnet_okuma_sablonu.xlsx")
+AYAR_PENCERE_SA = 24
+
+
+def k_ayar_degisikligi(o):
+    """Son 24 saatte lokasyonlarda değişen kritik ayarlar (bilgi — iş emri açmaz, ekranda görünür)."""
+    sinir = (o.simdi() - timedelta(hours=AYAR_PENCERE_SA)).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    satir = o.oku("ayar_degisiklikleri?select=lokasyon_id,zaman,dosya,alan,kullanici&zaman=gte.%s"
+                  "&order=zaman.desc&limit=1000" % sinir)
+    grup = {}
+    for r in satir:
+        if r.get("dosya") in KRITIK_AYARLAR:
+            grup.setdefault(r.get("lokasyon_id"), []).append(r)
+    cikti = []
+    for lok, liste in sorted(grup.items()):
+        dosyalar = sorted({r["dosya"] for r in liste})
+        kim = sorted({r.get("kullanici") for r in liste if r.get("kullanici")})
+        cikti.append(bulgu(
+            "ayar_degisikligi", lok, "bilgi", "Lokasyon ayarları",
+            "%s: kritik ayar değişti (%s)" % (lok, ", ".join(dosyalar)),
+            "değişiklik merkezde görülür", "%d alan, son: %s%s" % (
+                len(liste), tr(zaman(liste[0].get("zaman"))), (" · " + ", ".join(kim)) if kim else ""),
+            tekrar_adimi="Synapse → Yönetim → Lokasyon ayar değişiklikleri",
+            olasi_yer="lokasyondaki teknik ekip; sayaç / BACnet listesi değiştiyse ilk günlük satırı kontrol edin",
+            kanit={"dosyalar": dosyalar, "alanlar": [r.get("alan") for r in liste[:20]]}))
     return cikti
 
 
@@ -305,8 +367,17 @@ def k_anahtarsiz_erisim(o):
 
 
 def k_synapse_portal(o):
+    _bas = time.monotonic()
     kod, neden = o.http(PORTAL_SAGLIK, anahtarsiz=True, zaman_asimi=15)
+    sure = time.monotonic() - _bas
     if kod == 200:
+        if sure > YANIT_DIKKAT_SN:
+            return [bulgu(
+                "synapse_portal", "yavas", "uyari", "Ana sayfa",
+                "Synapse yavaş yanıt veriyor (%.1f sn)" % sure, "< %.0f sn" % YANIT_DIKKAT_SN, "%.1f sn" % sure,
+                tekrar_adimi="Yönetim > Sunucu: işlemci yükü; canliizlemectl errors",
+                olasi_yer="sunucu yükü (2 çekirdek) — sürerse Alp Bey'den çekirdek artırımı",
+                kanit={"sure_sn": round(sure, 2)})]
         return []
     return [bulgu(
         "synapse_portal", "saglik", "kritik", "Ana sayfa",
@@ -335,6 +406,18 @@ def k_sunucu(o):
                 "Sunucuda boş bellek %%%d" % (bos / top * 100), "≥ %%%d" % BELLEK_DIKKAT_YUZDE,
                 "%d MB boş" % (bos // 1024), olasi_yer="bellek tüketen süreç (yönetici)"))
     except (OSError, KeyError, ValueError):
+        pass
+    try:
+        yuk, cekirdek = s.yuk()
+        oran = yuk / max(cekirdek, 1)
+        if oran >= YUK_DIKKAT:
+            cikti.append(bulgu(
+                "sunucu", "islemci", "kritik" if oran >= YUK_KRITIK else "uyari", "Yerel sunucu",
+                "Sunucu işlemci yükü yüksek (15 dk ort. %.2f, %d çekirdek)" % (yuk, cekirdek),
+                "çekirdek başına < %.1f" % YUK_DIKKAT, "çekirdek başına %.2f" % oran,
+                olasi_yer="Synapse kullanıcı sayısı / lokasyon sayısı arttı — sürerse Alp Bey'den çekirdek artırımı",
+                kanit={"yuk15": round(yuk, 2), "cekirdek": cekirdek}))
+    except Exception:
         pass
     for ad in SERVISLER:
         try:
@@ -368,6 +451,7 @@ KONTROLLER = [
     ("canli_sayac", "Canlı sayaçlar", k_canli_sayac),
     ("yama_kuyrugu", "Yama kuyruğu", k_yama_kuyrugu),
     ("komutlar", "Saha komutları", k_komutlar),
+    ("ayar_degisikligi", "Lokasyon ayar değişiklikleri", k_ayar_degisikligi),
     ("surum", "Lokasyon sürümleri", k_surum),
     ("anahtarsiz_erisim", "Anahtarsız erişim", k_anahtarsiz_erisim),
     ("synapse_portal", "Synapse portalı", k_synapse_portal),

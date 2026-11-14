@@ -3,6 +3,7 @@
 # Her ayın 1'inde önceki ayın verilerini derleyerek modern PDF rapor üretir.
 
 from __future__ import annotations
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 
 import os
 import json
@@ -36,9 +37,9 @@ try:
     SETTINGS_FILE = _lm.get_data_path("configs/hvac_settings.json")
     REPORTS_DIR = _lm.get_data_path("monthly_reports_summary")
 except Exception:
-    DATA_FILE = os.path.join(BASE_DIR, "energy_data.csv")
-    SETTINGS_FILE = os.path.join(BASE_DIR, "configs", "hvac_settings.json")
-    REPORTS_DIR = os.path.join(BASE_DIR, "monthly_reports_summary")
+    DATA_FILE = yollar.yol("energy_data.csv", BASE_DIR)
+    SETTINGS_FILE = yollar.yol("configs/hvac_settings.json", BASE_DIR)
+    REPORTS_DIR = yollar.yol("monthly_reports_summary", BASE_DIR)
 GAS_TO_KWH = 10.64
 
 
@@ -339,8 +340,28 @@ class MonthlyReportPDF(FPDF):
 
 
 # ─── Ana Rapor Üretici ───
+def onceki_ay():
+    """(yıl, ay) — otomatik raporun ayı (bugünün bir önceki ayı)."""
+    prev = date.today().replace(day=1) - timedelta(days=1)
+    return prev.year, prev.month
+
+
+def ay_verisi_var(year: int = None, month: int = None) -> bool:
+    """O ay için en az bir günlük enerji satırı var mı (varsayılan: önceki ay).
+
+    Otomatik aylık rapor veri yoksa ÜRETİLMEZ: yeni kurulan lokasyonda ilk açılışta içi boş bir rapor
+    üretilip "1 rapor hazır" bildirimi çıkıyordu (13.11.2026 kurulum provası). Elle üretim etkilenmez.
+    """
+    if year is None or month is None:
+        year, month = onceki_ay()
+    try:
+        return MonthlyReportGenerator._get_month_data(None, load_energy_data(), year, month)["days"] > 0
+    except Exception:
+        return True                      # emin değilsek eski davranış: rapor üretilir
+
+
 class MonthlyReportGenerator:
-    
+
     def __init__(self):
         os.makedirs(REPORTS_DIR, exist_ok=True)
     

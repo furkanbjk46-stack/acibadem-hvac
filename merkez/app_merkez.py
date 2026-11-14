@@ -314,36 +314,8 @@ if getattr(_ik, "SURUM", 0) < 4:          # yayın sonrası eski modül önbelle
 st.markdown(_ik.CSS, unsafe_allow_html=True)
 
 # ============ SABİT VERİ ============
-HASTANELER = {
-    # ── İstanbul ──
-    "maslak":       {"isim": "Acıbadem Maslak",        "kisa": "MASLAK",        "lat": 41.1273, "lon": 29.0246, "m2": 15000, "renk": "#2a78d6"},
-    "altunizade":   {"isim": "Acıbadem Altunizade",    "kisa": "ALTUNİZADE",    "lat": 41.0189, "lon": 29.0458, "m2": 10000, "renk": "#c98500"},
-    "kozyatagi":    {"isim": "Acıbadem Kozyatağı",     "kisa": "KOZYATAĞİ",    "lat": 40.9766, "lon": 29.0928, "m2": 12000, "renk": "#0ca30c"},
-    "taksim":       {"isim": "Acıbadem Taksim",        "kisa": "TAKSİM",        "lat": 41.0417, "lon": 28.9827, "m2":  8000, "renk": "#4a3aa7"},
-    "atakent":      {"isim": "Acıbadem Atakent",       "kisa": "ATAKENT",       "lat": 41.0349, "lon": 28.7789, "m2": 20000, "renk": "#eb6834"},
-    "atasehir":     {"isim": "Acıbadem Ataşehir",      "kisa": "ATAŞEHİR",      "lat": 40.9934, "lon": 29.1213, "m2": 14000, "renk": "#256abf"},
-    "bakirkoy":     {"isim": "Acıbadem Bakırköy",      "kisa": "BAKIRKÖY",      "lat": 40.9776, "lon": 28.8731, "m2": 12000, "renk": "#84cc16"},
-    "fulya":        {"isim": "Acıbadem Fulya",         "kisa": "FULYA",         "lat": 41.0557, "lon": 28.9994, "m2":  9000, "renk": "#e87ba4"},
-    "international":{"isim": "Acıbadem International", "kisa": "INTERNAT.",     "lat": 40.9590, "lon": 28.8354, "m2": 18000, "renk": "#14b8a6"},
-    "kadikoy":      {"isim": "Acıbadem Kadıköy",       "kisa": "KADİKÖY",       "lat": 41.0072, "lon": 29.0429, "m2":  8000, "renk": "#ec4899"},
-    "kartal":       {"isim": "Acıbadem Kartal",        "kisa": "KARTAL",        "lat": 40.8860, "lon": 29.2041, "m2": 11000, "renk": "#d03b3b"},
-    # ── Ankara ──
-    "ankara":         {"isim": "Acıbadem Ankara",          "kisa": "ANKARA",       "lat": 39.9179, "lon": 32.8626, "m2": 16000, "renk": "#fb7185"},
-    "bayindir":       {"isim": "Acıbadem Bayındır Söğütözü","kisa": "BAYINDIR",    "lat": 39.8980, "lon": 32.8240, "m2": 12000, "renk": "#f43f5e"},
-    # ── Bursa ──
-    "bursa":          {"isim": "Acıbadem Bursa",            "kisa": "BURSA",        "lat": 40.2090, "lon": 28.9790, "m2": 13000, "renk": "#c98500"},
-    # ── Eskişehir ──
-    "eskisehir":      {"isim": "Acıbadem Eskişehir",        "kisa": "ESKİŞEHİR",    "lat": 39.7767, "lon": 30.5206, "m2":  9000, "renk": "#818cf8"},
-    # ── İzmir ──
-    "izmir":          {"isim": "Acıbadem İzmir Kent",       "kisa": "İZMİR",        "lat": 38.4192, "lon": 27.1287, "m2": 15000, "renk": "#2a78d6"},
-    # ── Kayseri ──
-    "kayseri":        {"isim": "Acıbadem Kayseri",          "kisa": "KAYSERİ",      "lat": 38.7225, "lon": 35.4875, "m2": 11000, "renk": "#a78bfa"},
-    # ── Adana ──
-    "adana":          {"isim": "Acıbadem Adana",            "kisa": "ADANA",        "lat": 37.0000, "lon": 35.3213, "m2": 12000, "renk": "#f472b6"},
-    "adana_ortopedia":{"isim": "Acıbadem Adana Ortopedia",  "kisa": "ADANA ORT.",   "lat": 37.0100, "lon": 35.3350, "m2":  5000, "renk": "#e87ba4"},
-    # ── Muğla / Bodrum ──
-    "bodrum":         {"isim": "Acıbadem Bodrum",           "kisa": "BODRUM",       "lat": 37.0344, "lon": 27.4305, "m2":  7000, "renk": "#2dd4bf"},
-}
+import hastaneler as _hastaneler  # tek kaynak: configs/hastaneler.json (Faz 1 / D3)
+HASTANELER = _hastaneler.yukle()
 
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "configs", "merkez_config.json")
 
@@ -680,6 +652,13 @@ def _dis_hava_log_yaz(sb_url: str, sb_key: str, derece: float, kaynak: str = "ap
 # energy_data günlük satırlardan oluşur; 75 sütun ve tüm geçmiş ~1,4 sn sürüyor.
 # select("*") BİLEREK kalıyor: karsilastirma_hesap Chiller/Kule/MCC/TRDP
 # sütunlarını adlarından bulur, sütun listesi yazmak yenilerini sessizce düşürürdü.
+# TARİH PENCERESİ (yol haritası D2, 12.11.2026): ana sayfa ve karşılaştırma en çok
+# "geçen yılın aynı dönemi" ile "Son 12 ay"ın önceki 12 ayına bakar (~2 yıl). Eskiden
+# bütün lokasyonların bütün geçmişi çekiliyordu; 10+ lokasyonda her yıl büyüyordu.
+# Lokasyonun tüm geçmişi lokasyon detayında (fetch_lok_data, tek lokasyon) kalır.
+ENERJI_PENCERE_GUN = 800
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_energy(url, key):
     try:
@@ -688,8 +667,10 @@ def fetch_energy(url, key):
         all_data = []
         offset = 0
         batch = 1000
+        _bas = (pd.Timestamp.now() - pd.Timedelta(days=ENERJI_PENCERE_GUN)).strftime("%Y-%m-%d")
         while True:
-            r = c.table("energy_data").select("*").order("Tarih", desc=False).range(offset, offset + batch - 1).execute()
+            r = (c.table("energy_data").select("*").gte("Tarih", _bas).order("Tarih", desc=False)
+                 .range(offset, offset + batch - 1).execute())
             if not r.data:
                 break
             all_data.extend(r.data)
@@ -710,6 +691,47 @@ def fetch_energy(url, key):
         return pd.DataFrame(), None
     except Exception as e:
         return pd.DataFrame(), str(e)
+
+def _agent_anahtari(key):
+    """Agent tablolarını okuyacak anahtar: varsa service_role (ortam / secrets), yoksa portal anahtarı.
+    agent_raporlar yalnız service_role'e açık (002); anon anahtarla iş emri listesi boş gelir."""
+    cev = os.environ.get("SUPABASE_SERVICE_KEY", "").strip()
+    if cev:
+        return cev
+    for _yol in (os.path.join(os.path.expanduser("~"), ".streamlit", "secrets.toml"),
+                 os.path.join(os.getcwd(), ".streamlit", "secrets.toml")):
+        if os.path.exists(_yol):
+            try:
+                _s = st.secrets.get("supabase", {})
+                if _s.get("service_key"):
+                    return str(_s["service_key"])
+            except Exception:
+                pass
+            break
+    return key
+
+
+# Açık agent iş emirleri — Canlı Uyarılar (F1, Synapse içi bildirim). Ana sayfa dakikada bir okur;
+# kritik iş emri en geç ~1 dk sonra kırmızı satır olarak görünür.
+@st.cache_data(ttl=60, show_spinner=False)
+def fetch_is_emirleri(url, anahtar):
+    import json as _j
+    import urllib.request as _u
+
+    def _oku(yol):
+        r = _u.Request(url.rstrip("/") + "/rest/v1/" + yol, headers={"apikey": anahtar,
+                                                                     "Authorization": "Bearer " + anahtar})
+        with _u.urlopen(r, timeout=15) as c:
+            return _j.load(c)
+    try:
+        rap = _oku("agent_raporlar?select=rapor_no,lokasyon_id,agent,onem,durum,baslik,bulgu_id,olusturma"
+                   "&durum=neq.kapandi&order=olusturma.desc&limit=200")
+        syn = _oku("agent_bulgular?select=id,anahtar&agent=eq.synapse") if any(
+            x.get("agent") == "synapse" for x in rap) else []
+        return rap if isinstance(rap, list) else [], syn if isinstance(syn, list) else []
+    except Exception:
+        return [], []
+
 
 @st.cache_data(ttl=30, show_spinner=False)
 def fetch_lokasyonlar(url, key):
@@ -2416,7 +2438,15 @@ with sag:
                 if pd.notna(cl) and cl > 90:
                     lok_uyari_map[lok_id].append(("r", f"🔥 {isim}: Chiller kritik yük (%{cl:.0f})"))
 
-    # 3) Çevrimdışı uyarıları — sol kolonda kart olarak gösterildiği için burada yok
+    # 3) Açık agent iş emirleri (F1, Synapse içi bildirim; e-posta yok — kullanıcı kararı 12.11.2026)
+    import agent_gorunum as _AGc
+    _ie_rap, _ie_syn = fetch_is_emirleri(url, _agent_anahtari(key))
+    _ie = _AGc.canli_uyarilar(_ie_rap, _ie_syn, list(HASTANELER))
+    for _lid, _sat in _ie.items():
+        _isim = HASTANELER.get(_lid, {}).get("kisa", "Merkez" if _lid == _AGc.MERKEZ else _lid)
+        lok_uyari_map.setdefault(_lid, []).extend((_s, "%s: %s" % (_isim, _m)) for _s, _m in _sat)
+
+    # 4) Çevrimdışı uyarıları — sol kolonda kart olarak gösterildiği için burada yok
 
     # Lokasyonları arıza sayısına göre sırala (en fazla arıza önce)
     def lok_ariza_skoru(lok_id):
@@ -2428,6 +2458,8 @@ with sag:
         return ozet.get("toplam_sorun", 0) * 10 + len(lok_uyari_map.get(lok_id, []))
 
     sirali_loklar = sorted(HASTANELER.keys(), key=lok_ariza_skoru, reverse=True)
+    if lok_uyari_map.get(_AGc.MERKEZ):            # sunucu / güvenlik iş emirleri en üstte
+        sirali_loklar = [_AGc.MERKEZ] + sirali_loklar
 
     # ── Uyarıları lokasyon bazında grupla ve göster ──────
     lok_ile_uyari = [(lid, lok_uyari_map.get(lid, []))
@@ -2444,7 +2476,7 @@ with sag:
         uyari_html = "<div style='max-height:195px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:#133273 transparent;'>"
         for lid, uyarilar in lok_ile_uyari:
             lok_inf  = HASTANELER.get(lid, {})
-            isim     = lok_inf.get("kisa", lid)
+            isim     = lok_inf.get("kisa", "Merkez (sunucu)" if lid == "merkez" else lid)
             has_crit = any(s == "r" for s, _ in uyarilar)
             kart_bg  = "rgba(208,59,59,0.06)" if has_crit else "rgba(250,178,25,0.06)"
             kart_br  = "rgba(208,59,59,0.30)" if has_crit else "rgba(250,178,25,0.25)"
@@ -3574,7 +3606,7 @@ with sag:
                         _aiv.mekanik_ozet(_oz, tam=tam)) + "\n"
 
                 def _lok_df(lid):
-                    """Lokasyonun TÜM geçmişi (geçen yıl kıyası için gerekir)."""
+                    """Lokasyonun son ENERJI_PENCERE_GUN günü (geçen yıl kıyası için yeterli)."""
                     return df_all[df_all["lokasyon_id"] == lid]
 
                 def _kiyas_blok(lid, kisa=False):

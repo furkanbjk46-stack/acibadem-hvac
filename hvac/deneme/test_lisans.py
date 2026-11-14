@@ -70,6 +70,86 @@ c("watchdog alt sürecinde (Enerji portalı) yeniden deneme yok, beklemez", s["n
 os.environ.pop("HVAC_WATCHDOG", None)
 
 hata = [x for x in T if not x[1]]
+# ── Makine kimliği: wmic yoksa PowerShell'den aynı UUID; ağ kartı adresi ikinci kimlik ──
+import uuid as _uuid  # noqa: E402
+_eski_co = L.subprocess.check_output
+
+
+def _sahte(cevaplar):
+    def co(komut, **k):
+        for anahtar, cevap in cevaplar.items():
+            if anahtar in komut:
+                if isinstance(cevap, Exception):
+                    raise cevap
+                return cevap
+        raise FileNotFoundError(komut)
+    return co
+
+
+UID = "4C4C4544-0042-3510-8051-B4C04F4B4B32"
+try:
+    L.subprocess.check_output = _sahte({"wmic": ("UUID  \r\n%s  \r\n" % UID).encode()})
+    c("wmic varsa UUID ondan", L.makine_kimlikleri() == [UID, str(_uuid.getnode())], L.makine_kimlikleri())
+    L.subprocess.check_output = _sahte({"wmic": FileNotFoundError("wmic yok"), "powershell": (UID + "\r\n").encode()})
+    c("wmic yoksa aynı UUID PowerShell'den (lisans değişmez)", L.get_makine_id() == UID, L.get_makine_id())
+    L.subprocess.check_output = _sahte({})
+    c("ikisi de yoksa ağ kartı adresi", L.makine_kimlikleri() == [str(_uuid.getnode())])
+finally:
+    L.subprocess.check_output = _eski_co
+
+# ── Lisans sorgusu iki kimliği de sorar (ağ kartı adresiyle lisanslanmış PC bozulmasın) ──
+import tempfile  # noqa: E402
+import types  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+_sorgu = {}
+
+
+class _Sb:
+    def __init__(self, satirlar):
+        self.s = satirlar
+
+    def table(self, ad):
+        return self
+
+    def select(self, *a):
+        return self
+
+    def in_(self, alan, degerler):
+        _sorgu["in"] = (alan, list(degerler))
+        return self
+
+    def eq(self, *a):
+        return self
+
+    def execute(self):
+        return types.SimpleNamespace(data=self.s)
+
+
+import importlib  # noqa: E402
+L = importlib.reload(L)          # yukarıdaki testler _lisans_kontrol_tek'i sahtesiyle değiştirdi
+_d = tempfile.mkdtemp()
+_cfg = Path(_d) / "supabase_config.json"
+_cfg.write_text('{"supabase_url": "http://x", "supabase_key": "k", "lokasyon_id": "maslak"}', encoding="utf-8")
+_eski = (L.CONFIG_PATH, L.makine_kimlikleri)
+import sb_kimlik  # noqa: E402
+_eski_ist = sb_kimlik.istemci
+try:
+    L.CONFIG_PATH = _cfg
+    L.makine_kimlikleri = lambda: [UID, "123456789"]
+    sb_kimlik.istemci = lambda u, k: _Sb([{"aktif": True, "makine_id": "123456789", "makine_adi": "Maslak PC"}])
+    r = L._lisans_kontrol_tek()
+    c("lisans iki kimlikle sorulur; ağ kartı adresiyle kayıtlı PC geçerli",
+      r["gecerli"] and r["makine_id"] == "123456789" and _sorgu["in"] == ("makine_id", [UID, "123456789"]), (r, _sorgu))
+    sb_kimlik.istemci = lambda u, k: _Sb([])
+    r = L._lisans_kontrol_tek()
+    c("kayıt yoksa geçersiz, gösterilen kimlik UUID", not r["gecerli"] and r["makine_id"] == UID and "tanimli degil" in r["hata"], r)
+    sb_kimlik.istemci = lambda u, k: _Sb([{"aktif": False, "makine_id": UID}])
+    c("pasif lisans geçersiz", not L._lisans_kontrol_tek()["gecerli"])
+finally:
+    L.CONFIG_PATH, L.makine_kimlikleri = _eski
+    sb_kimlik.istemci = _eski_ist
+
 for ad, ok, ek in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(ek)[:300]))
 print("%d/%d PASS" % (len(T) - len(hata), len(T)))

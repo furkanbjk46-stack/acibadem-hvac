@@ -123,8 +123,8 @@ c("teşhis modülü salt okuma: dosyaya yazdığı TEK yer kendi sonuç dosyası
 
 # ── Kök sebep düzeltmesi: data_collector şablonu configs/'te de bulmalı ──
 import data_collector as DC  # noqa: E402
-c("data_collector önce configs/ yolunu dener",
-  DC._EXCEL_FILE_CONFIGS.endswith(os.path.join("configs", "hedefli_okuma_sablonu_2.xlsx")))
+c("data_collector şablonu yollar.py ile arar (ayar/bacnet_okuma_sablonu.xlsx; eski kurulumda configs/)",
+  DC._EXCEL_FILE_CONFIGS == __import__("yollar").yol("configs/hedefli_okuma_sablonu_2.xlsx", BURASI))
 c("data_collector ve ahu_collector aynı sırayla arar",
   "configs" in open(os.path.join(BURASI, "ahu_collector.py"), encoding="utf-8").read().split("_ENERGY_EXCEL_CONFIGS")[1][:80])
 c("geliştirme PC'sinde şablon artık bulunuyor (configs/)", os.path.exists(DC.EXCEL_FILE), DC.EXCEL_FILE)

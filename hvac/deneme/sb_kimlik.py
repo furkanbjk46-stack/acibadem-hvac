@@ -20,11 +20,12 @@ Kullanım (Supabase'e bağlanan HER yer):
     client = sb_kimlik.istemci(url, key)              # supabase-py
     headers = sb_kimlik.basliklar(key, {"Content-Type": "application/json"})
 """
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import json
 import os
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
-ANAHTAR_DOSYA = os.path.join(BURASI, "configs", "lokasyon_anahtari.json")
+ANAHTAR_DOSYA = yollar.yol("configs/lokasyon_anahtari.json", BURASI)
 
 
 def lokasyon_anahtari():

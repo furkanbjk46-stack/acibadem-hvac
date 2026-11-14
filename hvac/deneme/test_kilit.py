@@ -154,10 +154,11 @@ c("[kaynak] watchdog cocuk ortaminda HVAC_WATCHDOG=1",
   'HVAC_WATCHDOG="1"' in _wd)
 _popen = re.findall(r"subprocess\.Popen\(\s*\[sys\.executable, \"(?:-m|cloud_sync|data_)", _wd)
 _env_li = len(re.findall(r"cwd=BASE_DIR, env=_COCUK_ENV", _wd))
-# 5 kalici cocuk sureci + 1 tek seferlik Mekanik Zeka oz testi (v8.2, oz_test.py).
-# Oz test de ayni ortamla baslar; sync baslatmadigi icin kilit acisindan zararsizdir.
-c("[kaynak] watchdog'un tum cocuk surecleri (5 kalici + oz test) bu ortamla baslar",
-  _env_li == 6, _env_li)
+# 5 kalici cocuk sureci + 1 tek seferlik Mekanik Zeka oz testi (v8.2, oz_test.py)
+# + agent'lar (13.1, _agent_baslat: Enerji ve Mekanik Zeka agent'i ayni satirdan baslar).
+# Oz test ve agent'lar sync baslatmadigi icin kilit acisindan zararsizdir.
+c("[kaynak] watchdog'un tum cocuk surecleri (5 kalici + oz test + agent'lar) bu ortamla baslar",
+  _env_li == 7, _env_li)
 c("[kaynak] oz test, kalici surec listesine eklenmedi (yeniden baslatma dongusune girmez)",
   "procs.append" not in _wd.split("def _oz_test_baslat")[1].split("def ")[0])
 

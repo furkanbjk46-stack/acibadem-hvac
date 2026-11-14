@@ -17,6 +17,8 @@
 #   Telafi: PC 00:05'te kapaliysa, acilista dun'un satiri eksikse snapshot
 #   hemen calistirilir (gun kaybi olmaz).
 
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
+import bacnet_esleme as _bacnet_esleme  # BACnet noktaları ve ısıtma hatları (ayar/bacnet_esleme.json)
 import csv
 import json
 import os
@@ -41,14 +43,14 @@ logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Gemini scriptinin urettigi CSV'ler (bu scriptle ayni klasorde olmali)
-MODBUS_CSV = os.path.join(BASE_DIR, "analizor_guncel_veriler.csv")
-BACNET_CSV = os.path.join(BASE_DIR, "hedefli_enerji_verileri.csv")
+MODBUS_CSV = yollar.yol("analizor_guncel_veriler.csv", BASE_DIR)
+BACNET_CSV = yollar.yol("hedefli_enerji_verileri.csv", BASE_DIR)
 
 # Portalin energy_data.csv konumu (bu scriptla ayni klasorde ise degistirme)
-ENERGY_CSV = os.path.join(BASE_DIR, "energy_data.csv")
+ENERGY_CSV = yollar.yol("energy_data.csv", BASE_DIR)
 
 # Gunluk Modbus referans degerleri (dun gece okuma)
-REF_FILE = os.path.join(BASE_DIR, "modbus_daily_ref.json")
+REF_FILE = yollar.yol("modbus_daily_ref.json", BASE_DIR)
 
 # Gunluk snapshot saati — her gece 00:05'te dunun (23:59 okumasi) satirini yazar
 SNAPSHOT_HOUR   = 0
@@ -73,31 +75,29 @@ BACNET_SUTUNLARI = [
     "Dis_Hava_Sicakligi_C", "Dis_Hava_Nem_Yuzde",
     "Chiller_Set_Temp_C", "Chiller_Adet", "Absorption_Chiller_Adet",
     "Kazan_Adet", "Kojen_Adet", "Chiller_Load_Percent",
-    "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
-    "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
-]
+] + _bacnet_esleme.hat_sutunlari(BASE_DIR)   # ısıtma hatları: ayar/bacnet_esleme.json (Maslak: Mas1_*, Mas2_*)
 # Donma TESPITI yalniz ondalikli OLCUMLERLE yapilir: chiller set ve cihaz adedi
 # haftalarca ayni kalabilir, bu normaldir.
 DONMA_OLCUMLERI = [
-    "Dis_Hava_Sicakligi_C", "Dis_Hava_Nem_Yuzde", "Chiller_Load_Percent", "Mas1_Isitma_Temp", "Mas1_Kazan_Temp",
-    "Mas1_Sogutma_Temp", "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
-]
+    "Dis_Hava_Sicakligi_C", "Dis_Hava_Nem_Yuzde", "Chiller_Load_Percent",
+] + _bacnet_esleme.hat_sutunlari(BASE_DIR)
 
 # ================================================================
 # ANALIZOR GRUPLARI
 # ================================================================
-CHILLER_ANALYZERS = {
-    "CHILLER-1", "CHILLER-2", "CHILLER-3", "CHILLER-4", "CHILLER-5"
-}
+# Gruplar KODDA DEĞİL: ayar/sayaclar.json (sayaclar.py; Faz 1 / C1, 12.11.2026).
+#   chiller   → CHILLER_ANALYZERS (soğutma)
+#   alt_sayac → MCC, kule, bina MCC'leri; chiller ile birlikte ALL_ANALYZERS (MCC + Chiller toplamı)
+#   trafo / sebeke / uretim bu toplama GİRMEZ (şebeke ve kojen ayrı hesaplanır, çift sayım olur)
+import sayaclar as _sayaclar  # noqa: E402
 
-ALL_ANALYZERS = {
-    "MCC-1", "MCC-2", "MCC-3", "MCC-4", "MCC-5", "MCC-6", "MCC-7",
-    "CHILLER-1", "CHILLER-2", "CHILLER-3", "CHILLER-4", "CHILLER-5",
-    "KULE-1", "KULE-2", "KULE-3",
-    "2BK-MCC-D01", "2BK-MCC-D02",
-    "4BK-MCC-E01", "4BK-MCC-E02", "4BK-MCC-F01",
-    "CK-MCC-D01", "CK-MCC-E01", "CK-MCC-F01",
-}
+
+def _numaralar(data, onek):
+    """Veride bulunan '<onek>N' anahtarlarının N'leri (sıralı). Chiller/kazan/kojen sayısı lokasyona göre değişir;
+    eskiden 5 chiller / 3 kazan / 4 kojen sabitti."""
+    return sorted(int(k[len(onek):]) for k in data if k.startswith(onek) and k[len(onek):].isdigit())
+CHILLER_ANALYZERS = set(_sayaclar.adlar("chiller", BASE_DIR))
+ALL_ANALYZERS = set(_sayaclar.adlar(("chiller", "alt_sayac"), BASE_DIR))
 
 # MCC tüketimi = Chiller HARİÇ geri kalan tüm analizörler
 MCC_ONLY_ANALYZERS = ALL_ANALYZERS - CHILLER_ANALYZERS
@@ -107,54 +107,18 @@ MCC_ONLY_ANALYZERS = ALL_ANALYZERS - CHILLER_ANALYZERS
 # Point Name (hedefli_enerji_verileri.csv) -> dahili anahtar
 # "_" ile baslayanllar gecici, son satirda kullanilmaz
 # ================================================================
-BACNET_MAP = {
-    "DIS HAVA":                "Dis_Hava_Sicakligi_C",
-    "DIS HAVA NEM":            "Dis_Hava_Nem_Yuzde",     # 24.10.2026: AI 32 (cihaz 2098211)
-    # "CH SET" KALDIRILDI (28.10.2026): şablondaki adresi (0103 / AV 12) chiller
-    # seti değil, kollektör denetleyicisinin set noktasıydı (GUNDUZ/GECE
-    # KOLLEKTOR SET AV 10/11'in yanı) — 27.10 satırına 12 °C yazdı, yanlış
-    # "chiller set yüksek" alarmı verdi. Chiller seti artık chiller'ların
-    # GERÇEKTE kullandığı CH-x IC SET'lerden hesaplanır (aşağıda).
-    "CH-1 IC SET":             "_ch_ic_1",
-    "CH-2 IC SET":             "_ch_ic_2",
-    "CH-3 IC SET":             "_ch_ic_3",
-    "CH-4 IC SET":             "_ch_ic_4",
-    "CH-5 IC SET":             "_ch_ic_5",
-    "MAS-1 ISITMA SICAKLIK":   "Mas1_Isitma_Temp",
-    "MAS-2 ISITMA SICAKLIK":   "Mas2_Isitma_Temp",
-    "MAS-1 SOGUTMA SICAKLIK":  "Mas1_Sogutma_Temp",
-    "MAS-2 SOGUTMA SICAKLIK":  "Mas2_Sogutma_Temp",
-    "MAS-1 KAZAN SICAKLIK":    "Mas1_Kazan_Temp",
-    "MAS-2 KAZAN SICAKLIK":    "Mas2_Kazan_Temp",
-    # Durum bilgileri (0.0=KAPALI, 1.0=ACIK)
-    "CH-1 DURUM BILGISI":      "_ch_dur_1",
-    "CH-2 DURUM BILGISI":      "_ch_dur_2",
-    "CH-3 DURUM BILGISI":      "_ch_dur_3",
-    "CH-4 DURUM BILGISI":      "_ch_dur_4",
-    "CH-5 DURUM BILGISI":      "_ch_dur_5",
-    "ABS DURUM BILGISI":       "_abs_dur",
-    "KAZAN-1 DURUM BILGISI":   "_kaz_dur_1",
-    "KAZAN-2 DURUM BILGISI":   "_kaz_dur_2",
-    "KAZAN-3 DURUM BILGISI":   "_kaz_dur_3",
-    # 24.10.2026: kojen durumları (BI 52-55, cihaz 2098215). Kojen çalışınca atık
-    # ısısı kazanın yerini tutar — ısıtma gazı tahmininde en güçlü girdi (hata %42 → %22)
-    "KOJEN-1 DURUM BILGISI":   "_kojen_dur_1",
-    "KOJEN-2 DURUM BILGISI":   "_kojen_dur_2",
-    "KOJEN-3 DURUM BILGISI":   "_kojen_dur_3",
-    "KOJEN-4 DURUM BILGISI":   "_kojen_dur_4",
-    # Chiller calisma yuzdesi
-    "CH-1 CALISMA YUZDELIK":   "_ch_yuz_1",
-    "CH-2 CALISMA YUZDELIK":   "_ch_yuz_2",
-    "CH-3 CALISMA YUZDELIK":   "_ch_yuz_3",
-    "CH-4 CALISMA YUZDELIK":   "_ch_yuz_4",
-    "CH-5 CALISMA YUZDELIK":   "_ch_yuz_5",
-}
+# Eşleme KODDA DEĞİL: ayar/bacnet_esleme.json (bacnet_esleme.py; Faz 1 / C2, 12.11.2026).
+# Maslak eşlemesindeki saha notları (ornek_ayar/maslak/bacnet_esleme.json'a taşındı):
+#   * "CH SET" kaldırıldı (28.10.2026): şablondaki adres (0103 / AV 12) kollektör denetleyicisinin
+#     set noktasıydı; chiller seti çalışan chiller'ların CH-x IC SET değerlerinden hesaplanır.
+#   * DIS HAVA NEM 24.10.2026: AI 32 (cihaz 2098211). KOJEN-n DURUM 24.10.2026: BI 52-55 (cihaz 2098215);
+#     kojen çalışınca atık ısısı kazanın yerini tutar — ısıtma gazı tahmininde en güçlü girdi.
+BACNET_MAP = _bacnet_esleme.noktalar(BASE_DIR)
 
 ENERGY_SCHEMA = [
     "Tarih", "Chiller_Set_Temp_C", "Chiller_Adet", "Absorption_Chiller_Adet",
     "Kazan_Adet", "Kojen_Adet",
-    "Mas1_Isitma_Temp", "Mas1_Kazan_Temp", "Mas1_Sogutma_Temp",
-    "Mas2_Isitma_Temp", "Mas2_Kazan_Temp", "Mas2_Sogutma_Temp",
+] + _bacnet_esleme.hat_sutunlari(BASE_DIR) + [   # ısıtma hatları (ayar/bacnet_esleme.json)
     "Kar_Eritme_Aktif",
     "TRDP1_kWh", "TRDP2_kWh", "TRDP3_kWh", "TRDP4_kWh",
     "Sebeke_Tuketim_kWh", "Kojen_Uretim_kWh",
@@ -172,6 +136,8 @@ ENERGY_SCHEMA = [
     "MCC_4BK_E01_kWh", "MCC_4BK_E02_kWh", "MCC_4BK_F01_kWh",
     "MCC_CK_D01_kWh", "MCC_CK_E01_kWh", "MCC_CK_F01_kWh",
 ] + HAVA_SUTUNLARI   # bina nem sensörü + internetten günlük hava (hava_durumu.py)
+# Lokasyonun sayaç sütunları (ayar/sayaclar.json): listede olmayanlar sona eklenir (yeni lokasyon / yeni sayaç)
+ENERGY_SCHEMA += [c for c in _sayaclar.sutunlar(base_dir=BASE_DIR) if c not in ENERGY_SCHEMA]
 
 # ================================================================
 # YARDIMCI FONKSIYONLAR
@@ -258,7 +224,7 @@ MAX_DAILY_KWH_PER_DEVICE = 50_000  # Bir cihazin gunluk max makul tuketimi
 # NET sayaclar (GIREN - VERILEN): sebekeye enerji verilen gun farki EKSI
 # olabilir — sayac sifirlanmasi sayilmaz. Sebeke girisi hastanenin tamamini
 # tasir (kojen dururken ~3 MW x 24 sa = ~75.000 kWh): genel sinir ona dar.
-NET_SAYACLAR = {"SEBEKE"}
+NET_SAYACLAR = set(_sayaclar.adlar("sebeke", BASE_DIR))
 MAX_DAILY_KWH_NET = 200_000
 
 
@@ -407,7 +373,7 @@ def chiller_set_hesapla(data):
     chiller kayda uyarı olarak düşer (ör. 28.10.2026: CH-5 IC SET 3,3 —
     OTO SET'in 7,5'ini uygulamıyor). Hiç IC SET okunamadıysa boş.
     """
-    okunan = {i: data[f"_ch_ic_{i}"] for i in range(1, 6) if f"_ch_ic_{i}" in data}
+    okunan = {i: data[f"_ch_ic_{i}"] for i in _numaralar(data, "_ch_ic_")}
     if not okunan:
         return ""
     calisan = {i: v for i, v in okunan.items() if data.get(f"_ch_dur_{i}", 0) >= 1.0}
@@ -442,11 +408,11 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     # adetler BOS kalir — eskiden 0 yaziliyordu, yani "hic chiller calismiyor"
     # gibi yanlis bir bilgi uretiliyordu.
     if data:
-        ch_adet = sum(1 for i in range(1, 6) if data.get(f"_ch_dur_{i}", 0) >= 1.0)
+        ch_adet = sum(1 for i in _numaralar(data, "_ch_dur_") if data.get(f"_ch_dur_{i}", 0) >= 1.0)
         abs_adet = int(data.get("_abs_dur", 0) or 0)
-        kaz_adet = sum(1 for i in range(1, 4) if data.get(f"_kaz_dur_{i}", 0) >= 1.0)
+        kaz_adet = sum(1 for i in _numaralar(data, "_kaz_dur_") if data.get(f"_kaz_dur_{i}", 0) >= 1.0)
         # Kojen noktaları şablonda yoksa (eski kurulum) adet BOŞ kalır, 0 yazılmaz
-        kojen_okunan = [data[f"_kojen_dur_{i}"] for i in range(1, 5) if f"_kojen_dur_{i}" in data]
+        kojen_okunan = [data[f"_kojen_dur_{i}"] for i in _numaralar(data, "_kojen_dur_")]
         kojen_adet = sum(1 for v in kojen_okunan if v >= 1.0) if kojen_okunan else ""
     else:
         ch_adet = abs_adet = kaz_adet = kojen_adet = ""
@@ -455,8 +421,8 @@ def build_daily_row(today_str, bacnet, daily_kwh):
 
     # Chiller yukleme yuzdesi: sadece calisan chillerlerin ortalamasi
     ch_yuz_vals = [
-        data[f"_ch_yuz_{i}"] for i in range(1, 6)
-        if f"_ch_yuz_{i}" in data and data.get(f"_ch_dur_{i}", 0) >= 1.0
+        data[f"_ch_yuz_{i}"] for i in _numaralar(data, "_ch_yuz_")
+        if data.get(f"_ch_dur_{i}", 0) >= 1.0
     ]
     ch_load = round(sum(ch_yuz_vals) / len(ch_yuz_vals), 1) if ch_yuz_vals else ""
 
@@ -471,15 +437,11 @@ def build_daily_row(today_str, bacnet, daily_kwh):
             and isinstance(chiller_kwh, (int, float))):
         diger_kwh = round(total_kwh - mcc_kwh - chiller_kwh, 1)
 
-    # --- TRDP degerleri ---
-    trdp1 = daily_kwh.get("TRDP-1", "") if daily_kwh else ""
-    trdp3 = daily_kwh.get("TRDP-3", "") if daily_kwh else ""
-    # TRDP-4: Siemens PAC4200 (172.17.91.123) — 21.09.2026'dan itibaren otomatik.
-    # Ilk gun referans olmadigi icin bos kalir; ertesi gunden itibaren dolar.
-    trdp4 = daily_kwh.get("TRDP-4", "") if daily_kwh else ""
-    # TRDP-2 (Janitza, 172.17.91.119) — 29.09.2026'da baglandi. Dort trafo da
-    # otomatik okundugu icin sebeke artik eksiksiz olculuyor.
-    trdp2 = daily_kwh.get("TRDP-2", "") if daily_kwh else ""
+    # --- Trafo sayaçları (ayar/sayaclar.json tur=trafo; Maslak: TRDP-1..4) ---
+    # Saha notları: TRDP-4 Siemens PAC4200, 21.09.2026'dan otomatik (ilk gün referans yok, boş);
+    # TRDP-2 Janitza, 29.09.2026'da bağlandı — dört trafo da otomatik okunuyor.
+    _trafo_adlari = _sayaclar.adlar("trafo", BASE_DIR)
+    trafo_deger = {ad: (daily_kwh.get(ad, "") if daily_kwh else "") for ad in _trafo_adlari}
 
     # --- Sebeke hesabi: YALNIZCA TRDP sayaclarinin toplami ---
     # Eskiden TRDP-2/4 bosken "MCC + Chiller" yedegi kullaniliyordu. O yedek
@@ -494,25 +456,22 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         except (TypeError, ValueError):
             return 0.0
 
-    _t1 = _to_num(trdp1)
-    _t2 = _to_num(trdp2)
-    _t3 = _to_num(trdp3)
-    _t4 = _to_num(trdp4)
+    _trafolar = [_to_num(trafo_deger[ad]) for ad in _trafo_adlari]
 
     # --- Kojen uretim sayaclari (KOJEN-n, "uretim" analizorleri) ---
     # KOJEN-1/2 sahada henuz bagli degil: okunmayan kojen BOS kalir (0 yazilmaz),
     # formdan elle girilebilir. Kural enerji_hesap.py'de (27.10.2026).
-    kojen_n = {i: (daily_kwh.get("KOJEN-%d" % i, "") if daily_kwh else "") for i in range(1, 5)}
+    kojen_n = {ad: (daily_kwh.get(ad, "") if daily_kwh else "") for ad in _sayaclar.adlar("uretim", BASE_DIR)}
     _okunan_kojen = [_to_num(v) for v in kojen_n.values() if v != ""]
     kojen_kwh = round(sum(_okunan_kojen), 1) if _okunan_kojen else ""
 
-    _trdp_toplam = round(_t1 + _t2 + _t3 + _t4, 1)
-    if (_t1 > 0 and _t2 > 0 and _t3 > 0 and _t4 > 0):
+    _trdp_toplam = round(sum(_trafolar), 1)
+    if _trafolar and all(v > 0 for v in _trafolar):
         # Dort trafo: trafo toplami = hastane geneli (kojen de icinde);
         # sebeke = trafo - kojen (eksi = sebekeye verildi)
         toplam_hastane_kwh = _trdp_toplam
         sebeke_kwh = round(_trdp_toplam - _to_num(kojen_kwh), 1)
-    elif (_t1 > 0 or _t2 > 0 or _t3 > 0 or _t4 > 0):
+    elif any(v > 0 for v in _trafolar):
         sebeke_kwh = _trdp_toplam   # Eksik trafo: olculenlerin toplami (eski kural)
         toplam_hastane_kwh = round(sebeke_kwh + _to_num(kojen_kwh), 1)
     else:
@@ -528,7 +487,8 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     try:
         import enerji_hesap as _eh
         if _eh.yeni_kural_mi(today_str):
-            _sb = daily_kwh.get("SEBEKE", "") if daily_kwh else ""
+            _sebeke_adi = (_sayaclar.adlar("sebeke", BASE_DIR) or [None])[0]
+            _sb = daily_kwh.get(_sebeke_adi, "") if (daily_kwh and _sebeke_adi) else ""
             sebeke_kwh = _sb
             if _sb != "":
                 toplam_hastane_kwh = round(_to_num(_sb) + _to_num(kojen_kwh), 1)
@@ -544,24 +504,9 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "Chiller_Adet":               ch_adet,
         "Absorption_Chiller_Adet":    abs_adet,
         "Kazan_Adet":                 kaz_adet,
-        "Mas1_Isitma_Temp":           data.get("Mas1_Isitma_Temp", ""),
-        "Mas1_Kazan_Temp":            data.get("Mas1_Kazan_Temp", ""),
-        "Mas1_Sogutma_Temp":          data.get("Mas1_Sogutma_Temp", ""),
-        "Mas2_Isitma_Temp":           data.get("Mas2_Isitma_Temp", ""),
-        "Mas2_Kazan_Temp":            data.get("Mas2_Kazan_Temp", ""),
-        "Mas2_Sogutma_Temp":          data.get("Mas2_Sogutma_Temp", ""),
         "Kar_Eritme_Aktif":           0,
-        # --- TRDP ---
-        "TRDP1_kWh":                  trdp1,   # Otomatik (Modbus)
-        "TRDP2_kWh":                  trdp2,   # Manuel / henuz bagli degil
-        "TRDP3_kWh":                  trdp3,   # Otomatik (Modbus)
-        "TRDP4_kWh":                  trdp4,   # Otomatik (Modbus, PAC4200)
         "Sebeke_Tuketim_kWh":         sebeke_kwh,  # Otomatik (SEBEKE sayaci, net)
         "Kojen_Uretim_kWh":           kojen_kwh,   # Okunan kojenlerin toplami
-        "Kojen1_kWh":                 kojen_n[1],
-        "Kojen2_kWh":                 kojen_n[2],
-        "Kojen3_kWh":                 kojen_n[3],  # Otomatik (Modbus, PAC3200)
-        "Kojen4_kWh":                 kojen_n[4],  # Otomatik (Modbus, PAC3200)
         "Kazan_Dogalgaz_m3":          "",
         "Kojen_Dogalgaz_m3":          "",
         "Su_Tuketimi_m3":             "",
@@ -576,32 +521,15 @@ def build_daily_row(today_str, bacnet, daily_kwh):
         "Toplam_Hastane_Tuketim_kWh": toplam_hastane_kwh,  # Dort trafo: trafo toplami (enerji_hesap)
         "Toplam_Sogutma_Tuketim_kWh": chiller_kwh,  # CH analizörleri = soğutma
         "Diger_Yuk_kWh":              diger_kwh,    # Toplam - MCC - Soğutma
-        # --- Soğutma kırılımı (Chiller bazında) ---
-        "Chiller1_kWh":               daily_kwh.get("CHILLER-1", "") if daily_kwh else "",
-        "Chiller2_kWh":               daily_kwh.get("CHILLER-2", "") if daily_kwh else "",
-        "Chiller3_kWh":               daily_kwh.get("CHILLER-3", "") if daily_kwh else "",
-        "Chiller4_kWh":               daily_kwh.get("CHILLER-4", "") if daily_kwh else "",
-        "Chiller5_kWh":               daily_kwh.get("CHILLER-5", "") if daily_kwh else "",
-        # --- MCC kırılımı (analizör bazında) ---
-        "MCC1_kWh":                   daily_kwh.get("MCC-1", "") if daily_kwh else "",
-        "MCC2_kWh":                   daily_kwh.get("MCC-2", "") if daily_kwh else "",
-        "MCC3_kWh":                   daily_kwh.get("MCC-3", "") if daily_kwh else "",
-        "MCC4_kWh":                   daily_kwh.get("MCC-4", "") if daily_kwh else "",
-        "MCC5_kWh":                   daily_kwh.get("MCC-5", "") if daily_kwh else "",
-        "MCC6_kWh":                   daily_kwh.get("MCC-6", "") if daily_kwh else "",
-        "MCC7_kWh":                   daily_kwh.get("MCC-7", "") if daily_kwh else "",
-        "Kule1_kWh":                  daily_kwh.get("KULE-1", "") if daily_kwh else "",
-        "Kule2_kWh":                  daily_kwh.get("KULE-2", "") if daily_kwh else "",
-        "Kule3_kWh":                  daily_kwh.get("KULE-3", "") if daily_kwh else "",
-        "MCC_2BK_D01_kWh":            daily_kwh.get("2BK-MCC-D01", "") if daily_kwh else "",
-        "MCC_2BK_D02_kWh":            daily_kwh.get("2BK-MCC-D02", "") if daily_kwh else "",
-        "MCC_4BK_E01_kWh":            daily_kwh.get("4BK-MCC-E01", "") if daily_kwh else "",
-        "MCC_4BK_E02_kWh":            daily_kwh.get("4BK-MCC-E02", "") if daily_kwh else "",
-        "MCC_4BK_F01_kWh":            daily_kwh.get("4BK-MCC-F01", "") if daily_kwh else "",
-        "MCC_CK_D01_kWh":             daily_kwh.get("CK-MCC-D01", "") if daily_kwh else "",
-        "MCC_CK_E01_kWh":             daily_kwh.get("CK-MCC-E01", "") if daily_kwh else "",
-        "MCC_CK_F01_kWh":             daily_kwh.get("CK-MCC-F01", "") if daily_kwh else "",
     }
+    # Isıtma hatlarının sıcaklıkları (ayar/bacnet_esleme.json)
+    for _c in _bacnet_esleme.hat_sutunlari(BASE_DIR):
+        row[_c] = data.get(_c, "")
+    # Sayaç başına günlük kWh (trafo, kojen, chiller, alt sayaçlar) — ayar/sayaclar.json'daki
+    # 'sutun' alanına. Şebeke sütunu yukarıda kurala göre hesaplanır (ham değer yazılmaz).
+    for _s in _sayaclar.yukle(BASE_DIR):
+        if _s["tur"] != "sebeke" and _s.get("sutun"):
+            row[_s["sutun"]] = daily_kwh.get(_s["ad"], "") if daily_kwh else ""
     return row
 
 
@@ -714,7 +642,7 @@ def donmus_bacnet_temizle(yol=None, yedek_dizin=None) -> dict:
 
     tarihler = sorted(df.loc[hedef, "Tarih"].str[:10])
     try:
-        yedek_dizin = yedek_dizin or os.path.join(BASE_DIR, "configs")
+        yedek_dizin = yedek_dizin or yollar.klasor("veri/eski_yedekler", BASE_DIR)
         os.makedirs(yedek_dizin, exist_ok=True)
         shutil.copy2(yol, os.path.join(yedek_dizin, "energy_data_yedek_bacnet_donma_%s.csv"
                                        % datetime.now().strftime("%Y%m%d_%H%M%S")))
@@ -818,14 +746,14 @@ def run_daily_snapshot():
         import veri_alarm
         _cfg = {}
         try:
-            with open(os.path.join(BASE_DIR, "supabase_config.json"), encoding="utf-8") as _f:
+            with open(yollar.yol("supabase_config.json", BASE_DIR), encoding="utf-8") as _f:
                 _cfg = json.load(_f)
         except Exception:
             pass
         _ozet = veri_alarm.kontrol_et(
             modbus_data, yesterday_str,
             sb_url=_cfg.get("supabase_url"), sb_key=_cfg.get("supabase_key"),
-            lokasyon_id=_cfg.get("lokasyon_id"))
+            lokasyon_id=__import__("location_manager").lokasyon_id(BASE_DIR, _cfg.get("lokasyon_id")))
         if _ozet.get("toplam"):
             logger.warning("Veri alarmi: %d uyari (%d kritik) — %s",
                            _ozet.get("toplam"), _ozet.get("kritik"),
@@ -850,7 +778,7 @@ def bridge_loop():
     # degerleri bosaltilir (tek sefer, yedekli; elle girilmis degere dokunmaz)
     try:
         import enerji_hesap as _eh
-        _n = _eh.sebeke_gecisi_uygula(ENERGY_CSV, os.path.join(BASE_DIR, "configs"))
+        _n = _eh.sebeke_gecisi_uygula(ENERGY_CSV, yollar.klasor("veri/eski_yedekler", BASE_DIR))
         if _n:
             logger.info("Sebeke gecisi: %d gunun turetilmis sebeke degeri bosaltildi", _n)
     except Exception as e:

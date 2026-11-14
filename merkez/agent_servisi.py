@@ -32,19 +32,17 @@ import time
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BURASI)
+import hastaneler  # noqa: E402
 import hava_besleyici  # noqa: E402
 import synapse_agent  # noqa: E402
 import ust_agent  # noqa: E402
 
-KOORDINAT_DOSYA = os.path.join(BURASI, "configs", "lokasyon_koordinat.json")
 logger = logging.getLogger("agent_servisi")
 
 
 def koordinatlar():
-    """{lokasyon_id: (enlem, boylam)} — configs/lokasyon_koordinat.json (app_merkez HASTANELER ile aynı)."""
-    with open(KOORDINAT_DOSYA, encoding="utf-8") as f:
-        d = json.load(f)
-    return {k: (float(v[0]), float(v[1])) for k, v in d.items() if not k.startswith("_")}
+    """{lokasyon_id: (enlem, boylam)} — tek kaynak configs/hastaneler.json (hastaneler.py; Faz 1 / D3)."""
+    return hastaneler.koordinatlar()
 
 
 def ayarlar():

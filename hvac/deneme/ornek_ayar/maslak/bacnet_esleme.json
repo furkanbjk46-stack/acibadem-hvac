@@ -1,0 +1,52 @@
+{
+ "_aciklama": "Bu lokasyonun BACnet noktaları → energy_data sütunları ve ısıtma hatları. Nokta adları BACnet okuma şablonundaki (bacnet_okuma_sablonu.xlsx) 'Point Name' ile birebir aynıdır. '_' ile başlayan hedefler ara değerdir (chiller/kazan/kojen durumu, çalışma yüzdesi, iç set) ve tabloya yazılmaz: _ch_dur_N, _ch_yuz_N, _ch_ic_N, _kaz_dur_N, _kojen_dur_N, _abs_dur. isitma_hatlari: her hattın ısıtma / kazan / soğutma sıcaklık sütunu ve ekrandaki adı.",
+ "noktalar": {
+  "DIS HAVA": "Dis_Hava_Sicakligi_C",
+  "DIS HAVA NEM": "Dis_Hava_Nem_Yuzde",
+  "CH-1 IC SET": "_ch_ic_1",
+  "CH-2 IC SET": "_ch_ic_2",
+  "CH-3 IC SET": "_ch_ic_3",
+  "CH-4 IC SET": "_ch_ic_4",
+  "CH-5 IC SET": "_ch_ic_5",
+  "MAS-1 ISITMA SICAKLIK": "Mas1_Isitma_Temp",
+  "MAS-2 ISITMA SICAKLIK": "Mas2_Isitma_Temp",
+  "MAS-1 SOGUTMA SICAKLIK": "Mas1_Sogutma_Temp",
+  "MAS-2 SOGUTMA SICAKLIK": "Mas2_Sogutma_Temp",
+  "MAS-1 KAZAN SICAKLIK": "Mas1_Kazan_Temp",
+  "MAS-2 KAZAN SICAKLIK": "Mas2_Kazan_Temp",
+  "CH-1 DURUM BILGISI": "_ch_dur_1",
+  "CH-2 DURUM BILGISI": "_ch_dur_2",
+  "CH-3 DURUM BILGISI": "_ch_dur_3",
+  "CH-4 DURUM BILGISI": "_ch_dur_4",
+  "CH-5 DURUM BILGISI": "_ch_dur_5",
+  "ABS DURUM BILGISI": "_abs_dur",
+  "KAZAN-1 DURUM BILGISI": "_kaz_dur_1",
+  "KAZAN-2 DURUM BILGISI": "_kaz_dur_2",
+  "KAZAN-3 DURUM BILGISI": "_kaz_dur_3",
+  "KOJEN-1 DURUM BILGISI": "_kojen_dur_1",
+  "KOJEN-2 DURUM BILGISI": "_kojen_dur_2",
+  "KOJEN-3 DURUM BILGISI": "_kojen_dur_3",
+  "KOJEN-4 DURUM BILGISI": "_kojen_dur_4",
+  "CH-1 CALISMA YUZDELIK": "_ch_yuz_1",
+  "CH-2 CALISMA YUZDELIK": "_ch_yuz_2",
+  "CH-3 CALISMA YUZDELIK": "_ch_yuz_3",
+  "CH-4 CALISMA YUZDELIK": "_ch_yuz_4",
+  "CH-5 CALISMA YUZDELIK": "_ch_yuz_5"
+ },
+ "isitma_hatlari": [
+  {
+   "ad": "MAS-1",
+   "etiket": "Mas-1",
+   "isitma": "Mas1_Isitma_Temp",
+   "kazan": "Mas1_Kazan_Temp",
+   "sogutma": "Mas1_Sogutma_Temp"
+  },
+  {
+   "ad": "MAS-2",
+   "etiket": "Mas-2",
+   "isitma": "Mas2_Isitma_Temp",
+   "kazan": "Mas2_Kazan_Temp",
+   "sogutma": "Mas2_Sogutma_Temp"
+  }
+ ]
+}

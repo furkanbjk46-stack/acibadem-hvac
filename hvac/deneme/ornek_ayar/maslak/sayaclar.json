@@ -1,0 +1,261 @@
+{
+ "_aciklama": "Bu lokasyonun Modbus enerji analizörleri. TEK KAYNAK: okuma (data_collector), canlı güç (canli_guc), günlük satır (data_bridge) ve agent'lar (enerji_agent) bu listeyi kullanır. Yeni sayaç = buraya bir satır; değeri merkezde sayac_gunluk'a satır olarak gider (energy_data sütunu isteğe bağlı). tur: trafo | sebeke (net giriş sayacı) | uretim (kojen) | chiller | alt_sayac (MCC, kule vb.). chiller + alt_sayac toplamı 'MCC + Chiller' tüketimidir; trafo, sebeke ve uretim bu toplama girmez.",
+ "sayaclar": [
+  {
+   "ad": "TRDP-1",
+   "ip": "172.17.91.121",
+   "marka": "janitza",
+   "tur": "trafo",
+   "sutun": "TRDP1_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "TRDP-2",
+   "ip": "172.17.91.119",
+   "marka": "janitza",
+   "tur": "trafo",
+   "sutun": "TRDP2_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "MCC-1",
+   "ip": "172.17.91.100",
+   "marka": "janitza",
+   "tur": "alt_sayac",
+   "sutun": "MCC1_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "MCC-2",
+   "ip": "172.17.91.101",
+   "marka": "janitza",
+   "tur": "alt_sayac",
+   "sutun": "MCC2_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "MCC-3",
+   "ip": "172.17.91.102",
+   "marka": "janitza",
+   "tur": "alt_sayac",
+   "sutun": "MCC3_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "MCC-4",
+   "ip": "172.17.91.103",
+   "marka": "janitza",
+   "tur": "alt_sayac",
+   "sutun": "MCC4_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "MCC-5",
+   "ip": "172.17.91.104",
+   "marka": "janitza",
+   "tur": "alt_sayac",
+   "sutun": "MCC5_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "MCC-6",
+   "ip": "172.17.91.105",
+   "marka": "janitza",
+   "tur": "alt_sayac",
+   "sutun": "MCC6_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "MCC-7",
+   "ip": "172.17.91.106",
+   "marka": "janitza",
+   "tur": "alt_sayac",
+   "sutun": "MCC7_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "CHILLER-1",
+   "ip": "172.17.91.107",
+   "marka": "janitza",
+   "tur": "chiller",
+   "sutun": "Chiller1_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "CHILLER-2",
+   "ip": "172.17.91.108",
+   "marka": "janitza",
+   "tur": "chiller",
+   "sutun": "Chiller2_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "CHILLER-3",
+   "ip": "172.17.91.109",
+   "marka": "janitza",
+   "tur": "chiller",
+   "sutun": "Chiller3_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "KULE-2",
+   "ip": "172.17.91.110",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "Kule2_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "KULE-3",
+   "ip": "172.17.91.111",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "Kule3_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "CHILLER-4",
+   "ip": "172.17.91.117",
+   "marka": "siemens",
+   "tur": "chiller",
+   "sutun": "Chiller4_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "CHILLER-5",
+   "ip": "172.17.91.118",
+   "marka": "siemens",
+   "tur": "chiller",
+   "sutun": "Chiller5_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "KULE-1",
+   "ip": "172.17.91.122",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "Kule1_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "2BK-MCC-D01",
+   "ip": "172.18.91.130",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "MCC_2BK_D01_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "2BK-MCC-D02",
+   "ip": "172.18.91.131",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "MCC_2BK_D02_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "4BK-MCC-E01",
+   "ip": "172.18.91.132",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "MCC_4BK_E01_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "4BK-MCC-E02",
+   "ip": "172.18.91.133",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "MCC_4BK_E02_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "4BK-MCC-F01",
+   "ip": "172.18.91.134",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "MCC_4BK_F01_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "CK-MCC-D01",
+   "ip": "172.18.91.135",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "MCC_CK_D01_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "CK-MCC-E01",
+   "ip": "172.18.91.136",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "MCC_CK_E01_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "CK-MCC-F01",
+   "ip": "172.18.91.137",
+   "marka": "siemens",
+   "tur": "alt_sayac",
+   "sutun": "MCC_CK_F01_kWh",
+   "kritik": false
+  },
+  {
+   "ad": "TRDP-3",
+   "ip": "172.17.91.125",
+   "marka": "siemens",
+   "tur": "trafo",
+   "sutun": "TRDP3_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "TRDP-4",
+   "ip": "172.17.91.123",
+   "marka": "siemens",
+   "tur": "trafo",
+   "sutun": "TRDP4_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "KOJEN-1",
+   "ip": "10.70.131.2",
+   "marka": "janitza",
+   "tur": "uretim",
+   "sutun": "Kojen1_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "KOJEN-2",
+   "ip": "10.70.131.3",
+   "marka": "janitza",
+   "tur": "uretim",
+   "sutun": "Kojen2_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "KOJEN-3",
+   "ip": "192.168.1.18",
+   "marka": "siemens",
+   "tur": "uretim",
+   "sutun": "Kojen3_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "KOJEN-4",
+   "ip": "192.168.1.19",
+   "marka": "siemens",
+   "tur": "uretim",
+   "sutun": "Kojen4_kWh",
+   "kritik": true
+  },
+  {
+   "ad": "SEBEKE",
+   "ip": "192.168.1.15",
+   "marka": "siemens",
+   "tur": "sebeke",
+   "sutun": "Sebeke_Tuketim_kWh",
+   "kritik": true
+  }
+ ]
+}

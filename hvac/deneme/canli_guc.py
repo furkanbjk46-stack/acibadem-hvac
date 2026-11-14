@@ -31,6 +31,7 @@ adresi sessizce yanlış kW üretemez — en kötü ihtimalle ortalamaya düşer
   · Okuma data_collector sürecinde, günlük okumayla AYNI kilit altında
     yapılır; iki okuma aynı sayaca aynı anda gitmez.
 """
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import json
 import logging
 import os
@@ -43,8 +44,8 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
-AYAR_DOSYA = os.path.join(BURASI, "configs", "canli_guc_ayar.json")
-SONUC_DOSYA = os.path.join(BURASI, "configs", "canli_guc_son.json")
+AYAR_DOSYA = yollar.yol("configs/canli_guc_ayar.json", BURASI)
+SONUC_DOSYA = yollar.yol("configs/canli_guc_son.json", BURASI)
 
 MODBUS_PORT = 502
 OKUMA_TIMEOUT = 2.0          # günlük okumadan kısa: canlı turu geciktirmesin

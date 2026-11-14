@@ -30,6 +30,7 @@ Sonuç: configs/saha_teshis_sonuc.json   (oz_test.py çağırır → heartbeat �
     python saha_teshis.py          → çalıştır ve yazdır
     python saha_teshis.py --oku    → son sonucu yazdır
 """
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import csv
 import glob
 import json
@@ -39,10 +40,10 @@ import sys
 from datetime import datetime
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
-SONUC_DOSYASI = os.path.join(BURASI, "configs", "saha_teshis_sonuc.json")
-BACNET_CSV = os.path.join(BURASI, "hedefli_enerji_verileri.csv")
-MODBUS_CSV = os.path.join(BURASI, "analizor_guncel_veriler.csv")
-ENERGY_CSV = os.path.join(BURASI, "energy_data.csv")
+SONUC_DOSYASI = yollar.yol("configs/saha_teshis_sonuc.json", BURASI)
+BACNET_CSV = yollar.yol("hedefli_enerji_verileri.csv", BURASI)
+MODBUS_CSV = yollar.yol("analizor_guncel_veriler.csv", BURASI)
+ENERGY_CSV = yollar.yol("energy_data.csv", BURASI)
 BAYAT_SAAT = 26          # günlük okuma + tolerans
 DONMA_GUN = 4            # bu kadar gün aynı değer = donmuş say
 CANLI_ZAMAN_ASIMI = 6.0  # canlı deneme okumasında nokta başına saniye
@@ -52,9 +53,9 @@ CANLI_NOKTA = 5
 # Chiller set ve cihaz adetleri bilerek YOK: haftalarca aynı kalmaları normaldir,
 # donma taramasına girerse sahte alarm üretir. Ondalıklı ölçümün günlerce birebir
 # aynı kalması ise fiziksel olarak olanaksızdır.
-BACNET_SUTUNLARI = ["Dis_Hava_Sicakligi_C", "Chiller_Load_Percent", "Mas1_Isitma_Temp",
-                    "Mas1_Kazan_Temp", "Mas2_Isitma_Temp", "Mas2_Kazan_Temp",
-                    "Mas1_Sogutma_Temp", "Mas2_Sogutma_Temp"]
+import bacnet_esleme as _be  # noqa: E402  ısıtma hatları: ayar/bacnet_esleme.json
+BACNET_SUTUNLARI = (["Dis_Hava_Sicakligi_C", "Chiller_Load_Percent"]
+                    + _be.hat_sutunlari(BURASI, ("isitma", "kazan")) + _be.hat_sutunlari(BURASI, ("sogutma",)))
 
 
 def _saat_once(ts: datetime) -> float:
@@ -91,8 +92,9 @@ SABLON_ADI = "hedefli_okuma_sablonu_2.xlsx"
 
 
 def _sablon_yolu():
-    yollar = [os.path.join(BURASI, "configs", SABLON_ADI), os.path.join(BURASI, SABLON_ADI)]
-    return next((y for y in yollar if os.path.exists(y)), None)
+    # ayar/bacnet_okuma_sablonu.xlsx; taşınmamış kurulumda configs/ ya da kök (yollar.py, Faz 1)
+    y = yollar.yol("configs/" + SABLON_ADI, BURASI)
+    return y if os.path.exists(y) else None
 
 
 def sablon_durumu() -> dict:
@@ -100,15 +102,15 @@ def sablon_durumu() -> dict:
     ahu_collector (Mekanik Zeka) önce configs/, sonra kökte arar; data_collector'ın
     kendi yolu ayrıca okunur. İkisi ayrışırsa Mekanik Zeka çalışır, enerji
     tablosunun BACnet okuması başlamaz."""
-    configs_var = os.path.exists(os.path.join(BURASI, "configs", SABLON_ADI))
-    kok_var = os.path.exists(os.path.join(BURASI, SABLON_ADI))
+    configs_var = os.path.exists(os.path.join(BURASI, "configs", SABLON_ADI))  # eski yer tanısı (bkz. yollar.KAYIT)
+    kok_var = os.path.exists(os.path.join(BURASI, SABLON_ADI))  # eski yer tanısı (bkz. yollar.KAYIT)
     try:
         import data_collector as dc
         collector_yolu = os.path.relpath(dc.EXCEL_FILE, BURASI)
         collector_buluyor = os.path.exists(dc.EXCEL_FILE)
     except Exception as e:
         collector_yolu, collector_buluyor = "okunamadı: %s" % type(e).__name__, None
-    r = {"var": configs_var or kok_var, "configs_var": configs_var, "kok_var": kok_var,
+    r = {"var": bool(_sablon_yolu()), "configs_var": configs_var, "kok_var": kok_var,
          "collector_yolu": collector_yolu, "collector_buluyor": collector_buluyor}
     yol = _sablon_yolu()
     if not yol:

@@ -35,7 +35,8 @@ c("portal başlığı çiziyor, eski st.title yok",
   "_pt.baslik_html(" in PORTAL and 'st.title("⚡ Enerji ve Verimlilik")\n\n' not in PORTAL)
 
 # ── Yazı tipi: Inter (Mekanik Zeka ile aynı) ──
-c("yazı tipi Inter", "family=Inter" in PT.CSS and "font-family: Inter" in PT.CSS)
+c("yazı tipi Inter (internetten indirilmez; yüklü değilse sistem yazı tipi)",
+  "font-family: Inter" in PT.CSS and "fonts.googleapis.com" not in PT.CSS)
 c("simge yazı tipleri bozulmaz", "Material Symbols Rounded" in PT.CSS)
 
 # ── Sekmeler: numarasız, emojisiz, simgeli ──

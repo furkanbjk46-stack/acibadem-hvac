@@ -3,6 +3,9 @@
 
 from __future__ import annotations
 import os
+import sys as _sys_y
+_sys_y.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import yollar  # dosya yolları (ayar/ durum/ veri/; Faz 1)
 import warnings
 import pandas as pd
 from datetime import date, datetime
@@ -14,7 +17,7 @@ warnings.filterwarnings('ignore', category=FutureWarning, message='.*DataFrame c
 
 
 # HVAC analiz geçmişi dosyası — __file__ bazlı mutlak yol (CWD bağımsız)
-HVAC_HISTORY_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hvac_analysis_history.csv")
+HVAC_HISTORY_FILE = yollar.yol("hvac_analysis_history.csv", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class HVACHistoryManager:

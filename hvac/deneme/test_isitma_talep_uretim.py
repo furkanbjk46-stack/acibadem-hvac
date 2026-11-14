@@ -21,6 +21,7 @@ import sys
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BURASI)
+import yollar  # noqa: E402  (ayar/ durum/ veri/; Faz 1)
 try:
     sys.stdout.reconfigure(errors="replace")
 except Exception:
@@ -39,8 +40,8 @@ def c(ad, kosul, detay=""):
 
 
 # ── 1) Kapasite dosyası ──────────────────────────────────────────────────
-ISITMA_DOSYA = os.path.join(BURASI, "configs", "ahu_tasarim_isitma_kapasiteleri.json")
-SOGUTMA_DOSYA = os.path.join(BURASI, "configs", "ahu_tasarim_kapasiteleri.json")
+ISITMA_DOSYA = yollar.yol("configs/ahu_tasarim_isitma_kapasiteleri.json", BURASI)
+SOGUTMA_DOSYA = yollar.yol("configs/ahu_tasarim_kapasiteleri.json", BURASI)
 
 c("ısıtma kapasite dosyası var", os.path.exists(ISITMA_DOSYA))
 ISITMA = json.load(open(ISITMA_DOSYA, encoding="utf-8")) if os.path.exists(ISITMA_DOSYA) else {}
@@ -100,7 +101,7 @@ TASARIM_DT = ac._kazan_tasarim_dt()
 c("tasarım ΔT kural motorundan geliyor (TARGET_DT_HEAT_EXCHANGER)",
   TASARIM_DT > 0 and "TARGET_DT_HEAT_EXCHANGER" in _kaynak, TASARIM_DT)
 
-_ayar = json.load(open(os.path.join(BURASI, "configs", "chiller_fcu_ayarlari.json"),
+_ayar = json.load(open(yollar.yol("configs/chiller_fcu_ayarlari.json", BURASI),
                        encoding="utf-8"))
 c("kazan ayarları dosyada", _ayar.get("kazan_adedi") and _ayar.get("kazan_birim_kw"),
   (_ayar.get("kazan_adedi"), _ayar.get("kazan_birim_kw")))
