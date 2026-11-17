@@ -57,6 +57,7 @@ def _tr_eksen(fig):
 _sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
 import karsilastirma_hesap as _KH          # hesaplar
 import karsilastirma_panel as _KP          # detay penceresi arayuzu (canli ile ORTAK)
+import karsilastirma_canli as _KC          # "Canlı" görünümü (canli ile ORTAK)
 
 # ── Metrik tanımları — ozet_karsilastirma.py ile AYNI olmalı ──────────────
 # (test_ozet_karsilastirma.py iki dosyanın eşitliğini doğrular)
@@ -149,8 +150,23 @@ _ESIK = _hedef_esikleri_oku(url, key).get(_metrik_key)
 
 # ── Dönem seçimi ──────────────────────────────────────────────────────────
 _DONEMLER = ["Bu ay", "Geçen ay", "Son 12 ay", "Bu yıl"]
-_secim = st.radio("Dönem", _DONEMLER, horizontal=True,
+# "Canlı" — canlı sayfayla aynı (gövdesi karsilastirma_canli.canli_bolum)
+_CANLI_METRIKLER = ("enerji",)
+_SECENEKLER = _DONEMLER + (["Canlı"] if _metrik_key in _CANLI_METRIKLER else [])
+if st.session_state.get("ozet_donem") not in (None, *_SECENEKLER):
+    st.session_state.pop("ozet_donem", None)
+_secim = st.radio("Dönem", _SECENEKLER, horizontal=True,
                   label_visibility="collapsed", key="ozet_donem")
+
+if _secim == "Canlı":
+    @st.fragment(run_every=CANLI_TAZELE_SN)
+    def _canli_gorunum():
+        _ham = fetch_canli_tum(url, key)
+        _KC.canli_bolum(st, _ham, canli_ozet_hesapla(_ham), HASTANELER, _metrik_key,
+                        CANLI_TAZELE_SN, CANLI_BAYAT_SN)
+
+    _canli_gorunum()
+    st.stop()
 
 
 def _aralik(secim):
