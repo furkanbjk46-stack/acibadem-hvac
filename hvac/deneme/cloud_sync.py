@@ -1145,8 +1145,25 @@ def start_background_sync():
         _periyot = max(5, int(canli_guc.ayar_oku().get("periyot_sn", 15)))
         _son_yazilan = None
         _uyarildi = False
+        _tur = 0
+        _temiz_uyarildi = False
         while True:
             try:
+                # Listeden çıkarılan sayacın eski satırı merkezde kalmasın (açılışta ve ~1 saatte bir).
+                # Merkezde işlev yoksa (009 uygulanmamış) bir kez bilgi yazar, ölçüm gönderimi sürer.
+                if client and _tur % 240 == 0:
+                    # Ayarla çağrılır: ölçüm döngüsü de cihazlar(ayar) kullanır (cihaz_onekleri aynı)
+                    _ad = [str(d.get("name")) for d in canli_guc.cihazlar(canli_guc.ayar_oku())
+                           if d.get("name")]
+                    if _ad:
+                        try:
+                            client.rpc("canli_guc_temizle", {"p_lokasyon": lokasyon_id,
+                                                             "p_cihazlar": _ad}).execute()
+                        except Exception as _te:
+                            if not _temiz_uyarildi:   # bir kez yaz (009 yoksa da)
+                                logger.info(f"Canlı güç temizliği yapılamadı: {_te}")
+                                _temiz_uyarildi = True
+                _tur += 1
                 veri = canli_guc.son_olcum()
                 # Aynı ölçüm iki kez yazılmasın (okuma durduysa boşuna istek gitmesin)
                 if client and veri and veri.get("zaman") != _son_yazilan:

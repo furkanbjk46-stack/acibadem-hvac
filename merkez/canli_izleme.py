@@ -125,7 +125,9 @@ def arama_betigi() -> str:
     var q = norm(kutu.value || ''), say = 0;
     d.querySelectorAll('.lok-kart[data-ara]').forEach(function (a) {
       var uyar = !q || a.getAttribute('data-ara').indexOf(q) !== -1;
-      a.style.display = uyar ? '' : 'none';
+      // Kart CSS'inde display:block !important var; satır içi 'none' onu yenemez
+      if (uyar) { a.style.removeProperty('display'); }
+      else { a.style.setProperty('display', 'none', 'important'); }
       if (uyar) { say++; }
     });
     var bos = d.querySelector('.lok-ara-bos');

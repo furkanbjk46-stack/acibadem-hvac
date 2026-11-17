@@ -384,7 +384,7 @@ c("arama: Türkçe harf farkı yok", CI.arama_metni("ATAŞEHİR") == "atasehir"
 c("arama: boşluk sadeleşir", CI.arama_metni("  Acıbadem   Maslak ") == "acibadem maslak")
 _ab = CI.arama_betigi()
 c("arama: betik yazarken çalışır", "addEventListener('input'" in _ab and ".st-key-lok_arama" in _ab)
-c("arama: silinince kartlar geri gelir", "a.style.display = uyar ? '' : 'none'" in _ab and "!q ||" in _ab)
+c("arama: silinince kartlar geri gelir", "setProperty('display', 'none', 'important')" in _ab and "!q ||" in _ab)
 c("arama: sayfa yenilenince de uygulanır", "setInterval(uygula" in _ab)
 c("arama: betiğin harf eşlemesi python ile aynı",
   all(("'%s':'%s'" % (chr(k), v)) in _ab for k, v in CI._ARAMA_HARF.items()))
