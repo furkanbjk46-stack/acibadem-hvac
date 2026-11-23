@@ -133,7 +133,8 @@ header[data-testid="stHeader"] button    { display: none !important; }
 
 /* Tüm yazılar — lokasyon detay sayfası (st.container(key="detay_gecis_katmani") içinde inline exec ile çalışıyor) kendi renklerini korusun */
 h1:not(.st-key-detay_gecis_katmani *),h2:not(.st-key-detay_gecis_katmani *),h3:not(.st-key-detay_gecis_katmani *),h4:not(.st-key-detay_gecis_katmani *),h5:not(.st-key-detay_gecis_katmani *),h6:not(.st-key-detay_gecis_katmani *) { color: #0f1f3d !important; font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important; font-weight: 650 !important; }
-p:not(.st-key-detay_gecis_katmani *), span:not(.st-key-detay_gecis_katmani *), div:not(.st-key-detay_gecis_katmani *), label:not(.st-key-detay_gecis_katmani *) { color: #0f1f3d !important; font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important; }
+/* Çark arayüzü: koyu pop-up'lar (uyarılar, OTO SET, harita, ayarlar) ve Sistem ekranı da kendi renklerini korusun; eski arayüzde (SYNAPSE_ESKI_ARAYUZ=1) bu seçiciler hiçbir şeye eşleşmez; :where özgüllüğü değiştirmez */
+p:not(.st-key-detay_gecis_katmani *):not(:where(body:has(.st-key-cark_demo) :is([data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > [data-testid="stColumn"]:is(:nth-child(2), :nth-child(3)), .st-key-ayarlar_panel) *, body:has(.ck-yonetim-tema) .st-key-yonetim_katmani *)), span:not(.st-key-detay_gecis_katmani *):not(:where(body:has(.st-key-cark_demo) :is([data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > [data-testid="stColumn"]:is(:nth-child(2), :nth-child(3)), .st-key-ayarlar_panel) *, body:has(.ck-yonetim-tema) .st-key-yonetim_katmani *)), div:not(.st-key-detay_gecis_katmani *):not(:where(body:has(.st-key-cark_demo) :is([data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > [data-testid="stColumn"]:is(:nth-child(2), :nth-child(3)), .st-key-ayarlar_panel) *, body:has(.ck-yonetim-tema) .st-key-yonetim_katmani *)), label:not(.st-key-detay_gecis_katmani *):not(:where(body:has(.st-key-cark_demo) :is([data-testid="stHorizontalBlock"]:has(.ana-duzen-isaret) > [data-testid="stColumn"]:is(:nth-child(2), :nth-child(3)), .st-key-ayarlar_panel) *, body:has(.ck-yonetim-tema) .st-key-yonetim_katmani *)) { color: #0f1f3d !important; font-family: Inter,system-ui,-apple-system,Segoe UI,sans-serif !important; }
 
 /* Streamlit Material ikon istisnası — _arrow_right gibi ikonların bozulmaması için */
 span[data-testid="stIconMaterial"],
@@ -544,6 +545,16 @@ def _demo_modu() -> bool:
         return str(st.secrets.get("demo", {}).get("aktif", "")).lower() in ("1", "true", "evet")
     except Exception:
         return False
+
+
+def _cark_arayuz() -> bool:
+    """Çark arayüzü (ana ekran, lokasyon detayı, Sistem ekranı) açık mı?
+    23.11.2026'dan beri canlıda da VARSAYILAN. Geri dönüş: SYNAPSE_ESKI_ARAYUZ=1 → eski
+    arayüz (üç sütun + açık tema detay). Sunumda SYNAPSE_DEMO_ESKI=1 → eski üst şerit.
+    Demo verisine bağlı davranışlar (yazmama, örnek veri) _demo_modu()'nda kalır."""
+    if os.environ.get("SYNAPSE_ESKI_ARAYUZ", "").strip() == "1":
+        return False
+    return not (_demo_modu() and os.environ.get("SYNAPSE_DEMO_ESKI", "").strip() == "1")
 
 
 def _gizli_oku(bolum: str, anahtar: str, varsayilan: str = "") -> str:
@@ -1526,6 +1537,19 @@ if "yonetim" in st.query_params:
     st.rerun()
 
 if st.session_state.get("yonetim"):
+    # Çark arayüzü: Sistem ekranı da koyu cam temada, ortada panel
+    if _cark_arayuz():
+        import detay_tema_demo as _dtd_y
+        if getattr(_dtd_y, "SURUM", 0) < 21:   # açık süreçte eski modül önbellekte kalmasın
+            import importlib as _il_dty
+            _dtd_y = _il_dty.reload(_dtd_y)
+        st.markdown(_dtd_y.yonetim_css(), unsafe_allow_html=True)
+        import tema_acik_demo as _tad_y   # aydınlık tema (seçiliyse)
+        if getattr(_tad_y, "SURUM", 0) < 6:   # açık süreçte eski modül önbellekte kalmasın
+            import importlib as _il_tad
+            _tad_y = _il_tad.reload(_tad_y)
+        st.markdown(_tad_y.hepsi(), unsafe_allow_html=True)
+        _components.html(_tad_y.betik(), height=0)
     with st.container(key="yonetim_katmani"):
         _yon_dosya = os.path.join(os.path.dirname(__file__), "pages", "yonetim.py")
         with open(_yon_dosya, "r", encoding="utf-8") as _f:
@@ -1557,6 +1581,25 @@ if st.session_state.get("detay_lokasyon"):
     .st-key-detay_gecis_katmani { animation: detayGirisAnim 0.4s ease-out; }
     </style>
     """, unsafe_allow_html=True)
+
+    # Çark arayüzü: detay koyu cam temada ve animasyonlu geçişle açılır (detay_tema_demo.py)
+    if _cark_arayuz():
+        import detay_tema_demo as _dtd
+        if getattr(_dtd, "SURUM", 0) < 21:   # açık süreçte eski modül önbellekte kalmasın
+            import importlib as _il_dtd
+            _dtd = _il_dtd.reload(_dtd)
+        with st.container(key="detay_tema_demo"):
+            st.markdown(_dtd.tema_css(), unsafe_allow_html=True)
+            import tema_acik_demo as _tad_d   # aydınlık tema (seçiliyse)
+            if getattr(_tad_d, "SURUM", 0) < 6:   # açık süreçte eski modül önbellekte kalmasın
+                import importlib as _il_tad
+                _tad_d = _il_tad.reload(_tad_d)
+            st.markdown(_tad_d.hepsi(), unsafe_allow_html=True)
+            _components.html(_tad_d.betik(), height=0)
+            _components.html(_dtd.betik(), height=0)
+            # Görünmez geri düğmesi: Geri tıklaması buna yönlendirilir (on_click →
+            # detay sayfası bir kez daha çizilmeden doğrudan ana ekran)
+            st.button("geri", key="ck_detay_geri", on_click=_dtd.geri_ac)
 
     with st.container(key="detay_gecis_katmani"):
         _detay_dosya = os.path.join(os.path.dirname(__file__), "pages", "lokasyon_detay.py")
@@ -1625,6 +1668,57 @@ def dun_kwh(lok_id):
 # ============================================================
 # ANA LAYOUT: sol | harita | sağ
 # ============================================================
+# YALNIZ SUNUM: başlığın altında altı kartlık üst şerit (5 Global Özet + Canlı
+# Uyarılar; ust_serit_demo.py). Kap burada açılır, içi değerler hesaplanınca
+# (sağ kolonda, uyarılardan sonra) doldurulur. Canlı portalda kap hiç açılmaz.
+# ÇARK ARAYÜZÜ (sunumda 17.11.2026, canlıda 23.11.2026'dan beri varsayılan):
+# ana_ekran_cark_demo.py. Geri dönüş SYNAPSE_ESKI_ARAYUZ=1 (eski 3 sütun); sunumda
+# SYNAPSE_DEMO_ESKI=1 önceki üst şerit. Çark görünümünde 3 sütun yine çizilir (gizli
+# düğmeler, akış / tazeleme betikleri, OTO SET ve harita çekmece olarak).
+_demo_eski = _demo_modu() and os.environ.get("SYNAPSE_DEMO_ESKI", "").strip() == "1"
+_cark_kutu = st.container(key="cark_demo") if _cark_arayuz() else None
+if _cark_kutu is not None:
+    import ana_ekran_cark_demo as _ckd
+    if getattr(_ckd, "SURUM", 0) < 20:      # açık süreçte eski modül önbellekte kalmasın
+        import importlib as _il_ckd
+        _ckd = _il_ckd.reload(_ckd)
+    with _cark_kutu:
+        st.markdown(_ckd.ekran_css(), unsafe_allow_html=True)
+        import tema_acik_demo as _tad   # aydınlık tema (seçiliyse); düğme alt orta çubukta
+        if getattr(_tad, "SURUM", 0) < 6:   # açık süreçte eski modül önbellekte kalmasın
+            import importlib as _il_tad
+            _tad = _il_tad.reload(_tad)
+        st.markdown(_tad.hepsi(), unsafe_allow_html=True)
+        _components.html(_tad.betik(), height=0)
+        # Görünmez detay düğmeleri (on_click): durum yeniden çizimden ÖNCE yazılır,
+        # çizim doğrudan detay dalına girer — ana ekran bir kez daha çizilmez.
+        import detay_tema_demo as _dtd_c
+        if getattr(_dtd_c, "SURUM", 0) < 21:   # açık süreçte eski modül önbellekte kalmasın
+            import importlib as _il_dtdc
+            _dtd_c = _il_dtdc.reload(_dtd_c)
+        with st.container(key="ck_gizli_detay"):
+            for _ck_l in HASTANELER:
+                st.button("git", key=f"ck_detay_{_ck_l}", on_click=_dtd_c.detay_ac, args=(_ck_l,))
+            # Görünmez küçük grafik: tarayıcı grafik kütüphanesini ana ekranda indirir;
+            # ilk detay açılışı (grafikler) kütüphane yüklemesini beklemez (~2,5 sn kazanç)
+            # Eksensiz ve yazısız: Plotly'nin metin ölçümü (bBox) gizli kutuda tarayıcıyı
+            # saniyelerce kilitliyordu (geri dönüşte ~3,6 sn, 19.11.2026 profili)
+            st.plotly_chart(go.Figure(layout=dict(height=20, width=20, margin=dict(t=0, b=0, l=0, r=0),
+                                                  xaxis=dict(visible=False), yaxis=dict(visible=False),
+                                                  showlegend=False)),
+                            key="ck_plotly_on", config={"staticPlot": True, "displayModeBar": False})
+_ust_serit_kutu = st.container(key="ust_serit_demo") if _demo_eski else None
+_ust_ozet_kartlar = []
+if _ust_serit_kutu is not None:
+    # YALNIZ SUNUM: tek ekran (sayfa kaydırmasız) düzen — geniş ekranda ana kap
+    # görünür yüksekliğe kilitlenir, ölçek vh'ye bağlı (ust_serit_demo.ekran_css)
+    import ust_serit_demo as _usd_ekran
+    if getattr(_usd_ekran, "SURUM", 0) < 14:   # açık süreçte eski modül önbellekte kalmasın
+        import importlib as _il_usd
+        _usd_ekran = _il_usd.reload(_usd_ekran)
+    with _ust_serit_kutu:
+        st.markdown(_usd_ekran.ekran_css(), unsafe_allow_html=True)
+
 sol, merkez, sag = st.columns([1, 2.8, 1], gap="small")
 
 # ════════════════════════════════
@@ -1816,7 +1910,9 @@ with sol:
     # Tüm lokasyonların canlı sayaçlarından ANLIK toplamlar (kW). Geçmiş /
     # aylık değerler kaldırıldı (22.10.2026). Canlı sayacı olmayan kalemlerde
     # sayı uydurulmaz: "canlı sayaç yok" yazılır; sayaç bağlanınca kendiliğinden dolar.
-    st.markdown('<div class="sec">' + _ik.ikon("enerji", 17) + 'GLOBAL ÖZET — ANLIK</div>', unsafe_allow_html=True)
+    # Sunumda bu kartlar sol sütunda değil, üst şeritte çizilir (_ust_serit_kutu)
+    if _ust_serit_kutu is None:
+        st.markdown('<div class="sec">' + _ik.ikon("enerji", 17) + 'GLOBAL ÖZET — ANLIK</div>', unsafe_allow_html=True)
 
     def _canli_topla(alan):
         degerler = [v[alan] for v in CANLI.values() if v.get(alan) is not None]
@@ -1856,6 +1952,11 @@ with sol:
     for _lbl, _deger, _alt_metin, _birim, _ozet_key in _metrikler:
         _g_ozet = gecis_toplami([GECIS.get((_l, _a)) for _l in CANLI
                                  for _a in _OZET_ALAN.get(_ozet_key, ())])
+        if _ust_serit_kutu is not None:
+            # Aynı değer / geçiş öznitelikleri üst şeride taşınır; burada çizilmez
+            _ust_ozet_kartlar.append((_lbl, _deger, _alt_metin, _birim, _ozet_key,
+                                      gecis_ozellik(_g_ozet)))
+            continue
         if _deger is None:
             _deger_html = ('<span style="font-size:10px;font-weight:600;color:#9aa3b2;">'
                            'canlı sayaç yok</span>')
@@ -1894,7 +1995,7 @@ with sol:
 
     # Not: ölçüm yaşı ekrana yazılmıyor — sahadaki saat dilimi kayması
     # (olcum_zamani 3 saat ileri görünüyor) düzeltilene kadar yanlış çıkar.
-    if _yaslar:
+    if _yaslar and _ust_serit_kutu is None:
         st.markdown(
             '<div style="font-size:9px;color:#6b7280;margin:2px 2px 0;">'
             'Anlık değerler · '
@@ -2288,8 +2389,11 @@ window.addEventListener('message', function(ev) {{
         _components.html(_canli_akis_betigi(_akis_taban, "dalga"), height=0)
         # YALNIZ SUNUM: kartlar akan değere göre süzülerek yer değiştirir.
         # Gerçek sistemde sıra sunucuda gerçek ölçüme göre kurulur.
-        import canli_izleme as _ci_s
-        _components.html(_ci_s.siralama_betigi(), height=0)
+        # Çark ekranında eski liste görünmez (content-visibility) — sıralama
+        # animasyonu orada her 4 sn'de boşuna yerleşim hesaplatırdı.
+        if _cark_kutu is None:
+            import canli_izleme as _ci_s
+            _components.html(_ci_s.siralama_betigi(), height=0)
     else:
         _akis_taban = {_lid: {_a: (GECIS.get((_lid, _a)) if gecis_ozellik(GECIS.get((_lid, _a)))
                                    else _v.get(_a)) for _a in ("sebeke", "kojen")}
@@ -2330,6 +2434,11 @@ window.addEventListener('message', function(ev) {{
                 _durum[_lk.get("lokasyon_id")] = _on
         _components.html(_ci_t.tazele_betigi({"kart": _kart, "ozet": _ozet, "harita": _hb,
                                               "durum": _durum}), height=0)
+        if _cark_kutu is not None:   # YALNIZ SUNUM: çark ekranındaki sayılar ve durum
+            _ck_s = fetch_canli_tum(url, key)
+            _components.html(_ckd.tazele_betigi(
+                _ckd.canli_birlestir(_c, _ck_s, canli_ozet_hesapla), _durum,
+                _ckd.cihaz_degerleri(_ckd.cihaz_gruplari(_ck_s, _ci_t, CANLI_BAYAT_SN))), height=0)
 
     _canli_tazele()
 
@@ -2380,8 +2489,10 @@ window.addEventListener('message', function(ev) {{
 # ════════════════════════════════
 with sag:
     # ── Canlı Uyarılar ──
-    st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
-                + _ik.ikon("alarm", 17) + 'CANLI UYARILAR</div>', unsafe_allow_html=True)
+    # Sunumda liste üst şeridin 6. kartında (açılır pencere) gösterilir
+    if _ust_serit_kutu is None:
+        st.markdown('<div class="sec" style="display:flex;align-items:center;gap:6px;">'
+                    + _ik.ikon("alarm", 17) + 'CANLI UYARILAR</div>', unsafe_allow_html=True)
 
     # Her lokasyon için uyarı listesi: {lok_id: [(severity, msg), ...]}
     lok_uyari_map = {lok_id: [] for lok_id in HASTANELER}
@@ -2483,12 +2594,14 @@ with sag:
                      for lid in sirali_loklar
                      if lok_uyari_map.get(lid)]
 
+    uyari_html = ""
     if not lok_ile_uyari:
-        st.markdown(
-            "<div style='background:rgba(12,163,12,0.07);border:1px solid rgba(12,163,12,0.2);"
-            "border-radius:8px;padding:8px 12px;font-size:11px;color:#006300;'>✅ Tüm sistemler normal</div>",
-            unsafe_allow_html=True
-        )
+        if _ust_serit_kutu is None:
+            st.markdown(
+                "<div style='background:rgba(12,163,12,0.07);border:1px solid rgba(12,163,12,0.2);"
+                "border-radius:8px;padding:8px 12px;font-size:11px;color:#006300;'>✅ Tüm sistemler normal</div>",
+                unsafe_allow_html=True
+            )
     else:
         uyari_html = "<div style='max-height:195px;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:#133273 transparent;'>"
         for lid, uyarilar in lok_ile_uyari:
@@ -2518,11 +2631,32 @@ with sag:
                 f"</details>"
             )
         uyari_html += "</div>"
-        st.markdown(uyari_html, unsafe_allow_html=True)
+        if _ust_serit_kutu is None:
+            st.markdown(uyari_html, unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+    if _ust_serit_kutu is None:
+        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
 
-    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+    else:
+        # ── YALNIZ SUNUM: üst şerit (başlığın altındaki kapta) ──
+        import ust_serit_demo as _usd
+        _usd_kartlar = [
+            _usd.ozet_kart_html(_i, _lbl, _deger, _alt_metin, _birim, _k, _gz,
+                                kw_metin(_deger), _ik.ikon(_k, 24), _ik.nokta("#0ca30c", 6),
+                                _ik.renk(_k))
+            for _i, (_lbl, _deger, _alt_metin, _birim, _k, _gz) in enumerate(_ust_ozet_kartlar)]
+        _usd_oz = _usd.uyari_ozeti(lok_ile_uyari)
+        _usd_kartlar.append(_usd.uyari_kart_html(
+            len(_usd_kartlar), lok_ile_uyari, uyari_html,
+            _ik.ikon("alarm", 24, "#0ca30c" if not _usd_oz["toplam"]
+                     else ("#d03b3b" if _usd_oz["kritik"] else "#c98500")),
+            _ik.nokta("#d03b3b" if lok_ile_uyari else "#0ca30c", 6)))
+        with _ust_serit_kutu:
+            st.markdown(_usd.serit_css() + _usd.serit_html(
+                _usd_kartlar, "Anlık değerler · her saniye güncellenir" if _yaslar else ""),
+                unsafe_allow_html=True)
+            _components.html(_usd.serit_betigi(), height=0)
 
     # ── OTO SET — Birleşik Kart (toggle + durum + geçmiş) ──
     st.markdown("""<style>
@@ -3996,6 +4130,59 @@ with sag:
             unsafe_allow_html=True)
 
     st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+
+
+# ── YALNIZ SUNUM: ÇARK ANA EKRANI (ana_ekran_cark_demo.py) ──
+# Veriler yukarıda hesaplananların AYNISI (CANLI, GECIS, uyarılar, OTO SET);
+# yeni sorgu yapılmaz, yeni sayı üretilmez.
+if _cark_kutu is not None:
+    # Kojen / kazan doğalgazı ayrı kalem: aynı canlı satırlar, aynı canli_ozet_hesapla
+    # (gaz satırları cihaz adından ayrılır — ana_ekran_cark_demo.GAZ_ONEK)
+    _ck_satir = fetch_canli_tum(url, key)
+    _ck_canli = _ckd.canli_birlestir(CANLI, _ck_satir, canli_ozet_hesapla)
+    # Ölçümler: Canlı İzleme sekmesiyle aynı gruplama ve tazelik kuralı
+    _ck_cihaz = _ckd.cihaz_gruplari(_ck_satir, _ci_g, CANLI_BAYAT_SN)
+    _ck_top = _ckd.toplamlar(_ck_canli)
+    _ck_kartlar = [_ckd.ozet_kart_html(_i, _e, _ck_top.get(_k), _b, _k, _oz, _ik.ikon(_ik_ad, 22),
+                                       aktif=(_k == "enerji"))
+                   for _i, (_k, _e, _b, _ik_ad, _oz) in enumerate(_ckd.KALEMLER)]
+    _ck_son = ""
+    if _ml_gecisler:
+        _m0 = _ml_gecisler[0]
+        _ck_son = "%s %s → %s · %s°C · %s" % (
+            "Chiller" if _m0.get("tip") == "chiller" else "Kol/FCU/AHU", _m0.get("eski_mod"),
+            _m0.get("yeni_mod"), _m0.get("tahmin_ort"), str(_m0.get("created_at", ""))[11:16])
+    _ck_genel = {
+        "oto_aktif": bool(_oto_aktif_su), "donem": _simdi_donem, "sonraki": _sonraki,
+        "g_saat": "%02d:00" % _g_saat, "ge_saat": "%02d:00" % _ge_saat, "ozel": list(_ozel_saatli),
+        "son_gecis": _ck_son, "kayit": len(_ml_data), "dis_hava": dis_hava_val,
+        "uyari_toplam": sum(len(_u) for _, _u in lok_ile_uyari),
+        "uyari_kritik": sum(1 for _, _u in lok_ile_uyari for _s, _m in _u if _s == "r"),
+        "zaman": now_display.strftime("%d.%m.%Y %H:%M"), "izleyici": bool(_IZLEYICI),
+    }
+    _ck_veri = _ckd.veri_hazirla(HASTANELER, [_l for _l, _ in lok_sira], _ck_canli,
+                                 {_l: online_bilgi(_l) for _l in HASTANELER}, lok_sicaklik,
+                                 dict(_oto_saglik), _saglik_sorunu, lok_uyari_map, _ck_genel, _ck_cihaz,
+                                 {_l: (lok_dict.get(_l, {}).get("bakim_ozet"), lok_dict.get(_l, {}).get("hvac_ozet"))
+                                  for _l in HASTANELER})
+    _ck_ikon = {_a: _ik.ikon(_a, 16) for _a in ("alarm", "oto", "harita", "ayar", "yonetim", "cikis")}
+    _ck_panel_ikon = {"hastane": _ik.ikon("konum", 16), "kojen": _ik.ikon("kojen", 18),
+                      "sogutma": _ik.ikon("sogutma", 18), "dogalgaz": _ik.ikon("dogalgaz", 18),
+                      "su": _ik.ikon("su", 18), "termometre": _ik.ikon("termometre", 15),
+                      "oto": _ik.ikon("oto", 15), "alarm": _ik.ikon("alarm", 15), "zeka": _ik.ikon("zeka", 15),
+                      "sebeke": _ik.ikon("sebeke", 18), "kazan": _ik.ikon("kazan", 18),
+                      "saat": _ik.ikon("saat", 13), "kayit": _ik.ikon("kayit", 13),
+                      # Detaydan taşınan bölümler (HVAC & Bakım / Setler / Sistem sağlığı)
+                      "bakim": _ik.ikon("bakim", 15), "ayar_set": _ik.ikon("ayar", 15),
+                      "saglik": _ik.ikon("saglik", 15), "ariza": _ik.ikon("ariza", 15),
+                      "hvac": _ik.ikon("hvac", 15), "chiller": _ik.ikon("chiller", 15),
+                      "kollektor": _ik.ikon("kollektor", 15), "fcu": _ik.ikon("fcu", 15),
+                      "ahu": _ik.ikon("ahu", 15), "oneri": _ik.ikon("oneri", 15)}
+    with _cark_kutu:
+        st.markdown(_ckd.sahne_css() + _ckd.sahne_html(
+            _ck_veri, _ck_kartlar, _ck_ikon, _ci_g.arama_metni, izleyici=_IZLEYICI,
+            surum=now_display.strftime("%H%M%S%f")), unsafe_allow_html=True)
+        _components.html(_ckd.betik(_ck_panel_ikon), height=0)
 
 
 # ============ FOOTER ============

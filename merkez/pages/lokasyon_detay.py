@@ -327,6 +327,30 @@ def _demo_modu() -> bool:
         return False
 
 
+def _dz_tek_ekran() -> bool:
+    """Çark arayüzü (app_merkez._cark_arayuz ile aynı kural): detay tek ekran düzeni.
+    23.11.2026'dan beri canlıda da varsayılan. SYNAPSE_ESKI_ARAYUZ=1 (ve sunumda
+    SYNAPSE_DEMO_ESKI=1) iken False — sayfa eski düzende çizilir."""
+    if os.environ.get("SYNAPSE_ESKI_ARAYUZ", "").strip() == "1":
+        return False
+    return not (_demo_modu() and os.environ.get("SYNAPSE_DEMO_ESKI", "").strip() == "1")
+
+
+def _dz_gh(h: int) -> int:
+    """Grafik yüksekliği. YALNIZ SUNUM (çark teması): detay paneli ekrana kilitli
+    olduğundan grafik kalan yüksekliğe oranlanır (tarayıcı ck_vh çerezine pencere
+    yüksekliğini yazar). Canlı portalda ve eski demoda değer değişmez."""
+    if not _dz_tek_ekran():
+        return h
+    try:
+        _vh = int(float(st.context.cookies.get("ck_vh") or 0))
+    except Exception:
+        _vh = 0
+    # Panel üstü + başlık + sekmeler + özet (3×2) + seçici satırı ≈ ekranın %34'ü + 210 px
+    # 19.11.2026: özet kartları sağ sütuna alındı; grafik başlık + seçici altında tüm yüksekliği alır
+    return int(min(h + 160, max(160, _vh * 0.74 - 120))) if _vh else min(h, 300)
+
+
 def load_config():
     # ── SUNUM/DEMO MODU ──
     # Bu sayfa ana sayfadan BAĞIMSIZ olarak kendi config'ini okuyordu; demo
@@ -578,7 +602,13 @@ st.markdown("<style>"
             + _ik.etiket_css('.st-key-detay_sekmeler [role="tab"]:nth-child(2) p', "enerji", 16)
             + "</style>", unsafe_allow_html=True)
 with st.container(key="detay_sekmeler"):
-    tab1, tab_canli = st.tabs(["Dashboard", "Canlı İzleme"])
+    if _dz_tek_ekran():
+        # YALNIZ SUNUM: Canlı İzleme sekmesi yok — canlı ölçümler ana ekrandaki
+        # lokasyon kartında (kullanıcı kararı 19.11.2026). Tek sekme, başlık şeridi gizli.
+        tab1, = st.tabs(["Dashboard"])
+        tab_canli = None
+    else:
+        tab1, tab_canli = st.tabs(["Dashboard", "Canlı İzleme"])
 
 # Dış bağlantıyla gelindiyse (?detay=..&sekme=canli) Canlı İzleme sekmesini aç.
 # Streamlit sekmeyi koddan seçtirmiyor; sekme düğmesine bir kez tıklatılır.
@@ -647,7 +677,16 @@ with tab1:
     sog_tuk    = son_df[_sog_col].sum() if _sog_col else None
 
     # ── 2 SÜTUN LAYOUT — sol KPI + sağ grafik ─────────
-    col_left, col_mid = st.columns([1.6, 5.4])
+    if _dz_tek_ekran():
+        # YALNIZ SUNUM (19.11.2026): grafik solda tüm yüksekliği alır (dz_grafik); özet
+        # kartları sağ sütunun (dz_yan) başında, kojen & kaynak kartlarıyla aynı kompakt
+        # ızgarada tek kart içinde (dz_ozet). Canlı portalda sütun düzeni aynen kalır.
+        col_mid = st.container(key="dz_grafik")
+        _dz_yan_ust = st.container(key="dz_yan")
+        col_left = _dz_yan_ust.container(key="dz_ozet")
+    else:
+        col_left, col_mid = st.columns([1.6, 5.4])
+        _dz_yan_ust = None
 
     # ──────────── SÜTUN 1: Stacked metrik kartlar ────────────
     with col_left:
@@ -936,7 +975,7 @@ with tab1:
             fig.update_layout(
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                margin=dict(t=4, b=20, l=50, r=10), height=355,
+                margin=dict(t=4, b=20, l=50, r=10), height=_dz_gh(355),
                 xaxis=dict(gridcolor="rgba(19,50,115,0.07)", showgrid=True),
                 yaxis=dict(gridcolor="rgba(19,50,115,0.07)", showgrid=True,
                            title=dict(text="kWh", font=dict(size=10))),
@@ -991,7 +1030,7 @@ with tab1:
                 fig_ch.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10,b=20,l=50,r=50), height=370,
+                    margin=dict(t=10,b=20,l=50,r=50), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(title=dict(text="Set °C", font=dict(size=10)),
                                gridcolor="rgba(19,50,115,0.07)"),
@@ -1019,7 +1058,7 @@ with tab1:
                 fig_v.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    margin=dict(t=10,b=20,l=50,r=10), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh/m²", font=dict(size=10))),
@@ -1043,7 +1082,7 @@ with tab1:
                 fig_su.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    margin=dict(t=10,b=20,l=50,r=10), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="m³", font=dict(size=10))),
@@ -1066,7 +1105,7 @@ with tab1:
                 fig_sb.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    margin=dict(t=10,b=20,l=50,r=10), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
@@ -1094,7 +1133,7 @@ with tab1:
                     barmode="group", bargap=0.22, bargroupgap=0.06,   # trafolar yan yana
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10, b=20, l=50, r=10), height=370,
+                    margin=dict(t=10, b=20, l=50, r=10), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
@@ -1145,7 +1184,7 @@ with tab1:
                 fig_sv.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10, b=20, l=50, r=10), height=330,
+                    margin=dict(t=10, b=20, l=50, r=10), height=_dz_gh(330),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)", title=dict(text="kWh", font=dict(size=10))),
                     legend=dict(orientation="h", y=1.1, x=0, font=dict(size=10), bgcolor="rgba(0,0,0,0)"),
@@ -1173,7 +1212,7 @@ with tab1:
                 fig_mcc.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    margin=dict(t=10,b=20,l=50,r=10), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
@@ -1199,7 +1238,7 @@ with tab1:
                 fig_sog.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    margin=dict(t=10,b=20,l=50,r=10), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
@@ -1223,7 +1262,7 @@ with tab1:
                 fig_kaz.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10,b=20,l=50,r=10), height=370,
+                    margin=dict(t=10,b=20,l=50,r=10), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="m³", font=dict(size=10))),
@@ -1258,7 +1297,7 @@ with tab1:
                 fig_ay.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=30,b=20,l=50,r=10), height=370,
+                    margin=dict(t=30,b=20,l=50,r=10), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)", title="Gün"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)", title=dict(text="kWh", font=dict(size=10))),
                     barmode="group",
@@ -1372,7 +1411,7 @@ with tab1:
                     fig.update_layout(
                         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                         font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                        margin=dict(t=52, b=28, l=10, r=10), height=360,
+                        margin=dict(t=52, b=28, l=10, r=10), height=_dz_gh(360),
                         showlegend=False,
                         annotations=[dict(
                             text=f"<b>{center_val:,.0f}</b><br><span style='font-size:11px;color:#46536b'>{center_label}</span>",
@@ -1433,7 +1472,7 @@ with tab1:
                 fig_kj.update_layout(
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="#24324d", family="Inter,system-ui,-apple-system,Segoe UI,sans-serif"),
-                    margin=dict(t=10,b=20,l=50,r=50), height=370,
+                    margin=dict(t=10,b=20,l=50,r=50), height=_dz_gh(370),
                     xaxis=dict(gridcolor="rgba(19,50,115,0.07)"),
                     yaxis=dict(gridcolor="rgba(19,50,115,0.07)",
                                title=dict(text="kWh", font=dict(size=10))),
@@ -1445,6 +1484,14 @@ with tab1:
                 st.plotly_chart(_tr_eksen(fig_kj), use_container_width=True, config={"displayModeBar": False})
             else:
                 st.info("Kojen verisi bulunamadı.")
+
+    # YALNIZ SUNUM (çark teması): Dashboard tek ekran — özet şeridi + grafik solda,
+    # kalan bölümler (kojen & kaynak, bakım, setler, sistem sağlığı) sağda KENDİ
+    # kutusunda kayan sütunda (dz_yan). Kap bu sekmenin sonunda kapanır. Canlı
+    # portalda ve eski demoda kap açılmaz: çizim HEAD ile aynı.
+    _dz_yan = _dz_yan_ust   # YALNIZ SUNUM: yukarıda özetle birlikte açılan yan sütun
+    if _dz_yan is not None:
+        _dz_yan.__enter__()
 
     # ──────────── KOJEN & KAYNAK — tam genişlik yatay grid ────────────
     kgaz_str   = f"{kojen_gaz:,.1f}"  if kojen_gaz  is not None else "—"
@@ -1525,6 +1572,13 @@ with tab1:
         f"{_grid_items}</div>",
         unsafe_allow_html=True
     )
+
+    # YALNIZ SUNUM: HVAC & Bakım, Yürürlükteki Setler ve Sistem Sağlığı ana ekrandaki
+    # lokasyon kartında (kullanıcı kararı 19.11.2026); detayda çizilmez.
+    if _dz_tek_ekran():
+        if _dz_yan is not None:
+            _dz_yan.__exit__(None, None, None)
+        st.stop()
 
     # ══════════════════════════════════════════════════════
     # HVAC & BAKIM DURUMU
@@ -2015,6 +2069,8 @@ with tab1:
             st.markdown("<div style='" + KART + "'><div style='" + LBL + "'>" + _ik.ikon("oneri", 16) + "ÖNERİ GERİ BİLDİRİMİ</div>"
                         + _govde + "</div>", unsafe_allow_html=True)
 
+    if _dz_yan is not None:   # YALNIZ SUNUM: yan sütun kabı kapanır
+        _dz_yan.__exit__(None, None, None)
 
 
 # ════════ TAB: CANLI İZLEME ════════

@@ -518,7 +518,11 @@ MASLAK_CANLI_TABAN = {
     "CK-MCC-D01": 20.7, "CK-MCC-E01": 32.6, "CK-MCC-F01": 15.9,
     # Gercek Maslak: gunde ~46.000 kWh kojen, dort makineden ikisi calisir
     "KOJEN-1": 960.0, "KOJEN-2": 945.0, "KOJEN-3": 0.0, "KOJEN-4": 0.0,
-    "DOGALGAZ-ANA": 470.0,   # m3/h (kazan + kojen)
+    # Gaz: kazan ve kojen girisleri AYRI sayac (18.11.2026, sunum): ozet kartlari
+    # "Kojen Dogalgaz" ve "Kazan Dogalgaz" kalemlerini ayri gosterir. Tabanlar
+    # yalniz grup ici oran icin; toplam gunluk kayda olceklenir.
+    "DOGALGAZ-KAZAN": 210.0,  # m3/h
+    "DOGALGAZ-KOJEN": 260.0,  # m3/h
     "SU-ANA": 12.5,          # m3/h
 }
 
@@ -561,8 +565,10 @@ def _canli_tabanlari():
         kojen = float(r.get("Kojen_Uretim_kWh") or 0) / 24.0
         if kojen > 0:
             t["KOJEN-1"], t["KOJEN-2"] = kojen * 0.55, kojen * 0.45
-        t["DOGALGAZ-ANA"] = (float(r.get("Kazan_Dogalgaz_m3") or 0)
-                             + float(r.get("Kojen_Dogalgaz_m3") or 0)) / 24.0
+        # Kazan ve kojen gaz girisleri ayri sayac (kojen gazi yalniz kojeni olan yerde)
+        t["DOGALGAZ-KAZAN"] = float(r.get("Kazan_Dogalgaz_m3") or 0) / 24.0
+        if float(r.get("Kojen_Dogalgaz_m3") or 0) > 0:
+            t["DOGALGAZ-KOJEN"] = float(r.get("Kojen_Dogalgaz_m3") or 0) / 24.0
         t["SU-ANA"] = float(r.get("Su_Tuketimi_m3") or 0) / 24.0
         # EDAS giris sayaci (02.11.2026): gunluk sebeke tuketimi / 24
         t["SEBEKE"] = float(r.get("Sebeke_Tuketim_kWh") or 0) / 24.0
@@ -583,7 +589,8 @@ def _maslak_olcekle(r):
         "KULE-": float(sum(v for k, v in r.items() if k.startswith("Kule") and isinstance(v, (int, float)))),
         ("MCC-", "2BK-", "4BK-", "CK-"): float(r.get("MCC_Tuketim_kWh") or 0),
         "KOJEN-": float(r.get("Kojen_Uretim_kWh") or 0),
-        "DOGALGAZ-": float(r.get("Kazan_Dogalgaz_m3") or 0) + float(r.get("Kojen_Dogalgaz_m3") or 0),
+        "DOGALGAZ-KAZAN": float(r.get("Kazan_Dogalgaz_m3") or 0),
+        "DOGALGAZ-KOJEN": float(r.get("Kojen_Dogalgaz_m3") or 0),
         "SU-": float(r.get("Su_Tuketimi_m3") or 0),
     }
     t = {}

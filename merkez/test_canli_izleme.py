@@ -445,14 +445,23 @@ c("[sunum] çalışan her lokasyonun canlı sayacı var", _lok == _calisan, _cal
 c("[sunum] kurulmamış/çevrimdışı lokasyon canlı veri vermez",
   not ({"bodrum", "kartal"} & _lok))
 _ms = {r["cihaz"]: r["kw"] for r in _cg if r["lokasyon_id"] == "maslak"}
-c("[sunum] Maslak gerçek 27 elektrik sayacı + kojen/gaz/su",
+c("[sunum] Maslak gerçek 27 elektrik sayacı + kojen / kazan ve kojen gazı (ayrı) / su",
   sum(1 for k in _ms if k.startswith(("TRDP-", "CHILLER-", "KULE-", "MCC-", "2BK-", "4BK-", "CK-"))) == 27
-  and "KOJEN-1" in _ms and "DOGALGAZ-ANA" in _ms and "SU-ANA" in _ms, sorted(_ms))
+  and "KOJEN-1" in _ms and "DOGALGAZ-KAZAN" in _ms and "DOGALGAZ-KOJEN" in _ms and "SU-ANA" in _ms, sorted(_ms))
 # Canlı şebeke, aynı lokasyonun günlük kaydıyla aynı büyüklükte (kart ve tablo çelişmesin)
 _son = {}
 for _r in S.VERI["energy_data"]:
     if _r["Tarih"] > _son.get(_r["lokasyon_id"], {}).get("Tarih", ""):
         _son[_r["lokasyon_id"]] = _r
+# Gaz girişleri günlük kayıtla tutarlı (kazan ve kojen ayrı ayrı)
+_gaz_tutarsiz = []
+for _l in _calisan:
+    for _ad, _sut in (("DOGALGAZ-KAZAN", "Kazan_Dogalgaz_m3"), ("DOGALGAZ-KOJEN", "Kojen_Dogalgaz_m3")):
+        _g = (_son[_l].get(_sut) or 0) / 24.0
+        _cv = sum(r["kw"] for r in _cg if r["lokasyon_id"] == _l and r["cihaz"] == _ad)
+        if _g > 0 and not (0.4 * _g < _cv < 2.0 * _g):
+            _gaz_tutarsiz.append((_l, _ad, round(_cv, 1), round(_g, 1)))
+c("[sunum] kazan / kojen gazı ayrı sayaç, günlük kaydın saatlik ortalamasıyla tutarlı", not _gaz_tutarsiz, _gaz_tutarsiz)
 _tutarsiz = []
 for _l in _calisan:   # Maslak dahil: gerçek sayaç adları, kendi günlük kaydına ölçekli
     _canli = sum(r["kw"] for r in _cg if r["lokasyon_id"] == _l and r["cihaz"].startswith("TRDP-"))
