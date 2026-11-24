@@ -22,7 +22,7 @@ import colorsys
 import functools
 import re
 
-SURUM = 8   # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 9  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 SINIF = "ck-acik-tema"
 KOK = "html." + SINIF
 # Tema uygulandı işareti (24.11.2026): sayfa ilk açılışta (sert yenileme) eski başlık →
@@ -312,6 +312,19 @@ def acik_css(*koyu_css: str) -> str:
     return "<style>\n" + "".join(_onbellek(c) for c in koyu_css) + _EK.replace("KOK", KOK) + "</style>"
 
 
+# Sistem ekranından "Geri": yeni ana ekran çizilirken eski Sistem kabı sayfada ~0,7 sn
+# kalıyordu; ana ekran kuralları ":not(:has(.st-key-yonetim_katmani))" ile kapalı
+# kaldığından gizli "git" düğmeleri ve boyutsuz büyük ikonlar bir an görünüyordu
+# (24.11.2026). Tıklama anında eski kap gizlenir ve işaret sınıfı alınır; Streamlit
+# eski kabı yeniden çizimin sonunda zaten kaldırır. Ana belgeye bir kez eklenir.
+YON_CIKIS = ("(function(){var d=document;window.__ckYonCikis=1;"
+             "d.addEventListener('click',function(ev){var b=ev.target&&ev.target.closest&&"
+             "ev.target.closest('.st-key-yonetim_geri button');if(!b){return;}"
+             "var k=d.querySelector('.st-key-yonetim_katmani');if(!k){return;}"
+             "k.style.display='none';k.classList.remove('st-key-yonetim_katmani');"
+             "k.classList.add('ck-yon-eski');},true);})();")
+
+
 def betik() -> str:
     """Kaydedilen temayı (localStorage ck_tema) uygular; tema düğmesine (data-ck-eylem="tema")
     basılınca değiştirir. Motor ANA BELGEYE <script> olarak bir kez eklenir: components.html
@@ -328,6 +341,8 @@ def betik() -> str:
              "var y=d.documentElement.classList.contains(S)?'koyu':'acik';"
              "try{W.localStorage.setItem('ck_tema',y);}catch(e){}uygula(y);},true);})();")
     return ("<script>(function(){var W=window.parent,d;try{d=W.document;}catch(e){return;}"
+            "if(!W.__ckYonCikis){var y=d.createElement('script');y.id='ck-yon-cikis';y.textContent="
+            + json.dumps(YON_CIKIS) + ";d.head.appendChild(y);}"
             "if(W.__ckTemaUygula){W.__ckTemaUygula();return;}"
             "var s=d.createElement('script');s.id='ck-tema-motor';s.textContent=" + json.dumps(motor) + ";"
             "d.head.appendChild(s);})();</script>")

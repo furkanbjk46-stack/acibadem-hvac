@@ -258,7 +258,7 @@ c("tema: canli izleme satir izgarasi esnek",
 # 24.11.2026: tarih parçaları okunur, Excel düğmesi kesilmez, geçiş yalnız transform/opacity
 c("tema: tarih kutusu gun/ay/yil parcalari acik renkte",
   '[data-testid="stDateInput"] [role="group"] span{ color:var(--ck-metin) !important;' in _tc)
-c("tema: Excel dugmesi kayan kutunun ustunden tasmaz", "top:-4px" not in re.sub(r"/\*.*?\*/", "", _tc, flags=re.S) and "top:0; right:0; width:132px" in _tc)
+c("tema: Excel dugmesi kayan kutunun ustunden tasmaz", "top:-4px" not in re.sub(r"/\*.*?\*/", "", _tc, flags=re.S) and "right:0; width:132px" in _tc and "max(9px, var(--ck-u) * 1.15) * 1.6 - 24px" in _tc and "height:22px" in _tc)
 _gcss = re.sub(r"/\*.*?\*/", "", T.GECIS_CSS, flags=re.S)
 c("gecis: blur ve kutu olcusu canlandirilmaz (compositor)",
   "blur(" not in _gcss and not re.search(r"transition:[^;]*\b(left|top|width|height|filter|background)\b", _gcss))

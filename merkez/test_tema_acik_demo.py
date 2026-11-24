@@ -96,6 +96,12 @@ c("betik: tema uygulaninca hazir isareti ve cerez", "ck-tema-hazir" in _bt and "
 c("app: on yukleme yalniz cark ana ekraninda, cerezle",
   'if _cark_arayuz() and not st.session_state.get("detay_lokasyon"):\n    import tema_acik_demo as _tad_on' in _app
   and 'st.context.cookies.get("ck_tema")' in _app)
+c("sistem geri: eski kap tiklamada gizlenir, isaret sinifi alinir, ana belgeye bir kez",
+  "id='ck-yon-cikis'" in _bt and "if(!W.__ckYonCikis)" in _bt
+  and ".st-key-yonetim_geri button" in A.YON_CIKIS and "classList.remove('st-key-yonetim_katmani')" in A.YON_CIKIS
+  and "k.style.display='none'" in A.YON_CIKIS)
+c("sistem geri: motor zaten kuruluyken de eklenir (erken donusten once)",
+  _bt.index("__ckYonCikis") < _bt.index("if(W.__ckTemaUygula)"))
 
 print("\n%d/%d PASS" % (gecti, gecti + basarisiz))
 raise SystemExit(1 if basarisiz else 0)

@@ -1310,7 +1310,7 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 # tema uygulanana dek ana alan gizli, zemin kayıtlı temanın renginde (tema_acik_demo)
 if _cark_arayuz() and not st.session_state.get("detay_lokasyon"):
     import tema_acik_demo as _tad_on
-    if getattr(_tad_on, "SURUM", 0) < 8:   # açık süreçte eski modül önbellekte kalmasın
+    if getattr(_tad_on, "SURUM", 0) < 9:   # açık süreçte eski modül önbellekte kalmasın
         import importlib as _il_tad_on
         _tad_on = _il_tad_on.reload(_tad_on)
     try:
@@ -1555,12 +1555,12 @@ if st.session_state.get("yonetim"):
     # Çark arayüzü: Sistem ekranı da koyu cam temada, ortada panel
     if _cark_arayuz():
         import detay_tema_demo as _dtd_y
-        if getattr(_dtd_y, "SURUM", 0) < 23:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd_y, "SURUM", 0) < 25:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dty
             _dtd_y = _il_dty.reload(_dtd_y)
         st.markdown(_dtd_y.yonetim_css(), unsafe_allow_html=True)
         import tema_acik_demo as _tad_y   # aydınlık tema (seçiliyse)
-        if getattr(_tad_y, "SURUM", 0) < 8:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_tad_y, "SURUM", 0) < 9:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_tad
             _tad_y = _il_tad.reload(_tad_y)
         st.markdown(_tad_y.hepsi(), unsafe_allow_html=True)
@@ -1600,13 +1600,13 @@ if st.session_state.get("detay_lokasyon"):
     # Çark arayüzü: detay koyu cam temada ve animasyonlu geçişle açılır (detay_tema_demo.py)
     if _cark_arayuz():
         import detay_tema_demo as _dtd
-        if getattr(_dtd, "SURUM", 0) < 23:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd, "SURUM", 0) < 25:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dtd
             _dtd = _il_dtd.reload(_dtd)
         with st.container(key="detay_tema_demo"):
             st.markdown(_dtd.tema_css(), unsafe_allow_html=True)
             import tema_acik_demo as _tad_d   # aydınlık tema (seçiliyse)
-            if getattr(_tad_d, "SURUM", 0) < 8:   # açık süreçte eski modül önbellekte kalmasın
+            if getattr(_tad_d, "SURUM", 0) < 9:   # açık süreçte eski modül önbellekte kalmasın
                 import importlib as _il_tad
                 _tad_d = _il_tad.reload(_tad_d)
             st.markdown(_tad_d.hepsi(), unsafe_allow_html=True)
@@ -1712,7 +1712,7 @@ if _cark_kutu is not None:
     with _cark_kutu:
         st.markdown(_ckd.ekran_css(), unsafe_allow_html=True)
         import tema_acik_demo as _tad   # aydınlık tema (seçiliyse); düğme alt orta çubukta
-        if getattr(_tad, "SURUM", 0) < 8:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_tad, "SURUM", 0) < 9:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_tad
             _tad = _il_tad.reload(_tad)
         st.markdown(_tad.hepsi(), unsafe_allow_html=True)
@@ -1720,7 +1720,7 @@ if _cark_kutu is not None:
         # Görünmez detay düğmeleri (on_click): durum yeniden çizimden ÖNCE yazılır,
         # çizim doğrudan detay dalına girer — ana ekran bir kez daha çizilmez.
         import detay_tema_demo as _dtd_c
-        if getattr(_dtd_c, "SURUM", 0) < 23:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd_c, "SURUM", 0) < 25:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dtdc
             _dtd_c = _il_dtdc.reload(_dtd_c)
         with st.container(key="ck_gizli_detay"):

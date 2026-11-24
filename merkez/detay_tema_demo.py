@@ -41,7 +41,7 @@ import re
 
 import ana_ekran_cark_demo as _cark
 
-SURUM = 23  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 25  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 KOK = ('body:has(.st-key-detay_tema_demo):not(:has(.st-key-ozet_gecis_katmani))'
        ':not(:has(.st-key-yonetim_katmani))')
@@ -162,12 +162,19 @@ html:has(.st-key-detay_tema_demo){ background:#03141a !important; }
 /* Grafik sütunu: Excel düğmesi başlık satırına alınır (dikey yer kazanır) */
 § D [data-testid="stColumn"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"] .st-key-grafik_secim) > [data-testid="stVerticalBlock"]{ position:relative; }
 § D [data-testid="stLayoutWrapper"]:has(> [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > .st-key-grafik_excel){
-  position:absolute !important; top:0; right:0; width:132px !important; z-index:2; }
-/* top:-4px kaydırılan kutunun üst kenarında düğmenin yarısını kesiyordu (24.11.2026) */
+  position:absolute !important; right:0; width:132px !important; z-index:2;
+  top:max(0px, min(calc(var(--ck-u) * .6 + 2px + max(9px, var(--ck-u) * 1.15) * .8 - 11px),
+                   calc(var(--ck-u) * 1.1 + 2px + max(9px, var(--ck-u) * 1.15) * 1.6 - 24px))); }
+/* top:-4px kaydırılan kutunun üst kenarında düğmenin yarısını kesiyordu (24.11.2026).
+   Konum (24.11.2026): düğme (22 px) GRAFİK yazısıyla aynı hizada ortalanır, alt kenarı
+   başlık çizgisinin üstünde kalır. .sec: üst boşluk .6u + 2px, yazı max(9px,1.15u) × 1.6
+   satır yüksekliği, alt boşluk .5u → çizgi; ekran küçükse üstten taşmasın diye en az 0. */
 § D [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > .st-key-grafik_excel) > [data-testid="stColumn"]:first-child{ display:none !important; }
 § D [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > .st-key-grafik_excel) > [data-testid="stColumn"]{ width:100% !important; flex:1 1 100% !important; }
 § D [data-testid="stColumn"]:has(.st-key-grafik_secim) > [data-testid="stVerticalBlock"]{ gap:calc(var(--ck-u) * .7) !important; }
-§ D .st-key-grafik_excel button{ min-height:30px !important; height:30px !important; padding:0 12px !important; }
+§ D .st-key-grafik_excel button{ min-height:22px !important; height:22px !important; padding:0 12px !important;
+  display:flex !important; }   /* satır içi düğme taban çizgisine oturup 2-3 px aşağı kayıyordu */
+§ D .st-key-grafik_excel button p{ font-size:12px !important; line-height:1 !important; }
 /* Canlı İzleme satırları dar sütunda kesilmesin: sabit 86/60/92 px ızgara yerine
    ad (daralabilir) · çubuk (esnek) · değer (sığdığı kadar) */
 § D .cg-liste:not(.cg-liste-blok){ grid-template-columns:minmax(0, max-content) minmax(14px, 1fr) max-content !important;
