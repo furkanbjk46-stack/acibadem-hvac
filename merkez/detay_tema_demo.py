@@ -41,7 +41,7 @@ import re
 
 import ana_ekran_cark_demo as _cark
 
-SURUM = 26  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 27  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 KOK = ('body:has(.st-key-detay_tema_demo):not(:has(.st-key-ozet_gecis_katmani))'
        ':not(:has(.st-key-yonetim_katmani))')
@@ -692,6 +692,9 @@ GECIS_JS = r"""
     }
     if (G.yon === 'geri') {
       var S = W.__synCark;
+      // Sahne gelir gelmez motoru bağla: 400 ms'lik denetim aralığı beklenmez (24.11.2026)
+      var sh = d.querySelector('.ck-sahne');
+      if (S && S.kontrol && sh && S.el !== sh) { try { S.kontrol(); } catch (e) {} }
       return !!(!d.querySelector('.st-key-detay_tema_demo') && S && S.el && S.el.isConnected && S.liste && S.liste.length);
     }
     return false;

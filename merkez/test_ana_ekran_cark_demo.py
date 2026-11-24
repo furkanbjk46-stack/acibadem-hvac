@@ -349,6 +349,18 @@ c("on_click detay dugmeleri yalniz cark dalinda",
   not _kosullu_mu(_agac, "_dtd_c", "_cark_kutu is not None"), _kosullu_mu(_agac, "_dtd_c", "_cark_kutu is not None"))
 c("eski siralama betigi cark ekraninda calismaz (demo dalinda kosul)",
   "        if _cark_kutu is None:\n            import canli_izleme as _ci_s\n            _components.html(_ci_s.siralama_betigi(), height=0)" in _app)
+# 24.11.2026: Karşılaştır — sağ panel kartının AYNISI (panelHtml) iki lokasyon için yan yana pop-up
+_ck_k = open(C.__file__, encoding="utf-8").read()
+c("kiyas: dugme 'degere gore' solunda, ayni satirda",
+  _ck_k.index('data-ck-eylem="kiyas"') < _ck_k.index('data-ck-eylem="sirala"') and 'class="ck-sira-satir"' in _ck_k)
+c("kiyas: panel ve pop-up ayni kart (panelHtml)", "kap.innerHTML = panelHtml(lid, false);" in _ck_k
+  and "panelHtml(l, true)" in _ck_k and "function panelHtml(lid, kiyas)" in _ck_k)
+c("kiyas: secim kipinde listeden ikinci lokasyon (secilinin kendisi degil)",
+  "if (ikinci && ikinci !== S.secili && S.veri.lok[ikinci]) { kiyasAc(S.secili, ikinci); }" in _ck_k)
+c("kiyas: Esc / kapat pop-up'i ve secim kipini kapatir", "'ck-kiyas-acik');" in _ck_k and "if (S.kiyasSec) { kiyasSec(false); }" in _ck_k)
+c("kiyas: OTO SET dugmeleri karsilastirmada pasif", '.ck-kiyas-kap [data-ck-eylem^="oto-"]{ pointer-events:none;' in _ck_k)
+c("kiyas: kartin Detay'i kendi lokasyonunu acar", "el.closest('.ck-kiyas-panel')" in _ck_k)
+c("kiyas: grafik iki kartta da cizilir", "p.getAttribute('data-kiyas-lok') || S.secili" in _ck_k)
 c("acik surecte tema modulu SURUM ile yenilenir",
   _app.count('"SURUM", 0) < %d:   # açık süreçte eski modül' % T.SURUM) == 3)   # detay, çark, Sistem
 c("tazeleme parcasina eklenen satir kosullu",

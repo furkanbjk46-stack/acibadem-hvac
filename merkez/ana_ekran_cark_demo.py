@@ -38,7 +38,7 @@ import html as _html
 import json
 import re
 
-SURUM = 21  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 23  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 # Repodaki Acıbadem "A" işareti — app_merkez.py içindeki haritanın Genel
 # Müdürlük logosuyla (var GM_A) aynı yol. Yeni logo çizilmez.
@@ -183,7 +183,7 @@ def ekran_css() -> str:
          .replace("ANA", _ANA).replace("§", EKRAN_KOK))
     # Pop-up içerikleri detay sayfasıyla AYNI koyu temada (detay_tema_demo.icerik_css)
     import detay_tema_demo as _dt
-    if getattr(_dt, "SURUM", 0) < 26:   # açık süreçte eski modül önbellekte kalmasın
+    if getattr(_dt, "SURUM", 0) < 27:   # açık süreçte eski modül önbellekte kalmasın
         import importlib
         _dt = importlib.reload(_dt)
     # Üç pop-up tek seçici listesiyle (üç kopya CSS yerine bir kopya; sayfa hafif kalsın)
@@ -339,6 +339,29 @@ def sahne_css() -> str:
   font-size:max(8.5px, calc(var(--ck-u) * 1)); --c:var(--ck-metin-2); border:1px solid var(--ck-cam-kenar); background:var(--ck-cam);
   cursor:pointer; position:relative; z-index:3; }
 .ck-sahne .ck-sirala.ck-acik{ --c:#062018; background:var(--ck-vurgu); border-color:var(--ck-vurgu); font-weight:700; }
+/* Karşılaştır + değere göre aynı satırda (24.11.2026) */
+.ck-sahne .ck-sira-satir{ align-self:flex-end; display:flex; gap:calc(var(--ck-u) * .6);
+  margin:calc(var(--ck-u) * .4) calc(var(--ck-u) * 2.4) 0 0; position:relative; z-index:3; }
+.ck-sahne .ck-sira-satir .ck-sirala{ margin:0; align-self:auto; }
+.ck-sahne .ck-kiyas{ padding:2px 9px; border-radius:99px; font-size:max(8.5px, calc(var(--ck-u) * 1)); --c:var(--ck-metin-2);
+  border:1px solid var(--ck-cam-kenar); background:var(--ck-cam); cursor:pointer; white-space:nowrap; }
+.ck-sahne .ck-kiyas:hover, .ck-sahne .ck-sirala:hover{ border-color:var(--ck-cam-kenar-2); --c:var(--ck-metin); }
+.ck-sahne .ck-kiyas.ck-acik{ --c:#062018; background:var(--ck-amber); border-color:var(--ck-amber); font-weight:700; }
+/* Seçim kipi: listedeki lokasyonlar ikinci seçim için vurgulanır */
+.ck-sahne.ck-kiyas-sec .ck-oge:not(.ck-merkez) .ck-ad{ text-decoration:underline dotted rgba(245,166,35,.7); text-underline-offset:3px; }
+.ck-sahne .ck-kiyas-ipucu{ display:none; align-self:flex-end; margin:calc(var(--ck-u) * .35) calc(var(--ck-u) * 2.4) 0 0;
+  font-size:max(8.5px, calc(var(--ck-u) * .95)); --c:var(--ck-amber); position:relative; z-index:3; }
+.ck-sahne.ck-kiyas-sec .ck-kiyas-ipucu{ display:block; }
+/* Karşılaştırma pop-up'ı: sağ paneldeki kartın aynısı, yan yana */
+.ck-sahne .ck-kiyas-kap{ position:absolute; z-index:21; left:50%; top:5vh; transform:translateX(-50%);
+  width:min(1180px, 94vw); height:88vh; display:none; gap:calc(var(--ck-u) * 1.6); }
+body.ck-kiyas-acik .ck-sahne .ck-kiyas-kap{ display:flex; }
+.ck-sahne .ck-kiyas-kap .ck-panel{ grid-column:auto; grid-row:auto; flex:1 1 0; min-width:0;
+  background:linear-gradient(180deg, rgb(20,60,70), rgb(7,27,34)); box-shadow:0 40px 90px -30px rgba(0,0,0,.85); }
+/* OTO SET tüm sistemi yönetir: karşılaştırmada yalnız gösterilir */
+.ck-sahne .ck-kiyas-kap [data-ck-eylem^="oto-"]{ pointer-events:none; opacity:.55; }
+body.ck-kiyas-acik .ck-sahne .ck-perde{ opacity:1; pointer-events:auto; }
+body.ck-kiyas-acik .ck-sahne .ck-katman-kapat{ display:flex; top:calc(5vh - 44px); right:calc(50% - min(590px, 47vw)); }
 .ck-sahne .ck-kart.ck-pasif .ck-kart-sayi{ font-size:max(10px, calc(var(--ck-u) * 1.25)); --c:var(--ck-metin-3); font-weight:600; }
 .ck-sahne .ck-kart.ck-pasif .ck-kart-ikon{ filter:grayscale(.7) opacity(.6); }
 
@@ -960,8 +983,15 @@ def sahne_html(veri: dict, ozet_kartlar: list, ikonlar: dict, arama_metni=None,
             '<path d="M20 20l-3.5-3.5"/></svg>'
             '<input class="ck-ara-kutu" type="search" placeholder="Lokasyon ara" aria-label="Lokasyon ara" autocomplete="off">'
             f'<span class="ck-ara-say">{len(veri["sira"])} lokasyon</span></label>'
+            # Karşılaştır (24.11.2026): seçili lokasyon + listeden seçilen ikinci lokasyon,
+            # sağ paneldeki kartın aynısıyla yan yana pop-up'ta
+            '<div class="ck-sira-satir">'
+            '<a class="ck-kiyas" href="#" role="button" data-ck-eylem="kiyas" '
+            'title="Seçili lokasyonu başka bir lokasyonla karşılaştır: tıklayın, sonra listeden ikinci lokasyonu seçin">'
+            '⇄ Karşılaştır</a>'
             '<a class="ck-sirala" href="#" role="button" data-ck-eylem="sirala" '
-            'title="Listeyi seçili kalemin değerine göre sırala / eski sıraya dön">⇅ değere göre</a>'
+            'title="Listeyi seçili kalemin değerine göre sırala / eski sıraya dön">⇅ değere göre</a></div>'
+            '<div class="ck-kiyas-ipucu">Karşılaştırılacak lokasyonu listeden seçin · Esc: vazgeç</div>'
             '<div class="ck-cark" tabindex="0" role="listbox" aria-label="Hastaneler — tekerlek, sürükleme ya da ok tuşlarıyla çevirin">'
             + ogeler + '<div class="ck-bos">Aramayla eşleşen lokasyon yok.</div></div>'
             '<div class="ck-ray" title="Listeyi kaydır"><div class="ck-ray-tutamak"></div></div></div>')
@@ -974,6 +1004,7 @@ def sahne_html(veri: dict, ozet_kartlar: list, ikonlar: dict, arama_metni=None,
             + '<div class="ck-kartlar">' + "".join(ozet_kartlar) + '</div>'
             + cark + panel + ust + alt
             + '<div class="ck-perde" data-ck-eylem="kapat"></div>'
+            + '<div class="ck-kiyas-kap" role="dialog" aria-label="Lokasyon karşılaştırma"></div>'
             + '<a class="ck-katman-kapat" href="#" role="button" data-ck-eylem="kapat" title="Kapat (Esc)" aria-label="Kapat">×</a>'
             + '</div>')
 
@@ -1109,7 +1140,11 @@ def betik(ikonlar: dict = None) -> str:
     var b = d.querySelector('.st-key-gizli_ozet_' + k + ' button');
     if (b) { b.click(); } else { W.location.search = '?ozet=' + encodeURIComponent(k); }
   }
-  function katmanKapat() { d.body.classList.remove('ck-kontrol-acik', 'ck-harita-acik', 'ck-uyari-acik'); }
+  function katmanKapat() {
+    d.body.classList.remove('ck-kontrol-acik', 'ck-harita-acik', 'ck-uyari-acik', 'ck-kiyas-acik');
+    if (S.kiyas) { S.kiyas = null; var kk = S.el && S.el.querySelector('.ck-kiyas-kap'); if (kk) { kk.innerHTML = ''; } }
+    if (S.kiyasSec) { kiyasSec(false); }
+  }
   function katman(ad, hedef) {
     var sinif = {harita: 'ck-harita-acik', uyari: 'ck-uyari-acik'}[ad] || 'ck-kontrol-acik';
     var acik = d.body.classList.contains(sinif);
@@ -1126,14 +1161,41 @@ def betik(ikonlar: dict = None) -> str:
       }, 60);
     }
   }
-  function eylem(ad) {
+  // ── Karşılaştır (24.11.2026): seçim kipi → listeden ikinci lokasyon → yan yana pop-up ──
+  function kiyasSec(ac) {
+    S.kiyasSec = !!ac;
+    if (!S.el) { return; }
+    S.el.classList.toggle('ck-kiyas-sec', S.kiyasSec);
+    var b = S.el.querySelector('.ck-kiyas'); if (b) { b.classList.toggle('ck-acik', S.kiyasSec); }
+  }
+  function kiyasCiz() {
+    var kap = S.el && S.el.querySelector('.ck-kiyas-kap'); if (!kap || !S.kiyas) { return; }
+    kap.innerHTML = S.kiyas.map(function (l) {
+      return '<aside class="ck-panel ck-kiyas-panel" data-kiyas-lok="' + kac(l) + '"><div class="ck-panel-ic">'
+        + (S.veri.lok[l] ? panelHtml(l, true) : '<div class="ck-p-bos">Lokasyon bulunamadı</div>') + '</div></aside>';
+    }).join('');
+    grafik();
+  }
+  function kiyasAc(a, b) {
+    kiyasSec(false); katmanKapat();
+    S.kiyas = [a, b];
+    d.body.classList.add('ck-kiyas-acik');
+    kiyasCiz();
+  }
+  function eylem(ad, el) {
+    if (ad === 'kiyas') { if (d.body.classList.contains('ck-kiyas-acik')) { katmanKapat(); } kiyasSec(!S.kiyasSec); return; }
     if (ad === 'sistem') { var y = d.querySelector('.st-key-yonetim_btn button'); if (y) { y.click(); } else { W.location.search = '?yonetim=1'; } }
     else if (ad === 'cikis') { var c = d.querySelector('.st-key-cikis_btn button'); if (c) { c.click(); } }
     else if (ad === 'uyarilar') { katman('uyari', null); }
     else if (ad === 'kontrol') { katman('kontrol', '.st-key-oto_set_karti'); }
     else if (ad === 'harita') { katman('harita'); }
     else if (ad === 'kapat') { katmanKapat(); }
-    else if (ad === 'detay') { detay(S.secili, S.el.querySelector('.ck-panel')); }
+    else if (ad === 'detay') {
+      // Karşılaştırma kartındaki "Detay ›" o kartın lokasyonunu açar
+      var kp = el && el.closest && el.closest('.ck-kiyas-panel');
+      if (kp) { var kl = kp.getAttribute('data-kiyas-lok'); katmanKapat(); detay(kl, S.el.querySelector('.ck-panel')); }
+      else { detay(S.secili, S.el.querySelector('.ck-panel')); }
+    }
     else if (ad === 'sirala') { S.sirala = !S.sirala; var sb = S.el.querySelector('.ck-sirala'); if (sb) { sb.classList.toggle('ck-acik', S.sirala); } siraUygula(true); }
     else if (ad === 'oto-anahtar' || ad === 'oto-saat' || ad === 'oto-kayit') {
       // Mevcut OTO SET düğmeleri (sağ sütun; demoda yazma yok, oturum içi kural aynen)
@@ -1321,12 +1383,19 @@ def betik(ikonlar: dict = None) -> str:
     // Açılır kartlar / uyarılar aynı lokasyonda açık kalır; başka lokasyona geçince kapalı başlar
     if (S.acikLok !== S.secili) { S.acik = {}; S.acikLok = S.secili; }
     else { S.acik = S.acik || {}; kap.querySelectorAll('details[data-ac]').forEach(function (x) { S.acik[x.getAttribute('data-ac')] = x.open; }); }
-    function acikMi(a) { return S.acik && S.acik[a] ? ' open' : ''; }
+    var lid = S.secili, v = lid && S.veri && S.veri.lok[lid];
+    if (!v) { kap.innerHTML = '<div class="ck-p-bos">' + (S.liste.length ? 'Lokasyon seçin' : 'Eşleşen lokasyon yok') + '</div>'; return; }
+    kap.innerHTML = panelHtml(lid, false);
+    // Karşılaştırma açıksa kartları da tazele (15 sn tazeleme / yeniden çizim)
+    if (S.kiyas) { kiyasCiz(); } else { grafik(); }
+  }
+  // Panel kartının HTML'i: sağ panel (kiyas=false) ve karşılaştırma pop-up'ı (kiyas=true) AYNI kartı kullanır
+  function panelHtml(lid, kiyas) {
+    function acikMi(a) { return !kiyas && S.acik && S.acik[a] ? ' open' : ''; }
     function satirlar(l) {
       return l.map(function (x) { return '<div class="ck-p-uyari' + (x[0] === 'r' ? ' ck-r' : '') + '">' + kac(x[1]) + (x[2] ? ' — ' + kac(x[2]) : '') + '</div>'; }).join('');
     }
-    var lid = S.secili, v = lid && S.veri && S.veri.lok[lid];
-    if (!v) { kap.innerHTML = '<div class="ck-p-bos">' + (S.liste.length ? 'Lokasyon seçin' : 'Eşleşen lokasyon yok') + '</div>'; return; }
+    var v = S.veri.lok[lid];
     var c = {}, a; for (a in v.canli) { c[a] = v.canli[a]; }
     if (S.canli && Object.keys(S.canli).length) {   // 15 sn tazeleme geldiyse onun değerleri
       var yeni = S.canli[lid] || {}; for (a in c) { c[a] = yeni[a] == null ? null : yeni[a]; }
@@ -1477,12 +1546,18 @@ def betik(ikonlar: dict = None) -> str:
       + (sg ? mini('oneri', 'Öneri geri bildirimi', sg.sayi + ' <small>· ✓' + sg.uyg + ' · ✗' + sg.red + '</small>', kac(sg.alt), '')
             : mini('oneri', 'Öneri geri bildirimi', 'Bildirim gelmedi', '', ''))
       + '</div>';
-    kap.innerHTML = h;
-    grafik();
+    return h;
   }
+  // Akan değer grafiği: sağ panel + (açıksa) karşılaştırma kartları
   function grafik() {
-    var kap = S.el && S.el.querySelector('.ck-panel .ck-grafik'); if (!kap) { return; }
-    var a = S.iz[S.secili] || [], eg = S.el.querySelector('.ck-panel .ck-p-egilim');
+    if (!S.el) { return; }
+    S.el.querySelectorAll('.ck-panel').forEach(function (p) {
+      grafikCiz(p.getAttribute('data-kiyas-lok') || S.secili, p.querySelector('.ck-grafik'), p.querySelector('.ck-p-egilim'));
+    });
+  }
+  function grafikCiz(lok, kap, eg) {
+    if (!kap) { return; }
+    var a = S.iz[lok] || [];
     if (a.length < 2) { kap.innerHTML = '<div class="ck-grafik-bos">akış bekleniyor…</div>'; if (eg) { eg.textContent = ''; } return; }
     var mn = Math.min.apply(null, a), mx = Math.max.apply(null, a), ar = (mx - mn) || 1, n = IZ_UZUN, w = 100 / n;
     var s = '<svg viewBox="0 0 100 30" preserveAspectRatio="none" aria-hidden="true">';
@@ -1520,7 +1595,7 @@ def betik(ikonlar: dict = None) -> str:
       if (!t.closest) { return; }
       if (t.closest('a.ayar-ac')) { return; }            // mevcut ayarlar betiği yakalar
       var e = t.closest('[data-ck-eylem]');
-      if (e) { ev.preventDefault(); eylem(e.getAttribute('data-ck-eylem')); return; }
+      if (e) { ev.preventDefault(); eylem(e.getAttribute('data-ck-eylem'), e); return; }
       var k = t.closest('.ck-kart[data-kalem]');
       if (k && ev.button === 0) { ev.preventDefault(); kalemSec(k.getAttribute('data-kalem')); }
     });
@@ -1601,6 +1676,11 @@ def betik(ikonlar: dict = None) -> str:
   function tikla(oge) {
     if (!oge) { return; }
     var i = S.liste.indexOf(oge); if (i < 0) { return; }
+    if (S.kiyasSec) {   // karşılaştırma seçim kipi: ikinci lokasyon (seçili olanın kendisi değil)
+      var ikinci = oge.getAttribute('data-lok');
+      if (ikinci && ikinci !== S.secili && S.veri.lok[ikinci]) { kiyasAc(S.secili, ikinci); }
+      return;
+    }
     var simdi = Date.now(), cift = S.sonTik && S.sonTik.oge === oge && simdi - S.sonTik.t < 380;
     S.sonTik = {oge: oge, t: simdi};
     var merkezde = i === seciliIdx() && Math.abs(S.hedef - S.pos) < 0.05;
@@ -1624,6 +1704,7 @@ def betik(ikonlar: dict = None) -> str:
     sahne.setAttribute('data-kalem', S.aktifKart);
     sahne.querySelectorAll('.ck-kart').forEach(function (x) { x.classList.toggle('ck-aktif', x.getAttribute('data-kalem') === S.aktifKart); });
     var sb = sahne.querySelector('.ck-sirala'); if (sb) { sb.classList.toggle('ck-acik', !!S.sirala); }
+    kiyasSec(S.kiyasSec);   // yeniden çizimde seçim kipi korunur
     S.taban = Array.prototype.slice.call(S.cark.querySelectorAll('.ck-oge'));
     if (!S.secili && S.veri.sira && S.veri.sira.length) { S.secili = S.veri.sira[0]; }
     havuz();
