@@ -178,15 +178,18 @@ def k_sensor_mantigi(o):
     _, satirlar = _analiz(o)
     if not satirlar:
         raise Atla("analiz satırı yok")
+    # Sensör arızası iki yoldan gelir: ön koşul kapısı → ANALIZ_DISI; bakım kartında
+    # FAULTY sensör (MZ-9) → SENSOR_FAULT (analiz kısıtlı sürer, önem UYARI). İkisi de
+    # doğrudur; hata, satırın OPTIMAL görünmesi ya da başka bir durumla analize girmesidir.
     hatali = [r for r in satirlar
               if (r.get("SAT Status") == "SENSOR_FAULT" or "Sensör Arızası" in str(r.get("Action", "")))
-              and (r.get("Status") != "ANALIZ_DISI" or r.get("Severity") == "OPTIMAL")]
+              and (r.get("Status") not in ("ANALIZ_DISI", "SENSOR_FAULT") or r.get("Severity") == "OPTIMAL")]
     if not hatali:
         return []
     return [bulgu(
         "sensor_mantigi", "optimal", "kritik", "Kural motoru",
         "Sensör arızalı %d santral analiz dışına düşmüyor / optimal sayılıyor" % len(hatali),
-        "sensör arızası → Analiz Dışı, önem OPTİMAL değil",
+        "sensör arızası → Analiz Dışı ya da Sensör Arızalı (kısıtlı), önem OPTİMAL değil",
         "; ".join("%s: %s / %s" % (r.get("Location"), r.get("Status"), r.get("Severity")) for r in hatali[:4]),
         tekrar_adimi="Mekanik Zeka → Analiz Dışı filtresi; ilgili santral satırı",
         olasi_yer="main_portal.py analiz kapısı (ANALIZ_DISI ataması), kural_denetim.py")]

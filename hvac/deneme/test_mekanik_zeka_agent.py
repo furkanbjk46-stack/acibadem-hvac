@@ -169,6 +169,13 @@ s = Kur(satirlar=sat).tur()
 b = [x for x in s["bulgular"] if x["kontrol"] == "sensor_mantigi"]
 c("sensör arızalı satır OPTİMAL sayılıyorsa kritik (doğru ayrılan sayılmaz)",
   b and b[0]["onem"] == "kritik" and "AHU-X" in b[0]["bulunan"] and "AHU-S" not in b[0]["bulunan"])
+sat = [satir("AHU-%d" % i) for i in range(19)] + [satir("AHU-K", "SENSOR_FAULT", "WARNING", "SENSOR_FAULT", "SENSOR_FAULT",
+                                                       "Sensör Arızalı - ΔT Bant Kontrolü Atlandı")]
+c("bakım kartında arızalı sensör (MZ-9): SENSOR_FAULT + UYARI doğrudur, bulgu açılmaz",
+  "sensor_mantigi:optimal" not in anahtarlar(Kur(satirlar=sat).tur()))
+sat[-1] = satir("AHU-K", "SENSOR_FAULT", "OPTIMAL", "SENSOR_FAULT", "SENSOR_FAULT")
+c("aynı satır OPTİMAL görünüyorsa yakalanır (Maslak MAS-2 vakası)",
+  "sensor_mantigi:optimal" in anahtarlar(Kur(satirlar=sat).tur()))
 c("STOP santralleri (SKIP_STOP, OPTIMAL) normaldir", Kur(satirlar=[satir("A", "ANALIZ_DISI", "OPTIMAL", "SKIP_STOP", "STANDBY")] * 20).tur()["bulgular"] == [])
 
 # 6) Donmuş okuma, grafik, öz test

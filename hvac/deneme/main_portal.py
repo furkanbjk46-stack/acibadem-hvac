@@ -2540,7 +2540,12 @@ class HVACAnalyzer:
             result.reason = ("Bakım kartında arızalı/bakımda işaretli sensör var; "
                              "hava ΔT bant analizi güvenilmez.")
             result.rule = "SENSOR_FAULT"   # Kural sütunu boş kalmasın (özel kural sonra ezebilir)
-            result.score = 3.0
+            # Önem rehberden (UYARI). Atanmazsa aşağıdaki map_severity skor 3.0'dan
+            # OPTIMAL türetiyordu: arızalı sensörlü santral "optimal" görünüyordu
+            # (Mekanik Zeka agent'ı sensor_mantigi, RPR-2026-11xx; 24.11.2026).
+            _ig_sf = INSTRUCTION_GUIDE.get("SENSOR_FAULT", {})
+            result.severity = _ig_sf.get("severity", "WARNING")
+            result.score = _ig_sf.get("score", 3.0)
         elif delta_t is None:
             result.status = "MISSING_DATA"
             result.band = "N/A"
