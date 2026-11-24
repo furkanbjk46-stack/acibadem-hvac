@@ -38,7 +38,7 @@ import html as _html
 import json
 import re
 
-SURUM = 20  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 21  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 # Repodaki Acıbadem "A" işareti — app_merkez.py içindeki haritanın Genel
 # Müdürlük logosuyla (var GM_A) aynı yol. Yeni logo çizilmez.
@@ -471,6 +471,8 @@ def sahne_css() -> str:
 .ck-sahne .ck-p-oc > span:last-child{ --c:var(--ck-metin); font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ck-sahne .ck-p-oc small{ margin-left:2px; --c:var(--ck-metin-3); font-weight:500; }
 .ck-sahne .ck-p-ocn{ display:inline-block; width:5px; height:5px; border-radius:50%; background:var(--ck-yesil); margin-right:5px; vertical-align:1px; }
+.ck-sahne .ck-p-oc-bayat .ck-p-ocn{ background:#f59e0b; box-shadow:0 0 0 2px rgba(245,158,11,.22); }
+.ck-sahne .ck-p-oc-bayat > span:last-child{ opacity:.6; }
 .ck-sahne .ck-p-oto-ust{ display:flex; align-items:center; gap:calc(var(--ck-u) * .7); margin:4px 0 4px; flex-wrap:wrap; }
 .ck-sahne .ck-p-oto-durum{ display:flex; flex-direction:column; line-height:1.15; margin-right:auto; }
 .ck-sahne .ck-p-oto-durum b{ font-weight:800; letter-spacing:.6px; --c:#ffffff; }
@@ -776,9 +778,11 @@ def toplamlar(canli: dict) -> dict:
 
 
 def cihaz_gruplari(satirlar: list, ci, esik_sn: int = 120) -> dict:
-    """Ölçümler bölümü: {lok: [{"a": grup, "b": başlık, "u": birim, "c": [[kısa ad, kW, cihaz]]}]}.
+    """Ölçümler bölümü: {lok: [{"a": grup, "b": başlık, "u": birim, "c": [[kısa ad, kW, cihaz, yaş_sn]]}]}.
     Canlı İzleme sekmesiyle AYNI gruplama (canli_izleme.gruplara_ayir) ve aynı
-    tazelik kuralı (taze_ayir); eski satır listeye girmez."""
+    tazelik kuralı (taze_ayir). 24.11.2026: eski (esik_sn'den yaşlı / zamanı okunamayan)
+    sayaç listeden DÜŞMEZ — değeri None ("—", turuncu nokta) ve yaşıyla kalır; hangi
+    sayaçtan veri alınamadığı görülsün. Taze sayacın yaşı None (yeşil nokta)."""
     lok_satir = {}
     for r in satirlar or []:
         if r.get("lokasyon_id") and r.get("cihaz"):
@@ -786,14 +790,19 @@ def cihaz_gruplari(satirlar: list, ci, esik_sn: int = 120) -> dict:
     sonuc = {}
     for lok, rs in lok_satir.items():
         try:
-            taze, _eski = ci.taze_ayir(rs, esik_sn=esik_sn)
+            taze, eski = ci.taze_ayir(rs, esik_sn=esik_sn)
         except Exception:
-            taze = []
+            taze, eski = [], [(r["cihaz"], None) for r in rs]
         deger = {r["cihaz"]: _sayi(r.get("kw")) for r in taze}
+        yas = {}
+        for ad, y in eski:
+            if ad not in deger:
+                deger[ad] = None
+                yas[ad] = round(y) if y is not None else -1   # -1: zamanı okunamadı
         gruplar = []
         for anahtar, baslik, cihazlar in ci.gruplara_ayir(list(deger)):
             gruplar.append({"a": anahtar, "b": baslik, "u": ci.birim(anahtar),
-                            "c": [[ci.kisa_ad(c), deger[c], c] for c in cihazlar]})
+                            "c": [[ci.kisa_ad(c), deger[c], c, yas.get(c)] for c in cihazlar]})
         if gruplar:
             sonuc[lok] = gruplar
     return sonuc
@@ -1062,6 +1071,9 @@ def betik(ikonlar: dict = None) -> str:
   function yaz(x, ond) { return Number(x).toLocaleString('tr-TR', {minimumFractionDigits: ond, maximumFractionDigits: ond}); }
   function kac(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
+  // Sayaç yaşı (sn) → "45 sn" / "12 dk" / "3 sa" / "2 gün"
+  function yasYaz(sn) { return sn < 60 ? sn + ' sn' : (sn < 3600 ? Math.round(sn / 60) + ' dk'
+    : (sn < 86400 ? Math.round(sn / 3600) + ' sa' : Math.round(sn / 86400) + ' gün')); }
   var HARF = {'İ': 'i', 'I': 'i', 'ı': 'i', 'Ş': 's', 'ş': 's', 'Ğ': 'g', 'ğ': 'g', 'Ü': 'u', 'ü': 'u', 'Ö': 'o', 'ö': 'o', 'Ç': 'c', 'ç': 'c'};
   function norm(s) { return String(s || '').replace(/[İIıŞşĞğÜüÖöÇç]/g, function (c) { return HARF[c]; }).toLowerCase().trim().replace(/\s+/g, ' '); }
   function mod(a, n) { return ((a % n) + n) % n; }
@@ -1365,7 +1377,11 @@ def betik(ikonlar: dict = None) -> str:
         var g = '<div class="ck-p-og"><div class="ck-p-og-b">' + kac(gr.b) + '</div>';
         gr.c.forEach(function (cc) {
           var yeniC = S.cihaz && S.cihaz[lid] && S.cihaz[lid][cc[2]] !== undefined ? S.cihaz[lid][cc[2]] : cc[1];
-          g += '<div class="ck-p-oc"><span><i class="ck-p-ocn"></i>' + kac(cc[0]) + '</span><span>'
+          // Yeşil: son 2 dk içinde okundu; turuncu: veri alınamıyor (24.11.2026)
+          var bayat = yeniC == null;
+          var ipucu = bayat ? (cc[3] != null && cc[3] >= 0 ? 'Veri alınamıyor — son okuma ' + yasYaz(cc[3]) + ' önce'
+                                                           : 'Veri alınamıyor') : 'Canlı — son 2 dk içinde okundu';
+          g += '<div class="ck-p-oc' + (bayat ? ' ck-p-oc-bayat' : '') + '" title="' + kac(ipucu) + '"><span><i class="ck-p-ocn"></i>' + kac(cc[0]) + '</span><span>'
             + cs(lid, 'c:' + cc[2], yeniC, 1) + '<small>' + kac(gr.u) + '</small></span></div>';
         });
         kol[SAG[gr.a] ? 'sag' : 'sol'] += g + '</div>';

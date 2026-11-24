@@ -112,6 +112,22 @@ c("saha: oto-set iyi + saat, oz test gecti, geri bildirim yok",
 _BOS = C.saha_ozeti(None, None)
 c("saha: veri yoksa uydurma yok", _BOS["set"] is None and _BOS["oto"] is None and _BOS["ariza"] == 0)
 c("veri_hazirla: saha her lokasyonda", V["lok"]["kartal"]["saha"]["set"] is None)
+# 24.11.2026: veri gelmeyen sayaç listeden düşmez — değer None + yaş (turuncu nokta)
+import canli_izleme as _CI
+from datetime import datetime as _dt, timedelta as _td
+_sim = _dt.now()
+_cg = C.cihaz_gruplari([
+    {"lokasyon_id": "maslak", "cihaz": "TRDP-1", "kw": 100.0, "olcum_zamani": (_sim - _td(seconds=10)).isoformat()},
+    {"lokasyon_id": "maslak", "cihaz": "TRDP-2", "kw": 90.0, "olcum_zamani": (_sim - _td(hours=3)).isoformat()},
+    {"lokasyon_id": "maslak", "cihaz": "TRDP-3", "kw": 80.0, "olcum_zamani": None}], _CI, 120)
+_cc = {x[2]: x for g in _cg.get("maslak", []) for x in g["c"]}
+c("olcum: taze sayac degerli, yasi yok (yesil)", _cc.get("TRDP-1", [0, 0])[1] == 100.0 and _cc["TRDP-1"][3] is None, _cc)
+c("olcum: eski sayac listede, degersiz, yasiyla (turuncu)",
+  "TRDP-2" in _cc and _cc["TRDP-2"][1] is None and 10700 < (_cc["TRDP-2"][3] or 0) < 10900, _cc.get("TRDP-2"))
+c("olcum: zamani okunamayan sayac listede, yas -1", "TRDP-3" in _cc and _cc["TRDP-3"][1] is None and _cc["TRDP-3"][3] == -1)
+c("olcum: tazelemede eski sayac None (panel turuncu yapar)",
+  C.cihaz_degerleri(_cg)["maslak"] == {"TRDP-1": 100.0, "TRDP-2": None, "TRDP-3": None})
+c("betik: turuncu nokta ve ipucu", "ck-p-oc-bayat" in _betik and "Veri alınamıyor" in _betik and "function yasYaz(" in _betik)
 c("betik: panelde tasinan bolumler ve baslik karti",
   all(x in _betik for x in ("HVAC & Bakım durumu", "Yürürlükteki setler", "Sistem sağlığı", "ck-p-kafa")))
 _p = C.ozet_kart_html(3, "Su", None, "m³/h", "su", "su", "")

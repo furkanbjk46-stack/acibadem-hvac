@@ -1006,8 +1006,22 @@ def start_background_sync():
     _sb_url = config.get("supabase_url", "")
     _sb_key = config.get("supabase_key", "")
 
-    # HVAC analiz periyodu (dakika) — canlı üretim/talep grafiği için sık çalışır
-    _HVAC_PERIYOT_DK = 10
+    # HVAC analiz periyodu (dakika). 24.11.2026: 10 → 120 (kullanıcı kararı). BACnet
+    # cevap bekleme 30 sn'ye çıktığı için analiz uzun sürebilir; ayrı iş parçacığında
+    # koşar, kalp atışı / oto-set / komut döngüsünü bekletmez (aynı anda tek analiz).
+    _HVAC_PERIYOT_DK = 120
+    _hvac_kilit = threading.Lock()
+
+    def _hvac_arka_plan():
+        try:
+            logger.info("⏰ HVAC AHU analizi başlatılıyor (arka plan)...")
+            _bas = time.time()
+            _hvac_analiz()
+            logger.info("HVAC AHU analizi bitti (%.0f sn)", time.time() - _bas)
+        except Exception as _ae:
+            logger.error("HVAC analiz hatası: %s", _ae)
+        finally:
+            _hvac_kilit.release()
 
     def _hvac_son_calisma_oku():
         """Disk'ten son HVAC çalışma zamanını oku — program restart'ına karşı kalıcı."""
@@ -1087,13 +1101,15 @@ def start_background_sync():
                             _son_calisma is None or
                             (_now - _son_calisma).total_seconds() >= _HVAC_PERIYOT_DK * 60
                         )
-                        if _periyot_gecti:
+                        # Önceki analiz hâlâ sürüyorsa yenisi başlamaz (kilit alınamaz)
+                        if _periyot_gecti and _hvac_kilit.acquire(blocking=False):
                             _hvac_son_calisma_yaz(_now)  # önce yaz — tekrar tetiklenmesin
                             try:
-                                logger.info("⏰ HVAC AHU analizi başlatılıyor...")
-                                _hvac_analiz()
-                            except Exception as _ae:
-                                logger.error("HVAC analiz hatası: %s", _ae)
+                                threading.Thread(target=_hvac_arka_plan, daemon=True,
+                                                 name="hvac-analiz").start()
+                            except Exception as _te:
+                                _hvac_kilit.release()
+                                logger.error("HVAC analiz başlatılamadı: %s", _te)
 
                     # Ay sonu AHU alarm tekrar raporu: her ayın 1'inde, günde 1 kez
                     # önceki ayın raporunu otomatik PDF olarak üretir

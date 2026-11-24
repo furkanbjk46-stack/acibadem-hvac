@@ -142,10 +142,13 @@ k.api["/api/last_auto_analysis"] = 404
 c("henüz analiz yoksa (404) uç hatası sayılmaz", not any(x["kontrol"] == "portal_api" for x in k.tur()["bulgular"]))
 
 # 3) Otomatik analiz
-c("analiz 60 dk gecikti → uyarı", any(x["anahtar"] == "otomatik_analiz:gecikti" and x["onem"] == "uyari"
-                                      for x in Kur(analiz_dk=60).tur()["bulgular"]))
-c("analiz 4 saat gecikti → kritik", any(x["anahtar"] == "otomatik_analiz:gecikti" and x["onem"] == "kritik"
-                                        for x in Kur(analiz_dk=240).tur()["bulgular"]))
+# 24.11.2026: analiz 2 saatte bir → olağan aralık (≤ 2 sa + süre payı) bulgu üretmez
+c("analiz 2 saat once → bulgu yok (olagan aralik)", not any(x["anahtar"] == "otomatik_analiz:gecikti"
+                                                         for x in Kur(analiz_dk=130).tur()["bulgular"]))
+c("analiz 5 saat gecikti → uyarı", any(x["anahtar"] == "otomatik_analiz:gecikti" and x["onem"] == "uyari"
+                                      for x in Kur(analiz_dk=300).tur()["bulgular"]))
+c("analiz 10 saat gecikti → kritik", any(x["anahtar"] == "otomatik_analiz:gecikti" and x["onem"] == "kritik"
+                                        for x in Kur(analiz_dk=600).tur()["bulgular"]))
 c("santralsiz analiz → kritik", any(x["anahtar"] == "otomatik_analiz:bos" for x in Kur(satirlar=[]).tur()["bulgular"]))
 
 # 4) Dış hava
@@ -171,7 +174,8 @@ c("STOP santralleri (SKIP_STOP, OPTIMAL) normaldir", Kur(satirlar=[satir("A", "A
 # 6) Donmuş okuma, grafik, öz test
 s = Kur(donmus=True).tur()
 c("son 4 okuma birebir aynıysa donmuş AHU kritik", any(x["anahtar"] == "donmus_ahu:son_okumalar" and x["onem"] == "kritik" for x in s["bulgular"]))
-c("grafik 60 dk güncellenmediyse uyarı", "talep_uretim:bayat" in anahtarlar(Kur(grafik_dk=60).tur()))
+c("grafik 2 saatlik aralikta bayat sayilmaz", "talep_uretim:bayat" not in anahtarlar(Kur(grafik_dk=130).tur()))
+c("grafik 5 saat güncellenmediyse uyarı", "talep_uretim:bayat" in anahtarlar(Kur(grafik_dk=300).tur()))
 s = Kur(oz="KALDI").tur()
 b = [x for x in s["bulgular"] if x["kontrol"] == "oz_test"]
 c("öz test kaldıysa kritik, kalan dosya yazılır", b and b[0]["onem"] == "kritik" and "test_kural_onceligi.py" in b[0]["bulunan"])

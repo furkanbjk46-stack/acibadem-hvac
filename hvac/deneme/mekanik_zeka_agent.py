@@ -17,7 +17,7 @@ KONTROLLER
   watchdog          agent'ı başlatan watchdog hâlâ çalışıyor mu
   bakim_karti       bakım kartları yükleniyor mu, durumları geçerli mi, tek kart açılıyor mu
   ayarlar           ayarlar okunuyor mu, her ayar izin verilen aralıkta mı, Chiller/FCU ayarları
-  otomatik_analiz   10 dk'lık AHU analizi zamanında mı; analiz edilen santral sayısı
+  otomatik_analiz   2 saatlik AHU analizi zamanında mı; analiz edilen santral sayısı
   dis_hava          analiz gerçek dış havayla mı yapıldı (20 °C varsayılan değil)
   ahu_veri          santrallerden veri geliyor mu ("Veri Alınamadı" oranı)
   sensor_mantigi    sensör arızalı satır OPTİMAL sayılıyor mu (kural motoru hatası)
@@ -53,8 +53,10 @@ try:                           # Mekanik Zeka portu: ayar/portlar.json (yoksa 80
 except Exception:
     PORTAL = "http://127.0.0.1:8005"
 
-ANALIZ_DIKKAT_DK = 40          # analiz 10 dk'da bir; 4 tur kaçarsa uyarı
-ANALIZ_KRITIK_DK = 180
+# 24.11.2026: analiz 2 saatte bir (cloud_sync._HVAC_PERIYOT_DK=120) ve 30 sn BACnet
+# beklemesiyle uzun sürebilir → bir tur + analiz süresi payı aşılırsa uyarı
+ANALIZ_DIKKAT_DK = 270
+ANALIZ_KRITIK_DK = 540
 VERI_YOK_ORAN = 0.20           # "Veri Alınamadı" santral oranı
 VERI_YOK_EN_AZ = 3
 DONMA_DOSYA = 4                # son kaç ham okuma karşılaştırılır
@@ -127,7 +129,7 @@ def k_otomatik_analiz(o):
         cikti.append(bulgu(
             "otomatik_analiz", "gecikti", "kritik" if dk > ANALIZ_KRITIK_DK else "uyari", "Otomatik analiz",
             "Otomatik AHU analizi %d dakikadır çalışmadı" % dk,
-            "10 dakikada bir analiz", "son analiz: %s" % z.strftime("%d.%m.%Y %H:%M"),
+            "2 saatte bir analiz", "son analiz: %s" % z.strftime("%d.%m.%Y %H:%M"),
             tekrar_adimi="Mekanik Zeka → 'Son Otomatik Analizi Göster'; cloud_sync.log içinde 'HVAC AHU analizi'",
             olasi_yer="cloud_sync.py _heartbeat_loop (hvac_son_calisma.txt), ahu_collector.hvac_analiz_calistir"))
     if not d.get("ahu_sayisi") or not satirlar:
@@ -231,7 +233,7 @@ def k_talep_uretim(o):
     return [bulgu(
         "talep_uretim", "bayat", "uyari", "Talep / üretim grafiği",
         "Canlı talep/üretim grafiği %d dakikadır güncellenmiyor" % dk,
-        "her analizde (10 dk) yeni nokta", "son nokta: %s" % z.strftime("%d.%m.%Y %H:%M"),
+        "her analizde (2 sa) yeni nokta", "son nokta: %s" % z.strftime("%d.%m.%Y %H:%M"),
         tekrar_adimi="Mekanik Zeka → Üretilen / Talep Edilen Soğutma grafiği",
         olasi_yer="ahu_collector.gecmis_kaydet (analiz çalışmıyor olabilir)")]
 

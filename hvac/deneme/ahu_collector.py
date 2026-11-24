@@ -43,7 +43,7 @@ AHU_TASARIM_KAPASITE_FILE = yollar.yol("configs/ahu_tasarim_kapasiteleri.json", 
 AHU_TASARIM_ISITMA_KAPASITE_FILE = yollar.yol("configs/ahu_tasarim_isitma_kapasiteleri.json", BASE_DIR)
 SETTINGS_FILE     = yollar.yol("configs/hvac_settings.json", BASE_DIR)
 URETIM_TUKETIM_GECMIS_FILE = yollar.yol("configs/uretim_tuketim_gecmis.json", BASE_DIR)
-GECMIS_MAKS_KAYIT = 1008  # 10 dk aralıkla ~1 hafta
+GECMIS_MAKS_KAYIT = 1008  # 10 dk aralıkla ~1 hafta; 2 sa aralıkla (24.11.2026'dan beri) ~12 hafta
 ENERGY_CSV_TAZELIK_ESIK_SAAT = 3  # bu süreden eski hedefli_enerji_verileri.csv için uyarı
 
 # data_collector.py ile aynı Excel kaynağı — enerji/kolektör/chiller/kazan noktaları
@@ -57,7 +57,11 @@ try:  # Mekanik Zeka portu: ayar/portlar.json (yoksa 8005)
 except Exception:
     MAIN_PORTAL_URL = "http://localhost:8005/api/recommend_json"
 BACNET_PORT       = 47808
-BACNET_TIMEOUT    = 4.0
+# Nokta başına cevap bekleme (sn). 24.11.2026: 4 → 30 — bazı noktaların cevabı geç
+# geliyor, 4 sn'de None sayılıp analiz hataya düşüyordu. Okuma sıralı: cevap vermeyen
+# her nokta turu 30 sn uzatır; analiz bu yüzden kalp atışı döngüsünü bekletmeyen ayrı
+# iş parçacığında ve 2 saatte bir çalışır (cloud_sync._HVAC_PERIYOT_DK).
+BACNET_TIMEOUT    = 30.0
 PROP_PRESENT_VAL  = 85
 
 
@@ -1041,12 +1045,13 @@ BILDIRIM_SON_GUN_FILE = yollar.yol("bildirim_son_gun.txt", BASE_DIR)
 
 def _bildirim_gunde_bir_gonder(kritik: int, uyari: int, optimal: int, toplam: int):
     """
-    HVAC analizi artık her 10 dk'da bir çalıştığı için Supabase bildirimi her
-    çalışmada gönderilmez — günde sadece bir kez (saat _BILDIRIM_SAATI'te)
-    gönderilir, böylece personel için bildirim yığını oluşmaz.
+    Supabase bildirimi her çalışmada gönderilmez — günde bir kez, saat
+    _BILDIRIM_SAATI'nden SONRAKİ ilk analizde gönderilir (bildirim yığını oluşmaz).
+    24.11.2026: analiz 2 saatte bire çekildi; eski "saat tam _BILDIRIM_SAATI ise"
+    koşulunda o saate analiz denk gelmeyen günler bildirimsiz kalırdı.
     """
     bugun = datetime.now().strftime("%Y-%m-%d")
-    if datetime.now().hour != _BILDIRIM_SAATI:
+    if datetime.now().hour < _BILDIRIM_SAATI:
         return
     try:
         if os.path.exists(BILDIRIM_SON_GUN_FILE):
@@ -1166,8 +1171,8 @@ def sonuclari_kaydet(sonuc: dict, veriler: dict, ahu_sayisi: int, oat: float):
     except Exception as e:
         logger.warning("Alarm sayacı güncellenemedi: %s", e)
 
-    # 4) Supabase bildirim — analiz her 10 dk'da bir çalıştığı için bildirim
-    # yığını oluşmaması adına günde sadece 1 kez (13:00 civarı) gönderilir.
+    # 4) Supabase bildirim — bildirim yığını oluşmaması adına günde sadece 1 kez
+    # (13:00'ten sonraki ilk analizde) gönderilir.
     _bildirim_gunde_bir_gonder(
         kritik  = kpi.get("crit", 0),
         uyari   = kpi.get("warn", 0),
