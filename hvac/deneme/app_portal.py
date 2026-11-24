@@ -4840,6 +4840,70 @@ with tab5:
                                 st.info(f"ℹ️ **{rec['name']}** (Potansiyel: {rec['savings_potential']})\n\n{rec['message']}")
                     else:
                         st.success("✅ Bu dönem için tasarruf önerisi bulunmamaktadır. Sistem verimli çalışıyor!")
+
+                # Alışkanlıklar (A2, 24.11.2026): lokasyonun son 12 aylık günlük verisinden
+                # kullanım alışkanlığı + veri kalitesi kapısı (tasarruf/aliskanlik.py)
+                _alis_metin = None
+                with _bolum_karti("kart_aliskanlik", "🧭 Alışkanlıklar (son 12 ay)"):
+                    try:
+                        # A3: bulgular kalıcı (kimlik = kod), karar ve ölçüm sonucu deftere yazılır
+                        from tasarruf.rapor import aylik_bolum as _aylik_bolum
+                        # A4: 10 dk AHU okumalarının gün özetleri (yeni günler bir kez işlenir)
+                        _gun_ici = None
+                        try:
+                            from tasarruf.gun_ici import ozetleri_guncelle as _gi_guncelle
+                            with st.spinner("Santral okumaları özetleniyor..."):
+                                _gun_ici = _gi_guncelle()
+                        except Exception as _gi_err:
+                            st.caption(f"Gün içi santral verisi okunamadı: {_gi_err}")
+                        _alis_metin = _aylik_bolum(load_data(), report_year, report_month, gun_ici=_gun_ici)
+                        if _alis_metin.get("pencere"):
+                            st.caption(f"Pencere: {_alis_metin['pencere'][0]} – {_alis_metin['pencere'][1]} "
+                                       f"({_alis_metin['gun']} gün). Bayram/tatil günleri ayrı sayılır.")
+                        if _alis_metin["ritim"]:
+                            st.dataframe(pd.DataFrame(_alis_metin["ritim"]), hide_index=True, use_container_width=True)
+                        for _sat in _alis_metin["aliskanliklar"]:
+                            st.markdown(f"- {_sat}")
+                        if _alis_metin.get("gun_ici"):
+                            st.markdown("**Gün içi santral davranışı (10 dakikalık AHU okumaları)**")
+                            for _sat in _alis_metin["gun_ici"]:
+                                st.markdown(f"- {_sat}")
+                        if _alis_metin["bulgular"]:
+                            st.markdown("**Alışkanlıktan çıkan bulgular**")
+                            for _b in _alis_metin["bulgular"]:
+                                _govde = (f"**{_b['baslik']}** · {_b['durum']}\n\n{_b['kanit']}"
+                                          f"\n\n➡️ {_b['oneri']}")
+                                if _b["tasarruf"]:
+                                    _govde += f"\n\n💡 Tahmini tasarruf: {_b['tasarruf']}"
+                                if _b.get("olculebilirlik"):
+                                    _govde += f"\n\n📏 {_b['olculebilirlik']}"
+                                if _b.get("kayit_durum"):
+                                    _govde += f"\n\n🗂️ Durum: {_b['kayit_durum']}"
+                                if _b.get("guven"):
+                                    _govde += f"\n\n🎯 {_b['guven']}"
+                                (st.warning if _b["durum"] == "Öneri" else st.info)(_govde)
+                            if _alis_metin.get("alt_bulgular"):
+                                with st.expander(f"Düşük öncelikli bulgular ({len(_alis_metin['alt_bulgular'])})"):
+                                    for _b in _alis_metin["alt_bulgular"]:
+                                        st.markdown(f"- **{_b['baslik']}** · {_b['durum']} — {_b['kanit']}"
+                                                    + (f" _{_b['guven']}_" if _b.get("guven") else ""))
+                            st.caption("Kararı aşağıdaki 'Tasarruf Önerileri ve Kararlar' kartından verin.")
+                        else:
+                            st.success("Bu pencerede alışkanlıktan çıkan bir tasarruf bulgusu yok.")
+                        if _alis_metin.get("sonuclar"):
+                            st.markdown("**Önceki önerilerin sonucu**")
+                            st.dataframe(pd.DataFrame(_alis_metin["sonuclar"]), hide_index=True,
+                                         use_container_width=True)
+                        if _alis_metin.get("ogrenme"):
+                            with st.expander("🎯 Bu lokasyondan öğrenilenler"):
+                                for _sat in _alis_metin["ogrenme"]:
+                                    st.markdown(f"- {_sat}")
+                        if _alis_metin["kalite"]:
+                            with st.expander(f"🔎 Veri kalitesi ({len(_alis_metin['kalite'])} not)"):
+                                for _k in _alis_metin["kalite"]:
+                                    st.markdown(f"- {_k}")
+                    except Exception as _alis_err:
+                        st.warning(f"Alışkanlık profili hesaplanamadı: {_alis_err}")
                 
                 
                 # PDF indirme
@@ -4950,7 +5014,7 @@ with tab5:
                             _fc_data = _tahmin_rapor_verisi(int(report_year), _veri_imzasi())
                         except Exception:
                             _fc_data = None
-                        pdf_bytes = pdf_gen.generate(report_year, report_month, unified_data, yoy_analysis, recommendations, charts=pdf_charts, forecast_data=_fc_data)
+                        pdf_bytes = pdf_gen.generate(report_year, report_month, unified_data, yoy_analysis, recommendations, charts=pdf_charts, forecast_data=_fc_data, aliskanlik=_alis_metin)
                     
                         ay_adi = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
                                   "Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"][report_month-1]
@@ -5045,111 +5109,180 @@ with tab5:
         except Exception:
             st.info("AI ilerleme modülü yüklenemedi.")
     
-    with _bolum_karti("kart_ml_egitim", "🤖 ML Eğitim Verisi Durumu"):
-    
+    with _bolum_karti("kart_ml_egitim", "🤖 Tasarruf Önerileri ve Kararlar"):
+        # A1 (24.11.2026): her öneri kural + rapor dönemiyle TEK kayıttır; aynı ayın
+        # raporu tekrar alınınca yeni kayıt açılmaz. Toplu işaretleme kaldırıldı:
+        # her öneriye tek tek karar verilir, ret için neden zorunludur.
         try:
             from monthly_report import TrainingDataCollector
+            from monthly_report.training_data import RET_NEDENLERI
             collector = TrainingDataCollector()
             stats = collector.get_statistics()
-        
+            _kd = stats.get("decision_distribution", {})
+
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("Toplam Kayıt", stats.get("total_records", 0))
+                st.metric("Farklı Öneri", stats.get("total_records", 0),
+                          help=f"Rapor üretimlerinde toplam {stats.get('report_runs', 0)} kez görüldü")
             with col2:
-                st.metric("Feedback Alınan", stats.get("with_feedback", 0))
+                st.metric("Uygulandı", _kd.get("applied", 0) + _kd.get("partially_applied", 0))
             with col3:
-                feedback_rate = stats.get("feedback_rate", 0)
-                st.metric("Feedback Oranı", f"%{feedback_rate:.1f}")
+                st.metric("Reddedildi", _kd.get("not_applied", 0))
             with col4:
-                ready = "✅ HAZIR" if stats.get("ready_for_ml") else "⏳ Veri Toplaniyor"
-                st.metric("ML Durumu", ready)
-        
-            # Kural dağılımı
+                st.metric("Karar Bekleyen", len(collector.get_pending_feedback()))
+
+            _rn = stats.get("reject_reasons", {})
+            if _rn:
+                st.caption("Ret nedenleri: " + " · ".join(
+                    f"{RET_NEDENLERI.get(k, 'Belirtilmemiş (eski kayıt)')}: {v}" for k, v in
+                    sorted(_rn.items(), key=lambda x: -x[1])))
+
             rule_dist = stats.get("rule_distribution", {})
             if rule_dist:
                 with st.expander("📊 Kural Dağılımı"):
                     for rule_id, count in sorted(rule_dist.items(), key=lambda x: -x[1]):
-                        st.text(f"  {rule_id}: {count} adet")
-        
-            # Bekleyen feedback'ler
+                        st.text(f"  {rule_id}: {count} öneri")
+
+            def _donem_yazi(r):
+                d = r.get("donem")
+                if d:
+                    y, a = d.split("-")
+                    return f"{a}.{y}"
+                return "dönem bilinmiyor (eski kayıt)"
+
             pending = collector.get_pending_feedback()
             if pending:
-                with st.expander(f"⏳ Feedback Bekleyen Öneriler ({len(pending)} adet)", expanded=True):
-                    # Session state için seçim listesi
-                    if "selected_feedbacks" not in st.session_state:
-                        st.session_state.selected_feedbacks = set()
-                
-                    # TOPLU İŞLEM BUTONLARI
-                    col_select_all, col_clear, col_apply_sel, col_reject_sel, col_pending_sel = st.columns(5)
-                    with col_select_all:
-                        if st.button("☑️ Tümünü Seç", key="fb_select_all"):
-                            st.session_state.selected_feedbacks = {rec['id'] for rec in pending}
-                            st.rerun()
-                    with col_clear:
-                        if st.button("⬜ Temizle", key="fb_clear_all"):
-                            st.session_state.selected_feedbacks = set()
-                            st.rerun()
-                    with col_apply_sel:
-                        if st.button("✅ Seçilenleri Uygula", key="fb_apply_selected"):
-                            for rec_id in st.session_state.selected_feedbacks:
-                                collector.update_feedback(rec_id, "applied")
-                            st.success(f"{len(st.session_state.selected_feedbacks)} öneri uygulandı olarak işaretlendi!")
-                            st.session_state.selected_feedbacks = set()
-                            st.rerun()
-                    with col_reject_sel:
-                        if st.button("❌ Seçilenleri Reddet", key="fb_reject_selected"):
-                            for rec_id in st.session_state.selected_feedbacks:
-                                collector.update_feedback(rec_id, "not_applied")
-                            st.warning(f"{len(st.session_state.selected_feedbacks)} öneri reddedildi olarak işaretlendi!")
-                            st.session_state.selected_feedbacks = set()
-                            st.rerun()
-                    with col_pending_sel:
-                        if st.button("⏸️ Seçilenleri Beklet", key="fb_pending_selected"):
-                            for rec_id in st.session_state.selected_feedbacks:
-                                collector.update_feedback(rec_id, "pending")
-                            st.info(f"{len(st.session_state.selected_feedbacks)} öneri beklemede olarak işaretlendi!")
-                            st.session_state.selected_feedbacks = set()
-                            st.rerun()
-                
-                    st.divider()
-                    st.caption(f"📌 Seçili: {len(st.session_state.selected_feedbacks)} adet")
-                
-                    # ÖNERİ LİSTESİ - Checkbox ile
+                with st.expander(f"⏳ Karar Bekleyen Öneriler ({len(pending)})", expanded=True):
+                    st.caption("Her öneriye ayrı karar verin. Ret için neden seçmek zorunludur; "
+                               "bu bilgi önerinin bir daha gösterilip gösterilmeyeceğini belirleyecek.")
                     for rec in pending:
                         rec_data = rec.get("recommendation", {})
-                        rec_id = rec['id']
-                    
-                        col_check, col_info, col_a, col_b, col_c = st.columns([0.5, 3, 1, 1, 1])
-                    
-                        with col_check:
-                            is_selected = rec_id in st.session_state.selected_feedbacks
-                            if st.checkbox("", value=is_selected, key=f"fb_check_{rec_id}", label_visibility="collapsed"):
-                                st.session_state.selected_feedbacks.add(rec_id)
-                            else:
-                                st.session_state.selected_feedbacks.discard(rec_id)
-                    
-                        with col_info:
-                            st.markdown(f"**{rec_id}** - {rec_data.get('name', 'N/A')}")
-                    
-                        with col_a:
-                            if st.button("✅", key=f"fb_applied_{rec_id}", help="Uygulandı"):
-                                collector.update_feedback(rec_id, "applied")
-                                st.success("Kaydedildi!")
-                                st.rerun()
-                        with col_b:
-                            if st.button("❌", key=f"fb_not_{rec_id}", help="Uygulanmadı"):
-                                collector.update_feedback(rec_id, "not_applied")
-                                st.warning("Kaydedildi!")
-                                st.rerun()
-                        with col_c:
-                            if st.button("⏸️", key=f"fb_pending_{rec_id}", help="Beklemede"):
-                                collector.update_feedback(rec_id, "pending")
-                                st.info("Kaydedildi!")
-                                st.rerun()
-                
-                    if len(pending) > 20:
-                        st.info(f"... toplam {len(pending)} öneri bekliyor")
-    
+                        rec_id = rec["id"]
+                        _bekle = (rec.get("feedback") or {}).get("status") == "pending"
+                        with st.container(border=True):
+                            st.markdown(f"**{rec_data.get('name', 'N/A')}** · rapor dönemi {_donem_yazi(rec)}"
+                                        + (" · ⏸️ bekletildi" if _bekle else ""))
+                            if rec_data.get("message"):
+                                st.caption(rec_data["message"])
+                            _gor = int(rec.get("gorulme") or 1)
+                            if _gor > 1:
+                                st.caption(f"Bu ayın raporunda {_gor} kez üretildi (tek öneri sayılır).")
+                            _c1, _c2, _c3, _c4 = st.columns([1, 1, 2, 1])
+                            with _c1:
+                                if st.button("✅ Uygulandı", key=f"fb_applied_{rec_id}"):
+                                    collector.update_feedback(rec_id, "applied")
+                                    st.rerun()
+                            with _c2:
+                                if st.button("⏸️ Beklet", key=f"fb_pending_{rec_id}", disabled=_bekle):
+                                    collector.update_feedback(rec_id, "pending")
+                                    st.rerun()
+                            with _c3:
+                                _neden = st.selectbox(
+                                    "Ret nedeni", options=[""] + list(RET_NEDENLERI),
+                                    format_func=lambda k: "Ret nedeni seçin…" if not k else RET_NEDENLERI[k],
+                                    key=f"fb_neden_{rec_id}", label_visibility="collapsed")
+                                _not = ""
+                                if _neden == "diger":
+                                    _not = st.text_input("Not", key=f"fb_not_{rec_id}",
+                                                         placeholder="Neden uygulanmadı?",
+                                                         label_visibility="collapsed")
+                            with _c4:
+                                _hazir = bool(_neden) and (_neden != "diger" or bool(_not.strip()))
+                                if st.button("❌ Reddet", key=f"fb_not_btn_{rec_id}", disabled=not _hazir):
+                                    collector.update_feedback(rec_id, "not_applied", notes=_not, neden=_neden)
+                                    st.rerun()
+            else:
+                st.success("Karar bekleyen öneri yok.")
+
+            _kararli = [r for r in collector.data
+                        if (r.get("feedback") or {}).get("status") not in (None, "pending")]
+            if _kararli:
+                with st.expander(f"🗂️ Karar Verilen Öneriler ({len(_kararli)})"):
+                    _etiket = {"applied": "✅ Uygulandı", "partially_applied": "◐ Kısmen",
+                               "not_applied": "❌ Reddedildi"}
+                    _satir = []
+                    for r in sorted(_kararli, key=lambda r: r["feedback"].get("updated_at") or "", reverse=True):
+                        fb = r["feedback"]
+                        _satir.append({
+                            "Öneri": (r.get("recommendation") or {}).get("name"),
+                            "Dönem": _donem_yazi(r),
+                            "Karar": _etiket.get(fb.get("status"), fb.get("status")),
+                            "Neden": RET_NEDENLERI.get(fb.get("neden"), "") if fb.get("neden") else
+                                     ("Belirtilmemiş (eski kayıt)" if fb.get("status") == "not_applied" else ""),
+                            "Not": fb.get("notes") or "",
+                            "Karar tarihi": (fb.get("updated_at") or "")[:10],
+                            "Karar sayısı": len(r.get("karar_gecmisi") or []),
+                        })
+                    st.dataframe(pd.DataFrame(_satir), hide_index=True, use_container_width=True)
+                    st.caption("Karar sayısı > 1: aynı öneriye zaman içinde farklı kararlar verilmiş; "
+                               "en sonuncusu geçerlidir.")
+
+            # ── Alışkanlık bulguları (A3, 24.11.2026): kalıcı kimlik, karar, ölçüm ──
+            st.divider()
+            st.markdown("#### 🧭 Alışkanlık Bulguları")
+            from tasarruf.bulgular import BulguDefteri, DURUM_ETIKET as _BD_ETIKET, RET_NEDENLERI as _BD_RET
+            from tasarruf.rapor import olcum_metni as _bd_olcum_metni, olculebilirlik_metni as _bd_olc_metni
+            _defter = BulguDefteri()
+            if not _defter.kayitlar:
+                st.caption("Henüz alışkanlık bulgusu yok — Aylık Birleşik Rapor üretildiğinde oluşur.")
+            for _r in _defter.karar_bekleyenler():
+                _kid = _r["kimlik"]
+                with st.container(border=True):
+                    st.markdown(f"**{_r.get('baslik')}** · {_BD_ETIKET.get(_r.get('durum'), '')}")
+                    st.caption(_r.get("kanit", ""))
+                    st.caption(f"➡️ {_r.get('oneri', '')}")
+                    if _r.get("tasarruf"):
+                        _ts = _r["tasarruf"]
+                        from tasarruf.aliskanlik import tr_sayi as _bd_tr
+                        st.caption(f"💡 Tahmini tasarruf: ~{_bd_tr(_ts['deger'])} {_ts['birim']} ({_ts['aciklama']})")
+                    _om = _bd_olc_metni(_r.get("olculebilirlik"), _r.get("olcut"))
+                    if _om:
+                        st.caption(f"📏 {_om}")
+                    _b1, _b2, _b3, _b4 = st.columns([1.3, 1, 1.6, 1])
+                    with _b1:
+                        _ut = st.date_input("Uygulama tarihi", value=date.today(), max_value=date.today(),
+                                            key=f"bd_tarih_{_kid}", format="DD.MM.YYYY")
+                        if st.button("✅ Uygulandı", key=f"bd_uyg_{_kid}"):
+                            _defter.karar_ver(_kid, "uygulandi", uygulama_tarihi=str(_ut))
+                            st.rerun()
+                    with _b2:
+                        st.write("")
+                        if st.button("⏸️ Beklet", key=f"bd_bek_{_kid}", disabled=_r.get("durum") == "bekletildi"):
+                            _defter.karar_ver(_kid, "bekletildi")
+                            st.rerun()
+                    with _b3:
+                        _bn = st.selectbox("Ret nedeni", options=[""] + list(_BD_RET),
+                                           format_func=lambda k: "Ret nedeni seçin…" if not k else _BD_RET[k],
+                                           key=f"bd_neden_{_kid}")
+                        _bnot = st.text_input("Not", key=f"bd_not_{_kid}", label_visibility="collapsed",
+                                              placeholder="Not (Diğer için zorunlu)") if _bn == "diger" else ""
+                    with _b4:
+                        st.write("")
+                        _hz = bool(_bn) and (_bn != "diger" or bool(_bnot.strip()))
+                        if st.button("❌ Reddet", key=f"bd_red_{_kid}", disabled=not _hz):
+                            _defter.karar_ver(_kid, "reddedildi", neden=_bn, notlar=_bnot)
+                            st.rerun()
+            _diger = [r for r in _defter.kayitlar.values() if r.get("durum") not in ("raporda", "bekletildi")]
+            if _diger:
+                if any(r.get("durum") == "olculuyor" for r in _diger):
+                    if st.button("📏 Ölçümleri güncelle", key="bd_olcum_guncelle"):
+                        with st.spinner("Ölçülüyor…"):
+                            _defter.olcumleri_guncelle(load_data())
+                        st.rerun()
+                _satirlar = []
+                for r in _diger:
+                    _k = r.get("karar") or {}
+                    _satirlar.append({
+                        "Bulgu": r.get("baslik"),
+                        "Durum": _BD_ETIKET.get(r.get("durum"), r.get("durum")),
+                        "Karar tarihi": (pd.Timestamp(_k["tarih"]).strftime("%d.%m.%Y") if _k.get("tarih") else ""),
+                        "Uygulama": (pd.Timestamp(_k["uygulama_tarihi"]).strftime("%d.%m.%Y")
+                                     if _k.get("uygulama_tarihi") else ""),
+                        "Neden": _BD_RET.get(_k.get("neden"), "") if _k.get("neden") else "",
+                        "Ölçüm": _bd_olcum_metni(r.get("olcum")) if _k.get("karar") == "uygulandi" else "",
+                    })
+                st.dataframe(pd.DataFrame(_satirlar), hide_index=True, use_container_width=True)
+
         except ImportError:
             st.info("ML eğitim modülü henüz aktif değil.")
 

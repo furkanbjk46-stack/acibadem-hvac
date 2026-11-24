@@ -49,6 +49,7 @@ class MonthlyReportPDFGenerator:
             "ℹ️": "[i]", "🔴": "[KRITIK]", "🟡": "[UYARI]", "🟢": "[OK]", "⚪": "[-]",
             "❄️": "[SOGUTMA]", "🔧": "[BAKIM]", "🔍": "[ANALIZ]", "💰": "[TASARRUF]",
             "🌡️": "[SICAKLIK]", "🏭": "[SISTEM]", "📏": "[OLCUM]", "💧": "[SU]",
+            "≥": ">=", "≤": "<=", "–": "-",
         }
 
         result = str(text)
@@ -170,7 +171,8 @@ class MonthlyReportPDFGenerator:
                  yoy_analysis: Dict,
                  recommendations: List[Dict],
                  charts: Dict[str, bytes] = None,
-                 forecast_data: Dict = None) -> bytes:
+                 forecast_data: Dict = None,
+                 aliskanlik: Dict = None) -> bytes:
         """
         PDF rapor oluştur.
 
@@ -204,6 +206,10 @@ class MonthlyReportPDFGenerator:
 
         # Tasarruf Önerileri
         self._add_recommendations_section(recommendations)
+
+        # Alışkanlıklar (A2): tasarruf/aliskanlik.rapor_metni çıktısı
+        if aliskanlik:
+            self._add_habits_section(aliskanlik)
 
         # HVAC Özet
         self._add_hvac_section(unified_data.get("summary", {}))
@@ -448,6 +454,78 @@ class MonthlyReportPDFGenerator:
             self.pdf.ln(3)
 
         self.pdf.ln(2)
+
+    def _add_habits_section(self, m: Dict):
+        """Alışkanlıklar: gün tipi tablosu, alışkanlık satırları, bulgular, veri kalitesi."""
+        self._section_title("ALIŞKANLIKLAR (SON 12 AY)", self.ACCENT)
+        if m.get("pencere"):
+            self.pdf.set_font(self.font, '', 8)
+            self.pdf.set_text_color(*self.GRAY)
+            self.pdf.cell(0, 5, self._sanitize(
+                f"Pencere: {m['pencere'][0]} - {m['pencere'][1]} ({m.get('gun', 0)} gün). "
+                "Bayram/tatil günleri ayrı sayılır."), 0, 1)
+        if m.get("ritim"):
+            basliklar = list(m["ritim"][0].keys())
+            satirlar = [[r[b] for b in basliklar] for r in m["ritim"]]
+            self._modern_table(basliklar, satirlar, [58, 28, 28, 28, 38])
+            self.pdf.ln(2)
+
+        def paragraf(metin, boyut=8, stil='', renk=(70, 70, 70), girinti=12):
+            self.pdf.set_font(self.font, stil, boyut)
+            self.pdf.set_text_color(*renk)
+            self.pdf.set_x(girinti)
+            self.pdf.multi_cell(200 - girinti - 10, 4, self._sanitize(metin))
+
+        for satir in m.get("aliskanliklar", []):
+            paragraf(f"- {satir}")
+        if m.get("gun_ici"):
+            self.pdf.ln(1)
+            paragraf("Gün içi santral davranışı (10 dakikalık AHU okumaları)", stil='B', renk=(30, 30, 30))
+            for satir in m["gun_ici"]:
+                paragraf(f"- {satir}")
+        if m.get("bulgular"):
+            self.pdf.ln(2)
+            for b in m["bulgular"]:
+                if self.pdf.get_y() > 255:
+                    self.pdf.add_page()
+                renk = self.WARNING_C if b["durum"] == "Öneri" else self.ACCENT
+                y = self.pdf.get_y()
+                self.pdf.set_fill_color(*renk)
+                self.pdf.rect(10, y, 2, 6, 'F')
+                self.pdf.set_xy(14, y)
+                self.pdf.set_font(self.font, 'B', 10)
+                self.pdf.set_text_color(30, 30, 30)
+                self.pdf.cell(0, 6, self._sanitize(f"{b['baslik']} [{b['durum']}]"), 0, 1)
+                paragraf(b["kanit"], girinti=16)
+                paragraf(f"Ne yapılmalı: {b['oneri']}", girinti=16)
+                if b.get("tasarruf"):
+                    paragraf(f"Tahmini tasarruf: {b['tasarruf']}", stil='B', renk=(30, 90, 50), girinti=16)
+                if b.get("olculebilirlik"):
+                    paragraf(b["olculebilirlik"], renk=(110, 110, 110), girinti=16)
+                if b.get("kayit_durum"):
+                    paragraf(f"Durum: {b['kayit_durum']}", renk=(110, 110, 110), girinti=16)
+                if b.get("guven"):
+                    paragraf(b["guven"], renk=(110, 110, 110), girinti=16)
+                self.pdf.ln(2)
+        if m.get("alt_bulgular"):
+            paragraf("Düşük öncelikli bulgular: " + "; ".join(b["baslik"] for b in m["alt_bulgular"]) + ".",
+                     renk=(110, 110, 110))
+        if m.get("ogrenme"):
+            self.pdf.ln(1)
+            paragraf("Bu lokasyondan öğrenilenler:", stil='B', renk=(40, 40, 40))
+            for satir in m["ogrenme"]:
+                paragraf(f"- {satir}")
+        if m.get("sonuclar"):
+            self.pdf.ln(1)
+            paragraf("Önceki önerilerin sonucu:", stil='B', renk=(40, 40, 40))
+            for r in m["sonuclar"]:
+                paragraf(f"- {r['Öneri']} (uygulama {r['Uygulama']}; tahmin {r['Tahmin edilen']}): {r['Sonuç']}")
+        if m.get("kalite"):
+            self.pdf.ln(1)
+            paragraf("Veri kalitesi:", stil='B', renk=(90, 90, 90))
+            for k in m["kalite"]:
+                paragraf(f"- {k}", boyut=7, renk=(110, 110, 110))
+        self.pdf.ln(3)
 
     def _add_hvac_section(self, summary: Dict):
         """HVAC özet — KPI kutuları ile"""

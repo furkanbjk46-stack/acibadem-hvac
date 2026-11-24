@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tasarruf Öğrenme Tasarımı</title>
+<style>
+:root {
+  --zemin:#f5f6f8; --kart:#ffffff; --yazi:#18202b; --soluk:#5c6675; --cizgi:#e1e5eb; --bant:#eef1f5;
+  --mavi:#1f5fbf; --mavi-z:#e6eefb; --kirmizi:#b42318; --kirmizi-z:#fde8e6; --turuncu:#b54708; --turuncu-z:#fdf0e1;
+  --sari:#8a6d00; --sari-z:#fbf5d9; --yesil:#1b7a3d; --yesil-z:#e3f4e8; --mor:#6b3fb3; --mor-z:#efe8fa;
+  --font:"Segoe UI", system-ui, -apple-system, Roboto, sans-serif; --mono:Consolas, "Cascadia Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --zemin:#11161d; --kart:#19202a; --yazi:#e6eaf0; --soluk:#9aa5b4; --cizgi:#2b3442; --bant:#212a36;
+    --mavi:#7fb0ff; --mavi-z:#1b2c47; --kirmizi:#ff8a80; --kirmizi-z:#3a1d1b; --turuncu:#ffb26b; --turuncu-z:#3a2a19;
+    --sari:#e9cc5c; --sari-z:#352f17; --yesil:#7fd69a; --yesil-z:#183223; --mor:#c3a5ff; --mor-z:#2a2140;
+  }
+}
+:root[data-theme="dark"] {
+  --zemin:#11161d; --kart:#19202a; --yazi:#e6eaf0; --soluk:#9aa5b4; --cizgi:#2b3442; --bant:#212a36;
+  --mavi:#7fb0ff; --mavi-z:#1b2c47; --kirmizi:#ff8a80; --kirmizi-z:#3a1d1b; --turuncu:#ffb26b; --turuncu-z:#3a2a19;
+  --sari:#e9cc5c; --sari-z:#352f17; --yesil:#7fd69a; --yesil-z:#183223; --mor:#c3a5ff; --mor-z:#2a2140;
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--zemin); color:var(--yazi); font:15px/1.6 var(--font); }
+.sayfa { max-width:1100px; margin:0 auto; padding:32px 16px 64px; }
+header h1 { font-size:28px; line-height:1.25; margin:0 0 6px; }
+header .alt { color:var(--soluk); margin:0; }
+h2 { font-size:20px; margin:40px 0 12px; padding-bottom:6px; border-bottom:1px solid var(--cizgi); }
+h3 { font-size:16px; margin:0 0 6px; }
+p { margin:0 0 10px; }
+ul { margin:0 0 10px; padding-left:20px; }
+li { margin-bottom:4px; }
+code { font:13px var(--mono); background:var(--bant); padding:1px 5px; border-radius:4px; overflow-wrap:anywhere; }
+.kart { background:var(--kart); border:1px solid var(--cizgi); border-radius:10px; padding:16px 18px; }
+.kart > :last-child { margin-bottom:0; }
+.ozet { display:grid; grid-template-columns:3fr 2fr; gap:16px; margin-top:20px; }
+.karar { border-left:4px solid var(--mavi); }
+.uyari { border-left:4px solid var(--turuncu); }
+.izgara { display:grid; grid-template-columns:repeat(2, 1fr); gap:12px; }
+.cip { display:inline-block; font:700 11px var(--font); padding:1px 8px; border-radius:999px; white-space:nowrap; vertical-align:2px; }
+.kritik { color:var(--kirmizi); background:var(--kirmizi-z); }
+.yuksek { color:var(--turuncu); background:var(--turuncu-z); }
+.orta { color:var(--sari); background:var(--sari-z); }
+.iyi { color:var(--yesil); background:var(--yesil-z); }
+.biz { color:var(--mavi); background:var(--mavi-z); }
+.sen { color:var(--mor); background:var(--mor-z); }
+/* Akış */
+.akis { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; margin:14px 0 6px; }
+.adim { background:var(--kart); border:1px solid var(--cizgi); border-top:4px solid var(--mavi); border-radius:10px; padding:10px 12px; position:relative; }
+.adim .no { font:700 11px var(--font); color:var(--soluk); letter-spacing:.04em; }
+.adim h3 { margin:2px 0 4px; font-size:14.5px; }
+.adim p { font-size:12.5px; color:var(--soluk); margin:0; }
+.adim.a1 { border-top-color:var(--soluk); } .adim.a2 { border-top-color:var(--mavi); } .adim.a3 { border-top-color:var(--mor); }
+.adim.a4 { border-top-color:var(--sari); } .adim.a5 { border-top-color:var(--yesil); } .adim.a6 { border-top-color:var(--turuncu); }
+.donus { font-size:13px; color:var(--soluk); text-align:right; margin:0 0 4px; }
+/* Tablolar */
+.tablo { width:100%; border-collapse:collapse; background:var(--kart); border:1px solid var(--cizgi); border-radius:10px; overflow:hidden; font-size:14px; }
+.tablo th, .tablo td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--cizgi); vertical-align:top; }
+.tablo th { background:var(--bant); font-size:12.5px; color:var(--soluk); font-weight:700; }
+.tablo tr:last-child td { border-bottom:none; }
+.tablo td.sayi { font-variant-numeric:tabular-nums; white-space:nowrap; }
+.kaydir { overflow-x:auto; }
+/* Yaşam döngüsü */
+.dongu { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin:10px 0; font-size:13.5px; }
+.dongu span.d { background:var(--kart); border:1px solid var(--cizgi); border-radius:8px; padding:5px 10px; }
+.dongu span.ok { color:var(--soluk); }
+.ornek { background:var(--bant); border-radius:8px; padding:12px 14px; font-size:14px; }
+.ornek b { font-weight:700; }
+.soluk { color:var(--soluk); font-size:13.5px; }
+@media (max-width: 860px) {
+  .ozet, .izgara { grid-template-columns:1fr; }
+  .akis { grid-template-columns:repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="sayfa">
+<header>
+  <h1>Tasarruf Öğrenme Tasarımı</h1>
+  <p class="alt">Lokasyonun kullanım alışkanlığını tespit et → nereden, ne kadar tasarruf edileceğini raporda öner → uygulananın gerçekten tasarruf ettirip ettirmediğini ölç · Taslak, 24.11.2026 · Enerji ve Verimlilik tarafı</p>
+</header>
+
+<div class="ozet">
+  <div class="kart karar">
+    <h3>Özet</h3>
+    <p>Bugünkü "tasarruf önerisi" 16 sabit kuraldan oluşuyor: ayın toplamını geçen yılın aynı ayıyla kıyaslayıp hazır bir metin basıyor. Lokasyonun nasıl kullanıldığını bilmiyor, tasarrufu kendi verisinden hesaplamıyor ve geri bildirimi hiçbir yerde kullanmıyor.</p>
+    <p>Önerilen yapı altı adımlı bir döngü: <b>veri → alışkanlık profili → kimlikli bulgu → rapordaki öneri → karar → ölçülen tasarruf</b>. Öğrenme, kaç öneriye "evet" dendiğinden değil, <b>ölçülen tasarruftan</b> beslenir.</p>
+    <p>Her şey lokasyon PC'sinde çalışır (veri orada, internet yok); Synapse yalnız özeti görür. Yapısal bir iş: aşama aşama, önce bu PC'de Maslak verisiyle denenir, toplu yamayla gider.</p>
+  </div>
+  <div class="kart uyari">
+    <h3>Bugünkü sayılar neden bir şey ifade etmiyor</h3>
+    <ul>
+      <li>Rapor her üretildiğinde tetiklenen öneriler <b>yeniden kaydediliyor</b>; önerinin kimliği yok. 31 kayıt birkaç önerinin tekrarı olabilir.</li>
+      <li>Geri bildirim ekranında <b>"tümünü seç → uygulandı"</b> var; toplu işaretleme tek tek kararı göstermez.</li>
+      <li>Tasarruf oranları ("%5-10") sabit metin; raporda <b>toplanıyor</b>.</li>
+      <li>"Uygulandı" denen önerinin sonucu ölçülmüyor.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>1. Hedef döngü</h2>
+<div class="akis" role="list">
+  <div class="adim a1" role="listitem"><div class="no">1 · VERİ</div><h3>Ölçüm</h3><p>Günlük enerji, sayaç başına günlük, 10 dk AHU okumaları, oto-set geçişleri, hava</p></div>
+  <div class="adim a2" role="listitem"><div class="no">2 · PROFİL</div><h3>Alışkanlık</h3><p>Haftalık ritim, dış havaya tepki, eş zamanlı ısıtma-soğutma, santral saatleri</p></div>
+  <div class="adim a3" role="listitem"><div class="no">3 · BULGU</div><h3>Kimlikli fırsat</h3><p>Kanıt + lokasyonun kendi rakamıyla kWh ve TL tahmini; tekrar eden rapor aynı bulguyu günceller</p></div>
+  <div class="adim a4" role="listitem"><div class="no">4 · RAPOR</div><h3>Öneri</h3><p>Aylık raporda en fazla 5 öneri, tasarrufa göre sıralı; önceki önerilerin sonucu</p></div>
+  <div class="adim a5" role="listitem"><div class="no">5 · KARAR</div><h3>İnsan</h3><p>Uygulandı / reddedildi + neden (tek tek, toplu işaret yok)</p></div>
+  <div class="adim a6" role="listitem"><div class="no">6 · ÖLÇÜM</div><h3>Gerçek tasarruf</h3><p>Hava ve takvim düzeltmeli öncesi/sonrası; doğrulandı / tutmadı</p></div>
+</div>
+<p class="donus">↺ Ölçüm sonucu, kuralın güvenini ve lokasyona özel eşiğini günceller (öğrenme)</p>
+
+<h2>2. Alışkanlık profili — Maslak verisiyle sınama</h2>
+<p>Aşağıdaki rakamlar bu PC'deki Maslak verisinden (01.11.2025 – 23.11.2026, 388 geçerli gün) hesaplandı. Amaç, profilin gerçekten bulgu üretebileceğini göstermek; rakamlar henüz hava etkisinden arındırılmadı.</p>
+<div class="kaydir">
+<table class="tablo">
+  <thead><tr><th>Alışkanlık</th><th>Veri</th><th>Maslak'ta görülen</th><th>Bulgu adayı</th></tr></thead>
+  <tbody>
+    <tr><td><b>Haftalık ritim</b></td><td>Günlük enerji, gaz, su</td>
+      <td class="sayi">Toplam: hafta içi 64,0 · cumartesi 60,9 · pazar 57,6 MWh/gün<br>Kazan gazı: hafta içi 1.719 · pazar 1.847 m³/gün</td>
+      <td>Ham ortalamada pazar kazan gazı %7 yüksek görünüyordu. <b>A2 sınaması:</b> aynı dış sıcaklıktaki hafta içiyle kıyaslanınca fazla olan gün oranı yalnız %48; tutarlı bir alışkanlık değil, bulgu üretilmedi.</td></tr>
+    <tr><td><b>Dış havaya tepki</b></td><td>Chiller seti, chiller adedi, dış hava</td>
+      <td class="sayi">Set: &lt;10 °C'de ort. 7,5 · &gt;24 °C'de 7,0 °C<br>Kullanılan setler yalnız 6,5 / 7,0 / 7,5</td>
+      <td>Set dış havayla yalnız 0,5 °C değişiyor. Serin günlerde seti yükseltme potansiyeli (oto-set kapsamı, insan onaylı).</td></tr>
+    <tr><td><b>Eş zamanlı ısıtma-soğutma</b></td><td>Kazan gazı + soğutma aynı gün; gün içinde AHU vanaları</td>
+      <td class="sayi">134 gün: kazan &gt;500 m³ ve soğutma &gt;3.000 kWh (ort. dış hava 20,5 °C)</td>
+      <td>Ara mevsim kaybı adayı. Günlük veri yalnız şüphe verir; <b>saatlik AHU verisiyle</b> doğrulanmadan öneri olmaz.</td></tr>
+    <tr><td><b>Kojen düzeni</b></td><td>Kojen üretimi, şebeke</td>
+      <td class="sayi">Günlerin %62'sinde çalışıyor</td>
+      <td>Çalışmadığı günlerin deseni (bakım / tarife / talep) ve şebeke maliyetine etkisi.</td></tr>
+    <tr><td><b>Su</b></td><td>Günlük su, soğutma</td>
+      <td class="sayi">Hafta içi 448 · pazar 342 m³/gün</td>
+      <td>Soğutmadan bağımsız taban su tüketimi; artış = kaçak işareti.</td></tr>
+    <tr><td><b>Gün içi düzen</b></td><td>10 dk AHU okumaları (yalnız lokasyonda)</td>
+      <td class="sayi">Henüz hesaplanmadı</td>
+      <td>Santrallerin gece/hafta sonu boşta çalışma saatleri, vana avcılığı, set dışı çalışma.</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="kart uyari" style="margin-top:12px">
+  <p><b>Veri kalitesi kapısı şart.</b> Günlük hava verisiyle yaz soğutması derece-gün başına 2023: 1.819, 2024: 1.950, 2025: 1.424, 2026: 1.514 kWh. 2024→2025 arasında %27'lik kırılma var; gerçek verimlilik mi, sayaç/hesap değişikliği mi doğrulanmalı. (İlk taslaktaki "2026: 899" bina sensörüyle hesaplanmıştı; A2'de düzeltildi.) Profil, veri kalitesi kontrolünden geçmemiş dönemden bulgu üretmez; yanlış bulgu güveni bir öneriden daha çok kaybettirir.</p>
+</div>
+
+<h2>3. Bulgu: kimlik, kanıt, tasarruf</h2>
+<div class="izgara">
+  <div class="kart">
+    <h3>Bir bulguda olanlar</h3>
+    <ul>
+      <li><b>Kimlik:</b> kural + nesne + dönem (ör. <code>hafta_sonu_isitma · kazan · 2026-11</code>). Aynı rapor beş kez üretilse de tek bulgu.</li>
+      <li><b>Kanıt:</b> hangi günler, hangi değerler, kıyas neye göre (aynı hava koşulundaki hafta içi günleri).</li>
+      <li><b>Tasarruf tahmini:</b> lokasyonun kendi rakamıyla kWh/ay ve m³/ay; TL karşılığı lokasyonun birim fiyatıyla.</li>
+      <li><b>Güven:</b> kanıt gün sayısı + kuralın bu lokasyondaki geçmiş başarısı.</li>
+      <li><b>Ne yapılmalı:</b> somut ve tek adım; kim yapar (işletme / otomasyon / bakım).</li>
+    </ul>
+  </div>
+  <div class="kart">
+    <h3>Örnek bulgu metni</h3>
+    <div class="ornek">
+      <p><b>Pazar günleri kazan gazı hafta içinden yüksek</b></p>
+      <p>Son 8 pazarın 7'sinde kazan gazı, aynı dış sıcaklıktaki hafta içi günlerinden ort. <b>X m³</b> fazla. Tüketim pazar %10 düşerken ısıtma düşmüyor.</p>
+      <p>Öneri: poliklinik ve idari katların hafta sonu ısıtma setini/saatini gözden geçirin. Tahmini tasarruf <b>Y m³/ay ≈ Z TL</b>.</p>
+      <p class="soluk" style="margin:0">X, Y, Z hava düzeltmeli hesapla doldurulur; burada yer tutucu.</p>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:18px">Yaşam döngüsü</h3>
+<div class="dongu">
+  <span class="d">yeni</span><span class="ok">→</span><span class="d">raporda</span><span class="ok">→</span>
+  <span class="d">uygulandı / reddedildi (+ neden)</span><span class="ok">→</span><span class="d">ölçülüyor (4 hafta)</span><span class="ok">→</span>
+  <span class="d">doğrulandı · tutmadı · kapandı</span>
+</div>
+<p class="soluk">Ret nedenleri sabit listeden seçilir: <i>uygulanamaz (işletme gereği)</i>, <i>zaten yapılıyor</i>, <i>veri yanlış</i>, <i>sonra bakılacak</i>. "Veri yanlış" kuralın veri kontrolünü sıkılaştırır; "uygulanamaz" aynı bulguyu o lokasyonda 6 ay susturur.</p>
+
+<h2>4. Ölçüm: uygulanan öneri gerçekten tasarruf ettirdi mi</h2>
+<div class="kart">
+  <p>Tüketim Tahmini'ndeki günlük model (<code>tuketim_tahmin/gunluk_model.py</code>) zaten havayı, hafta sonunu, tatili ve mevsimi hesaba katıyor. Ölçüm onu yeniden kullanır:</p>
+  <ul>
+    <li>Model <b>uygulama tarihine kadarki</b> veriyle eğitilir (bugün Dönem Tahmini'ndeki gerçekleşen/tahmin çubuklarıyla aynı ilke).</li>
+    <li>Sonraki 4 haftada, gerçekleşen hava ile <b>"öneri uygulanmasaydı"</b> tüketimi tahmin edilir.</li>
+    <li>Tasarruf = beklenen − gerçekleşen, yalnız ilgili kalemde (kazan gazı, chiller, su…). Modelin olağan hata payının (bugün aylık toplamda ±%3–5) altındaki fark "belirsiz" sayılır, tasarruf diye yazılmaz.</li>
+  </ul>
+  <p>Raporda: <b>"Önceki önerilerin sonucu"</b> tablosu — öneri, uygulama tarihi, tahmin edilen ve ölçülen tasarruf, durum.</p>
+  <p style="margin:0"><b>A3 sınaması (Maslak, 24.11.2026):</b> 28 günlük ölçümün tipik hata payı toplam tüketimde ~%7, soğutmada ~%32, kazan gazında %60'ın üstünde. Eklenen %10'luk etki toplamda yakalanıyor; değişiklik olmayan 39 tarihte yanlış "doğrulandı" toplamda 1, soğutma ve gazda 0. Sonuç: %1–3'lük set tasarrufu günlük sayaçlardan doğrulanamaz; bulgu bunu raporda baştan "ölçülemez" diye yazar. Gerçek olay: 02.07.2025 set 7,5→6,5 sonrası toplam tüketim +%4,9 (pay %4,4) — yön doğru, ama aynı günlerde chiller sayısı da arttığı için tümü sete bağlanamaz.</p>
+</div>
+
+<h2>5. Öğrenme</h2>
+<div class="izgara">
+  <div class="kart">
+    <h3>Ne öğrenilir</h3>
+    <ul>
+      <li><b>Kural güveni (lokasyon başına):</b> doğrulanan tasarruf / uygulanan öneri. Düşük güvenli kural raporda alta iner, sonra susar.</li>
+      <li><b>Eşikler:</b> kuralın tetik eşiği lokasyonun kendi dağılımından (ör. "pazar fazlası" eşiği, o lokasyonun normal hafta sonu farkı).</li>
+      <li><b>Ret nedenleri:</b> aynı nedenle reddedilen bulgu susturulur; neden "veri yanlış" ise veri kontrolüne gider.</li>
+    </ul>
+  </div>
+  <div class="kart">
+    <h3>Ne öğrenilmez</h3>
+    <ul>
+      <li>Oto-set ve BACnet yazımı: öneri yalnız önerir, <b>koruma alanına dokunmaz</b>; set değişikliği insan onayıyla.</li>
+      <li>Bir lokasyonun öğrendiği diğer lokasyona kopyalanmaz; Synapse yalnız kıyas için özet görür.</li>
+      <li>"Kaç öneri kabul edildi" tek başına başarı ölçüsü değildir.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>6. Nerede, hangi dosyalar</h2>
+<div class="kaydir">
+<table class="tablo">
+  <thead><tr><th>Parça</th><th>Yer</th><th>Not</th></tr></thead>
+  <tbody>
+    <tr><td>Alışkanlık profili</td><td><code>tasarruf/aliskanlik.py</code> (yeni)</td><td>Günlük veriden; gün içi kısım AHU okuma geçmişinden</td></tr>
+    <tr><td>Bulgu motoru + kayıt</td><td><code>tasarruf/bulgular.py</code>, <code>veri/tasarruf_bulgulari.json</code></td><td>Kimlikli; eski <code>ml_training_data.json</code> taşınır ve tekilleştirilir</td></tr>
+    <tr><td>Ölçüm</td><td><code>tasarruf/olcum.py</code></td><td><code>gunluk_model</code>'i kullanır</td></tr>
+    <tr><td>Rapor bölümü</td><td><code>monthly_report/</code></td><td>"Alışkanlıklar", "Öneriler", "Önceki önerilerin sonucu"</td></tr>
+    <tr><td>Karar ekranı</td><td><code>app_portal.py</code> (Enerji ve Verimlilik)</td><td>Tek tek karar + neden; toplu işaret kalkar</td></tr>
+    <tr><td>Synapse özeti</td><td>heartbeat <code>geri_bildirim</code> yerine <code>tasarruf</code> özeti</td><td>Açık bulgu, doğrulanan tasarruf kWh/TL</td></tr>
+    <tr><td>Eski motor</td><td><code>monthly_report/savings_engine.py</code></td><td>Yeni bulgular gelene kadar çalışır; kuralları tek tek taşınır, sonra kalkar</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>7. Aşamalar</h2>
+<div class="kaydir">
+<table class="tablo">
+  <thead><tr><th>Aşama</th><th>İş</th><th>Bitti sayılır</th></tr></thead>
+  <tbody>
+    <tr><td><span class="cip yuksek">A1</span> Temizlik</td><td>Önerilere kimlik; rapor tekrarında kopya yok; toplu işaret kalkar, ret nedeni eklenir. Maslak'taki 31 kaydın gerçek dağılımı çıkarılır.</td><td>Aynı ay için rapor 5 kez alınsa da öneri sayısı değişmiyor</td></tr>
+    <tr><td><span class="cip biz">A2</span> Profil</td><td>Günlük veriden alışkanlık profili + veri kalitesi kapısı; aylık rapora "Alışkanlıklar" bölümü</td><td>Maslak'ın 12 ayı için profil, elle kontrol edilmiş rakamlarla aynı</td></tr>
+    <tr><td><span class="cip biz">A3</span> Bulgu + ölçüm</td><td>Kimlikli bulgu, hava düzeltmeli tasarruf tahmini, yaşam döngüsü, ölçüm</td><td>Geçmişte bilinen bir değişiklik (ör. oto-set saatinin değişmesi) geriye dönük ölçülüp doğru sonuç veriyor</td></tr>
+    <tr><td><span class="cip orta">A4</span> Gün içi</td><td>10 dk AHU okumalarından santral saatleri, eş zamanlı ısıtma-soğutma (saatlik)</td><td>134 şüpheli günün kaçının gerçek olduğu saat bazında ayrılıyor</td></tr>
+    <tr><td><span class="cip iyi">A5</span> Öğrenme</td><td>Kural güveni, lokasyona özel eşik, susturma; Synapse özeti</td><td>Düşük güvenli kural raporda alta iniyor, ret nedeni susturuyor</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="soluk" style="margin-top:8px">Her aşama önce bu PC'de Maslak verisiyle denenir; sahaya toplu yamayla gider (yapısal değişiklik, ara yama yok).</p>
+
+<h2>8. Senin kararın gereken sorular</h2>
+<div class="kart">
+  <ul>
+    <li><span class="cip sen">karar</span> <b>TL karşılığı:</b> birim fiyatlar (elektrik, gaz, su) nereden gelsin — lokasyon ayarı mı, Synapse'te merkezi tablo mu?</li>
+    <li><span class="cip sen">karar</span> <b>Kararı kim verir:</b> lokasyondaki Enerji portalı mı, Synapse'te merkez mi, ikisi de mi?</li>
+    <li><span class="cip sen">karar</span> <b>Öncelik:</b> ilk hangi alışkanlıklar — önerim haftalık ritim (hafta sonu ısıtma) ve dış havaya tepki (chiller seti); veri hazır ve tasarruf etkisi büyük.</li>
+    <li><span class="cip sen">karar</span> <b>Ölçüm süresi:</b> 4 hafta yeterli mi; mevsim geçişinde uzatılsın mı?</li>
+  </ul>
+</div>
+</div>
+</body>
+</html>

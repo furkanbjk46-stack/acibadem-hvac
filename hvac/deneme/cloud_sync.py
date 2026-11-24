@@ -740,8 +740,17 @@ def _geri_bildirim_ozet() -> dict:
             kayitlar = json.load(f)
         if not isinstance(kayitlar, list):
             return {"kayit": 0, "geri_bildirim": 0}
+        # A1: eski (kimliksiz) dosyada aynı öneri defalarca kayıtlı; portal açılınca
+        # dosya tekilleşir ama heartbeat ondan önce gidebilir → okurken tekilleştir.
+        if any(not k.get("kimlik") for k in kayitlar):
+            try:
+                from oneri_kimlik import tekillestir
+                kayitlar = tekillestir(kayitlar)
+            except Exception as e:
+                logger.debug(f"Öneri kayıtları tekilleştirilemedi: {e}")
 
         durum_sayac = {}
+        red_neden = {}
         kural_red = {}
         kural_geri_bildirim = {}
         geri_bildirimli = 0
@@ -756,6 +765,8 @@ def _geri_bildirim_ozet() -> dict:
             kural_geri_bildirim[kural] = kural_geri_bildirim.get(kural, 0) + 1
             if durum == "not_applied":
                 kural_red[kural] = kural_red.get(kural, 0) + 1
+                n = fb.get("neden") or "belirtilmemis"
+                red_neden[n] = red_neden.get(n, 0) + 1
 
         # Öğrenme için eşik: bir kural hakkında karar vermek en az 5 geri bildirim ister
         hazir = sorted(k for k, n in kural_geri_bildirim.items() if n >= 5)
@@ -769,9 +780,54 @@ def _geri_bildirim_ozet() -> dict:
             "kismi": durum_sayac.get("partially_applied", 0),
             "ogrenmeye_hazir_kural": hazir,
             "en_cok_red": [{"kural": k, "adet": n} for k, n in en_cok_red],
+            "red_nedeni": red_neden,
         }
     except Exception as e:
         logger.debug(f"Geri bildirim özeti okunamadı: {e}")
+        return {}
+
+
+def _tasarruf_ozet() -> dict:
+    """Alışkanlık bulguları ve öğrenme özeti (tasarruf/bulgular.py defteri, A5).
+
+    NEDEN VAR: "Kaç öneriye evet dendi" (geri_bildirim) başarı ölçüsü değildir;
+    merkez, hangi lokasyonda kaç bulgunun açık olduğunu, kaçının ölçümle
+    DOĞRULANDIĞINI ve hangi kuralın o lokasyonda tutmadığını görmeli.
+    Lokasyonun öğrendiği başka lokasyona kopyalanmaz; Synapse yalnız özeti görür.
+
+    KÜÇÜK: sayılar + kanıtı olan kuralların güveni. Defter yoksa boş sözlük.
+    Kendi içinde kapalı: okunamazsa heartbeat kesilmez.
+    """
+    try:
+        from tasarruf.bulgular import BulguDefteri, KARAR_BEKLEYEN
+        from tasarruf import ogrenme as OG
+        d = BulguDefteri()
+        if not d.kayitlar:
+            return {}
+        say = {}
+        for r in d.kayitlar.values():
+            say[r.get("durum")] = say.get(r.get("durum"), 0) + 1
+        dogrulanan = {}
+        for r in d.kayitlar.values():
+            o = r.get("olcum") or {}
+            if r.get("durum") == "dogrulandi" and o.get("tasarruf") and o.get("olcut") != "gun_ici":
+                dogrulanan[o.get("birim") or "?"] = round(dogrulanan.get(o.get("birim") or "?", 0) + float(o["tasarruf"]))
+        ogr = d.ogrenme()
+        return {
+            "bulgu": len(d.kayitlar),
+            "karar_bekleyen": len(d.karar_bekleyenler()),
+            "olculuyor": say.get("olculuyor", 0),
+            "dogrulandi": say.get("dogrulandi", 0),
+            "tutmadi": say.get("tutmadi", 0),
+            "belirsiz": say.get("belirsiz", 0),
+            "olculemez": say.get("olculemez", 0),
+            "reddedildi": say.get("reddedildi", 0),
+            "dogrulanan_tasarruf": dogrulanan,     # ölçüm dönemlerinin toplamı, birime göre
+            "kural": OG.synapse_ozeti(ogr)[:6],
+            "susturulan": OG.susturulan_kurallar(ogr),
+        }
+    except Exception as e:
+        logger.debug(f"Tasarruf özeti okunamadı: {e}")
         return {}
 
 
@@ -811,6 +867,7 @@ def send_heartbeat(client, lokasyon_id: str):
         _ozet["oto"] = _oto_durum_topla()
         _ozet["oz_test"] = _oz_test_ozet()
         _ozet["geri_bildirim"] = _geri_bildirim_ozet()
+        _ozet["tasarruf"] = _tasarruf_ozet()
         _ozet["veri_alarm"] = _veri_alarm_ozet()
 
         payload = {

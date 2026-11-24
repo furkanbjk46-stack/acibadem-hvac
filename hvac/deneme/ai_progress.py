@@ -57,14 +57,22 @@ def _count_energy_data_days() -> int:
 
 
 def _count_feedback() -> int:
-    """Toplam geri bildirim (kabul + red) sayısını döner."""
+    """Toplam geri bildirim (kabul + red) sayısını döner.
+
+    A1 (24.11.2026): öneri dosyasında her öneri bir kez ve yalnız KARAR verilmiş
+    öneriler sayılır. Önceden kayıt sayısı sayılıyordu; aynı rapor 9 kez üretilince
+    9 "geri bildirim" görünüyordu."""
     total = 0
     for fpath in [_TRAINING_FILE, _ML_TRAINING_FILE]:
         try:
             if os.path.exists(fpath):
                 with open(fpath, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                if isinstance(data, list):
+                if isinstance(data, list) and fpath == _ML_TRAINING_FILE:
+                    from oneri_kimlik import tekillestir
+                    total += sum(1 for r in tekillestir(data)
+                                 if (r.get("feedback") or {}).get("status") not in (None, "pending"))
+                elif isinstance(data, list):
                     total += len(data)
                 elif isinstance(data, dict):
                     total += sum(len(v) if isinstance(v, list) else 1 for v in data.values())

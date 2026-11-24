@@ -675,7 +675,7 @@ def saha_ozeti(bakim_ozet, hvac_ozet) -> dict:
         "ariza": int(b.get("toplam_ariza") or 0), "ariza_l": [_ad(c) for c in ar_l][:8],
         "bakim": int(b.get("toplam_bakim") or 0), "bakim_l": [_ad(c) for c in bk_l][:8],
         "hv_kritik": hk, "hv_uyari": hu, "hv_normal": len(nr), "hv_l": hv_l[:8],
-        "set": None, "oto": None, "oz": None, "gb": None,
+        "set": None, "oto": None, "oz": None, "gb": None, "ts": None,
     }
     o = b.get("oto") if isinstance(b.get("oto"), dict) else {}
     st_ = o.get("setler") if isinstance(o.get("setler"), dict) else {}
@@ -709,6 +709,20 @@ def saha_ozeti(bakim_ozet, hvac_ozet) -> dict:
                    "alt": "%s öneri kaydı · %s" % (gb.get("kayit", 0),
                                                    ("öğrenmeye hazır: " + ", ".join(map(str, hz[:2]))) if hz
                                                    else "öğrenme beklemede")}
+    # Alışkanlık bulguları ve öğrenme (A5): kabul sayısı değil, ölçülen sonuç
+    ts = b.get("tasarruf") or {}
+    if isinstance(ts, dict) and ts.get("bulgu"):
+        dt = ts.get("dogrulanan_tasarruf") or {}
+        alt = []
+        if dt:
+            alt.append("doğrulanan " + ", ".join("%s %s" % (kw_metin(v), k) for k, v in dt.items()))
+        if ts.get("olculuyor"):
+            alt.append("%s ölçülüyor" % ts["olculuyor"])
+        if ts.get("susturulan"):
+            alt.append("susturulan: " + ", ".join(map(str, ts["susturulan"][:2])))
+        s["ts"] = {"acik": int(ts.get("karar_bekleyen") or 0), "dog": int(ts.get("dogrulandi") or 0),
+                   "tut": int(ts.get("tutmadi") or 0),
+                   "alt": " · ".join(alt) or "%s bulgu, henüz ölçüm sonucu yok" % ts.get("bulgu")}
     return s
 
 
@@ -1537,13 +1551,15 @@ def betik(ikonlar: dict = None) -> str:
         + mini('kollektor', 'Kollektör', kac(st.kol), 'gündüz / gece · ' + kac(st.dig_mod))
         + mini('fcu', 'FCU', kac(st.fcu), 'A/B blok') + mini('ahu', 'AHU', kac(st.ahu), 'Zon-1/2 santral') + '</div>';
     } else { h += '<div class="ck-p-not">Lokasyon yürürlükteki setleri bildirmedi.</div>'; }
-    var so = sh.oto, sz = sh.oz, sg = sh.gb;
+    var so = sh.oto, sz = sh.oz, sg = sh.gb, stt = sh.ts;
     h += '<div class="ck-p-bolum">' + (ik.saglik || '') + 'Sistem sağlığı</div><div class="ck-p-izgara ck-p-izgara-3 ck-p-saglik">'
       + (so ? mini('oto', 'Oto-set', kac(so.metin), (so.zaman ? 'son tur ' + kac(so.zaman) : '') + (so.dg ? (so.zaman ? ' · ' : '') + kac(so.dg[1]) : ''),
                    so.iyi ? 'g' : 'r') : mini('oto', 'Oto-set', 'Bildirim gelmedi', '', ''))
       + (sz ? mini('zeka', 'Mekanik Zeka öz testi', kac(sz.metin), kac(sz.kalan || sz.zaman), sz.gecti ? 'g' : 'r')
             : mini('zeka', 'Mekanik Zeka öz testi', 'Henüz çalışmadı', '', ''))
-      + (sg ? mini('oneri', 'Öneri geri bildirimi', sg.sayi + ' <small>· ✓' + sg.uyg + ' · ✗' + sg.red + '</small>', kac(sg.alt), '')
+      + (stt ? mini('oneri', 'Tasarruf bulguları', stt.acik + ' açık <small>· ✓' + stt.dog + ' doğrulandı · ✗' + stt.tut + ' tutmadı</small>',
+                    kac(stt.alt), stt.tut > stt.dog ? 'y' : '')
+         : sg ? mini('oneri', 'Öneri geri bildirimi', sg.sayi + ' <small>· ✓' + sg.uyg + ' · ✗' + sg.red + '</small>', kac(sg.alt), '')
             : mini('oneri', 'Öneri geri bildirimi', 'Bildirim gelmedi', '', ''))
       + '</div>';
     return h;

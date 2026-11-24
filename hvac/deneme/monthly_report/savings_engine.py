@@ -859,15 +859,19 @@ Her 1°C değişim yaklaşık %3-5 {benefit} sağlar.
                 energy_summary = {k: v for k, v in summary.items() if k in energy_keys}
                 hvac_summary = {k: v for k, v in summary.items() if k in hvac_keys}
                 
+                # A1: kural + rapor dönemi = kimlik; aynı ayın raporu tekrar
+                # üretilirse yeni kayıt açılmaz, mevcut öneri güncellenir.
                 for rec in recommendations:
-                    collector.save_recommendation_context(
+                    rec["kayit_id"] = collector.save_recommendation_context(
                         recommendation=rec,
                         energy_summary=energy_summary,
                         hvac_summary=hvac_summary,
-                        yoy_data=yoy_data
+                        yoy_data=yoy_data,
+                        yil=unified_data.get("year"),
+                        ay=unified_data.get("month"),
                     )
                 
-                print(f"ML Training: {len(recommendations)} oneri kaydedildi")
+                print(f"ML Training: {len(recommendations)} oneri kaydedildi/guncellendi")
             except Exception as e:
                 print(f"Training data kaydetme hatasi: {e}")
         

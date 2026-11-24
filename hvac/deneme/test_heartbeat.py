@@ -162,8 +162,15 @@ _gecici = _tempfile.mkdtemp(prefix="gb_")
 _veri_yolu = os.path.join(_gecici, "ml_training_data.json")
 
 
+_say = iter(range(1000))
+
+
 def _kayit(kural, durum):
-    return {"id": f"{kural}_{durum}", "recommendation": {"rule_id": kural},
+    # A1: kimlikli kayıt (her biri ayrı öneri). Kimliksiz eski kayıtların
+    # tekilleştirilmesi test_oneri_kimlik.py'de sınanır.
+    n = next(_say)
+    return {"id": f"{kural}_{durum}_{n}", "kimlik": f"{kural}|2026-{n % 12 + 1:02d}-{n}",
+            "recommendation": {"rule_id": kural},
             "feedback": ({"status": durum} if durum else None)}
 
 
