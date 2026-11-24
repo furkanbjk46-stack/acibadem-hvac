@@ -41,7 +41,7 @@ import re
 
 import ana_ekran_cark_demo as _cark
 
-SURUM = 25  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 26  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 KOK = ('body:has(.st-key-detay_tema_demo):not(:has(.st-key-ozet_gecis_katmani))'
        ':not(:has(.st-key-yonetim_katmani))')
@@ -162,7 +162,7 @@ html:has(.st-key-detay_tema_demo){ background:#03141a !important; }
 /* Grafik sütunu: Excel düğmesi başlık satırına alınır (dikey yer kazanır) */
 § D [data-testid="stColumn"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"] .st-key-grafik_secim) > [data-testid="stVerticalBlock"]{ position:relative; }
 § D [data-testid="stLayoutWrapper"]:has(> [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > .st-key-grafik_excel){
-  position:absolute !important; right:0; width:132px !important; z-index:2;
+  position:absolute !important; right:0; width:100px !important; z-index:2;
   top:max(0px, min(calc(var(--ck-u) * .6 + 2px + max(9px, var(--ck-u) * 1.15) * .8 - 11px),
                    calc(var(--ck-u) * 1.1 + 2px + max(9px, var(--ck-u) * 1.15) * 1.6 - 24px))); }
 /* top:-4px kaydırılan kutunun üst kenarında düğmenin yarısını kesiyordu (24.11.2026).
@@ -174,7 +174,13 @@ html:has(.st-key-detay_tema_demo){ background:#03141a !important; }
 § D [data-testid="stColumn"]:has(.st-key-grafik_secim) > [data-testid="stVerticalBlock"]{ gap:calc(var(--ck-u) * .7) !important; }
 § D .st-key-grafik_excel button{ min-height:22px !important; height:22px !important; padding:0 12px !important;
   display:flex !important; }   /* satır içi düğme taban çizgisine oturup 2-3 px aşağı kayıyordu */
-§ D .st-key-grafik_excel button p{ font-size:12px !important; line-height:1 !important; }
+/* Yazı düğmenin ortasında: dış kap 14 px / 22,4 px satır kutusuyla yazıyı taban çizgisine
+   indiriyor, alttan taşırıyordu (24.11.2026) — kap ve yazı aynı boy, satır yüksekliği 1 */
+§ D .st-key-grafik_excel button > div, § D .st-key-grafik_excel button span,
+§ D .st-key-grafik_excel button [data-testid="stMarkdownContainer"]{ height:100% !important; display:flex !important;
+  align-items:center !important; justify-content:center !important; font-size:12px !important; line-height:1 !important; }
+§ D .st-key-grafik_excel button span[style*="contents"]{ display:contents !important; }
+§ D .st-key-grafik_excel button p{ font-size:12px !important; line-height:1 !important; margin:0 !important; display:block !important; }
 /* Canlı İzleme satırları dar sütunda kesilmesin: sabit 86/60/92 px ızgara yerine
    ad (daralabilir) · çubuk (esnek) · değer (sığdığı kadar) */
 § D .cg-liste:not(.cg-liste-blok){ grid-template-columns:minmax(0, max-content) minmax(14px, 1fr) max-content !important;

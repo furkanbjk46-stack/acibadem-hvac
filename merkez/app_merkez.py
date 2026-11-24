@@ -1555,7 +1555,7 @@ if st.session_state.get("yonetim"):
     # Çark arayüzü: Sistem ekranı da koyu cam temada, ortada panel
     if _cark_arayuz():
         import detay_tema_demo as _dtd_y
-        if getattr(_dtd_y, "SURUM", 0) < 25:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd_y, "SURUM", 0) < 26:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dty
             _dtd_y = _il_dty.reload(_dtd_y)
         st.markdown(_dtd_y.yonetim_css(), unsafe_allow_html=True)
@@ -1600,7 +1600,7 @@ if st.session_state.get("detay_lokasyon"):
     # Çark arayüzü: detay koyu cam temada ve animasyonlu geçişle açılır (detay_tema_demo.py)
     if _cark_arayuz():
         import detay_tema_demo as _dtd
-        if getattr(_dtd, "SURUM", 0) < 25:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd, "SURUM", 0) < 26:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dtd
             _dtd = _il_dtd.reload(_dtd)
         with st.container(key="detay_tema_demo"):
@@ -1720,7 +1720,7 @@ if _cark_kutu is not None:
         # Görünmez detay düğmeleri (on_click): durum yeniden çizimden ÖNCE yazılır,
         # çizim doğrudan detay dalına girer — ana ekran bir kez daha çizilmez.
         import detay_tema_demo as _dtd_c
-        if getattr(_dtd_c, "SURUM", 0) < 25:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd_c, "SURUM", 0) < 26:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dtdc
             _dtd_c = _il_dtdc.reload(_dtd_c)
         with st.container(key="ck_gizli_detay"):
