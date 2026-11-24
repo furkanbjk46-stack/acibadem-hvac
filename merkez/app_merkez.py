@@ -1540,7 +1540,7 @@ if st.session_state.get("yonetim"):
     # Çark arayüzü: Sistem ekranı da koyu cam temada, ortada panel
     if _cark_arayuz():
         import detay_tema_demo as _dtd_y
-        if getattr(_dtd_y, "SURUM", 0) < 21:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd_y, "SURUM", 0) < 23:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dty
             _dtd_y = _il_dty.reload(_dtd_y)
         st.markdown(_dtd_y.yonetim_css(), unsafe_allow_html=True)
@@ -1585,7 +1585,7 @@ if st.session_state.get("detay_lokasyon"):
     # Çark arayüzü: detay koyu cam temada ve animasyonlu geçişle açılır (detay_tema_demo.py)
     if _cark_arayuz():
         import detay_tema_demo as _dtd
-        if getattr(_dtd, "SURUM", 0) < 21:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd, "SURUM", 0) < 23:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dtd
             _dtd = _il_dtd.reload(_dtd)
         with st.container(key="detay_tema_demo"):
@@ -1603,14 +1603,21 @@ if st.session_state.get("detay_lokasyon"):
 
     with st.container(key="detay_gecis_katmani"):
         _detay_dosya = os.path.join(os.path.dirname(__file__), "pages", "lokasyon_detay.py")
-        with open(_detay_dosya, "r", encoding="utf-8") as _f:
-            _detay_kaynak = _f.read()
-        # app_merkez zaten kendi set_page_config'ini çağırdı — detay sayfasınınkini atla
-        import re as _detay_re
-        _detay_kaynak = _detay_re.sub(
-            r"st\.set_page_config\(.*?\)\n", "", _detay_kaynak, count=1, flags=_detay_re.DOTALL
-        )
-        exec(compile(_detay_kaynak, _detay_dosya, "exec"), globals())
+        # Derlenmiş kod süreçte saklanır (24.11.2026: her açılışta ~50 ms derleme);
+        # dosya değişirse (deploy) değişiklik zamanıyla yeniden derlenir
+        _detay_mt = os.path.getmtime(_detay_dosya)
+        _detay_kod = st.session_state.get("_detay_kod")
+        if not _detay_kod or _detay_kod[0] != _detay_mt:
+            with open(_detay_dosya, "r", encoding="utf-8") as _f:
+                _detay_kaynak = _f.read()
+            # app_merkez zaten kendi set_page_config'ini çağırdı — detay sayfasınınkini atla
+            import re as _detay_re
+            _detay_kaynak = _detay_re.sub(
+                r"st\.set_page_config\(.*?\)\n", "", _detay_kaynak, count=1, flags=_detay_re.DOTALL
+            )
+            _detay_kod = (_detay_mt, compile(_detay_kaynak, _detay_dosya, "exec"))
+            st.session_state["_detay_kod"] = _detay_kod
+        exec(_detay_kod[1], globals())
 
     st.stop()
 
@@ -1650,20 +1657,25 @@ if getattr(_ci_g, "SURUM", 0) < 12:
 def online_bilgi(lok_id):
     return _ci_g.baglanti_durumu(lok_dict.get(lok_id, {}).get("ping_zamani"))
 
+_dun_kwh_tablo = None
+
+
 def dun_kwh(lok_id):
-    if df_all.empty or lok_id not in aktif_loklar:
+    """Dünün (yoksa en son günün) toplam tüketimi. Tüm lokasyonlar tek gruplamayla
+    bir kez hesaplanır (24.11.2026: lokasyon başına süzme ana ekranda ~100 ms tutuyordu)."""
+    global _dun_kwh_tablo
+    if df_all.empty or lok_id not in aktif_loklar or "Toplam_Hastane_Tuketim_kWh" not in df_all.columns:
         return 0
-    lok_df = df_all[df_all["lokasyon_id"] == lok_id]
-    if lok_df.empty:
-        return 0
-    # Önce dünü dene, yoksa en son mevcut günü kullan
-    d = lok_df[lok_df["Tarih"].dt.strftime("%Y-%m-%d") == dun]
-    if d.empty:
-        son = lok_df["Tarih"].dropna().max()
-        d = lok_df[lok_df["Tarih"].dt.strftime("%Y-%m-%d") == son.strftime("%Y-%m-%d")]
-    if not d.empty and "Toplam_Hastane_Tuketim_kWh" in d.columns:
-        return d["Toplam_Hastane_Tuketim_kWh"].sum()
-    return 0
+    if _dun_kwh_tablo is None:
+        _dun_kwh_tablo = {}
+        _g = df_all.loc[df_all["Tarih"].notna(), ["lokasyon_id", "Tarih", "Toplam_Hastane_Tuketim_kWh"]]
+        _top = (_g.assign(_gun=_g["Tarih"].dt.strftime("%Y-%m-%d"))
+                .groupby(["lokasyon_id", "_gun"])["Toplam_Hastane_Tuketim_kWh"].sum())
+        for _l, _s in _top.groupby(level=0):
+            _s = _s.droplevel(0)
+            # Önce dünü dene, yoksa en son mevcut günü kullan
+            _dun_kwh_tablo[_l] = _s[dun] if dun in _s.index else _s[max(_s.index)]
+    return _dun_kwh_tablo.get(lok_id, 0)
 
 # ============================================================
 # ANA LAYOUT: sol | harita | sağ
@@ -1693,7 +1705,7 @@ if _cark_kutu is not None:
         # Görünmez detay düğmeleri (on_click): durum yeniden çizimden ÖNCE yazılır,
         # çizim doğrudan detay dalına girer — ana ekran bir kez daha çizilmez.
         import detay_tema_demo as _dtd_c
-        if getattr(_dtd_c, "SURUM", 0) < 21:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd_c, "SURUM", 0) < 23:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dtdc
             _dtd_c = _il_dtdc.reload(_dtd_c)
         with st.container(key="ck_gizli_detay"):

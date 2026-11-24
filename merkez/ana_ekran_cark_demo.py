@@ -183,7 +183,7 @@ def ekran_css() -> str:
          .replace("ANA", _ANA).replace("§", EKRAN_KOK))
     # Pop-up içerikleri detay sayfasıyla AYNI koyu temada (detay_tema_demo.icerik_css)
     import detay_tema_demo as _dt
-    if getattr(_dt, "SURUM", 0) < 21:   # açık süreçte eski modül önbellekte kalmasın
+    if getattr(_dt, "SURUM", 0) < 23:   # açık süreçte eski modül önbellekte kalmasın
         import importlib
         _dt = importlib.reload(_dt)
     # Üç pop-up tek seçici listesiyle (üç kopya CSS yerine bir kopya; sayfa hafif kalsın)

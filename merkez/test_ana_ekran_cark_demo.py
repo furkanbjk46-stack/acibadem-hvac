@@ -239,6 +239,15 @@ c("tema: yer tutucu kalmadi", not re.search(r"§|PALET|SATIR_ICI|IZ_SVG| D | D\)
 # Canlı İzleme satırları dar sütunda kesilmesin (18.11.2026): sabit 86/60/92 px ızgara esner
 c("tema: canli izleme satir izgarasi esnek",
   ".cg-liste:not(.cg-liste-blok){ grid-template-columns:minmax(0, max-content) minmax(14px, 1fr) max-content" in _tc)
+# 24.11.2026: tarih parçaları okunur, Excel düğmesi kesilmez, geçiş yalnız transform/opacity
+c("tema: tarih kutusu gun/ay/yil parcalari acik renkte",
+  '[data-testid="stDateInput"] [role="group"] span{ color:var(--ck-metin) !important;' in _tc)
+c("tema: Excel dugmesi kayan kutunun ustunden tasmaz", "top:-4px" not in re.sub(r"/\*.*?\*/", "", _tc, flags=re.S) and "top:0; right:0; width:132px" in _tc)
+_gcss = re.sub(r"/\*.*?\*/", "", T.GECIS_CSS, flags=re.S)
+c("gecis: blur ve kutu olcusu canlandirilmaz (compositor)",
+  "blur(" not in _gcss and not re.search(r"transition:[^;]*\b(left|top|width|height|filter|background)\b", _gcss))
+c("gecis: panel olcumu eklemeden once (buyume animasyonu oynar)",
+  T.GECIS_JS.index("var hedef = hedefDetay();") < T.GECIS_JS.index("var o = kaplama(isim);"))
 _tic = re.sub(r"/\*.*?\*/", "", _tc[_tc.index(">") + 1:_tc.rindex("<")], flags=re.S)
 _tic = re.sub(r"@media[^{]*\{", "", _tic)
 _tsec = [x.split("{")[0].strip() for x in _tic.split("}") if "{" in x]
@@ -434,7 +443,11 @@ if AppTest is not None:
         _d2, _, _ = _calistir(False, _head, durum={"detay_lokasyon": "maslak"}, eski_arayuz=True)
         c("[canli-eski-detay] hatasiz, tema ve demo geri dugmesi YOK",
           not _d1.exception and "detay_tema_demo" not in _dm and "ck_detay_geri" not in _db and "detay_geri" in _db)
-        _a, _b = _iz(_d1), _iz(_d2)
+        # Excel dosyası 24.11.2026'dan beri tıklanınca üretilir (download_button data=çağrılabilir):
+        # dosya alanı (hazır url / ertelenmiş kimlik) dışında düğme aynı olmalı
+        _xl = re.compile(r'(?:deferred_file_id|url): "[^"]*"\n')
+        _a, _b = ([[_xl.sub("", s) if isinstance(s, str) else s for s in x] for x in _iz(_d)]
+                  for _d in (_d1, _d2))
         c("[canli-eski-detay] HEAD'deki app_merkez.py ile ayni cizim",
           not _d2.exception and _a == _b,
           [(k, len(x), len(y), next(((i, p[:300], q[:300]) for i, (p, q) in enumerate(zip(x, y)) if p != q), None))

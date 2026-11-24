@@ -41,7 +41,7 @@ import re
 
 import ana_ekran_cark_demo as _cark
 
-SURUM = 21  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 23  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 KOK = ('body:has(.st-key-detay_tema_demo):not(:has(.st-key-ozet_gecis_katmani))'
        ':not(:has(.st-key-yonetim_katmani))')
@@ -99,7 +99,9 @@ html:has(.st-key-detay_tema_demo){ background:#03141a !important; }
 /* ── Kompozisyon: solda ana ekranın bulanık izi, sağda yüksek cam panel ── */
 § [data-testid="stAppViewContainer"]::before{ content:""; position:fixed; inset:-30px; z-index:0; pointer-events:none;
   background:url("IZ_SVG") left center / auto 100% no-repeat;
-  filter:blur(7px) brightness(.62) saturate(.85); opacity:.95; }
+  filter:blur(7px) brightness(.62) saturate(.85); opacity:.95;
+  will-change:transform; transform:translateZ(0); }
+/* Bulanık iz kendi katmanında bir kez çizilir; her karede yeniden bulanıklaştırılmaz (24.11.2026) */
 § [data-testid="stMain"]{ position:relative; z-index:1; }
 §:not(.ck-geri-surer) [data-testid="stMainBlockContainer"]{
   margin:var(--ck-dp-ust, 50px) var(--ck-dp-sag, 1.6vw) var(--ck-dp-alt, 1.4vh) var(--ck-dp-sol, 27vw) !important;
@@ -160,7 +162,8 @@ html:has(.st-key-detay_tema_demo){ background:#03141a !important; }
 /* Grafik sütunu: Excel düğmesi başlık satırına alınır (dikey yer kazanır) */
 § D [data-testid="stColumn"]:has(> [data-testid="stVerticalBlock"] > [data-testid="stLayoutWrapper"] .st-key-grafik_secim) > [data-testid="stVerticalBlock"]{ position:relative; }
 § D [data-testid="stLayoutWrapper"]:has(> [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > .st-key-grafik_excel){
-  position:absolute !important; top:-4px; right:0; width:132px !important; z-index:2; }
+  position:absolute !important; top:0; right:0; width:132px !important; z-index:2; }
+/* top:-4px kaydırılan kutunun üst kenarında düğmenin yarısını kesiyordu (24.11.2026) */
 § D [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > .st-key-grafik_excel) > [data-testid="stColumn"]:first-child{ display:none !important; }
 § D [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"] > [data-testid="stVerticalBlock"] > .st-key-grafik_excel) > [data-testid="stColumn"]{ width:100% !important; flex:1 1 100% !important; }
 § D [data-testid="stColumn"]:has(.st-key-grafik_secim) > [data-testid="stVerticalBlock"]{ gap:calc(var(--ck-u) * .7) !important; }
@@ -362,6 +365,11 @@ html:has(.st-key-detay_tema_demo){ background:#03141a !important; }
 § D :is([data-testid="stDateInput"], [data-testid="stNumberInput"], [data-testid="stTextInput"]) input{
   color:var(--ck-metin) !important; -webkit-text-fill-color:var(--ck-metin) !important; }
 § D [data-baseweb="select"] svg{ fill:var(--ck-metin-2) !important; }
+/* Tarih kutusu (Streamlit 1.66): görünen tarih <input> değil, gün/ay/yıl parçaları
+   (span role=spinbutton) — koyu varsayılan renkte okunmuyordu (24.11.2026) */
+§ D [data-testid="stDateInput"] [role="group"] span{ color:var(--ck-metin) !important; -webkit-text-fill-color:var(--ck-metin) !important; }
+§ D [data-testid="stDateInput"] [role="group"] span:not([role="spinbutton"]){ opacity:.55; }
+§ D [data-testid="stDateInput"] [role="spinbutton"]:focus{ background:rgba(46,196,182,.28) !important; border-radius:4px; outline:none; }
 § [data-baseweb="popover"]:has([role="listbox"]) > div, § [data-testid="stSelectboxVirtualDropdown"],
 § [data-testid="stSelectboxVirtualDropdown"] [role="listbox"]{
   background:#0b2a33 !important; border:1px solid var(--ck-cam-kenar) !important; }
@@ -525,16 +533,18 @@ GECIS_CSS = """
 @keyframes ckKaplamaEmniyet{ to{ opacity:0; visibility:hidden; } }
 /* Perde yalnız karartır; bulanıklık ana sahnenin kendi filtresinde (backdrop-filter
    tam ekranda her karede yeniden hesaplanır, yavaş makinede takılır) */
-.ck-gecis-perde{ position:absolute; inset:0; background:rgba(2,14,18,0); transition:background .6s ease; }
-.ck-gecis-kaplama.ck-acik .ck-gecis-perde{ background:rgba(2,14,18,.38); }
-.ck-gecis-panel{ position:absolute; box-sizing:border-box; overflow:hidden; border-radius:16px; padding:22px 26px;
+/* HIZ (24.11.2026): geçişte yalnız transform ve opacity canlandırılır — bunları ekran
+   kartı (compositor) oynatır; detay çizilirken ana iş parçacığı ~0,5 sn meşgulken de
+   akıcı kalır. Önceki left/top/width/height + blur() canlandırması o sırada donuyordu. */
+.ck-gecis-perde{ position:absolute; inset:0; background:rgba(2,14,18,.38); opacity:0; transition:opacity .6s ease; }
+.ck-gecis-kaplama.ck-acik .ck-gecis-perde{ opacity:1; }
+.ck-gecis-panel{ position:absolute; box-sizing:border-box; overflow:hidden; border-radius:22px; padding:22px 26px;
   font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;
   background:linear-gradient(180deg, rgba(22,62,72,.97), rgba(7,28,35,.98));
   border:1px solid rgba(150,225,225,.30);
   box-shadow:0 40px 90px -30px rgba(0,0,0,.85), 0 0 0 6px rgba(46,196,182,.05), inset 0 1px 0 rgba(255,255,255,.07);
-  transition:left .44s cubic-bezier(.2,.75,.15,1), top .44s cubic-bezier(.2,.75,.15,1),
-             width .44s cubic-bezier(.2,.75,.15,1), height .44s cubic-bezier(.2,.75,.15,1),
-             border-radius .44s ease, opacity .3s ease; }
+  transform-origin:0 0; will-change:transform, opacity;
+  transition:transform .44s cubic-bezier(.2,.75,.15,1), opacity .3s ease; }
 .ck-gecis-kaplama .ck-gecis-panel *{ color:#e8f1f2 !important; box-sizing:border-box; }
 .ck-gecis-kaplama .ck-gecis-panel .ck-gp-ust{ font-size:9px; letter-spacing:4px; text-transform:uppercase; color:#86e8dc !important; opacity:.8; white-space:nowrap; }
 .ck-gp-ad{ margin-top:6px; font-size:22px; font-weight:800; letter-spacing:2.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -544,13 +554,14 @@ GECIS_CSS = """
 .ck-gp-izgara i{ height:58px; }
 .ck-gp-izgara i:nth-child(2){ grid-row:span 3; height:auto; }
 .ck-gp-satir i{ flex:1; height:70px; }
-.ck-gecis-panel i{ display:block; border-radius:10px; border:1px solid rgba(255,255,255,.06);
-  background:linear-gradient(90deg, rgba(255,255,255,.035) 0%, rgba(134,232,220,.13) 50%, rgba(255,255,255,.035) 100%);
-  background-size:220% 100%; animation:ckIskelet 1.3s linear infinite; }
-@keyframes ckIskelet{ from{ background-position:120% 0; } to{ background-position:-120% 0; } }
+.ck-gecis-panel i{ display:block; position:relative; overflow:hidden; border-radius:10px; border:1px solid rgba(255,255,255,.06);
+  background:rgba(255,255,255,.035); }
+.ck-gecis-panel i::after{ content:""; position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent 0%, rgba(134,232,220,.13) 50%, transparent 100%);
+  transform:translateX(-100%); animation:ckIskelet 1.3s linear infinite; }
+@keyframes ckIskelet{ to{ transform:translateX(100%); } }
 .ck-gecis-kaplama.ck-gecis-cikis{ opacity:0; transition:opacity .42s ease; }
-.ck-gecis-kaplama.ck-geri .ck-gecis-panel{ transition:left .55s cubic-bezier(.4,.05,.25,1), top .55s cubic-bezier(.4,.05,.25,1),
-  width .55s cubic-bezier(.4,.05,.25,1), height .55s cubic-bezier(.4,.05,.25,1), border-radius .55s ease, opacity .4s ease; }
+.ck-gecis-kaplama.ck-geri .ck-gecis-panel{ transition:transform .55s cubic-bezier(.4,.05,.25,1), opacity .4s ease; }
 
 /* Sayfa değişimi görünmesin: zemin koyu; ana sahneyi içeren üst düzey öğe dışında hepsi gizli */
 body:is(.ck-gecis-surer, .ck-geri-surer, .ck-sahne-giris), body:is(.ck-gecis-surer, .ck-geri-surer, .ck-sahne-giris) :is(.stApp, [data-testid="stApp"], [data-testid="stAppViewContainer"]){
@@ -558,9 +569,9 @@ body:is(.ck-gecis-surer, .ck-geri-surer, .ck-sahne-giris), body:is(.ck-gecis-sur
 /* opacity (visibility değil: Streamlit iç kapları visibility:visible verip gizlemeyi deliyor) */
 body:is(.ck-gecis-surer, .ck-geri-surer, .ck-sahne-giris) [data-testid="stMainBlockContainer"] > [data-testid="stVerticalBlock"] > *:not(:has(.ck-sahne)){
   opacity:0 !important; pointer-events:none !important; transition:none !important; }
-/* İleri: ana sahne bulanıklaşıp kararır (perde) ve hafif küçülüp uzaklaşır */
-body.ck-gecis-surer .ck-sahne{ transform:scale(.955) translateX(-1.5%); filter:blur(7px) brightness(.66) saturate(.85);
-  will-change:transform, filter; transition:transform .62s cubic-bezier(.2,.75,.15,1), filter .62s ease; }
+/* İleri: ana sahne kararır (perde + opacity) ve hafif küçülüp uzaklaşır (blur yok: her karede tam ekran bulanıklık yavaş PC'de takılıyordu) */
+body.ck-gecis-surer .ck-sahne{ transform:scale(.955) translateX(-1.5%); opacity:.55;
+  will-change:transform, opacity; transition:transform .62s cubic-bezier(.2,.75,.15,1), opacity .62s ease; }
 /* Detay açıldı ama yeniden çizim bitmedi: eski ana sahne (bayat öğe) detayın üstünde görünmesin */
 body:not(.ck-geri-surer):not(.ck-sahne-giris):has(.st-key-detay_tema_demo) .ck-sahne{ visibility:hidden !important; }
 /* Detay içeriği iskeletin yerine oturur */
@@ -569,13 +580,13 @@ body.ck-detay-giris [data-testid="stMainBlockContainer"] > [data-testid="stVerti
 /* Geri: ana sahne gelene dek gizli; gelince netleşerek girer */
 body.ck-geri-surer .ck-sahne{ opacity:0; animation:ckEmniyet .45s ease 6s forwards; }
 body.ck-sahne-giris .ck-sahne{ animation:ckSahneGir .66s cubic-bezier(.2,.75,.15,1) both; }
-@keyframes ckSahneGir{ from{ opacity:0; transform:scale(1.035); filter:blur(12px) brightness(.5); } to{ opacity:1; transform:none; filter:none; } }
+@keyframes ckSahneGir{ from{ opacity:0; transform:scale(1.035); } to{ opacity:1; transform:none; } }
 @keyframes ckEmniyet{ to{ opacity:1; } }
 @media (prefers-reduced-motion: reduce){
-  .ck-gecis-perde{ transition:background .25s ease; }
-  body.ck-gecis-surer .ck-sahne{ filter:brightness(.5); transition:filter .25s ease; }
+  .ck-gecis-perde{ transition:opacity .25s ease; }
+  body.ck-gecis-surer .ck-sahne{ opacity:.5; transition:opacity .25s ease; }
   .ck-gecis-panel, .ck-gecis-kaplama.ck-geri .ck-gecis-panel{ transition:opacity .25s ease; }
-  .ck-gecis-panel i{ animation:none; }
+  .ck-gecis-panel i::after{ animation:none; opacity:0; }
   body.ck-gecis-surer .ck-sahne{ transform:none; }
   @keyframes ckIcerikGir{ from{ opacity:0; } to{ opacity:1; } }
   @keyframes ckSahneGir{ from{ opacity:0; } to{ opacity:1; } }
@@ -599,6 +610,12 @@ GECIS_JS = r"""
   // Bir sonraki kare: requestAnimationFrame; sekme arka plandaysa (rAF durur) zamanlayıcı yedeği
   function sonra(fn) { var ok = false; function c() { if (!ok) { ok = true; fn(); } } W.requestAnimationFrame(c); W.setTimeout(c, 50); }
   function kutu(p, r) { p.style.left = r.left + 'px'; p.style.top = r.top + 'px'; p.style.width = r.width + 'px'; p.style.height = r.height + 'px'; }
+  // Panel yerinde (r) durur; başka bir kutunun (h) yerinde görünmesi yalnız transform ile
+  // (ekran kartı oynatır, ana iş parçacığı meşgulken donmaz — 24.11.2026)
+  function donus(r, h) {
+    return 'translate(' + (h.left - r.left) + 'px,' + (h.top - r.top) + 'px) scale('
+      + Math.max(h.width / Math.max(r.width, 1), .01) + ',' + Math.max(h.height / Math.max(r.height, 1), .01) + ')';
+  }
   function hedefDetay() {
     var p = d.createElement('div'); p.className = 'ck-dp-olcu'; d.body.appendChild(p);
     var r = p.getBoundingClientRect(); d.body.removeChild(p);
@@ -623,17 +640,21 @@ GECIS_JS = r"""
   }
   // İLERİ: tıklama anında (yeniden çizim beklenmeden) başlar
   G.ileri = function (isim, kaynak) {
+    // Ölçüm panel eklenmeden ÖNCE: sonradan ölçmek paneli başlangıç dönüşümü olmadan
+    // biçimlendirir ve büyüme animasyonu hiç oynamaz
+    var hedef = hedefDetay();
     var o = kaplama(isim);
     G.yon = 'ileri'; G.t0 = Date.now(); G.p0 = W.performance.now();
     d.body.classList.remove('ck-geri-surer', 'ck-sahne-giris', 'ck-detay-giris', 'ck-kontrol-acik', 'ck-harita-acik');
     d.body.classList.add('ck-gecis-surer');
-    var hedef = hedefDetay();
-    if (AZ || !kaynak) { kutu(o.p, hedef); o.p.style.opacity = '0'; }
-    else { kutu(o.p, {left: kaynak.left - 8, top: kaynak.top - 6, width: Math.max(kaynak.width + 16, 200), height: Math.max(kaynak.height + 12, 70)}); }
+    kutu(o.p, hedef);
+    if (AZ || !kaynak) { o.p.style.opacity = '0'; }
+    else { o.p.style.transform = donus(hedef, {left: kaynak.left - 8, top: kaynak.top - 6,
+                                               width: Math.max(kaynak.width + 16, 200), height: Math.max(kaynak.height + 12, 70)}); }
     void o.p.offsetWidth;
     sonra(function () {
       o.k.classList.add('ck-acik');
-      o.p.style.opacity = '1'; kutu(o.p, hedef); o.p.style.borderRadius = '22px';
+      o.p.style.opacity = '1'; o.p.style.transform = 'none';
     });
   };
   // GERİ: detay paneli iskelete döner, çark ekranındaki panelin yerine küçülür
@@ -642,12 +663,12 @@ GECIS_JS = r"""
     if (bc) { var b = bc.getBoundingClientRect(); r = {left: b.left, top: Math.max(b.top, 0), width: b.width, height: Math.min(b.bottom, W.innerHeight) - Math.max(b.top, 0)}; }
     var ad = d.querySelector('.dz-baslik');
     var o = kaplama(ad ? ad.textContent.trim() : '');
-    o.k.classList.add('ck-geri', 'ck-acik'); kutu(o.p, r); o.p.style.borderRadius = '22px';
+    o.k.classList.add('ck-geri', 'ck-acik'); kutu(o.p, r);
     G.yon = 'geri'; G.t0 = Date.now(); G.p0 = W.performance.now();
     d.body.classList.remove('ck-gecis-surer', 'ck-detay-giris', 'ck-sahne-giris');
     d.body.classList.add('ck-geri-surer');
     void o.p.offsetWidth;
-    sonra(function () { kutu(o.p, hedefAna()); o.p.style.borderRadius = '16px'; });
+    sonra(function () { o.p.style.transform = donus(r, hedefAna()); });
   };
   function hazir() {
     if (G.yon === 'ileri') {

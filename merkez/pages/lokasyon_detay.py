@@ -2,7 +2,7 @@
 # Lokasyon Detay Sayfası — Sadece Okuma & Grafik
 
 from __future__ import annotations
-import os, sys, json, re
+import os, sys, json, re, functools
 # Ana sayfa: demo app_demo.py ile açılır; "app_merkez.py"ye geçiş orada
 # StreamlitAPIException veriyordu (Geri butonu sunumda kırmızı hata basıyordu).
 _ANA_SAYFA = "app_demo.py" if os.environ.get("SYNAPSE_DEMO") == "1" else "app_merkez.py"
@@ -285,6 +285,11 @@ CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs"
 _AY_TR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz",
           "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
 _AY_KISA_TR = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+
+
+def _xl_dosya(gv, arg):
+    """Excel düğmesinin dosyası: yalnız tıklanınca üretilir (download_button data=çağrılabilir)."""
+    return gv.xlsx_uret(*arg, pd.Timestamp.now(tz="Etc/GMT-3").strftime("%d.%m.%Y %H:%M"))
 
 
 def _tr_tarih(dt, bicim: str) -> str:
@@ -942,11 +947,12 @@ with tab1:
                     _kiyas_ay.year, _kiyas_ay.month, _kiyas_ad, _kiyas_gec_ad)
                 if _xl_paket:
                     _xl_bas, _xl_bit = ((_kiyas_ay.date(), None) if _xl_ay else (tarih_bas, tarih_bit))
+                    # Dosya tıklanınca üretilir (24.11.2026: her detay çiziminde ~70 ms openpyxl)
+                    _xl_arg = (secim, lok_info["isim"],
+                               (f"{_kiyas_ad} / {_kiyas_gec_ad}" if _xl_ay else tarih_aralik_str), _xl_paket)
                     st.download_button(
                         "⬇ Excel",
-                        _GV.xlsx_uret(secim, lok_info["isim"],
-                                      (f"{_kiyas_ad} / {_kiyas_gec_ad}" if _xl_ay else tarih_aralik_str),
-                                      _xl_paket, pd.Timestamp.now(tz="Etc/GMT-3").strftime("%d.%m.%Y %H:%M")),
+                        functools.partial(_xl_dosya, _GV, _xl_arg),
                         file_name=f"{lok_id}_{grafik_tip}_{_xl_bas}{'_' + str(_xl_bit) if _xl_bit else ''}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True, key="grafik_excel")
