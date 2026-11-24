@@ -23,7 +23,7 @@ import numpy as np
 import pandas as pd
 
 from . import _BURASI  # noqa: F401 — sys.path ayarı
-from gunluk_model import GunlukTahminModeli, KOLONLAR, ENERJI_HAVA_SUTUNLARI
+from gunluk_model import GunlukTahminModeli, KOLONLAR, ENERJI_HAVA_SUTUNLARI, ISTEGE_BAGLI
 from gunluk_model import birlestir as _birlestir
 from sinama import olcutler
 
@@ -185,6 +185,32 @@ def hava_tablosu(hava_tahmin: Optional[Dict[str, dict]]) -> Optional[pd.DataFram
     return pd.DataFrame(satirlar)
 
 
+def _gecmis_gun_tahmini(g: pd.DataFrame, hedef: str, bas: pd.Timestamp,
+                        bugun: pd.Timestamp) -> Dict[pd.Timestamp, float]:
+    """Ayın gerçekleşmiş günleri için modelin tahmini (gerçekleşen ile yan yana gösterilir).
+
+    Model YALNIZ AY BAŞINA KADARKİ veriyle eğitilir (ileriye dönük; Aylık Tahmin ile aynı
+    ilke) — o günlerin gerçek tüketimini görmez. Girdi olarak o günlerin ÖLÇÜLEN havası
+    kullanılır: fark hava tahmininin değil, modelin hatasıdır. Geçmiş yetmezse boş döner.
+    """
+    if bugun < bas:
+        return {}
+    try:
+        ilk = g.loc[g[hedef].notna(), "tarih"].min()
+        if pd.isna(ilk) or (bas - ilk).days < EN_AZ_EGITIM_GUN:
+            return {}
+        m = GunlukTahminModeli(hedef=hedef)
+        m.egit(g, bitis=bas)
+        ay = g[(g["tarih"] >= bas) & (g["tarih"] <= bugun)]
+        kol = ["T"] + [c for c in ISTEGE_BAGLI if c in ay.columns]
+        hava = ay[kol].copy()
+        hava.insert(0, "Tarih", ay["tarih"].values)
+        s = m.gunluk_tahmin(bas, bugun, hava=hava)
+        return {t: float(v) for t, v in zip(s["tarih"], s["tuketim"])}
+    except Exception:
+        return {}
+
+
 def donem_tahmini(df: pd.DataFrame, hedef: str = "toplam",
                   hava_tahmin: Optional[Dict[str, dict]] = None, bugun=None,
                   haric: Optional[List[Dict]] = None) -> Dict:
@@ -214,6 +240,7 @@ def donem_tahmini(df: pd.DataFrame, hedef: str = "toplam",
     sonuc = m.gunluk_tahmin(bas, son, hava=hava_tablosu(hava_tahmin))
     gecerli = g[g["hedef_gecerli"] & g[hedef].notna() & (g["tarih"] < yarin)].set_index("tarih")[hedef]
     tahminli = set((hava_tahmin or {}).keys())
+    onceki = _gecmis_gun_tahmini(g, hedef, bas, bugun)
     gunler = []
     for t, v, s in zip(sonuc["tarih"], sonuc["tuketim"], sonuc["T"]):
         ts = t.strftime("%Y-%m-%d")
@@ -221,7 +248,9 @@ def donem_tahmini(df: pd.DataFrame, hedef: str = "toplam",
         kaynak = "gercek" if gercek is not None else ("tahmin" if ts in tahminli else "ortalama")
         gunler.append({"tarih": ts, "tahmin": float(v), "gercek": gercek,
                        "deger": gercek if gercek is not None else float(v),
-                       "sicaklik": float(s), "kaynak": kaynak})
+                       "sicaklik": float(s), "kaynak": kaynak,
+                       # Gerçekleşen günde modelin o gün için beklediği (ay başına kadarki veriyle)
+                       "onceki_tahmin": onceki.get(t) if gercek is not None else None})
     # Ayın iki yarısı: 1–15 ve 16–ay sonu (31.10.2026 kullanıcı kararı; haftalık kaldırıldı)
     yarilar = []
     for bas_g, son_g in ((1, 15), (16, len(gunler))):

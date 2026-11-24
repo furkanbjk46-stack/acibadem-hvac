@@ -119,7 +119,8 @@ def _hava_tahmini() -> dict:
 @st.cache_data(show_spinner=False, ttl=3 * 3600)
 def _donem_tahmini(hedef: str, gun_imzasi: str, veri_imzasi: float) -> dict:
     """Yarın + ayın iki yarısı + dönem (yarının ayı) tahmini. gun_imzasi: bugünün
-    tarihi — gün dönünce önbellek tazelenir."""
+    tarihi — gün dönünce önbellek tazelenir. Gerçekleşen günlerde 'onceki_tahmin' de
+    döner (yan yana çubuk; 24.11.2026) — bu gövde değişince eski önbellek kullanılmaz."""
     from tuketim_tahmin import portal_ozet
     return portal_ozet.donem_tahmini(load_data(), hedef, hava_tahmin=_hava_tahmini())
 
@@ -5211,6 +5212,13 @@ with tab6:
                 _ufig = _pg.tahmin_grafigi(_dt["gunler"], _ub)
                 if _ufig is not None:
                     st.plotly_chart(_ufig, use_container_width=True, config={"displayModeBar": False})
+                _ok = [x for x in _dt["gunler"] if x.get("onceki_tahmin")]
+                _ot, _og = sum(x["onceki_tahmin"] for x in _ok), sum(x["gercek"] for x in _ok)
+                if _ok and _ot > 0:
+                    st.caption(f"Gerçekleşen günlerde açık mavi çubuk: modelin o gün için tahmini (yalnız ay "
+                               f"başına kadarki veriyle, o günün ölçülen havasıyla). {len(_ok)} günde tahmin "
+                               f"{_sayi(_ot)} {_ub}, gerçekleşen {_sayi(_og)} {_ub} · sapma "
+                               + f"%{(_og - _ot) / _ot * 100:+.1f}".replace(".", ",") + ".")
                 if _dt["hava_tahmin_gun"]:
                     st.caption(f"Hava tahmini {_dt['hava_tahmin_gun']} gün için kullanıldı; kalan tahmin günleri "
                                f"geçmiş yılların aynı takvim günü ortalaması. Son tüketim verisi: {_dt['son_veri']}.")

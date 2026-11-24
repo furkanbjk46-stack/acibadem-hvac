@@ -181,6 +181,34 @@ c("gerçek günler hava tahmininden etkilenmez", uh["gunler"][5]["deger"] == u["
 us = PO.donem_tahmini(df, "sogutma", hava_tahmin=_sicak, bugun=BUGUN, haric=[])
 c("soğutma dönemi: kWh, sıcakta artar", us.get("hata") is None and us["birim"] == "kWh"
   and us["gunler"][23]["deger"] > us["gunler"][30]["deger"])
+# Gerçekleşen günlerde modelin o gün için tahmini (yan yana çubuk; 24.11.2026)
+_ot = [g for g in u["gunler"] if g["kaynak"] == "gercek"]
+c("gerçekleşen her günde önceki tahmin var, kalan günlerde yok",
+  all(g["onceki_tahmin"] and g["onceki_tahmin"] > 0 for g in _ot)
+  and all(g["onceki_tahmin"] is None for g in u["gunler"] if g["kaynak"] != "gercek"))
+_ot_t, _ot_g = sum(g["onceki_tahmin"] for g in _ot), sum(g["gercek"] for g in _ot)
+c("önceki tahmin gerçeğe yakın (±%15, sentetik veri)", abs(_ot_g / _ot_t - 1) < 0.15, (_ot_g, _ot_t))
+c("önceki tahmin ay başına kadarki veriyle: bu ayın gerçeğini görmez",
+  PO._gecmis_gun_tahmini(PO.birlestir(df, haric=[])[0], "toplam", pd.Timestamp("2026-10-01"),
+                         pd.Timestamp(BUGUN)) ==
+  PO._gecmis_gun_tahmini(PO.birlestir(df[df["Tarih"] < "2026-10-01"].pipe(
+      lambda d: pd.concat([d, df[df["Tarih"] >= "2026-10-01"].assign(Toplam_Hastane_Tuketim_kWh=1e9)])),
+      haric=[])[0], "toplam", pd.Timestamp("2026-10-01"), pd.Timestamp(BUGUN)))
+c("önceki tahmin: soğutmada da var", all(g["onceki_tahmin"] is not None for g in us["gunler"][:23]))
+c("ay başı (yarın 1'i): gerçekleşen gün yok → önceki tahmin boş", all(g["onceki_tahmin"] is None for g in uk["gunler"]))
+c("önceki tahmin: bir yıldan az geçmiş → boş",
+  PO._gecmis_gun_tahmini(PO.birlestir(sentetik(bas="2026-03-01"), haric=[])[0], "toplam",
+                         pd.Timestamp("2026-10-01"), pd.Timestamp(BUGUN)) == {})
+import portal_grafik as _PG
+_f = _PG.tahmin_grafigi(u["gunler"], "kWh")
+_iz = {t.name: t for t in _f.data}
+c("grafik: gerçekleşen yeşil + tahmin açık mavi yan yana (aynı gün, bitişik)",
+  _iz["Gerçekleşen"].marker.color == "#0ca30c" and _iz["Tahmin (gerçekleşen günler)"].marker.color == "#9db8e0"
+  and len(_iz["Tahmin (gerçekleşen günler)"].x) == 23 and _iz["Tahmin (gerçekleşen günler)"].offset == 0
+  and _iz["Gerçekleşen"].offset == -.4 * 86_400_000 and _f.layout.barmode == "overlay")
+c("grafik: tahmin günleri tek, geniş çubuk", _iz["Tahmin (geçmiş ortalama havayla)"].width == .8 * 86_400_000)
+c("grafik: eski biçimli gün listesi (onceki_tahmin yok) de çizilir",
+  _PG.tahmin_grafigi([{k: v for k, v in g.items() if k != "onceki_tahmin"} for g in u["gunler"]], "kWh") is not None)
 c("dönem: boş veri → hata metni", PO.donem_tahmini(pd.DataFrame(), "toplam")["hata"])
 c("dönem: bir yıldan az geçmiş → hata metni",
   PO.donem_tahmini(sentetik(bas="2026-03-01"), "toplam", bugun=BUGUN, haric=[])["hata"])

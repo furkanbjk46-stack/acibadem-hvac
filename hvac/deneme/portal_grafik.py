@@ -233,22 +233,42 @@ def _tarih_ekseni(fig):
 
 
 def tahmin_grafigi(gunler, birim: str):
-    """Günlük çubuklar: gerçekleşen (yeşil), hava tahminiyle (koyu mavi), geçmiş
-    ortalama havayla (açık mavi) + sağ eksende sıcaklık. Animasyon yok."""
+    """Günlük çubuklar: gerçekleşen günlerde gerçekleşen (yeşil) ile modelin o gün
+    için tahmini (açık mavi) YAN YANA; kalan günlerde tek çubuk: hava tahminiyle
+    (koyu mavi) / geçmiş ortalama havayla (açık mavi) + sağ eksende sıcaklık.
+    Animasyon yok."""
     d = pd.DataFrame(gunler)
     if d.empty:
         return None
     d["tarih"] = pd.to_datetime(d["tarih"])
+    if "onceki_tahmin" not in d.columns:
+        d["onceki_tahmin"] = None
+    # Tarih ekseninde konum/genişlik milisaniye: gün = 86.400.000 ms. Yan yana çift
+    # %40 + %40, tek çubuk %80 (iki çubuğun toplamı kadar) — günler aynı hizada kalır.
+    GUN = 86_400_000
     fig = go.Figure()
-    for tur, ad, renk in (("gercek", "Gerçekleşen", "#0ca30c"), ("tahmin", "Tahmin (hava tahminiyle)", "#2a78d6"),
+    s = d[d["kaynak"] == "gercek"]
+    cift = s[s["onceki_tahmin"].notna()]
+    if len(s):
+        fig.add_bar(x=s["tarih"], y=s["deger"], name="Gerçekleşen", marker_color="#0ca30c",
+                    offset=-.4 * GUN, width=[.4 * GUN if t in set(cift["tarih"]) else .8 * GUN for t in s["tarih"]],
+                    hovertemplate="%{x|%d.%m.%Y}<br>Gerçekleşen: %{y:,.0f} " + birim + "<extra></extra>")
+    if len(cift):
+        sap = ((cift["deger"] - cift["onceki_tahmin"]) / cift["onceki_tahmin"] * 100).round(1)
+        fig.add_bar(x=cift["tarih"], y=cift["onceki_tahmin"].astype(float), name="Tahmin (gerçekleşen günler)",
+                    marker_color="#9db8e0", offset=0, width=.4 * GUN, customdata=sap,
+                    hovertemplate="%{x|%d.%m.%Y}<br>Tahmin: %{y:,.0f} " + birim
+                                  + "<br>Sapma: %{customdata:+.1f}%<extra></extra>")
+    for tur, ad, renk in (("tahmin", "Tahmin (hava tahminiyle)", "#2a78d6"),
                           ("ortalama", "Tahmin (geçmiş ortalama havayla)", "#9db8e0")):
         s = d[d["kaynak"] == tur]
         if len(s):
-            fig.add_bar(x=s["tarih"], y=s["deger"], name=ad, marker_color=renk,
+            fig.add_bar(x=s["tarih"], y=s["deger"], name=ad, marker_color=renk, offset=-.4 * GUN, width=.8 * GUN,
                         hovertemplate="%{x|%d.%m.%Y}<br>%{y:,.0f} " + birim + "<extra></extra>")
     fig.add_scatter(x=d["tarih"], y=d["sicaklik"], name="Ort. sıcaklık (°C)", yaxis="y2", mode="lines+markers",
                     line=dict(color="#e0773a", width=2), marker=dict(size=4),
                     hovertemplate="%{y:.1f} °C<extra></extra>")
+    fig.update_layout(barmode="overlay")      # konumlar yukarıda elle verildi
     return _tarih_ekseni(_duzen(fig, birim, yukseklik=340, sag_eksen="°C", lejant=True))
 
 
