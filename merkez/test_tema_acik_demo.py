@@ -82,9 +82,20 @@ c("hepsi: tum ekranlarin aydinlik kurallari tek parca", A.hepsi().count("html.ck
 
 # ── Uygulama ──
 _app = open(os.path.join(BURASI, "app_merkez.py"), encoding="utf-8").read()
-c("app: uc dalda basilir (ana, detay, Sistem)", _app.count("import tema_acik_demo as") == 3)
+c("app: uc dalda basilir (ana, detay, Sistem) + on yukleme", _app.count("import tema_acik_demo as") == 4)
 c("app: acik surecte SURUM ile yenilenir",
-  _app.count('"SURUM", 0) < %d:   # açık süreçte eski modül' % A.SURUM) == 3)
+  _app.count('"SURUM", 0) < %d:   # açık süreçte eski modül' % A.SURUM) == 4)
+# 24.11.2026: sert yenilemede eski başlık / yanlış tema bir an görünmesin
+_on = A.on_yukleme_css("acik")
+c("on yukleme: tema hazir olana dek ana alan gizli, 3 sn emniyet",
+  'html:not(.ck-tema-hazir):not(#ck-on) [data-testid="stMainBlockContainer"]{ opacity:0; animation:ckOnAc 0s linear 3s forwards; }' in _on)
+c("on yukleme: zemin kayitli temada", "#eef3f6" in _on and "#03141a" in A.on_yukleme_css(None)
+  and "#03141a" in A.on_yukleme_css("koyu"))
+_bt = A.betik()
+c("betik: tema uygulaninca hazir isareti ve cerez", "ck-tema-hazir" in _bt and "ck_tema=" in _bt)
+c("app: on yukleme yalniz cark ana ekraninda, cerezle",
+  'if _cark_arayuz() and not st.session_state.get("detay_lokasyon"):\n    import tema_acik_demo as _tad_on' in _app
+  and 'st.context.cookies.get("ck_tema")' in _app)
 
 print("\n%d/%d PASS" % (gecti, gecti + basarisiz))
 raise SystemExit(1 if basarisiz else 0)

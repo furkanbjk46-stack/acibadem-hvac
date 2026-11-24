@@ -89,7 +89,8 @@ c("harita taban boyu kisaldi", "height=640, scrolling=False" in _m)
 c("grafik listesi emojisiz + simgeli", '("Tüketim", "tuketim", "kWh")' in _l and "_GRAFIK_IKON" in _l)
 c("grafik listesi kategorili (baslik + birim)", "_GRAFIK_GRUPLARI" in _l and all(g in _l for g in
   ("SU & ENERJİ KAYNAKLARI", "KOJENERASYON & GAZ SİSTEMLERİ", "SOĞUTMA & MEKANİK SİSTEMLER", "ÖZET & KARŞILAŞTIRMA")))
-c("detayda ust baslik yok", 'if not st.session_state.get("detay_lokasyon"):' in _m)
+c("detayda ve cark arayuzunde ust baslik yok",
+  'if not st.session_state.get("detay_lokasyon") and not _cark_arayuz():' in _m)
 c("bolum basliklari hareketli simgeli", '_ik.ikon("konum", 17)' in _m and '_ik.ikon("harita", 17)' in _m)
 c("ayarlar her ekrandan acilir", "synapse_ayar_ac" in _m and 'key="ayar_ana_btn"' in _m)
 c("KPI ozet satirlarinda tarih yok", "({_etiket})" not in _l)

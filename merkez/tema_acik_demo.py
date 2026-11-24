@@ -22,9 +22,24 @@ import colorsys
 import functools
 import re
 
-SURUM = 6   # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 8   # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 SINIF = "ck-acik-tema"
 KOK = "html." + SINIF
+# Tema uygulandı işareti (24.11.2026): sayfa ilk açılışta (sert yenileme) eski başlık →
+# koyu çark → aydınlık tema sırasıyla bir an yanıp sönüyordu. Ana ekran bu sınıf gelene
+# dek gizli (on_yukleme_css); tema çerezi (ck_tema) zemin rengini sunucuda seçtirir.
+HAZIR = "ck-tema-hazir"
+
+
+def on_yukleme_css(tema: str = None) -> str:
+    """Çark ana ekranı, kayıtlı tema uygulanana dek (html.ck-tema-hazir) gizli; zemin
+    kayıtlı temanın renginde. Betik çalışmazsa 3 sn sonra içerik yine de görünür."""
+    zemin = "#eef3f6" if tema == "acik" else "#03141a"
+    # :not(#ck-on) kimlik özgüllüğü katar: çark ekranının body:has(...) zemin kuralını geçer
+    h = "html:not(.%s):not(#ck-on)" % HAZIR
+    return ("<style>%s, %s body, %s [data-testid=\"stAppViewContainer\"]{ background:%s !important; }\n"
+            "%s [data-testid=\"stMainBlockContainer\"]{ opacity:0; animation:ckOnAc 0s linear 3s forwards; }\n"
+            "@keyframes ckOnAc{ to{ opacity:1; } }</style>" % (h, h, h, zemin, h))
 
 _RENK = re.compile(r"rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*(?:,\s*[\d.]+\s*)?\)|#[0-9a-fA-F]{3,8}\b")
 
@@ -305,7 +320,8 @@ def betik() -> str:
     import json
     motor = ("(function(){var d=document,W=window,S='" + SINIF + "';"
              "function oku(){try{return W.localStorage.getItem('ck_tema');}catch(e){return null;}}"
-             "function uygula(t){d.documentElement.classList.toggle(S,t==='acik');}"
+             "function uygula(t){var h=d.documentElement;h.classList.toggle(S,t==='acik');h.classList.add('" + HAZIR + "');"
+             "try{d.cookie='ck_tema='+(t==='acik'?'acik':'koyu')+'; path=/; max-age=31536000; SameSite=Lax';}catch(e){}}"
              "W.__ckTemaUygula=function(){uygula(oku());};W.__ckTemaUygula();"
              "W.addEventListener('click',function(ev){var b=ev.target&&ev.target.closest&&"
              "ev.target.closest('[data-ck-eylem=\"tema\"]');if(!b){return;}ev.preventDefault();ev.stopPropagation();"

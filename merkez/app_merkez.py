@@ -1306,6 +1306,19 @@ except ImportError:
     now_display = datetime.now(_tz(timedelta(hours=3)))
 dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
+# Çark ana ekranı: sert yenilemede eski başlık / koyu tema bir an görünmesin — kayıtlı
+# tema uygulanana dek ana alan gizli, zemin kayıtlı temanın renginde (tema_acik_demo)
+if _cark_arayuz() and not st.session_state.get("detay_lokasyon"):
+    import tema_acik_demo as _tad_on
+    if getattr(_tad_on, "SURUM", 0) < 8:   # açık süreçte eski modül önbellekte kalmasın
+        import importlib as _il_tad_on
+        _tad_on = _il_tad_on.reload(_tad_on)
+    try:
+        _tema_cerez = st.context.cookies.get("ck_tema")
+    except Exception:
+        _tema_cerez = None
+    st.markdown(_tad_on.on_yukleme_css(_tema_cerez), unsafe_allow_html=True)
+
 # ============ HEADER ============
 # "ACIBADEM SAĞLIK GRUBU" büyük; üzerinden lacivert→mavi parıltı akar.
 # Altında küçük "Enerji Canlı İzleme" + atan canlı noktası.
@@ -1327,7 +1340,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-if not st.session_state.get("detay_lokasyon"):
+# Çark arayüzünde başlık çark sahnesinin ARKASINDA kalır, hiç görünmez; sert yenilemede
+# sahne çizilmeden önce bir an beliriyordu (24.11.2026) → çark arayüzünde basılmaz
+if not st.session_state.get("detay_lokasyon") and not _cark_arayuz():
   st.markdown("""
 <style>
 @keyframes bsAkis{0%{background-position:0% 50%;}100%{background-position:200% 50%;}}
@@ -1545,7 +1560,7 @@ if st.session_state.get("yonetim"):
             _dtd_y = _il_dty.reload(_dtd_y)
         st.markdown(_dtd_y.yonetim_css(), unsafe_allow_html=True)
         import tema_acik_demo as _tad_y   # aydınlık tema (seçiliyse)
-        if getattr(_tad_y, "SURUM", 0) < 6:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_tad_y, "SURUM", 0) < 8:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_tad
             _tad_y = _il_tad.reload(_tad_y)
         st.markdown(_tad_y.hepsi(), unsafe_allow_html=True)
@@ -1591,7 +1606,7 @@ if st.session_state.get("detay_lokasyon"):
         with st.container(key="detay_tema_demo"):
             st.markdown(_dtd.tema_css(), unsafe_allow_html=True)
             import tema_acik_demo as _tad_d   # aydınlık tema (seçiliyse)
-            if getattr(_tad_d, "SURUM", 0) < 6:   # açık süreçte eski modül önbellekte kalmasın
+            if getattr(_tad_d, "SURUM", 0) < 8:   # açık süreçte eski modül önbellekte kalmasın
                 import importlib as _il_tad
                 _tad_d = _il_tad.reload(_tad_d)
             st.markdown(_tad_d.hepsi(), unsafe_allow_html=True)
@@ -1697,7 +1712,7 @@ if _cark_kutu is not None:
     with _cark_kutu:
         st.markdown(_ckd.ekran_css(), unsafe_allow_html=True)
         import tema_acik_demo as _tad   # aydınlık tema (seçiliyse); düğme alt orta çubukta
-        if getattr(_tad, "SURUM", 0) < 6:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_tad, "SURUM", 0) < 8:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_tad
             _tad = _il_tad.reload(_tad)
         st.markdown(_tad.hepsi(), unsafe_allow_html=True)
