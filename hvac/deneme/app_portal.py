@@ -4848,7 +4848,7 @@ with tab5:
                     try:
                         # A3: bulgular kalıcı (kimlik = kod), karar ve ölçüm sonucu deftere yazılır
                         from tasarruf.rapor import aylik_bolum as _aylik_bolum
-                        # A4: 10 dk AHU okumalarının gün özetleri (yeni günler bir kez işlenir)
+                        # A4: AHU okumalarının (HVAC analizinin okumaları) gün özetleri (yeni günler bir kez işlenir)
                         _gun_ici = None
                         try:
                             from tasarruf.gun_ici import ozetleri_guncelle as _gi_guncelle
@@ -4865,7 +4865,7 @@ with tab5:
                         for _sat in _alis_metin["aliskanliklar"]:
                             st.markdown(f"- {_sat}")
                         if _alis_metin.get("gun_ici"):
-                            st.markdown("**Gün içi santral davranışı (10 dakikalık AHU okumaları)**")
+                            st.markdown("**Gün içi santral davranışı (AHU okumaları)**")
                             for _sat in _alis_metin["gun_ici"]:
                                 st.markdown(f"- {_sat}")
                         if _alis_metin["bulgular"]:

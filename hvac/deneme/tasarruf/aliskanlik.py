@@ -402,13 +402,13 @@ def _bulgular(s: Dict, p: pd.DataFrame, t: pd.DataFrame, rapor_ayi: pd.Series, k
              f"{tr_sayi(ez['esik_gaz'])} m³ ve soğutma {tr_sayi(ez['esik_sogutma'])} kWh üzerinde; "
              f"bu günlerin ortalama dış sıcaklığı {tr_sayi(ez['ort_T'], 1)} °C."),
             ("Ara mevsimde santrallerde ısıtma ve soğutma vanalarının aynı anda açık olup olmadığı "
-             "10 dakikalık AHU verisiyle doğrulanmalı. Doğrulanmadan tasarruf hesaplanmaz."),
+             "santral (AHU) okumalarıyla doğrulanmalı. Doğrulanmadan tasarruf hesaplanmaz."),
             ["gaz", "sogutma"], kalite, durum="dogrulama_gerekli"))
         sp = (s.get("gun_ici") or {}).get("supheli")
         if sp and sp["veri_var"]:
             es = b[-1]
             cak = [g for g in sp["gunler"] if g["tur"] == "santralde_cakisma"]
-            es["kanit"] += (f" Bu günlerden {sp['veri_var']} tanesinin 10 dakikalık AHU verisi var: "
+            es["kanit"] += (f" Bu günlerden {sp['veri_var']} tanesinin santral okuma verisi var: "
                             f"{len(cak)} gün aynı santralde ısıtma ve soğutma vanası birlikte açık, "
                             f"{sp['yalniz_zon']} gün yalnız farklı santraller ısıtıp soğutuyor.")
             if not cak and sp["veri_var"] >= 5:

@@ -10,7 +10,7 @@ df1 = pd.DataFrame([
     ["TARGET_DT_FCU", "5.0°C", "FCU hedef ΔT (soğutma modu)", "Inlet/Outlet (coil su) -> fallback Plant Supply/Return"],
     ["TARGET_DT_CHILLER", "5.0°C", "Chiller hedef ΔT", "Plant Supply/Return (chillerda Inlet/Outlet genelde yok)"],
     ["TARGET_DT_COLLECTOR", "3.0°C", "Kolektör (ana toplayıcı) hedef ΔT", "Plant Supply (°C) ve Plant Return (°C) - kolektör giriş/çıkış sıcaklıkları. delta_t = |Plant Return - Plant Supply|"],
-    ["TARGET_DT_HEAT_EXCHANGER", "8.0°C", "Eşanjör hedef ΔT", "Inlet/Outlet (birincil/ikincil devre su sıcaklıkları)"],
+    ["TARGET_DT_HEAT_EXCHANGER", "8.0°C", "Kazan hedef ΔT", "Kazan giriş/çıkış su sıcaklıkları (Kazan-1/2/3)"],
     ["TARGET_DT_HEAT", "15.0°C", "Isıtma devresi (chiller hariç, AHU/FCU dışı tipler) hedef ΔT", "Inlet/Outlet su sıcaklıkları, ısıtma modunda ΔT = Inlet - Outlet"],
     ["(AHU/FCU ısıtma)", "10.0°C", "AHU/FCU coil ısıtma modunda hedef ΔT (özel durum)", "Inlet/Outlet, Mode = Heating"],
     ["TOLERANCE_CRITICAL", "±2.0°C (kodda su an KULLANILMIYOR)", "Parametre analiz fonksiyonlarina tasinir ama hicbir kuralda kullanilmaz; bant kararlari TOLERANCE_NORMAL ile verilir", "Hesaplanan delta_t vs target_delta_t farkı"],

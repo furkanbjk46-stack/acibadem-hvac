@@ -62,7 +62,7 @@ YENIDEN_SORMA_GUN = 182
 # Bulgu kodu → ölçülecek kalem
 OLCUT = {"SET_DIS_HAVA": "sogutma", "HAFTA_SONU_ISITMA_PAZAR": "gaz",
          "HAFTA_SONU_ISITMA_CUMARTESI": "gaz", "SU_ARTISI_HAFTA_ICI": "su", "SU_ARTISI_PAZAR": "su",
-         # A4: gün içi bulgular sayaçla değil, 10 dk santral davranışıyla ölçülür
+         # A4: gün içi bulgular sayaçla değil, santral okumalarındaki davranışla ölçülür
          "VANA_CAKISMASI": "gun_ici", "GECE_SUREKLI_CALISMA": "gun_ici", "ES_ZAMANLI_ISITMA_SOGUTMA": "gun_ici"}
 OLCULEBILIRLIK_YENILE_GUN = 30
 

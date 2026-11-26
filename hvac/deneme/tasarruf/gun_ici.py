@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-GÜN İÇİ PROFİL — 10 dakikalık AHU okumalarından santral alışkanlıkları
-====================================================================
+GÜN İÇİ PROFİL — AHU okumalarından santral alışkanlıkları
+=========================================================
 
 A4 (24.11.2026, tasarım: merkez/sunum/tasarruf_ogrenme_tasarimi.html §2, §7).
 
 Günlük enerji verisi yalnız şüphe verir: "aynı gün kazan da soğutma da yüksek"
 binada bir santralin ısıtıp diğerinin soğutmasıyla da olur (çevre / iç zon) — bu
 normaldir. Asıl kayıp AYNI SANTRALDE ısıtma ve soğutma vanasının AYNI ANDA açık
-olmasıdır. Bunu ancak 10 dakikalık okumalar gösterir
+olmasıdır. Bunu ancak santral okumaları gösterir
 (veri/ahu_okuma_gecmis/ahu_bacnet_YYYYMMDD_HHMM.csv, lokasyon PC'sinde 90 gün saklanır).
+
+AYRI OKUMA YAPMAZ: HVAC analizinin her turda zaten yazdığı ham okuma dosyalarını kullanır.
+Okuma aralığı sabit varsayılmaz, dosya zamanlarından hesaplanır: 24.11.2026'ya (14.6) kadar
+10 dakikada bir, sonra 2 saatte bir okunuyor. Her okuma, bir sonrakine kadarki süreyi temsil eder.
 
 Gün başına santral özeti (bir kez hesaplanıp veri/ahu_gun_ici_ozet.csv'ye eklenir;
 13 bin dosya her raporda yeniden okunmaz):
@@ -39,9 +43,10 @@ import pandas as pd
 logger = logging.getLogger(__name__)
 
 VANA_ESIK = 10.0              # % — vana "açık" sayılır
-OKUMA_DK = 10                 # okuma aralığı (dakika)
+VARSAYILAN_ADIM_DK = 120      # günde tek okuma varsa (aralık hesaplanamaz): HVAC analiz periyodu
 GECE_SAATLER = set(range(22, 24)) | set(range(0, 6))
 ONEMLI_CAKISMA_SAAT = 1.0     # günde bu kadar saatten fazla çakışma "önemli gün"
+ONEMLI_CAKISMA_OKUMA = 2      # ve en az bu kadar okumada (tek anlık okuma "önemli gün" yapmaz)
 SUREKLI_ORAN = 0.30           # santralin günlerinin bu kadarında önemli çakışma → bulgu
 GECE_ORAN = 0.90              # gece okumalarının bu kadarında çalışıyor
 GECE_GUN_ORAN = 0.80          # ve günlerin bu kadarında → "sürekli çalışıyor"
@@ -49,8 +54,8 @@ EN_AZ_GUN = 5
 PENCERE_GUN = 90              # ham dosyalar lokasyonda 90 gün saklanır
 _DOSYA = re.compile(r"ahu_bacnet_(\d{8})_(\d{4})\.csv$")
 OZET_SUTUNLAR = ["Tarih", "Lokasyon", "AHU", "okuma", "calisma", "gece", "cakisma_saat",
-                 "isitma_saat", "sogutma_saat"]
-BINA_SUTUNLAR = ["Tarih", "karisik_saat", "okuma_zamani"]
+                 "isitma_saat", "sogutma_saat", "cakisma_okuma"]
+BINA_SUTUNLAR = ["Tarih", "karisik_saat", "okuma_zamani", "adim_dk"]
 
 
 def varsayilan_yollar():
@@ -74,7 +79,7 @@ def _sayi(seri: pd.Series) -> pd.Series:
 
 
 def gun_ozeti(dosyalar: List[str]):
-    """Bir günün 10 dk dosyaları → (santral özeti, bina özeti)."""
+    """Bir günün okuma dosyaları → (santral özeti, bina özeti)."""
     parcalar = []
     for p in sorted(dosyalar):
         try:
@@ -116,7 +121,8 @@ def gun_ozeti(dosyalar: List[str]):
     g["yalniz_sog"] = sog & ~isi
     g["calis_b"] = calis
     g["gece_b"] = g["saat"].isin(GECE_SAATLER)
-    adim = OKUMA_DK / 60.0
+    adim_dk = okuma_araligi_dk(zaman)
+    adim = adim_dk / 60.0
     grp = g.groupby(["Lokasyon", "AHU_Adi"])
     oz = pd.DataFrame({
         "okuma": grp.size(),
@@ -125,11 +131,31 @@ def gun_ozeti(dosyalar: List[str]):
         "cakisma_saat": grp["cakisma"].sum() * adim,
         "isitma_saat": grp["yalniz_isi"].sum() * adim,
         "sogutma_saat": grp["yalniz_sog"].sum() * adim,
+        "cakisma_okuma": grp["cakisma"].sum(),
     }).reset_index().rename(columns={"AHU_Adi": "AHU"})
     # Bina: aynı okumada bir santral ısıtıyor, başka biri soğutuyor
     z = g.groupby("Timestamp").agg(i=("yalniz_isi", "any"), s=("yalniz_sog", "any"))
-    bina = {"karisik_saat": float((z["i"] & z["s"]).sum() * adim), "okuma_zamani": int(len(z))}
+    bina = {"karisik_saat": float((z["i"] & z["s"]).sum() * adim), "okuma_zamani": int(len(z)),
+            "adim_dk": round(adim_dk, 1)}
     return oz, bina
+
+
+def okuma_araligi_dk(zaman: pd.Series) -> float:
+    """Günün okuma zamanları arasındaki ortanca aralık (dakika). Kesintiler ortancayı bozmaz."""
+    t = pd.Series(pd.to_datetime(zaman, errors="coerce")).dropna().drop_duplicates().sort_values()
+    if len(t) < 2:
+        return float(VARSAYILAN_ADIM_DK)
+    return float(t.diff().dropna().dt.total_seconds().median() / 60.0)
+
+
+def aralik_metni(dk: Optional[float]) -> str:
+    from tasarruf.aliskanlik import tr_sayi
+    if not dk or dk != dk:
+        return "bilinmiyor"
+    if dk < 60:
+        return f"{dk:.0f} dakikada bir"
+    sa = dk / 60.0
+    return f"{tr_sayi(sa, 0 if abs(sa - round(sa)) < 0.05 else 1)} saatte bir"
 
 
 def ozetleri_guncelle(klasor: Optional[str] = None, ozet_yol: Optional[str] = None,
@@ -140,6 +166,11 @@ def ozetleri_guncelle(klasor: Optional[str] = None, ozet_yol: Optional[str] = No
     bugun = bugun or pd.Timestamp.now().strftime("%Y%m%d")
     oz = pd.read_csv(ozet_yol, dtype={"Tarih": str}) if os.path.exists(ozet_yol) else pd.DataFrame(columns=OZET_SUTUNLAR)
     bn = pd.read_csv(bina_yol, dtype={"Tarih": str}) if os.path.exists(bina_yol) else pd.DataFrame(columns=BINA_SUTUNLAR)
+    if len(bn) and "adim_dk" not in bn.columns:
+        # 26.11.2026 öncesi önbellek her okumayı 10 dk saydı; 2 saatlik okumalarda süreler
+        # 12 kat düşük. Ham dosyalar 90 gün durduğu için önbellek baştan kurulur.
+        logger.info("Gün içi özet önbelleği eski biçimde (okuma aralığı yok) — yeniden hesaplanıyor")
+        oz, bn = pd.DataFrame(columns=OZET_SUTUNLAR), pd.DataFrame(columns=BINA_SUTUNLAR)
     var = set(oz["Tarih"].astype(str)) | set(bn["Tarih"].astype(str))
     yeni_oz, yeni_bn = [], []
     for gun, dosyalar in sorted(_gun_dosyalari(klasor).items()):
@@ -152,8 +183,8 @@ def ozetleri_guncelle(klasor: Optional[str] = None, ozet_yol: Optional[str] = No
         yeni_oz.append(o)
         yeni_bn.append({"Tarih": gun, **b})
     if yeni_oz:
-        oz = pd.concat([oz] + yeni_oz, ignore_index=True)[OZET_SUTUNLAR]
-        bn = pd.concat([bn, pd.DataFrame(yeni_bn)], ignore_index=True)[BINA_SUTUNLAR]
+        oz = pd.concat([oz] + yeni_oz, ignore_index=True).reindex(columns=OZET_SUTUNLAR)
+        bn = pd.concat([bn, pd.DataFrame(yeni_bn)], ignore_index=True).reindex(columns=BINA_SUTUNLAR)
         try:
             os.makedirs(os.path.dirname(ozet_yol), exist_ok=True)
             for tablo, yol in ((oz, ozet_yol), (bn, bina_yol)):
@@ -180,7 +211,8 @@ def profil(oz: pd.DataFrame, bn: pd.DataFrame, bas=None, son=None,
     if not gunler:
         return sonuc
     oz = oz.copy()
-    oz["onemli"] = oz["cakisma_saat"] > ONEMLI_CAKISMA_SAAT
+    cak_n = oz["cakisma_okuma"] if "cakisma_okuma" in oz.columns else pd.Series(np.nan, index=oz.index)
+    oz["onemli"] = (oz["cakisma_saat"] > ONEMLI_CAKISMA_SAAT) & (cak_n.fillna(ONEMLI_CAKISMA_OKUMA) >= ONEMLI_CAKISMA_OKUMA)
     oz["sabah_gece"] = oz["gece"] >= GECE_ORAN
     for (lok, ahu), s in oz.groupby(["Lokasyon", "AHU"]):
         n = len(s)
@@ -194,6 +226,8 @@ def profil(oz: pd.DataFrame, bn: pd.DataFrame, bas=None, son=None,
     sonuc["santral"].sort(key=lambda x: -x["cakisma_saat_gun"])
     sonuc["toplam_cakisma_saat_gun"] = float(oz.groupby("Tarih")["cakisma_saat"].sum().mean())
     sonuc["karisik_saat_gun"] = float(bn["karisik_saat"].mean()) if len(bn) else None
+    adim = pd.to_numeric(bn["adim_dk"], errors="coerce").dropna() if "adim_dk" in bn.columns else pd.Series(dtype=float)
+    sonuc["adim_dk"] = float(adim.iloc[-1]) if len(adim) else None     # en son okuma düzeni
 
     if supheli_gunler:
         gun_cak = oz.groupby(oz["Tarih"].dt.date)["cakisma_saat"].sum()
@@ -231,8 +265,9 @@ def bulgular(gp: Dict, carpan: float = 1.0) -> List[Dict]:
                           for s in surekli[:8])
         b.append({
             "kod": "VANA_CAKISMASI", "baslik": "Aynı santralde ısıtma ve soğutma vanası birlikte açık",
-            "kanit": (f"Son {gp['gun']} günün 10 dakikalık okumalarında {len(surekli)} santral, çalıştığı günlerin "
-                      f"en az %{oran_esik * 100:.0f} kadarında günde 1 saatten fazla ısıtma ve soğutma vanası aynı anda "
+            "kanit": (f"Son {gp['gun']} günün santral okumalarında ({aralik_metni(gp.get('adim_dk'))}) {len(surekli)} "
+                      f"santral, çalıştığı günlerin en az %{oran_esik * 100:.0f} kadarında günde 1 saatten fazla ve en az "
+                      f"{ONEMLI_CAKISMA_OKUMA} okumada ısıtma ve soğutma vanası aynı anda "
                       f"%{VANA_ESIK:.0f} üzerinde açık: {liste}."),
             "oneri": ("Bu santrallerde vana sıralamasını (ısıtma ve soğutma arasında ölü bant), set değerlerini ve "
                       "vana/aktüatör arızasını kontrol edin. Ameliyathane veya nem kontrollü santrallerde "
@@ -261,9 +296,10 @@ def metin_satirlari(gp: Dict) -> List[str]:
     """Rapordaki 'Gün içi' satırları."""
     from tasarruf.aliskanlik import tr_sayi, tr_tarih
     if not gp.get("gun"):
-        return ["Gün içi (10 dakikalık) santral verisi yok."]
+        return ["Gün içi santral okuma verisi yok."]
     s = [f"Gün içi santral verisi: {tr_tarih(gp['ilk'])} – {tr_tarih(gp['son'])} ({gp['gun']} gün, "
-         f"{len(gp['santral'])} santral)."]
+         f"{len(gp['santral'])} santral, okuma {aralik_metni(gp.get('adim_dk'))}). Ayrı okuma yapılmaz; "
+         "HVAC analizinin okumaları kullanılır, her okuma bir sonrakine kadarki süreyi temsil eder."]
     s.append(f"Aynı santralde ısıtma ve soğutma vanası birlikte açık: bina toplamı günde ortalama "
              f"{tr_sayi(gp['toplam_cakisma_saat_gun'], 1)} santral-saat.")
     if gp.get("karisik_saat_gun") is not None:

@@ -480,7 +480,7 @@ class MonthlyReportPDFGenerator:
             paragraf(f"- {satir}")
         if m.get("gun_ici"):
             self.pdf.ln(1)
-            paragraf("Gün içi santral davranışı (10 dakikalık AHU okumaları)", stil='B', renk=(30, 30, 30))
+            paragraf("Gün içi santral davranışı (AHU okumaları)", stil='B', renk=(30, 30, 30))
             for satir in m["gun_ici"]:
                 paragraf(f"- {satir}")
         if m.get("bulgular"):

@@ -23,9 +23,9 @@ OLCUM_ETIKET_GUN_ICI = {"dogrulandi": "Uygulandığı doğrulandı", "belirsiz":
 
 def olculebilirlik_metni(o: Optional[Dict], olcut: Optional[str]) -> Optional[str]:
     if not olcut:
-        return "Ölçüm yöntemi yok (10 dakikalık santral verisiyle doğrulama gerekiyor)."
+        return "Ölçüm yöntemi yok (santral okumalarıyla doğrulama gerekiyor)."
     if olcut == "gun_ici":
-        return ("Ölçülebilir: uygulamadan önceki ve sonraki 14 günün 10 dakikalık santral verisi karşılaştırılır "
+        return ("Ölçülebilir: uygulamadan önceki ve sonraki 14 günün santral okumaları karşılaştırılır "
                 "(kWh değil, santralin davranışı ölçülür).")
     if not o or o.get("sonuc") == "bilinmiyor" or o.get("pay") is None:
         return None

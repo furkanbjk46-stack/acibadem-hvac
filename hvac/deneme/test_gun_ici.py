@@ -50,11 +50,12 @@ def satirlar(zaman, ahu, lok, calis, sog, isi, durum="OK"):
             [ts, ahu, lok, "Heat Valve (%)", isi, durum], [ts, ahu, lok, "SAT (°C)", "16,5", durum]]
 
 
-def gun_yaz(gun, cakisma_saat=2.0, a_lok="MAS-1", zaman_asimi=False, eksik=False):
+def gun_yaz(gun, cakisma_saat=2.0, a_lok="MAS-1", zaman_asimi=False, eksik=False, aralik_dk=10, klasor=None):
     """AHU-A: 08:00'dan itibaren cakisma_saat kadar ısıtma+soğutma birlikte; gündüz çalışır.
     AHU-B: yalnız ısıtma (gündüz). AHU-C: yalnız soğutma (gündüz). AHU-D: 7/24 çalışır, vanalar kapalı.
     Aynı ad başka lokasyonda: MAS-2 AHU-A yalnız soğutma."""
-    for dk in range(0, 24 * 60, 10):
+    klasor = klasor or KL
+    for dk in range(0, 24 * 60, aralik_dk):
         if eksik and dk % 60:
             continue
         z = pd.Timestamp(gun) + pd.Timedelta(minutes=dk)
@@ -73,7 +74,7 @@ def gun_yaz(gun, cakisma_saat=2.0, a_lok="MAS-1", zaman_asimi=False, eksik=False
         d = pd.DataFrame(sat, columns=["Timestamp", "AHU_Adi", "Lokasyon", "Nokta_Tipi", "Deger", "Durum"])
         if zaman_asimi and 8 <= h < 9:
             d = d[~((d["AHU_Adi"] == "AHU-C") & (d["Durum"] == "OK"))]
-        d.to_csv(os.path.join(KL, f"ahu_bacnet_{z.strftime('%Y%m%d_%H%M')}.csv"), index=False, encoding="utf-8")
+        d.to_csv(os.path.join(klasor, f"ahu_bacnet_{z.strftime('%Y%m%d_%H%M')}.csv"), index=False, encoding="utf-8")
 
 
 try:
@@ -117,6 +118,42 @@ try:
     oz2, bn2 = GI.ozetleri_guncelle(KL, oz_yol, bn_yol, bugun="20261115")
     c("ertesi gün yalnız yeni gün eklenir", oz2["Tarih"].nunique() == 14 and len(bn2) == 14, oz2["Tarih"].nunique())
 
+    c("okuma aralığı dosyalardan: 10 dk", bn2["adim_dk"].dropna().eq(10).all(), bn2["adim_dk"].tolist())
+
+    # ── 1b) 2 saatte bir okuma (14.6'dan beri HVAC analizi 2 saatte bir) ─
+    KL2 = os.path.join(GEC, "iki_saat")
+    os.makedirs(KL2)
+    for g in pd.date_range("2026-11-02", "2026-11-08"):
+        gun_yaz(g, cakisma_saat=4.0, aralik_dk=120, klasor=KL2)      # 08:00 ve 10:00 okumaları çakışık
+    gun_yaz("2026-11-09", cakisma_saat=1.0, aralik_dk=120, klasor=KL2)  # yalnız 08:00 okuması çakışık
+    o2s, b2s = GI.ozetleri_guncelle(KL2, os.path.join(GEC, "oz2.csv"), os.path.join(GEC, "bn2.csv"), bugun="20261110")
+    a2s = o2s[(o2s["AHU"] == "AHU-A") & (o2s["Lokasyon"] == "MAS-1")].set_index("Tarih")
+    c("2 saatlik okuma: aralık 120 dk bulunur", b2s["adim_dk"].eq(120).all(), b2s["adim_dk"].tolist())
+    c("2 saatlik okuma: çakışma 4 saat (2 okuma × 2 sa)", abs(a2s.loc["2026-11-02", "cakisma_saat"] - 4.0) < 1e-9,
+      a2s.loc["2026-11-02", "cakisma_saat"])
+    c("2 saatlik okuma: yalnız ısıtan santral 12 saat",
+      abs(o2s[(o2s["AHU"] == "AHU-B")].iloc[0]["isitma_saat"] - 12.0) < 1e-9)
+    gp2 = GI.profil(o2s, b2s)
+    a2p = [x for x in gp2["santral"] if x["ahu"] == "AHU-A" and x["lokasyon"] == "MAS-1"][0]
+    c("tek çakışık okuma 'önemli gün' sayılmaz", abs(a2p["cakisma_gun_orani"] - 7 / 8) < 1e-9, a2p)
+    c("2 saatlik okumada gece bulgusu doğru santral",
+      [b.get("santraller") for b in GI.bulgular(gp2) if b["kod"] == "GECE_SUREKLI_CALISMA"] == [["MAS-1 AHU-D"]])
+    m2s = GI.metin_satirlari(gp2)
+    c("metin okuma aralığını söyler", "2 saatte bir" in m2s[0], m2s[0])
+    vb2 = [b for b in GI.bulgular(gp2) if b["kod"] == "VANA_CAKISMASI"]
+    c("vana bulgusu okuma aralığını söyler", vb2 and "2 saatte bir" in vb2[0]["kanit"], vb2)
+    # Eski önbellek (aralık sütunu yok) her okumayı 10 dk saymıştı: baştan kurulur
+    eski_oz, eski_bn = os.path.join(GEC, "oz3.csv"), os.path.join(GEC, "bn3.csv")
+    pd.DataFrame([{"Tarih": "20261102", "Lokasyon": "MAS-1", "AHU": "AHU-A", "okuma": 12, "calisma": 0.5,
+                   "gece": 0.0, "cakisma_saat": 0.33, "isitma_saat": 0, "sogutma_saat": 1.0}]).to_csv(eski_oz, index=False)
+    pd.DataFrame([{"Tarih": "20261102", "karisik_saat": 1.0, "okuma_zamani": 12}]).to_csv(eski_bn, index=False)
+    o3, b3 = GI.ozetleri_guncelle(KL2, eski_oz, eski_bn, bugun="20261110")
+    a3 = o3[(o3["AHU"] == "AHU-A") & (o3["Lokasyon"] == "MAS-1") & (o3["Tarih"] == "2026-11-02")]
+    c("eski biçim önbellek yeniden hesaplanır", len(a3) == 1 and abs(a3.iloc[0]["cakisma_saat"] - 4.0) < 1e-9
+      and "adim_dk" in pd.read_csv(eski_bn).columns, a3.to_dict("records"))
+    c("aralık metni", GI.aralik_metni(10) == "10 dakikada bir" and GI.aralik_metni(120) == "2 saatte bir"
+      and GI.aralik_metni(90) == "1,5 saatte bir" and GI.aralik_metni(None) == "bilinmiyor")
+
     # ── 2) Şüpheli günlerin ayrılması ───────────────────────────────────
     sup = ["2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-10-01"]
     gp = GI.profil(oz2, bn2, supheli_gunler=sup)
@@ -138,7 +175,7 @@ try:
     az = GI.profil(oz2[oz2["Tarih"] <= "2026-11-03"], bn2[bn2["Tarih"] <= "2026-11-03"])
     c("5 günden az veride bulgu yok", GI.bulgular(az) == [], az["gun"])
     c("veri yoksa metin çökmez", GI.metin_satirlari(GI.profil(oz2.iloc[0:0], bn2.iloc[0:0])) ==
-      ["Gün içi (10 dakikalık) santral verisi yok."])
+      ["Gün içi santral okuma verisi yok."])
     m = GI.metin_satirlari(gp)
     c("metin: tarih gg.aa.yyyy, sayı virgüllü", "01.11.2026" in m[0] and "," in m[1], m[:2])
 
