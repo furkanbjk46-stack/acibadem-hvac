@@ -18,10 +18,10 @@ DÜZEN (soldan sağa, tek ekran, sayfa kaydırması yok)
     seçiliye tekrar tık / çift tık / Enter / "Detay" → `gizli_detay_<lok>`.
   * Kartlardan çarka ince eğri ışık çizgileri (SVG; akan ışık animasyonu).
   * Sağ cam panel: seçili lokasyonun mevcut verileri (küçük yazı).
-  * Alt orta tek çubuk (26.11.2026): Uyarılar / OTO SET · Saha / Harita (eski sağ
-    sütun ve harita sütunu açılır katman olarak), ayraç, Sunucu Ayarları
-    (a.ayar-ac → mevcut ayarlar paneli), Sistem (mevcut Yönetim düğmesi),
-    tema, Oturumu Kapat (mevcut Çıkış düğmesi).
+  * Alt orta tek çubuk (26.11.2026): Uyarılar / OTO SET / Harita (eski sağ sütun
+    ve harita sütunu açılır katman olarak), ayraç, Ayarlar (a.ayar-ac → mevcut
+    ayarlar paneli), Sistem (mevcut Yönetim düğmesi), tema, Çıkış (mevcut Çıkış
+    düğmesi). Simge üstte yazı altta; seçili düğme çubuktan yukarı kabarır.
 
 CANLI SAYILAR
   Sayılar `.canli-sayi` (data-deger / data-ond / data-faz): saniyelik akış
@@ -38,7 +38,7 @@ import html as _html
 import json
 import re
 
-SURUM = 24  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 25  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 # Repodaki Acıbadem "A" işareti — app_merkez.py içindeki haritanın Genel
 # Müdürlük logosuyla (var GM_A) aynı yol. Yeni logo çizilmez.
@@ -426,6 +426,8 @@ body.ck-kiyas-acik .ck-sahne .ck-katman-kapat{ display:flex; top:calc(5vh - 44px
   width:calc(var(--ck-u) * 1.1); min-width:7px; border-radius:99px; background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.05); cursor:pointer; touch-action:none; }
 .ck-sahne .ck-ray:hover{ background:rgba(255,255,255,.08); }
+/* Kaydırma rayı görünmez (26.11.2026, kullanıcı isteği); liste tekerlek, sürükleme ve ok tuşlarıyla kayar */
+.ck-sahne .ck-ray{ visibility:hidden; }
 .ck-sahne .ck-ray-tutamak{ position:absolute; left:-1px; right:-1px; top:0; height:calc(var(--ck-u) * 5); border-radius:99px;
   background:linear-gradient(180deg, var(--ck-vurgu-acik), var(--ck-vurgu)); opacity:.7;
   box-shadow:0 0 12px rgba(46,196,182,.45); }
@@ -565,29 +567,65 @@ body.ck-kiyas-acik .ck-sahne .ck-katman-kapat{ display:flex; top:calc(5vh - 44px
 .ck-sahne .ck-p-acilir-ic{ max-height:calc(var(--ck-u) * 20); overflow-y:auto; }
 .ck-sahne .ck-p-mini-alt{ margin-top:3px; font-size:.82em; line-height:1.25; --c:var(--ck-metin-3); overflow-wrap:anywhere; }
 
-/* ── Alt orta düğme çubuğu (Uyarılar / OTO SET / Harita | ayarlar, sistem, tema, çıkış) ── */
-.ck-sahne .ck-ayrac{ align-self:stretch; width:1px; margin:calc(var(--ck-u) * .5) calc(var(--ck-u) * .3);
+/* ── Alt orta düğme çubuğu (26.11.2026): küçük, simge üstte yazı altta; seçili / üzerine gelinen
+   düğme çubuktan yukarı kabarır, çubuğun alt kenarındaki turkuaz ışık çizgisi kabarıklığı çevreler ── */
+.ck-sahne .ck-alt{ grid-column:1 / -1; grid-row:2; justify-self:center; position:relative; z-index:3;
+  display:flex; align-items:stretch; gap:calc(var(--ck-u) * .15); margin-top:calc(var(--ck-u) * 1.5);
+  padding:calc(var(--ck-u) * .3) calc(var(--ck-u) * 1.1);
+  border-radius:calc(var(--ck-u) * 2.6); background:linear-gradient(180deg, rgba(16,50,60,.94), rgba(6,26,33,.96));
+  border:1px solid var(--ck-cam-kenar);
+  box-shadow:0 7px 16px -8px rgba(46,196,182,.55), 0 18px 40px -22px rgba(0,0,0,.8); }
+/* alt kenarda uçlara doğru sönen turkuaz ışık çizgisi (tema renkleriyle) */
+.ck-sahne .ck-alt::after{ content:""; position:absolute; z-index:1; left:calc(var(--ck-u) * 1.4); right:calc(var(--ck-u) * 1.4);
+  bottom:-1px; height:2px; border-radius:2px; pointer-events:none;
+  background:linear-gradient(90deg, transparent, var(--ck-vurgu) 10%, var(--ck-vurgu-acik) 50%, var(--ck-vurgu) 90%, transparent);
+  box-shadow:0 0 8px var(--ck-vurgu); }
+.ck-sahne .ck-ayrac{ align-self:center; width:1px; height:calc(var(--ck-u) * 2.6); margin:0 calc(var(--ck-u) * .45);
   background:var(--ck-cam-kenar); }
-.ck-sahne .ck-cip, .ck-sahne .ck-dugme{ display:inline-flex; align-items:center; gap:calc(var(--ck-u) * .7); cursor:pointer;
-  border-radius:99px; font-weight:600; white-space:nowrap; --c:var(--ck-metin);
-  background:rgba(14,46,56,.82); border:1px solid var(--ck-cam-kenar);
-  transition:background .2s ease, border-color .2s ease; }
-.ck-sahne .ck-cip{ padding:calc(var(--ck-u) * .55) calc(var(--ck-u) * 1.3); font-size:max(9.5px, calc(var(--ck-u) * 1.12)); }
-.ck-sahne .ck-cip .ai, .ck-sahne .ck-dugme .ai{ width:calc(var(--ck-u) * 1.8) !important; height:calc(var(--ck-u) * 1.8) !important; }
-.ck-sahne .ck-cip:hover, .ck-sahne .ck-dugme:hover{ background:rgba(46,196,182,.18); border-color:rgba(134,232,220,.45); }
-.ck-sahne .ck-sayac{ min-width:18px; text-align:center; padding:0 5px; border-radius:99px; font-size:.92em; font-weight:800; }
-.ck-sahne .ck-sayac.ck-r{ --c:#fff; background:rgba(240,106,90,.85); }
+.ck-sahne .ck-dugme{ position:relative; display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:calc(var(--ck-u) * .22); min-width:calc(var(--ck-u) * 5.4); padding:calc(var(--ck-u) * .45) calc(var(--ck-u) * .95) calc(var(--ck-u) * .5);
+  cursor:pointer; white-space:nowrap; font-weight:600; line-height:1.1; font-size:max(8.5px, calc(var(--ck-u) * .9));
+  --c:var(--ck-metin-2); background:transparent; border:0; border-radius:calc(var(--ck-u) * 1.6);
+  transition:transform .28s cubic-bezier(.3,1.4,.5,1), color .2s ease; }
+/* kabarıklık: çubuk renginde, üstü ve yanları turkuaz ışık; alt kenarı çubuğun ışık çizgisine oturur */
+.ck-sahne .ck-dugme::before{ content:""; position:absolute; z-index:-1; left:calc(var(--ck-u) * .1); right:calc(var(--ck-u) * .1);
+  top:calc(var(--ck-u) * -.75); bottom:calc(var(--ck-u) * -.3 - 1px);
+  border-radius:calc(var(--ck-u) * 2.2) calc(var(--ck-u) * 2.2) calc(var(--ck-u) * .6) calc(var(--ck-u) * .6);
+  background:linear-gradient(180deg, rgba(20,62,72,.98), rgba(6,26,33,.98));
+  border:1.5px solid var(--ck-vurgu); border-bottom:0;
+  box-shadow:0 -5px 14px -5px rgba(46,196,182,.6);
+  opacity:0; transform:translateY(calc(var(--ck-u) * .6)); transition:opacity .22s ease, transform .28s ease; }
+/* seçili düğmenin altında küçük nokta */
+.ck-sahne .ck-dugme::after{ content:""; position:absolute; left:50%; bottom:calc(var(--ck-u) * .05);
+  width:4px; height:4px; margin-left:-2px; border-radius:50%; background:var(--ck-vurgu-acik);
+  box-shadow:0 0 6px var(--ck-vurgu); opacity:0; transition:opacity .2s ease; }
+.ck-sahne .ck-dugme:is(:hover, :focus-visible),
+body.ck-uyari-acik .ck-sahne .ck-dugme[data-ck-eylem="uyarilar"],
+body.ck-kontrol-acik .ck-sahne .ck-dugme[data-ck-eylem="kontrol"],
+body.ck-harita-acik .ck-sahne .ck-dugme[data-ck-eylem="harita"]{ --c:var(--ck-metin); transform:translateY(calc(var(--ck-u) * -.35)); outline:none; }
+.ck-sahne .ck-dugme:is(:hover, :focus-visible)::before,
+body.ck-uyari-acik .ck-sahne .ck-dugme[data-ck-eylem="uyarilar"]::before,
+body.ck-kontrol-acik .ck-sahne .ck-dugme[data-ck-eylem="kontrol"]::before,
+body.ck-harita-acik .ck-sahne .ck-dugme[data-ck-eylem="harita"]::before{ opacity:1; transform:none; }
+body.ck-uyari-acik .ck-sahne .ck-dugme[data-ck-eylem="uyarilar"]::after,
+body.ck-kontrol-acik .ck-sahne .ck-dugme[data-ck-eylem="kontrol"]::after,
+body.ck-harita-acik .ck-sahne .ck-dugme[data-ck-eylem="harita"]::after{ opacity:1; }
+.ck-sahne .ck-dugme.ck-cikis:is(:hover, :focus-visible){ --c:#ffb4a8; }
+.ck-sahne .ck-dugme.ck-cikis:is(:hover, :focus-visible)::before{ border-color:rgba(240,106,90,.85);
+  box-shadow:0 -5px 14px -5px rgba(240,106,90,.6); }
+.ck-sahne .ck-ik{ display:flex; align-items:center; justify-content:center; height:calc(var(--ck-u) * 1.75);
+  font-size:calc(var(--ck-u) * 1.45); line-height:1; }
+.ck-sahne .ck-dugme .ai{ width:calc(var(--ck-u) * 1.75) !important; height:calc(var(--ck-u) * 1.75) !important; }
+/* uyarı sayısı: simgenin sağ üst köşesinde rozet */
+.ck-sahne .ck-sayac{ position:absolute; top:calc(var(--ck-u) * -.05); left:calc(50% + var(--ck-u) * .7);
+  min-width:calc(var(--ck-u) * 1.5); padding:0 calc(var(--ck-u) * .35); border-radius:99px; text-align:center;
+  font-size:max(7.5px, calc(var(--ck-u) * .78)); line-height:1.35; font-weight:800;
+  box-shadow:0 0 0 1.5px rgba(6,26,33,.96); }
+.ck-sahne .ck-sayac.ck-r{ --c:#fff; background:rgba(240,106,90,.95); }
 .ck-sahne .ck-sayac.ck-y{ --c:#2b1d00; background:var(--ck-amber); }
 .ck-sahne .ck-sayac.ck-g{ --c:#062018; background:var(--ck-yesil); }
-.ck-sahne .ck-alt{ grid-column:1 / -1; grid-row:2; justify-self:center; position:relative; z-index:3;
-  display:flex; gap:calc(var(--ck-u) * .8); margin-top:calc(var(--ck-u) * 1.2); padding:calc(var(--ck-u) * .6);
-  border-radius:99px; background:rgba(8,32,40,.86); border:1px solid var(--ck-cam-kenar);
-  box-shadow:0 18px 40px -22px rgba(0,0,0,.8), 0 0 0 1px rgba(46,196,182,.05);
-  }
-.ck-sahne .ck-dugme{ padding:calc(var(--ck-u) * .75) calc(var(--ck-u) * 1.9); font-size:max(10px, calc(var(--ck-u) * 1.22)); }
 /* Tema düğmesi: karanlıkta "Aydınlık"a geçişi, aydınlıkta "Karanlık"a geçişi gösterir */
 .ck-sahne .ck-tema .ck-tema-koyu{ display:none; }
-.ck-sahne .ck-dugme.ck-cikis:hover{ background:rgba(240,106,90,.2); border-color:rgba(240,106,90,.5); }
 
 /* ── Açılır katman perdesi ── */
 .ck-sahne .ck-perde{ position:absolute; inset:0; z-index:20; background:rgba(2,10,14,.6); opacity:0; pointer-events:none;
@@ -974,24 +1012,27 @@ def sahne_html(veri: dict, ozet_kartlar: list, ikonlar: dict, arama_metni=None,
         for l in veri["sira"])
     toplam_uy = int(g.get("uyari_toplam") or 0)
     sayac_sinif = "ck-r" if g.get("uyari_kritik") else ("ck-y" if toplam_uy else "ck-g")
-    # Uyarılar / OTO SET / Harita alt çubukta, ayarların solunda (26.11.2026; eskiden sağ üstte)
-    ust = (f'<a class="ck-dugme" href="#" role="button" data-ck-eylem="uyarilar" title="Canlı uyarılar listesi">'
-           f'{ikonlar.get("alarm", "")}Uyarılar<span class="ck-sayac {sayac_sinif}">{toplam_uy}</span></a>'
-           f'<a class="ck-dugme" href="#" role="button" data-ck-eylem="kontrol" '
-           f'title="OTO SET, dış hava & chiller set, saha durumu">{ikonlar.get("oto", "")}OTO SET · Saha</a>'
-           f'<a class="ck-dugme" href="#" role="button" data-ck-eylem="harita" title="Hastane enerji ağı haritası">'
-           f'{ikonlar.get("harita", "")}Harita</a><span class="ck-ayrac" aria-hidden="true"></span>')
+    # Alt çubuk (26.11.2026): Uyarılar / OTO SET / Harita | Ayarlar, Sistem, tema, Çıkış.
+    # Simge üstte, kısa yazı altta; tam adlar title'da.
+    def _d(eylem, ikon, yazi, baslik, sinif="ck-dugme", ek=""):
+        return (f'<a class="{sinif}" href="#" role="button" data-ck-eylem="{eylem}" title="{baslik}">'
+                f'<span class="ck-ik">{ikonlar.get(ikon, "")}</span><span class="ck-etiket">{yazi}</span>{ek}</a>')
+    ust = (_d("uyarilar", "alarm", "Uyarılar", "Canlı uyarılar listesi",
+              ek=f'<span class="ck-sayac {sayac_sinif}">{toplam_uy}</span>')
+           + _d("kontrol", "oto", "OTO SET", "OTO SET, dış hava &amp; chiller set, saha durumu")
+           + _d("harita", "harita", "Harita", "Hastane enerji ağı haritası")
+           + '<span class="ck-ayrac" aria-hidden="true"></span>')
     ayar = ("" if izleyici else
             f'<a class="ayar-ac ck-dugme" href="#" title="Sunucu ayarları" aria-label="Sunucu ayarları">'
-            f'{ikonlar.get("ayar", "")}Sunucu Ayarları</a>')
+            f'<span class="ck-ik">{ikonlar.get("ayar", "")}</span><span class="ck-etiket">Ayarlar</span></a>')
     alt = ('<nav class="ck-alt" aria-label="Sistem">' + ust + ayar
-           + f'<a class="ck-dugme" href="#" role="button" data-ck-eylem="sistem" title="Yönetim — sunucu ve veri durumu">'
-             f'{ikonlar.get("yonetim", "")}Sistem</a>'
+           + _d("sistem", "yonetim", "Sistem", "Yönetim — sunucu ve veri durumu")
            # Karanlık / aydınlık tema geçişi (tema_acik_demo.betik dinler; seçim tarayıcıda saklanır)
            + '<a class="ck-dugme ck-tema" href="#" role="button" data-ck-eylem="tema" title="Karanlık / aydınlık tema">'
-             '<span class="ck-tema-acik">☀ Aydınlık</span><span class="ck-tema-koyu">☾ Karanlık</span></a>'
-           + f'<a class="ck-dugme ck-cikis" href="#" role="button" data-ck-eylem="cikis" title="Oturumu kapat">'
-             f'{ikonlar.get("cikis", "")}Oturumu Kapat</a></nav>')
+             '<span class="ck-ik"><span class="ck-tema-acik">☀</span><span class="ck-tema-koyu">☾</span></span>'
+             '<span class="ck-etiket"><span class="ck-tema-acik">Aydınlık</span><span class="ck-tema-koyu">Karanlık</span></span></a>'
+           + _d("cikis", "cikis", "Çıkış", "Oturumu kapat", sinif="ck-dugme ck-cikis")
+           + '</nav>')
     cark = ('<div class="ck-cark-alan">'
             '<label class="ck-ara"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/>'
             '<path d="M20 20l-3.5-3.5"/></svg>'

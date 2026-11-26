@@ -163,10 +163,10 @@
                 chiller tüketimini günlük takip eder, anomalileri tespit eder ve maliyet düşürme
                 fırsatlarını otomatik olarak raporlar.
                 <br><br>
-                <strong>Sürüm v14.4 — 14 Kasım 2026</strong> &nbsp;|&nbsp; <code>app_portal.py</code> (Streamlit,
-                port 8501) &nbsp;|&nbsp; 33 Modbus sayaç + canlı güç &nbsp;|&nbsp; günlük hava durumu
-                &nbsp;|&nbsp; 12 tasarruf kuralı &nbsp;|&nbsp; Lokasyon Donanımı paneli &nbsp;|&nbsp;
-                Enerji Portal Agent'ı
+                <strong>Sürüm v14.12 — 26 Kasım 2026</strong> &nbsp;|&nbsp; <code>app_portal.py</code> (Streamlit,
+                port 8501) &nbsp;|&nbsp; 33 Modbus sayaç + canlı güç &nbsp;|&nbsp; BMS su / gaz / ısı sayaçları
+                &nbsp;|&nbsp; günlük hava durumu &nbsp;|&nbsp; 12 tasarruf kuralı + alışkanlık ve gün içi bulgular
+                &nbsp;|&nbsp; Lokasyon Donanımı paneli &nbsp;|&nbsp; Enerji Portal Agent'ı
             </div>
         </div>
 
@@ -240,7 +240,9 @@
             <p>Modül, Modbus üzerinden 33 enerji sayacından (trafo, şebeke giriş, kojen üretim, chiller,
                 MCC/kule ve kontrol sayaçları), BACnet'ten (51 nokta), internetten (günlük hava) ve manuel
                 girişlerden gelen verileri günlük olarak kaydeder. Her sayacın günlük değeri merkezde ayrı satır
-                olarak da tutulur (<code>sayac_gunluk</code>) — yeni sayaç için sütun açmak gerekmez.</p>
+                olarak da tutulur (<code>sayac_gunluk</code>) — yeni sayaç için sütun açmak gerekmez.
+                26.11.2026'dan beri BMS'teki <strong>su, gaz ve ısı sayaçları</strong> da Lokasyon Donanımı
+                panelinden sayaç olarak seçilebilir: 23:59'da okunur, günlük değer endeks farkıdır.</p>
 
             <div class="kpi-strip">
                 <div class="kpi-item">
@@ -835,6 +837,50 @@
             </table>
         </div>
 
+        <!-- ========== v14.4 → v14.12 ========== -->
+        <div class="section page-break">
+            <h2>🆕 14 Kasım'dan Bu Yana Ne Değişti? (v14.4 → v14.12)</h2>
+            <table>
+                <thead>
+                    <tr><th>Konu</th><th>Ne değişti</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>BMS sayaçları</strong></td>
+                        <td>Lokasyon Donanımı'nın BMS tablosunda <strong>Nokta Türü</strong> (sayaç / ölçüm / durum /
+                            set / diğer), Sayaç Türü ve Çarpan. Sayaç seçilen nokta analizörlerle aynı sayaç listesine
+                            girer. Yeni türler: ana su, alt su, kazan gazı, kojen gazı, alt gaz, ısı; elektrik türleri
+                            BMS'ten de okunabilir. 23:59'da okunur; BACnet birimi okunur, litre ve MWh çevrilir,
+                            anlık değer (m³/h, kW) ve yanlış boyut reddedilir. Günlük değer endeks farkıdır; ortak su /
+                            gaz sütunları toplamdır, biri okunamazsa boş kalır ve veri alarmı açılır. Portalda birimler
+                            ve "otomatik" işareti. Kod bütün lokasyonlar için ortak; hangi noktanın sayaç olduğu
+                            lokasyonun kendi panelinde seçilir</td></tr>
+                    <tr><td><strong>Dönem tahmini</strong></td>
+                        <td>Gerçekleşen günlerde gerçekleşen (yeşil) ve modelin o gün için tahmini (açık mavi) yan
+                            yana; kalan günler tek çubuk. Tahmin yalnız ay başına kadarki veriyle ve o günün ölçülen
+                            havasıyla yapılır. Toplam ve soğutma için aynı</td></tr>
+                    <tr><td><strong>Tasarruf öğrenme (A1–A5)</strong></td>
+                        <td><strong>Öneri kimliği:</strong> aynı ayın raporu tekrar üretilince yeni kayıt açılmaz, ret
+                            nedeni zorunlu. <strong>Alışkanlık profili:</strong> haftalık ritim, hava eşleşmeli hafta
+                            sonu ısıtması, chiller seti – dış hava, aynı gün ısıtma + soğutma; veri kalitesi kapısı.
+                            <strong>Bulgu defteri ve ölçüm:</strong> her bulgunun kararı ve ölçümü kaydedilir.
+                            <strong>Gün içi:</strong> AHU verisinden vana çakışması ve gece çalışması.
+                            <strong>Öğrenme:</strong> kuralın bu lokasyondaki güveni ölçülen sonuçtan hesaplanır;
+                            tutmayan kuralın eşiği büyür, düşük güvenli kural raporda alta iner ya da susturulur,
+                            aynı nedenle reddedilen bulgu 1 yıl tekrar gelmez. Rapor ve PDF'te ayrı bölüm; Synapse
+                            lokasyon detayında "Tasarruf bulguları" kartı. Öneri yalnız önerir: oto-set ve BACnet'e
+                            hiçbir şey yazılmaz</td></tr>
+                    <tr><td><strong>Ölçülebilirlik</strong></td>
+                        <td>Maslak'ın 28 günlük ölçüm hata payı toplamda ~%7, soğutmada ~%32, gazda %60'ın üstünde.
+                            Set değişikliği gibi %1–3'lük bir etki günlük sayaçla doğrulanamaz; rapor bunu
+                            "ölçülemez" diye açıkça yazar, ölçülemeyen sonuç öğrenmeye girmez</td></tr>
+                    <tr><td><strong>Veri güvenilirliği</strong></td>
+                        <td>Synapse'ten indirilen noktalı virgüllü <code>energy_data.csv</code> portalda okunur;
+                            Synapse'te veri gelmeyen sayaç listeden düşmez — değer yerine tire, turuncu nokta ve son
+                            okumanın yaşı; kaldırılan sayacın canlı satırı merkezde temizlenir</td></tr>
+                </tbody>
+            </table>
+        </div>
+
         <!-- ========== 6. KULLANIM ========== -->
         <div class="section page-break">
             <h2>👤 Kullanım — Operasyon Ekibi İçin</h2>
@@ -899,10 +945,11 @@
         <!-- FOOTER -->
         <div class="footer">
             <strong>Enerji ve Verimlilik</strong> — Synapse (SYN) Enerji Modülü — Acıbadem Hastanesi<br>
-            Sürüm <strong>v14.4</strong> — 14 Kasım 2026 | <code>app_portal.py</code> (5.357 satır) +
-            aylık rapor motoru (3.310 satır) | 33 Modbus sayaç + 51 BACnet noktası | günlük hava
-            durumu | 12 tasarruf kuralı | Lokasyon Donanımı paneli | Enerji Portal Agent'ı (10 kontrol)<br>
-            Yayından önce 81 test dosyası (2.600+ kontrol) çalıştırılır; açılışta 197 kontrollük öz test ve
+            Sürüm <strong>v14.12</strong> — 26 Kasım 2026 | <code>app_portal.py</code> (5.534 satır) +
+            aylık rapor motoru (3.485 satır) + tasarruf öğrenme (1.726 satır) | 33 Modbus sayaç + 51 BACnet
+            noktası + BMS sayaçları | günlük hava durumu | 12 tasarruf kuralı | Lokasyon Donanımı paneli |
+            Enerji Portal Agent'ı (10 kontrol)<br>
+            Yayından önce 90 test dosyası (3.000+ kontrol) çalıştırılır; açılışta 199 kontrollük öz test ve
             veri toplama zincirinin saha teşhisi koşar.<br>
             <em>Bu belge modülün güncel davranışını anlatır; eşikler ayarlar panelinden, donanım listeleri
             Lokasyon Donanımı panelinden değiştirilebilir.</em>

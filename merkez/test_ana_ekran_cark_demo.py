@@ -163,7 +163,7 @@ c("sahne verisi oznitelikte, JSON geri okunur",
   _m and json.loads(html.unescape(_m.group(1)))["lok"]["maslak"]["isim"] == "Acıbadem Maslak")
 c("sahne surum damgasi", 'data-surum="X1"' in _s)
 c("logo: repodaki GM 'A' isareti + ACIBADEM yazisi", C.GM_A in _s and "<b>ACIBADEM</b>" in _s)
-c("alt orta: Sunucu Ayarlari (a.ayar-ac), Sistem, Oturumu Kapat",
+c("alt orta: Ayarlar (a.ayar-ac), Sistem, Cikis",
   '<a class="ayar-ac ck-dugme"' in _s and 'data-ck-eylem="sistem"' in _s and 'data-ck-eylem="cikis"' in _s
   and _s.index("ck-alt") < _s.index('data-ck-eylem="cikis"'))
 c("alt cubuk: uyarilar (sayac), OTO SET, harita ayarlarin solunda; sag ust cip yok",
