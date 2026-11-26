@@ -13,7 +13,8 @@ Watchdog'un yanında ayrı süreç olarak çalışır.
 
 KONTROLLER
   portal_api        8005 ve /api uçları yanıt veriyor mu (health, son analiz, talimat, grafik)
-  giris_qr          giriş ekranı, /hvac, /enerji, QR bakım kartı bağlantısı, QR ayarı
+  giris_qr          giriş ekranı, /hvac, /enerji geçişleri (kod adı geriye uyum için korunur;
+                    saha QR'ı 26.11.2026'da kaldırıldı)
   watchdog          agent'ı başlatan watchdog hâlâ çalışıyor mu
   bakim_karti       bakım kartları yükleniyor mu, durumları geçerli mi, tek kart açılıyor mu
   ayarlar           ayarlar okunuyor mu, her ayar izin verilen aralıkta mı, Chiller/FCU ayarları
@@ -331,9 +332,11 @@ def _json(o, uc):
         return kod, None
 
 
-def k_giris_qr(o):
-    """Portal giriş ekranı, HVAC / Enerji geçişleri ve QR bakım kartı bağlantısı açılıyor mu.
-    (Yönlendirmeler izlenir: /hvac → arayüz, /enerji → 8501, /bakim/X → arayüz + bakım kartı.)"""
+def k_giris(o):
+    """Portal giriş ekranı ve HVAC / Enerji geçişleri açılıyor mu.
+    (Yönlendirmeler izlenir: /hvac → arayüz, /enerji → 8501.) Saha QR bağlantısı
+    (/bakim/…, /api/qr-config) 26.11.2026'da kaldırıldı; kod adı "giris_qr" Synapse'teki
+    geçmiş kayıtlarla uyum için aynı kalır."""
     taban = o.portal_url.rstrip("/")
     kod, metin = o.http(taban + "/", zaman_asimi=10)
     if kod is None:
@@ -343,25 +346,18 @@ def k_giris_qr(o):
         sorun.append("giriş ekranı (/) → HTTP %s" % kod)
     elif "/hvac" not in metin or "/enerji" not in metin:
         sorun.append("giriş ekranında HVAC / Enerji bağlantısı yok")
-    for uc, ad in (("/hvac", "HVAC arayüzü"), ("/enerji", "Enerji portalına geçiş"),
-                   ("/bakim/AGENT-TEST", "QR bakım kartı bağlantısı")):
+    for uc, ad in (("/hvac", "HVAC arayüzü"), ("/enerji", "Enerji portalına geçiş")):
         k, m = o.http(taban + uc, zaman_asimi=15)
         if k != 200:
             sorun.append("%s (%s) → HTTP %s %s" % (ad, uc, k, str(m)[:40] if k is None else ""))
-    k, d = _json(o, "/api/qr-config")
-    if k != 200:
-        sorun.append("QR ayarı (/api/qr-config) → HTTP %s" % k)
-    elif not (d or {}).get("lokasyon_id"):
-        sorun.append("QR ayarında lokasyon kimliği boş (supabase_config.json lokasyon_id)")
     if not sorun:
         return []
     return [bulgu(
-        "giris_qr", "giris", "uyari", "Giriş ekranı ve QR",
-        "Giriş ekranı / QR bağlantısında %d sorun" % len(sorun), "giriş ekranı, /hvac, /enerji, /bakim/… açılır",
+        "giris_qr", "giris", "uyari", "Giriş ekranı",
+        "Giriş ekranında %d sorun" % len(sorun), "giriş ekranı, /hvac, /enerji açılır",
         "; ".join(sorun),
-        tekrar_adimi="Lokasyon PC'sinde " + o.portal_url.rstrip("/") + "/ aç, HVAC ve Enerji düğmelerine bas; "
-                     "telefonla bir santral QR etiketini okut",
-        olasi_yer="main_portal.py portal_home / hvac_entry / enerji_entry / bakim_qr_link")]
+        tekrar_adimi="Lokasyon PC'sinde " + o.portal_url.rstrip("/") + "/ aç, HVAC ve Enerji düğmelerine bas",
+        olasi_yer="main_portal.py portal_home / hvac_entry / enerji_entry")]
 
 
 def _surec_canli(pid):
@@ -426,7 +422,7 @@ def k_bakim_karti(o):
         if k != 200 or not (tek or {}).get("success"):
             cikti.append(bulgu(
                 "bakim_karti", "tek", "uyari", "Bakım kartları", "Tek cihazın bakım kartı açılmıyor (%s)" % ilk,
-                "HTTP 200", "HTTP %s" % k, tekrar_adimi="QR etiketi / Bakım Kartları → %s" % ilk,
+                "HTTP 200", "HTTP %s" % k, tekrar_adimi="Mekanik Zeka → Bakım Kartları → %s" % ilk,
                 olasi_yer="main_portal.py get_equipment_maintenance"))
     return cikti
 
@@ -474,7 +470,7 @@ def k_ayarlar(o):
 
 KONTROLLER = [
     ("portal_api", "API uçları (8005)", k_portal_api),
-    ("giris_qr", "Giriş ekranı ve QR", k_giris_qr),
+    ("giris_qr", "Giriş ekranı", k_giris),
     ("watchdog", "Watchdog", k_watchdog),
     ("bakim_karti", "Bakım kartları", k_bakim_karti),
     ("ayarlar", "Ayarlar", k_ayarlar),

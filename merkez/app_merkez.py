@@ -26,7 +26,7 @@ _salt_okuma.kur()
 
 from streamlit_autorefresh import st_autorefresh
 # Otomatik yenileme yalnızca GİRİŞ YAPILMIŞ portal ekranlarında çalışır.
-#   - QR bakım sayfasında: form doldurulurken sıfırlanmasın
+#   - (eski) QR bakım sayfasında: form doldurulurken sıfırlanmasın — sayfa 26.11.2026'da kaldırıldı
 #   - Giriş ekranında: 10 sn'de bir yenileme, yazılan kullanıcı adı/parolayı
 #     siler ve girişi imkânsız hale getirirdi
 #   - Karşılaştırma sayfasında (demo VE canlı): detay penceresi açıkken 10 sn'lik
@@ -1125,162 +1125,10 @@ for lok_id in HASTANELER:
     if lok_id in m2_config:
         HASTANELER[lok_id]["m2"] = int(m2_config[lok_id])
 
-# ═══════════ QR SAHA BAKIM KARTI (telefon) — ?bakim=<cihaz>&lok=<lokasyon> ═══════════
-# Sahadaki QR etiketleri buraya yönlenir. Kartlar Supabase `bakim_kartlari` tablosunda
-# tutulur; lokasyon PC'si cloud_sync ile 2 dakikada bir çift yönlü senkronize eder.
-BAKIM_BILESENLER = [
-    "heating_valve_body", "heating_valve_signal",
-    "cooling_valve_body", "cooling_valve_signal",
-    "supply_sensor", "return_sensor", "pressure_sensor",
-]
-BAKIM_BILESEN_ETIKET = {
-    "heating_valve_body":   "Isıtma Vanası Gövde",
-    "heating_valve_signal": "Isıtma Vanası 0-10V",
-    "cooling_valve_body":   "Soğutma Vanası Gövde",
-    "cooling_valve_signal": "Soğutma Vanası 0-10V",
-    "supply_sensor":        "Üfleme Sensör",
-    "pressure_sensor":      "Basınç Sensörü",
-    "return_sensor":        "Emiş Sensör",
-}
-BAKIM_DURUMLAR = ["OK", "FAULTY", "MAINTENANCE", "N/A"]
-BAKIM_DURUM_ETIKET = {
-    "OK": "✅ Sağlam", "FAULTY": "❌ Arızalı",
-    "MAINTENANCE": "🔧 Bakımda", "N/A": "⚪ Yok",
-}
-
-def _qr_bakim_sayfasi():
-    from datetime import timezone as _qtz
-
-    cihaz = (st.query_params.get("bakim") or "").strip()
-    lok   = (st.query_params.get("lok") or "").strip().lower()
-
-    # Mobil dostu kompakt başlık
-    st.markdown(f"""
-    <div style="text-align:center; padding:8px 0 4px;">
-      <div style="font-size:10px; color:#46536b; letter-spacing:2px;">ACIBADEM SYNAPSE — SAHA</div>
-      <div style="font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif; font-size:26px; font-weight:600; color:#0f1f3d;">
-        🔧 Dijital Bakım Kartı
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    if not bagli:
-        st.error("Supabase bağlantısı yok — sistem yöneticisine bildirin.")
-        return
-
-    # ── Saha PIN koruması (secrets'ta [saha] pin tanımlıysa) ──
-    saha_pin = _gizli_oku("saha", "pin")
-    if not saha_pin:
-        saha_pin = str(config.get("saha_pin", "") or "")
-    if saha_pin and not st.session_state.get("saha_pin_ok"):
-        girilen = st.text_input("Saha PIN", type="password", placeholder="PIN girin")
-        if st.button("Giriş", use_container_width=True):
-            if girilen == saha_pin:
-                st.session_state["saha_pin_ok"] = True
-                st.rerun()
-            else:
-                st.error("PIN hatalı")
-        return
-
-    from supabase import create_client as _qcc
-    try:
-        _qc = _qcc(url, key)
-    except Exception as e:
-        st.error(f"Bağlantı hatası: {e}")
-        return
-
-    # ── Lokasyon seçimi (QR'da lok yoksa) ──
-    if lok not in HASTANELER:
-        lok = st.selectbox(
-            "Lokasyon", list(HASTANELER.keys()),
-            format_func=lambda k: HASTANELER[k]["isim"],
-        )
-
-    st.markdown(
-        f"<div style='text-align:center; font-size:12px; color:#2a78d6; letter-spacing:1px; "
-        f"margin-bottom:8px;'>{HASTANELER[lok]['isim'].upper()}</div>",
-        unsafe_allow_html=True,
-    )
-
-    # ── Lokasyonun kayıtlı kartlarını çek ──
-    try:
-        r = _qc.table("bakim_kartlari").select("cihaz,kart,updated_at,updated_by") \
-            .eq("lokasyon_id", lok).order("cihaz").range(0, 999).execute()
-        satirlar = {x["cihaz"]: x for x in (r.data or [])}
-    except Exception as e:
-        st.error(f"Bakım kartları okunamadı: {e}")
-        st.caption("`bakim_kartlari` tablosu oluşturulmamış olabilir (merkez/bakim_kartlari_tablo.sql).")
-        return
-
-    if not satirlar:
-        st.warning(
-            f"**{HASTANELER[lok]['isim']}** için henüz senkronize edilmiş bakım kartı yok. "
-            "Kartlar lokasyon portalında tanımlanır ve PC internete bağlanınca buraya gelir."
-        )
-        return
-
-    # ── Cihaz seçimi (QR'da cihaz yoksa veya kayıtlı değilse liste göster) ──
-    if cihaz not in satirlar:
-        if cihaz:
-            st.warning(f"**{cihaz}** bu lokasyonda kayıtlı değil — listeden seçin.")
-        cihaz = st.selectbox("Santral / Cihaz", sorted(satirlar.keys()))
-
-    satir = satirlar[cihaz]
-    kart = dict(satir.get("kart") or {})
-
-    st.markdown(
-        f"<div style='text-align:center; background:rgba(19,50,115,0.1); "
-        f"border:1px solid rgba(19,50,115,0.35); border-radius:14px; padding:10px; "
-        f"font-size:22px; font-weight:700; color:#0f1f3d; margin-bottom:6px;'>{cihaz}</div>",
-        unsafe_allow_html=True,
-    )
-    son_g = str(satir.get("updated_at") or "")[:16].replace("T", " ")
-    st.caption(f"Son güncelleme: {son_g} UTC — {satir.get('updated_by') or '-'}")
-
-    # ── Bileşen durumları formu ──
-    with st.form(key=f"qr_bakim_form_{lok}_{cihaz}"):
-        yeni_kart = {}
-        for comp in BAKIM_BILESENLER:
-            mevcut = kart.get(comp, "OK")
-            idx = BAKIM_DURUMLAR.index(mevcut) if mevcut in BAKIM_DURUMLAR else 0
-            yeni_kart[comp] = st.selectbox(
-                BAKIM_BILESEN_ETIKET[comp], BAKIM_DURUMLAR, index=idx,
-                format_func=lambda s: BAKIM_DURUM_ETIKET.get(s, s),
-                key=f"qrb_{lok}_{cihaz}_{comp}",
-            )
-        yeni_kart["notes"] = st.text_input(
-            "📝 Not", value=str(kart.get("notes", "") or ""),
-            placeholder="Opsiyonel not...", key=f"qrb_{lok}_{cihaz}_notes",
-        )
-        kaydet = st.form_submit_button("💾 Kaydet", use_container_width=True)
-
-    if kaydet:
-        try:
-            simdi = datetime.now(_qtz.utc).isoformat()
-            _qc.table("bakim_kartlari").upsert({
-                "lokasyon_id": lok,
-                "cihaz": cihaz,
-                "kart": yeni_kart,
-                "updated_at": simdi,
-                "updated_by": "saha-qr",
-            }, on_conflict="lokasyon_id,cihaz").execute()
-            st.success("✅ Kaydedildi — lokasyon portalına birkaç dakika içinde yansır.")
-        except Exception as e:
-            st.error(f"Kaydedilemedi: {e}")
-
-    # Durum özeti rozetleri
-    sorunlu = [BAKIM_BILESEN_ETIKET[c] for c in BAKIM_BILESENLER if kart.get(c) in ("FAULTY", "MAINTENANCE")]
-    if sorunlu:
-        st.caption("Kayıtlı sorunlar: " + ", ".join(sorunlu))
-
-if "bakim" in st.query_params:
-    _qr_bakim_sayfasi()
-    st.stop()
-
 # ============ GİRİŞ KAPISI ============
-# Buraya kadar olan tek şey QR bakım sayfasıdır (yukarıda st.stop() ile biter) —
-# saha personeli QR okuttuğunda parola sorulmaz, mevcut akış korunur.
-# Bu satırdan SONRAKİ her şey (GM portalı) kimlik doğrulaması ister.
+# Bu satırdan SONRAKİ her şey (GM portalı) kimlik doğrulaması ister. Parolasız açılan
+# saha QR bakım sayfası (?bakim=) 26.11.2026'da kaldırıldı (kullanıcı kararı: sahada QR
+# yok); bakım kartları yalnız lokasyon portalında (Mekanik Zeka) düzenlenir.
 #
 # Neden zorunlu: portal Supabase'e service_role anahtarıyla bağlanır ve
 # service_role RLS'i bypass eder → portala erişebilen veritabanına tam yetkilidir.
@@ -1555,7 +1403,7 @@ if st.session_state.get("yonetim"):
     # Çark arayüzü: Sistem ekranı da koyu cam temada, ortada panel
     if _cark_arayuz():
         import detay_tema_demo as _dtd_y
-        if getattr(_dtd_y, "SURUM", 0) < 27:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd_y, "SURUM", 0) < 28:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dty
             _dtd_y = _il_dty.reload(_dtd_y)
         st.markdown(_dtd_y.yonetim_css(), unsafe_allow_html=True)
@@ -1600,7 +1448,7 @@ if st.session_state.get("detay_lokasyon"):
     # Çark arayüzü: detay koyu cam temada ve animasyonlu geçişle açılır (detay_tema_demo.py)
     if _cark_arayuz():
         import detay_tema_demo as _dtd
-        if getattr(_dtd, "SURUM", 0) < 27:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd, "SURUM", 0) < 28:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dtd
             _dtd = _il_dtd.reload(_dtd)
         with st.container(key="detay_tema_demo"):
@@ -1720,7 +1568,7 @@ if _cark_kutu is not None:
         # Görünmez detay düğmeleri (on_click): durum yeniden çizimden ÖNCE yazılır,
         # çizim doğrudan detay dalına girer — ana ekran bir kez daha çizilmez.
         import detay_tema_demo as _dtd_c
-        if getattr(_dtd_c, "SURUM", 0) < 27:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_dtd_c, "SURUM", 0) < 28:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_dtdc
             _dtd_c = _il_dtdc.reload(_dtd_c)
         with st.container(key="ck_gizli_detay"):

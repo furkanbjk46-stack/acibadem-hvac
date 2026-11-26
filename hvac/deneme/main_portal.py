@@ -1075,8 +1075,7 @@ INSTRUCTION_GUIDE = {
         "description": "Dijital bakım kartında en az bir bileşen MAINTENANCE olarak işaretli. Bakım süresince analiz ve alarmlar durdurulur (gürültü önlenir).",
         "steps": [
             "Bakım tamamlanınca bakım kartında bileşeni OK olarak güncelleyin — analiz otomatik devam eder",
-            "Bakım uzadıysa kartı ve saha durumunu kontrol edin",
-            "Kart QR etiketiyle sahadan da güncellenebilir"
+            "Bakım uzadıysa kartı ve saha durumunu kontrol edin"
         ],
         "causes": []
     },
@@ -3183,14 +3182,7 @@ def validate_equipment_data(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 @app.get("/", include_in_schema=False)
 async def portal_home(request: Request):
-    """Ana giriş ekranı (HVAC / Enerji). ?bakim= parametresi QR derin bağlantısıdır."""
-    if "bakim" in request.query_params:
-        from urllib.parse import urlencode
-        _bootstrap_static_assets()
-        return RedirectResponse(
-            url="/static/index.html?" + urlencode(dict(request.query_params)),
-            status_code=302,
-        )
+    """Ana giriş ekranı (HVAC / Enerji)."""
     return HTMLResponse(_load_or_create_portal_html())
 
 @app.get("/api/instruction-guide")
@@ -3208,62 +3200,6 @@ async def api_instruction_guide():
 @app.get("/home", include_in_schema=False)
 async def home_redirect():
     return RedirectResponse(url="/", status_code=302)
-
-# ---- QR Dijital Bakım Kartı derin bağlantısı ----
-# Saha etiketlerindeki QR kodlar bu adresi taşır: http://<pc-ip>:8005/bakim/AHU-6
-# Telefon okutunca HVAC arayüzü doğrudan o cihazın bakım kartı açık şekilde gelir.
-@app.get("/bakim", include_in_schema=False)
-@app.get("/bakim/{cihaz}", include_in_schema=False)
-async def bakim_qr_link(cihaz: str = ""):
-    from urllib.parse import quote
-    _bootstrap_static_assets()
-    return RedirectResponse(
-        url="/static/index.html?bakim=" + quote(cihaz, safe=""),
-        status_code=302,
-    )
-
-@app.get("/api/network-info")
-async def network_info(request: Request):
-    """QR etiketlerine yazılacak taban adres için PC'nin yerel ağ IP'sini tespit et."""
-    import socket
-    ip = None
-    try:
-        # UDP connect paket göndermez; sadece hangi arayüzden çıkılacağı öğrenilir
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-    except Exception:
-        try:
-            ip = socket.gethostbyname(socket.gethostname())
-        except Exception:
-            ip = "127.0.0.1"
-    port = request.url.port or _PORT["mekanik_zeka"]
-    return {"ip": ip, "port": port, "base_url": f"http://{ip}:{port}"}
-
-@app.get("/api/qr-config")
-async def qr_config():
-    """QR etiketleri için lokasyon kimliği ve merkez portal adresi.
-
-    supabase_config.json her lokasyon PC'sinde bulunur (repoda yoktur):
-    lokasyon_id zorunlu, merkez_url opsiyoneldir (QR'ların hedefi —
-    ör. https://acibadem-synapse.streamlit.app).
-    """
-    cfg_path = yollar.yol("supabase_config.json", os.path.dirname(__file__))
-    lokasyon_id, merkez_url = "", ""
-    try:
-        if os.path.exists(cfg_path):
-            with open(cfg_path, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-            merkez_url = str(cfg.get("merkez_url", "") or "").rstrip("/")
-    except Exception:
-        pass
-    try:   # kimlik: lokasyon profili (Faz 1); profil yoksa bağlantı dosyasındaki değer
-        import location_manager as _lm_k
-        lokasyon_id = _lm_k.lokasyon_id(os.path.dirname(__file__))
-    except Exception:
-        pass
-    return {"lokasyon_id": lokasyon_id, "merkez_url": merkez_url}
 
 @app.get("/hvac", include_in_schema=False)
 async def hvac_entry():

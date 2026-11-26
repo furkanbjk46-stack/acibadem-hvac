@@ -35,7 +35,7 @@ PORT_BEKLEME_SN = 30
 def _portlari_hazirla(bekleme_sn=PORT_BEKLEME_SN, _bekle=time.sleep):
     """Portlar (ayar/portlar.json; yoksa 8501 / 8005) ve çocuk süreçlerin birbirini bulduğu adresler.
 
-    Port KAYDIRILMAZ (QR etiketleri portu taşır). Yeniden başlatmada eski süreç portu birkaç saniye
+    Port KAYDIRILMAZ (yer imleri, kısayollar ve agent'lar portu bilir). Yeniden başlatmada eski süreç portu birkaç saniye
     tutabildiği için önce beklenir; hâlâ doluysa açıkça uyarılır (log → merkezde hata özeti,
     durum/portlar_durum.json → kurulum kontrolü) ve portal yine başlatılır.
     """
@@ -52,7 +52,7 @@ def _portlari_hazirla(bekleme_sn=PORT_BEKLEME_SN, _bekle=time.sleep):
         _bekle(2)
     for ad, port in dolu:
         logger.error("⛔ %s portu %d başka bir program tarafından kullanılıyor — portal açılamayabilir. "
-                     "Portu tutan programı kapatın; port değiştirilmez (QR etiketleri bu portu taşır).",
+                     "Portu tutan programı kapatın; port değiştirilmez (yer imleri ve kısayollar bu portu kullanır).",
                      "Enerji" if ad == "enerji" else "Mekanik Zeka", port)
     # Portallar birbirine ve agent'lar portallara bu adreslerden ulaşır (açıkça verilmişse dokunulmaz)
     _COCUK_ENV.setdefault("STREAMLIT_URL", "http://localhost:%d" % p["enerji"])

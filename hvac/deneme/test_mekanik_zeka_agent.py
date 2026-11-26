@@ -65,8 +65,7 @@ class Kur:
                     "/api/uretim_tuketim_gecmis": 200}
         self.sayfalar = {
             "/": (200, '<a href="/hvac">HVAC</a> <a href="/enerji">Enerji</a>'), "/hvac": (200, "<html>"),
-            "/enerji": (200, "<html>"), "/bakim/AGENT-TEST": (200, "<html>"),
-            "/api/qr-config": (200, json.dumps({"lokasyon_id": "maslak", "merkez_url": ""})),
+            "/enerji": (200, "<html>"),
             "/api/maintenance": (200, json.dumps({"success": True, "data": {"cards": {
                 "AHU-1": {"supply_sensor": "OK", "return_sensor": "FAULTY"}}},
                 "components": ["supply_sensor", "return_sensor"], "statuses": ["OK", "FAULTY", "MAINTENANCE", "N/A"]})),
@@ -219,13 +218,16 @@ _wd = open(os.path.join(BURASI, "portal_watchdog.py"), encoding="utf-8").read()
 c("watchdog Enerji ve Mekanik Zeka agent'larını ayrı ayrı başlatır",
   '"enerji_agent.py"' in _wd and '"mekanik_zeka_agent.py"' in _wd and "procs.append(_agent" not in _wd)
 
-# 10) Giriş ekranı / QR, watchdog, bakım kartı, ayarlar
+# 10) Giriş ekranı, watchdog, bakım kartı, ayarlar
 k = Kur()
 k.sayfalar["/hvac"] = (500, "hata")
-k.sayfalar["/api/qr-config"] = (200, json.dumps({"lokasyon_id": ""}))
+k.sayfalar["/enerji"] = (500, "hata")
 b = [x for x in k.tur()["bulgular"] if x["kontrol"] == "giris_qr"]
-c("açılmayan /hvac ve boş QR lokasyonu tek bulguda", len(b) == 1 and "/hvac" in b[0]["bulunan"]
-  and "lokasyon kimliği" in b[0]["bulunan"], b)
+c("açılmayan /hvac ve /enerji tek bulguda", len(b) == 1 and "/hvac" in b[0]["bulunan"]
+  and "/enerji" in b[0]["bulunan"], b)
+# Saha QR'ı kaldırıldı (26.11.2026): agent artık /bakim ve /api/qr-config istemez
+_ag = open(os.path.join(BURASI, "mekanik_zeka_agent.py"), encoding="utf-8").read()
+c("agent QR uçlarını denetlemez", '_json(o, "/api/qr-config")' not in _ag and '"/bakim/AGENT-TEST"' not in _ag)
 k = Kur()
 k.sayfalar["/"] = (200, "<html>bos</html>")
 c("giriş ekranında HVAC/Enerji bağlantısı yoksa bulgu", "giris_qr:giris" in anahtarlar(k.tur()))

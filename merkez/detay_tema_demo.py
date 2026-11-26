@@ -41,7 +41,7 @@ import re
 
 import ana_ekran_cark_demo as _cark
 
-SURUM = 27  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 28  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 KOK = ('body:has(.st-key-detay_tema_demo):not(:has(.st-key-ozet_gecis_katmani))'
        ':not(:has(.st-key-yonetim_katmani))')
@@ -221,6 +221,23 @@ html:has(.st-key-detay_tema_demo){ background:#03141a !important; }
 § D .st-key-dz_yan div:is([style*="grid-template-columns:repeat("], [style*="grid-template-columns: repeat("]){
   padding:calc(var(--ck-u) * .9) !important; border-radius:calc(var(--ck-u) * 1.4);
   background:rgba(255,255,255,.035); border:1px solid var(--ck-cam-kenar); }
+/* 26.11.2026: özet + kojen & kaynak kartları yan sütunun boyunu doldurur — altında boşluk kalmaz,
+   kartlar grafik sütunuyla aynı yerde biter. Fazla yükseklik satır sayısıyla orantılı paylaşılır
+   (özet 3 satır : kaynak 5 satır); içerik sığmazsa küçülmez, sütun eskisi gibi kendi içinde kayar. */
+§ D .st-key-dz_yan > [data-testid="stLayoutWrapper"]:first-child{ flex:3 0 auto !important; }   /* özet kabı */
+§ D .st-key-dz_yan .st-key-dz_ozet{ height:100%; grid-template-rows:auto; grid-auto-rows:1fr; align-items:stretch !important; }
+§ D .st-key-dz_yan .st-key-dz_ozet > [data-testid="stElementContainer"]{ display:flex !important; flex-direction:column; }
+§ D .st-key-dz_yan .st-key-dz_ozet > [data-testid="stElementContainer"] :is([data-testid="stMarkdown"], [data-testid="stMarkdown"] > div, [data-testid="stMarkdownContainer"]){
+  flex:1 1 auto !important; display:flex !important; flex-direction:column; width:100%; }
+§ D .st-key-dz_yan .st-key-dz_ozet .dz-kart{ flex:1 1 auto; }
+/* Kaynak ızgarası yan sütunun SON öğesi (lokasyon_detay: tek ekranda ızgaradan sonra kap kapanır).
+   :has(div[style*=...]) KULLANILMAZ: her DOM değişikliğinde tüm sayfa stilini yeniden hesaplatıyor,
+   geri dönüşte iskelet ~3 sn fazla bekliyordu (26.11.2026 ölçüm: 74 ms → 0,2 ms / değişiklik) */
+§ D .st-key-dz_yan > [data-testid="stElementContainer"]:last-child{
+  flex:5 0 auto !important; display:flex !important; flex-direction:column; }
+§ D .st-key-dz_yan > [data-testid="stElementContainer"]:last-child :is([data-testid="stMarkdown"], [data-testid="stMarkdown"] > div, [data-testid="stMarkdownContainer"]){
+  flex:1 1 auto !important; display:flex !important; flex-direction:column; width:100%; }
+§ D .st-key-dz_yan div:is([style*="grid-template-columns:repeat("], [style*="grid-template-columns: repeat("]){ flex:1 1 auto; grid-auto-rows:1fr; }
 /* Streamlit metin kutusuna -16px alt boşluk verir; sıkı düzende kartlar üst üste biniyordu (18.11.2026) */
 § D [data-testid="stMarkdownContainer"]{ margin-bottom:0 !important; }
 § D .st-key-dz_yan .sec{ margin-top:calc(var(--ck-u) * .4) !important; }
@@ -723,7 +740,10 @@ GECIS_JS = r"""
     var kalan = (AZ ? 120 : (G.yon === 'ileri' ? 440 : 560)) - (Date.now() - G.t0);
     bekZ = W.setTimeout(function () {
       bekZ = 0;
-      if (hazir()) { sonra(function () { sonra(bitir); }); }
+      // Geri: sahne hazırsa hemen açılır. Çark sahnesi gelince ana sayfanın geri kalanı
+      // (harita, çerçeveler) çizilirken kareler uzun sürüyor; iki kare beklemek ~0,9 sn
+      // ekliyordu (26.11.2026). Giriş animasyonu yalnız opacity/transform: ekran kartı oynatır.
+      if (hazir()) { if (G.yon === 'geri') { bitir(); } else { sonra(function () { sonra(bitir); }); } }
     }, Math.max(0, kalan));
   }
   G.denetle = denetle;

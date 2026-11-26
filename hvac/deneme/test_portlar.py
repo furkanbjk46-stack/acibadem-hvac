@@ -51,7 +51,7 @@ dolu = {8005, 8006, 8501}
 r = P.sec(d, _bos_mu=lambda p: p not in dolu)
 c("varsayılan doluysa sıradaki boş port; sonra sabit", r["portlar"] == {"enerji": 8502, "mekanik_zeka": 8007}
   and sorted(r["degisen"]) == ["enerji", "mekanik_zeka"] and P.yukle(d) == r["portlar"], r)
-c("sonraki kurulumda port kaymaz (QR etiketleri)", P.sec(d, _bos_mu=lambda p: True)["portlar"] == r["portlar"])
+c("sonraki kurulumda port kaymaz (yer imleri, kısayollar)", P.sec(d, _bos_mu=lambda p: True)["portlar"] == r["portlar"])
 
 # ── Gerçek soket: dolu port bulunur ──
 s = socket.socket()

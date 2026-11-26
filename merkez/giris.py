@@ -3,7 +3,7 @@
 SYNAPSE — Giriş kapısı (kimlik doğrulama)
 ==========================================
 
-app_merkez.py'nin QR bakım bloğundan SONRA çağrılır:
+app_merkez.py'nin başında (bağlantı ve ayarlar yüklendikten sonra) çağrılır:
 
     import giris
     giris.giris_kapisi()          # giriş yapılmamışsa ekranı basar ve durdurur

@@ -8,8 +8,8 @@ Dosya yoksa varsayılanlar (bugünkü portlar) geçerlidir; Maslak'ta hiçbir ş
 
 Neden: bazı PC'lerde 8005 / 8501'i başka bir program tutuyor (geliştirme PC'sinde 8005'i Windows
 tutuyor). Port KURULUMDA BİR KEZ seçilir (sec()): varsayılan boşsa o, doluysa sıradaki boş port
-yazılır. Sonra SABİT kalır — çalışırken başka porta KAYDIRILMAZ: sahadaki bakım kartı QR etiketleri
-http://<pc-ip>:<port>/bakim/... adresini taşır, yer imleri ve agent kontrolleri de portu bilir.
+yazılır. Sonra SABİT kalır — çalışırken başka porta KAYDIRILMAZ: yer imleri, kısayollar ve agent
+kontrolleri portu bilir (saha QR etiketleri 26.11.2026'da kaldırıldı).
 Port sonradan dolarsa watchdog açıkça uyarır (durum/portlar_durum.json, log → merkezde hata özeti).
 """
 import json
@@ -97,8 +97,8 @@ def sec(base_dir=None, _bos_mu=None):
             degisen.append(ad)
     p = yollar.dosya_icin(DOSYA, base_dir)
     with open(p, "w", encoding="utf-8") as f:
-        json.dump(dict(secilen, _aciklama="Kurulumda seçildi; sonradan DEĞİŞTİRMEYİN — bakım kartı QR "
-                                          "etiketleri bu portu taşır."), f, ensure_ascii=False, indent=1)
+        json.dump(dict(secilen, _aciklama="Kurulumda seçildi; sonradan DEĞİŞTİRMEYİN — yer imleri, kısayollar "
+                                          "ve agent kontrolleri bu portu kullanır."), f, ensure_ascii=False, indent=1)
     return {"portlar": secilen, "yazildi": True, "degisen": degisen}
 
 
