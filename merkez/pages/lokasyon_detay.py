@@ -1781,7 +1781,7 @@ with tab1:
             _v = _setler.get(anahtar)
             return ("%g°C" % _v) if isinstance(_v, (int, float)) else "—"
 
-        _CH_AD = {"koc_soguk": "Koç soğuk", "serin": "Serin",
+        _CH_AD = {"koc_soguk": "Çok soğuk", "serin": "Serin",
                   "ilimli": "Ilımlı", "sicak": "Sıcak"}
         _DIG_AD = {"yogun_sogutma": "Yoğun soğutma",
                    "sogutma": "Soğutma", "isitma": "Isıtma"}

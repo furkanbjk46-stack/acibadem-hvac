@@ -1158,7 +1158,7 @@ dun  = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 # tema uygulanana dek ana alan gizli, zemin kayıtlı temanın renginde (tema_acik_demo)
 if _cark_arayuz() and not st.session_state.get("detay_lokasyon"):
     import tema_acik_demo as _tad_on
-    if getattr(_tad_on, "SURUM", 0) < 9:   # açık süreçte eski modül önbellekte kalmasın
+    if getattr(_tad_on, "SURUM", 0) < 10:   # açık süreçte eski modül önbellekte kalmasın
         import importlib as _il_tad_on
         _tad_on = _il_tad_on.reload(_tad_on)
     try:
@@ -1408,7 +1408,7 @@ if st.session_state.get("yonetim"):
             _dtd_y = _il_dty.reload(_dtd_y)
         st.markdown(_dtd_y.yonetim_css(), unsafe_allow_html=True)
         import tema_acik_demo as _tad_y   # aydınlık tema (seçiliyse)
-        if getattr(_tad_y, "SURUM", 0) < 9:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_tad_y, "SURUM", 0) < 10:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_tad
             _tad_y = _il_tad.reload(_tad_y)
         st.markdown(_tad_y.hepsi(), unsafe_allow_html=True)
@@ -1454,7 +1454,7 @@ if st.session_state.get("detay_lokasyon"):
         with st.container(key="detay_tema_demo"):
             st.markdown(_dtd.tema_css(), unsafe_allow_html=True)
             import tema_acik_demo as _tad_d   # aydınlık tema (seçiliyse)
-            if getattr(_tad_d, "SURUM", 0) < 9:   # açık süreçte eski modül önbellekte kalmasın
+            if getattr(_tad_d, "SURUM", 0) < 10:   # açık süreçte eski modül önbellekte kalmasın
                 import importlib as _il_tad
                 _tad_d = _il_tad.reload(_tad_d)
             st.markdown(_tad_d.hepsi(), unsafe_allow_html=True)
@@ -1554,13 +1554,13 @@ _demo_eski = _demo_modu() and os.environ.get("SYNAPSE_DEMO_ESKI", "").strip() ==
 _cark_kutu = st.container(key="cark_demo") if _cark_arayuz() else None
 if _cark_kutu is not None:
     import ana_ekran_cark_demo as _ckd
-    if getattr(_ckd, "SURUM", 0) < 25:      # açık süreçte eski modül önbellekte kalmasın
+    if getattr(_ckd, "SURUM", 0) < 27:      # açık süreçte eski modül önbellekte kalmasın
         import importlib as _il_ckd
         _ckd = _il_ckd.reload(_ckd)
     with _cark_kutu:
         st.markdown(_ckd.ekran_css(), unsafe_allow_html=True)
         import tema_acik_demo as _tad   # aydınlık tema (seçiliyse); düğme alt orta çubukta
-        if getattr(_tad, "SURUM", 0) < 9:   # açık süreçte eski modül önbellekte kalmasın
+        if getattr(_tad, "SURUM", 0) < 10:   # açık süreçte eski modül önbellekte kalmasın
             import importlib as _il_tad
             _tad = _il_tad.reload(_tad)
         st.markdown(_tad.hepsi(), unsafe_allow_html=True)
@@ -2740,7 +2740,7 @@ with sag:
         if _os_dig in ("", "—", None) and _modlar_dig:
             _os_dig = _modlar_dig.pop() if len(_modlar_dig) == 1 else "farkli"
     _CH_IKON = {"koc_soguk": "❄️", "serin": "🌤️", "ilimli": "☀️", "sicak": "🔥"}
-    _ch_label   = "%s %s" % (_CH_IKON.get(_os_ch, ""), {"koc_soguk": "Koç soğuk",
+    _ch_label   = "%s %s" % (_CH_IKON.get(_os_ch, ""), {"koc_soguk": "Çok soğuk",
                   "serin": "Serin", "ilimli": "Ilımlı", "sicak": "Sıcak",
                   "farkli": "lokasyona göre farklı"}.get(_os_ch, _os_ch))
     _dig_label  = {"yogun_sogutma": "🔆 Yoğun soğutma", "sogutma": "☀️ Soğutma",
@@ -2850,6 +2850,9 @@ with sag:
     # gönderim kayıtları (*_yenileme) buraya girmez, yoksa "ilimli → ilimli"
     # gibi geçiş olmayan bir satır gösterilirdi.
     _ml_gecisler = [x for x in _ml_data if x["tip"] in ("chiller", "diger")]
+    # Mod kodlarının ekran adı (kod oto_set.py'de; "koc_soguk" = dış hava < 7 °C)
+    _MOD_AD = {"koc_soguk": "Çok soğuk", "serin": "Serin", "ilimli": "Ilımlı", "sicak": "Sıcak",
+               "isitma": "Isıtma", "sogutma": "Soğutma", "yogun_sogutma": "Yoğun soğutma"}
     _son_gecis_html = ""
     if _ml_gecisler:
         _ml_son = _ml_gecisler[0]
@@ -2861,8 +2864,8 @@ with sag:
             f"<div style='font-size:9px;border-top:1px solid rgba(24,26,30,0.10);"
             f"padding-top:6px;margin-top:6px;color:#46536b;'>"
             f"Son geçiş: {_son_tip} &nbsp;{_son_ok}&nbsp; "
-            f"<b style='color:#24324d;'>{_ml_son['eski_mod']}</b> → "
-            f"<b style='color:#2a78d6;'>{_ml_son['yeni_mod']}</b> &nbsp;·&nbsp; "
+            f"<b style='color:#24324d;'>{_MOD_AD.get(_ml_son['eski_mod'], _ml_son['eski_mod'])}</b> → "
+            f"<b style='color:#2a78d6;'>{_MOD_AD.get(_ml_son['yeni_mod'], _ml_son['yeni_mod'])}</b> &nbsp;·&nbsp; "
             f"<span style='color:#c98500;'>{_ml_son['tahmin_ort']}°C</span></div>"
         )
 
@@ -4024,9 +4027,12 @@ if _cark_kutu is not None:
     _ck_son = ""
     if _ml_gecisler:
         _m0 = _ml_gecisler[0]
+        # created_at UTC'dir; saat İstanbul saatiyle gösterilir (_log_zamani)
         _ck_son = "%s %s → %s · %s°C · %s" % (
-            "Chiller" if _m0.get("tip") == "chiller" else "Kol/FCU/AHU", _m0.get("eski_mod"),
-            _m0.get("yeni_mod"), _m0.get("tahmin_ort"), str(_m0.get("created_at", ""))[11:16])
+            "Chiller" if _m0.get("tip") == "chiller" else "Kol/FCU/AHU",
+            _MOD_AD.get(_m0.get("eski_mod"), _m0.get("eski_mod")),
+            _MOD_AD.get(_m0.get("yeni_mod"), _m0.get("yeni_mod")), _m0.get("tahmin_ort"),
+            _log_zamani(_m0)[11:16])
     _ck_genel = {
         "oto_aktif": bool(_oto_aktif_su), "donem": _simdi_donem, "sonraki": _sonraki,
         "g_saat": "%02d:00" % _g_saat, "ge_saat": "%02d:00" % _ge_saat, "ozel": list(_ozel_saatli),

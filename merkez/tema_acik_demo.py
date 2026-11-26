@@ -22,7 +22,7 @@ import colorsys
 import functools
 import re
 
-SURUM = 9  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 10  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 SINIF = "ck-acik-tema"
 KOK = "html." + SINIF
 # Tema uygulandı işareti (24.11.2026): sayfa ilk açılışta (sert yenileme) eski başlık →
@@ -287,6 +287,13 @@ KOK .ck-sahne .ck-kure{ background:#1f2559; }
 KOK .ck-sahne .ck-kart-sayi, KOK .ck-sahne .ck-p-buyuk b{ --c:#0f1f3d; }
 KOK [data-testid="stAppViewContainer"]::before{ filter:blur(7px) brightness(1.35) saturate(.5) !important; opacity:.32 !important; }
 KOK .ck-sahne .ck-tema .ck-tema-koyu{ display:inline; } KOK .ck-sahne .ck-tema .ck-tema-acik{ display:none; }
+KOK .ck-sahne .ck-ik{ --c:#0f1f3d; }
+KOK .ck-sahne .ck-p-uyari{ --c:#6b4300; background:rgba(242,180,65,.16); border-left-color:#c98500; }
+KOK .ck-sahne .ck-p-uyari.ck-r{ --c:#8f1d1d; background:rgba(220,70,60,.12); border-left-color:#d03b3b; }
+KOK .ck-sahne .ck-p-satir .ck-iyi{ --c:#0b6b45; } KOK .ck-sahne .ck-p-satir .ck-kotu{ --c:#b42318; }
+KOK .ck-sahne .ck-p-satir .ck-dikkat{ --c:#8a5a00; }
+KOK .ck-sahne .ck-p-acilir-say{ --c:#b42318; } KOK .ck-sahne .ck-p-acilir-say.ck-y{ --c:#8a5a00; }
+KOK .ck-sahne .ck-p-cip{ --c:#8a5a00; }
 """
 
 

@@ -20,8 +20,8 @@ DÜZEN (soldan sağa, tek ekran, sayfa kaydırması yok)
   * Sağ cam panel: seçili lokasyonun mevcut verileri (küçük yazı).
   * Alt orta tek çubuk (26.11.2026): Uyarılar / OTO SET / Harita (eski sağ sütun
     ve harita sütunu açılır katman olarak), ayraç, Ayarlar (a.ayar-ac → mevcut
-    ayarlar paneli), Sistem (mevcut Yönetim düğmesi), tema, Çıkış (mevcut Çıkış
-    düğmesi). Simge üstte yazı altta; seçili düğme çubuktan yukarı kabarır.
+    Sistem ayarları paneli), Sunucu (Yönetim · Sunucu ve Veri Durumu), tema, Çıkış.
+    Simge üstte yazı altta; üzerine gelinen düğme büyür.
 
 CANLI SAYILAR
   Sayılar `.canli-sayi` (data-deger / data-ond / data-faz): saniyelik akış
@@ -38,7 +38,7 @@ import html as _html
 import json
 import re
 
-SURUM = 25  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 27  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 # Repodaki Acıbadem "A" işareti — app_merkez.py içindeki haritanın Genel
 # Müdürlük logosuyla (var GM_A) aynı yol. Yeni logo çizilmez.
@@ -71,7 +71,7 @@ GAZ_ONEK = {"dogalgaz_kojen": "DOGALGAZ-KOJEN", "dogalgaz_kazan": "DOGALGAZ-KAZA
 CARK_YARI = 7
 
 # Lokasyonun bildirdiği OTO SET modları (app_merkez'deki etiketlerle aynı ad)
-_CH_MOD = {"koc_soguk": "Koç soğuk", "serin": "Serin", "ilimli": "Ilımlı", "sicak": "Sıcak"}
+_CH_MOD = {"koc_soguk": "Çok soğuk", "serin": "Serin", "ilimli": "Ilımlı", "sicak": "Sıcak"}
 _DIG_MOD = {"yogun_sogutma": "Yoğun soğutma", "sogutma": "Soğutma", "isitma": "Isıtma"}
 
 # ── PALET (tek yer) ──────────────────────────────────────────────────────────
@@ -567,8 +567,8 @@ body.ck-kiyas-acik .ck-sahne .ck-katman-kapat{ display:flex; top:calc(5vh - 44px
 .ck-sahne .ck-p-acilir-ic{ max-height:calc(var(--ck-u) * 20); overflow-y:auto; }
 .ck-sahne .ck-p-mini-alt{ margin-top:3px; font-size:.82em; line-height:1.25; --c:var(--ck-metin-3); overflow-wrap:anywhere; }
 
-/* ── Alt orta düğme çubuğu (26.11.2026): küçük, simge üstte yazı altta; seçili / üzerine gelinen
-   düğme çubuktan yukarı kabarır, çubuğun alt kenarındaki turkuaz ışık çizgisi kabarıklığı çevreler ── */
+/* ── Alt orta düğme çubuğu (26.11.2026): küçük, simge üstte yazı altta; üzerine gelinen düğme
+   büyür (çerçeve yok); açık pop-up'ın düğmesinin altında nokta; alt kenarda turkuaz ışık çizgisi ── */
 .ck-sahne .ck-alt{ grid-column:1 / -1; grid-row:2; justify-self:center; position:relative; z-index:3;
   display:flex; align-items:stretch; gap:calc(var(--ck-u) * .15); margin-top:calc(var(--ck-u) * 1.5);
   padding:calc(var(--ck-u) * .3) calc(var(--ck-u) * 1.1);
@@ -587,14 +587,6 @@ body.ck-kiyas-acik .ck-sahne .ck-katman-kapat{ display:flex; top:calc(5vh - 44px
   cursor:pointer; white-space:nowrap; font-weight:600; line-height:1.1; font-size:max(8.5px, calc(var(--ck-u) * .9));
   --c:var(--ck-metin-2); background:transparent; border:0; border-radius:calc(var(--ck-u) * 1.6);
   transition:transform .28s cubic-bezier(.3,1.4,.5,1), color .2s ease; }
-/* kabarıklık: çubuk renginde, üstü ve yanları turkuaz ışık; alt kenarı çubuğun ışık çizgisine oturur */
-.ck-sahne .ck-dugme::before{ content:""; position:absolute; z-index:-1; left:calc(var(--ck-u) * .1); right:calc(var(--ck-u) * .1);
-  top:calc(var(--ck-u) * -.75); bottom:calc(var(--ck-u) * -.3 - 1px);
-  border-radius:calc(var(--ck-u) * 2.2) calc(var(--ck-u) * 2.2) calc(var(--ck-u) * .6) calc(var(--ck-u) * .6);
-  background:linear-gradient(180deg, rgba(20,62,72,.98), rgba(6,26,33,.98));
-  border:1.5px solid var(--ck-vurgu); border-bottom:0;
-  box-shadow:0 -5px 14px -5px rgba(46,196,182,.6);
-  opacity:0; transform:translateY(calc(var(--ck-u) * .6)); transition:opacity .22s ease, transform .28s ease; }
 /* seçili düğmenin altında küçük nokta */
 .ck-sahne .ck-dugme::after{ content:""; position:absolute; left:50%; bottom:calc(var(--ck-u) * .05);
   width:4px; height:4px; margin-left:-2px; border-radius:50%; background:var(--ck-vurgu-acik);
@@ -602,20 +594,24 @@ body.ck-kiyas-acik .ck-sahne .ck-katman-kapat{ display:flex; top:calc(5vh - 44px
 .ck-sahne .ck-dugme:is(:hover, :focus-visible),
 body.ck-uyari-acik .ck-sahne .ck-dugme[data-ck-eylem="uyarilar"],
 body.ck-kontrol-acik .ck-sahne .ck-dugme[data-ck-eylem="kontrol"],
-body.ck-harita-acik .ck-sahne .ck-dugme[data-ck-eylem="harita"]{ --c:var(--ck-metin); transform:translateY(calc(var(--ck-u) * -.35)); outline:none; }
-.ck-sahne .ck-dugme:is(:hover, :focus-visible)::before,
-body.ck-uyari-acik .ck-sahne .ck-dugme[data-ck-eylem="uyarilar"]::before,
-body.ck-kontrol-acik .ck-sahne .ck-dugme[data-ck-eylem="kontrol"]::before,
-body.ck-harita-acik .ck-sahne .ck-dugme[data-ck-eylem="harita"]::before{ opacity:1; transform:none; }
+body.ck-harita-acik .ck-sahne .ck-dugme[data-ck-eylem="harita"]{ --c:var(--ck-metin); outline:none; }
+/* üzerine gelince büyür (yukarı doğru, çubuğun dışına taşabilir) */
+.ck-sahne .ck-dugme:is(:hover, :focus-visible){ transform:translateY(calc(var(--ck-u) * -.25)) scale(1.16); }
 body.ck-uyari-acik .ck-sahne .ck-dugme[data-ck-eylem="uyarilar"]::after,
 body.ck-kontrol-acik .ck-sahne .ck-dugme[data-ck-eylem="kontrol"]::after,
 body.ck-harita-acik .ck-sahne .ck-dugme[data-ck-eylem="harita"]::after{ opacity:1; }
 .ck-sahne .ck-dugme.ck-cikis:is(:hover, :focus-visible){ --c:#ffb4a8; }
-.ck-sahne .ck-dugme.ck-cikis:is(:hover, :focus-visible)::before{ border-color:rgba(240,106,90,.85);
-  box-shadow:0 -5px 14px -5px rgba(240,106,90,.6); }
 .ck-sahne .ck-ik{ display:flex; align-items:center; justify-content:center; height:calc(var(--ck-u) * 1.75);
   font-size:calc(var(--ck-u) * 1.45); line-height:1; }
 .ck-sahne .ck-dugme .ai{ width:calc(var(--ck-u) * 1.75) !important; height:calc(var(--ck-u) * 1.75) !important; }
+/* koyu zeminde simgeler: satır içi renkler (--ai-renk, ör. lacivert #133273) aydınlık zemin
+   içindir. html:not(.ck-acik-tema) ile yalnız koyu temada; aydınlık tema dönüşümü bu kuralları
+   eşleşmeyen seçiciye çevirir, simgeler orada kendi renginde kalır */
+html:not(.ck-acik-tema) .ck-sahne .ck-alt .ai{ --ai-renk:#d7eef0 !important; color:#d7eef0 !important; }
+html:not(.ck-acik-tema) .ck-sahne .ck-alt .ai:is(.ai-harita, .ai-yonetim){ --ai-renk:#7cc4ff !important; color:#7cc4ff !important; }
+html:not(.ck-acik-tema) .ck-sahne .ck-alt .ai:is(.ai-alarm, .ai-cikis){ --ai-renk:#ff8f80 !important; color:#ff8f80 !important; }
+html:not(.ck-acik-tema) .ck-sahne .ck-alt .ai-oto{ --ai-renk:#86e8dc !important; color:#86e8dc !important; }
+html:not(.ck-acik-tema) .ck-sahne .ck-ik{ --c:#ffe7a3; }
 /* uyarı sayısı: simgenin sağ üst köşesinde rozet */
 .ck-sahne .ck-sayac{ position:absolute; top:calc(var(--ck-u) * -.05); left:calc(50% + var(--ck-u) * .7);
   min-width:calc(var(--ck-u) * 1.5); padding:0 calc(var(--ck-u) * .35); border-radius:99px; text-align:center;
@@ -1023,10 +1019,11 @@ def sahne_html(veri: dict, ozet_kartlar: list, ikonlar: dict, arama_metni=None,
            + _d("harita", "harita", "Harita", "Hastane enerji ağı haritası")
            + '<span class="ck-ayrac" aria-hidden="true"></span>')
     ayar = ("" if izleyici else
-            f'<a class="ayar-ac ck-dugme" href="#" title="Sunucu ayarları" aria-label="Sunucu ayarları">'
+            f'<a class="ayar-ac ck-dugme" href="#" title="Sistem ayarları" aria-label="Sistem ayarları">'
             f'<span class="ck-ik">{ikonlar.get("ayar", "")}</span><span class="ck-etiket">Ayarlar</span></a>')
     alt = ('<nav class="ck-alt" aria-label="Sistem">' + ust + ayar
-           + _d("sistem", "yonetim", "Sistem", "Yönetim — sunucu ve veri durumu")
+           # "sistem" eylemi Yönetim · Sunucu ve Veri Durumu ekranını açar; düğmenin adı ekranla aynı
+           + _d("sistem", "yonetim", "Sunucu", "Sunucu ve veri durumu")
            # Karanlık / aydınlık tema geçişi (tema_acik_demo.betik dinler; seçim tarayıcıda saklanır)
            + '<a class="ck-dugme ck-tema" href="#" role="button" data-ck-eylem="tema" title="Karanlık / aydınlık tema">'
              '<span class="ck-ik"><span class="ck-tema-acik">☀</span><span class="ck-tema-koyu">☾</span></span>'
