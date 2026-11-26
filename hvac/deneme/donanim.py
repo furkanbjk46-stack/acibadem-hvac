@@ -15,6 +15,12 @@ IP'si olmayan analizör (sayaç henüz bağlı değil) ile "okunacak" / "yazıla
 programın okuduğu dosyalara GİRMEZ; ayar/donanim_bekleyen.json'da saklanır (liste kaybolmasın).
 Yazılabilir noktalar oto-set'in kendi ayarındadır (korunan alan): panel yalnız listeler.
 
+BMS "Nokta Türü" (26.11.2026): sayaç · ölçüm · durum · set · diğer. "sayaç" seçilen nokta (su, gaz, ısı ya da
+BMS'ten gelen elektrik sayacı) "Sayaç Türü" ve "Çarpan" ile ayar/sayaclar.json'a kaynak=bms olarak yazılır:
+23:59'da analizörlerle birlikte okunur, günlük farkı alınır, türüne göre toplamlara ve ortak sütunlara
+(su_ana → Su_Tuketimi_m3 …) girer. Diğer türler bilgi ve doğrulama içindir: noktanın programdaki anlamını
+yine STANDART NOKTA ADLARI belirler (hangi chiller'ın durumu vb.); seçilen tür adla uyuşmazsa uyarı verilir.
+
 Kayıt: önce yedek (durum/donanim_yedek/<zaman>/), sonra atomik yazım, sonra _restart.flag
 (portal_watchdog programı yeniden başlatır; analizör listesi açılışta okunur). Değişiklik ayar/
 altında olduğu için ayar_kaydi ile merkeze de gider (K1).
@@ -35,15 +41,20 @@ import yollar
 BURASI = os.path.dirname(os.path.abspath(__file__))
 
 AN_SUTUN = ["AD", "IP ADRESI", "BİNA", "MARKA", "TÜR", "KRİTİK", "NOT"]
-BMS_SUTUN = ["Gateway IP", "Network (DNET)", "MAC (DADR)", "Device Instance ID", "Object Type",
-             "Object Instance", "Point Name", "Durum"]
+BMS_ADRES = ["Gateway IP", "Network (DNET)", "MAC (DADR)", "Device Instance ID", "Object Type",
+             "Object Instance", "Point Name"]                  # okuma şablonuna yazılan sütunlar
+BMS_SUTUN = BMS_ADRES + ["Durum", "Nokta Türü", "Sayaç Türü", "Çarpan"]
 AHU_SUTUN = ["Bina", "Santral", "Nokta Tipi", "Gateway IP", "Network (DNET)", "MAC (DADR)",
              "Object Type", "Object Instance"]
 SUTUNLAR = {"analizorler": AN_SUTUN, "bms": BMS_SUTUN, "ahu": AHU_SUTUN}
 TABLO_ADI = {"analizorler": "Analizörler", "bms": "BMS okuma noktaları", "ahu": "AHU noktaları"}
 
 MARKALAR = ("Siemens", "Janitza")
-TURLER = ("trafo", "sebeke", "uretim", "chiller", "alt_sayac", "kontrol")
+TURLER = ("trafo", "sebeke", "uretim", "chiller", "alt_sayac", "kontrol")     # analizör (Modbus, elektrik)
+import sayaclar as _sayaclar  # noqa: E402
+SAYAC_TURLERI = _sayaclar.TURLER                                               # BMS sayacı: elektrik + su/gaz/ısı
+SAYAC, OLCUM, DURUM_NOKTA, SET_NOKTA, DIGER = "sayaç", "ölçüm", "durum", "set", "diğer"
+NOKTA_TURLERI = (SAYAC, OLCUM, DURUM_NOKTA, SET_NOKTA, DIGER)
 EVET_HAYIR = ("Evet", "Hayır")
 OKUNAN, YAZILABILIR, OKUNACAK = "okunan değer", "yazılabilir değer", "okunacak"
 DURUMLAR = (OKUNAN, YAZILABILIR, OKUNACAK)
@@ -201,7 +212,11 @@ def mevcut(base: str = None) -> dict:
     veri = {"analizorler": [], "bms": [], "ahu": []}
 
     sj = _json_oku(y["sayac"], {})
+    bms_sayac = {}
     for s in (sj.get("sayaclar") if isinstance(sj, dict) else sj) or []:
+        if _sayaclar.bms_mi(s):
+            bms_sayac[_katla(s.get("nokta") or s.get("ad"))] = s
+            continue
         veri["analizorler"].append({
             "AD": s.get("ad"), "IP ADRESI": s.get("ip") or None, "BİNA": s.get("bina"),
             "MARKA": _secim(s.get("marka"), MARKALAR), "TÜR": s.get("tur"),
@@ -221,13 +236,20 @@ def mevcut(base: str = None) -> dict:
                 if all(_bos(c) for c in r):
                     continue
                 d = {}
-                for ad in BMS_SUTUN[:-1]:
+                for ad in BMS_ADRES:
                     i = bas.index(_katla(ad)) if _katla(ad) in bas else None
                     d[ad] = r[i] if i is not None and i < len(r) else None
                 d["Durum"] = OKUNAN
+                sy = bms_sayac.get(_katla(d.get("Point Name")))
+                if sy:
+                    d.update({"Nokta Türü": SAYAC, "Sayaç Türü": sy.get("tur"), "Çarpan": sy.get("carpan", 1)})
                 veri["bms"].append(_bms_satir(d))
     for s in bekleyen.get("bms") or []:
         veri["bms"].append(_bms_satir(s))
+    es = _esleme(base)
+    for s in veri["bms"]:
+        if not s.get("Nokta Türü"):
+            s["Nokta Türü"] = nokta_turu_tahmin(s.get("Point Name"), es)
 
     for n in _json_oku(y["nokta"], []) or []:
         veri["ahu"].append({
@@ -237,11 +259,58 @@ def mevcut(base: str = None) -> dict:
     return veri
 
 
+def _ondalik(v):
+    if _bos(v):
+        return None
+    if isinstance(v, bool):
+        return str(v)
+    if isinstance(v, (int, float)):
+        return float(v)
+    t = str(v).strip().replace(" ", "")
+    if "," in t:                                   # Türkçe yazım: 1.000,5 → 1000.5
+        t = t.replace(".", "").replace(",", ".")
+    try:
+        return float(t)
+    except ValueError:
+        return str(v).strip()
+
+
+def _esleme(base) -> dict:
+    """{Point Name: programdaki karşılığı} (ayar/bacnet_esleme.json)."""
+    try:
+        import bacnet_esleme
+        return dict(bacnet_esleme.yukle(base or BURASI).get("noktalar") or {})
+    except Exception:
+        return {}
+
+
+def nokta_turu_tahmin(point_name, es: dict) -> str:
+    """Standart adın karşılığından nokta türü: _ch_dur_/_kaz_dur_/_kojen_dur_/_abs_dur → durum,
+    _ch_ic_ → set, diğer standart adlar → ölçüm; listede olmayan ad → diğer."""
+    k = es.get(point_name)
+    if k is None:
+        kk = {_katla(a): v for a, v in es.items()}
+        k = kk.get(_katla(point_name))
+    if not k:
+        return DIGER
+    if re.match(r"_(ch_dur|kaz_dur|kojen_dur|abs_dur)", k):
+        return DURUM_NOKTA
+    if k.startswith("_ch_ic_"):
+        return SET_NOKTA
+    return OLCUM
+
+
 def _bms_satir(d):
     s = {}
     for ad in BMS_SUTUN:
         v = d.get(ad)
-        if ad in TAMSAYI:
+        if ad == "Nokta Türü":
+            v = _secim(v, NOKTA_TURLERI)
+        elif ad == "Sayaç Türü":
+            v = _secim(v, SAYAC_TURLERI)
+        elif ad == "Çarpan":
+            v = _ondalik(v)
+        elif ad in TAMSAYI:
             try:
                 v = _tamsayi(v)
             except (TypeError, ValueError):
@@ -294,7 +363,18 @@ def sistem_karsiligi(base: str = None) -> dict:
         for alan, ad in (("isitma", "ısıtma"), ("kazan", "kazan"), ("sogutma", "soğutma")):
             if h.get(alan):
                 hat[h[alan]] = "%s %s" % (h.get("ad"), ad)
-    return {n: (k + (" (" + hat[k] + ")" if k in hat else "")) for n, k in (es.get("noktalar") or {}).items()}
+    cikti = {n: (k + (" (" + hat[k] + ")" if k in hat else "")) for n, k in (es.get("noktalar") or {}).items()}
+    for s in _sayaclar.bms_sayaclar(base or BURASI):
+        cikti[s.get("nokta") or s["ad"]] = sayac_karsiligi(s.get("tur"), s.get("sutun"))
+    return cikti
+
+
+def sayac_karsiligi(tur, sutun=None) -> str:
+    """Panelde 'Sistem karşılığı': BMS sayacının günlük değerinin gittiği sütun(lar)."""
+    m = "sayaç (%s, %s): günlük fark → %s" % (tur, _sayaclar.BIRIM.get(tur, "?"), sutun or "yeni sütun")
+    if tur in _sayaclar.TOPLAM_SUTUN:
+        m += " + " + _sayaclar.TOPLAM_SUTUN[tur]
+    return m
 
 
 # ═══════════════════════════ Excel ═══════════════════════════
@@ -427,6 +507,20 @@ def tamamla(yeni: dict, eski: dict) -> list:
     """Eski biçimli Excel'de (MARKA / TÜR / KRİTİK sütunu yok) eksik alanları mevcut kayıttan doldurur:
     satır IP'den (yoksa addan) eşleşir. yeni yerinde değişir; dönüş: açıklama satırları."""
     notlar = []
+    bms = yeni.get("bms")
+    if bms:
+        e_bms = {_katla(s.get("Point Name")): s for s in eski.get("bms") or [] if s.get("Point Name")}
+        dolan = 0
+        for s in bms:
+            e = e_bms.get(_katla(s.get("Point Name")))
+            if e and _bos(s.get("Nokta Türü")) and e.get("Nokta Türü"):
+                for a in ("Nokta Türü", "Sayaç Türü", "Çarpan"):
+                    if _bos(s.get(a)):
+                        s[a] = e.get(a)
+                dolan += 1
+        if dolan:
+            notlar.append("%d BMS noktasının boş Nokta Türü / Sayaç Türü / Çarpan alanı programdaki kayıttan "
+                          "tamamlandı." % dolan)
     an = yeni.get("analizorler")
     if not an:
         return notlar
@@ -503,6 +597,19 @@ def dogrula(veri: dict, base: str = None) -> tuple:
                 hatalar.append("%s: Durum geçersiz: %s (okunan değer / yazılabilir değer / okunacak)."
                                % (yer, s.get("Durum")))
                 continue
+            nt = s.get("Nokta Türü")
+            if nt and nt not in NOKTA_TURLERI:
+                hatalar.append("%s: Nokta Türü geçersiz: %s (%s)." % (yer, nt, " / ".join(NOKTA_TURLERI)))
+            if nt == SAYAC:
+                if s.get("Sayaç Türü") not in SAYAC_TURLERI:
+                    hatalar.append("%s: Sayaç Türü seçilmeli (%s)." % (yer, " / ".join(SAYAC_TURLERI)))
+                c = s.get("Çarpan")
+                if c is not None and (not isinstance(c, float) or c <= 0):
+                    hatalar.append("%s: Çarpan sıfırdan büyük sayı olmalı: %s" % (yer, c))
+                if s["Durum"] == YAZILABILIR:
+                    hatalar.append("%s: sayaç noktası 'yazılabilir değer' olamaz." % yer)
+            elif s.get("Sayaç Türü"):
+                uyarilar.append("%s: Sayaç Türü yalnız Nokta Türü 'sayaç' iken kullanılır — yok sayıldı." % yer)
             if s["Durum"] == OKUNACAK:
                 continue
             hatalar.extend(_adres_hatalari(yer, s, ("Device Instance ID",)))
@@ -518,10 +625,40 @@ def dogrula(veri: dict, base: str = None) -> tuple:
                 if adres in gor_adres:
                     uyarilar.append("%s: adresi %d. satırla aynı." % (yer, gor_adres[adres]))
                 gor_adres.setdefault(adres, i)
+        es_n = _esleme(base)
+        for i, s in enumerate(bms, 1):
+            nt, pn = s.get("Nokta Türü"), s.get("Point Name")
+            if not pn or not nt:
+                continue
+            tahmin = nokta_turu_tahmin(pn, es_n)
+            if nt == SAYAC and tahmin != DIGER:
+                uyarilar.append("BMS noktası %d (%s): standart bir nokta adı — sayaç olarak da okunursa iki "
+                                "yerde kullanılır. Sayaç için ayrı bir ad verin." % (i, pn))
+            elif nt not in (SAYAC, DIGER) and tahmin != nt:
+                uyarilar.append("BMS noktası %d (%s): Nokta Türü '%s' seçili ama %s. Programdaki anlamını nokta adı "
+                                "belirler; tür bilgi içindir." % (
+                                    i, pn, nt, ("ad standart listede yok — değer okunur, hesaba girmez"
+                                                if tahmin == DIGER else "standart adın türü '%s'" % tahmin)))
+        # Sayaç adı (Point Name) analizör adlarıyla çakışmamalı: günlük değer ve merkez kaydı adla tutulur
+        an_kaynak = veri.get("analizorler")
+        if an_kaynak is None:
+            an_kaynak = mevcut(base).get("analizorler") or []
+        an_adlar = {_katla(a.get("AD")) for a in an_kaynak if a.get("AD")}
+        el_bms = []
+        for i, s in enumerate(bms, 1):
+            if s.get("Nokta Türü") == SAYAC and s.get("Point Name"):
+                if _katla(s["Point Name"]) in an_adlar:
+                    hatalar.append("BMS noktası %d (%s): aynı adda bir analizör var — sayaç adları tekil olmalı."
+                                   % (i, s["Point Name"]))
+                if s.get("Sayaç Türü") in TURLER and s.get("Durum") == OKUNAN:
+                    el_bms.append("%s (%s)" % (s["Point Name"], s["Sayaç Türü"]))
+        if el_bms:
+            uyarilar.append("BMS'ten okunan elektrik sayacı: %s — aynı cihaz Analizörler listesinde de varsa toplama "
+                            "iki kez girer (çift sayım). Yalnız birinde tutun." % ", ".join(el_bms))
         es = sistem_karsiligi(base)
         if es:
             yok = [s["Point Name"] for s in bms if s.get("Durum") == OKUNAN and s.get("Point Name")
-                   and s["Point Name"] not in es]
+                   and s["Point Name"] not in es and s.get("Nokta Türü") != SAYAC]
             if yok:
                 uyarilar.append("Bilgi: %d okunan noktanın programda hesap karşılığı yok (%s…) — değer okunur ve "
                                 "kaydedilir, hesaba girmez. Hesaba girmesi için STANDART NOKTA ADLARI'ndaki adı "
@@ -600,13 +737,14 @@ def fark_var(f: dict) -> bool:
     return any(d["eklenen"] or d["silinen"] or d["degisen"] for d in f.values())
 
 
-def sutun_uret(ad: str, kullanilan=()) -> str:
+def sutun_uret(ad: str, kullanilan=(), birim: str = "kWh") -> str:
     """Yeni sayacın energy_data sütunu: 'STEP-UP/3' → 'S_STEP_UP_3_kWh'. 'S_' öneki hesaplanan
     sütunlarla (Sebeke_kWh vb.) çakışmayı önler. Günlük değer bu sütundan sayac_gunluk'a gider."""
     govde = re.sub(r"_+", "_", re.sub(r"[^A-Za-z0-9]", "_", str(ad).translate(_TR).upper())).strip("_") or "SAYAC"
-    aday, n = "S_%s_kWh" % govde, 2
+    son = "m3" if birim == "m³" else "kWh"
+    aday, n = "S_%s_%s" % (govde, son), 2
     while aday in set(kullanilan):
-        aday, n = "S_%s_%d_kWh" % (govde, n), n + 1
+        aday, n = "S_%s_%d_%s" % (govde, n, son), n + 1
     return aday
 
 
@@ -620,19 +758,41 @@ _TUR_ETKI = {
     "alt_sayac": "'MCC + Chiller' toplamına girer (MCC panosu, kule vb.).",
     "kontrol": "Hiçbir toplama girmez: okunur, günlük değeri kaydedilir ve merkezde görünür (karşılaştırma). "
                "Enerji yönden bağımsız okunur.",
+    "su_ana": "Su Tüketimi (m³) bu sayaçtan otomatik yazılır (birden çok ana su sayacı varsa toplamı); veri "
+              "girişinden elle düzeltilebilir.",
+    "su_alt": "Yalnız kendi sütununa yazılır, su toplamına girmez.",
+    "gaz_kazan": "Kazan Doğalgaz (m³) bu sayaçtan otomatik yazılır (birden çoksa toplamı).",
+    "gaz_kojen": "Kojen Doğalgaz (m³) bu sayaçtan otomatik yazılır (birden çoksa toplamı).",
+    "gaz_alt": "Yalnız kendi sütununa yazılır, gaz toplamlarına girmez.",
+    "isi": "Isı sayacı (kWh): kendi sütununa yazılır, elektrik toplamlarına girmez.",
 }
 
 
+def bms_sayac_satirlari(bms) -> list:
+    """Okunan BMS sayaç satırları (Nokta Türü = sayaç, Durum = okunan değer)."""
+    return [s for s in bms or [] if s.get("Nokta Türü") == SAYAC and s.get("Durum") == OKUNAN
+            and s.get("Sayaç Türü") in SAYAC_TURLERI and s.get("Point Name")]
+
+
 def tur_uyarilari(eski: dict, yeni: dict) -> list:
-    """Yeni eklenen ya da türü değişen (IP'li) analizörün hangi toplama girdiği — önizlemede gösterilir."""
-    if "analizorler" not in yeni:
-        return []
-    once = {_katla(s.get("AD")): s.get("TÜR") for s in eski.get("analizorler") or [] if s.get("IP ADRESI")}
+    """Yeni eklenen ya da türü değişen sayacın hangi toplama girdiği — önizlemede gösterilir."""
     cikti = []
+    if "bms" in yeni:
+        once_b = {_katla(s.get("Point Name")): s.get("Sayaç Türü") for s in bms_sayac_satirlari(eski.get("bms"))}
+        for s in bms_sayac_satirlari(yeni["bms"]):
+            if once_b.get(_katla(s["Point Name"])) != s["Sayaç Türü"]:
+                cikti.append("%s (BMS sayacı) → %s: %s Değer ENDEKS olmalı (sürekli artan toplam); günlük tüketim "
+                             "gece 23:59 okumalarının farkıdır, ilk gün boş kalır." % (
+                                 s["Point Name"], s["Sayaç Türü"], _TUR_ETKI.get(s["Sayaç Türü"], "")))
+    if "analizorler" not in yeni:
+        return cikti
+    once = {_katla(s.get("AD")): s.get("TÜR") for s in eski.get("analizorler") or [] if s.get("IP ADRESI")}
     for s in yeni["analizorler"]:
         if s.get("IP ADRESI") and s.get("TÜR") in _TUR_ETKI and once.get(_katla(s.get("AD"))) != s["TÜR"]:
             cikti.append("%s → %s: %s" % (s.get("AD"), s["TÜR"], _TUR_ETKI[s["TÜR"]]))
     sebeke = [s["AD"] for s in yeni["analizorler"] if s.get("IP ADRESI") and s.get("TÜR") == "sebeke"]
+    sebeke += [s["Point Name"] for s in bms_sayac_satirlari(yeni["bms"] if "bms" in yeni else eski.get("bms"))
+               if s.get("Sayaç Türü") == "sebeke"]
     if len(sebeke) > 1:
         cikti.append("Birden çok 'sebeke' sayacı var (%s) — Şebeke değeri yalnız ilkinden hesaplanır."
                      % ", ".join(sebeke))
@@ -659,15 +819,19 @@ def kaydet(veri: dict, base: str = None, kullanici: str = "", yeniden_baslat: bo
         bekleyen = {}
     yazilacak = {}
 
-    if "analizorler" in veri:
+    if "analizorler" in veri or "bms" in veri:
         sj = _json_oku(y["sayac"], {})
         if not isinstance(sj, dict):
             sj = {"sayaclar": sj or []}
         onceki = list(sj.get("sayaclar") or [])
-        ad_sutun = {_katla(s.get("ad")): s.get("sutun", "") for s in onceki}
-        ip_sutun = {s.get("ip"): s.get("sutun", "") for s in onceki if s.get("ip")}
+        onceki_modbus = [s for s in onceki if not _sayaclar.bms_mi(s)]
+        onceki_bms = [s for s in onceki if _sayaclar.bms_mi(s)]
+        kullanilan = {s.get("sutun") for s in onceki if s.get("sutun")}
+        liste, bms_liste = onceki_modbus, onceki_bms
+    if "analizorler" in veri:
+        ad_sutun = {_katla(s.get("ad")): s.get("sutun", "") for s in onceki_modbus}
+        ip_sutun = {s.get("ip"): s.get("sutun", "") for s in onceki_modbus if s.get("ip")}
         liste, bek = [], []
-        kullanilan = {x for x in list(ad_sutun.values()) + list(ip_sutun.values()) if x}
         for s in veri["analizorler"]:
             if not s.get("IP ADRESI"):
                 bek.append(dict(s))
@@ -685,19 +849,34 @@ def kaydet(veri: dict, base: str = None, kullanici: str = "", yeniden_baslat: bo
             if s.get("NOT"):
                 k["not"] = s["NOT"]
             liste.append(k)
-        sj["sayaclar"] = liste
-        yazilacak[y["sayac"]] = (json.dumps(sj, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
         bekleyen["analizorler"] = bek
+    if "bms" in veri:
+        nokta_kayit = {_katla(s.get("nokta") or s.get("ad")): s for s in onceki_bms}
+        bms_liste = []
+        for s in bms_sayac_satirlari(veri["bms"]):
+            tur = s["Sayaç Türü"]
+            birim = _sayaclar.BIRIM.get(tur, "kWh")
+            e = nokta_kayit.get(_katla(s["Point Name"])) or {}
+            sutun = e.get("sutun") if e.get("sutun") and _sayaclar.birim(e) == birim else None
+            if not sutun:
+                sutun = sutun_uret(s["Point Name"], kullanilan, birim)    # birim değişirse yeni sütun
+                kullanilan.add(sutun)
+            bms_liste.append({"ad": s["Point Name"], "kaynak": "bms", "nokta": s["Point Name"], "tur": tur,
+                              "birim": birim, "carpan": s.get("Çarpan") or 1.0, "sutun": sutun,
+                              "kritik": bool(e.get("kritik"))})
+    if "analizorler" in veri or "bms" in veri:
+        sj["sayaclar"] = liste + bms_liste
+        yazilacak[y["sayac"]] = (json.dumps(sj, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
 
     if "bms" in veri:
         import openpyxl
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = SABLON_SAYFA
-        ws.append(BMS_SUTUN[:-1])
+        ws.append(BMS_ADRES)
         for s in veri["bms"]:
             if s["Durum"] == OKUNAN:
-                ws.append([s[a] for a in BMS_SUTUN[:-1]])
+                ws.append([s[a] for a in BMS_ADRES])
         b = io.BytesIO()
         wb.save(b)
         yazilacak[y["sablon"]] = b.getvalue()
@@ -794,7 +973,8 @@ def excel_yaz(veri: dict = None, lokasyon_adi: str = "", base: str = None) -> by
     wb.remove(wb.active)
     if bos:
         an = [["TRDP-1", "10.20.30.41", "A-BLOK", "Janitza", "trafo", "Evet", "ÖRNEK SATIR — silip kendi satırlarınızı girin"]]
-        bms = [["10.20.30.2", 2, "0x011C", 2098211, 0, 33, "DIS HAVA", OKUNAN, None]]
+        bms = [["10.20.30.2", 2, "0x011C", 2098211, 0, 33, "DIS HAVA", OKUNAN, OLCUM, None, None, None],
+               ["10.20.30.2", 2, "0x011C", 2098211, 0, 120, "SU ANA SAYAC", OKUNAN, SAYAC, "su_ana", 1, None]]
         ahu = [["A-BLOK", "Ahu-1", "SAT (°C)", "10.20.30.8", 16, "0x0101", 0, 22]]
     else:
         an = [[s.get(a) for a in AN_SUTUN] for s in veri.get("analizorler") or []]
@@ -804,8 +984,9 @@ def excel_yaz(veri: dict = None, lokasyon_adi: str = "", base: str = None) -> by
         ahu = [[s.get(a) for a in AHU_SUTUN] for s in veri.get("ahu") or []]
     sayfa(wb, "ANALIZORLER", AN_SUTUN, [18, 16, 10, 12, 12, 9, 60], an,
           [("D", MARKALAR), ("E", TURLER), ("F", EVET_HAYIR)])
-    sayfa(wb, "SAHA OKUMA LISTESI", BMS_SUTUN + ["Sistem karşılığı"], [15, 12, 12, 16, 11, 12, 34, 18, 40], bms,
-          [("H", DURUMLAR)])
+    sayfa(wb, "SAHA OKUMA LISTESI", BMS_SUTUN + ["Sistem karşılığı"],
+          [15, 12, 12, 16, 11, 12, 34, 18, 12, 13, 9, 40], bms,
+          [("H", DURUMLAR), ("I", NOKTA_TURLERI), ("J", SAYAC_TURLERI)])
     sayfa(wb, "AHU NOKTALARI", AHU_SUTUN, [10, 12, 18, 15, 12, 12, 11, 12], ahu, [("C", NOKTA_TIPLERI)])
     ws = wb.create_sheet("ACIKLAMA")
     ws.column_dimensions["A"].width = 24
@@ -821,7 +1002,14 @@ def excel_yaz(veri: dict = None, lokasyon_adi: str = "", base: str = None) -> by
                         "listede durur, okunmaz. TÜR: trafo · sebeke · uretim (kojen) · chiller · alt_sayac · kontrol "
                         "(okunur, hiçbir toplama girmez; ör. iki kojenin ortak step-up sayacı)."),
         ("SAHA OKUMA LISTESI", "Durum: okunan değer = program okur · yazılabilir değer = oto-set yazar (bu panel "
-                               "değiştirmez, yalnız listeler) · okunacak = henüz okunmuyor."),
+                               "değiştirmez, yalnız listeler) · okunacak = henüz okunmuyor. Nokta Türü: sayaç · ölçüm · "
+                               "durum · set · diğer. SAYAÇ (su, doğalgaz, ısı ya da BMS'ten okunan elektrik sayacı) "
+                               "için Sayaç Türü seçin: elektrikte analizör türleri; su_ana (Su Tüketimi) · su_alt · "
+                               "gaz_kazan (Kazan Doğalgaz) · gaz_kojen (Kojen Doğalgaz) · gaz_alt · isi. Nokta ENDEKS "
+                               "vermeli (sürekli artan toplam, ör. m³) — anlık debi (m³/h) olmaz. Çarpan: değeri "
+                               "türün birimine çevirir (ör. darbe başına 10 litre → 0,01); BMS noktanın birimini "
+                               "bildiriyorsa (MWh, litre) program çevirmeyi kendisi yapar. Sayaç gece 23:59'da "
+                               "okunur; günlük tüketim iki okumanın farkıdır."),
         ("AHU NOKTALARI", "Mekanik Zeka'nın okuduğu santral noktaları. Bina + Santral + Nokta Tipi tekil olmalı."),
         ("Sistem karşılığı", "Bilgi sütunu (program doldurur); yüklemede okunmaz."),
     ], 3):

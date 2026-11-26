@@ -55,7 +55,7 @@ r = D.kaydet(t, d, yeniden_baslat=False)
 c("değişiklik yoksa hiçbir dosya yazılmaz", r["yazilan"] == [] and r["yedek"] is None, r)
 c("değişiklik yoksa yeniden başlatma işareti yok", not os.path.exists(os.path.join(d, "_restart.flag")))
 bos = D.excel_oku(D.excel_yaz(None))
-c("boş şablon okunur: her tabloda bir örnek satır", all(len(bos[k]) == 1 for k in D.SUTUNLAR))
+c("boş şablon okunur: örnek satırlar (BMS: ölçüm + sayaç)", len(bos["analizorler"]) == 1 and len(bos["ahu"]) == 1 and [s["Nokta Türü"] for s in bos["bms"]] == ["ölçüm", "sayaç"], bos.get("bms"))
 c("boş şablonun örnek satırları geçerli", not D.dogrula({k: bos[k] for k in D.SUTUNLAR})[0])
 
 # ── STEP-UP/3 ekleme (panel yolu) ──
@@ -158,7 +158,7 @@ import openpyxl  # noqa: E402
 ws = openpyxl.load_workbook(os.path.join(d, "ayar", "bacnet_okuma_sablonu.xlsx")).worksheets[0]
 satir = list(ws.iter_rows(values_only=True))
 c("okuma şablonu: yalnız okunan noktalar, 7 sütun, aynı başlık",
-  len(satir) == 52 and list(satir[0]) == D.BMS_SUTUN[:-1], (len(satir), satir[0]))
+  len(satir) == 52 and list(satir[0]) == D.BMS_ADRES, (len(satir), satir[0]))
 c("okuma şablonunda yeni MAC", satir[1][2] == "0x0999")
 bek = json.load(open(os.path.join(d, "ayar", "donanim_bekleyen.json"), encoding="utf-8"))
 c("yazılabilir + okunacak bekleyende; analizör bekleyeni korunur",

@@ -57,10 +57,20 @@ GRUPLAR = (
     ("MCC", "mcc", "uyari"),
 )
 GRUP_ETIKET = {"trafo": "Trafo", "chiller": "Chiller", "kule": "Soğutma kulesi",
-               "mcc": "MCC panosu", "bacnet": "BACnet", "diger": "Analizör"}
+               "mcc": "MCC panosu", "bacnet": "BACnet", "diger": "Analizör", "bms_sayac": "BMS sayacı"}
 
 
-def _grup(cihaz_adi: str):
+def _bms_sayac_adlari() -> set:
+    try:
+        import sayaclar
+        return {x["ad"] for x in sayaclar.bms_sayaclar(BASE_DIR)}
+    except Exception:
+        return set()
+
+
+def _grup(cihaz_adi: str, bms_adlari=()):
+    if cihaz_adi in bms_adlari:                 # BMS'ten okunan sayaç (su, gaz, ısı, elektrik)
+        return "bms_sayac", "uyari"
     ad = (cihaz_adi or "").upper()
     for onek, grup, onem in GRUPLAR:
         if onek in ad:
@@ -101,9 +111,10 @@ def alarm_uret(analizorler, csv_durum, daily_kwh, tarih=None) -> list:
     gunluk = daily_kwh if isinstance(daily_kwh, dict) else {}
 
     baglanti, veri_yok = {}, {}
+    bms_adlari = _bms_sayac_adlari()
     for ad in adlar:
         durum = csv_durum.get(ad)
-        grup, onem = _grup(ad)
+        grup, onem = _grup(ad, bms_adlari)
         if durum is None or "hata" in durum.lower():
             # Hiç okunamadı ya da bağlantı hatası
             baglanti.setdefault((grup, onem), []).append(ad)
@@ -345,9 +356,10 @@ def kontrol_et(daily_kwh, tarih=None, sb_url=None, sb_key=None, lokasyon_id=None
     """
     try:
         import data_collector as dc
-        analizorler = dc.ANALYZERS
+        analizorler = list(dc.ANALYZERS)
     except Exception:
         analizorler = []
+    analizorler += sorted(_bms_sayac_adlari())  # BMS sayaçları da aynı okuma dosyasında (23:59)
     alarmlar = alarm_uret(analizorler, csv_durumlari(), daily_kwh, tarih)
     alarmlar = sorted(alarmlar + bacnet_alarmlari(tarih=tarih) + sensor_tutarlilik_alarmlari(tarih=tarih),
                       key=lambda a: (a["onem"] != "kritik", a["tur"], a["grup"]))

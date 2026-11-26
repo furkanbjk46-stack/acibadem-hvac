@@ -279,6 +279,17 @@ def modbus_thread():
                                       val if val is not None else "", status])
                 logger.debug("  %s: %s", dev['name'], status)
 
+            # BMS sayaçları (ayar/sayaclar.json kaynak=bms; su, gaz, ısı, BMS'ten elektrik): aynı 23:59
+            # okuması, aynı dosya — data_bridge günlük farkı analizörlerle aynı yoldan alır.
+            try:
+                bms_say = bms_sayaclari_oku()
+            except Exception as e:
+                logger.error("BMS sayaclari okunamadi: %s", e)
+                bms_say = []
+            for ad, ip, deger, durum in bms_say:
+                ok_count += deger is not None
+                current_data.append([ts, ad, ip, deger if deger is not None else "", durum])
+
             # CSV'ye yaz (her turde uzerine yaz — en guncel veri)
             with open(MODBUS_CSV, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
@@ -287,7 +298,7 @@ def modbus_thread():
                     writer.writerow(row)
 
             logger.info("Modbus gunluk okuma tamamlandi: %d/%d OK -> %s",
-                        ok_count, len(ANALYZERS), MODBUS_CSV)
+                        ok_count, len(ANALYZERS) + len(bms_say), MODBUS_CSV)
 
         time.sleep(KONTROL_SN)  # 23:59 penceresi tek dakika — sık kontrol
 
@@ -495,6 +506,90 @@ def bacnet_thread():
         logger.info("BACnet gunluk okuma tamamlandi: %d/%d OK -> %s",
                     ok_count, len(df), BACNET_CSV)
         time.sleep(60)
+
+# ================================================================
+# BMS SAYAÇLARI (26.11.2026)
+# ================================================================
+# Panelde Nokta Türü = sayaç seçilen BACnet noktası (ayar/sayaclar.json kaynak=bms). Değer ENDEKS olmalı;
+# günlük tüketim data_bridge'de bugünkü − dünkü okumadır (analizörlerle aynı). Noktanın birimi (BACnet
+# "units" özelliği, 117) de okunur: türün birimine kendiliğinden çevrilir (MWh → kWh, litre → m³);
+# anlık değer birimi (m³/h, kW) ya da yanlış boyut (kWh diye eklenen m³) HATA sayılır — değer yazılmaz,
+# günlük veri boş kalır ve veri alarmı çıkar (yanlış veri yerine eksik veri).
+PROP_UNITS = 117
+# BACnet engineering units → (boyut, türün birimine katsayı)
+BACNET_BIRIM = {
+    18: ("enerji", 0.001, "Wh"), 19: ("enerji", 1.0, "kWh"), 146: ("enerji", 1000.0, "MWh"),
+    17: ("enerji", 1 / 3600.0, "kJ"), 126: ("enerji", 1 / 3.6, "MJ"),
+    80: ("hacim", 1.0, "m³"), 82: ("hacim", 0.001, "litre"), 79: ("hacim", 0.0283168, "ft³"),
+    83: ("hacim", 0.00378541, "US galon"),
+    47: ("anlik", None, "W"), 48: ("anlik", None, "kW"), 49: ("anlik", None, "MW"),
+    84: ("anlik", None, "ft³/dk"), 85: ("anlik", None, "m³/s"), 87: ("anlik", None, "litre/s"),
+    88: ("anlik", None, "litre/dk"), 89: ("anlik", None, "galon/dk"), 135: ("anlik", None, "m³/h"),
+    136: ("anlik", None, "litre/h"), 165: ("anlik", None, "m³/dk"),
+}
+_HEDEF_BOYUT = {"kWh": "enerji", "m³": "hacim"}
+
+
+def bms_birim_cevir(birim_kodu, hedef: str):
+    """(katsayı, not, hata). Birim bilinmiyorsa katsayı 1 (yalnız panel çarpanı uygulanır)."""
+    try:
+        kod = int(birim_kodu)
+    except (TypeError, ValueError):
+        return 1.0, "BMS birimi okunamadı", None
+    b = BACNET_BIRIM.get(kod)
+    if b is None:
+        return 1.0, "BMS birim kodu %d tanınmıyor" % kod, None
+    boyut, katsayi, ad = b
+    if boyut == "anlik":
+        return None, None, "BMS birimi %s — anlık değer, endeks değil (sayaç olarak okunamaz)" % ad
+    if _HEDEF_BOYUT.get(hedef) != boyut:
+        return None, None, "BMS birimi %s, sayaç türünün birimi %s — tür yanlış seçilmiş" % (ad, hedef)
+    return katsayi, ("BMS birimi %s" % ad) if katsayi != 1.0 else None, None
+
+
+def bms_sayaclari_oku(sayac_listesi=None, sablon=None, okuyucu=None):
+    """[(ad, gateway_ip, değer | None, durum metni)] — değer türün biriminde (kWh / m³).
+    okuyucu: test için bacnet_nokta_oku yerine (aynı imza)."""
+    liste = _sayaclar.bms_sayaclar(BASE_DIR) if sayac_listesi is None else sayac_listesi
+    if not liste:
+        return []
+    df = bacnet_sablonu_oku() if sablon is None else sablon
+    oku = okuyucu or bacnet_nokta_oku
+    adres = {}
+    if df is not None:
+        for _, r in df.iterrows():
+            adres.setdefault(str(r.get("Point Name") or "").strip(), r)
+    cikti = []
+    for sy in liste:
+        nokta = str(sy.get("nokta") or sy["ad"]).strip()
+        hedef = _sayaclar.birim(sy)
+        r = adres.get(nokta)
+        if r is None:
+            cikti.append((sy["ad"], "", None, "[BMS Hatasi: '%s' okuma sablonunda yok]" % nokta))
+            continue
+        try:
+            arg = (str(r["Gateway IP"]).strip(), int(float(r["Network (DNET)"])), str(r["MAC (DADR)"]),
+                   int(float(r["Object Type"])), int(float(r["Object Instance"])))
+        except Exception:
+            cikti.append((sy["ad"], "", None, "[BMS Hatasi: adres eksik]"))
+            continue
+        val = oku(*arg, PROP_PRESENT_VALUE)
+        if not isinstance(val, (int, float)):
+            cikti.append((sy["ad"], arg[0], None, "[BMS Hatasi: %s]" % val))
+            continue
+        katsayi, notu, hata = bms_birim_cevir(oku(*arg, PROP_UNITS), hedef)
+        if hata:
+            logger.error("BMS sayaci %s: %s", sy["ad"], hata)
+            cikti.append((sy["ad"], arg[0], None, "[BMS Hatasi: %s]" % hata))
+            continue
+        try:
+            carpan = float(sy.get("carpan") or 1.0)
+        except (TypeError, ValueError):
+            carpan = 1.0
+        deger = round(float(val) * katsayi * carpan, 3)
+        cikti.append((sy["ad"], arg[0], deger, "%s %s%s" % (deger, hedef, " (%s)" % notu if notu else "")))
+    return cikti
+
 
 # ================================================================
 # ANA BASLATI

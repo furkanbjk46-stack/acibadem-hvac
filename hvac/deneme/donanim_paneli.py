@@ -34,6 +34,8 @@ def _df(tur, satirlar, karsilik=None):
     for a in sutunlar:
         if a in D.TAMSAYI:
             df[a] = pd.to_numeric(df[a], errors="coerce").astype("Int64")
+        elif a == "Çarpan":
+            df[a] = pd.to_numeric(df[a], errors="coerce")             # NumberColumn: boş = NaN
         else:
             df[a] = df[a].astype(object).where(df[a].notna(), "")     # boş hücre "None" yazmasın
     df.insert(0, SIL, False)
@@ -75,6 +77,17 @@ def _sutun_ayari_tur(tur):
             "Durum": cc.SelectboxColumn("Durum", options=list(D.DURUMLAR), required=True,
                                         help="okunan değer = program okur · yazılabilir değer = oto-set yazar "
                                              "(bu panel değiştirmez) · okunacak = henüz okunmuyor"),
+            "Nokta Türü": cc.SelectboxColumn("Nokta Türü", options=list(D.NOKTA_TURLERI),
+                                             help="sayaç = su / doğalgaz / ısı ya da BMS'ten okunan elektrik sayacı "
+                                                  "(günlük farkı alınır, toplamlara girer) · ölçüm · durum · set · "
+                                                  "diğer (okunur, hesaba girmez)"),
+            "Sayaç Türü": cc.SelectboxColumn("Sayaç Türü", options=list(D.SAYAC_TURLERI),
+                                             help="Yalnız Nokta Türü = sayaç. su_ana → Su Tüketimi · gaz_kazan → "
+                                                  "Kazan Doğalgaz · gaz_kojen → Kojen Doğalgaz · su_alt / gaz_alt / "
+                                                  "isi yalnız kendi sütunu · elektrik: analizör türleri"),
+            "Çarpan": cc.NumberColumn("Çarpan", min_value=0.0, format="%g",
+                                      help="Değeri türün birimine çevirir (boş = 1). BMS birimi bildiriyorsa "
+                                           "(MWh, litre) çevirme kendiliğinden yapılır; çarpan onun üstüne uygulanır"),
             "Sistem karşılığı": cc.TextColumn("Sistem karşılığı", disabled=True, width="medium"),
         })
     return dict(tam, **{
@@ -222,7 +235,9 @@ def ciz(base: str = None):
                        "Satır eklemek için tablonun sağ üstündeki + düğmesini kullanın; silmek için satırın "
                        "'🗑 Sil' kutusunu işaretleyin.",
         "bms": "Enerji / tesis BACnet noktaları. Yalnız 'okunan değer' satırları okunur. 'yazılabilir değer' "
-               "noktaları oto-set'in kendi ayarındadır; bu panel onları yalnız listeler.",
+               "noktaları oto-set'in kendi ayarındadır; bu panel onları yalnız listeler. Su / doğalgaz / ısı "
+               "sayacı ya da BMS'ten okunan elektrik sayacı için Nokta Türü = sayaç ve Sayaç Türü seçin: nokta "
+               "ENDEKS vermeli (sürekli artan toplam); günlük tüketim gece 23:59 okumalarının farkıdır.",
         "ahu": "Mekanik Zeka'nın okuduğu santral noktaları (Start/Stop ve Basınç dahil), santral santral sıralı. "
                "Bina + Santral + Nokta Tipi tekil olmalı. Silmek için '🗑 Sil' kutusunu işaretleyin.",
     }
@@ -252,8 +267,8 @@ def ciz(base: str = None):
                 st.caption("%d analizör okunuyor · %d bekleyen (IP yok)" % (ip, len(okunan) - ip))
             elif tur == "bms":
                 say = {d: sum(1 for s in okunan if s.get("Durum") == d) for d in D.DURUMLAR}
-                st.caption("%d okunan · %d yazılabilir (oto-set) · %d okunacak" % (
-                    say[D.OKUNAN], say[D.YAZILABILIR], say[D.OKUNACAK]))
+                st.caption("%d okunan · %d yazılabilir (oto-set) · %d okunacak · %d sayaç (23:59'da okunur)" % (
+                    say[D.OKUNAN], say[D.YAZILABILIR], say[D.OKUNACAK], len(D.bms_sayac_satirlari(okunan))))
             else:
                 st.caption("%d nokta · %d santral" % (len(okunan), len({(s.get("Bina"), s.get("Santral"))
                                                                         for s in okunan})))

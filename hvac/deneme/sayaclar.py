@@ -15,6 +15,17 @@ Satır: {"ad", "ip", "marka", "tur", "sutun", "kritik"}
   kontrol (14.11.2026): okunur ve günlük değeri kaydedilir, HİÇBİR toplama girmez — başka sayaçların
   toplamını ölçen karşılaştırma sayacı (ör. Maslak STEP-UP/3 = KOJEN-3 + KOJEN-4). Enerji, üretim
   sayaçları gibi yönden bağımsız okunur (giren + verilen; tüketim sayacında verilen ≈ 0).
+
+BMS SAYAÇLARI (26.11.2026): sayaç Modbus analizörü değil, BMS'teki (Desigo) bir BACnet noktası da olabilir —
+su, doğalgaz, ısı ya da elektrik (ör. chiller kWh'i analizör yerine BMS'ten). Panelde BMS noktasının
+"Nokta Türü" = sayaç seçilir; satır bu listeye şu alanlarla girer:
+  {"ad", "kaynak": "bms", "nokta": <Point Name>, "tur", "birim", "carpan", "sutun", "kritik"}
+  Adres BACnet okuma şablonundadır (Point Name ile bulunur). Değer ENDEKS olmalı (sürekli artan toplam);
+  günlük tüketim = bugünkü endeks − dünkü endeks (analizörlerle aynı hesap, aynı 23:59 okuması).
+  Elektrik türleri (trafo … kontrol) BMS'ten de gelebilir ve aynı toplamlara girer. Ek türler:
+    su_ana    → Su_Tuketimi_m3 (birden çoksa toplamı)      su_alt    → yalnız kendi sütunu
+    gaz_kazan → Kazan_Dogalgaz_m3                          gaz_kojen → Kojen_Dogalgaz_m3
+    gaz_alt   → yalnız kendi sütunu                        isi       → ısı sayacı (kWh), hiçbir toplama girmez
 """
 import json
 import logging
@@ -23,7 +34,13 @@ import os
 import yollar
 
 BURASI = os.path.dirname(os.path.abspath(__file__))
-TURLER = ("trafo", "sebeke", "uretim", "chiller", "alt_sayac", "kontrol")
+ELEKTRIK_TURLERI = ("trafo", "sebeke", "uretim", "chiller", "alt_sayac", "kontrol")
+DIGER_TURLER = ("su_ana", "su_alt", "gaz_kazan", "gaz_kojen", "gaz_alt", "isi")
+TURLER = ELEKTRIK_TURLERI + DIGER_TURLER
+# Türün birimi (BMS sayacının değeri bu birime çevrilir) ve günlük satırdaki ortak sütunu
+BIRIM = {t: "kWh" for t in ELEKTRIK_TURLERI + ("isi",)}
+BIRIM.update({t: "m³" for t in ("su_ana", "su_alt", "gaz_kazan", "gaz_kojen", "gaz_alt")})
+TOPLAM_SUTUN = {"su_ana": "Su_Tuketimi_m3", "gaz_kazan": "Kazan_Dogalgaz_m3", "gaz_kojen": "Kojen_Dogalgaz_m3"}
 logger = logging.getLogger("sayaclar")
 _ONBELLEK = {}
 
@@ -53,10 +70,25 @@ def yukle(base_dir: str = None) -> list:
     return [dict(s) for s in _ONBELLEK["liste"]]
 
 
+def bms_mi(s: dict) -> bool:
+    return (s.get("kaynak") or "modbus") == "bms"
+
+
+def bms_sayaclar(base_dir: str = None) -> list:
+    """BMS (BACnet) noktasından okunan sayaçlar."""
+    return [s for s in yukle(base_dir) if bms_mi(s)]
+
+
+def birim(s: dict) -> str:
+    return s.get("birim") or BIRIM.get(s.get("tur"), "kWh")
+
+
 def analizorler(base_dir: str = None) -> list:
-    """data_collector biçimi: {"ip", "name", "brand"[, "uretim": True][, "sebeke": True]}."""
+    """data_collector biçimi (yalnız Modbus): {"ip", "name", "brand"[, "uretim": True][, "sebeke": True]}."""
     cikti = []
     for s in yukle(base_dir):
+        if bms_mi(s):
+            continue
         a = {"ip": s.get("ip", ""), "name": s["ad"], "brand": s.get("marka", "")}
         if s["tur"] in ("uretim", "kontrol"):      # yön bağımsız okuma (toplama girmek ayrı: tur)
             a["uretim"] = True

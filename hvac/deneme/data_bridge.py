@@ -99,6 +99,10 @@ def _numaralar(data, onek):
 CHILLER_ANALYZERS = set(_sayaclar.adlar("chiller", BASE_DIR))
 ALL_ANALYZERS = set(_sayaclar.adlar(("chiller", "alt_sayac"), BASE_DIR))
 
+# BMS sayaçları (26.11.2026): aynı listede kaynak=bms. Elektrik türündekiler yukarıdaki gruplara
+# analizör gibi girer (ör. chiller kWh'i BMS'ten); su/gaz türleri ortak sütunlara (TOPLAM_SUTUN).
+BMS_SAYAC_ADLARI = {s["ad"] for s in _sayaclar.bms_sayaclar(BASE_DIR)}
+
 # MCC tüketimi = Chiller HARİÇ geri kalan tüm analizörler
 MCC_ONLY_ANALYZERS = ALL_ANALYZERS - CHILLER_ANALYZERS
 
@@ -157,7 +161,9 @@ def read_modbus_csv():
                 name = row.get("Cihaz_Adi", "").strip()
                 try:
                     raw = row.get("Enerji_kWh", "").strip()
-                    result[name] = int(float(raw))
+                    # BMS sayacı (su / gaz m³, ısı): küçük endeks tam sayıya yuvarlanmaz.
+                    # Analizörler eskisi gibi tam kWh (günlük fark davranışı değişmesin).
+                    result[name] = round(float(raw), 3) if name in BMS_SAYAC_ADLARI else int(float(raw))
                 except (ValueError, TypeError) as e:
                     logger.warning("Modbus %s parse hatasi (%s) — atlaniyor", name, e)
     except Exception as e:
@@ -530,7 +536,27 @@ def build_daily_row(today_str, bacnet, daily_kwh):
     for _s in _sayaclar.yukle(BASE_DIR):
         if _s["tur"] != "sebeke" and _s.get("sutun"):
             row[_s["sutun"]] = daily_kwh.get(_s["ad"], "") if daily_kwh else ""
+    row.update(toplam_sutunlari(daily_kwh))
     return row
+
+
+def toplam_sutunlari(daily, base_dir=None) -> dict:
+    """Su / doğalgaz ortak sütunları (Su_Tuketimi_m3, Kazan_Dogalgaz_m3, Kojen_Dogalgaz_m3) o türdeki
+    sayaçların günlük toplamı. Türde sayaç yoksa sütun YAZILMAZ (elle giriş eskisi gibi). Sayaçlardan
+    biri okunamadıysa BOŞ kalır: eksik toplam düşük tüketim gibi görünmesin; veri girişinden elle girilir."""
+    cikti = {}
+    for tur, sutun in _sayaclar.TOPLAM_SUTUN.items():
+        adlar = _sayaclar.adlar(tur, base_dir or BASE_DIR)
+        if not adlar:
+            continue
+        degerler = [(daily or {}).get(a, "") for a in adlar]
+        if all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in degerler):
+            cikti[sutun] = round(sum(degerler), 3)
+        else:
+            cikti[sutun] = ""
+            logger.warning("%s bos: %s sayaclarindan okunamayan var (%s)", sutun, tur,
+                           ", ".join(a for a, v in zip(adlar, degerler) if v == "" or v is None))
+    return cikti
 
 
 def hava_doldur(yol=None, bugun=None) -> dict:

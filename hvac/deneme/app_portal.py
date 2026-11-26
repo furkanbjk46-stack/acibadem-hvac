@@ -1512,8 +1512,26 @@ SCHEMA = SCHEMA + [s["sutun"] for s in _SAYAC_LISTESI if s["sutun"] not in SCHEM
 NUMERIC_COLS = NUMERIC_COLS + [s["sutun"] for s in _SAYAC_LISTESI if s["sutun"] not in NUMERIC_COLS]
 _EK_SAYACLAR = [s for s in _SAYAC_LISTESI if s["sutun"] not in _SABIT_SCHEMA]
 _TUR_ETIKET = {"trafo": "trafo", "sebeke": "şebeke", "uretim": "üretim", "chiller": "chiller",
-               "alt_sayac": "alt sayaç", "kontrol": "kontrol — toplama girmez"}
-_PANEL_SUTUN = re.compile(r"^S_[A-Z0-9_]+_kWh$")      # panelin ürettiği sayaç sütunu (donanim.sutun_uret)
+               "alt_sayac": "alt sayaç", "kontrol": "kontrol — toplama girmez",
+               "su_ana": "ana su sayacı", "su_alt": "alt su sayacı", "gaz_kazan": "kazan gazı",
+               "gaz_kojen": "kojen gazı", "gaz_alt": "alt gaz sayacı", "isi": "ısı sayacı"}
+_PANEL_SUTUN = re.compile(r"^S_[A-Z0-9_]+_(kWh|m3)$")  # panelin ürettiği sayaç sütunu (donanim.sutun_uret)
+
+
+def _sayac_birim(s) -> str:
+    try:
+        return _sayaclar.birim(s)
+    except Exception:
+        return s.get("birim") or "kWh"
+
+
+def _otomatik_not(tur: str):
+    """Su / gaz ortak sütunu BMS sayacından otomatik yazılıyorsa veri girişindeki açıklama (yoksa None)."""
+    adlar = [s["ad"] for s in _SAYAC_LISTESI if s.get("tur") == tur]
+    if not adlar:
+        return None
+    return ("Otomatik: %s sayacından her gece yazılır (günlük endeks farkı). Okunamadığı gün boş kalır; "
+            "buradan elle girilebilir ya da düzeltilebilir — kaydettiğiniz değer korunur." % ", ".join(adlar))
 
 TR_MAP = str.maketrans({
     "ş": "s", "Ş": "s",
@@ -3615,9 +3633,9 @@ def _enerji_diyagrami_render(df_kaynak, lok_id):
         _cipler = "".join(
             "<div style='background:#fff;border:1px solid rgba(19,50,115,.14);border-radius:10px;padding:8px 12px;"
             "min-width:150px;'><div class='bdlbl'>%s</div><div style='font-size:18px;font-weight:700;"
-            "color:#133273;'>%s <span style='font-size:11px;font-weight:500;'>kWh</span></div>"
+            "color:#133273;'>%s <span style='font-size:11px;font-weight:500;'>%s</span></div>"
             "<div class='hsub' style='font-size:10px;letter-spacing:0;'>%s</div></div>"
-            % (_html_kac(s["ad"]), _ed_num(_ed_val(row, s["sutun"])),
+            % (_html_kac(s["ad"]), _ed_num(_ed_val(row, s["sutun"])), _html_kac(_sayac_birim(s)),
                _html_kac(_TUR_ETIKET.get(s.get("tur"), s.get("tur") or "")))
             for s in _digerleri)
         st.markdown(
@@ -3862,9 +3880,14 @@ with tab1:
                                            help="EDAŞ giriş sayacından (PAC3200) her gece otomatik yazılır; "
                                                 "sayaç okunamadıysa elle girilebilir. Net değerdir: eksi = "
                                                 "şebekeye verildi. Hastane genel toplam = şebeke + kojen üretim.")
-            kazan_gaz = st.number_input("Kazan Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kazan_gaz")
-            koj_gaz = st.number_input("Kojen Doğalgaz (m³)", step=10.0, min_value=0.0, key="entry_kojen_gaz")
-            su = st.number_input("Su Tüketimi (m³)", step=1.0, min_value=0.0, key="entry_su")
+            _ot_kg, _ot_kj, _ot_su = (_otomatik_not("gaz_kazan"), _otomatik_not("gaz_kojen"),
+                                      _otomatik_not("su_ana"))
+            kazan_gaz = st.number_input("Kazan Doğalgaz (m³)" + (" · otomatik" if _ot_kg else ""), step=10.0,
+                                        min_value=0.0, key="entry_kazan_gaz", help=_ot_kg)
+            koj_gaz = st.number_input("Kojen Doğalgaz (m³)" + (" · otomatik" if _ot_kj else ""), step=10.0,
+                                      min_value=0.0, key="entry_kojen_gaz", help=_ot_kj)
+            su = st.number_input("Su Tüketimi (m³)" + (" · otomatik" if _ot_su else ""), step=1.0, min_value=0.0,
+                                 key="entry_su", help=_ot_su)
         with a4:
             st.markdown("**Alt Sayaçlar**")
             ch_kwh = st.number_input("Chiller Tüketim (kWh)", step=50.0, min_value=0.0, key="entry_ch_kwh")
@@ -3881,7 +3904,8 @@ with tab1:
             for _i, _ek in enumerate(_EK_SAYACLAR):
                 with _ek_kol[_i % 4]:
                     _ek_degerler[_ek["sutun"]] = st.number_input(
-                        f"{_ek['ad']} (kWh)", step=50.0, key="entry_ek_" + _ek["sutun"],
+                        f"{_ek['ad']} ({_sayac_birim(_ek)})", step=50.0 if _sayac_birim(_ek) == "kWh" else 1.0,
+                        key="entry_ek_" + _ek["sutun"],
                         help="Tür: %s" % _TUR_ETIKET.get(_ek.get("tur"), _ek.get("tur")))
 
         preview_bina_yuk = trdp1 + trdp3
