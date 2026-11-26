@@ -1554,7 +1554,7 @@ _demo_eski = _demo_modu() and os.environ.get("SYNAPSE_DEMO_ESKI", "").strip() ==
 _cark_kutu = st.container(key="cark_demo") if _cark_arayuz() else None
 if _cark_kutu is not None:
     import ana_ekran_cark_demo as _ckd
-    if getattr(_ckd, "SURUM", 0) < 23:      # açık süreçte eski modül önbellekte kalmasın
+    if getattr(_ckd, "SURUM", 0) < 24:      # açık süreçte eski modül önbellekte kalmasın
         import importlib as _il_ckd
         _ckd = _il_ckd.reload(_ckd)
     with _cark_kutu:

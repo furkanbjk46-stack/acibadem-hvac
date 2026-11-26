@@ -18,10 +18,10 @@ DÜZEN (soldan sağa, tek ekran, sayfa kaydırması yok)
     seçiliye tekrar tık / çift tık / Enter / "Detay" → `gizli_detay_<lok>`.
   * Kartlardan çarka ince eğri ışık çizgileri (SVG; akan ışık animasyonu).
   * Sağ cam panel: seçili lokasyonun mevcut verileri (küçük yazı).
-  * Alt orta: Sunucu Ayarları (a.ayar-ac → mevcut ayarlar paneli), Sistem
-    (mevcut Yönetim düğmesi), Oturumu Kapat (mevcut Çıkış düğmesi).
-  * Sağ üst: Uyarılar / OTO SET · Saha / Harita — eski sağ sütun ve harita
-    sütunu (Streamlit öğeleri olduğu gibi) açılır katman olarak gösterilir.
+  * Alt orta tek çubuk (26.11.2026): Uyarılar / OTO SET · Saha / Harita (eski sağ
+    sütun ve harita sütunu açılır katman olarak), ayraç, Sunucu Ayarları
+    (a.ayar-ac → mevcut ayarlar paneli), Sistem (mevcut Yönetim düğmesi),
+    tema, Oturumu Kapat (mevcut Çıkış düğmesi).
 
 CANLI SAYILAR
   Sayılar `.canli-sayi` (data-deger / data-ond / data-faz): saniyelik akış
@@ -38,7 +38,7 @@ import html as _html
 import json
 import re
 
-SURUM = 23  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
+SURUM = 24  # app_merkez bu sayıyla açık süreçte modülü yeniden yükler
 
 # Repodaki Acıbadem "A" işareti — app_merkez.py içindeki haritanın Genel
 # Müdürlük logosuyla (var GM_A) aynı yol. Yeni logo çizilmez.
@@ -565,9 +565,9 @@ body.ck-kiyas-acik .ck-sahne .ck-katman-kapat{ display:flex; top:calc(5vh - 44px
 .ck-sahne .ck-p-acilir-ic{ max-height:calc(var(--ck-u) * 20); overflow-y:auto; }
 .ck-sahne .ck-p-mini-alt{ margin-top:3px; font-size:.82em; line-height:1.25; --c:var(--ck-metin-3); overflow-wrap:anywhere; }
 
-/* ── Sağ üst çipler, alt orta düğmeler ── */
-.ck-sahne .ck-ust{ position:absolute; z-index:3; top:calc(var(--ck-u) * 1.3); right:calc(var(--ck-u) * 2.6);
-  display:flex; gap:calc(var(--ck-u) * .8); }
+/* ── Alt orta düğme çubuğu (Uyarılar / OTO SET / Harita | ayarlar, sistem, tema, çıkış) ── */
+.ck-sahne .ck-ayrac{ align-self:stretch; width:1px; margin:calc(var(--ck-u) * .5) calc(var(--ck-u) * .3);
+  background:var(--ck-cam-kenar); }
 .ck-sahne .ck-cip, .ck-sahne .ck-dugme{ display:inline-flex; align-items:center; gap:calc(var(--ck-u) * .7); cursor:pointer;
   border-radius:99px; font-weight:600; white-space:nowrap; --c:var(--ck-metin);
   background:rgba(14,46,56,.82); border:1px solid var(--ck-cam-kenar);
@@ -607,7 +607,6 @@ body.ck-harita-acik .ck-sahne .ck-katman-kapat{ display:flex; top:calc(9vh - 44p
   .ck-sahne{ display:flex; flex-direction:column; gap:14px; overflow-y:auto; overflow-x:hidden;
     padding:48px 16px 18px; --ck-u:6.5px; }
   .ck-sahne svg.ck-baglar{ display:none; }
-  .ck-sahne .ck-ust{ position:static; justify-content:center; flex-wrap:wrap; order:-1; }
   .ck-sahne .ck-logo-alan{ flex:none; }
   .ck-sahne .ck-disk{ width:min(52vw, 220px); }
   .ck-sahne .ck-kartlar{ flex:none; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px; }
@@ -616,6 +615,7 @@ body.ck-harita-acik .ck-sahne .ck-katman-kapat{ display:flex; top:calc(9vh - 44p
   .ck-sahne .ck-panel{ flex:none; overflow:visible; }
   .ck-sahne .ck-panel-ic{ overflow:visible; }
   .ck-sahne .ck-alt{ flex-wrap:wrap; justify-content:center; border-radius:16px; margin-top:0; }
+  .ck-sahne .ck-ayrac{ display:none; }
 }
 @media (prefers-reduced-motion: reduce){
   .ck-sahne *, .ck-sahne *::before, .ck-sahne *::after{ animation:none !important; transition:none !important; }
@@ -974,17 +974,17 @@ def sahne_html(veri: dict, ozet_kartlar: list, ikonlar: dict, arama_metni=None,
         for l in veri["sira"])
     toplam_uy = int(g.get("uyari_toplam") or 0)
     sayac_sinif = "ck-r" if g.get("uyari_kritik") else ("ck-y" if toplam_uy else "ck-g")
-    ust = ('<div class="ck-ust">'
-           f'<a class="ck-cip" href="#" role="button" data-ck-eylem="uyarilar" title="Canlı uyarılar listesi">'
+    # Uyarılar / OTO SET / Harita alt çubukta, ayarların solunda (26.11.2026; eskiden sağ üstte)
+    ust = (f'<a class="ck-dugme" href="#" role="button" data-ck-eylem="uyarilar" title="Canlı uyarılar listesi">'
            f'{ikonlar.get("alarm", "")}Uyarılar<span class="ck-sayac {sayac_sinif}">{toplam_uy}</span></a>'
-           f'<a class="ck-cip" href="#" role="button" data-ck-eylem="kontrol" '
+           f'<a class="ck-dugme" href="#" role="button" data-ck-eylem="kontrol" '
            f'title="OTO SET, dış hava & chiller set, saha durumu">{ikonlar.get("oto", "")}OTO SET · Saha</a>'
-           f'<a class="ck-cip" href="#" role="button" data-ck-eylem="harita" title="Hastane enerji ağı haritası">'
-           f'{ikonlar.get("harita", "")}Harita</a></div>')
+           f'<a class="ck-dugme" href="#" role="button" data-ck-eylem="harita" title="Hastane enerji ağı haritası">'
+           f'{ikonlar.get("harita", "")}Harita</a><span class="ck-ayrac" aria-hidden="true"></span>')
     ayar = ("" if izleyici else
             f'<a class="ayar-ac ck-dugme" href="#" title="Sunucu ayarları" aria-label="Sunucu ayarları">'
             f'{ikonlar.get("ayar", "")}Sunucu Ayarları</a>')
-    alt = ('<nav class="ck-alt" aria-label="Sistem">' + ayar
+    alt = ('<nav class="ck-alt" aria-label="Sistem">' + ust + ayar
            + f'<a class="ck-dugme" href="#" role="button" data-ck-eylem="sistem" title="Yönetim — sunucu ve veri durumu">'
              f'{ikonlar.get("yonetim", "")}Sistem</a>'
            # Karanlık / aydınlık tema geçişi (tema_acik_demo.betik dinler; seçim tarayıcıda saklanır)
@@ -1016,7 +1016,7 @@ def sahne_html(veri: dict, ozet_kartlar: list, ikonlar: dict, arama_metni=None,
             '<svg class="ck-baglar" aria-hidden="true"></svg>'
             + _logo_html(veri)
             + '<div class="ck-kartlar">' + "".join(ozet_kartlar) + '</div>'
-            + cark + panel + ust + alt
+            + cark + panel + alt
             + '<div class="ck-perde" data-ck-eylem="kapat"></div>'
             + '<div class="ck-kiyas-kap" role="dialog" aria-label="Lokasyon karşılaştırma"></div>'
             + '<a class="ck-katman-kapat" href="#" role="button" data-ck-eylem="kapat" title="Kapat (Esc)" aria-label="Kapat">×</a>'

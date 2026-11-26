@@ -166,8 +166,10 @@ c("logo: repodaki GM 'A' isareti + ACIBADEM yazisi", C.GM_A in _s and "<b>ACIBAD
 c("alt orta: Sunucu Ayarlari (a.ayar-ac), Sistem, Oturumu Kapat",
   '<a class="ayar-ac ck-dugme"' in _s and 'data-ck-eylem="sistem"' in _s and 'data-ck-eylem="cikis"' in _s
   and _s.index("ck-alt") < _s.index('data-ck-eylem="cikis"'))
-c("sag ust: uyarilar (sayac), OTO SET, harita",
-  all('data-ck-eylem="%s"' % e in _s for e in ("uyarilar", "kontrol", "harita")) and 'ck-sayac ck-r">2<' in _s)
+c("alt cubuk: uyarilar (sayac), OTO SET, harita ayarlarin solunda; sag ust cip yok",
+  all('data-ck-eylem="%s"' % e in _s for e in ("uyarilar", "kontrol", "harita")) and 'ck-sayac ck-r">2<' in _s
+  and _s.index("ck-alt") < _s.index('data-ck-eylem="uyarilar"') < _s.index('data-ck-eylem="harita"')
+  < _s.index("ayar-ac ck-dugme") and 'class="ck-ust"' not in _s)
 c("arama kutusu + cark + ray + panel + baglanti svg",
   all(k in _s for k in ('class="ck-ara-kutu"', 'class="ck-cark"', 'class="ck-ray"', 'class="ck-panel"',
                         '<svg class="ck-baglar"')))
