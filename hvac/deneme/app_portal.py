@@ -1681,7 +1681,8 @@ def parse_numeric_series(s: pd.Series) -> pd.Series:
 def parse_bool_series(s: pd.Series) -> pd.Series:
     if s.dtype == bool:
         return s
-    x = s.astype(str).str.strip().str.lower().map(lambda v: v.translate(TR_MAP))
+    # pandas 3: astype(str) boş hücreyi NaN (float) bırakır — translate çöküyordu
+    x = s.map(lambda v: "" if pd.isna(v) else str(v)).str.strip().str.lower().map(lambda v: v.translate(TR_MAP))
     true_set = {"1", "true", "yes", "evet", "aktif", "on", "acik", "var"}
     return x.isin(true_set)
 
@@ -1724,6 +1725,17 @@ def recalc(df: pd.DataFrame) -> pd.DataFrame:
     return _enerji_hesap.yeniden_hesapla(df)
 
 
+def _enerji_csv_oku(yol: str) -> pd.DataFrame:
+    """energy_data.csv'yi okur. Synapse'ten indirilen dosya (Yönetim → veri dışa aktarma) Excel için
+    noktalı virgüllü ve BOM'ludur, başında id / lokasyon_id sütunları vardır (26.11.2026). Virgülle
+    okununca bütün satır tek sütuna düşüyor, portal boş veriyle açılıp çöküyordu. Ayırıcı ilk satırdan
+    anlaşılır; fazla sütunları ensure_schema atar, load_data dosyayı standart biçimde geri yazar."""
+    with open(yol, encoding="utf-8-sig") as f:
+        bas = f.readline()
+    ayirici = ";" if bas.count(";") > bas.count(",") else ","
+    return pd.read_csv(yol, sep=ayirici, encoding="utf-8-sig")
+
+
 @st.cache_data(show_spinner=False, ttl=300)
 def load_data() -> pd.DataFrame:
     if not os.path.exists(DATA_FILE):
@@ -1733,7 +1745,7 @@ def load_data() -> pd.DataFrame:
         _enerji_hesap.sebeke_gecisi_uygula(DATA_FILE, yollar.klasor("veri/eski_yedekler"))
     except Exception:
         pass
-    df = pd.read_csv(DATA_FILE)
+    df = _enerji_csv_oku(DATA_FILE)
     df = ensure_schema(df)
     df = coerce_types(df)
     df = recalc(df)
