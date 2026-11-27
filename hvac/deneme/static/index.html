@@ -2855,6 +2855,13 @@
                 if (severity === 'CRITICAL') badgeClass = 'badge-critical';
                 else if (severity === 'WARNING') badgeClass = 'badge-warning';
                 else if (row.Status === 'MISSING_DATA') badgeClass = 'badge-missing';
+                // 27.11.2026: bakım kartında arızalı/bakımda bileşeni olan santral analiz
+                // edilmez; rozet yeşil OPTIMAL değil, kartın durumunu söyler.
+                let _rozet = severity;
+                if (row.Status === 'MAINTENANCE') {
+                    badgeClass = 'badge-missing';
+                    _rozet = String(row.Action || 'Bakımda').toLocaleUpperCase('tr-TR');
+                }
 
                 // SAĞLAMLAŞTIRMA: Analiz Dışı işareti (ön koşul kapısında atlananlar)
                 const _rule = String(row.Rule || '');
@@ -2886,7 +2893,7 @@
                     <td>${row['SAT Status'] || ''}</td>
                     <td>${row['Recommended SAT (°C)'] || ''}</td>
                     <td><strong>${row.Score || '0'}</strong></td>
-                    <td><span class="badge ${badgeClass}">${severity}</span></td>
+                    <td><span class="badge ${badgeClass}">${_rozet}</span></td>
 
                     <td>${row['Approach_Supply (°C)'] || ''}</td>
                     <td>${row['Approach_Return (°C)'] || ''}</td>

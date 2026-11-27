@@ -161,14 +161,15 @@ susmali("[SAT] vana %20 kısıkken SAT kontrolü yapılmaz",
 kapsa("SENSOR_FAULT", "MAINTENANCE")
 _KART = {"return_sensor": "FAULTY"}
 r = kural(prof(mode="COOLING", sat=16.0, ret=23.0, setp=23.0, cv=60))
-c("[BAKIM] emiş sensörü ARIZALI → analiz güvenilmez işaretlenir",
-  r.rule in ("SENSOR_FAULT", "SKIP_SENSOR_ARIZA", "VERI_EKSIK"), (r.rule, r.severity))
-c("[BAKIM] arızalı sensörlü satır OPTİMAL görünmez (Maslak MAS-2, 24.11.2026)",
-  r.severity != "OPTIMAL", (r.rule, r.status, r.severity))
+# 27.11.2026 (kullanıcı kararı): personelin ARIZALI / BAKIMDA seçtiği santral analize hiç alınmaz
+c("[BAKIM] emiş sensörü ARIZALI → santral analiz dışı (MAINTENANCE)",
+  r.rule == "MAINTENANCE" and r.status == "MAINTENANCE", (r.rule, r.status))
+c("[BAKIM] analiz dışı satır kartın durumunu söyler (OPTİMAL rozeti arayüzde gösterilmez)",
+  r.action == "Arızalı" and "Emiş Sensör" in r.reason, (r.action, r.reason))
 _KART = {"supply_sensor": "FAULTY"}
 r = kural(prof(mode="COOLING", sat=16.0, ret=23.0, setp=23.0, cv=60))
-c("[BAKIM] üfleme sensörü ARIZALI → OPTİMAL görünmez",
-  r.rule in ("SENSOR_FAULT", "SKIP_SENSOR_ARIZA", "VERI_EKSIK") and r.severity != "OPTIMAL", (r.rule, r.severity))
+c("[BAKIM] üfleme sensörü ARIZALI → santral analiz dışı",
+  r.rule == "MAINTENANCE" and "Üfleme Sensör" in r.reason, (r.rule, r.reason))
 _KART = {}
 r = kural(prof(mode="COOLING", sat=16.0, ret=23.0, setp=23.0, cv=60))
 c("[BAKIM] kart temizken normal analiz döner", r.rule not in ("SENSOR_FAULT", "MAINTENANCE"), r.rule)

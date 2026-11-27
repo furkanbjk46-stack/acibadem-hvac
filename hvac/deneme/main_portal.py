@@ -1072,9 +1072,9 @@ INSTRUCTION_GUIDE = {
         "severity": "OPTIMAL",
         "score": 0.0,
         "title": "Bakımda",
-        "description": "Dijital bakım kartında en az bir bileşen MAINTENANCE olarak işaretli. Bakım süresince analiz ve alarmlar durdurulur (gürültü önlenir).",
+        "description": "Dijital bakım kartında en az bir bileşen ARIZALI ya da BAKIMDA işaretli (personel). Kart düzeltilene kadar santral analiz edilmez, alarm üretilmez. Sistemin otomatik koyduğu sensör arıza işareti santrali analiz dışına almaz.",
         "steps": [
-            "Bakım tamamlanınca bakım kartında bileşeni OK olarak güncelleyin — analiz otomatik devam eder",
+            "Bakım / onarım tamamlanınca bakım kartında bileşeni OK olarak güncelleyin — analiz otomatik devam eder",
             "Bakım uzadıysa kartı ve saha durumunu kontrol edin"
         ],
         "causes": []
@@ -2390,19 +2390,36 @@ class HVACAnalyzer:
         result.maintenance_notes = maintenance_notes
 
         # --- MZ-9: BAKIM KARTI ANALİZE ENTEGRE ---
-        # a) Santralin TÜM bileşenleri bakımdaysa santral bütünüyle bakımdadır —
-        #    analiz atlanır (STANDBY ile aynı model). N/A (santralde olmayan) sayılmaz.
+        # a) 27.11.2026 (kullanıcı kararı): PERSONELİN herhangi bir bileşeni ARIZALI ya da
+        #    BAKIMDA seçtiği santral analize HİÇ alınmaz (STANDBY ile aynı model).
+        #    Eskiden (22.09.2026) yalnız TÜM bileşenler bakımdaysa atlanıyor, tek bileşen
+        #    seçilince analiz sürüp yalnız o bileşene bağlı teşhis susturuluyordu; sahada
+        #    bakımdaki santral yine de analiz listesinde ve uyarılarda görünüyordu.
+        #    İSTİSNA: SİSTEMİN otomatik koyduğu ARIZALI işareti (source=SISTEM, on_kosul)
+        #    santrali dışarı almaz — sensör düzelince sistem işareti kendisi kaldırır;
+        #    dışarı alsaydı bozulan bir sensör santrali sessizce analizden düşürürdü.
+        #    N/A (santralde olmayan bileşen) sayılmaz.
         _MAINT_KEYS = ("supply_sensor", "return_sensor", "heating_valve_body",
                        "cooling_valve_body", "heating_valve_signal", "cooling_valve_signal",
                        "pressure_sensor")
-        _mevcut = [k for k in _MAINT_KEYS if maint.get(k, "OK") != "N/A"]
-        _bakimda = [k for k in _mevcut if maint.get(k) == "MAINTENANCE"]
-        if _mevcut and len(_bakimda) == len(_mevcut):
+
+        def _sistem_isareti(k):
+            return (maint.get(k) == "FAULTY"
+                    and (maint.get(k + "_meta") or {}).get("source") == "SISTEM")
+
+        _secili = [k for k in _MAINT_KEYS if maint.get(k) in _DISI and not _sistem_isareti(k)]
+        if _secili:
+            _ariza = [k for k in _secili if maint.get(k) == "FAULTY"]
+            _bakim = [k for k in _secili if maint.get(k) == "MAINTENANCE"]
+            _ad = lambda ks: ", ".join(MAINTENANCE_LABELS.get(k, "Basınç Sensörü") for k in ks)
+            _parca = ([f"arızalı: {_ad(_ariza)}"] if _ariza else []) + \
+                     ([f"bakımda: {_ad(_bakim)}"] if _bakim else [])
             result.status = "MAINTENANCE"
-            result.action = "Bakımda"
-            result.reason = f"Santral bütünüyle bakımda ({len(_bakimda)} bileşen). Bakım bitene kadar analiz yapılmıyor."
+            result.action = "Arızalı" if _ariza and not _bakim else "Bakımda"
+            result.reason = ("Bakım kartında " + "; ".join(_parca) +
+                             ". Kart düzeltilene kadar santral analiz edilmiyor.")
             result.rule = "MAINTENANCE"
-            result.atlama_nedeni = f"BAKIMDA (tüm bileşenler)"
+            result.atlama_nedeni = "BAKIM KARTI (" + "; ".join(_parca) + ")"
             result.severity = "OPTIMAL"
             result.sat_status = "MAINTENANCE"
             result.score = 0.0

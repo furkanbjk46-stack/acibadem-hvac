@@ -260,7 +260,8 @@ try:
     r = _analiz(_p7(mode="COOLING", sat=16.5, ret=23.0, setp=23.0, cv=60, start=1, basinc=10))
     c("personel basınç sensörünü arızalı işaretlediyse FAN_BASMIYOR ÜRETİLMEZ",
       r.rule != "FAN_BASMIYOR", r.rule)
-    c("  └ analiz sürer (santral sağlıklıysa NORMAL)", r.rule == "NORMAL", (r.rule, r.severity))
+    c("  └ personel işareti santrali analiz dışına alır (27.11.2026)", r.rule == "MAINTENANCE"
+      and "Basınç Sensörü" in r.reason, (r.rule, r.reason))
     c("  └ satırda 'basınç doğrulaması yapılmadı' notu",
       any("Basınç sensörü" in n for n in (r.maintenance_notes or [])), r.maintenance_notes)
 
@@ -275,14 +276,22 @@ try:
     c("sistemin koyduğu basınç işaretinde okuma kullanılmaya devam eder",
       r.rule == "FAN_BASMIYOR", r.rule)
 
-    # ── Bileşen bazlı bakım: tek bileşen bakımdayken analiz SÜRER ──
-    # Kullanıcı endişesi: "yalnız basınç sensörü bakımdayken santral soğutmasa
-    # bile görünmüyordu"
+    # ── 27.11.2026 (kullanıcı kararı): TEK bileşen bile arızalı/bakımdaysa santral
+    # analize alınmaz. (22.09.2026'daki bileşen bazlı model kaldırıldı: bakımdaki
+    # santral analiz listesinde ve uyarılarda görünmeye devam ediyordu.)
     _kart = {"pressure_sensor": "MAINTENANCE"}
     r = _analiz(_p7(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=95, start=1, basinc=450))
-    c("yalnız basınç sensörü bakımdayken santral soğutmuyorsa YİNE yakalanır",
-      r.rule == "NOT_COOLING" and r.severity == "CRITICAL", (r.rule, r.severity))
-    c("  └ santral bütünüyle 'bakımda' sayılmaz", r.rule != "MAINTENANCE", r.rule)
+    c("yalnız basınç sensörü bakımdayken santral analiz dışı, alarm üretmez",
+      r.rule == "MAINTENANCE" and r.severity == "OPTIMAL", (r.rule, r.severity))
+    c("  └ satır 'Bakımda' der", r.action == "Bakımda", r.action)
+    _kart = {"pressure_sensor": "MAINTENANCE", "supply_sensor": "FAULTY"}
+    r = _analiz(_p7(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=95))
+    c("arızalı + bakımda birlikte: iki grup da nedende yazar",
+      "arızalı: Üfleme Sensör" in r.reason and "bakımda: Basınç Sensörü" in r.reason, r.reason)
+    _kart = {"pressure_sensor": "N/A", "heating_valve_body": "N/A"}
+    r = _analiz(_p7(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=95))
+    c("yalnız N/A seçilen santral analiz edilir (N/A arıza/bakım sayılmaz)",
+      r.rule == "NOT_COOLING", r.rule)
 
     _kart = {"supply_sensor": "MAINTENANCE"}
     r = _analiz(_p7(mode="COOLING", sat=26.0, ret=23.0, setp=23.0, cv=95))
@@ -297,8 +306,8 @@ try:
 
     _kart = {"heating_valve_body": "MAINTENANCE"}
     r = _analiz(_p7(mode="COOLING", sat=16.5, ret=23.0, setp=23.0, cv=60))
-    c("vana gövdesi bakımdayken analiz normal sürer, not düşer",
-      r.rule == "NORMAL" and any("Isıtma vanası gövdesi" in n for n in (r.maintenance_notes or [])),
+    c("vana gövdesi bakımdayken de santral analiz dışı, not düşer",
+      r.rule == "MAINTENANCE" and any("Isıtma vanası gövdesi" in n for n in (r.maintenance_notes or [])),
       (r.rule, r.maintenance_notes))
 
     # ── Santral BÜTÜNÜYLE bakımda: tüm bileşenler ──
@@ -316,8 +325,8 @@ try:
     _kart = {b: "MAINTENANCE" for b in _BIL}
     _kart["supply_sensor"] = "OK"
     r = _analiz(_p7(mode="COOLING", sat=16.5, ret=23.0, setp=23.0, cv=60))
-    c("tek bir bileşen bile sağlamsa santral bütünüyle bakımda sayılmaz",
-      r.rule != "MAINTENANCE", r.rule)
+    c("bileşenlerin biri sağlam olsa da bakımdaki bileşen santrali analiz dışına alır",
+      r.rule == "MAINTENANCE", r.rule)
 finally:
     mp.get_maintenance_card = _orj_kart
 
