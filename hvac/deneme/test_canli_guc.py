@@ -408,6 +408,149 @@ try:
 finally:
     cg.guc_oku, cg._sayac_oku = _orj_guc, _orj_sayac
 
+# ── 27.11.2026: hata TÜRÜ ve aynı turda yeniden deneme (Maslak MCC-E02 / F01) ──
+# Ping'te kayıp yokken iki analizör ara ara kopuyordu. Hata türü ayrılmadan
+# ağ mı, cihaz mı, bağlantı sınırı mı olduğu anlaşılamıyordu.
+import socket as _so  # noqa: E402
+import struct as _st  # noqa: E402
+import logging as _lg  # noqa: E402
+
+
+def _sunucu(davranis):
+    """127.0.0.1'de tek bağlantılık sahte Modbus sunucusu → port."""
+    sv = _so.socket(_so.AF_INET, _so.SOCK_STREAM)
+    sv.bind(("127.0.0.1", 0))
+    sv.listen(1)
+    port = sv.getsockname()[1]
+
+    def _is():
+        try:
+            k, _ = sv.accept()
+            k.recv(64)
+            if davranis == "kapat":
+                k.close()
+            elif davranis == "sus":
+                _tm.sleep(1.0)
+                k.close()
+            elif davranis == "istisna":
+                k.send(_st.pack(">HHHBBB", 1, 0, 3, 1, 0x83, 2))
+                k.close()
+            elif davranis == "tamam":
+                k.send(_st.pack(">HHHBBB", 1, 0, 7, 1, 3, 4) + _st.pack(">f", 12345.0))
+                k.close()
+        except Exception:
+            pass
+        finally:
+            sv.close()
+    _th.Thread(target=_is, daemon=True).start()
+    return port
+
+
+_orj_port = cg.MODBUS_PORT
+try:
+    _bos = _so.socket(); _bos.bind(("127.0.0.1", 0)); cg.MODBUS_PORT = _bos.getsockname()[1]; _bos.close()
+    # Windows reddedilen bağlantıyı ~2 sn yeniden dener; bekleme uzun tutulur
+    c("kapalı port → 'reddedildi'", cg._float_oku("127.0.0.1", 19026, 4.0) is None
+      and cg.son_hata("127.0.0.1") == "reddedildi", cg.son_hata("127.0.0.1"))
+    cg.MODBUS_PORT = _sunucu("sus")
+    c("bağlanıp cevap gelmezse → 'cevap_zaman_asimi'", cg._float_oku("127.0.0.1", 19026, 0.3) is None
+      and cg.son_hata("127.0.0.1") == "cevap_zaman_asimi", cg.son_hata("127.0.0.1"))
+    cg.MODBUS_PORT = _sunucu("kapat")
+    c("cihaz bağlantıyı kapatırsa → 'kapatildi'", cg._float_oku("127.0.0.1", 19026, 0.5) is None
+      and cg.son_hata("127.0.0.1") == "kapatildi", cg.son_hata("127.0.0.1"))
+    cg.MODBUS_PORT = _sunucu("istisna")
+    c("Modbus hata cevabı → 'modbus_istisna' (geçici sayılmaz)",
+      cg._float_oku("127.0.0.1", 19026, 0.5) is None and cg.son_hata("127.0.0.1") == "modbus_istisna"
+      and "modbus_istisna" not in cg.GECICI_HATALAR, cg.son_hata("127.0.0.1"))
+    cg.MODBUS_PORT = _sunucu("tamam")
+    _w = cg._float_oku("127.0.0.1", 19026, 0.5)
+    c("başarılı okuma değeri döner ve son hatayı siler", _w == 12345.0 and cg.son_hata("127.0.0.1") is None, _w)
+finally:
+    cg.MODBUS_PORT = _orj_port
+c("bağlantı zaman aşımı ayrı türde (ağ/cihaz cevapsız)", "baglanti_zaman_asimi" in cg.HATA_METIN
+  and 'asama + "_zaman_asimi"' in KAYNAK)
+c("her türün okunur metni var", set(cg.GECICI_HATALAR) | {"modbus_istisna"} <= set(cg.HATA_METIN))
+
+# Yeniden deneme: geçici hatada aynı turda bir kez daha sorulur
+_cagri = {}
+_SENARYO = {}
+
+
+def _sahte_guc2(dev, ayar=None, adres=None):
+    ad = dev["name"]
+    _cagri[ad] = _cagri.get(ad, 0) + 1
+    adim = _SENARYO[ad][min(_cagri[ad], len(_SENARYO[ad])) - 1]
+    if isinstance(adim, str):
+        cg._SON_HATA[dev["ip"]] = adim
+        return None
+    cg._SON_HATA.pop(dev["ip"], None)
+    return adim
+
+
+_CIHAZ2 = [{"name": "MCC-E02", "ip": "10.0.0.2", "brand": "janitza"},
+           {"name": "MCC-F01", "ip": "10.0.0.3", "brand": "janitza"},
+           {"name": "ADRES-YANLIS", "ip": "10.0.0.4", "brand": "janitza"},
+           {"name": "KOPUK", "ip": "10.0.0.5", "brand": "janitza"}]
+_orj_guc, _orj_sayac, _orj_cih = cg.guc_oku, cg._sayac_oku, cg.cihazlar
+cg.guc_oku = _sahte_guc2
+cg._sayac_oku = lambda dev: None
+cg.cihazlar = lambda ayar=None: list(_CIHAZ2)
+
+
+class _Topla(_lg.Handler):
+    def __init__(self):
+        super().__init__()
+        self.satirlar = []
+
+    def emit(self, k):
+        self.satirlar.append(k.getMessage())
+
+
+_tk = _Topla()
+cg.logger.addHandler(_tk)
+_eski_seviye = cg.logger.level
+cg.logger.setLevel(_lg.INFO)
+try:
+    _SENARYO.update({"MCC-E02": ["cevap_zaman_asimi", 80.0],      # ilk deneme düşer, ikinci gelir
+                     "MCC-F01": ["reddedildi", 60.0],
+                     "ADRES-YANLIS": ["modbus_istisna", 1.0],      # kalıcı hata: yeniden sorulmaz
+                     "KOPUK": ["baglanti_zaman_asimi"]})
+    _oy = cg.Olcer(dict(a, es_zamanli=4, yeniden_deneme_bekleme_sn=0, ariza_esigi=2,
+                        ariza_bekleme_tur=3, ozet_her_n_tur=2))
+    _r = {x["cihaz"]: x for x in _oy.tur()}
+    c("geçici hatada aynı turda yeniden denenir ve değer gelir",
+      _r["MCC-E02"]["kw"] == 80.0 and _r["MCC-F01"]["kw"] == 60.0 and _cagri["MCC-E02"] == 2,
+      (_r["MCC-E02"], _cagri))
+    c("kurtarılan okuma hata sayılmaz", _oy._hata.get("MCC-E02", 0) == 0, _oy._hata)
+    c("Modbus istisnasında yeniden denenmez (turu uzatmaz)", _cagri["ADRES-YANLIS"] == 1, _cagri)
+    c("kopuk cihaz da bir kez daha denenir", _cagri["KOPUK"] == 2, _cagri)
+    c("okunamayan cihazın notunda hata türü yazar",
+      _r["KOPUK"]["kw"] is None and "bağlantı kurulamadı" in (_r["KOPUK"]["not"] or "")
+      and "Modbus hata" in (_r["ADRES-YANLIS"]["not"] or ""), (_r["KOPUK"]["not"], _r["ADRES-YANLIS"]["not"]))
+    _r2 = _oy.tur()
+    _atl = [m for m in _tk.satirlar if "üst üste cevap vermedi" in m]
+    c("atlama logu hata türünü söyler", any("KOPUK" in m and "bağlantı kurulamadı" in m and "×2" in m for m in _atl), _atl)
+    _oz = [m for m in _tk.satirlar if m.startswith("Canlı güç okuma özeti")]
+    c("özet logu türleri ve kurtarılan okumaları sayar",
+      len(_oz) == 1 and "KOPUK: baglanti_zaman_asimi ×2" in _oz[0]
+      and "MCC-E02: hata yok · yeniden denemeyle kurtarılan ×1" in _oz[0], _oz)
+    _tk.satirlar.clear()
+    _SENARYO.update({"MCC-E02": [80.0], "MCC-F01": [60.0], "ADRES-YANLIS": [1.0], "KOPUK": [5.0]})
+    _cagri.clear()
+    _oy2 = cg.Olcer(dict(a, es_zamanli=1, ozet_her_n_tur=1))
+    _oy2.tur()
+    c("sorun yoksa özet satırı yazılmaz", not any(m.startswith("Canlı güç okuma özeti") for m in _tk.satirlar),
+      _tk.satirlar)
+    _SENARYO.update({"KOPUK": ["cevap_zaman_asimi"]})
+    _cagri.clear()
+    _oy3 = cg.Olcer(dict(a, es_zamanli=1, yeniden_deneme=0))
+    _oy3.tur()
+    c("yeniden deneme ayardan kapatılabilir", _cagri["KOPUK"] == 1, _cagri)
+finally:
+    cg.guc_oku, cg._sayac_oku, cg.cihazlar = _orj_guc, _orj_sayac, _orj_cih
+    cg.logger.removeHandler(_tk)
+    cg.logger.setLevel(_eski_seviye)
+
 for ad, ok, detay in T:
     print(("PASS " if ok else "FAIL ") + ad + ("" if ok else "   " + str(detay)))
 _g = sum(1 for _, ok, _ in T if ok)

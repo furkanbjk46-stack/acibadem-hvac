@@ -728,6 +728,53 @@ def k_portal_sagligi(o):
                 "hata satırı yok", hata[-1][:220],
                 tekrar_adimi="cloud_sync.log dosyasının son satırlarını aç",
                 olasi_yer="cloud_sync.py (hata satırındaki işlem)", kanit={"son": hata[-3:]}))
+        cikti += _esitleme_kaydi_canli_mi(o, yol, satirlar)
+    return cikti
+
+
+LOG_DONME_SINIRI = 2_000_000     # cloud_sync RotatingFileHandler maxBytes ile aynı
+LOG_SESSIZ_SAAT = 3              # sağlıklı süreç en geç 2 saatte bir (AHU analizi) yazar
+
+
+def _esitleme_kaydi_canli_mi(o, yol, satirlar):
+    """Eşitleme kaydı dönüyor ve yazılıyor mu (27.11.2026, Maslak WinError 32).
+
+    Dosyayı başka bir süreç tutarken 2 MB'ta yedeğe geçilemiyor; Python her
+    satırda yeniden deniyor, başaramıyor ve satırı ATIYOR. Dosya donar, içinde
+    yeni hata satırı da olmaz — yukarıdaki kontrol bu yüzden hiçbir şey
+    görmüyordu. İki iz bırakır: boyut dönme sınırında takılır, son satır eskir."""
+    cikti = []
+    try:
+        boyut = os.path.getsize(yol)
+    except OSError:
+        return cikti
+    if boyut >= LOG_DONME_SINIRI:
+        cikti.append(bulgu(
+            "portal_sagligi", "esitleme_kaydi_donmuyor", "uyari", "Portal sağlığı",
+            "Eşitleme kaydı yedeğe geçemiyor (%.1f MB)" % (boyut / 1e6),
+            "dosya %.0f MB'ta yedeğe geçer" % (LOG_DONME_SINIRI / 1e6), "%d bayt" % boyut,
+            tekrar_adimi="cloud_sync penceresinde '--- Logging error --- PermissionError [WinError 32]' satırı",
+            olasi_yer="cloud_sync.log'u başka bir süreç açık tutuyor (eski sürümde Enerji portalı); "
+                      "programı yeniden başlatmak geçici olarak giderir",
+            kanit={"boyut": boyut}))
+    son = None
+    for s in reversed(satirlar):
+        try:
+            son = datetime.strptime(s[:19], "%Y-%m-%d %H:%M:%S")
+            break
+        except ValueError:
+            continue
+    if son is not None:
+        dakika = (o.simdi() - son).total_seconds() / 60
+        if dakika > LOG_SESSIZ_SAAT * 60:
+            cikti.append(bulgu(
+                "portal_sagligi", "esitleme_kaydi_sessiz", "uyari", "Portal sağlığı",
+                "Eşitleme kaydı %d dakikadır yazılmıyor" % dakika,
+                "en geç %d saatte bir yeni satır" % LOG_SESSIZ_SAAT,
+                "son satır: %s" % son.strftime("%d.%m.%Y %H:%M"),
+                tekrar_adimi="cloud_sync.log dosyasının son satırının saatine bak",
+                olasi_yer="cloud_sync.py süreci durmuş ya da log dosyası kilitli (portal_watchdog penceresi)",
+                kanit={"son_satir": son.isoformat(), "dakika": round(dakika)}))
     return cikti
 
 

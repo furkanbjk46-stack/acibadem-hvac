@@ -8,6 +8,8 @@
      hesaplanıp ISITMA hedefiyle kıyaslanıyordu (+10.6 görünüyordu, gerçek −10.6).
   2) Talimat butonları: ön yüz listesi arka uçtan geri kalmıştı.
   3) Bakım kartı PDF'i: bölünen tablo satırında "reading 'badgeLabel'" hatası.
+
+27.11.2026: 14.8 yamasında sahaya gitmemişti (öz test Maslak'ta 197/199); 14.13 ile gönderildi.
 """
 import asyncio
 import json

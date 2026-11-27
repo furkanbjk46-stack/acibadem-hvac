@@ -64,6 +64,13 @@ VARSAYILAN_AYAR = {
     "es_zamanli": 8,           # aynı anda kaç sayaç okunsun (0/1 = sırayla)
     "ariza_esigi": 3,          # kaç ardışık hatadan sonra cihaz geçici atlanır
     "ariza_bekleme_tur": 10,   # atlanan cihaz kaç tur sonra tekrar denenir
+    # 27.11.2026 (Maslak, 4BK-MCC-E02 / F01 ara ara kopuyordu; ping kaybı yok):
+    # ağ türü hatada (bağlantı kurulamadı / cevap gelmedi / reddedildi /
+    # kapatıldı) okuma AYNI turda bir kez daha denenir. Tek bir kayıp ya da
+    # meşgul anı "cevap vermedi" sayılmaz; gerçek kopma yine yakalanır.
+    "yeniden_deneme": 1,
+    "yeniden_deneme_bekleme_sn": 0.3,
+    "ozet_her_n_tur": 240,     # hata türü / kurtarılan okuma özeti logu (240×15 sn = 1 saat)
     "sayac_her_n_tur": 8,      # kaç turda bir kWh ile çapraz denetim (8×15 = 2 dk)
     "tolerans_oran": 0.12,     # register ile sayaç farkı: %12'ye kadar uyumlu sayılır
     "tolerans_kw": 15.0,       # küçük yüklerde oran anlamsız, mutlak pay
@@ -115,20 +122,64 @@ def _istek_paketi(adres: int, adet: int = 2, birim: int = 1) -> bytes:
     return struct.pack(">HHHBBHH", 1, 0, 6, birim, 3, int(adres), int(adet))
 
 
+# ── Okuma hatasının TÜRÜ (27.11.2026) ─────────────────────────────────────
+# Eskiden her başarısızlık tek tip "cevap vermedi" sayılıyordu; ağ mı, cihaz
+# mı, bağlantı sınırı mı ayırt edilemiyordu. Son hata IP başına tutulur
+# (paralel okumada her iplik kendi cihazının anahtarına yazar).
+HATA_METIN = {
+    "baglanti_zaman_asimi": "bağlantı kurulamadı (cihaz/ağ cevapsız)",
+    "cevap_zaman_asimi": "bağlandı ama cevap gelmedi (cihaz meşgul/yavaş)",
+    "reddedildi": "bağlantı reddedildi (bağlantı sınırı dolu olabilir)",
+    "kapatildi": "cihaz bağlantıyı kapattı (bağlantı sınırı / başka okuyucu)",
+    "kisa_cevap": "eksik cevap geldi",
+    "modbus_istisna": "cihaz Modbus hata cevabı verdi (adres/izin)",
+    "ag_hatasi": "ağ hatası",
+}
+# Yeniden denemenin işe yarayabileceği (geçici) türler; Modbus istisnası
+# kalıcıdır (yanlış adres vb.) — tekrar sormak yalnız turu uzatır.
+GECICI_HATALAR = {"baglanti_zaman_asimi", "cevap_zaman_asimi", "reddedildi",
+                  "kapatildi", "kisa_cevap", "ag_hatasi"}
+_SON_HATA = {}
+
+
+def son_hata(ip):
+    """Bu IP'nin son okumasındaki hata türü (başarılıysa None)."""
+    return _SON_HATA.get(ip)
+
+
 def _float_oku(ip: str, adres: int, timeout: float = OKUMA_TIMEOUT):
-    """Tek bir float32 register çiftini oku (W). Hata → None."""
+    """Tek bir float32 register çiftini oku (W). Hata → None (türü: son_hata)."""
     s = None
+    asama = "baglanti"
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.settimeout(timeout)
         s.connect((ip, MODBUS_PORT))
+        asama = "cevap"
         s.send(_istek_paketi(adres, 2))
         resp = s.recv(256)
         if len(resp) >= 13 and resp[7] == 3:
+            _SON_HATA.pop(ip, None)
             return struct.unpack(">f", resp[9:13])[0]
-        # Modbus istisna yanıtı (fonksiyon kodu | 0x80): adres yok / izin yok
+        if not resp:
+            _SON_HATA[ip] = "kapatildi"
+        elif len(resp) >= 9 and resp[7] & 0x80:
+            # Modbus istisna yanıtı (fonksiyon kodu | 0x80): adres yok / izin yok
+            _SON_HATA[ip] = "modbus_istisna"
+        else:
+            _SON_HATA[ip] = "kisa_cevap"
+        return None
+    except socket.timeout:
+        _SON_HATA[ip] = asama + "_zaman_asimi"
+        return None
+    except ConnectionRefusedError:
+        _SON_HATA[ip] = "reddedildi"
+        return None
+    except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+        _SON_HATA[ip] = "kapatildi"
         return None
     except Exception:
+        _SON_HATA[ip] = "ag_hatasi"
         return None
     finally:
         try:
@@ -190,6 +241,16 @@ def _sayac_oku(dev: dict):
         return None
 
 
+def _tur_metni(nedenler) -> str:
+    """Hata türleri listesi → okunur özet (ör. 'bağlandı ama cevap gelmedi ... ×2')."""
+    if not nedenler:
+        return ""
+    say = {}
+    for n in nedenler:
+        say[n] = say.get(n, 0) + 1
+    return ", ".join("%s ×%d" % (HATA_METIN.get(k, k), say[k]) for k in sorted(say))
+
+
 # ── Ölçüm turu ────────────────────────────────────────────────────────────
 
 class Olcer:
@@ -211,19 +272,29 @@ class Olcer:
         self._son_karar = {}               # cihaz → {"yontem": ...} (doğrulama damgası)
         self._hata = {}                    # cihaz → ardışık hata sayısı
         self._atla = {}                    # cihaz → kaç tur daha atlanacak
+        self._seri_neden = {}              # cihaz → bu hata serisindeki hata türleri
+        self._ozet_hata = {}               # cihaz → {tür: adet} (saatlik özet)
+        self._ozet_kurtarilan = {}         # cihaz → yeniden denemeyle kurtarılan okuma
 
     def _oku_tek(self, dev, sayac_turu):
         """TEK cihazdan okuma (havuzda çalışır, ortak duruma DOKUNMAZ)."""
         kilit = self.kilit_al(dev) if self.kilit_al else None
         if kilit is not None:
             kilit.acquire()
+        kurtarildi = False
         try:
             kw_reg = guc_oku(dev, self.ayar)
+            if (kw_reg is None and int(self.ayar.get("yeniden_deneme", 1) or 0) > 0
+                    and son_hata(dev.get("ip")) in GECICI_HATALAR):
+                time.sleep(float(self.ayar.get("yeniden_deneme_bekleme_sn", 0.3) or 0))
+                kw_reg = guc_oku(dev, self.ayar)
+                kurtarildi = kw_reg is not None
+            neden = son_hata(dev.get("ip")) if kw_reg is None else None
             kwh = _sayac_oku(dev) if sayac_turu else None
         finally:
             if kilit is not None:
                 kilit.release()
-        return kw_reg, kwh
+        return kw_reg, kwh, neden, kurtarildi
 
     def _makul(self, kw, net: bool = False) -> bool:
         # Şebeke iki yönlü: eksi taraf da üst sınır kadar geniş
@@ -265,16 +336,43 @@ class Olcer:
             return True
         return False
 
-    def _hata_isle(self, ad, basarili):
+    def _hata_isle(self, ad, basarili, neden=None):
         if basarili:
             self._hata[ad] = 0
+            self._seri_neden[ad] = []
             return
         self._hata[ad] = self._hata.get(ad, 0) + 1
+        if neden:
+            self._seri_neden.setdefault(ad, []).append(neden)
+            ozet = self._ozet_hata.setdefault(ad, {})
+            ozet[neden] = ozet.get(neden, 0) + 1
         if self._hata[ad] >= int(self.ayar["ariza_esigi"]):
             self._atla[ad] = int(self.ayar["ariza_bekleme_tur"])
             self._hata[ad] = 0
-            logger.info("%s üst üste cevap vermedi — %d tur atlanacak",
-                        ad, self.ayar["ariza_bekleme_tur"])
+            logger.info("%s üst üste cevap vermedi (%s) — %d tur atlanacak",
+                        ad, _tur_metni(self._seri_neden.get(ad)) or "neden bilinmiyor",
+                        self.ayar["ariza_bekleme_tur"])
+            self._seri_neden[ad] = []
+
+    def _ozet_yaz(self):
+        """Saatlik özet: hangi sayaç hangi türden hata verdi, kaçı kurtarıldı.
+
+        Ara sıra kopan sayacın nedeni (ağ mı, cihaz mı, bağlantı sınırı mı)
+        birkaç günlük logdan okunur; sorun yoksa satır yazılmaz."""
+        n = int(self.ayar.get("ozet_her_n_tur", 240) or 0)
+        if n <= 0 or self.tur_no % n:
+            return
+        if self._ozet_hata or self._ozet_kurtarilan:
+            parcalar = []
+            for ad in sorted(set(self._ozet_hata) | set(self._ozet_kurtarilan)):
+                tur = self._ozet_hata.get(ad, {})
+                metin = ", ".join("%s ×%d" % (k, tur[k]) for k in sorted(tur))
+                kurt = self._ozet_kurtarilan.get(ad, 0)
+                parcalar.append("%s: %s%s" % (ad, metin or "hata yok",
+                                              " · yeniden denemeyle kurtarılan ×%d" % kurt if kurt else ""))
+            logger.info("Canlı güç okuma özeti (son %d tur): %s", n, " | ".join(parcalar))
+        self._ozet_hata = {}
+        self._ozet_kurtarilan = {}
 
     def tur(self) -> list:
         """Bir ölçüm turu. Her cihaz için sözlük döner."""
@@ -295,13 +393,13 @@ class Olcer:
                     try:
                         ham[dev.get("name", "?")] = is_.result()
                     except Exception:
-                        ham[dev.get("name", "?")] = (None, None)
+                        ham[dev.get("name", "?")] = (None, None, "ag_hatasi", False)
         else:
             for dev in okunacak:
                 try:
                     ham[dev.get("name", "?")] = self._oku_tek(dev, sayac_turu)
                 except Exception:
-                    ham[dev.get("name", "?")] = (None, None)
+                    ham[dev.get("name", "?")] = (None, None, "ag_hatasi", False)
 
         # ── Karar: tek iplikte, sıra GARANTİLİ ───────────────────────────
         simdi = time.time()
@@ -313,12 +411,18 @@ class Olcer:
                 kayit["not"] = "cihaz cevap vermiyor — geçici olarak atlanıyor"
                 sonuc.append(kayit)
                 continue
-            kw_reg, kwh = ham[ad]
+            kw_reg, kwh, neden, kurtarildi = ham[ad]
             net = bool(dev.get("sebeke"))
-            self._hata_isle(ad, kw_reg is not None or kwh is not None)
+            if kurtarildi:
+                self._ozet_kurtarilan[ad] = self._ozet_kurtarilan.get(ad, 0) + 1
+            self._hata_isle(ad, kw_reg is not None or kwh is not None, neden)
             kw_sayac = self._sayac_gucu(ad, kwh, simdi, net) if sayac_turu else None
-            sonuc.append(self._karar(ad, kw_reg, kw_sayac, kwh, net))
+            kayit = self._karar(ad, kw_reg, kw_sayac, kwh, net)
+            if kayit["kw"] is None and neden in HATA_METIN:
+                kayit["not"] = "cihaz okunamadı — " + HATA_METIN[neden]
+            sonuc.append(kayit)
 
+        self._ozet_yaz()
         return sonuc
 
     def _karar(self, ad, kw_reg, kw_sayac, kwh, net: bool = False) -> dict:

@@ -25,20 +25,44 @@ logger = logging.getLogger(__name__)
 # görmüyordu. Bir arıza olduğunda (örn. oto-set'in sessizce durması) sahada
 # bakılacak hiçbir iz kalmıyordu. Log artık dosyaya da yazılır ve döner:
 # 2 MB'ta yenilenir, 3 yedek tutulur — disk şişmez.
-try:
-    from logging.handlers import RotatingFileHandler as _RFH
-    _LOG_DOSYA = yollar.yol("cloud_sync.log", os.path.dirname(__file__))
-    _fh = _RFH(_LOG_DOSYA, maxBytes=2_000_000, backupCount=3, encoding="utf-8")
-    _fh.setFormatter(logging.Formatter('%(asctime)s [SYNC] %(levelname)s %(message)s'))
-    logging.getLogger().addHandler(_fh)
-except Exception as _le:      # log kurulamazsa program yine de çalışmalı
-    logger.warning(f"Log dosyasi kurulamadi: {_le}")
-# Uyarı / hata özeti: log 3 gün tutuyor; gün gün özet 30 gün durur ve merkeze gider (N5)
+#
+# 27.11.2026 (Maslak, WinError 32): dosya eskiden modül İÇE AKTARILIRKEN
+# açılıyordu. Enerji portalı kayıt / "Merkeze gönder" için cloud_sync'i içe
+# aldığında aynı dosyayı ikinci bir süreç de tutuyordu; Windows'ta 2 MB'ta
+# yeniden adlandırma başarısız oluyor, konsola "--- Logging error ---"
+# basılıyor ve eşitleme sürecinin log satırları KAYBOLUYORDU. Artık dosyayı
+# yalnız arka plan döngülerini çalıştıran TEK süreç açar (log_dosyasi_kur).
 try:
     import hata_ozeti
-    hata_ozeti.kur("sync")
 except Exception:
     hata_ozeti = None
+
+_LOG_KURULDU = {"tamam": False}
+
+
+def log_dosyasi_kur():
+    """cloud_sync.log dosyasını ve 'sync' hata özetini bu süreçte kur (bir kez).
+
+    Yalnız döngü sahibi süreç çağırır; içe aktaran süreçler (Enerji portalı,
+    testler) dosyaya dokunmaz, kayıtları kendi loglarına gider."""
+    if _LOG_KURULDU["tamam"]:
+        return
+    _LOG_KURULDU["tamam"] = True
+    try:
+        from logging.handlers import RotatingFileHandler as _RFH
+        _log_dosya = yollar.yol("cloud_sync.log", os.path.dirname(__file__))
+        _fh = _RFH(_log_dosya, maxBytes=2_000_000, backupCount=3, encoding="utf-8")
+        _fh.setFormatter(logging.Formatter('%(asctime)s [SYNC] %(levelname)s %(message)s'))
+        logging.getLogger().addHandler(_fh)
+    except Exception as _le:      # log kurulamazsa program yine de çalışmalı
+        logger.warning(f"Log dosyasi kurulamadi: {_le}")
+    # Uyarı / hata özeti: log 3 gün tutuyor; gün gün özet 30 gün durur ve merkeze gider (N5)
+    if hata_ozeti is not None:
+        try:
+            hata_ozeti.kur("sync")
+        except Exception:
+            pass
+
 
 CONFIG_FILE = yollar.yol("supabase_config.json", os.path.dirname(__file__))
 DATA_FILE = yollar.yol("energy_data.csv", os.path.dirname(__file__))
@@ -985,6 +1009,8 @@ def start_background_sync():
             logger.info("Arka plan döngüleri başka bir süreçte çalışıyor — bu süreçte başlatılmadı.")
             return False
         _ARKA_PLAN["basladi"] = True
+    # Döngülerin sahibi bu süreç: log dosyasını yalnız burada aç (WinError 32)
+    log_dosyasi_kur()
 
     config = load_config()
     if not config:

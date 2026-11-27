@@ -311,6 +311,24 @@ with open(k.yol("cloud_sync.log"), "w", encoding="utf-8") as f:
 s = k.tur()
 b = [x for x in s["bulgular"] if x["anahtar"] == "portal_sagligi:esitleme_hatasi"]
 c("eşitleme kaydındaki YENİ hata yakalanır, eskisi sayılmaz", len(b) == 1 and "1 hata" in b[0]["baslik"] and "PGRST204" in b[0]["bulunan"])
+c("taze ve küçük kayıtta dönme / sessizlik bulgusu yok",
+  not any(x["anahtar"] in ("portal_sagligi:esitleme_kaydi_donmuyor", "portal_sagligi:esitleme_kaydi_sessiz")
+          for x in s["bulgular"]))
+# 27.11.2026 Maslak: başka süreç dosyayı tutunca 2 MB'ta yedeğe geçemez, satırlar atılır, dosya donar
+k = Kur()
+with open(k.yol("cloud_sync.log"), "w", encoding="utf-8") as f:
+    f.write("x" * 2_000_100 + "\n2026-11-10 05:10:00,000 [SYNC] INFO son yazılabilen satır\n")
+s = k.tur()
+a = anahtarlar(s)
+c("2 MB'ta takılan kayıt yakalanır (WinError 32)", "portal_sagligi:esitleme_kaydi_donmuyor" in a, a)
+c("donan kaydın son satırı eskiyse sessizlik de bildirilir", "portal_sagligi:esitleme_kaydi_sessiz" in a, a)
+b = [x for x in s["bulgular"] if x["anahtar"] == "portal_sagligi:esitleme_kaydi_sessiz"]
+c("sessizlik bulgusu dakikayı ve son saati yazar", bool(b) and "230 dakikadır" in b[0]["baslik"]
+  and "10.11.2026 05:10" in b[0]["bulunan"], b and b[0]["baslik"])
+k = Kur()
+with open(k.yol("cloud_sync.log"), "w", encoding="utf-8") as f:
+    f.write("2026-11-10 07:30:00,000 [SYNC] INFO HVAC AHU analizi bitti\n")
+c("3 saatten yeni kayıt sessiz sayılmaz", "portal_sagligi:esitleme_kaydi_sessiz" not in anahtarlar(k.tur()))
 
 # ── 8b) Portallar arası tutarlılık ve kapsam ───────────────────────────
 k = Kur()

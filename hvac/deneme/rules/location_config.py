@@ -17,13 +17,39 @@ class LocationConfig:
     """
 
     def __init__(self, config_dir: str = None):
-        self.config_dir = Path(config_dir) if config_dir else _HERE / "configs"
+        self.config_dir = Path(config_dir) if config_dir else None
         self.configs: Dict[str, Dict] = {}
         self.current_location = "hastane_merkez"
         self._load_all_configs()
-    
+
+    def _varsayilan_dosya(self) -> Path:
+        """hastane_merkez.json'un geçerli yeri (27.11.2026).
+
+        14.0 ile ayarlar ayar/ klasörüne taşındı; bu modül hâlâ sabit configs/
+        klasörüne bakıyor, dosyayı bulamayıp her açılışta 'Hic konfigurasyon
+        dosyasi bulunamadi' yazıyordu. Yer artık yollar.py'den gelir (ayar/,
+        yoksa eski configs/). ayar/ başka ayar dosyalarını da tuttuğu için
+        klasör taranmaz; yalnız bu dosya okunur."""
+        try:
+            import yollar
+            return Path(yollar.yol("configs/hastane_merkez.json", str(_HERE)))
+        except Exception:
+            return _HERE / "configs" / "hastane_merkez.json"
+
     def _load_all_configs(self):
         """Tüm konfigürasyon dosyalarını yükle"""
+        if self.config_dir is None:
+            dosya = self._varsayilan_dosya()
+            if not dosya.exists():
+                print(f"[UYARI] Konfigurasyon dosyasi bulunamadi: {dosya} (kod varsayilanlari kullaniliyor)")
+                return
+            try:
+                with open(dosya, 'r', encoding='utf-8') as f:
+                    self.configs[dosya.stem] = json.load(f)
+                print(f"[OK] Konfigurasyon yuklendi: {dosya.stem}")
+            except Exception as e:
+                print(f"[HATA] Konfigurasyon yuklenemedi ({dosya.stem}): {e}")
+            return
         if not self.config_dir.exists():
             print(f"[UYARI] Konfigurasyon dizini bulunamadi: {self.config_dir}")
             return

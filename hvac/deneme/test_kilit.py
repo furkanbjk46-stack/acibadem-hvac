@@ -165,6 +165,33 @@ c("[kaynak] oz test, kalici surec listesine eklenmedi (yeniden baslatma dongusun
 _oto = open(os.path.join(BURASI, "oto_set.py"), encoding="utf-8").read()
 c("[kaynak] oto_set.kontrol kilit altinda", 'kisa_kilit("oto_set")' in _oto)
 
+# ── 4) cloud_sync.log yalnız döngü sahibi süreçte açılır (27.11.2026) ─────
+# Maslak: Enerji portalı cloud_sync'i içe alınca log dosyasını ikinci bir süreç
+# de tutuyordu; Windows'ta 2 MB'ta yedeğe geçiş WinError 32 ile düşüyor ve
+# eşitleme sürecinin satırları kayboluyordu. Temiz bir süreçte denenir.
+_log_deneme = subprocess.run(
+    [sys.executable, "-c",
+     "import sys, os, logging, tempfile; sys.path.insert(0, %r); "
+     "import cloud_sync as cs; "
+     "rfh = lambda: [h for h in logging.getLogger().handlers if h.__class__.__name__ == 'RotatingFileHandler']; "
+     "print('ICE_ALMA', len(rfh())); "
+     "d = tempfile.mkdtemp(); cs.yollar.yol = lambda g, b=None: os.path.join(d, os.path.basename(g)); "
+     "cs.log_dosyasi_kur(); cs.log_dosyasi_kur(); "
+     "print('SAHIP', len(rfh())); "
+     "[h.close() for h in rfh()]" % BURASI],
+    capture_output=True, text=True, timeout=120)
+_cikti = _log_deneme.stdout.split()
+c("cloud_sync içe alınınca log dosyası AÇILMAZ (Enerji portalı dosyayı tutmaz)",
+  "ICE_ALMA" in _cikti and _cikti[_cikti.index("ICE_ALMA") + 1] == "0", _log_deneme.stdout + _log_deneme.stderr[-300:])
+c("döngü sahibi log dosyasını bir kez açar",
+  "SAHIP" in _cikti and _cikti[_cikti.index("SAHIP") + 1] == "1", _log_deneme.stdout)
+_cs = open(os.path.join(BURASI, "cloud_sync.py"), encoding="utf-8").read()
+_bg = _cs.split("def start_background_sync")[1]
+c("[kaynak] log dosyası kilidi alan süreçte kuruluyor",
+  _bg.index('_ARKA_PLAN["basladi"] = True') < _bg.index("log_dosyasi_kur()") < _bg.index("config = load_config()"))
+c("[kaynak] modül düzeyinde RotatingFileHandler kurulmuyor",
+  "_RFH(" not in _cs.split("def log_dosyasi_kur")[0])
+
 # Temizlik
 for _ek in ("", "_k", "_h"):
     try:
